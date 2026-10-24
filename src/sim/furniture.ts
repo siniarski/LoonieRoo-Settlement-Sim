@@ -10,6 +10,8 @@ export interface Furniture {
   kind: FurnitureKind;
   x: number;
   y: number;
+  /** Beds: the survivor who has claimed it (walking to it or asleep in it). */
+  occupant: string | null;
 }
 
 export function furnitureAt(state: SimState, x: number, y: number): Furniture | undefined {
@@ -17,7 +19,7 @@ export function furnitureAt(state: SimState, x: number, y: number): Furniture | 
 }
 
 export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y: number): Furniture {
-  const f: Furniture = { id: `f${state.nextId++}`, kind, x, y };
+  const f: Furniture = { id: `f${state.nextId++}`, kind, x, y, occupant: null };
   state.furniture.push(f);
   return f;
 }

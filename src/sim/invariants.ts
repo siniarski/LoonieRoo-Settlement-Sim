@@ -3,6 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { getTile, isWalkable } from './grid';
+import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
 import type { SimState } from './state';
 
@@ -75,6 +76,23 @@ export function checkInvariants(state: SimState): string[] {
     furnitureTiles.add(key);
     if (getTile(grid, f.x, f.y) !== 'floor') problems.push(`${f.kind} ${f.id} on non-floor (${key})`);
     if (occupied.has(key)) problems.push(`item on ${f.kind} at (${key})`);
+  }
+
+  for (const s of state.survivors) {
+    if (s.rest < 0 || s.rest > REST_MAX || !Number.isInteger(s.rest)) problems.push(`${s.name} has rest ${s.rest}`);
+    if (!s.sleep) continue;
+    if (s.jobId) problems.push(`${s.name} is sleeping but holds job ${s.jobId}`);
+    if (s.carrying) problems.push(`${s.name} is sleeping while carrying ${s.carrying}`);
+    if (s.sleep.bedId) {
+      const bed = state.furniture.find((f) => f.id === s.sleep!.bedId);
+      if (!bed) problems.push(`${s.name} sleeps in missing bed ${s.sleep.bedId}`);
+      else if (bed.occupant !== s.id) problems.push(`${s.name} claims ${bed.id}, occupied by ${bed.occupant}`);
+    }
+  }
+  for (const f of state.furniture) {
+    if (!f.occupant) continue;
+    const s = survivors.get(f.occupant);
+    if (s?.sleep?.bedId !== f.id) problems.push(`${f.id} occupied by ${f.occupant}, who isn't sleeping in it`);
   }
 
   const roomsClaimed = new Set<number>();

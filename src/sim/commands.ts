@@ -8,6 +8,8 @@ import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
+import { wake } from './needs';
+import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
@@ -27,7 +29,9 @@ export type Command =
   // Survivors.
   | { type: 'spawnSurvivor'; x: number; y: number }
   | { type: 'moveSurvivor'; survivorId: string; x: number; y: number }
-  | { type: 'setPriority'; survivorId: string; jobType: JobType; priority: Priority };
+  | { type: 'setPriority'; survivorId: string; jobType: JobType; priority: Priority }
+  // Debug: set a survivor's rest (0..REST_MAX), e.g. to make them tired now.
+  | { type: 'setRest'; survivorId: string; rest: number };
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -41,6 +45,7 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'setRest') return setRest(state, command.survivorId, command.rest);
   const { x, y } = command;
   if (!inBounds(state.grid, x, y)) return reject(`(${x}, ${y}) is out of bounds`);
   switch (command.type) {
@@ -154,9 +159,21 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   if (!survivor) return reject(`no survivor ${id}`);
   if (!isWalkable(state.grid, x, y)) return reject(`(${x}, ${y}) is not walkable`);
   if (survivor.goal?.x === x && survivor.goal.y === y && !survivor.jobId) return unchanged();
-  // A direct order overrides work. The survivor returns to jobs after arriving.
+  // A direct order overrides work and sleep. The survivor returns to jobs (or bed, if still tired) after arriving.
   if (survivor.jobId) releaseSurvivor(state, survivor, 'ordered elsewhere');
+  wake(state, survivor, 'woken by an order');
   setGoal(survivor, { x, y });
+  return changed();
+}
+
+function setRest(state: SimState, id: string, rest: unknown): CommandResult {
+  const survivor = getSurvivor(state, id);
+  if (!survivor) return reject(`no survivor ${id}`);
+  if (typeof rest !== 'number' || !Number.isInteger(rest) || rest < 0 || rest > REST_MAX) {
+    return reject(`rest must be an integer 0-${REST_MAX}`);
+  }
+  if (survivor.rest === rest) return unchanged();
+  survivor.rest = rest;
   return changed();
 }
 

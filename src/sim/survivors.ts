@@ -9,6 +9,7 @@
 import { getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
+import { initialRest, type Sleep } from './rest';
 import { random } from './rng';
 import { isIndoors } from './rooms';
 import type { SimState } from './state';
@@ -49,6 +50,10 @@ export interface Survivor {
   carrying: string | null;
   /** When idle and nothing was doable, don't look for work again before this tick. */
   nextSeekTick: number;
+  /** 0..REST_MAX. Drains while awake; see needs.ts. */
+  rest: number;
+  /** Set while heading to bed or asleep. */
+  sleep: Sleep | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number): Survivor {
@@ -66,6 +71,8 @@ export function addSurvivor(state: SimState, x: number, y: number): Survivor {
     jobId: null,
     carrying: null,
     nextSeekTick: 0,
+    rest: initialRest(state.survivors.length),
+    sleep: null,
   };
   state.survivors.push(survivor);
   return survivor;

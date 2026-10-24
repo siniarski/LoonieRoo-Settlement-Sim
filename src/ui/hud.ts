@@ -7,6 +7,7 @@ import type { Point } from '../sim/grid';
 import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
+import { REST_MAX, TIRED } from '../sim/rest';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
@@ -265,6 +266,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 }
 
 function activity(state: SimState, s: Survivor): string {
+  if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   if (job) return `${job.type} (${job.x}, ${job.y})`;
   if (s.goal) return 'walking (ordered)';
@@ -313,7 +315,8 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   const p = s.priorities;
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? '  carrying wood' : ''}`,
-    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} c${p.clean}`,
+    `    rest ${s.rest}/${REST_MAX} (${Math.round((100 * s.rest) / REST_MAX)}%)${s.rest < TIRED ? ' TIRED' : ''}  ·  ${activity(state, s)}`,
+    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep ? 'none: sleeping' : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,
   ];

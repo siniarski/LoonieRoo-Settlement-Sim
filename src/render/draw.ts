@@ -3,7 +3,8 @@
 import type { Blueprint, BuildTarget } from '../sim/designations';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
-import { evaluateRoom, getRoomMap, labelAt, roomAt, type RoomPurpose } from '../sim/rooms';
+import { REST_MAX, TIRED } from '../sim/rest';
+import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
@@ -33,6 +34,9 @@ const COLOURS = {
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
   survivorOutline: '#1a1d1b',
+  survivorAsleep: '#8a8fa8',
+  rest: '#7fb2ff',
+  restLow: '#ff8a7a',
   selected: '#8cf0a4',
   path: 'rgba(140, 240, 164, 0.7)',
   goal: '#8cf0a4',
@@ -187,7 +191,7 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
     const detail = missing
       ? `⚠ needs: ${missing.label}`
       : d.purpose === 'housing'
-        ? `✓ ${status.beds} bed${status.beds === 1 ? '' : 's'}`
+        ? `✓ ${status.beds} bed${status.beds === 1 ? '' : 's'}${bedsInUse(state, room) > 0 ? `, ${bedsInUse(state, room)} in use` : ''}`
         : `✓ ${status.size} tiles`;
     const text = `${PURPOSE_NAMES[d.purpose]}  ${detail}`;
     const anchor = room ? { x: (room.minX + room.maxX + 1) / 2, y: room.minY + 0.15 } : { x: d.x + 0.5, y: d.y + 0.15 };
@@ -199,6 +203,11 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
     ctx.fillStyle = missing ? COLOURS.incomplete : COLOURS.roomLabel[d.purpose];
     ctx.fillText(text, p.x, p.y + 2);
   }
+}
+
+function bedsInUse(state: SimState, room: Room | null): number {
+  if (!room) return 0;
+  return state.furniture.filter((f) => f.kind === 'bed' && f.occupant !== null && labelAt(state, f.x, f.y) === room.index).length;
 }
 
 function drawBed(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number): void {
@@ -315,7 +324,8 @@ function drawSurvivor(
     ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.fillStyle = COLOURS.survivor;
+  const asleep = s.sleep?.asleep === true;
+  ctx.fillStyle = asleep ? COLOURS.survivorAsleep : COLOURS.survivor;
   ctx.strokeStyle = COLOURS.survivorOutline;
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -324,12 +334,23 @@ function drawSurvivor(
   ctx.stroke();
   if (s.carrying) drawWood(ctx, camera, viewport, world.x + 0.3, world.y + 0.25, size * 0.6);
 
+  // Rest bar under the survivor once it matters: below half, or while sleeping.
+  if (asleep || s.rest < REST_MAX / 2) {
+    const w = Math.max(10, size * 0.8);
+    const h = Math.max(2, Math.round(size * 0.1));
+    const y = p.y + radius + 3;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(p.x - w / 2, y, w, h);
+    ctx.fillStyle = s.rest < TIRED ? COLOURS.restLow : COLOURS.rest;
+    ctx.fillRect(p.x - w / 2, y, (w * s.rest) / REST_MAX, h);
+  }
+
   if (size >= MIN_LABEL_PX) {
     ctx.fillStyle = COLOURS.label;
     ctx.font = `${Math.round(Math.min(14, size * 0.45))}px ui-monospace, Consolas, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(s.name, p.x, p.y - radius - 3);
+    ctx.fillText(asleep ? `${s.name} z` : s.name, p.x, p.y - radius - 3);
   }
 }
 
