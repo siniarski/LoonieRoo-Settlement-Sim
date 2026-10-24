@@ -72,7 +72,7 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 
 ## Dev gotchas
 
-- **Vite's watcher can miss rapid successive edits on Windows.** Symptom: the browser keeps running old code (a `?t=` URL serves stale content) even after a page reload. Fix: re-save the file, or restart the dev server.
+- **Vite's watcher can miss rapid successive edits on Windows.** Symptom: the browser keeps running old code (a `?t=` URL serves stale content) even after a page reload. Fix: re-save the file, or restart the dev server. Seen twice now (draw.ts in M3, hud.ts for the pause banner). Quick check: `fetch('/src/<file>', {cache: 'no-store'})` in the page and look for the new code. If it keeps happening, try `server.watch.usePolling` in vite.config.ts.
 - **Don't fetch `/src/...` modules with made-up query strings while debugging.** Vite adds them to its module graph as separate modules with no importers, which makes hot reload fall back to full page reloads for everything they import. Restart the dev server to clear it.
 - **Editing `index.html` opens a `file://` preview tab in the browser pane**, which becomes the active tab and backgrounds the game tab. Background tabs don't get `requestAnimationFrame`, so the game freezes at its current tick. Close the extra tab.
 - **Stop the dev server during big multi-file sim changes** and restart it to verify. Otherwise every intermediate save is hot-reloaded and may half-apply.

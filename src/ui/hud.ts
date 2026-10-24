@@ -70,7 +70,11 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
-  root.append(bar, info, priorities.root, debug);
+  // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
+  const pausedFrame = el('div', 'hud-paused-frame');
+  const pausedBanner = el('div', 'hud-paused-banner');
+  pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
+  root.append(pausedFrame, bar, info, priorities.root, debug, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -82,6 +86,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       toolButtons.forEach(({ id, button }) => button.classList.toggle('active', id === view.tool));
       pauseButton.textContent = view.paused ? '▶ Resume' : '❚❚ Pause';
       pauseButton.classList.toggle('active', view.paused);
+      pausedFrame.hidden = !view.paused;
+      pausedBanner.hidden = !view.paused;
       speedButtons.forEach(({ speed, button }) =>
         button.classList.toggle('active', !view.paused && speed === view.speed),
       );
