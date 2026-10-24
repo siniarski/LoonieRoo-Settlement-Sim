@@ -1,0 +1,10 @@
+{
+  // Enforces architecture rule 2: the sim compiles with no DOM types.
+  // Any `window`, `document`, `HTMLCanvasElement`, etc. in src/sim/ fails typecheck.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/sim"]
+}

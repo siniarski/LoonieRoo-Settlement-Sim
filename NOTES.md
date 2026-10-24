@@ -29,6 +29,11 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 | Hauling v1 | One item, one carrier, no stacks, no stockpile filters | Hauling multiplies edge cases |
 | First room purposes | Housing (N beds), storage (designated area only) | Enough to exercise the requirements loop; mess hall waits for needs |
 | Stuck-state thresholds | Max 600 ticks on one job; max 20 idle ticks with a doable job | Starting values, tune later |
+| State mutation | Sim functions mutate the state they are given; `cloneState` (JSON round trip) when a copy is needed | Simpler than immutable updates; determinism doesn't need immutability. Replays clone the initial state first |
+| Command log contents | Only accepted commands are logged | Rejected commands change nothing, so replay files stay clean |
+| Rule enforcement | `tsconfig.sim.json` (no DOM lib) + `tests/architecture.test.ts` (source scan) | Rules 2 and 3 fail the build instead of relying on review |
+| Toolchain | Node 24 LTS, TypeScript 7, Vite 8, Vitest 5 | Current versions as of 2026-10-24 |
+| Vitest `fsModuleCache` | Disabled | It doesn't refresh `import.meta.glob` when files are added, so the architecture scan missed new sim files. Suite runs in ~200ms, so the cache isn't needed |
 
 ## Open questions
 
@@ -38,3 +43,4 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 ## Session log
 
 - **2026-10-24:** Moved from Claude chat to Claude Code. Reviewed CLAUDE.md, added commands, RNG/iteration/movement rules, command-log replays, `walkabilityVersion` invalidation, door semantics, and concrete stuck-state thresholds. Resolved the hauling and room-purpose open questions (see table). Started milestone 1.
+- **2026-10-24, milestone 1 done:** grid (floor/wall/door), commands with a command log, seeded RNG, fixed tick, replay, ASCII scenarios that round-trip through the text renderer, `window.game` hooks, a page that shows the ASCII map. 38 tests. Found that Vitest 5's persistent module cache hid newly added sim files from the architecture scan; disabled it (see table). Next: milestone 2 (canvas view and placement tools).
