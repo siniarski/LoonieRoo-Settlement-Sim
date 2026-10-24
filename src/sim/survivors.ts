@@ -10,6 +10,7 @@ import { getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
 import { initialSatiety, type Meal } from './food';
+import { HEALTH_MAX } from './health';
 import { initialRest, type Sleep } from './rest';
 import { random } from './rng';
 import { isIndoors } from './rooms';
@@ -61,6 +62,8 @@ export interface Survivor {
   meal: Meal | null;
   /** When hungry and no food was found, don't look again before this tick. */
   nextMealTick: number;
+  /** 0..HEALTH_MAX. At 0 the survivor dies; see needs.ts. */
+  health: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number): Survivor {
@@ -83,6 +86,7 @@ export function addSurvivor(state: SimState, x: number, y: number): Survivor {
     satiety: initialSatiety(state.survivors.length),
     meal: null,
     nextMealTick: 0,
+    health: HEALTH_MAX,
   };
   state.survivors.push(survivor);
   return survivor;

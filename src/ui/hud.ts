@@ -8,6 +8,8 @@ import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
+import { HEALTH_MAX } from '../sim/health';
+import { clockText, dayOf, isNight } from '../sim/time';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
@@ -24,6 +26,8 @@ export interface Hud {
 
 const JOB_LABELS: Record<JobType, string> = { build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
+/** Most recent events shown in the feed under the status line. */
+const FEED_LINES = 4;
 
 /** Click cycles 1 → 2 → 3 → 4 → off → 1; right-click goes the other way. */
 export function cyclePriority(p: Priority, backwards: boolean): Priority {
@@ -36,6 +40,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   root.innerHTML = '';
 
   const bar = el('div', 'hud-bar');
+  const clock = el('span', 'hud-clock');
+  bar.append(clock, el('span', 'hud-sep'));
   const pauseButton = el('button', 'hud-button');
   pauseButton.addEventListener('click', () => (view.paused = !view.paused));
   bar.append(pauseButton);
@@ -63,7 +69,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const info = el('div', 'hud-info');
   const status = el('div', 'hud-status');
   const roomPanel = el('pre', 'hud-room');
-  info.append(status, roomPanel);
+  const feed = el('div', 'hud-feed');
+  info.append(status, roomPanel, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -78,9 +85,22 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   let lastStatus = '';
   let lastRoom = '';
   let lastDebug = '';
+  let lastClock = '';
+  let lastFeed = '';
 
   return {
     update(state, fps) {
+      const clockLine = `Day ${dayOf(state.tick)} · ${clockText(state.tick)} ${isNight(state.tick) ? '☾' : '☀'}`;
+      if (clockLine !== lastClock) clock.textContent = lastClock = clockLine;
+      clock.classList.toggle('night', isNight(state.tick));
+
+      const feedText = state.events
+        .slice(-FEED_LINES)
+        .map((e) => `Day ${dayOf(e.tick)} ${clockText(e.tick)}  ${e.message}`)
+        .join('\n');
+      feed.hidden = feedText === '';
+      if (feedText !== lastFeed) feed.textContent = lastFeed = feedText;
+
       pauseButton.textContent = view.paused ? '▶ Resume' : '❚❚ Pause';
       pauseButton.classList.toggle('active', view.paused);
       pausedFrame.hidden = !view.paused;
@@ -334,7 +354,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   const p = s.priorities;
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
-    `    rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
+    `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,

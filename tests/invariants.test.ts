@@ -42,6 +42,8 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   const roll = randomInt(driver, 0, 1000);
   const x = randomInt(driver, 0, state.grid.width);
   const y = randomInt(driver, 0, state.grid.height);
+  // Deaths can empty the colony: then the only useful command is a new survivor.
+  if (state.survivors.length === 0) return { type: 'spawnSurvivor', x, y };
   const survivor = state.survivors[randomInt(driver, 0, state.survivors.length)]!;
   if (roll < 15) return { type: 'designateBuild', x, y, structure: 'wall' };
   if (roll < 22) return { type: 'designateBuild', x, y, structure: 'door' };
@@ -61,12 +63,16 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 60) return { type: 'setSatiety', survivorId: survivor.id, satiety: randomInt(driver, 0, 3001) };
   if (roll < 62) return { type: 'spawnFood', x, y };
   if (roll < 70) return { type: 'designateScavenge', x, y };
+  // Occasionally wound someone badly (they may die mid-job or mid-sleep) or add a survivor.
+  if (roll < 72) return { type: 'setHealth', survivorId: survivor.id, health: randomInt(driver, 0, 4) };
+  if (roll < 73) return { type: 'spawnSurvivor', x, y };
   return null;
 }
 
 describe('stuck-state invariant', () => {
   /** Outcomes seen across all seeds (tests in a file run in order). */
   const notesSeen = new Set<string>();
+  let deaths = 0;
 
   for (const seed of [1, 2, 3, 4, 5]) {
     it(`holds under random designations, orders, and wall edits (seed ${seed})`, () => {
@@ -114,10 +120,16 @@ describe('stuck-state invariant', () => {
         }
       }
 
+      deaths += state.events.filter((e) => e.message.includes(' died of ')).length;
+
       const replayed = replay(initial, state.commandLog, state.tick);
       expect(JSON.stringify(replayed)).toBe(JSON.stringify(state));
     });
   }
+
+  it('saw survivors die along the way (death handling is exercised)', () => {
+    expect(deaths).toBeGreaterThan(0);
+  });
 
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so

@@ -2,16 +2,26 @@
 // frame, never what a tick means.
 
 import { reconcileJobs, updateWork } from './jobs';
-import { interruptForNeeds, reconcileNeeds, updateMeal, updateRest, updateSatiety, updateSleep } from './needs';
+import {
+  interruptForNeeds,
+  killSurvivor,
+  reconcileNeeds,
+  updateHealth,
+  updateMeal,
+  updateRest,
+  updateSatiety,
+  updateSleep,
+} from './needs';
 import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
-import { updateMovement } from './survivors';
+import { updateMovement, type Survivor } from './survivors';
 
 export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
   reconcileJobs(state);
   reconcileNeeds(state);
+  const dying: { s: Survivor; cause: string }[] = [];
   for (const s of state.survivors) {
     interruptForNeeds(state, s);
     updateMovement(state, s);
@@ -19,10 +29,16 @@ export function tick(state: SimState): void {
     if (!s.move && !s.goal && !updateMeal(state, s) && !updateSleep(state, s)) updateWork(state, s);
     updateRest(state, s);
     updateSatiety(s);
+    const cause = updateHealth(state, s);
+    if (cause) dying.push({ s, cause });
   }
-  // Walls finished this tick may have covered a room's anchor tile; slide it off now
-  // so state is consistent between ticks (it also runs at the start, for commands).
+  // Deaths after the loop, so the survivor array isn't spliced while iterating it.
+  for (const { s, cause } of dying) killSurvivor(state, s, cause);
+  // Work finished this tick may have covered a room's anchor tile or removed a bed
+  // someone sleeps in; tidy up now so state is consistent between ticks (both also
+  // run at the start, for commands applied in between).
   reconcileRoomDesignations(state);
+  reconcileNeeds(state);
   state.tick += 1;
 }
 

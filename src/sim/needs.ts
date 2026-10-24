@@ -18,17 +18,20 @@
 // Constants live in rest.ts and food.ts.
 
 import { EAT_TICKS, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
+import { logEvent } from './events';
 import { furnitureAt, type Furniture } from './furniture';
+import { AWAKE_HEAL_EVERY, HEALTH_MAX, SLEEP_HEAL, STARVE_DAMAGE } from './health';
 import { getItem, removeItem, type Item } from './items';
 import { releaseSurvivor } from './jobs';
 import { canReach, findPathToAny } from './pathfinding';
-import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX, TIRED } from './rest';
+import { BED_REGEN, FLOOR_REGEN, NIGHT_TIRED, REST_DRAIN, REST_MAX, TIRED } from './rest';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
+import { isNight } from './time';
 import { walk, type Survivor } from './survivors';
 
-export function isTired(s: Survivor): boolean {
-  return s.rest < TIRED;
+export function isTired(state: SimState, s: Survivor): boolean {
+  return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
 }
 
 export function isHungry(s: Survivor): boolean {
@@ -65,7 +68,7 @@ export function reconcileNeeds(state: SimState): void {
  */
 export function interruptForNeeds(state: SimState, s: Survivor): void {
   if (!s.jobId || s.sleep || s.meal) return;
-  if (isTired(s)) {
+  if (isTired(state, s)) {
     releaseSurvivor(state, s, 'too tired to work');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
     if (nearestFreeFood(state, s)) releaseSurvivor(state, s, 'hungry');
@@ -147,6 +150,36 @@ export function updateSatiety(s: Survivor): void {
   s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
 }
 
+// --- Health -----------------------------------------------------------------
+
+/**
+ * Starving (satiety 0) costs health every tick; sleep heals, and so does
+ * being awake and fed, more slowly. Returns the cause if the survivor died
+ * this tick; the caller removes them (after the survivor loop, so the array
+ * isn't spliced mid-iteration).
+ */
+export function updateHealth(state: SimState, s: Survivor): string | null {
+  if (s.satiety === 0) {
+    s.health = Math.max(0, s.health - STARVE_DAMAGE);
+  } else if (s.health > 0 && s.sleep?.asleep) {
+    s.health = Math.min(HEALTH_MAX, s.health + SLEEP_HEAL);
+  } else if (s.health > 0 && !isHungry(s) && state.tick % AWAKE_HEAL_EVERY === 0) {
+    s.health = Math.min(HEALTH_MAX, s.health + 1);
+  }
+  if (s.health > 0) return null;
+  return s.satiety === 0 ? 'starvation' : 'injuries';
+}
+
+/** Removes a survivor, releasing everything they hold (job, carried item, bed, food). */
+export function killSurvivor(state: SimState, s: Survivor, cause: string): void {
+  if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
+  wake(state, s, cause);
+  cancelMeal(state, s, cause);
+  const i = state.survivors.indexOf(s);
+  if (i >= 0) state.survivors.splice(i, 1);
+  logEvent(state, `${s.name} died of ${cause}`);
+}
+
 // --- Sleep ------------------------------------------------------------------
 
 /**
@@ -155,7 +188,7 @@ export function updateSatiety(s: Survivor): void {
  */
 export function updateSleep(state: SimState, s: Survivor): boolean {
   if (!s.sleep) {
-    if (!isTired(s)) return false;
+    if (!isTired(state, s)) return false;
     startSleep(state, s);
     return true;
   }

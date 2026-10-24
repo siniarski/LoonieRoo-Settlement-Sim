@@ -10,6 +10,7 @@ import { spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
 import { SATIETY_MAX } from './food';
+import { HEALTH_MAX } from './health';
 import { cancelMeal, wake } from './needs';
 import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
@@ -37,6 +38,7 @@ export type Command =
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
   | { type: 'setRest'; survivorId: string; rest: number }
   | { type: 'setSatiety'; survivorId: string; satiety: number }
+  | { type: 'setHealth'; survivorId: string; health: number }
   // Debug/sandbox: drop a food item on (or near) a tile.
   | { type: 'spawnFood'; x: number; y: number };
 
@@ -54,6 +56,7 @@ function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
   if (command.type === 'setRest') return setNeed(state, command.survivorId, 'rest', command.rest, REST_MAX);
   if (command.type === 'setSatiety') return setNeed(state, command.survivorId, 'satiety', command.satiety, SATIETY_MAX);
+  if (command.type === 'setHealth') return setNeed(state, command.survivorId, 'health', command.health, HEALTH_MAX);
   const { x, y } = command;
   if (!inBounds(state.grid, x, y)) return reject(`(${x}, ${y}) is out of bounds`);
   switch (command.type) {
@@ -191,7 +194,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   return changed();
 }
 
-function setNeed(state: SimState, id: string, need: 'rest' | 'satiety', value: unknown, max: number): CommandResult {
+function setNeed(state: SimState, id: string, need: 'rest' | 'satiety' | 'health', value: unknown, max: number): CommandResult {
   const survivor = getSurvivor(state, id);
   if (!survivor) return reject(`no survivor ${id}`);
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > max) {

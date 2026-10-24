@@ -4,6 +4,7 @@
 
 import { getTile, isWalkable } from './grid';
 import { SATIETY_MAX } from './food';
+import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
 import type { SimState } from './state';
@@ -84,6 +85,8 @@ export function checkInvariants(state: SimState): string[] {
   for (const s of state.survivors) {
     if (s.rest < 0 || s.rest > REST_MAX || !Number.isInteger(s.rest)) problems.push(`${s.name} has rest ${s.rest}`);
     if (s.satiety < 0 || s.satiety > SATIETY_MAX || !Number.isInteger(s.satiety)) problems.push(`${s.name} has satiety ${s.satiety}`);
+    // Between ticks every living survivor has health; at 0 they are removed within the tick.
+    if (s.health <= 0 || s.health > HEALTH_MAX || !Number.isInteger(s.health)) problems.push(`${s.name} has health ${s.health}`);
     if (s.meal) {
       const food = items.get(s.meal.itemId);
       if (!food || food.kind !== 'food') problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);

@@ -5,6 +5,8 @@
 export const REST_MAX = 2000;
 /** Below this a survivor stops working and goes to sleep. */
 export const TIRED = 500;
+/** At night survivors turn in much earlier (below 75%), so sleep follows the clock. */
+export const NIGHT_TIRED = 1500;
 /** Rest lost per tick while awake (2000 → 500 takes 1500 ticks, 2.5 min at 1x). */
 export const REST_DRAIN = 1;
 /** Rest gained per tick asleep in a bed / on the floor. */

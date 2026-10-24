@@ -3,6 +3,7 @@
 
 import type { Command } from './commands';
 import type { Blueprint } from './designations';
+import type { GameEvent } from './events';
 import type { Furniture } from './furniture';
 import { createGrid, type Grid } from './grid';
 import type { Item } from './items';
@@ -15,7 +16,7 @@ import type { Survivor } from './survivors';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -43,6 +44,8 @@ export interface SimState {
   nextId: number;
   /** Every command that changed state, in order. seed + initial state + this = replay. */
   commandLog: LoggedCommand[];
+  /** Notable happenings (deaths, ...), newest last, capped. See events.ts. */
+  events: GameEvent[];
 }
 
 export interface NewStateOptions {
@@ -66,6 +69,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     jobs: [],
     nextId: 1,
     commandLog: [],
+    events: [],
   };
 }
 

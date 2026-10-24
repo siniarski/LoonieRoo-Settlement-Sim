@@ -5,6 +5,8 @@ import type { Furniture } from '../sim/furniture';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
+import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
+import { darkness } from '../sim/time';
 import type { ItemKind } from '../sim/items';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
@@ -42,6 +44,8 @@ const COLOURS = {
   rest: '#7fb2ff',
   satiety: '#ffb35c',
   needLow: '#ff6a5c',
+  health: '#7ee08a',
+  night: '#0a1030',
   foodCan: '#b9c2c9',
   foodLabel: '#d9534f',
   foodRim: '#6f7880',
@@ -77,6 +81,9 @@ const COLOURS = {
 };
 
 const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage' };
+
+/** How dark full night gets (overlay opacity). */
+const NIGHT_MAX_ALPHA = 0.55;
 
 /** Below this tile size, grid lines are just noise. */
 const MIN_GRID_LINE_PX = 10;
@@ -136,6 +143,15 @@ export function draw(
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
   for (const item of state.items) {
     if (item.pos) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
+  }
+
+  // Night falls over the world, but not over survivors, previews, or labels, so play stays readable.
+  const dark = darkness(state.tick);
+  if (dark > 0) {
+    ctx.fillStyle = COLOURS.night;
+    ctx.globalAlpha = dark * NIGHT_MAX_ALPHA;
+    ctx.fillRect(0, 0, viewport.width, viewport.height);
+    ctx.globalAlpha = 1;
   }
 
   if (options.areaDrag && options.tool) drawAreaBox(ctx, camera, viewport, options.areaDrag, COLOURS.tools[options.tool]);
@@ -422,6 +438,9 @@ function drawSurvivor(
   // Need bars under the survivor once they matter: rest (blue) below half or
   // while sleeping, food (orange) below half or while eating. Red when urgent.
   const bars: { value: number; max: number; colour: string }[] = [];
+  if (s.health < HEALTH_MAX) {
+    bars.push({ value: s.health, max: HEALTH_MAX, colour: s.health < HEALTH_LOW ? COLOURS.needLow : COLOURS.health });
+  }
   if (asleep || s.rest < REST_MAX / 2) {
     bars.push({ value: s.rest, max: REST_MAX, colour: s.rest < TIRED ? COLOURS.needLow : COLOURS.rest });
   }
