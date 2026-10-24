@@ -1,18 +1,21 @@
 // Designations -> jobs -> workers.
 //
 // The job queue is derived from the world: reconcileJobs (start of every
-// tick) drops jobs whose target is gone and creates missing ones, one per
-// blueprint (haul while it needs material, then build) and one per dirty
-// tile (clean). Survivors reserve a job when they claim it, so two survivors
+// tick) drops jobs whose target is gone and creates missing ones: one per
+// blueprint (haul while it needs material, then build), one per indoor dirty
+// tile (clean), one per loose item outside storage (haul to storage), and
+// one per marked crate with loot left (scavenge). Survivors reserve a job when they claim it, so two survivors
 // never share one. Every way a job can go wrong ends the same way:
 // releaseSurvivor() frees the reservation, drops anything carried, and the
 // survivor goes back to looking for work. Nobody gets stuck.
 
 import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
+import { getFurniture } from './furniture';
 import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
-import { canHoldItem, dropItem, getItem, removeItem, type Item } from './items';
+import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item } from './items';
 import { JOB_TYPES, type JobType } from './jobTypes';
 import { canReach, findPathToAny } from './pathfinding';
+import { random } from './rng';
 import { completeStorageRooms, getRoomMap, isIndoors, labelAt, reconcileRoomDesignations } from './rooms';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
@@ -32,15 +35,21 @@ export interface Job {
   y: number;
   blueprintId: string | null;
   itemId: string | null;
+  /** Scavenge only: the crate being searched. */
+  furnitureId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
-  /** Clean only: ticks of scrubbing done. */
+  /** Clean and scavenge: ticks of work done. */
   progress: number;
   reservedBy: string | null;
 }
 
 /** Ticks to clean one tile. */
 export const CLEAN_WORK = 15;
+/** Ticks to search a crate once; each search yields one find. */
+export const SCAVENGE_WORK = 40;
+/** Chance a find is food rather than wood (rolled with the sim RNG). */
+export const SCAVENGE_FOOD_CHANCE = 0.6;
 /** How many nearest candidates a survivor checks per job type before giving up on that type. */
 const MAX_CANDIDATES = 8;
 /** An idle survivor with nothing doable looks again after this many ticks. */
@@ -88,6 +97,14 @@ export function reconcileJobs(state: SimState): void {
       addJob(state, 'haul', item.pos.x, item.pos.y, null, item.id);
     }
   }
+
+  // Marked crates with loot left get one scavenge job each.
+  const searching = new Set(state.jobs.filter((j) => j.type === 'scavenge').map((j) => j.furnitureId));
+  for (const f of state.furniture) {
+    if (f.kind === 'crate' && f.scavenge && f.loot > 0 && !searching.has(f.id)) {
+      addJob(state, 'scavenge', f.x, f.y, null, null, f.id);
+    }
+  }
 }
 
 export function isStoreJob(job: Job): boolean {
@@ -103,6 +120,12 @@ function invalidReason(state: SimState, job: Job, storage: Set<number>): string 
     case 'clean':
       if (!isDirty(state.grid, job.x, job.y)) return 'tile already clean';
       return isIndoors(state, job.x, job.y) ? null : 'tile is no longer indoors';
+    case 'scavenge': {
+      const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+      if (!crate) return 'crate gone';
+      if (!crate.scavenge) return 'no longer marked for scavenging';
+      return crate.loot > 0 ? null : 'crate is empty';
+    }
     case 'build':
     case 'haul': {
       if (isStoreJob(job)) return storeInvalidReason(state, job, storage);
@@ -140,6 +163,7 @@ function addJob(
   y: number,
   blueprintId: string | null,
   itemId: string | null,
+  furnitureId: string | null = null,
 ): Job {
   const job: Job = {
     id: `j${state.nextId++}`,
@@ -148,6 +172,7 @@ function addJob(
     y,
     blueprintId,
     itemId,
+    furnitureId,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -209,7 +234,23 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workBuild(state, s, job);
     case 'haul':
       return workHaul(state, s, job);
+    case 'scavenge':
+      return workScavenge(state, s, job);
   }
+}
+
+/** Search a crate from next to it; each completed search drops one find by the survivor. */
+function workScavenge(state: SimState, s: Survivor, job: Job): void {
+  const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+  if (!crate || crate.loot <= 0) return releaseSurvivor(state, s, 'crate is empty');
+  if (manhattan(s.pos, crate) !== 1) return goTo(state, s, job, neighbours4(state.grid, crate.x, crate.y));
+  job.progress += 1;
+  if (job.progress < SCAVENGE_WORK) return;
+  const kind = random(state) < SCAVENGE_FOOD_CHANCE ? 'food' : 'wood';
+  spawnItem(state, kind, s.pos.x, s.pos.y);
+  crate.loot -= 1;
+  if (crate.loot === 0) crate.scavenge = false;
+  finishJob(state, s, job, `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
 }
 
 function workClean(state: SimState, s: Survivor, job: Job): void {
@@ -364,7 +405,9 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       if (!canReach(grid, v, s.pos, goal)) return null;
       return pathPlan(state, s.pos, goal, null);
     }
-    case 'build': {
+    case 'build':
+    case 'scavenge': {
+      // Both are done from a tile next to the target.
       const goals = neighbours4(grid, job.x, job.y);
       if (!canReach(grid, v, s.pos, goals)) return null;
       return pathPlan(state, s.pos, goals, null);

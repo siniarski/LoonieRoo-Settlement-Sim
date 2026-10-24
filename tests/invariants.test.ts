@@ -28,8 +28,8 @@ const MAP = [
   '.######.....###D##..++..',
   '..........s.........d...',
   '....,...........,.......',
-  '..www......ff...........',
-  '........................',
+  '..www......ff......c.c..',
+  '...................c....',
 ];
 
 /** Holding a goal while standing still is fine for one tick (the claim tick). */
@@ -60,6 +60,7 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 57) return { type: 'setRest', survivorId: survivor.id, rest: randomInt(driver, 0, 2001) };
   if (roll < 60) return { type: 'setSatiety', survivorId: survivor.id, satiety: randomInt(driver, 0, 3001) };
   if (roll < 62) return { type: 'spawnFood', x, y };
+  if (roll < 70) return { type: 'designateScavenge', x, y };
   return null;
 }
 
@@ -121,7 +122,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

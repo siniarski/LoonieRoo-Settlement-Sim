@@ -14,6 +14,8 @@ export interface ViewState {
   /** The armed build tool, or null: clicks select and right-clicks move. Only set while buildOpen. */
   tool: ToolId | null;
   selectedId: string | null;
+  /** While dragging an area tool: the box being dragged out (tile corners). */
+  areaDrag: { from: Point; to: Point } | null;
   hover: Point | null;
   speed: Speed;
   paused: boolean;

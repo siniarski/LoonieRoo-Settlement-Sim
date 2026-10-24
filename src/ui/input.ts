@@ -5,7 +5,8 @@
 //   Right click    move the selected survivor there
 // Build mode (B opens the build bar):
 //   1-9            arm a tool from the open category; Tab/E next category, Shift+Tab/Q previous
-//   Left drag      paint with the armed tool (designations for survivors to work on)
+//   Left drag      paint with the armed tool (designations for survivors to work on);
+//                  area tools (Scavenge) drag out a box instead, applied on release
 //   Shift + drag   wall/door/bed/remove happen instantly (sandbox/debug)
 //   Right click    put the tool down
 //   Esc            put the tool down, then close build mode, then deselect
@@ -17,7 +18,7 @@ import { centredOn, panByScreen, screenToTile, zoomAt, type Viewport } from '../
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 import { disarm, handleBuildKey } from './buildMode';
-import { getTool, tilesOnLine } from './tools';
+import { getTool, tilesInBox, tilesOnLine } from './tools';
 import type { ViewState } from './view';
 
 /** Screen pixels per second for keyboard panning. */
@@ -78,6 +79,10 @@ export function attachInput(ctx: InputContext): Input {
   };
 
   const onLeftDown = (tile: Point, shift: boolean) => {
+    if (view.tool && getTool(view.tool).area) {
+      view.areaDrag = { from: tile, to: tile };
+      return;
+    }
     if (view.tool) {
       paintInstant = shift;
       apply(tile);
@@ -119,6 +124,7 @@ export function attachInput(ctx: InputContext): Input {
     const p = screenPoint(e);
     const tile = tileAt(p);
     view.hover = tile;
+    if (view.areaDrag) view.areaDrag.to = tile;
     if (painting && (tile.x !== painting.x || tile.y !== painting.y)) {
       // Skip the first point: it was painted on the previous event.
       tilesOnLine(painting, tile).slice(1).forEach(apply);
@@ -135,6 +141,11 @@ export function attachInput(ctx: InputContext): Input {
   const onPointerUp = (e: PointerEvent) => {
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     if (e.button === 2 && rightPress && rightPress.travelled < CLICK_SLOP_PX) onRightClick(tileAt(rightPress.start));
+    if (e.button === 0 && view.areaDrag) {
+      const { from, to } = view.areaDrag;
+      view.areaDrag = null;
+      tilesInBox(from, to).forEach(apply);
+    }
     painting = null;
     panning = null;
     rightPress = null;

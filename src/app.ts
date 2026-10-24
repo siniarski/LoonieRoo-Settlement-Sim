@@ -44,6 +44,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     buildCategory: 'structure',
     tool: null,
     selectedId: null,
+    areaDrag: null,
     hover: null,
     speed: 1,
     paused: false,
@@ -118,6 +119,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
         alpha: Math.min(1, accumulatorMs / MS_PER_TICK),
         selectedId: view.selectedId,
         showDebug: view.showDebug,
+        areaDrag: view.areaDrag,
       });
       hud.update(handle.state, fps);
     } catch (err) {

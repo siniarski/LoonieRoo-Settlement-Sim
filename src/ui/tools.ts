@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'bed' | 'housing' | 'storage' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'bed' | 'housing' | 'storage' | 'scavenge' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -33,6 +33,8 @@ export interface Tool {
   category: CategoryId;
   /** Painting tools apply on every tile a drag crosses; others only on click. */
   paints: boolean;
+  /** Area tools drag out a box instead, applied to every tile in it on release. */
+  area?: true;
   /** Whether Shift (instant) does anything for this tool. */
   hasInstant: boolean;
   command(x: number, y: number, ctx: ToolContext): Command;
@@ -80,6 +82,15 @@ export const TOOLS: readonly Tool[] = [
     command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'storage' }),
   },
   {
+    id: 'scavenge',
+    label: 'Scavenge',
+    category: 'orders',
+    paints: false,
+    area: true,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateScavenge', x, y }),
+  },
+  {
     id: 'remove',
     label: 'Remove',
     category: 'orders',
@@ -113,6 +124,15 @@ export function isCategoryId(id: unknown): id is CategoryId {
 
 export function toolsIn(category: CategoryId): Tool[] {
   return TOOLS.filter((t) => t.category === category);
+}
+
+/** Every tile in the box spanned by two corners, row by row (the order commands are applied). */
+export function tilesInBox(a: Point, b: Point): Point[] {
+  const tiles: Point[] = [];
+  for (let y = Math.min(a.y, b.y); y <= Math.max(a.y, b.y); y++) {
+    for (let x = Math.min(a.x, b.x); x <= Math.max(a.x, b.x); x++) tiles.push({ x, y });
+  }
+  return tiles;
 }
 
 /** Number keys pick tools within the open category: '1' is the first. */

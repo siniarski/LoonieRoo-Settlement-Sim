@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NO_JOBS } from '../src/sim/jobTypes';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { getTile, isDirty } from '../src/sim/grid';
@@ -50,7 +51,7 @@ describe('build jobs', () => {
 
   it('evicts a survivor standing on the tile when the wall completes', () => {
     const state = setup(['s.w.s.'], { clean: 0 });
-    state.survivors[1]!.priorities = { build: 0, haul: 0, clean: 0 }; // just stands there
+    state.survivors[1]!.priorities = { ...NO_JOBS }; // just stands there
     applyCommand(state, { type: 'designateBuild', x: 4, y: 0, structure: 'wall' });
     runUntil(state, (s) => getTile(s.grid, 4, 0) === 'wall');
     expect(state.survivors[1]!.pos).not.toEqual({ x: 4, y: 0 });
@@ -94,7 +95,7 @@ describe('job selection', () => {
   });
 
   it('picks the highest-priority job type first', () => {
-    const state = setup(inRoom('s,.w..'), { build: 3, haul: 3, clean: 1 });
+    const state = setup(inRoom('s,.w..'), { build: 3, haul: 3, scavenge: 3, clean: 1 });
     applyCommand(state, { type: 'designateBuild', x: 7, y: 2, structure: 'wall' });
     tick(state);
     expect(state.survivors[0]!.note).toMatch(/^took clean job/);

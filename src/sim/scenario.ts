@@ -38,6 +38,7 @@ export const ENTITY_CHARS = {
   food: 'f',
   dirt: ',',
   bed: 'b',
+  crate: 'c',
   wallBlueprint: '+',
   doorBlueprint: 'd',
   bedBlueprint: 'B',
@@ -71,6 +72,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.bed:
       addFurniture(state, 'bed', x, y);
+      return true;
+    case ENTITY_CHARS.crate:
+      addFurniture(state, 'crate', x, y);
       return true;
     case ENTITY_CHARS.bedBlueprint:
       addBlueprint(state, x, y, 'bed');

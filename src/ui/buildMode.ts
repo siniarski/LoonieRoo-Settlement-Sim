@@ -4,7 +4,7 @@
 import { stepCategory, toolForKey, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
 
-type BuildView = Pick<ViewState, 'buildOpen' | 'buildCategory' | 'tool' | 'selectedId'>;
+type BuildView = Pick<ViewState, 'buildOpen' | 'buildCategory' | 'tool' | 'selectedId'> & Partial<Pick<ViewState, 'areaDrag'>>;
 
 export function openBuild(view: BuildView): void {
   view.buildOpen = true;
@@ -13,7 +13,7 @@ export function openBuild(view: BuildView): void {
 /** Closing build mode also drops the armed tool, back to select mode. */
 export function closeBuild(view: BuildView): void {
   view.buildOpen = false;
-  view.tool = null;
+  disarm(view);
 }
 
 export function toggleBuild(view: BuildView): void {
@@ -34,9 +34,10 @@ export function chooseTool(view: BuildView, tool: ToolId, category: CategoryId):
   view.tool = view.tool === tool ? null : tool;
 }
 
-/** Right-click or Escape with a tool armed: put the tool down, stay in build mode. */
+/** Right-click or Escape with a tool armed: put the tool down (abandoning any box being dragged), stay in build mode. */
 export function disarm(view: BuildView): void {
   view.tool = null;
+  if (view.areaDrag) view.areaDrag = null;
 }
 
 /**

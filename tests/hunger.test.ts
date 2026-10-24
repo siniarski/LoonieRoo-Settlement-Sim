@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NO_JOBS } from '../src/sim/jobTypes';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { EAT_TICKS, HUNGRY, MEAL_VALUE, SATIETY_MAX, initialSatiety } from '../src/sim/food';
@@ -21,7 +22,7 @@ function runUntil(state: SimState, done: (s: SimState) => boolean, max = 1500): 
 
 function setup(map: string[]) {
   const state = loadScenario({ seed: 1, map });
-  for (const s of state.survivors) s.priorities = { build: 0, haul: 0, clean: 0 };
+  for (const s of state.survivors) s.priorities = { ...NO_JOBS };
   return state;
 }
 

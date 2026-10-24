@@ -5,7 +5,7 @@ import type { Priority } from '../src/sim/jobTypes';
 import { createState } from '../src/sim/state';
 import { handleBuildKey } from '../src/ui/buildMode';
 import { cyclePriority } from '../src/ui/hud';
-import { CATEGORIES, TOOLS, getTool, stepCategory, tilesOnLine, toolForKey, toolsIn } from '../src/ui/tools';
+import { CATEGORIES, TOOLS, getTool, stepCategory, tilesInBox, tilesOnLine, toolForKey, toolsIn } from '../src/ui/tools';
 import type { ViewState } from '../src/ui/view';
 
 const designate = { instant: false };
@@ -50,8 +50,23 @@ describe('tools', () => {
     expect(toolForKey('structure', '1')?.id).toBe('wall');
     expect(toolForKey('structure', '2')?.id).toBe('door');
     expect(toolForKey('structure', '3')).toBeUndefined();
-    expect(toolForKey('orders', '2')?.id).toBe('cancel');
+    expect(toolForKey('orders', '1')?.id).toBe('scavenge');
+    expect(toolForKey('orders', '3')?.id).toBe('cancel');
     expect(toolForKey('rooms', 'x')).toBeUndefined();
+  });
+
+  it('area tools cover every tile in the dragged box, whichever way it was dragged', () => {
+    expect(getTool('scavenge').area).toBe(true);
+    const box = tilesInBox({ x: 3, y: 2 }, { x: 1, y: 3 });
+    expect(box).toEqual([
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 1, y: 3 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
+    ]);
+    expect(tilesInBox({ x: 5, y: 5 }, { x: 5, y: 5 })).toEqual([{ x: 5, y: 5 }]);
   });
 
   it('categories wrap in both directions', () => {

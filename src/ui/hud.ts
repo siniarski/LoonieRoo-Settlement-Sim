@@ -22,7 +22,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { build: 'Build', haul: 'Haul', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 
 /** Click cycles 1 → 2 → 3 → 4 → off → 1; right-click goes the other way. */
@@ -127,7 +127,7 @@ function statusText(state: SimState, view: ViewState): string {
   return [
     mode,
     selected ? `${selected.name} selected (right-click to move)` : 'nobody selected',
-    hover && tile ? `(${hover.x}, ${hover.y}) ${tile}` : '—',
+    hover && tile ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}` : '—',
     `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
@@ -135,7 +135,22 @@ function statusText(state: SimState, view: ViewState): string {
   ].join('  ·  ');
 }
 
+/** " · crate (3 left, marked)" etc. for the hovered tile's furniture, or ''. */
+function furnitureText(state: SimState, p: Point): string {
+  const f = state.furniture.find((x) => x.x === p.x && x.y === p.y);
+  if (!f) return '';
+  if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
+  return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
+}
+
 // --- Build bar --------------------------------------------------------------
+
+/** Tools whose action isn't obvious from "click or drag to place". */
+const TOOL_HINTS: Partial<Record<ToolId, string>> = {
+  scavenge: 'Drag a box over a ruin to mark its crates',
+  remove: 'Drag over walls, doors, or furniture to take down',
+  cancel: 'Drag to cancel plans, unmark crates, or clear room purposes',
+};
 
 function createBuildBar(view: ViewState) {
   const root = el('div', 'hud-build');
@@ -178,7 +193,7 @@ function createBuildBar(view: ViewState) {
       toolButtons.forEach(({ id, button }) => button.classList.toggle('active', id === view.tool));
       const tool = view.tool ? getTool(view.tool) : null;
       const text = tool
-        ? `${tool.paints ? 'Click or drag to place' : 'Click inside a room'}${tool.hasInstant ? ' · Shift: instant' : ''} · Right-click: put down · Esc`
+        ? `${TOOL_HINTS[tool.id] ?? (tool.paints ? 'Click or drag to place' : 'Click inside a room')}${tool.hasInstant ? ' · Shift: instant' : ''} · Right-click: put down · Esc`
         : 'Number keys: pick a tool · Tab / Q E: category · Esc or B: close';
       if (text !== lastHint) hint.textContent = lastHint = text;
     },
@@ -320,7 +335,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
     `    rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
-    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} c${p.clean}`,
+    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,
   ];

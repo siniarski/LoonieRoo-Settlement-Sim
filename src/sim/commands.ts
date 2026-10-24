@@ -25,8 +25,10 @@ export type Command =
   // Designations: become jobs for survivors.
   | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' }
   | { type: 'designateRemove'; x: number; y: number }
-  /** Cancels a blueprint on the tile, or else clears the purpose of the room the tile is in. */
+  /** Cancels a blueprint on the tile, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
+  /** Marks the crate on this tile (if it has loot left) for scavenging. Paint it over an area. */
+  | { type: 'designateScavenge'; x: number; y: number }
   | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
   // Survivors.
   | { type: 'spawnSurvivor'; x: number; y: number }
@@ -79,6 +81,12 @@ function execute(state: SimState, command: Command): CommandResult {
       return designateRemove(state, x, y);
     case 'cancelDesignation':
       return cancelDesignation(state, x, y);
+    case 'designateScavenge': {
+      const crate = furnitureAt(state, x, y);
+      if (crate?.kind !== 'crate' || crate.loot === 0 || crate.scavenge) return unchanged();
+      crate.scavenge = true;
+      return changed();
+    }
     case 'designateRoom':
       return designateRoom(state, x, y, command.purpose);
     case 'spawnSurvivor':
@@ -137,6 +145,12 @@ function cancelDesignation(state: SimState, x: number, y: number): CommandResult
   const bp = blueprintAt(state, x, y);
   if (bp) {
     cancelBlueprint(state, bp);
+    return changed();
+  }
+  const crate = furnitureAt(state, x, y);
+  if (crate?.kind === 'crate') {
+    if (!crate.scavenge) return unchanged();
+    crate.scavenge = false;
     return changed();
   }
   const room = roomAt(state, x, y);

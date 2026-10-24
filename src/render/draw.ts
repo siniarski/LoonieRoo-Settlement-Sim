@@ -1,6 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import type { Blueprint, BuildTarget } from '../sim/designations';
+import type { Furniture } from '../sim/furniture';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
@@ -29,6 +30,7 @@ const COLOURS = {
     door: '#ffc27a',
     remove: '#ff7a7a',
     cancel: '#c9c9c9',
+    scavenge: '#ffd166',
     bed: '#c7a6ff',
     housing: '#6ea8ff',
     storage: '#e6be6e',
@@ -59,6 +61,11 @@ const COLOURS = {
   blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
+  crate: '#7a5a35',
+  crateSlat: '#5a4026',
+  crateEmpty: '#4a4038',
+  crateMarked: '#ffd166',
+  lootPip: '#ffd166',
   bedFrame: '#5b4a7a',
   bedSheet: '#9c8cc4',
   bedPillow: '#e9e3f5',
@@ -85,6 +92,8 @@ export interface DrawOptions {
   selectedId: string | null;
   /** Debug overlay: path previews for every survivor. */
   showDebug: boolean;
+  /** Box being dragged out by an area tool, if any. */
+  areaDrag: { from: Point; to: Point } | null;
 }
 
 export function draw(
@@ -120,13 +129,17 @@ export function draw(
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
   if (options.showDebug) drawRoomOutlines(ctx, camera, viewport, state, range);
 
-  for (const f of state.furniture) drawBed(ctx, camera, viewport, f.x, f.y);
+  for (const f of state.furniture) {
+    if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
+    else drawCrate(ctx, camera, viewport, f, size);
+  }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
   for (const item of state.items) {
     if (item.pos) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
   }
 
-  if (options.hover) drawHover(ctx, camera, viewport, options.hover, options.tool, grid.width, grid.height);
+  if (options.areaDrag && options.tool) drawAreaBox(ctx, camera, viewport, options.areaDrag, COLOURS.tools[options.tool]);
+  else if (options.hover) drawHover(ctx, camera, viewport, options.hover, options.tool, grid.width, grid.height);
 
   for (const s of state.survivors) {
     if (options.showDebug) {
@@ -210,6 +223,41 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
     ctx.fillRect(p.x - w / 2, p.y, w, h);
     ctx.fillStyle = missing ? COLOURS.incomplete : COLOURS.roomLabel[d.purpose];
     ctx.fillText(text, p.x, p.y + 2);
+  }
+}
+
+/** A slatted crate: dull when searched out, yellow dashed outline when marked, pips for finds left. */
+function drawCrate(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {
+  const r = tileRect(camera, viewport, f.x, f.y);
+  const pad = Math.max(1, Math.round(r.w * 0.14));
+  const x = r.x + pad;
+  const y = r.y + pad;
+  const w = r.w - pad * 2;
+  const h = r.h - pad * 2;
+  ctx.fillStyle = f.loot > 0 ? COLOURS.crate : COLOURS.crateEmpty;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = COLOURS.crateSlat;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const t of [1 / 3, 2 / 3]) {
+    ctx.moveTo(x, Math.round(y + h * t) + 0.5);
+    ctx.lineTo(x + w, Math.round(y + h * t) + 0.5);
+  }
+  ctx.stroke();
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  if (f.scavenge) {
+    ctx.strokeStyle = COLOURS.crateMarked;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
+    ctx.setLineDash([]);
+  }
+  if (f.loot > 0 && size >= MIN_GRID_LINE_PX) {
+    const pip = Math.max(1.5, size * 0.06);
+    ctx.fillStyle = COLOURS.lootPip;
+    for (let i = 0; i < f.loot; i++) {
+      ctx.fillRect(x + 2 + i * (pip + 1.5), y + h - pip - 2, pip, pip);
+    }
   }
 }
 
@@ -499,6 +547,31 @@ function drawMapEdge(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Vi
   ctx.strokeStyle = COLOURS.mapEdge;
   ctx.lineWidth = 2;
   ctx.strokeRect(Math.round(a.x) - 1, Math.round(a.y) - 1, Math.round(b.x - a.x) + 2, Math.round(b.y - a.y) + 2);
+}
+
+/** The box an area tool is dragging out, covering whole tiles. */
+function drawAreaBox(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewport: Viewport,
+  box: { from: Point; to: Point },
+  colour: string,
+): void {
+  const a = tileRect(camera, viewport, Math.min(box.from.x, box.to.x), Math.min(box.from.y, box.to.y));
+  const b = tileRect(camera, viewport, Math.max(box.from.x, box.to.x), Math.max(box.from.y, box.to.y));
+  const x = a.x;
+  const y = a.y;
+  const w = b.x + b.w - a.x;
+  const h = b.y + b.h - a.y;
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = colour;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.setLineDash([]);
 }
 
 function drawHover(
