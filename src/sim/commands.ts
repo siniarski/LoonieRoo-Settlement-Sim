@@ -3,10 +3,12 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
-import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom } from './designations';
+import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable } from './designations';
+import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
+import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 
@@ -15,10 +17,13 @@ export type Command =
   | { type: 'placeWall'; x: number; y: number }
   | { type: 'placeDoor'; x: number; y: number }
   | { type: 'clearTile'; x: number; y: number }
+  | { type: 'placeBed'; x: number; y: number }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' }
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' }
   | { type: 'designateRemove'; x: number; y: number }
+  /** Cancels a blueprint on the tile, or else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
+  | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
   // Survivors.
   | { type: 'spawnSurvivor'; x: number; y: number }
   | { type: 'moveSurvivor'; survivorId: string; x: number; y: number }
@@ -44,18 +49,27 @@ function execute(state: SimState, command: Command): CommandResult {
       return setStructure(state, x, y, 'wall');
     case 'placeDoor':
       return setStructure(state, x, y, 'door');
-    case 'clearTile':
+    case 'clearTile': {
+      const f = furnitureAt(state, x, y);
+      if (f) {
+        removeFurniture(state, f);
+        return changed();
+      }
       return setStructure(state, x, y, 'floor');
+    }
+    case 'placeBed':
+      if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not floor`);
+      if (furnitureAt(state, x, y)) return unchanged();
+      addFurniture(state, 'bed', x, y);
+      return changed();
     case 'designateBuild':
       return designateBuild(state, x, y, command.structure);
     case 'designateRemove':
       return designateRemove(state, x, y);
-    case 'cancelDesignation': {
-      const bp = blueprintAt(state, x, y);
-      if (!bp) return unchanged();
-      cancelBlueprint(state, bp);
-      return changed();
-    }
+    case 'cancelDesignation':
+      return cancelDesignation(state, x, y);
+    case 'designateRoom':
+      return designateRoom(state, x, y, command.purpose);
     case 'spawnSurvivor':
       return spawnSurvivor(state, x, y);
     case 'moveSurvivor':
@@ -71,14 +85,21 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
   if (!setTile(state.grid, x, y, tile)) return unchanged();
   // Any wall/door/floor change can alter walkability or room boundaries.
   state.walkabilityVersion += 1;
+  if (tile !== 'floor') {
+    // Instant walls/doors flatten furniture (debug/sandbox behaviour, no refund).
+    const f = furnitureAt(state, x, y);
+    if (f) removeFurniture(state, f);
+  }
   if (tile === 'wall') evictFrom(state, { x, y });
   return changed();
 }
 
-function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door'): CommandResult {
+function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'bed'): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === structure) return unchanged();
-  if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not empty floor; remove what's there first`);
+  if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) {
+    return reject(`(${x}, ${y}) is not empty floor; remove what's there first`);
+  }
   if (existing) cancelBlueprint(state, existing);
   addBlueprint(state, x, y, structure);
   return changed();
@@ -88,13 +109,36 @@ function designateRemove(state: SimState, x: number, y: number): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === 'floor') return unchanged();
   if (existing) {
-    // Removing a planned wall/door just cancels the plan.
+    // Removing a planned build just cancels the plan.
     cancelBlueprint(state, existing);
     return changed();
   }
-  const tile = getTile(state.grid, x, y);
-  if (tile !== 'wall' && tile !== 'door') return unchanged();
+  if (!hasRemovable(state, x, y)) return unchanged();
   addBlueprint(state, x, y, 'floor');
+  return changed();
+}
+
+function cancelDesignation(state: SimState, x: number, y: number): CommandResult {
+  const bp = blueprintAt(state, x, y);
+  if (bp) {
+    cancelBlueprint(state, bp);
+    return changed();
+  }
+  const room = roomAt(state, x, y);
+  const d = room ? designationOf(state, room) : state.roomDesignations.find((r) => r.x === x && r.y === y);
+  if (!d) return unchanged();
+  state.roomDesignations.splice(state.roomDesignations.indexOf(d), 1);
+  return changed();
+}
+
+function designateRoom(state: SimState, x: number, y: number, purpose: unknown): CommandResult {
+  if (!ROOM_PURPOSES.includes(purpose as RoomPurpose)) return reject(`unknown room purpose ${String(purpose)}`);
+  const room = roomAt(state, x, y);
+  if (!room) return reject(`(${x}, ${y}) is not inside an enclosed room`);
+  const existing = designationOf(state, room);
+  if (existing?.purpose === purpose) return unchanged();
+  if (existing) existing.purpose = purpose as RoomPurpose;
+  else state.roomDesignations.push({ id: `r${state.nextId++}`, x, y, purpose: purpose as RoomPurpose });
   return changed();
 }
 

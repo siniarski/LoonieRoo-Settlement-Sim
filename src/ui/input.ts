@@ -7,6 +7,7 @@
 //   Wheel          zoom at the cursor
 //   WASD / arrows  pan
 //   1-5            wall, door, remove, move (selected survivor walks to the tile), cancel
+//   6-8            bed, housing room, storage room (click inside a room; Cancel clears it)
 //   P              toggle the priority panel
 //   Space          pause / resume
 //   `              toggle debug panel

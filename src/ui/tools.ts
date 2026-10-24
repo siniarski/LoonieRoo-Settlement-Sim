@@ -4,7 +4,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'remove' | 'move' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'remove' | 'move' | 'cancel' | 'bed' | 'housing' | 'storage';
 
 export interface ToolContext {
   selectedId: string | null;
@@ -53,6 +53,27 @@ export const TOOLS: readonly Tool[] = [
     command: (x, y, { selectedId }) => (selectedId ? { type: 'moveSurvivor', survivorId: selectedId, x, y } : null),
   },
   { id: 'cancel', label: 'Cancel', key: '5', paints: true, command: (x, y) => ({ type: 'cancelDesignation', x, y }) },
+  {
+    id: 'bed',
+    label: 'Bed',
+    key: '6',
+    paints: true,
+    command: (x, y, { instant }) => (instant ? { type: 'placeBed', x, y } : { type: 'designateBuild', x, y, structure: 'bed' }),
+  },
+  {
+    id: 'housing',
+    label: 'Housing',
+    key: '7',
+    paints: false,
+    command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'housing' }),
+  },
+  {
+    id: 'storage',
+    label: 'Storage',
+    key: '8',
+    paints: false,
+    command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'storage' }),
+  },
 ];
 
 export function getTool(id: ToolId): Tool {

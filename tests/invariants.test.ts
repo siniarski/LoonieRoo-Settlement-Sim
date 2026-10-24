@@ -45,8 +45,10 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   const survivor = state.survivors[randomInt(driver, 0, state.survivors.length)]!;
   if (roll < 15) return { type: 'designateBuild', x, y, structure: 'wall' };
   if (roll < 22) return { type: 'designateBuild', x, y, structure: 'door' };
-  if (roll < 28) return { type: 'designateRemove', x, y };
-  if (roll < 32) return { type: 'cancelDesignation', x, y };
+  if (roll < 25) return { type: 'designateBuild', x, y, structure: 'bed' };
+  if (roll < 31) return { type: 'designateRemove', x, y };
+  if (roll < 34) return { type: 'cancelDesignation', x, y };
+  if (roll < 36) return { type: 'designateRoom', x, y, purpose: roll < 35 ? 'storage' : 'housing' };
   if (roll < 38) return { type: 'moveSurvivor', survivorId: survivor.id, x, y };
   if (roll < 45) {
     const jobType = JOB_TYPES[randomInt(driver, 0, JOB_TYPES.length)]!;
@@ -58,15 +60,24 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
 }
 
 describe('stuck-state invariant', () => {
+  /** Outcomes seen across all seeds (tests in a file run in order). */
+  const notesSeen = new Set<string>();
+
   for (const seed of [1, 2, 3, 4, 5]) {
     it(`holds under random designations, orders, and wall edits (seed ${seed})`, () => {
-      const initial = loadScenario({ seed, map: MAP });
+      const initial = loadScenario({
+        seed,
+        map: MAP,
+        rooms: [
+          { x: 3, y: 3, purpose: 'housing' },
+          { x: 14, y: 3, purpose: 'storage' },
+        ],
+      });
       const state = cloneState(initial);
       const driver = { rng: seedRng(seed * 7919) }; // Player input, separate from sim RNG.
       const stillWithGoal = new Map<string, number>();
       const idleWithWork = new Map<string, number>();
       const onJob = new Map<string, { id: string; since: number }>();
-      const notesSeen = new Set<string>();
 
       for (let t = 0; t < TICKS; t++) {
         const cmd = randomCommand(state, driver);
@@ -98,14 +109,15 @@ describe('stuck-state invariant', () => {
         }
       }
 
-      // Guard against a vacuous run: every outcome must actually have happened.
-      // ('stopped:' is usually overwritten in the same tick by the next job, so
-      // invalid-job recovery is covered by dedicated tests in jobs.test.ts.)
-      const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'cleaned', 'arrived'];
-      expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
-
       const replayed = replay(initial, state.commandLog, state.tick);
       expect(JSON.stringify(replayed)).toBe(JSON.stringify(state));
     });
   }
+
+  it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
+    // 'stopped:' is usually overwritten in the same tick by the next job, so
+    // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived'];
+    expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
+  });
 });

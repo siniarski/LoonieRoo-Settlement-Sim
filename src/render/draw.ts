@@ -1,8 +1,9 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
-import type { Blueprint } from '../sim/designations';
+import type { Blueprint, BuildTarget } from '../sim/designations';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
+import { evaluateRoom, getRoomMap, labelAt, roomAt, type RoomPurpose } from '../sim/rooms';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
@@ -26,6 +27,9 @@ const COLOURS = {
     remove: '#ff7a7a',
     cancel: '#c9c9c9',
     move: '#8cf0a4',
+    bed: '#c7a6ff',
+    housing: '#6ea8ff',
+    storage: '#e6be6e',
   } satisfies Record<ToolId, string>,
   survivor: '#f2e6c9',
   survivorOutline: '#1a1d1b',
@@ -36,11 +40,26 @@ const COLOURS = {
   dirt: 'rgba(120, 92, 56, 0.85)',
   wood: '#b07a3f',
   woodGrain: '#7a4f24',
-  blueprint: { wall: 'rgba(110, 180, 255, 0.35)', door: 'rgba(255, 190, 110, 0.35)', floor: 'rgba(255, 110, 110, 0.0)' },
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', floor: '#ff6e6e' },
+  blueprint: {
+    wall: 'rgba(110, 180, 255, 0.35)',
+    door: 'rgba(255, 190, 110, 0.35)',
+    bed: 'rgba(199, 166, 255, 0.30)',
+    floor: 'rgba(255, 110, 110, 0.0)',
+  } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
+  bedFrame: '#5b4a7a',
+  bedSheet: '#9c8cc4',
+  bedPillow: '#e9e3f5',
+  room: { housing: 'rgba(110, 168, 255, 0.10)', storage: 'rgba(230, 190, 110, 0.10)' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a' } satisfies Record<RoomPurpose, string>,
+  incomplete: '#ff8a7a',
+  roomOutline: 'rgba(255, 255, 255, 0.35)',
+  labelBg: 'rgba(13, 15, 14, 0.75)',
 };
+
+const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage' };
 
 /** Below this tile size, grid lines are just noise. */
 const MIN_GRID_LINE_PX = 10;
@@ -78,6 +97,8 @@ export function draw(
     }
   }
 
+  drawRoomTints(ctx, camera, viewport, state, range);
+
   for (let y = range.y0; y <= range.y1; y++) {
     for (let x = range.x0; x <= range.x1; x++) {
       if (grid.dirt[y * grid.width + x] === 1) drawDirt(ctx, camera, viewport, x, y, size);
@@ -86,7 +107,9 @@ export function draw(
 
   if (size >= MIN_GRID_LINE_PX) drawGridLines(ctx, camera, viewport, range);
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
+  if (options.showDebug) drawRoomOutlines(ctx, camera, viewport, state, range);
 
+  for (const f of state.furniture) drawBed(ctx, camera, viewport, f.x, f.y);
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
   for (const item of state.items) if (item.pos) drawWood(ctx, camera, viewport, item.pos.x + 0.5, item.pos.y + 0.5, size);
 
@@ -100,6 +123,92 @@ export function draw(
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, s, options, size);
+  drawRoomLabels(ctx, camera, viewport, state, size);
+}
+
+type TileRange = { x0: number; y0: number; x1: number; y1: number };
+
+/** Soft tint over designated rooms, by purpose. */
+function drawRoomTints(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, state: SimState, range: TileRange): void {
+  if (state.roomDesignations.length === 0) return;
+  const { labels } = getRoomMap(state);
+  const purposeByLabel = new Map<number, RoomPurpose>();
+  for (const d of state.roomDesignations) {
+    const label = labelAt(state, d.x, d.y);
+    if (label >= 0) purposeByLabel.set(label, d.purpose);
+  }
+  const { width } = state.grid;
+  for (let y = range.y0; y <= range.y1; y++) {
+    for (let x = range.x0; x <= range.x1; x++) {
+      const purpose = purposeByLabel.get(labels[y * width + x]!);
+      if (!purpose) continue;
+      const r = tileRect(camera, viewport, x, y);
+      ctx.fillStyle = COLOURS.room[purpose];
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+  }
+}
+
+/** Debug: outline every room (designated or not) where it meets something else. */
+function drawRoomOutlines(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, state: SimState, range: TileRange): void {
+  const { labels } = getRoomMap(state);
+  const { width, height } = state.grid;
+  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= width || y >= height ? -99 : labels[y * width + x]!);
+  ctx.strokeStyle = COLOURS.roomOutline;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  for (let y = range.y0; y <= range.y1; y++) {
+    for (let x = range.x0; x <= range.x1; x++) {
+      const label = at(x, y);
+      if (label < 0) continue;
+      const r = tileRect(camera, viewport, x, y);
+      const inset = 2.5;
+      if (at(x, y - 1) !== label) (ctx.moveTo(r.x, r.y + inset), ctx.lineTo(r.x + r.w, r.y + inset));
+      if (at(x, y + 1) !== label) (ctx.moveTo(r.x, r.y + r.h - inset), ctx.lineTo(r.x + r.w, r.y + r.h - inset));
+      if (at(x - 1, y) !== label) (ctx.moveTo(r.x + inset, r.y), ctx.lineTo(r.x + inset, r.y + r.h));
+      if (at(x + 1, y) !== label) (ctx.moveTo(r.x + r.w - inset, r.y), ctx.lineTo(r.x + r.w - inset, r.y + r.h));
+    }
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/** Purpose and status, centred at the top of each designated room. Incomplete rooms name their first unmet requirement. */
+function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, state: SimState, size: number): void {
+  ctx.font = `${Math.round(Math.max(10, Math.min(13, size * 0.5)))}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (const d of state.roomDesignations) {
+    const room = roomAt(state, d.x, d.y);
+    const status = evaluateRoom(state, room, d.purpose);
+    const missing = status.requirements.find((r) => !r.met);
+    const detail = missing
+      ? `⚠ needs: ${missing.label}`
+      : d.purpose === 'housing'
+        ? `✓ ${status.beds} bed${status.beds === 1 ? '' : 's'}`
+        : `✓ ${status.size} tiles`;
+    const text = `${PURPOSE_NAMES[d.purpose]}  ${detail}`;
+    const anchor = room ? { x: (room.minX + room.maxX + 1) / 2, y: room.minY + 0.15 } : { x: d.x + 0.5, y: d.y + 0.15 };
+    const p = worldToScreen(camera, viewport, anchor.x, anchor.y);
+    const w = ctx.measureText(text).width + 8;
+    const h = Math.round(Math.max(10, Math.min(13, size * 0.5))) + 4;
+    ctx.fillStyle = COLOURS.labelBg;
+    ctx.fillRect(p.x - w / 2, p.y, w, h);
+    ctx.fillStyle = missing ? COLOURS.incomplete : COLOURS.roomLabel[d.purpose];
+    ctx.fillText(text, p.x, p.y + 2);
+  }
+}
+
+function drawBed(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number): void {
+  const r = tileRect(camera, viewport, x, y);
+  const pad = Math.max(1, Math.round(r.w * 0.12));
+  ctx.fillStyle = COLOURS.bedFrame;
+  ctx.fillRect(r.x + pad, r.y + pad, r.w - pad * 2, r.h - pad * 2);
+  ctx.fillStyle = COLOURS.bedSheet;
+  ctx.fillRect(r.x + pad + 1, r.y + pad + Math.round(r.h * 0.3), r.w - pad * 2 - 2, r.h - pad * 2 - Math.round(r.h * 0.3) - 1);
+  ctx.fillStyle = COLOURS.bedPillow;
+  ctx.fillRect(r.x + pad + 2, r.y + pad + 2, r.w - pad * 2 - 4, Math.max(2, Math.round(r.h * 0.2)));
 }
 
 function drawDirt(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, size: number): void {

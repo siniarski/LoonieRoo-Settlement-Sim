@@ -13,7 +13,9 @@
       .hud-button:hover { background: #2c332e; }
       .hud-button.active { background: #3d5a46; border-color: #6c9a78; }
       .hud-sep { width: 1px; align-self: stretch; background: #3a423c; margin: 0 4px; }
-      .hud-status { margin-left: 8px; color: #9aa39b; white-space: pre; }
+      .hud-info { position: absolute; left: 12px; top: 58px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+      .hud-status { padding: 4px 8px; color: #9aa39b; white-space: pre; background: rgba(20, 23, 21, 0.85); border-radius: 4px; }
+      .hud-room { margin: 0; padding: 6px 10px; background: rgba(20, 23, 21, 0.92); border: 1px solid #333a35; border-radius: 6px; line-height: 1.4; }
       .hud-priorities { position: absolute; left: 12px; bottom: 12px; padding: 6px 8px; background: rgba(20, 23, 21, 0.92); border: 1px solid #333a35; border-radius: 6px; pointer-events: auto; }
       .prio-table { border-collapse: collapse; }
       .prio-table th { font-weight: normal; color: #9aa39b; padding: 2px 6px; text-align: center; }
@@ -28,7 +30,7 @@
       .prio-cell.p3 { background: #e0cf8a; }
       .prio-cell.p4 { background: #e0a98a; }
       .prio-cell.p0 { background: #2a302c; color: #6c746d; }
-      .hud-debug { position: absolute; right: 12px; top: 64px; margin: 0; padding: 8px 10px; background: rgba(20, 23, 21, 0.9); border: 1px solid #333a35; border-radius: 6px; }
+      .hud-debug { position: absolute; right: 12px; top: 58px; max-height: calc(100vh - 80px); overflow: auto; margin: 0; padding: 8px 10px; background: rgba(20, 23, 21, 0.9); border: 1px solid #333a35; border-radius: 6px; }
     </style>
   </head>
   <body>

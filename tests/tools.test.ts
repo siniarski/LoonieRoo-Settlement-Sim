@@ -30,6 +30,13 @@ describe('tools', () => {
     expect(dumpText(state)).toBe('.x.');
   });
 
+  it('bed designates (or places instantly), housing/storage designate the room under the click', () => {
+    expect(getTool('bed').command(1, 2, designate)).toEqual({ type: 'designateBuild', x: 1, y: 2, structure: 'bed' });
+    expect(getTool('bed').command(1, 2, instant)).toEqual({ type: 'placeBed', x: 1, y: 2 });
+    expect(getTool('housing').command(1, 2, designate)).toEqual({ type: 'designateRoom', x: 1, y: 2, purpose: 'housing' });
+    expect(getTool('storage').paints).toBe(false);
+  });
+
   it('move needs a selected survivor', () => {
     const move = getTool('move');
     expect(move.paints).toBe(false);

@@ -6,6 +6,7 @@ import type { Point } from '../sim/grid';
 import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
+import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import { SPEEDS } from './loop';
@@ -62,15 +63,18 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   prioritiesButton.addEventListener('click', () => (view.showPriorities = !view.showPriorities));
   bar.append(prioritiesButton);
 
-  const status = el('span', 'hud-status');
-  bar.append(status);
+  const info = el('div', 'hud-info');
+  const status = el('div', 'hud-status');
+  const roomPanel = el('pre', 'hud-room');
+  info.append(status, roomPanel);
 
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
-  root.append(bar, priorities.root, debug);
+  root.append(bar, info, priorities.root, debug);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
+  let lastRoom = '';
   let lastDebug = '';
 
   return {
@@ -85,6 +89,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
       const text = statusText(state, view);
       if (text !== lastStatus) status.textContent = lastStatus = text;
+
+      const room = roomText(state, view.hover);
+      roomPanel.hidden = room === '';
+      if (room !== lastRoom) roomPanel.textContent = lastRoom = room;
 
       priorities.update(state);
 
@@ -114,6 +122,26 @@ function statusText(state: SimState, view: ViewState): string {
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
   ].join('  ·  ');
+}
+
+/** Requirements checklist for the room (or outdoor room designation) under the cursor. */
+function roomText(state: SimState, hover: Point | null): string {
+  if (!hover) return '';
+  const room = roomAt(state, hover.x, hover.y);
+  const designation = room
+    ? designationOf(state, room)
+    : state.roomDesignations.find((d) => d.x === hover.x && d.y === hover.y);
+  if (!room && !designation) return '';
+  const header = room
+    ? `Room · ${room.tiles.length} tiles · ${room.doors.length} door${room.doors.length === 1 ? '' : 's'}`
+    : 'Not a room (open to the outside)';
+  if (!designation) return `${header}\nno purpose · 7 Housing or 8 Storage to assign`;
+  const status = evaluateRoom(state, room, designation.purpose);
+  return [
+    header,
+    `${designation.purpose === 'housing' ? 'Housing' : 'Storage'} · ${status.complete ? 'complete' : 'INCOMPLETE'}`,
+    ...status.requirements.map((r) => ` ${r.met ? '✓' : '✗'} ${r.label}`),
+  ].join('\n');
 }
 
 // --- Priority panel ---------------------------------------------------------
@@ -201,6 +229,9 @@ function debugText(state: SimState, view: ViewState, fps: number): string {
     `camera         ${view.camera.x.toFixed(1)}, ${view.camera.y.toFixed(1)} @ ${view.camera.zoom.toFixed(2)}x`,
     `rng            ${state.rng}`,
     `invariants     ${problems.length === 0 ? 'ok' : `${problems.length} PROBLEM(S): ${problems[0]}`}`,
+    `rooms          ${getRoomMap(state).rooms.length} enclosed, ${state.roomDesignations
+      .map((d) => `${d.purpose}${designationStatus(state, d).complete ? '' : ' (incomplete)'}`)
+      .join(', ') || 'none designated'}`,
     '',
     ...state.survivors.flatMap((s) => survivorLines(state, s, s.id === view.selectedId)),
     '',

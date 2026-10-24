@@ -3,17 +3,19 @@
 
 import type { Command } from './commands';
 import type { Blueprint } from './designations';
+import type { Furniture } from './furniture';
 import { createGrid, type Grid } from './grid';
 import type { Item } from './items';
 import type { Job } from './jobs';
 import { seedRng } from './rng';
+import type { RoomDesignation } from './rooms';
 import type { Survivor } from './survivors';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -31,7 +33,10 @@ export interface SimState {
   walkabilityVersion: number;
   survivors: Survivor[];
   items: Item[];
+  furniture: Furniture[];
   blueprints: Blueprint[];
+  /** Player-assigned room purposes, anchored to a tile. Rooms themselves are derived (rooms.ts). */
+  roomDesignations: RoomDesignation[];
   /** The shared job queue. Derived from blueprints and dirt by reconcileJobs each tick. */
   jobs: Job[];
   /** Next numeric id for entities. Ids are strings like "s1", "i7", "b12", "j20". */
@@ -55,7 +60,9 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     walkabilityVersion: 0,
     survivors: [],
     items: [],
+    furniture: [],
     blueprints: [],
+    roomDesignations: [],
     jobs: [],
     nextId: 1,
     commandLog: [],

@@ -3,9 +3,11 @@
 // so a dumped map can be pasted straight back into a scenario.
 
 import { addBlueprint } from './designations';
+import { addFurniture } from './furniture';
 import { setDirty, setTile, type Tile } from './grid';
 import { spawnItem } from './items';
 import { replay } from './replay';
+import type { RoomPurpose } from './rooms';
 import { createState, type LoggedCommand, type SimState } from './state';
 import { addSurvivor } from './survivors';
 
@@ -14,6 +16,8 @@ export interface Scenario {
   seed: number;
   /** One string per row, top to bottom. All rows must be the same length. */
   map: string[];
+  /** Room purposes, anchored at a tile inside each room. */
+  rooms?: { x: number; y: number; purpose: RoomPurpose }[];
   commands?: LoggedCommand[];
 }
 
@@ -32,8 +36,10 @@ export const ENTITY_CHARS = {
   survivor: 's',
   wood: 'w',
   dirt: ',',
+  bed: 'b',
   wallBlueprint: '+',
   doorBlueprint: 'd',
+  bedBlueprint: 'B',
   removeBlueprint: 'x',
 } as const;
 
@@ -59,6 +65,12 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
     case ENTITY_CHARS.doorBlueprint:
       addBlueprint(state, x, y, 'door');
       return true;
+    case ENTITY_CHARS.bed:
+      addFurniture(state, 'bed', x, y);
+      return true;
+    case ENTITY_CHARS.bedBlueprint:
+      addBlueprint(state, x, y, 'bed');
+      return true;
     default:
       return false;
   }
@@ -82,6 +94,9 @@ export function loadScenario(scenario: Scenario): SimState {
       setTile(state.grid, x, y, tile);
     });
   });
+  for (const room of scenario.rooms ?? []) {
+    state.roomDesignations.push({ id: `r${state.nextId++}`, x: room.x, y: room.y, purpose: room.purpose });
+  }
   return state;
 }
 

@@ -57,17 +57,36 @@ describe('build jobs', () => {
   });
 });
 
+/** Wraps one row of floor in a walled room with a door, surrounded by outdoor floor. */
+function inRoom(row: string): string[] {
+  const w = row.length;
+  return [
+    '.'.repeat(w + 4),
+    `.${'#'.repeat(w + 2)}.`,
+    `.#${row}#.`,
+    `.#D${'#'.repeat(w)}.`,
+    '.'.repeat(w + 4),
+  ];
+}
+
 describe('clean jobs', () => {
-  it('cleans dirty tiles', () => {
+  it('cleans dirty tiles indoors', () => {
+    const state = setup(inRoom('s..,..'), { build: 0, haul: 0 });
+    runUntil(state, (s) => !isDirty(s.grid, 5, 2));
+    expect(state.survivors[0]!.note).toBe('cleaned (5, 2)');
+  });
+
+  it('ignores dirt outdoors', () => {
     const state = setup(['s..,..'], { build: 0, haul: 0 });
-    runUntil(state, (s) => !isDirty(s.grid, 3, 0));
-    expect(state.survivors[0]!.note).toBe('cleaned (3, 0)');
+    for (let i = 0; i < 50; i++) tick(state);
+    expect(isDirty(state.grid, 3, 0)).toBe(true);
+    expect(state.jobs).toEqual([]);
   });
 });
 
 describe('job selection', () => {
   it('two survivors never reserve the same job', () => {
-    const state = setup(['s....,....s']);
+    const state = setup(inRoom('s....,....s'));
     tick(state);
     const holders = state.survivors.filter((s) => s.jobId);
     expect(holders).toHaveLength(1);
@@ -75,34 +94,34 @@ describe('job selection', () => {
   });
 
   it('picks the highest-priority job type first', () => {
-    const state = setup(['s,.w...'], { build: 3, haul: 3, clean: 1 });
-    applyCommand(state, { type: 'designateBuild', x: 6, y: 0, structure: 'wall' });
+    const state = setup(inRoom('s,.w..'), { build: 3, haul: 3, clean: 1 });
+    applyCommand(state, { type: 'designateBuild', x: 7, y: 2, structure: 'wall' });
     tick(state);
     expect(state.survivors[0]!.note).toMatch(/^took clean job/);
   });
 
   it('breaks priority ties by job type order: build, haul, clean', () => {
-    const state = setup(['s,.w...']);
-    applyCommand(state, { type: 'designateBuild', x: 6, y: 0, structure: 'wall' });
+    const state = setup(inRoom('s,.w..'));
+    applyCommand(state, { type: 'designateBuild', x: 7, y: 2, structure: 'wall' });
     tick(state);
     // No build job yet (material missing), so haul beats clean.
     expect(state.survivors[0]!.note).toMatch(/^took haul job/);
   });
 
   it('never takes a job type set to off', () => {
-    const state = setup(['s.,.'], { clean: 0 });
+    const state = setup(inRoom('s.,.'), { clean: 0 });
     for (let i = 0; i < 50; i++) {
       tick(state);
       expect(state.survivors[0]!.jobId).toBeNull();
     }
-    expect(isDirty(state.grid, 2, 0)).toBe(true);
+    expect(isDirty(state.grid, 4, 2)).toBe(true);
     expect(explainIdle(state, state.survivors[0]!)).toBe('no open jobs of enabled types');
   });
 
   it('takes the nearest job of the chosen type', () => {
-    const state = setup(['.....,..s.,']);
+    const state = setup(inRoom('..,..s.,.'));
     tick(state);
-    expect(state.survivors[0]!.note).toBe('took clean job at (10, 0): priority 3, nearest of 2 open');
+    expect(state.survivors[0]!.note).toBe('took clean job at (9, 2): priority 3, nearest of 2 open');
   });
 
   it('explains why haul jobs are waiting', () => {

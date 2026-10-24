@@ -10,12 +10,13 @@ import { getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
 import { random } from './rng';
+import { isIndoors } from './rooms';
 import type { SimState } from './state';
 
 /** Ticks to cross one tile (4 ticks = 0.4s at 1x). */
 export const TICKS_PER_TILE = 4;
 
-/** Chance that stepping onto a floor tile leaves dirt on it. Uses the sim RNG. */
+/** Chance that stepping onto an indoor floor tile leaves dirt on it. Uses the sim RNG. */
 export const DIRT_CHANCE = 1 / 30;
 
 const NAMES = ['Ash', 'Bea', 'Cal', 'Dee', 'Eli', 'Fen', 'Gus', 'Hal', 'Ivy', 'Jo'];
@@ -137,8 +138,9 @@ export function updateMovement(state: SimState, s: Survivor): void {
 
 function trackDirt(state: SimState, p: Point): void {
   if (getTile(state.grid, p.x, p.y) !== 'floor') return;
-  // Always draw from the RNG, even on dirty tiles, so RNG use doesn't depend on dirt state.
-  if (random(state) < DIRT_CHANCE) setDirty(state.grid, p.x, p.y, true);
+  // Always draw from the RNG on floor steps, even outdoors or on dirty tiles,
+  // so RNG use doesn't depend on dirt or room state.
+  if (random(state) < DIRT_CHANCE && isIndoors(state, p.x, p.y)) setDirty(state.grid, p.x, p.y, true);
 }
 
 function stop(s: Survivor, note: string | null): void {

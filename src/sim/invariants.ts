@@ -3,6 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { getTile, isWalkable } from './grid';
+import { labelAt } from './rooms';
 import type { SimState } from './state';
 
 export function checkInvariants(state: SimState): string[] {
@@ -57,6 +58,31 @@ export function checkInvariants(state: SimState): string[] {
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
       if (job?.itemId !== item.id) problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job`);
     }
+  }
+
+  const destinations = new Set<string>();
+  for (const job of state.jobs) {
+    if (!job.dest || !job.reservedBy) continue;
+    const key = `${job.dest.x},${job.dest.y}`;
+    if (destinations.has(key)) problems.push(`two haulers headed for storage tile (${key})`);
+    destinations.add(key);
+  }
+
+  const furnitureTiles = new Set<string>();
+  for (const f of state.furniture) {
+    const key = `${f.x},${f.y}`;
+    if (furnitureTiles.has(key)) problems.push(`two pieces of furniture on (${key})`);
+    furnitureTiles.add(key);
+    if (getTile(grid, f.x, f.y) !== 'floor') problems.push(`${f.kind} ${f.id} on non-floor (${key})`);
+    if (occupied.has(key)) problems.push(`item on ${f.kind} at (${key})`);
+  }
+
+  const roomsClaimed = new Set<number>();
+  for (const d of state.roomDesignations) {
+    if (getTile(grid, d.x, d.y) !== 'floor') problems.push(`room designation ${d.id} anchored on non-floor`);
+    const label = labelAt(state, d.x, d.y);
+    if (label >= 0 && roomsClaimed.has(label)) problems.push(`room ${label} has two designations`);
+    roomsClaimed.add(label);
   }
 
   grid.dirt.forEach((d, i) => {
