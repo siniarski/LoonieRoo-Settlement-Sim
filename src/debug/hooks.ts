@@ -24,23 +24,20 @@ export interface GameHandle {
   state: SimState;
 }
 
-/** `onChange` runs after anything that alters state, so the view can redraw. */
-export function installGameHooks(handle: GameHandle, onChange: () => void): void {
+export interface GameHookOptions {
+  /** Runs after a scenario replaces the state, e.g. to recentre the camera. */
+  onLoad?: () => void;
+}
+
+export function installGameHooks(handle: GameHandle, options: GameHookOptions = {}): void {
   window.game = {
     getState: () => cloneState(handle.state),
-    step: (n = 1) => {
-      step(handle.state, n);
-      onChange();
-    },
+    step: (n = 1) => step(handle.state, n),
     load: (scenario) => {
       handle.state = loadScenario(scenario);
-      onChange();
+      options.onLoad?.();
     },
-    command: (cmd) => {
-      const result = applyCommand(handle.state, cmd);
-      onChange();
-      return result;
-    },
+    command: (cmd) => applyCommand(handle.state, cmd),
     dumpText: () => dumpText(handle.state),
   };
 }

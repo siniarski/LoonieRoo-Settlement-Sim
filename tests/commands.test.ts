@@ -51,6 +51,14 @@ describe('commands', () => {
     ]);
   });
 
+  it('does not log no-op commands', () => {
+    const state = fresh();
+    applyCommand(state, { type: 'placeWall', x: 0, y: 0 });
+    applyCommand(state, { type: 'placeWall', x: 0, y: 0 });
+    applyCommand(state, { type: 'clearTile', x: 1, y: 0 });
+    expect(state.commandLog).toHaveLength(1);
+  });
+
   it('logs a copy, so mutating the caller object does not rewrite history', () => {
     const state = fresh();
     const cmd = { type: 'placeWall' as const, x: 0, y: 0 };

@@ -10,6 +10,14 @@ describe('scenarios', () => {
     expect(dumpText(state)).toBe(twoRooms.map.join('\n'));
   });
 
+  it('loads and round-trips every bundled scenario file', () => {
+    const files = import.meta.glob<Scenario>('../src/scenarios/*.json', { import: 'default', eager: true });
+    expect(Object.keys(files).length).toBeGreaterThan(1);
+    for (const scenario of Object.values(files)) {
+      expect(dumpText(loadScenario(scenario))).toBe(scenario.map.join('\n'));
+    }
+  });
+
   it('reads tiles from the map legend', () => {
     const state = loadScenario({ seed: 0, map: ['.#', 'D.'] });
     expect(getTile(state.grid, 0, 0)).toBe('floor');

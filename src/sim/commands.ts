@@ -1,5 +1,7 @@
 // The only way to change the sim from outside (architecture rule 5).
-// Every accepted command is appended to state.commandLog for replays.
+// Every accepted command that changed state is appended to state.commandLog
+// for replays. No-ops (painting a wall over a wall while dragging) are not
+// logged, since replaying them would change nothing.
 
 import { inBounds, setTile, type Tile } from './grid';
 import type { SimState } from './state';
@@ -19,7 +21,7 @@ const TILE_FOR_COMMAND: Record<Command['type'], Tile> = {
 
 export function applyCommand(state: SimState, command: Command): CommandResult {
   const result = execute(state, command);
-  if (result.ok) {
+  if (result.ok && result.changed) {
     state.commandLog.push({ tick: state.tick, command: { ...command } });
   }
   return result;
