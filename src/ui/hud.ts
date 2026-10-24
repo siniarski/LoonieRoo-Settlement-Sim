@@ -1,6 +1,8 @@
 // Tool palette, speed controls, status line, and the debug panel (DOM).
 
+import type { Point } from '../sim/grid';
 import type { SimState } from '../sim/state';
+import type { Survivor } from '../sim/survivors';
 import { SPEEDS } from './loop';
 import { TOOLS } from './tools';
 import type { ViewState } from './view';
@@ -63,7 +65,8 @@ export function createHud(root: HTMLElement, view: ViewState): Hud {
         hover && hover.x >= 0 && hover.y >= 0 && hover.x < state.grid.width && hover.y < state.grid.height
           ? state.grid.tiles[hover.y * state.grid.width + hover.x]
           : undefined;
-      const text = `tick ${state.tick}  ·  ${hover && tile ? `(${hover.x}, ${hover.y}) ${tile}` : '—'}`;
+      const selected = state.survivors.find((s) => s.id === view.selectedId);
+      const text = `tick ${state.tick}  ·  ${hover && tile ? `(${hover.x}, ${hover.y}) ${tile}` : '—'}  ·  ${selected ? `selected ${selected.name}` : 'nobody selected'}`;
       if (text !== lastStatus) status.textContent = lastStatus = text;
 
       debug.hidden = !view.showDebug;
@@ -77,6 +80,8 @@ export function createHud(root: HTMLElement, view: ViewState): Hud {
           `commands       ${state.commandLog.length}`,
           `camera         ${view.camera.x.toFixed(1)}, ${view.camera.y.toFixed(1)} @ ${view.camera.zoom.toFixed(2)}x`,
           `rng            ${state.rng}`,
+          '',
+          ...state.survivors.flatMap((s) => survivorLines(s, state.walkabilityVersion, s.id === view.selectedId)),
         ].join('\n');
         if (lines !== lastDebug) debug.textContent = lastDebug = lines;
       }
@@ -85,6 +90,20 @@ export function createHud(root: HTMLElement, view: ViewState): Hud {
       root.innerHTML = '';
     },
   };
+}
+
+/** "Why is she just standing there?" in three lines. */
+function survivorLines(s: Survivor, walkabilityVersion: number, selected: boolean): string[] {
+  const at = (p: Point) => `(${p.x}, ${p.y})`;
+  const state = s.move ? `moving ${at(s.move.from)}→${at(s.move.to)} ${s.move.progress}/${s.move.duration}` : 'idle';
+  const remaining = s.path.length + (s.move ? 1 : 0);
+  const cache =
+    s.pathVersion === -1 ? 'no path' : s.pathVersion === walkabilityVersion ? `path v${s.pathVersion} fresh` : `path v${s.pathVersion} STALE`;
+  return [
+    `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${state}`,
+    `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
+    `    ${s.note ?? ''}`,
+  ];
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {

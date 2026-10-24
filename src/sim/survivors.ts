@@ -1,0 +1,119 @@
+// Survivors: tile-to-tile movement along cached A* paths.
+//
+// A survivor's `path` is a cache stamped with the walkabilityVersion it was
+// computed at. Paths are re-checked at every tile boundary, so a wall placed
+// mid-route causes a repath at the next step, never a walk through a wall.
+// If no path exists the survivor drops the goal and goes idle with a note
+// saying why (never stuck).
+
+import type { Point } from './grid';
+import { findPath } from './pathfinding';
+import type { SimState } from './state';
+
+/** Ticks to cross one tile (4 ticks = 0.4s at 1x). */
+export const TICKS_PER_TILE = 4;
+
+const NAMES = ['Ash', 'Bea', 'Cal', 'Dee', 'Eli', 'Fen', 'Gus', 'Hal', 'Ivy', 'Jo'];
+
+export interface Movement {
+  from: Point;
+  to: Point;
+  /** Ticks elapsed in this step, 0..duration. */
+  progress: number;
+  duration: number;
+}
+
+export interface Survivor {
+  id: string;
+  name: string;
+  /** The tile the survivor is on, or is leaving while `move` is set. */
+  pos: Point;
+  move: Movement | null;
+  goal: Point | null;
+  /** Remaining tiles to walk, excluding the current one. */
+  path: Point[];
+  /** walkabilityVersion the path was computed at; -1 forces a repath. */
+  pathVersion: number;
+  /** Last thing that happened, for the debug panel ("why is she just standing there?"). */
+  note: string | null;
+}
+
+export function addSurvivor(state: SimState, x: number, y: number): Survivor {
+  const n = state.nextId++;
+  const survivor: Survivor = {
+    id: `s${n}`,
+    name: NAMES[(n - 1) % NAMES.length]!,
+    pos: { x, y },
+    move: null,
+    goal: null,
+    path: [],
+    pathVersion: -1,
+    note: null,
+  };
+  state.survivors.push(survivor);
+  return survivor;
+}
+
+export function getSurvivor(state: SimState, id: string): Survivor | undefined {
+  return state.survivors.find((s) => s.id === id);
+}
+
+/** The survivor standing on, or stepping onto, a tile. */
+export function survivorAt(state: SimState, x: number, y: number): Survivor | undefined {
+  return state.survivors.find(
+    (s) => (s.pos.x === x && s.pos.y === y) || (s.move !== null && s.move.to.x === x && s.move.to.y === y),
+  );
+}
+
+export function setGoal(survivor: Survivor, goal: Point): void {
+  survivor.goal = { x: goal.x, y: goal.y };
+  survivor.path = [];
+  survivor.pathVersion = -1;
+  survivor.note = `ordered to (${goal.x}, ${goal.y})`;
+}
+
+export function updateSurvivors(state: SimState): void {
+  for (const survivor of state.survivors) updateSurvivor(state, survivor);
+}
+
+function updateSurvivor(state: SimState, s: Survivor): void {
+  if (s.move) {
+    s.move.progress += 1;
+    if (s.move.progress < s.move.duration) return;
+    s.pos = s.move.to;
+    s.move = null;
+    // Fall through so the next step starts this same tick (no stutter per tile).
+  }
+
+  const goal = s.goal;
+  if (!goal) return;
+
+  if (s.pos.x === goal.x && s.pos.y === goal.y) {
+    stop(s, `arrived at (${goal.x}, ${goal.y})`);
+    return;
+  }
+
+  if (s.pathVersion !== state.walkabilityVersion || s.path.length === 0) {
+    const wasRepath = s.pathVersion !== -1;
+    const path = findPath(state.grid, s.pos, goal);
+    if (!path || path.length === 0) {
+      stop(s, `no path to (${goal.x}, ${goal.y})`);
+      return;
+    }
+    s.path = path;
+    s.pathVersion = state.walkabilityVersion;
+    s.note = wasRepath
+      ? `walls changed, repathed to (${goal.x}, ${goal.y})`
+      : `walking to (${goal.x}, ${goal.y}), ${path.length} tiles`;
+  }
+
+  const next = s.path.shift()!;
+  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: TICKS_PER_TILE };
+}
+
+function stop(s: Survivor, note: string): void {
+  s.goal = null;
+  s.path = [];
+  s.pathVersion = -1;
+  s.note = note;
+}

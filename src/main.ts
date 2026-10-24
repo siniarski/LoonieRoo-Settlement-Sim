@@ -8,7 +8,7 @@
 import { createApp, type App } from './app';
 import sandbox from './scenarios/sandbox.json';
 import { loadScenario, type Scenario } from './sim/scenario';
-import type { SimState } from './sim/state';
+import { SCHEMA_VERSION, type SimState } from './sim/state';
 import type { ViewState } from './ui/view';
 
 interface HotData {
@@ -21,7 +21,10 @@ const hud = document.getElementById('hud');
 if (!(canvas instanceof HTMLCanvasElement) || !hud) throw new Error('missing #view canvas or #hud');
 
 const hot = import.meta.hot?.data as HotData | undefined;
-const app: App = createApp(canvas, hud, hot?.state ?? loadScenario(sandbox as Scenario), hot?.view);
+// State saved by code with a different SimState shape is discarded, not migrated.
+const kept = hot?.state?.schemaVersion === SCHEMA_VERSION ? hot.state : undefined;
+if (hot?.state && !kept) console.info('[hmr] sim state shape changed; reloading the scenario');
+const app: App = createApp(canvas, hud, kept ?? loadScenario(sandbox as Scenario), hot?.view);
 
 if (import.meta.hot) {
   import.meta.hot.accept();

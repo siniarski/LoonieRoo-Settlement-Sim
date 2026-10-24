@@ -2,11 +2,12 @@
 // frame, never what a tick means.
 
 import type { SimState } from './state';
+import { updateSurvivors } from './survivors';
 
 export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
-  // Milestone 1: nothing moves yet. Survivors, jobs, and needs hook in here.
+  updateSurvivors(state);
   state.tick += 1;
 }
 

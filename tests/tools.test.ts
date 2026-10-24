@@ -5,12 +5,19 @@ import { createState } from '../src/sim/state';
 import { TOOLS, getTool, tilesOnLine } from '../src/ui/tools';
 
 describe('tools', () => {
-  it('each tool maps to a command the sim accepts', () => {
+  it('each painting tool maps to a command the sim accepts', () => {
     const state = createState({ seed: 0, width: 3, height: 1 });
-    TOOLS.forEach((tool, x) => {
-      expect(applyCommand(state, tool.command(x, 0)).ok).toBe(true);
+    TOOLS.filter((t) => t.paints).forEach((tool, x) => {
+      expect(applyCommand(state, tool.command(x, 0, null)!).ok).toBe(true);
     });
     expect(dumpText(state)).toBe('#D.');
+  });
+
+  it('move needs a selected survivor', () => {
+    const move = getTool('move');
+    expect(move.paints).toBe(false);
+    expect(move.command(2, 3, null)).toBeNull();
+    expect(move.command(2, 3, 's1')).toEqual({ type: 'moveSurvivor', survivorId: 's1', x: 2, y: 3 });
   });
 
   it('has unique ids and keys', () => {

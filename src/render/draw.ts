@@ -2,8 +2,10 @@
 
 import type { Point, Tile } from '../sim/grid';
 import type { SimState } from '../sim/state';
+import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
+import { survivorWorldPos } from './interp';
 
 const COLOURS = {
   background: '#0d0f0e',
@@ -20,15 +22,29 @@ const COLOURS = {
     wall: '#9fd3ff',
     door: '#ffc27a',
     clear: '#ff7a7a',
+    move: '#8cf0a4',
   } satisfies Record<ToolId, string>,
+  survivor: '#f2e6c9',
+  survivorOutline: '#1a1d1b',
+  selected: '#8cf0a4',
+  path: 'rgba(140, 240, 164, 0.7)',
+  goal: '#8cf0a4',
+  label: '#f2e6c9',
 };
 
 /** Below this tile size, grid lines are just noise. */
 const MIN_GRID_LINE_PX = 10;
+/** Below this tile size, survivor names are unreadable. */
+const MIN_LABEL_PX = 18;
 
 export interface DrawOptions {
   hover: Point | null;
   tool: ToolId;
+  /** Fraction of the next tick elapsed, for interpolating movement. */
+  alpha: number;
+  selectedId: string | null;
+  /** Debug overlay: path previews for every survivor. */
+  showDebug: boolean;
 }
 
 export function draw(
@@ -55,6 +71,81 @@ export function draw(
   if (size >= MIN_GRID_LINE_PX) drawGridLines(ctx, camera, viewport, range);
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
   if (options.hover) drawHover(ctx, camera, viewport, options.hover, options.tool, grid.width, grid.height);
+
+  for (const s of state.survivors) {
+    if (options.showDebug) drawPath(ctx, camera, viewport, s, options.alpha);
+    if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
+  }
+  for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, s, options, size);
+}
+
+function drawSurvivor(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewport: Viewport,
+  s: Survivor,
+  options: DrawOptions,
+  size: number,
+): void {
+  const world = survivorWorldPos(s, options.alpha);
+  const p = worldToScreen(camera, viewport, world.x, world.y);
+  const radius = Math.max(3, size * 0.32);
+
+  if (s.id === options.selectedId) {
+    ctx.strokeStyle = COLOURS.selected;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = COLOURS.survivor;
+  ctx.strokeStyle = COLOURS.survivorOutline;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (size >= MIN_LABEL_PX) {
+    ctx.fillStyle = COLOURS.label;
+    ctx.font = `${Math.round(Math.min(14, size * 0.45))}px ui-monospace, Consolas, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(s.name, p.x, p.y - radius - 3);
+  }
+}
+
+/** Debug path preview: from the survivor's drawn position through every remaining tile. */
+function drawPath(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, s: Survivor, alpha: number): void {
+  const points = [survivorWorldPos(s, alpha)];
+  if (s.move) points.push({ x: s.move.to.x + 0.5, y: s.move.to.y + 0.5 });
+  for (const p of s.path) points.push({ x: p.x + 0.5, y: p.y + 0.5 });
+  if (points.length < 2) return;
+
+  ctx.strokeStyle = COLOURS.path;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  points.forEach((w, i) => {
+    const p = worldToScreen(camera, viewport, w.x, w.y);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawGoal(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, goal: Point, size: number): void {
+  const p = worldToScreen(camera, viewport, goal.x + 0.5, goal.y + 0.5);
+  const r = Math.max(3, size * 0.25);
+  ctx.strokeStyle = COLOURS.goal;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(p.x - r, p.y - r);
+  ctx.lineTo(p.x + r, p.y + r);
+  ctx.moveTo(p.x + r, p.y - r);
+  ctx.lineTo(p.x - r, p.y + r);
+  ctx.stroke();
 }
 
 /** Integer pixel rect for a tile, so neighbouring tiles share edges without seams. */

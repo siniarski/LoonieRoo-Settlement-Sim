@@ -1,10 +1,11 @@
 // Mouse and keyboard -> view changes and sim commands.
 //
-//   Left drag      paint with the current tool
+//   Left click     on a survivor: select them. Otherwise use the current tool
+//   Left drag      paint with wall/door/clear
 //   Right/middle   drag to pan
 //   Wheel          zoom at the cursor
 //   WASD / arrows  pan
-//   1 2 3          wall, door, clear
+//   1 2 3 4        wall, door, clear, move (selected survivor walks to the tile)
 //   Space          pause / resume
 //   `              toggle debug panel
 //   Home           recentre
@@ -34,6 +35,8 @@ export interface InputContext {
   view: ViewState;
   viewport(): Viewport;
   mapSize(): { width: number; height: number };
+  /** Id of the survivor on (or stepping onto) a tile, if any. */
+  survivorAt(tile: Point): string | null;
   command(cmd: Command): void;
 }
 
@@ -55,10 +58,11 @@ export function attachInput(ctx: InputContext): Input {
   };
   const tileAt = (p: Point) => screenToTile(view.camera, ctx.viewport(), p.x, p.y);
 
-  const paint = (tile: Point) => {
+  const apply = (tile: Point) => {
     const { width, height } = ctx.mapSize();
     if (tile.x < 0 || tile.y < 0 || tile.x >= width || tile.y >= height) return;
-    ctx.command(getTool(view.tool).command(tile.x, tile.y));
+    const cmd = getTool(view.tool).command(tile.x, tile.y, view.selectedId);
+    if (cmd) ctx.command(cmd);
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -71,8 +75,14 @@ export function attachInput(ctx: InputContext): Input {
     }
     const p = screenPoint(e);
     if (e.button === 0) {
-      painting = tileAt(p);
-      paint(painting);
+      const tile = tileAt(p);
+      const clicked = ctx.survivorAt(tile);
+      if (clicked) {
+        view.selectedId = clicked;
+        return;
+      }
+      apply(tile);
+      if (getTool(view.tool).paints) painting = tile;
     } else if (e.button === 1 || e.button === 2) {
       panning = p;
     }
@@ -84,7 +94,7 @@ export function attachInput(ctx: InputContext): Input {
     view.hover = tile;
     if (painting && (tile.x !== painting.x || tile.y !== painting.y)) {
       // Skip the first point: it was painted on the previous event.
-      tilesOnLine(painting, tile).slice(1).forEach(paint);
+      tilesOnLine(painting, tile).slice(1).forEach(apply);
       painting = tile;
     }
     if (panning) {

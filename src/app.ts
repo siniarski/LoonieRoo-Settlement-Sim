@@ -7,10 +7,11 @@ import { draw } from './render/draw';
 import { applyCommand } from './sim/commands';
 import type { Point } from './sim/grid';
 import type { SimState } from './sim/state';
+import { survivorAt } from './sim/survivors';
 import { step } from './sim/tick';
 import { createHud } from './ui/hud';
 import { attachInput } from './ui/input';
-import { ticksForFrame } from './ui/loop';
+import { MS_PER_TICK, ticksForFrame } from './ui/loop';
 import type { ViewState } from './ui/view';
 
 /** View-side helpers for agents and Playwright (screen coords are CSS px, page-relative). */
@@ -36,13 +37,20 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   if (!ctx2d) throw new Error('2D canvas not supported');
 
   const handle: GameHandle = { state };
-  const view: ViewState = saved ?? {
+  const view: ViewState = {
     camera: centredOn(state.grid.width, state.grid.height),
-    tool: 'wall',
+    tool: 'move',
+    selectedId: null,
     hover: null,
     speed: 1,
     paused: false,
     showDebug: false,
+    // Spread over the defaults so view state saved by older code gains new fields.
+    ...saved,
+  };
+  const ensureSelection = () => {
+    const survivors = handle.state.survivors;
+    if (!survivors.some((s) => s.id === view.selectedId)) view.selectedId = survivors[0]?.id ?? null;
   };
 
   let viewport: Viewport = { width: 0, height: 0 };
@@ -74,6 +82,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     view,
     viewport: () => viewport,
     mapSize: () => handle.state.grid,
+    survivorAt: (tile) => survivorAt(handle.state, tile.x, tile.y)?.id ?? null,
     command: (cmd) => applyCommand(handle.state, cmd),
   });
   const hud = createHud(hudRoot, view);
@@ -81,19 +90,36 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   let accumulatorMs = 0;
   let last = performance.now();
   let fps = 0;
+  const reported = new Set<string>();
   let frameId = requestAnimationFrame(function frame(now) {
+    // Schedule first, so one bad frame (often a half-finished edit during
+    // hot reload) can't kill the loop. Each distinct error is logged once.
+    frameId = requestAnimationFrame(frame);
     const frameMs = now - last;
     last = now;
     fps = fps * 0.9 + (1000 / Math.max(frameMs, 1)) * 0.1;
+    try {
+      const result = ticksForFrame(accumulatorMs, frameMs, view.speed, view.paused);
+      accumulatorMs = result.accumulatorMs;
+      step(handle.state, result.ticks);
 
-    const result = ticksForFrame(accumulatorMs, frameMs, view.speed, view.paused);
-    accumulatorMs = result.accumulatorMs;
-    step(handle.state, result.ticks);
-
-    input.update(frameMs);
-    draw(ctx2d, handle.state, view.camera, viewport, { hover: view.hover, tool: view.tool });
-    hud.update(handle.state, fps);
-    frameId = requestAnimationFrame(frame);
+      input.update(frameMs);
+      ensureSelection();
+      draw(ctx2d, handle.state, view.camera, viewport, {
+        hover: view.hover,
+        tool: view.tool,
+        alpha: Math.min(1, accumulatorMs / MS_PER_TICK),
+        selectedId: view.selectedId,
+        showDebug: view.showDebug,
+      });
+      hud.update(handle.state, fps);
+    } catch (err) {
+      const key = String(err);
+      if (!reported.has(key)) {
+        reported.add(key);
+        console.error('[frame]', err);
+      }
+    }
   });
 
   return {

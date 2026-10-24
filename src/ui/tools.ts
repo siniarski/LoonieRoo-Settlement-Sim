@@ -4,20 +4,30 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'clear';
+export type ToolId = 'wall' | 'door' | 'clear' | 'move';
 
 export interface Tool {
   id: ToolId;
   label: string;
   /** KeyboardEvent.key that selects this tool. */
   key: string;
-  command(x: number, y: number): Command;
+  /** Painting tools apply on every tile a drag crosses; others only on click. */
+  paints: boolean;
+  /** Null when the tool can't act (e.g. move with nobody selected). */
+  command(x: number, y: number, selectedId: string | null): Command | null;
 }
 
 export const TOOLS: readonly Tool[] = [
-  { id: 'wall', label: 'Wall', key: '1', command: (x, y) => ({ type: 'placeWall', x, y }) },
-  { id: 'door', label: 'Door', key: '2', command: (x, y) => ({ type: 'placeDoor', x, y }) },
-  { id: 'clear', label: 'Clear', key: '3', command: (x, y) => ({ type: 'clearTile', x, y }) },
+  { id: 'wall', label: 'Wall', key: '1', paints: true, command: (x, y) => ({ type: 'placeWall', x, y }) },
+  { id: 'door', label: 'Door', key: '2', paints: true, command: (x, y) => ({ type: 'placeDoor', x, y }) },
+  { id: 'clear', label: 'Clear', key: '3', paints: true, command: (x, y) => ({ type: 'clearTile', x, y }) },
+  {
+    id: 'move',
+    label: 'Move',
+    key: '4',
+    paints: false,
+    command: (x, y, selectedId) => (selectedId ? { type: 'moveSurvivor', survivorId: selectedId, x, y } : null),
+  },
 ];
 
 export function getTool(id: ToolId): Tool {

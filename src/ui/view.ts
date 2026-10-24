@@ -9,6 +9,7 @@ import type { ToolId } from './tools';
 export interface ViewState {
   camera: Camera;
   tool: ToolId;
+  selectedId: string | null;
   hover: Point | null;
   speed: Speed;
   paused: boolean;

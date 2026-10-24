@@ -5,6 +5,7 @@
 import { setTile, type Tile } from './grid';
 import { replay } from './replay';
 import { createState, type LoggedCommand, type SimState } from './state';
+import { addSurvivor } from './survivors';
 
 export interface Scenario {
   name?: string;
@@ -19,6 +20,9 @@ export const TILE_CHARS: Record<Tile, string> = {
   wall: '#',
   door: 'D',
 };
+
+/** A survivor standing on floor. Survivors get ids s1, s2, ... in reading order. */
+export const SURVIVOR_CHAR = 's';
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
@@ -36,6 +40,10 @@ export function loadScenario(scenario: Scenario): SimState {
       throw new Error(`loadScenario: row ${y} has length ${row.length}, expected ${width}`);
     }
     [...row].forEach((char, x) => {
+      if (char === SURVIVOR_CHAR) {
+        addSurvivor(state, x, y);
+        return;
+      }
       const tile = CHAR_TILES[char];
       if (tile === undefined) throw new Error(`loadScenario: unknown char '${char}' at (${x}, ${y})`);
       setTile(state.grid, x, y, tile);
