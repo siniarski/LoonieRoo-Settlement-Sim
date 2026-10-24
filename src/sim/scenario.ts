@@ -2,7 +2,9 @@
 // The map legend here is the data format; debug/text.ts renders with it too,
 // so a dumped map can be pasted straight back into a scenario.
 
-import { setTile, type Tile } from './grid';
+import { addBlueprint } from './designations';
+import { setDirty, setTile, type Tile } from './grid';
+import { spawnItem } from './items';
 import { replay } from './replay';
 import { createState, type LoggedCommand, type SimState } from './state';
 import { addSurvivor } from './survivors';
@@ -21,12 +23,46 @@ export const TILE_CHARS: Record<Tile, string> = {
   door: 'D',
 };
 
-/** A survivor standing on floor. Survivors get ids s1, s2, ... in reading order. */
-export const SURVIVOR_CHAR = 's';
+/**
+ * Things on floor tiles. Survivors get ids in reading order. A removal
+ * designation ('x') is only ever printed, never parsed, since it needs a
+ * wall underneath.
+ */
+export const ENTITY_CHARS = {
+  survivor: 's',
+  wood: 'w',
+  dirt: ',',
+  wallBlueprint: '+',
+  doorBlueprint: 'd',
+  removeBlueprint: 'x',
+} as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
 );
+
+/** Floor plus something on it. Returns false if `char` isn't an entity char. */
+function placeEntity(state: SimState, char: string, x: number, y: number): boolean {
+  switch (char) {
+    case ENTITY_CHARS.survivor:
+      addSurvivor(state, x, y);
+      return true;
+    case ENTITY_CHARS.wood:
+      spawnItem(state, 'wood', x, y);
+      return true;
+    case ENTITY_CHARS.dirt:
+      setDirty(state.grid, x, y, true);
+      return true;
+    case ENTITY_CHARS.wallBlueprint:
+      addBlueprint(state, x, y, 'wall');
+      return true;
+    case ENTITY_CHARS.doorBlueprint:
+      addBlueprint(state, x, y, 'door');
+      return true;
+    default:
+      return false;
+  }
+}
 
 /** Builds the initial state (tick 0, empty log). Does not apply commands. */
 export function loadScenario(scenario: Scenario): SimState {
@@ -40,10 +76,7 @@ export function loadScenario(scenario: Scenario): SimState {
       throw new Error(`loadScenario: row ${y} has length ${row.length}, expected ${width}`);
     }
     [...row].forEach((char, x) => {
-      if (char === SURVIVOR_CHAR) {
-        addSurvivor(state, x, y);
-        return;
-      }
+      if (placeEntity(state, char, x, y)) return;
       const tile = CHAR_TILES[char];
       if (tile === undefined) throw new Error(`loadScenario: unknown char '${char}' at (${x}, ${y})`);
       setTile(state.grid, x, y, tile);

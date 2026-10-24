@@ -14,4 +14,5 @@ export interface ViewState {
   speed: Speed;
   paused: boolean;
   showDebug: boolean;
+  showPriorities: boolean;
 }

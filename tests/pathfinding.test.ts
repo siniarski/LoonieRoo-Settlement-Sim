@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Point } from '../src/sim/grid';
-import { findPath } from '../src/sim/pathfinding';
+import { setTile, type Point } from '../src/sim/grid';
+import { canReach, findPath, findPathToAny } from '../src/sim/pathfinding';
 import { loadScenario } from '../src/sim/scenario';
 
 /** Builds a grid from rows; 'A' marks start and 'B' marks goal (both floor). */
@@ -109,6 +109,36 @@ describe('findPath', () => {
     const b = findPath(grid, { x: 2, y: 3 }, { x: 27, y: 17 });
     expect(a).toEqual(b);
     expect(a).toHaveLength(25 + 14);
+  });
+
+  it('findPathToAny goes to the nearest reachable goal', () => {
+    const rows = [
+      '..#....',
+      'A.#..B.',
+      '..#....',
+    ];
+    const { grid, start } = setup(rows);
+    // (5,1) is walled off from A; (0,0) is reachable.
+    expect(findPathToAny(grid, start, [{ x: 5, y: 1 }, { x: 0, y: 0 }])).toEqual([{ x: 0, y: 0 }]);
+    expect(findPathToAny(grid, start, [{ x: 5, y: 1 }])).toBeNull();
+    expect(findPathToAny(grid, start, [{ x: 0, y: 1 }])).toEqual([]);
+    expect(findPathToAny(grid, start, [{ x: 2, y: 1 }])).toBeNull();
+  });
+
+  it('canReach agrees with A* and refreshes when the version changes', () => {
+    const rows = [
+      'A.#..B',
+      '..#...',
+      '......',
+    ];
+    const { grid, start, goal } = setup(rows);
+    expect(canReach(grid, 0, start, [goal])).toBe(true);
+    setTile(grid, 2, 2, 'wall');
+    expect(canReach(grid, 0, start, [goal])).toBe(true); // stale on purpose: same version
+    expect(canReach(grid, 1, start, [goal])).toBe(false);
+    expect(findPath(grid, start, goal)).toBeNull();
+    // From inside a wall you can step to any walkable neighbour.
+    expect(canReach(grid, 1, { x: 2, y: 0 }, [goal])).toBe(true);
   });
 
   it('solves a maze', () => {

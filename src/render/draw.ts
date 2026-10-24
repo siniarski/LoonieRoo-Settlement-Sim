@@ -1,6 +1,8 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
+import type { Blueprint } from '../sim/designations';
 import type { Point, Tile } from '../sim/grid';
+import { getJob } from '../sim/jobs';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
@@ -21,7 +23,8 @@ const COLOURS = {
   tools: {
     wall: '#9fd3ff',
     door: '#ffc27a',
-    clear: '#ff7a7a',
+    remove: '#ff7a7a',
+    cancel: '#c9c9c9',
     move: '#8cf0a4',
   } satisfies Record<ToolId, string>,
   survivor: '#f2e6c9',
@@ -30,6 +33,13 @@ const COLOURS = {
   path: 'rgba(140, 240, 164, 0.7)',
   goal: '#8cf0a4',
   label: '#f2e6c9',
+  dirt: 'rgba(120, 92, 56, 0.85)',
+  wood: '#b07a3f',
+  woodGrain: '#7a4f24',
+  blueprint: { wall: 'rgba(110, 180, 255, 0.35)', door: 'rgba(255, 190, 110, 0.35)', floor: 'rgba(255, 110, 110, 0.0)' },
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', floor: '#ff6e6e' },
+  progress: '#8cf0a4',
+  jobLine: 'rgba(255, 214, 102, 0.8)',
 };
 
 /** Below this tile size, grid lines are just noise. */
@@ -68,15 +78,112 @@ export function draw(
     }
   }
 
+  for (let y = range.y0; y <= range.y1; y++) {
+    for (let x = range.x0; x <= range.x1; x++) {
+      if (grid.dirt[y * grid.width + x] === 1) drawDirt(ctx, camera, viewport, x, y, size);
+    }
+  }
+
   if (size >= MIN_GRID_LINE_PX) drawGridLines(ctx, camera, viewport, range);
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
+
+  for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
+  for (const item of state.items) if (item.pos) drawWood(ctx, camera, viewport, item.pos.x + 0.5, item.pos.y + 0.5, size);
+
   if (options.hover) drawHover(ctx, camera, viewport, options.hover, options.tool, grid.width, grid.height);
 
   for (const s of state.survivors) {
-    if (options.showDebug) drawPath(ctx, camera, viewport, s, options.alpha);
+    if (options.showDebug) {
+      drawPath(ctx, camera, viewport, s, options.alpha);
+      drawJobLink(ctx, camera, viewport, state, s, options.alpha);
+    }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, s, options, size);
+}
+
+function drawDirt(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, size: number): void {
+  const r = tileRect(camera, viewport, x, y);
+  ctx.fillStyle = COLOURS.dirt;
+  // A fixed speckle pattern per tile, so it doesn't shimmer.
+  const dot = Math.max(1, Math.round(size * 0.1));
+  for (const [fx, fy] of [
+    [0.2, 0.3],
+    [0.55, 0.2],
+    [0.75, 0.6],
+    [0.35, 0.7],
+    [0.6, 0.85],
+  ] as const) {
+    ctx.fillRect(r.x + Math.round(r.w * fx), r.y + Math.round(r.h * fy), dot, dot);
+  }
+}
+
+function drawWood(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const w = size * 0.6;
+  const h = size * 0.16;
+  ctx.fillStyle = COLOURS.wood;
+  ctx.strokeStyle = COLOURS.woodGrain;
+  ctx.lineWidth = 1;
+  for (const dy of [-h * 1.1, 0, h * 1.1]) {
+    ctx.fillRect(p.x - w / 2, p.y + dy - h / 2, w, h);
+    ctx.strokeRect(p.x - w / 2 + 0.5, p.y + dy - h / 2 + 0.5, w - 1, h - 1);
+  }
+}
+
+function drawBlueprint(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, bp: Blueprint, size: number): void {
+  const r = tileRect(camera, viewport, bp.x, bp.y);
+  const edge = COLOURS.blueprintEdge[bp.target];
+  ctx.fillStyle = COLOURS.blueprint[bp.target];
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = 1.5;
+  // Dashed while still waiting for material, solid once it can be built.
+  ctx.setLineDash(bp.needsMaterial && !bp.delivered ? [3, 3] : []);
+  ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
+  ctx.setLineDash([]);
+  if (bp.target === 'floor') {
+    ctx.beginPath();
+    ctx.moveTo(r.x + 3, r.y + 3);
+    ctx.lineTo(r.x + r.w - 3, r.y + r.h - 3);
+    ctx.moveTo(r.x + r.w - 3, r.y + 3);
+    ctx.lineTo(r.x + 3, r.y + r.h - 3);
+    ctx.stroke();
+  }
+  if (bp.workDone > 0) {
+    const barH = Math.max(2, Math.round(size * 0.12));
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(r.x + 2, r.y + r.h - barH - 2, r.w - 4, barH);
+    ctx.fillStyle = COLOURS.progress;
+    ctx.fillRect(r.x + 2, r.y + r.h - barH - 2, ((r.w - 4) * bp.workDone) / bp.workRequired, barH);
+  }
+}
+
+/** Debug: a line from each worker to their job's tile, so reservations are visible. */
+function drawJobLink(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewport: Viewport,
+  state: SimState,
+  s: Survivor,
+  alpha: number,
+): void {
+  const job = s.jobId ? getJob(state, s.jobId) : undefined;
+  if (!job) return;
+  const from = worldToScreen(camera, viewport, ...xy(survivorWorldPos(s, alpha)));
+  const to = worldToScreen(camera, viewport, job.x + 0.5, job.y + 0.5);
+  const r = tileRect(camera, viewport, job.x, job.y);
+  ctx.strokeStyle = COLOURS.jobLine;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+}
+
+function xy(p: Point): [number, number] {
+  return [p.x, p.y];
 }
 
 function drawSurvivor(
@@ -105,6 +212,7 @@ function drawSurvivor(
   ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+  if (s.carrying) drawWood(ctx, camera, viewport, world.x + 0.3, world.y + 0.25, size * 0.6);
 
   if (size >= MIN_LABEL_PX) {
     ctx.fillStyle = COLOURS.label;

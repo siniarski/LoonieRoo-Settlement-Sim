@@ -6,12 +6,17 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
-import type { Point } from './grid';
+import { getTile, setDirty, type Point } from './grid';
+import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
+import { random } from './rng';
 import type { SimState } from './state';
 
 /** Ticks to cross one tile (4 ticks = 0.4s at 1x). */
 export const TICKS_PER_TILE = 4;
+
+/** Chance that stepping onto a floor tile leaves dirt on it. Uses the sim RNG. */
+export const DIRT_CHANCE = 1 / 30;
 
 const NAMES = ['Ash', 'Bea', 'Cal', 'Dee', 'Eli', 'Fen', 'Gus', 'Hal', 'Ivy', 'Jo'];
 
@@ -36,6 +41,13 @@ export interface Survivor {
   pathVersion: number;
   /** Last thing that happened, for the debug panel ("why is she just standing there?"). */
   note: string | null;
+  priorities: Priorities;
+  /** The job this survivor has reserved, if any. */
+  jobId: string | null;
+  /** Id of the item being carried, if any. */
+  carrying: string | null;
+  /** When idle and nothing was doable, don't look for work again before this tick. */
+  nextSeekTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number): Survivor {
@@ -49,6 +61,10 @@ export function addSurvivor(state: SimState, x: number, y: number): Survivor {
     path: [],
     pathVersion: -1,
     note: null,
+    priorities: { ...DEFAULT_PRIORITIES },
+    jobId: null,
+    carrying: null,
+    nextSeekTick: 0,
   };
   state.survivors.push(survivor);
   return survivor;
@@ -72,16 +88,23 @@ export function setGoal(survivor: Survivor, goal: Point): void {
   survivor.note = `ordered to (${goal.x}, ${goal.y})`;
 }
 
-export function updateSurvivors(state: SimState): void {
-  for (const survivor of state.survivors) updateSurvivor(state, survivor);
+/** Follow a path that was already computed (by job planning) at the current walkabilityVersion. */
+export function walk(s: Survivor, path: Point[], version: number): void {
+  const last = path.at(-1);
+  if (!last) return;
+  s.goal = { x: last.x, y: last.y };
+  s.path = path.slice();
+  s.pathVersion = version;
 }
 
-function updateSurvivor(state: SimState, s: Survivor): void {
+/** Advances movement by one tick. Afterwards the survivor is mid-step, walking, or standing still. */
+export function updateMovement(state: SimState, s: Survivor): void {
   if (s.move) {
     s.move.progress += 1;
     if (s.move.progress < s.move.duration) return;
     s.pos = s.move.to;
     s.move = null;
+    trackDirt(state, s.pos);
     // Fall through so the next step starts this same tick (no stutter per tile).
   }
 
@@ -89,7 +112,8 @@ function updateSurvivor(state: SimState, s: Survivor): void {
   if (!goal) return;
 
   if (s.pos.x === goal.x && s.pos.y === goal.y) {
-    stop(s, `arrived at (${goal.x}, ${goal.y})`);
+    // Job walks are narrated by the job; only manual orders report arrival.
+    stop(s, s.jobId ? s.note : `arrived at (${goal.x}, ${goal.y})`);
     return;
   }
 
@@ -111,7 +135,13 @@ function updateSurvivor(state: SimState, s: Survivor): void {
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: TICKS_PER_TILE };
 }
 
-function stop(s: Survivor, note: string): void {
+function trackDirt(state: SimState, p: Point): void {
+  if (getTile(state.grid, p.x, p.y) !== 'floor') return;
+  // Always draw from the RNG, even on dirty tiles, so RNG use doesn't depend on dirt state.
+  if (random(state) < DIRT_CHANCE) setDirty(state.grid, p.x, p.y, true);
+}
+
+function stop(s: Survivor, note: string | null): void {
   s.goal = null;
   s.path = [];
   s.pathVersion = -1;

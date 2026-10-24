@@ -1,0 +1,311 @@
+// Designations -> jobs -> workers.
+//
+// The job queue is derived from the world: reconcileJobs (start of every
+// tick) drops jobs whose target is gone and creates missing ones, one per
+// blueprint (haul while it needs material, then build) and one per dirty
+// tile (clean). Survivors reserve a job when they claim it, so two survivors
+// never share one. Every way a job can go wrong ends the same way:
+// releaseSurvivor() frees the reservation, drops anything carried, and the
+// survivor goes back to looking for work. Nobody gets stuck.
+
+import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
+import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
+import { dropItem, getItem, removeItem, type Item } from './items';
+import { JOB_TYPES, type JobType } from './jobTypes';
+import { canReach, findPathToAny } from './pathfinding';
+import { manhattan, samePoint } from './space';
+import type { SimState } from './state';
+import { getSurvivor, walk, type Survivor } from './survivors';
+
+export interface Job {
+  id: string;
+  type: JobType;
+  /** The tile the job is about: the blueprint or the dirty tile. */
+  x: number;
+  y: number;
+  blueprintId: string | null;
+  /** Haul only: the item picked at claim time. */
+  itemId: string | null;
+  /** Clean only: ticks of scrubbing done. */
+  progress: number;
+  reservedBy: string | null;
+}
+
+/** Ticks to clean one tile. */
+export const CLEAN_WORK = 15;
+/** How many nearest candidates a survivor checks per job type before giving up on that type. */
+const MAX_CANDIDATES = 8;
+/** An idle survivor with nothing doable looks again after this many ticks. */
+export const IDLE_RETRY_TICKS = 5;
+
+export function getJob(state: SimState, id: string): Job | undefined {
+  return state.jobs.find((j) => j.id === id);
+}
+
+// --- Reconcile -------------------------------------------------------------
+
+export function reconcileJobs(state: SimState): void {
+  // Blueprints whose tile changed underneath them (e.g. instant placeWall) are void.
+  for (const bp of [...state.blueprints]) {
+    if (!preconditionHolds(state, bp)) cancelBlueprint(state, bp);
+  }
+
+  for (const job of [...state.jobs]) {
+    const reason = invalidReason(state, job);
+    if (reason) removeJob(state, job, reason);
+  }
+
+  const haveJob = new Set(state.jobs.map((j) => j.blueprintId));
+  for (const bp of state.blueprints) {
+    if (!haveJob.has(bp.id)) addJob(state, wantedJobType(bp), bp.x, bp.y, bp.id);
+  }
+
+  const { width, dirt } = state.grid;
+  const cleaning = new Set(state.jobs.filter((j) => j.type === 'clean').map((j) => j.y * width + j.x));
+  for (let i = 0; i < dirt.length; i++) {
+    if (dirt[i] === 1 && !cleaning.has(i)) addJob(state, 'clean', i % width, Math.floor(i / width), null);
+  }
+}
+
+function wantedJobType(bp: Blueprint): JobType {
+  return bp.needsMaterial && !bp.delivered ? 'haul' : 'build';
+}
+
+function invalidReason(state: SimState, job: Job): string | null {
+  switch (job.type) {
+    case 'clean':
+      return isDirty(state.grid, job.x, job.y) ? null : 'tile already clean';
+    case 'build':
+    case 'haul': {
+      const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
+      if (!bp) return 'designation cancelled';
+      if (wantedJobType(bp) !== job.type) return 'designation moved on';
+      if (job.type === 'haul' && job.itemId) {
+        const item = getItem(state, job.itemId);
+        if (!item) return 'item gone';
+        if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
+      }
+      return null;
+    }
+  }
+}
+
+function addJob(state: SimState, type: JobType, x: number, y: number, blueprintId: string | null): Job {
+  const job: Job = { id: `j${state.nextId++}`, type, x, y, blueprintId, itemId: null, progress: 0, reservedBy: null };
+  state.jobs.push(job);
+  return job;
+}
+
+function removeJob(state: SimState, job: Job, reason: string): void {
+  const worker = job.reservedBy ? getSurvivor(state, job.reservedBy) : undefined;
+  if (worker && worker.jobId === job.id) releaseSurvivor(state, worker, reason);
+  const i = state.jobs.indexOf(job);
+  if (i >= 0) state.jobs.splice(i, 1);
+}
+
+// --- Releasing --------------------------------------------------------------
+
+/** Frees the survivor's job reservation and drops anything they carry. Always safe to call. */
+export function releaseSurvivor(state: SimState, s: Survivor, reason: string): void {
+  const job = s.jobId ? getJob(state, s.jobId) : undefined;
+  if (job && job.reservedBy === s.id) {
+    job.reservedBy = null;
+    const reserved = job.itemId ? getItem(state, job.itemId) : undefined;
+    if (reserved && reserved.reservedBy === s.id) reserved.reservedBy = null;
+    job.itemId = null;
+  }
+  if (s.carrying) {
+    const item = getItem(state, s.carrying);
+    if (item) dropItem(state, item, s.pos);
+    s.carrying = null;
+  }
+  s.jobId = null;
+  s.goal = null;
+  s.path = [];
+  s.pathVersion = -1;
+  s.note = `stopped: ${reason}`;
+}
+
+// --- Working ----------------------------------------------------------------
+
+/** Runs when the survivor is standing still: continue the current job, or look for one. */
+export function updateWork(state: SimState, s: Survivor): void {
+  if (!s.jobId) {
+    if (state.tick < s.nextSeekTick) return;
+    if (!seekJob(state, s)) s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
+    return;
+  }
+  const job = getJob(state, s.jobId);
+  if (!job || job.reservedBy !== s.id) {
+    releaseSurvivor(state, s, 'job vanished');
+    return;
+  }
+  switch (job.type) {
+    case 'clean':
+      return workClean(state, s, job);
+    case 'build':
+      return workBuild(state, s, job);
+    case 'haul':
+      return workHaul(state, s, job);
+  }
+}
+
+function workClean(state: SimState, s: Survivor, job: Job): void {
+  const target = { x: job.x, y: job.y };
+  if (!samePoint(s.pos, target)) return goTo(state, s, job, [target]);
+  job.progress += 1;
+  if (job.progress < CLEAN_WORK) return;
+  setDirty(state.grid, job.x, job.y, false);
+  finishJob(state, s, job, `cleaned (${job.x}, ${job.y})`);
+}
+
+function workBuild(state: SimState, s: Survivor, job: Job): void {
+  const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
+  if (!bp) return releaseSurvivor(state, s, 'designation cancelled');
+  if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
+  bp.workDone += 1;
+  if (bp.workDone < bp.workRequired) return;
+  completeBlueprint(state, bp);
+  finishJob(state, s, job, bp.target === 'floor' ? `removed structure at (${bp.x}, ${bp.y})` : `built ${bp.target} at (${bp.x}, ${bp.y})`);
+}
+
+function workHaul(state: SimState, s: Survivor, job: Job): void {
+  const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
+  const item = job.itemId ? getItem(state, job.itemId) : undefined;
+  if (!bp || !item) return releaseSurvivor(state, s, 'haul target gone');
+
+  if (s.carrying !== item.id) {
+    if (!item.pos) return releaseSurvivor(state, s, 'item taken by someone else');
+    if (!samePoint(s.pos, item.pos)) return goTo(state, s, job, [item.pos]);
+    item.pos = null;
+    item.carriedBy = s.id;
+    s.carrying = item.id;
+    s.note = `picked up ${item.kind} for (${bp.x}, ${bp.y})`;
+    // Fall through and head for the site this same tick.
+  }
+
+  if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
+  removeItem(state, item);
+  s.carrying = null;
+  bp.delivered = true;
+  finishJob(state, s, job, `delivered ${item.kind} to (${bp.x}, ${bp.y})`);
+}
+
+function goTo(state: SimState, s: Survivor, job: Job, goals: Point[]): void {
+  const path = findPathToAny(state.grid, s.pos, goals);
+  if (!path || path.length === 0) {
+    releaseSurvivor(state, s, `can't reach ${job.type} job at (${job.x}, ${job.y})`);
+    return;
+  }
+  walk(s, path, state.walkabilityVersion);
+}
+
+function finishJob(state: SimState, s: Survivor, job: Job, note: string): void {
+  const i = state.jobs.indexOf(job);
+  if (i >= 0) state.jobs.splice(i, 1);
+  s.jobId = null;
+  s.note = note;
+}
+
+// --- Choosing work ----------------------------------------------------------
+
+interface Plan {
+  path: Point[];
+  itemId: string | null;
+}
+
+/**
+ * Highest-priority job type first (ties: build, haul, clean), then the
+ * nearest open job of that type that is actually doable. Returns true if a
+ * job was claimed.
+ */
+export function seekJob(state: SimState, s: Survivor): boolean {
+  const choice = chooseJob(state, s);
+  if (!choice) return false;
+  claim(state, s, choice.job, choice.plan, choice.why);
+  return true;
+}
+
+/** The job this survivor would take right now, without claiming it. Pure. */
+export function chooseJob(state: SimState, s: Survivor): { job: Job; plan: Plan; why: string } | null {
+  for (const type of typesByPriority(s)) {
+    const open = openJobsByDistance(state, type, s.pos);
+    for (const job of open.slice(0, MAX_CANDIDATES)) {
+      const plan = planJob(state, s, job);
+      if (plan) return { job, plan, why: `priority ${s.priorities[type]}, nearest of ${open.length} open` };
+    }
+  }
+  return null;
+}
+
+export function typesByPriority(s: Survivor): JobType[] {
+  return JOB_TYPES.filter((t) => s.priorities[t] > 0).sort(
+    (a, b) => s.priorities[a] - s.priorities[b] || JOB_TYPES.indexOf(a) - JOB_TYPES.indexOf(b),
+  );
+}
+
+function openJobsByDistance(state: SimState, type: JobType, from: Point): Job[] {
+  // Array.prototype.sort is stable, so ties keep queue order (deterministic).
+  return state.jobs
+    .filter((j) => j.type === type && j.reservedBy === null)
+    .sort((a, b) => manhattan(from, a) - manhattan(from, b));
+}
+
+function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
+  const { grid, walkabilityVersion: v } = state;
+  switch (job.type) {
+    case 'clean': {
+      const goal = [{ x: job.x, y: job.y }];
+      if (!canReach(grid, v, s.pos, goal)) return null;
+      return pathPlan(state, s.pos, goal, null);
+    }
+    case 'build': {
+      const goals = neighbours4(grid, job.x, job.y);
+      if (!canReach(grid, v, s.pos, goals)) return null;
+      return pathPlan(state, s.pos, goals, null);
+    }
+    case 'haul': {
+      const site = neighbours4(grid, job.x, job.y).filter((p) => isWalkable(grid, p.x, p.y));
+      if (site.length === 0) return null;
+      const free = state.items
+        .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === 'wood')
+        .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos));
+      for (const item of free.slice(0, MAX_CANDIDATES)) {
+        if (!canReach(grid, v, s.pos, [item.pos]) || !canReach(grid, v, item.pos, site)) continue;
+        return pathPlan(state, s.pos, [item.pos], item.id);
+      }
+      return null;
+    }
+  }
+}
+
+function pathPlan(state: SimState, from: Point, goals: Point[], itemId: string | null): Plan | null {
+  const path = findPathToAny(state.grid, from, goals);
+  return path ? { path, itemId } : null;
+}
+
+function claim(state: SimState, s: Survivor, job: Job, plan: Plan, why: string): void {
+  job.reservedBy = s.id;
+  s.jobId = job.id;
+  if (plan.itemId) {
+    job.itemId = plan.itemId;
+    const item = getItem(state, plan.itemId);
+    if (item) item.reservedBy = s.id;
+  }
+  walk(s, plan.path, state.walkabilityVersion);
+  s.note = `took ${job.type} job at (${job.x}, ${job.y}): ${why}`;
+}
+
+// --- Explaining (debug only, read-only) -------------------------------------
+
+/** Why an idle survivor isn't working. Pure: safe to call from the renderer. */
+export function explainIdle(state: SimState, s: Survivor): string {
+  const types = typesByPriority(s);
+  if (types.length === 0) return 'all job types are off';
+  const open = state.jobs.filter((j) => j.reservedBy === null && types.includes(j.type));
+  if (open.length === 0) return 'no open jobs of enabled types';
+  const haulOnly = open.every((j) => j.type === 'haul');
+  const freeWood = state.items.some((i) => i.pos !== null && i.reservedBy === null);
+  if (haulOnly && !freeWood) return `${open.length} haul job(s) waiting for wood`;
+  return `${open.length} open job(s), none reachable right now`;
+}

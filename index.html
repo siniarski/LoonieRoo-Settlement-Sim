@@ -9,11 +9,25 @@
       #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
       #hud { position: fixed; inset: 0; pointer-events: none; }
       .hud-bar { position: absolute; left: 12px; top: 12px; display: flex; gap: 4px; align-items: center; padding: 6px; background: rgba(20, 23, 21, 0.9); border: 1px solid #333a35; border-radius: 6px; pointer-events: auto; }
-      .hud-button { font: inherit; color: inherit; background: #222824; border: 1px solid #3a423c; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+      .hud-button { white-space: nowrap; font: inherit; color: inherit; background: #222824; border: 1px solid #3a423c; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
       .hud-button:hover { background: #2c332e; }
       .hud-button.active { background: #3d5a46; border-color: #6c9a78; }
       .hud-sep { width: 1px; align-self: stretch; background: #3a423c; margin: 0 4px; }
       .hud-status { margin-left: 8px; color: #9aa39b; white-space: pre; }
+      .hud-priorities { position: absolute; left: 12px; bottom: 12px; padding: 6px 8px; background: rgba(20, 23, 21, 0.92); border: 1px solid #333a35; border-radius: 6px; pointer-events: auto; }
+      .prio-table { border-collapse: collapse; }
+      .prio-table th { font-weight: normal; color: #9aa39b; padding: 2px 6px; text-align: center; }
+      .prio-table th:first-child, .prio-name { text-align: left; }
+      .prio-table td { padding: 2px 4px; text-align: center; }
+      .prio-table tr.selected .prio-name { color: #8cf0a4; }
+      .prio-name { cursor: pointer; padding-right: 10px; }
+      .prio-doing { color: #9aa39b; text-align: left !important; min-width: 130px; padding-left: 10px; }
+      .prio-cell { font: inherit; width: 28px; height: 22px; border-radius: 4px; border: 1px solid #3a423c; cursor: pointer; color: #111; }
+      .prio-cell.p1 { background: #8cf0a4; }
+      .prio-cell.p2 { background: #b9e08a; }
+      .prio-cell.p3 { background: #e0cf8a; }
+      .prio-cell.p4 { background: #e0a98a; }
+      .prio-cell.p0 { background: #2a302c; color: #6c746d; }
       .hud-debug { position: absolute; right: 12px; top: 64px; margin: 0; padding: 8px 10px; background: rgba(20, 23, 21, 0.9); border: 1px solid #333a35; border-radius: 6px; }
     </style>
   </head>

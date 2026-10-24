@@ -13,6 +13,7 @@ describe('survivor interpolation', () => {
 
   it('moves continuously across tile boundaries with no jumps', () => {
     const state = loadScenario({ seed: 0, map: ['s....'] });
+    state.survivors[0]!.priorities = { build: 0, haul: 0, clean: 0 };
     applyCommand(state, { type: 'moveSurvivor', survivorId: 's1', x: 4, y: 0 });
     const samples: number[] = [];
     for (let t = 0; t < 4 * TICKS_PER_TILE + 2; t++) {

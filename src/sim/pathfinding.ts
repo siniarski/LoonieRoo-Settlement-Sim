@@ -20,27 +20,43 @@ const DIRS: readonly Point[] = [
  * walkable (you can always walk out of the tile you are on).
  */
 export function findPath(grid: Grid, start: Point, goal: Point): Point[] | null {
-  if (!inBounds(grid, start.x, start.y) || !isWalkable(grid, goal.x, goal.y)) return null;
-  if (start.x === goal.x && start.y === goal.y) return [];
+  return findPathToAny(grid, start, [goal]);
+}
+
+/**
+ * Shortest path to whichever goal is nearest (e.g. any tile next to a
+ * blueprint). Unwalkable goals are ignored. Same conventions as findPath.
+ */
+export function findPathToAny(grid: Grid, start: Point, goals: readonly Point[]): Point[] | null {
+  if (!inBounds(grid, start.x, start.y)) return null;
+  const targets = goals.filter((g) => isWalkable(grid, g.x, g.y));
+  if (targets.length === 0) return null;
+  if (targets.some((g) => g.x === start.x && g.y === start.y)) return [];
 
   const { width } = grid;
   const size = width * grid.height;
   const startIdx = start.y * width + start.x;
-  const goalIdx = goal.y * width + goal.x;
+  const goalSet = new Set(targets.map((g) => g.y * width + g.x));
 
   const gScore = new Float64Array(size).fill(Infinity);
   const cameFrom = new Int32Array(size).fill(-1);
   const closed = new Uint8Array(size);
   const open = new MinHeap();
 
-  const h = (idx: number) => Math.abs((idx % width) - goal.x) + Math.abs(Math.floor(idx / width) - goal.y);
+  const h = (idx: number) => {
+    const x = idx % width;
+    const y = Math.floor(idx / width);
+    let best = Infinity;
+    for (const g of targets) best = Math.min(best, Math.abs(x - g.x) + Math.abs(y - g.y));
+    return best;
+  };
 
   gScore[startIdx] = 0;
   open.push(startIdx, h(startIdx), h(startIdx));
 
   while (open.size > 0) {
     const current = open.pop();
-    if (current === goalIdx) return reconstruct(cameFrom, current, width);
+    if (goalSet.has(current)) return reconstruct(cameFrom, current, width);
     if (closed[current]) continue;
     closed[current] = 1;
 
@@ -60,6 +76,64 @@ export function findPath(grid: Grid, start: Point, goal: Point): Point[] | null 
     }
   }
   return null;
+}
+
+// --- Reachability -----------------------------------------------------------
+//
+// Connected-component labels for walkable tiles, so "can I reach any of
+// these?" is O(1) instead of a failed A* that floods the whole map. Memoised
+// per Grid object and walkabilityVersion. This is a derived cache outside sim
+// state: it never affects results, only speed, and a cloned state just
+// recomputes it.
+
+const componentCache = new WeakMap<Grid, { version: number; labels: Int32Array }>();
+
+function components(grid: Grid, version: number): Int32Array {
+  const cached = componentCache.get(grid);
+  if (cached && cached.version === version) return cached.labels;
+
+  const { width, height } = grid;
+  const labels = new Int32Array(width * height).fill(-1);
+  let next = 0;
+  const queue: number[] = [];
+  for (let i = 0; i < labels.length; i++) {
+    if (labels[i] !== -1 || !isWalkable(grid, i % width, Math.floor(i / width))) continue;
+    labels[i] = next;
+    queue.push(i);
+    while (queue.length > 0) {
+      const cur = queue.pop()!;
+      const cx = cur % width;
+      const cy = Math.floor(cur / width);
+      for (const dir of DIRS) {
+        const nx = cx + dir.x;
+        const ny = cy + dir.y;
+        const n = ny * width + nx;
+        if (isWalkable(grid, nx, ny) && labels[n] === -1) {
+          labels[n] = next;
+          queue.push(n);
+        }
+      }
+    }
+    next++;
+  }
+  componentCache.set(grid, { version, labels });
+  return labels;
+}
+
+/**
+ * True if any walkable goal is reachable from `from`. `version` must be the
+ * state's walkabilityVersion. An unwalkable `from` (e.g. inside a wall) can
+ * step into any walkable neighbour.
+ */
+export function canReach(grid: Grid, version: number, from: Point, goals: readonly Point[]): boolean {
+  if (!inBounds(grid, from.x, from.y)) return false;
+  const labels = components(grid, version);
+  const { width } = grid;
+  const starts = isWalkable(grid, from.x, from.y)
+    ? [from]
+    : DIRS.map((d) => ({ x: from.x + d.x, y: from.y + d.y })).filter((p) => isWalkable(grid, p.x, p.y));
+  const startLabels = new Set(starts.map((p) => labels[p.y * width + p.x]));
+  return goals.some((g) => isWalkable(grid, g.x, g.y) && startLabels.has(labels[g.y * width + g.x]!));
 }
 
 function reconstruct(cameFrom: Int32Array, end: number, width: number): Point[] {

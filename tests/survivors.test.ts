@@ -6,8 +6,10 @@ import { loadScenario } from '../src/sim/scenario';
 import { TICKS_PER_TILE } from '../src/sim/survivors';
 import { step } from '../src/sim/tick';
 
+/** Movement tests switch jobs off, so survivors don't wander off to clean tracked dirt. */
 function only(map: string[]) {
   const state = loadScenario({ seed: 0, map });
+  for (const s of state.survivors) s.priorities = { build: 0, haul: 0, clean: 0 };
   const survivor = state.survivors[0]!;
   return { state, survivor: () => state.survivors[0]!, id: survivor.id };
 }

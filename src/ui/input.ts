@@ -1,11 +1,13 @@
 // Mouse and keyboard -> view changes and sim commands.
 //
 //   Left click     on a survivor: select them. Otherwise use the current tool
-//   Left drag      paint with wall/door/clear
+//   Left drag      paint with wall/door/remove/cancel (designations for survivors to work on)
+//   Shift + drag   wall/door/remove happen instantly (sandbox/debug)
 //   Right/middle   drag to pan
 //   Wheel          zoom at the cursor
 //   WASD / arrows  pan
-//   1 2 3 4        wall, door, clear, move (selected survivor walks to the tile)
+//   1-5            wall, door, remove, move (selected survivor walks to the tile), cancel
+//   P              toggle the priority panel
 //   Space          pause / resume
 //   `              toggle debug panel
 //   Home           recentre
@@ -50,6 +52,8 @@ export function attachInput(ctx: InputContext): Input {
   const { canvas, view } = ctx;
   const held = new Set<string>();
   let painting: Point | null = null;
+  /** Shift state captured when the drag started, so a drag doesn't change mode halfway. */
+  let paintInstant = false;
   let panning: Point | null = null;
 
   const screenPoint = (e: MouseEvent): Point => {
@@ -61,7 +65,7 @@ export function attachInput(ctx: InputContext): Input {
   const apply = (tile: Point) => {
     const { width, height } = ctx.mapSize();
     if (tile.x < 0 || tile.y < 0 || tile.x >= width || tile.y >= height) return;
-    const cmd = getTool(view.tool).command(tile.x, tile.y, view.selectedId);
+    const cmd = getTool(view.tool).command(tile.x, tile.y, { selectedId: view.selectedId, instant: paintInstant });
     if (cmd) ctx.command(cmd);
   };
 
@@ -81,6 +85,7 @@ export function attachInput(ctx: InputContext): Input {
         view.selectedId = clicked;
         return;
       }
+      paintInstant = e.shiftKey;
       apply(tile);
       if (getTool(view.tool).paints) painting = tile;
     } else if (e.button === 1 || e.button === 2) {
@@ -134,6 +139,8 @@ export function attachInput(ctx: InputContext): Input {
       e.preventDefault();
     } else if (key === '`') {
       view.showDebug = !view.showDebug;
+    } else if (key === 'p') {
+      view.showPriorities = !view.showPriorities;
     } else if (key === 'Home') {
       const { width, height } = ctx.mapSize();
       view.camera = centredOn(width, height, view.camera.zoom);

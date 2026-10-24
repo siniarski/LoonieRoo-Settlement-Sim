@@ -12,6 +12,7 @@ import { step } from './sim/tick';
 import { createHud } from './ui/hud';
 import { attachInput } from './ui/input';
 import { MS_PER_TICK, ticksForFrame } from './ui/loop';
+import { TOOLS } from './ui/tools';
 import type { ViewState } from './ui/view';
 
 /** View-side helpers for agents and Playwright (screen coords are CSS px, page-relative). */
@@ -39,15 +40,18 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   const handle: GameHandle = { state };
   const view: ViewState = {
     camera: centredOn(state.grid.width, state.grid.height),
-    tool: 'move',
+    tool: 'wall',
     selectedId: null,
     hover: null,
     speed: 1,
     paused: false,
     showDebug: false,
+    showPriorities: true,
     // Spread over the defaults so view state saved by older code gains new fields.
     ...saved,
   };
+  // A tool that no longer exists (renamed since the view was saved) falls back to the default.
+  if (!TOOLS.some((t) => t.id === view.tool)) view.tool = 'wall';
   const ensureSelection = () => {
     const survivors = handle.state.survivors;
     if (!survivors.some((s) => s.id === view.selectedId)) view.selectedId = survivors[0]?.id ?? null;
@@ -85,7 +89,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     survivorAt: (tile) => survivorAt(handle.state, tile.x, tile.y)?.id ?? null,
     command: (cmd) => applyCommand(handle.state, cmd),
   });
-  const hud = createHud(hudRoot, view);
+  const hud = createHud(hudRoot, view, (cmd) => applyCommand(handle.state, cmd));
 
   let accumulatorMs = 0;
   let last = performance.now();

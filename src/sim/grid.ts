@@ -13,13 +13,20 @@ export interface Grid {
   height: number;
   /** Row-major: index = y * width + x. */
   tiles: Tile[];
+  /** 1 where a floor tile is dirty, else 0. Same indexing as tiles. Only floor can be dirty. */
+  dirt: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
     throw new Error(`createGrid: invalid size ${width}x${height}`);
   }
-  return { width, height, tiles: new Array<Tile>(width * height).fill(fill) };
+  return {
+    width,
+    height,
+    tiles: new Array<Tile>(width * height).fill(fill),
+    dirt: new Array<number>(width * height).fill(0),
+  };
 }
 
 export function inBounds(grid: Grid, x: number, y: number): boolean {
@@ -44,6 +51,19 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   const i = tileIndex(grid, x, y);
   if (grid.tiles[i] === tile) return false;
   grid.tiles[i] = tile;
+  if (tile !== 'floor') grid.dirt[i] = 0;
+  return true;
+}
+
+export function isDirty(grid: Grid, x: number, y: number): boolean {
+  return inBounds(grid, x, y) && grid.dirt[tileIndex(grid, x, y)] === 1;
+}
+
+/** Marks a floor tile dirty or clean. Returns true if it changed. Non-floor tiles can't get dirty. */
+export function setDirty(grid: Grid, x: number, y: number, dirty: boolean): boolean {
+  if (getTile(grid, x, y) !== 'floor' && dirty) return false;
+  if (isDirty(grid, x, y) === dirty || !inBounds(grid, x, y)) return false;
+  grid.dirt[tileIndex(grid, x, y)] = dirty ? 1 : 0;
   return true;
 }
 

@@ -2,7 +2,10 @@
 // JSON-compatible data (architecture rule 7).
 
 import type { Command } from './commands';
+import type { Blueprint } from './designations';
 import { createGrid, type Grid } from './grid';
+import type { Item } from './items';
+import type { Job } from './jobs';
 import { seedRng } from './rng';
 import type { Survivor } from './survivors';
 
@@ -10,7 +13,7 @@ import type { Survivor } from './survivors';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -27,7 +30,11 @@ export interface SimState {
   /** Bumped whenever a wall or door changes. Caches compare against it. */
   walkabilityVersion: number;
   survivors: Survivor[];
-  /** Next numeric id for entities. Ids are strings like "s1". */
+  items: Item[];
+  blueprints: Blueprint[];
+  /** The shared job queue. Derived from blueprints and dirt by reconcileJobs each tick. */
+  jobs: Job[];
+  /** Next numeric id for entities. Ids are strings like "s1", "i7", "b12", "j20". */
   nextId: number;
   /** Every command that changed state, in order. seed + initial state + this = replay. */
   commandLog: LoggedCommand[];
@@ -47,6 +54,9 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     grid: createGrid(width, height),
     walkabilityVersion: 0,
     survivors: [],
+    items: [],
+    blueprints: [],
+    jobs: [],
     nextId: 1,
     commandLog: [],
   };

@@ -4,7 +4,13 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'clear' | 'move';
+export type ToolId = 'wall' | 'door' | 'remove' | 'move' | 'cancel';
+
+export interface ToolContext {
+  selectedId: string | null;
+  /** Shift held: build or remove instantly instead of designating a job. */
+  instant: boolean;
+}
 
 export interface Tool {
   id: ToolId;
@@ -14,20 +20,39 @@ export interface Tool {
   /** Painting tools apply on every tile a drag crosses; others only on click. */
   paints: boolean;
   /** Null when the tool can't act (e.g. move with nobody selected). */
-  command(x: number, y: number, selectedId: string | null): Command | null;
+  command(x: number, y: number, ctx: ToolContext): Command | null;
 }
 
 export const TOOLS: readonly Tool[] = [
-  { id: 'wall', label: 'Wall', key: '1', paints: true, command: (x, y) => ({ type: 'placeWall', x, y }) },
-  { id: 'door', label: 'Door', key: '2', paints: true, command: (x, y) => ({ type: 'placeDoor', x, y }) },
-  { id: 'clear', label: 'Clear', key: '3', paints: true, command: (x, y) => ({ type: 'clearTile', x, y }) },
+  {
+    id: 'wall',
+    label: 'Wall',
+    key: '1',
+    paints: true,
+    command: (x, y, { instant }) => (instant ? { type: 'placeWall', x, y } : { type: 'designateBuild', x, y, structure: 'wall' }),
+  },
+  {
+    id: 'door',
+    label: 'Door',
+    key: '2',
+    paints: true,
+    command: (x, y, { instant }) => (instant ? { type: 'placeDoor', x, y } : { type: 'designateBuild', x, y, structure: 'door' }),
+  },
+  {
+    id: 'remove',
+    label: 'Remove',
+    key: '3',
+    paints: true,
+    command: (x, y, { instant }) => (instant ? { type: 'clearTile', x, y } : { type: 'designateRemove', x, y }),
+  },
   {
     id: 'move',
     label: 'Move',
     key: '4',
     paints: false,
-    command: (x, y, selectedId) => (selectedId ? { type: 'moveSurvivor', survivorId: selectedId, x, y } : null),
+    command: (x, y, { selectedId }) => (selectedId ? { type: 'moveSurvivor', survivorId: selectedId, x, y } : null),
   },
+  { id: 'cancel', label: 'Cancel', key: '5', paints: true, command: (x, y) => ({ type: 'cancelDesignation', x, y }) },
 ];
 
 export function getTool(id: ToolId): Tool {
