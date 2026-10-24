@@ -28,7 +28,7 @@ const MAP = [
   '.######.....###D##..++..',
   '..........s.........d...',
   '....,...........,.......',
-  '..www...................',
+  '..www......ff...........',
   '........................',
 ];
 
@@ -58,6 +58,8 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 54) return { type: 'clearTile', x, y };
   // Make someone tired (or rested) at a random moment, mid-job or mid-walk.
   if (roll < 57) return { type: 'setRest', survivorId: survivor.id, rest: randomInt(driver, 0, 2001) };
+  if (roll < 60) return { type: 'setSatiety', survivorId: survivor.id, satiety: randomInt(driver, 0, 3001) };
+  if (roll < 62) return { type: 'spawnFood', x, y };
   return null;
 }
 
@@ -99,7 +101,7 @@ describe('stuck-state invariant', () => {
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
 
-          const idle = !s.jobId && !s.goal && !s.move && !s.sleep;
+          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal;
           const idleTicks = idle && chooseJob(state, s) ? (idleWithWork.get(s.id) ?? 0) + 1 : 0;
           idleWithWork.set(s.id, idleTicks);
           expect(idleTicks, `idle with doable work: ${where}`).toBeLessThanOrEqual(MAX_IDLE_WITH_DOABLE_JOB);
@@ -119,7 +121,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

@@ -35,6 +35,7 @@ export const TILE_CHARS: Record<Tile, string> = {
 export const ENTITY_CHARS = {
   survivor: 's',
   wood: 'w',
+  food: 'f',
   dirt: ',',
   bed: 'b',
   wallBlueprint: '+',
@@ -55,6 +56,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.wood:
       spawnItem(state, 'wood', x, y);
+      return true;
+    case ENTITY_CHARS.food:
+      spawnItem(state, 'food', x, y);
       return true;
     case ENTITY_CHARS.dirt:
       setDirty(state.grid, x, y, true);

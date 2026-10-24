@@ -3,6 +3,8 @@
 import type { Blueprint, BuildTarget } from '../sim/designations';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
+import { HUNGRY, SATIETY_MAX } from '../sim/food';
+import type { ItemKind } from '../sim/items';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
 import type { SimState } from '../sim/state';
@@ -36,7 +38,11 @@ const COLOURS = {
   survivorOutline: '#1a1d1b',
   survivorAsleep: '#8a8fa8',
   rest: '#7fb2ff',
-  restLow: '#ff8a7a',
+  satiety: '#ffb35c',
+  needLow: '#ff6a5c',
+  foodCan: '#b9c2c9',
+  foodLabel: '#d9534f',
+  foodRim: '#6f7880',
   selected: '#8cf0a4',
   path: 'rgba(140, 240, 164, 0.7)',
   goal: '#8cf0a4',
@@ -116,7 +122,9 @@ export function draw(
 
   for (const f of state.furniture) drawBed(ctx, camera, viewport, f.x, f.y);
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
-  for (const item of state.items) if (item.pos) drawWood(ctx, camera, viewport, item.pos.x + 0.5, item.pos.y + 0.5, size);
+  for (const item of state.items) {
+    if (item.pos) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
+  }
 
   if (options.hover) drawHover(ctx, camera, viewport, options.hover, options.tool, grid.width, grid.height);
 
@@ -127,7 +135,7 @@ export function draw(
     }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
-  for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, s, options, size);
+  for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
 }
 
@@ -237,6 +245,33 @@ function drawDirt(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
   }
 }
 
+function drawItem(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewport: Viewport,
+  kind: ItemKind,
+  wx: number,
+  wy: number,
+  size: number,
+): void {
+  if (kind === 'food') drawFood(ctx, camera, viewport, wx, wy, size);
+  else drawWood(ctx, camera, viewport, wx, wy, size);
+}
+
+/** A tin can: easy to tell apart from wood planks at a glance. */
+function drawFood(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const w = size * 0.42;
+  const h = size * 0.5;
+  ctx.fillStyle = COLOURS.foodCan;
+  ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
+  ctx.fillStyle = COLOURS.foodLabel;
+  ctx.fillRect(p.x - w / 2, p.y - h * 0.15, w, h * 0.3);
+  ctx.strokeStyle = COLOURS.foodRim;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(p.x - w / 2 + 0.5, p.y - h / 2 + 0.5, w - 1, h - 1);
+}
+
 function drawWood(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
   const p = worldToScreen(camera, viewport, wx, wy);
   const w = size * 0.6;
@@ -309,6 +344,7 @@ function drawSurvivor(
   ctx: CanvasRenderingContext2D,
   camera: Camera,
   viewport: Viewport,
+  state: SimState,
   s: Survivor,
   options: DrawOptions,
   size: number,
@@ -332,18 +368,27 @@ function drawSurvivor(
   ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  if (s.carrying) drawWood(ctx, camera, viewport, world.x + 0.3, world.y + 0.25, size * 0.6);
+  const carried = s.carrying ? state.items.find((i) => i.id === s.carrying) : undefined;
+  if (carried) drawItem(ctx, camera, viewport, carried.kind, world.x + 0.3, world.y + 0.25, size * 0.6);
 
-  // Rest bar under the survivor once it matters: below half, or while sleeping.
+  // Need bars under the survivor once they matter: rest (blue) below half or
+  // while sleeping, food (orange) below half or while eating. Red when urgent.
+  const bars: { value: number; max: number; colour: string }[] = [];
   if (asleep || s.rest < REST_MAX / 2) {
-    const w = Math.max(10, size * 0.8);
-    const h = Math.max(2, Math.round(size * 0.1));
-    const y = p.y + radius + 3;
+    bars.push({ value: s.rest, max: REST_MAX, colour: s.rest < TIRED ? COLOURS.needLow : COLOURS.rest });
+  }
+  if (s.meal || s.satiety < SATIETY_MAX / 2) {
+    bars.push({ value: s.satiety, max: SATIETY_MAX, colour: s.satiety < HUNGRY ? COLOURS.needLow : COLOURS.satiety });
+  }
+  const w = Math.max(10, size * 0.8);
+  const h = Math.max(2, Math.round(size * 0.1));
+  bars.forEach((bar, i) => {
+    const y = p.y + radius + 3 + i * (h + 1);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(p.x - w / 2, y, w, h);
-    ctx.fillStyle = s.rest < TIRED ? COLOURS.restLow : COLOURS.rest;
-    ctx.fillRect(p.x - w / 2, y, (w * s.rest) / REST_MAX, h);
-  }
+    ctx.fillStyle = bar.colour;
+    ctx.fillRect(p.x - w / 2, y, (w * bar.value) / bar.max, h);
+  });
 
   if (size >= MIN_LABEL_PX) {
     ctx.fillStyle = COLOURS.label;

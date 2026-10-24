@@ -7,6 +7,7 @@ import type { Point } from '../sim/grid';
 import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
+import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
@@ -121,6 +122,7 @@ function statusText(state: SimState, view: ViewState): string {
     hover && hover.x >= 0 && hover.y >= 0 && hover.x < width && hover.y < height ? tiles[hover.y * width + hover.x] : undefined;
   const selected = state.survivors.find((s) => s.id === view.selectedId);
   const wood = state.items.filter((i) => i.kind === 'wood').length;
+  const food = state.items.filter((i) => i.kind === 'food').length;
   const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : 'select';
   return [
     mode,
@@ -129,6 +131,7 @@ function statusText(state: SimState, view: ViewState): string {
     `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
+    `food ${food}`,
   ].join('  ·  ');
 }
 
@@ -266,6 +269,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 }
 
 function activity(state: SimState, s: Survivor): string {
+  if (s.meal) return s.meal.progress > 0 ? 'eating' : 'going to eat';
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   if (job) return `${job.type} (${job.x}, ${job.y})`;
@@ -314,9 +318,9 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   const p = s.priorities;
   return [
-    `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? '  carrying wood' : ''}`,
-    `    rest ${s.rest}/${REST_MAX} (${Math.round((100 * s.rest) / REST_MAX)}%)${s.rest < TIRED ? ' TIRED' : ''}  ·  ${activity(state, s)}`,
-    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep ? 'none: sleeping' : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} c${p.clean}`,
+    `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
+    `    rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
+    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,
   ];

@@ -3,6 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { getTile, isWalkable } from './grid';
+import { SATIETY_MAX } from './food';
 import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
 import type { SimState } from './state';
@@ -57,7 +58,9 @@ export function checkInvariants(state: SimState): string[] {
     if (item.reservedBy) {
       const holder = survivors.get(item.reservedBy);
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
-      if (job?.itemId !== item.id) problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job`);
+      if (job?.itemId !== item.id && holder?.meal?.itemId !== item.id) {
+        problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job or meal`);
+      }
     }
   }
 
@@ -80,6 +83,14 @@ export function checkInvariants(state: SimState): string[] {
 
   for (const s of state.survivors) {
     if (s.rest < 0 || s.rest > REST_MAX || !Number.isInteger(s.rest)) problems.push(`${s.name} has rest ${s.rest}`);
+    if (s.satiety < 0 || s.satiety > SATIETY_MAX || !Number.isInteger(s.satiety)) problems.push(`${s.name} has satiety ${s.satiety}`);
+    if (s.meal) {
+      const food = items.get(s.meal.itemId);
+      if (!food || food.kind !== 'food') problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);
+      else if (food.reservedBy !== s.id) problems.push(`${s.name} eats ${food.id}, reserved by ${food.reservedBy}`);
+      if (s.jobId) problems.push(`${s.name} is eating but holds job ${s.jobId}`);
+      if (s.sleep) problems.push(`${s.name} is eating and sleeping at once`);
+    }
     if (!s.sleep) continue;
     if (s.jobId) problems.push(`${s.name} is sleeping but holds job ${s.jobId}`);
     if (s.carrying) problems.push(`${s.name} is sleeping while carrying ${s.carrying}`);

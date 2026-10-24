@@ -417,7 +417,7 @@ export function explainIdle(state: SimState, s: Survivor): string {
   const open = state.jobs.filter((j) => j.reservedBy === null && types.includes(j.type));
   if (open.length === 0) return 'no open jobs of enabled types';
   const haulOnly = open.every((j) => j.type === 'haul');
-  const freeWood = state.items.some((i) => i.pos !== null && i.reservedBy === null);
+  const freeWood = state.items.some((i) => i.kind === 'wood' && i.pos !== null && i.reservedBy === null);
   if (haulOnly && !freeWood) return `${open.length} haul job(s) waiting for wood`;
   return `${open.length} open job(s), none reachable right now`;
 }

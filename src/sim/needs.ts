@@ -1,16 +1,25 @@
-// Needs: rest and sleep.
+// Needs: rest/sleep and hunger/food.
 //
 // Rest drains while awake. Below TIRED a survivor drops whatever job they
 // have (through releaseSurvivor, so nothing is left reserved or carried),
 // reserves the nearest reachable free bed (first come, first served), walks
 // there, and sleeps until fully rested. With no free reachable bed they
-// sleep on the floor where they stand, recovering more slowly. Anything that
-// goes wrong (bed removed, path blocked) falls back to re-planning or the
-// floor, so a tired survivor is never stuck.
+// sleep on the floor where they stand, recovering more slowly.
 //
-// Constants live in rest.ts.
+// Satiety drains all the time. Below HUNGRY, if there is reachable free
+// food, a survivor drops their job, reserves the nearest food item, walks to
+// it, and eats it where it lies. With no food they keep working and look
+// again every MEAL_RETRY_TICKS. Eating comes before sleeping; sleepers aren't
+// woken to eat.
+//
+// Anything that goes wrong (bed or food gone, path blocked) falls back to
+// re-planning or the floor, so a needy survivor is never stuck.
+//
+// Constants live in rest.ts and food.ts.
 
+import { EAT_TICKS, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { furnitureAt, type Furniture } from './furniture';
+import { getItem, removeItem, type Item } from './items';
 import { releaseSurvivor } from './jobs';
 import { canReach, findPathToAny } from './pathfinding';
 import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX, TIRED } from './rest';
@@ -22,13 +31,21 @@ export function isTired(s: Survivor): boolean {
   return s.rest < TIRED;
 }
 
+export function isHungry(s: Survivor): boolean {
+  return s.satiety < HUNGRY;
+}
+
 function getBed(state: SimState, id: string): Furniture | undefined {
   return state.furniture.find((f) => f.id === id && f.kind === 'bed');
 }
 
-/** Drops sleep plans whose bed has gone (removed, flattened). Runs at the start of each tick. */
-export function reconcileSleep(state: SimState): void {
+/** Drops sleep and meal plans whose bed or food has gone. Runs at the start of each tick. */
+export function reconcileNeeds(state: SimState): void {
   for (const s of state.survivors) {
+    if (s.meal) {
+      const item = getItem(state, s.meal.itemId);
+      if (!item || item.reservedBy !== s.id || !item.pos) cancelMeal(state, s, 'food gone');
+    }
     if (!s.sleep?.bedId) continue;
     const bed = getBed(state, s.sleep.bedId);
     if (bed && bed.occupant === s.id) continue;
@@ -41,10 +58,96 @@ export function reconcileSleep(state: SimState): void {
   }
 }
 
-/** Interrupts work for sleep before movement, so a tired hauler doesn't finish a long walk first. */
-export function interruptIfTired(state: SimState, s: Survivor): void {
-  if (isTired(s) && !s.sleep && s.jobId) releaseSurvivor(state, s, 'too tired to work');
+/**
+ * Interrupts work for a need before movement, so a tired or hungry hauler
+ * doesn't finish a long walk first. Hunger only interrupts if there is food
+ * to go to.
+ */
+export function interruptForNeeds(state: SimState, s: Survivor): void {
+  if (!s.jobId || s.sleep || s.meal) return;
+  if (isTired(s)) {
+    releaseSurvivor(state, s, 'too tired to work');
+  } else if (isHungry(s) && state.tick >= s.nextMealTick) {
+    if (nearestFreeFood(state, s)) releaseSurvivor(state, s, 'hungry');
+    else s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
+  }
 }
+
+// --- Hunger -----------------------------------------------------------------
+
+/**
+ * Runs when the survivor is standing still, before sleep and work. Returns
+ * true if eating handled this tick.
+ */
+export function updateMeal(state: SimState, s: Survivor): boolean {
+  if (s.sleep) return false; // sleepers aren't woken to eat
+  if (!s.meal && !startMeal(state, s)) return false;
+  const meal = s.meal!;
+  const item = getItem(state, meal.itemId);
+  if (!item?.pos || item.reservedBy !== s.id) {
+    cancelMeal(state, s, 'food gone');
+    return false;
+  }
+  if (!samePoint(s.pos, item.pos)) {
+    const path = findPathToAny(state.grid, s.pos, [item.pos]);
+    if (!path || path.length === 0) {
+      cancelMeal(state, s, "can't reach the food");
+      s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
+      return false;
+    }
+    walk(s, path, state.walkabilityVersion);
+    return true;
+  }
+  meal.progress += 1;
+  if (meal.progress === 1) s.note = `eating at (${item.pos.x}, ${item.pos.y})`;
+  if (meal.progress < EAT_TICKS) return true;
+  removeItem(state, item);
+  s.satiety = Math.min(SATIETY_MAX, s.satiety + MEAL_VALUE);
+  s.meal = null;
+  s.note = 'ate a meal';
+  return true;
+}
+
+function startMeal(state: SimState, s: Survivor): boolean {
+  if (!isHungry(s) || state.tick < s.nextMealTick) return false;
+  const food = nearestFreeFood(state, s);
+  if (!food?.pos) {
+    s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
+    return false;
+  }
+  if (s.jobId) releaseSurvivor(state, s, 'hungry');
+  food.reservedBy = s.id;
+  s.meal = { itemId: food.id, progress: 0 };
+  s.note = `going to eat at (${food.pos.x}, ${food.pos.y})`;
+  return true;
+}
+
+/** Nearest unreserved food on the ground that this survivor can reach. */
+function nearestFreeFood(state: SimState, s: Survivor): Item | undefined {
+  return state.items
+    .filter((i): i is Item & { pos: NonNullable<Item['pos']> } => i.kind === 'food' && i.pos !== null && i.reservedBy === null)
+    .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos))
+    .find((i) => canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
+}
+
+/** Gives up the reserved food (if any). Safe to call when not eating. */
+export function cancelMeal(state: SimState, s: Survivor, note: string): void {
+  if (!s.meal) return;
+  const item = getItem(state, s.meal.itemId);
+  if (item && item.reservedBy === s.id) item.reservedBy = null;
+  s.meal = null;
+  s.goal = null;
+  s.path = [];
+  s.pathVersion = -1;
+  s.note = note;
+}
+
+/** Satiety drains every tick, awake or asleep. */
+export function updateSatiety(s: Survivor): void {
+  s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
+}
+
+// --- Sleep ------------------------------------------------------------------
 
 /**
  * Runs when the survivor is standing still. Returns true if sleep handled
