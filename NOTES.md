@@ -58,14 +58,14 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 | Storage | Complete storage rooms are haul destinations: each loose item outside storage gets a store job; destination tile chosen and reserved at claim time. Builders take wood back out of storage | Answers the M4 stockpile question with the existing haul job type |
 | Cleaning scope | Indoors only (any enclosed room): dirt is only tracked indoors, clean jobs only for indoor dirt | Answers the M4 home-area question; no more scrubbing the street |
 | Cancel tool | On a blueprint cancels it; otherwise clears the purpose of the room under the click | One "undo a designation" tool |
+| Bed ownership | First come, first served (milestone 6). Assigned beds can come later as room types with bed assignment (e.g. barracks vs private quarters) | Simplest thing that makes sleep work |
+| No drafting | Planning happens while paused (Space): designate freely, nothing ticks, unpause to start work. Or build on the fly. Direct move orders stay temporary | Player's call: pause-to-plan fits the game better than a drafted mode. Verified in the browser: 0 ticks while paused, jobs created and claimed on unpause |
 | Rule enforcement | `tsconfig.sim.json` (no DOM lib) + `tests/architecture.test.ts` (source scan) | Rules 2 and 3 fail the build instead of relying on review |
 | Toolchain | Node 24 LTS, TypeScript 7, Vite 8, Vitest 5 | Current versions as of 2026-10-24 |
 | Vitest `fsModuleCache` | Disabled | It doesn't refresh `import.meta.glob` when files are added, so the architecture scan missed new sim files. Suite runs in ~200ms, so the cache isn't needed |
 
 ## Open questions
 
-- **Drafting.** Direct orders are temporary; survivors go straight back to work. Probably needs a "drafted" toggle by milestone 7.
-- **Bed ownership.** Housing counts beds but nobody owns or sleeps in one yet. Milestone 6 (sleep) decides whether beds are assigned or first-come.
 - **Haul distance.** Storage far from the wood pile makes hauling slow (1 item per trip). Fine for now; if it drags, consider carrying 2-3 or a "nearest storage" preference per item.
 
 - **Scale: "macro" vs colony.** The concept says macro-scale (SimCity), but the systems are colony-scale (individual survivors doing per-tile A*, like RimWorld). Plain A* is fine for 5-30 survivors. Hundreds of survivors on a town-sized map would need hierarchical pathfinding or flow fields. What is the target map size and survivor count?
