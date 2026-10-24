@@ -1,26 +1,29 @@
 // Mouse and keyboard -> view changes and sim commands.
 //
-//   Left click     on a survivor: select them. Otherwise use the current tool
-//   Left drag      paint with wall/door/remove/cancel (designations for survivors to work on)
-//   Shift + drag   wall/door/remove happen instantly (sandbox/debug)
-//   Right/middle   drag to pan
-//   Wheel          zoom at the cursor
-//   WASD / arrows  pan
-//   1-5            wall, door, remove, move (selected survivor walks to the tile), cancel
-//   6-8            bed, housing room, storage room (click inside a room; Cancel clears it)
-//   P              toggle the priority panel
-//   Space          pause / resume
-//   `              toggle debug panel
-//   Home           recentre
+// Select mode (default):
+//   Left click     select a survivor (click empty ground to deselect)
+//   Right click    move the selected survivor there
+// Build mode (B opens the build bar):
+//   1-9            arm a tool from the open category; Tab/E next category, Shift+Tab/Q previous
+//   Left drag      paint with the armed tool (designations for survivors to work on)
+//   Shift + drag   wall/door/bed/remove happen instantly (sandbox/debug)
+//   Right click    put the tool down
+//   Esc            put the tool down, then close build mode, then deselect
+// Always:
+//   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
+//   P priorities · Space pause · ` debug panel · Home recentre
 
 import { centredOn, panByScreen, screenToTile, zoomAt, type Viewport } from '../render/camera';
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
-import { TOOLS, getTool, tilesOnLine } from './tools';
+import { disarm, handleBuildKey } from './buildMode';
+import { getTool, tilesOnLine } from './tools';
 import type { ViewState } from './view';
 
 /** Screen pixels per second for keyboard panning. */
 const KEY_PAN_PX_PER_SEC = 600;
+/** A right-button press that moves less than this is a click, not a pan. */
+const CLICK_SLOP_PX = 4;
 
 const PAN_KEYS: Record<string, Point> = {
   w: { x: 0, y: -1 },
@@ -56,18 +59,43 @@ export function attachInput(ctx: InputContext): Input {
   /** Shift state captured when the drag started, so a drag doesn't change mode halfway. */
   let paintInstant = false;
   let panning: Point | null = null;
+  /** Right button: where it went down and how far it has travelled, to tell click from pan. */
+  let rightPress: { start: Point; travelled: number } | null = null;
 
   const screenPoint = (e: MouseEvent): Point => {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
   const tileAt = (p: Point) => screenToTile(view.camera, ctx.viewport(), p.x, p.y);
+  const onMap = (tile: Point) => {
+    const { width, height } = ctx.mapSize();
+    return tile.x >= 0 && tile.y >= 0 && tile.x < width && tile.y < height;
+  };
 
   const apply = (tile: Point) => {
-    const { width, height } = ctx.mapSize();
-    if (tile.x < 0 || tile.y < 0 || tile.x >= width || tile.y >= height) return;
-    const cmd = getTool(view.tool).command(tile.x, tile.y, { selectedId: view.selectedId, instant: paintInstant });
-    if (cmd) ctx.command(cmd);
+    if (!view.tool || !onMap(tile)) return;
+    ctx.command(getTool(view.tool).command(tile.x, tile.y, { instant: paintInstant }));
+  };
+
+  const onLeftDown = (tile: Point, shift: boolean) => {
+    if (view.tool) {
+      paintInstant = shift;
+      apply(tile);
+      if (getTool(view.tool).paints) painting = tile;
+      return;
+    }
+    // Select mode: pick a survivor, or clear the selection on empty ground.
+    view.selectedId = ctx.survivorAt(tile);
+  };
+
+  const onRightClick = (tile: Point) => {
+    if (view.tool) {
+      disarm(view);
+      return;
+    }
+    if (view.selectedId && onMap(tile)) {
+      ctx.command({ type: 'moveSurvivor', survivorId: view.selectedId, x: tile.x, y: tile.y });
+    }
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -80,17 +108,10 @@ export function attachInput(ctx: InputContext): Input {
     }
     const p = screenPoint(e);
     if (e.button === 0) {
-      const tile = tileAt(p);
-      const clicked = ctx.survivorAt(tile);
-      if (clicked) {
-        view.selectedId = clicked;
-        return;
-      }
-      paintInstant = e.shiftKey;
-      apply(tile);
-      if (getTool(view.tool).paints) painting = tile;
+      onLeftDown(tileAt(p), e.shiftKey);
     } else if (e.button === 1 || e.button === 2) {
       panning = p;
+      if (e.button === 2) rightPress = { start: p, travelled: 0 };
     }
   };
 
@@ -104,6 +125,7 @@ export function attachInput(ctx: InputContext): Input {
       painting = tile;
     }
     if (panning) {
+      if (rightPress) rightPress.travelled += Math.hypot(p.x - panning.x, p.y - panning.y);
       view.camera = panByScreen(view.camera, p.x - panning.x, p.y - panning.y);
       panning = p;
       view.hover = tileAt(p);
@@ -112,8 +134,10 @@ export function attachInput(ctx: InputContext): Input {
 
   const onPointerUp = (e: PointerEvent) => {
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    if (e.button === 2 && rightPress && rightPress.travelled < CLICK_SLOP_PX) onRightClick(tileAt(rightPress.start));
     painting = null;
     panning = null;
+    rightPress = null;
   };
 
   const onPointerLeave = () => {
@@ -132,10 +156,12 @@ export function attachInput(ctx: InputContext): Input {
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    const tool = TOOLS.find((t) => t.key === key);
-    if (tool) {
-      view.tool = tool.id;
-    } else if (key === ' ') {
+    if (handleBuildKey(view, key, e.shiftKey)) {
+      if (key === 'Tab') e.preventDefault(); // don't move browser focus
+      if (!view.tool) painting = null;
+      return;
+    }
+    if (key === ' ') {
       view.paused = !view.paused;
       e.preventDefault();
     } else if (key === '`') {

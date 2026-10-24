@@ -1,5 +1,6 @@
-// Tool palette, speed controls, status line, priority panel, and the debug
-// panel (DOM). Reads state; changes go out as sim commands.
+// Top bar (speed, Build, Priorities), status line, room checklist, build
+// bar, priority panel, and the debug panel (DOM). Reads state; changes go
+// out as sim commands or view-state changes.
 
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
@@ -9,8 +10,9 @@ import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
+import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
-import { TOOLS } from './tools';
+import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
 
 export interface Hud {
@@ -32,17 +34,6 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   root.innerHTML = '';
 
   const bar = el('div', 'hud-bar');
-  const toolButtons = TOOLS.map((tool) => {
-    const button = el('button', 'hud-button');
-    button.textContent = `${tool.key} ${tool.label}`;
-    button.title = tool.paints && tool.id !== 'cancel' ? 'Hold Shift to place instantly' : '';
-    button.addEventListener('click', () => (view.tool = tool.id));
-    bar.append(button);
-    return { id: tool.id, button };
-  });
-
-  bar.append(el('span', 'hud-sep'));
-
   const pauseButton = el('button', 'hud-button');
   pauseButton.addEventListener('click', () => (view.paused = !view.paused));
   bar.append(pauseButton);
@@ -58,6 +49,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   });
 
   bar.append(el('span', 'hud-sep'));
+  const buildButton = el('button', 'hud-button');
+  buildButton.textContent = 'B Build';
+  buildButton.addEventListener('click', () => toggleBuild(view));
+  bar.append(buildButton);
   const prioritiesButton = el('button', 'hud-button');
   prioritiesButton.textContent = 'P Priorities';
   prioritiesButton.addEventListener('click', () => (view.showPriorities = !view.showPriorities));
@@ -68,13 +63,14 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const roomPanel = el('pre', 'hud-room');
   info.append(status, roomPanel);
 
+  const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
   // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, pausedBanner);
+  root.append(pausedFrame, bar, info, priorities.root, debug, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -83,11 +79,14 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
   return {
     update(state, fps) {
-      toolButtons.forEach(({ id, button }) => button.classList.toggle('active', id === view.tool));
       pauseButton.textContent = view.paused ? '▶ Resume' : '❚❚ Pause';
       pauseButton.classList.toggle('active', view.paused);
       pausedFrame.hidden = !view.paused;
       pausedBanner.hidden = !view.paused;
+      // Lift the banner above the build bar when both are showing.
+      pausedBanner.classList.toggle('above-build', view.buildOpen);
+      buildButton.classList.toggle('active', view.buildOpen);
+      buildBar.update();
       speedButtons.forEach(({ speed, button }) =>
         button.classList.toggle('active', !view.paused && speed === view.speed),
       );
@@ -121,13 +120,65 @@ function statusText(state: SimState, view: ViewState): string {
     hover && hover.x >= 0 && hover.y >= 0 && hover.x < width && hover.y < height ? tiles[hover.y * width + hover.x] : undefined;
   const selected = state.survivors.find((s) => s.id === view.selectedId);
   const wood = state.items.filter((i) => i.kind === 'wood').length;
+  const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : 'select';
   return [
-    `tick ${state.tick}`,
+    mode,
+    selected ? `${selected.name} selected (right-click to move)` : 'nobody selected',
     hover && tile ? `(${hover.x}, ${hover.y}) ${tile}` : '—',
-    selected ? `selected ${selected.name}` : 'nobody selected',
+    `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
   ].join('  ·  ');
+}
+
+// --- Build bar --------------------------------------------------------------
+
+function createBuildBar(view: ViewState) {
+  const root = el('div', 'hud-build');
+  const tabs = el('div', 'build-tabs');
+  const tools = el('div', 'build-tools');
+  const hint = el('div', 'build-hint');
+  root.append(tabs, tools, hint);
+
+  const tabButtons = CATEGORIES.map((category) => {
+    const button = el('button', 'build-tab');
+    button.textContent = category.label;
+    button.addEventListener('click', () => chooseCategory(view, category.id));
+    tabs.append(button);
+    return { id: category.id, button };
+  });
+
+  let shownCategory: CategoryId | null = null;
+  let toolButtons: { id: ToolId; button: HTMLButtonElement }[] = [];
+  const showTools = (category: CategoryId) => {
+    tools.innerHTML = '';
+    toolButtons = toolsIn(category).map((tool, i) => {
+      const button = el('button', 'hud-button build-tool');
+      button.textContent = `${i + 1} ${tool.label}`;
+      button.title = tool.hasInstant ? 'Hold Shift while placing to build instantly' : '';
+      button.addEventListener('click', () => chooseTool(view, tool.id, tool.category));
+      tools.append(button);
+      return { id: tool.id, button };
+    });
+    shownCategory = category;
+  };
+
+  let lastHint = '';
+  return {
+    root,
+    update() {
+      root.hidden = !view.buildOpen;
+      if (!view.buildOpen) return;
+      if (shownCategory !== view.buildCategory) showTools(view.buildCategory);
+      tabButtons.forEach(({ id, button }) => button.classList.toggle('active', id === view.buildCategory));
+      toolButtons.forEach(({ id, button }) => button.classList.toggle('active', id === view.tool));
+      const tool = view.tool ? getTool(view.tool) : null;
+      const text = tool
+        ? `${tool.paints ? 'Click or drag to place' : 'Click inside a room'}${tool.hasInstant ? ' · Shift: instant' : ''} · Right-click: put down · Esc`
+        : 'Number keys: pick a tool · Tab / Q E: category · Esc or B: close';
+      if (text !== lastHint) hint.textContent = lastHint = text;
+    },
+  };
 }
 
 /** Requirements checklist for the room (or outdoor room designation) under the cursor. */

@@ -12,7 +12,7 @@ import { step } from './sim/tick';
 import { createHud } from './ui/hud';
 import { attachInput } from './ui/input';
 import { MS_PER_TICK, ticksForFrame } from './ui/loop';
-import { TOOLS } from './ui/tools';
+import { isCategoryId, isToolId } from './ui/tools';
 import type { ViewState } from './ui/view';
 
 /** View-side helpers for agents and Playwright (screen coords are CSS px, page-relative). */
@@ -40,7 +40,9 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   const handle: GameHandle = { state };
   const view: ViewState = {
     camera: centredOn(state.grid.width, state.grid.height),
-    tool: 'wall',
+    buildOpen: false,
+    buildCategory: 'structure',
+    tool: null,
     selectedId: null,
     hover: null,
     speed: 1,
@@ -50,11 +52,12 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     // Spread over the defaults so view state saved by older code gains new fields.
     ...saved,
   };
-  // A tool that no longer exists (renamed since the view was saved) falls back to the default.
-  if (!TOOLS.some((t) => t.id === view.tool)) view.tool = 'wall';
+  // View state saved by older code may name tools/categories that no longer exist.
+  if (!isToolId(view.tool) || !view.buildOpen) view.tool = null;
+  if (!isCategoryId(view.buildCategory)) view.buildCategory = 'structure';
+  /** Drop the selection if that survivor no longer exists (e.g. after loading a scenario). */
   const ensureSelection = () => {
-    const survivors = handle.state.survivors;
-    if (!survivors.some((s) => s.id === view.selectedId)) view.selectedId = survivors[0]?.id ?? null;
+    if (view.selectedId && !handle.state.survivors.some((s) => s.id === view.selectedId)) view.selectedId = null;
   };
 
   let viewport: Viewport = { width: 0, height: 0 };

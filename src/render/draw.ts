@@ -26,11 +26,11 @@ const COLOURS = {
     door: '#ffc27a',
     remove: '#ff7a7a',
     cancel: '#c9c9c9',
-    move: '#8cf0a4',
     bed: '#c7a6ff',
     housing: '#6ea8ff',
     storage: '#e6be6e',
   } satisfies Record<ToolId, string>,
+  selectHover: '#e8ece6',
   survivor: '#f2e6c9',
   survivorOutline: '#1a1d1b',
   selected: '#8cf0a4',
@@ -68,7 +68,8 @@ const MIN_LABEL_PX = 18;
 
 export interface DrawOptions {
   hover: Point | null;
-  tool: ToolId;
+  /** Armed build tool, or null in select mode. */
+  tool: ToolId | null;
   /** Fraction of the next tick elapsed, for interpolating movement. */
   alpha: number;
   selectedId: string | null;
@@ -439,18 +440,20 @@ function drawHover(
   camera: Camera,
   viewport: Viewport,
   hover: Point,
-  tool: ToolId,
+  tool: ToolId | null,
   w: number,
   h: number,
 ): void {
   if (hover.x < 0 || hover.y < 0 || hover.x >= w || hover.y >= h) return;
   const r = tileRect(camera, viewport, hover.x, hover.y);
-  const colour = COLOURS.tools[tool];
-  ctx.globalAlpha = 0.25;
+  // Select mode gets a faint outline; an armed tool previews boldly in its colour.
+  const colour = tool ? COLOURS.tools[tool] : COLOURS.selectHover;
+  ctx.globalAlpha = tool ? 0.25 : 0.06;
   ctx.fillStyle = colour;
   ctx.fillRect(r.x, r.y, r.w, r.h);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = tool ? 1 : 0.5;
   ctx.strokeStyle = colour;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = tool ? 2 : 1;
   ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+  ctx.globalAlpha = 1;
 }

@@ -1,13 +1,28 @@
-// Placement tools. A tool turns a tile into a sim command; it never touches
-// state directly (architecture rule 5).
+// Build tools, grouped into the categories of the build bar (B). A tool
+// turns a tile into a sim command; it never touches state directly
+// (architecture rule 5). Outside build mode there is no tool: left-click
+// selects, right-click moves the selected survivor.
 
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'remove' | 'move' | 'cancel' | 'bed' | 'housing' | 'storage';
+export type ToolId = 'wall' | 'door' | 'bed' | 'housing' | 'storage' | 'remove' | 'cancel';
+
+export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
+
+export interface Category {
+  id: CategoryId;
+  label: string;
+}
+
+export const CATEGORIES: readonly Category[] = [
+  { id: 'structure', label: 'Structure' },
+  { id: 'furniture', label: 'Furniture' },
+  { id: 'rooms', label: 'Rooms' },
+  { id: 'orders', label: 'Orders' },
+];
 
 export interface ToolContext {
-  selectedId: string | null;
   /** Shift held: build or remove instantly instead of designating a job. */
   instant: boolean;
 }
@@ -15,64 +30,70 @@ export interface ToolContext {
 export interface Tool {
   id: ToolId;
   label: string;
-  /** KeyboardEvent.key that selects this tool. */
-  key: string;
+  category: CategoryId;
   /** Painting tools apply on every tile a drag crosses; others only on click. */
   paints: boolean;
-  /** Null when the tool can't act (e.g. move with nobody selected). */
-  command(x: number, y: number, ctx: ToolContext): Command | null;
+  /** Whether Shift (instant) does anything for this tool. */
+  hasInstant: boolean;
+  command(x: number, y: number, ctx: ToolContext): Command;
 }
 
 export const TOOLS: readonly Tool[] = [
   {
     id: 'wall',
     label: 'Wall',
-    key: '1',
+    category: 'structure',
     paints: true,
+    hasInstant: true,
     command: (x, y, { instant }) => (instant ? { type: 'placeWall', x, y } : { type: 'designateBuild', x, y, structure: 'wall' }),
   },
   {
     id: 'door',
     label: 'Door',
-    key: '2',
+    category: 'structure',
     paints: true,
+    hasInstant: true,
     command: (x, y, { instant }) => (instant ? { type: 'placeDoor', x, y } : { type: 'designateBuild', x, y, structure: 'door' }),
   },
   {
-    id: 'remove',
-    label: 'Remove',
-    key: '3',
-    paints: true,
-    command: (x, y, { instant }) => (instant ? { type: 'clearTile', x, y } : { type: 'designateRemove', x, y }),
-  },
-  {
-    id: 'move',
-    label: 'Move',
-    key: '4',
-    paints: false,
-    command: (x, y, { selectedId }) => (selectedId ? { type: 'moveSurvivor', survivorId: selectedId, x, y } : null),
-  },
-  { id: 'cancel', label: 'Cancel', key: '5', paints: true, command: (x, y) => ({ type: 'cancelDesignation', x, y }) },
-  {
     id: 'bed',
     label: 'Bed',
-    key: '6',
+    category: 'furniture',
     paints: true,
+    hasInstant: true,
     command: (x, y, { instant }) => (instant ? { type: 'placeBed', x, y } : { type: 'designateBuild', x, y, structure: 'bed' }),
   },
   {
     id: 'housing',
     label: 'Housing',
-    key: '7',
+    category: 'rooms',
     paints: false,
+    hasInstant: false,
     command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'housing' }),
   },
   {
     id: 'storage',
     label: 'Storage',
-    key: '8',
+    category: 'rooms',
     paints: false,
+    hasInstant: false,
     command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'storage' }),
+  },
+  {
+    id: 'remove',
+    label: 'Remove',
+    category: 'orders',
+    paints: true,
+    hasInstant: true,
+    command: (x, y, { instant }) => (instant ? { type: 'clearTile', x, y } : { type: 'designateRemove', x, y }),
+  },
+  {
+    id: 'cancel',
+    label: 'Cancel',
+    category: 'orders',
+    paints: true,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'cancelDesignation', x, y }),
   },
 ];
 
@@ -80,6 +101,30 @@ export function getTool(id: ToolId): Tool {
   const tool = TOOLS.find((t) => t.id === id);
   if (!tool) throw new Error(`unknown tool ${id}`);
   return tool;
+}
+
+export function isToolId(id: unknown): id is ToolId {
+  return TOOLS.some((t) => t.id === id);
+}
+
+export function isCategoryId(id: unknown): id is CategoryId {
+  return CATEGORIES.some((c) => c.id === id);
+}
+
+export function toolsIn(category: CategoryId): Tool[] {
+  return TOOLS.filter((t) => t.category === category);
+}
+
+/** Number keys pick tools within the open category: '1' is the first. */
+export function toolForKey(category: CategoryId, key: string): Tool | undefined {
+  const n = Number(key);
+  return Number.isInteger(n) && n >= 1 ? toolsIn(category)[n - 1] : undefined;
+}
+
+/** Next (or previous) category, wrapping around. */
+export function stepCategory(category: CategoryId, direction: 1 | -1): CategoryId {
+  const i = CATEGORIES.findIndex((c) => c.id === category);
+  return CATEGORIES[(i + direction + CATEGORIES.length) % CATEGORIES.length]!.id;
 }
 
 /**

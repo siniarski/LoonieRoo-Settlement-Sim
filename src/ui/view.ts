@@ -1,14 +1,18 @@
 // View state: everything the UI remembers that is NOT sim state (camera,
-// selected tool, hover, speed). Kept separate so it never leaks into saves.
+// build mode, selection, hover, speed). Kept separate so it never leaks into saves.
 
 import type { Camera } from '../render/camera';
 import type { Point } from '../sim/grid';
 import type { Speed } from './loop';
-import type { ToolId } from './tools';
+import type { CategoryId, ToolId } from './tools';
 
 export interface ViewState {
   camera: Camera;
-  tool: ToolId;
+  /** Build mode (B): the bottom build bar is open. */
+  buildOpen: boolean;
+  buildCategory: CategoryId;
+  /** The armed build tool, or null: clicks select and right-clicks move. Only set while buildOpen. */
+  tool: ToolId | null;
   selectedId: string | null;
   hover: Point | null;
   speed: Speed;

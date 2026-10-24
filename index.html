@@ -30,6 +30,14 @@
       .prio-cell.p3 { background: #e0cf8a; }
       .prio-cell.p4 { background: #e0a98a; }
       .prio-cell.p0 { background: #2a302c; color: #6c746d; }
+      .hud-build { position: absolute; left: max(50%, 625px); bottom: 14px; transform: translateX(-50%); width: 460px; padding: 6px 8px 5px; background: rgba(20, 23, 21, 0.94); border: 1px solid #333a35; border-radius: 8px; pointer-events: auto; }
+      .build-tabs { display: flex; gap: 2px; border-bottom: 1px solid #333a35; margin-bottom: 6px; }
+      .build-tab { font: inherit; color: #9aa39b; background: none; border: none; border-bottom: 2px solid transparent; padding: 4px 10px; cursor: pointer; }
+      .build-tab:hover { color: #d8dcd6; }
+      .build-tab.active { color: #d8dcd6; border-bottom-color: #8cf0a4; }
+      .build-tools { display: flex; gap: 4px; min-height: 26px; }
+      .build-hint { margin-top: 5px; color: #7d867e; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .hud-paused-banner.above-build { bottom: 118px; }
       .hud-paused-frame { position: absolute; inset: 0; box-shadow: inset 0 0 0 4px rgba(255, 196, 92, 0.85), inset 0 0 60px rgba(255, 196, 92, 0.18); }
       /* Centred, but never far enough left to sit on the priority panel (bottom-left, ~380px wide; banner ~345px). */
       .hud-paused-banner { position: absolute; left: max(50%, 576px); bottom: 18px; white-space: nowrap; transform: translateX(-50%); padding: 6px 16px; color: #1a1408; background: rgba(255, 196, 92, 0.95); border-radius: 6px; font-weight: bold; letter-spacing: 0.08em; }

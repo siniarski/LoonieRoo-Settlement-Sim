@@ -3,11 +3,13 @@ import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import type { Priority } from '../src/sim/jobTypes';
 import { createState } from '../src/sim/state';
+import { handleBuildKey } from '../src/ui/buildMode';
 import { cyclePriority } from '../src/ui/hud';
-import { TOOLS, getTool, tilesOnLine } from '../src/ui/tools';
+import { CATEGORIES, TOOLS, getTool, stepCategory, tilesOnLine, toolForKey, toolsIn } from '../src/ui/tools';
+import type { ViewState } from '../src/ui/view';
 
-const designate = { selectedId: null, instant: false };
-const instant = { selectedId: null, instant: true };
+const designate = { instant: false };
+const instant = { instant: true };
 
 describe('tools', () => {
   it('wall, door, and remove designate jobs by default', () => {
@@ -37,22 +39,79 @@ describe('tools', () => {
     expect(getTool('storage').paints).toBe(false);
   });
 
-  it('move needs a selected survivor', () => {
-    const move = getTool('move');
-    expect(move.paints).toBe(false);
-    expect(move.command(2, 3, designate)).toBeNull();
-    expect(move.command(2, 3, { selectedId: 's1', instant: false })).toEqual({
-      type: 'moveSurvivor',
-      survivorId: 's1',
-      x: 2,
-      y: 3,
-    });
+  it('has unique ids, and every tool sits in a category', () => {
+    expect(new Set(TOOLS.map((t) => t.id)).size).toBe(TOOLS.length);
+    const categorised = CATEGORIES.flatMap((c) => toolsIn(c.id));
+    expect(categorised).toHaveLength(TOOLS.length);
+    for (const c of CATEGORIES) expect(toolsIn(c.id).length, c.id).toBeLessThanOrEqual(9); // number keys 1-9
   });
 
-  it('has unique ids and keys', () => {
-    expect(new Set(TOOLS.map((t) => t.id)).size).toBe(TOOLS.length);
-    expect(new Set(TOOLS.map((t) => t.key)).size).toBe(TOOLS.length);
-    expect(getTool('door').label).toBe('Door');
+  it('number keys pick tools within the open category', () => {
+    expect(toolForKey('structure', '1')?.id).toBe('wall');
+    expect(toolForKey('structure', '2')?.id).toBe('door');
+    expect(toolForKey('structure', '3')).toBeUndefined();
+    expect(toolForKey('orders', '2')?.id).toBe('cancel');
+    expect(toolForKey('rooms', 'x')).toBeUndefined();
+  });
+
+  it('categories wrap in both directions', () => {
+    expect(stepCategory('structure', 1)).toBe('furniture');
+    expect(stepCategory('orders', 1)).toBe('structure');
+    expect(stepCategory('structure', -1)).toBe('orders');
+  });
+});
+
+describe('build mode keys', () => {
+  const fresh = (): Pick<ViewState, 'buildOpen' | 'buildCategory' | 'tool' | 'selectedId'> => ({
+    buildOpen: false,
+    buildCategory: 'structure',
+    tool: null,
+    selectedId: 's1',
+  });
+
+  it('B opens and closes build mode; closing drops the tool', () => {
+    const view = fresh();
+    expect(handleBuildKey(view, '1', false)).toBe(false); // number keys do nothing outside build mode
+    handleBuildKey(view, 'b', false);
+    expect(view.buildOpen).toBe(true);
+    handleBuildKey(view, '2', false);
+    expect(view.tool).toBe('door');
+    handleBuildKey(view, 'b', false);
+    expect(view).toMatchObject({ buildOpen: false, tool: null });
+  });
+
+  it('Tab / Shift+Tab / Q / E switch category and put the tool down', () => {
+    const view = fresh();
+    handleBuildKey(view, 'b', false);
+    handleBuildKey(view, '1', false);
+    handleBuildKey(view, 'Tab', false);
+    expect(view).toMatchObject({ buildCategory: 'furniture', tool: null });
+    handleBuildKey(view, 'Tab', true);
+    expect(view.buildCategory).toBe('structure');
+    handleBuildKey(view, 'q', false);
+    expect(view.buildCategory).toBe('orders');
+    handleBuildKey(view, 'e', false);
+    expect(view.buildCategory).toBe('structure');
+  });
+
+  it('pressing the armed tool again puts it down', () => {
+    const view = fresh();
+    handleBuildKey(view, 'b', false);
+    handleBuildKey(view, '1', false);
+    handleBuildKey(view, '1', false);
+    expect(view.tool).toBeNull();
+  });
+
+  it('Escape steps back: tool, then build mode, then selection', () => {
+    const view = fresh();
+    handleBuildKey(view, 'b', false);
+    handleBuildKey(view, '1', false);
+    handleBuildKey(view, 'Escape', false);
+    expect(view).toMatchObject({ buildOpen: true, tool: null, selectedId: 's1' });
+    handleBuildKey(view, 'Escape', false);
+    expect(view).toMatchObject({ buildOpen: false, selectedId: 's1' });
+    handleBuildKey(view, 'Escape', false);
+    expect(view.selectedId).toBeNull();
   });
 });
 
