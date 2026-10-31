@@ -4,6 +4,7 @@
 import type { Command } from './commands';
 import type { Blueprint } from './designations';
 import type { GameEvent } from './events';
+import type { FarmPlot } from './farming';
 import type { Furniture } from './furniture';
 import { createGrid, type Grid } from './grid';
 import type { Item } from './items';
@@ -17,7 +18,7 @@ import type { Zombie } from './zombies';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -37,6 +38,8 @@ export interface SimState {
   zombies: Zombie[];
   items: Item[];
   furniture: Furniture[];
+  /** Farm plots (see farming.ts). */
+  farm: FarmPlot[];
   blueprints: Blueprint[];
   /** Player-assigned room purposes, anchored to a tile. Rooms themselves are derived (rooms.ts). */
   roomDesignations: RoomDesignation[];
@@ -67,6 +70,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     zombies: [],
     items: [],
     furniture: [],
+    farm: [],
     blueprints: [],
     roomDesignations: [],
     jobs: [],

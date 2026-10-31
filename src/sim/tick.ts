@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { updateFarm } from './farming';
 import { reconcileJobs, updateWork } from './jobs';
 import {
   interruptForNeeds,
@@ -24,6 +25,7 @@ export function tick(state: SimState): void {
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
+  updateFarm(state);
   for (const s of state.survivors) {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }

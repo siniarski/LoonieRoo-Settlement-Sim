@@ -1,6 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import type { Blueprint, BuildTarget } from '../sim/designations';
+import { GROW_TICKS, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
@@ -34,6 +35,7 @@ const COLOURS = {
     remove: '#ff7a7a',
     cancel: '#c9c9c9',
     scavenge: '#ffd166',
+    farm: '#9ed36a',
     bed: '#c7a6ff',
     housing: '#6ea8ff',
     storage: '#e6be6e',
@@ -70,6 +72,10 @@ const COLOURS = {
   blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
+  soil: '#4a3726',
+  furrow: '#3a2a1c',
+  sprout: '#6fbf4a',
+  ripe: '#e8c45a',
   crate: '#7a5a35',
   crateSlat: '#5a4026',
   crateEmpty: '#4a4038',
@@ -141,6 +147,7 @@ export function draw(
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
   if (options.showDebug) drawRoomOutlines(ctx, camera, viewport, state, range);
 
+  for (const plot of state.farm) drawPlot(ctx, camera, viewport, plot);
   for (const f of state.furniture) {
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
     else drawCrate(ctx, camera, viewport, f, size);
@@ -246,6 +253,22 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
     ctx.fillStyle = missing ? COLOURS.incomplete : COLOURS.roomLabel[d.purpose];
     ctx.fillText(text, p.x, p.y + 2);
   }
+}
+
+/** Tilled soil with furrows; a sprout that grows with the crop; gold when ripe. */
+function drawPlot(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, plot: FarmPlot): void {
+  const r = tileRect(camera, viewport, plot.x, plot.y);
+  ctx.fillStyle = COLOURS.soil;
+  ctx.fillRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+  ctx.fillStyle = COLOURS.furrow;
+  for (const t of [0.3, 0.55, 0.8]) ctx.fillRect(r.x + 2, Math.round(r.y + r.h * t), r.w - 4, Math.max(1, Math.round(r.h * 0.06)));
+  if (!plot.planted) return;
+  const ripe = isRipe(plot);
+  const grown = ripe ? 1 : plot.growth / GROW_TICKS;
+  const h = Math.max(2, r.h * (0.15 + 0.55 * grown));
+  const w = Math.max(2, r.w * (0.12 + 0.3 * grown));
+  ctx.fillStyle = ripe ? COLOURS.ripe : COLOURS.sprout;
+  ctx.fillRect(r.x + r.w / 2 - w / 2, r.y + r.h * 0.85 - h, w, h);
 }
 
 /** A slatted crate: dull when searched out, yellow dashed outline when marked, pips for finds left. */

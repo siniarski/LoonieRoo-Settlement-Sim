@@ -2,6 +2,7 @@
 // Each blueprint gets one job at a time from jobs.ts: a haul job while it
 // still needs material, then a build job.
 
+import { clearPlot } from './farming';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, isWalkable, setTile, type Point } from './grid';
 import { dropItem, itemAt, spawnItem } from './items';
@@ -82,6 +83,7 @@ export function completeBlueprint(state: SimState, bp: Blueprint): void {
       if (setTile(state.grid, bp.x, bp.y, bp.target)) state.walkabilityVersion += 1;
       if (bp.target === 'wall') evictFrom(state, bp);
       evictZombies(state, bp); // zombies can stand on neither walls nor doors
+      clearPlot(state, bp);
       return;
     case 'bed': {
       addFurniture(state, 'bed', bp.x, bp.y);

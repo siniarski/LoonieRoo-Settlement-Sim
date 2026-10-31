@@ -3,6 +3,7 @@
 // so a dumped map can be pasted straight back into a scenario.
 
 import { addBlueprint } from './designations';
+import { addPlot } from './farming';
 import { addFurniture } from './furniture';
 import { setDirty, setTile, type Tile } from './grid';
 import { spawnItem } from './items';
@@ -41,6 +42,7 @@ export const ENTITY_CHARS = {
   bed: 'b',
   crate: 'c',
   zombie: 'z',
+  farmPlot: '~',
   wallBlueprint: '+',
   doorBlueprint: 'd',
   bedBlueprint: 'B',
@@ -74,6 +76,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.bed:
       addFurniture(state, 'bed', x, y);
+      return true;
+    case ENTITY_CHARS.farmPlot:
+      addPlot(state, x, y);
       return true;
     case ENTITY_CHARS.zombie:
       addZombie(state, x, y);

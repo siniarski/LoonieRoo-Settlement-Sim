@@ -12,7 +12,7 @@ const BLUEPRINT_CHARS = {
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 
-/** The map. Layers, top wins: survivor, zombie, item, blueprint, furniture, dirt, tile. */
+/** The map. Layers, top wins: survivor, zombie, item, blueprint, furniture, farm plot, dirt, tile. */
 export function dumpText(state: SimState): string {
   const { width, height, tiles, dirt } = state.grid;
   const rows: string[][] = [];
@@ -29,6 +29,7 @@ export function dumpText(state: SimState): string {
     const row = rows[y];
     if (row && x >= 0 && x < width) row[x] = char;
   };
+  for (const plot of state.farm) put(plot.x, plot.y, ENTITY_CHARS.farmPlot);
   for (const f of state.furniture) put(f.x, f.y, ENTITY_CHARS[f.kind]);
   for (const bp of state.blueprints) put(bp.x, bp.y, BLUEPRINT_CHARS[bp.target]);
   for (const item of state.items) if (item.pos) put(item.pos.x, item.pos.y, ENTITY_CHARS[item.kind]);

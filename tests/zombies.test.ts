@@ -11,8 +11,8 @@ import { tick } from '../src/sim/tick';
 import { DAY_LENGTH, TICKS_PER_HOUR, clockText, isNight, nightNumber } from '../src/sim/time';
 import { MAX_ZOMBIES, ZOMBIE_DAMAGE, isSpawnTick, zombiesForNight } from '../src/sim/zombies';
 
-/** 22:00 on day 1: night, and on a spawn boundary. */
-const NIGHT = 16 * TICKS_PER_HOUR;
+/** 23:00 on day 1: night, and the first spawn time. */
+const NIGHT = 17 * TICKS_PER_HOUR;
 
 function runUntil(state: SimState, done: (s: SimState) => boolean, max = 1500): number {
   for (let t = 0; t < max; t++) {
@@ -66,14 +66,14 @@ describe('zombies', () => {
       }
       return ticks;
     };
-    expect([1, 2, 3, 10].map(zombiesForNight)).toEqual([4, 5, 6, 13]);
-    expect(spawnTicks(1).map((t) => clockText(t))).toEqual(['22:00', '00:00', '02:00', '04:00']);
-    expect(spawnTicks(2)).toHaveLength(5);
-    expect(spawnTicks(3)).toHaveLength(6);
+    expect([1, 2, 3, 10].map(zombiesForNight)).toEqual([2, 3, 4, 11]);
+    expect(spawnTicks(1).map((t) => clockText(t))).toEqual(['23:00', '03:00']);
+    expect(spawnTicks(2)).toHaveLength(3);
+    expect(spawnTicks(3)).toHaveLength(4);
     expect(spawnTicks(3).every((t) => isNight(t))).toBe(true);
   });
 
-  it('a whole run: 4, then 5, then 6 zombies, with a nightfall notice each night', () => {
+  it('a whole run: 2, then 3, then 4 zombies, with a nightfall notice each night', () => {
     // A survivor safe in a sealed box, so nobody fights and every spawn is counted.
     const map = Array.from({ length: 20 }, (_, y) =>
       y === 9 ? `${'.'.repeat(17)}###${'.'.repeat(20)}` : y === 10 ? `${'.'.repeat(17)}#s#${'.'.repeat(20)}` : y === 11 ? `${'.'.repeat(17)}###${'.'.repeat(20)}` : '.'.repeat(40),
@@ -82,11 +82,11 @@ describe('zombies', () => {
     state.survivors[0]!.priorities = { ...NO_JOBS };
     for (let i = 0; i < 3 * DAY_LENGTH; i++) tick(state);
     const perNight = [1, 2, 3].map((n) => state.events.filter((e) => e.message.startsWith('A zombie appeared') && nightNumber(e.tick) === n).length);
-    expect(perNight).toEqual([4, 5, 6]);
+    expect(perNight).toEqual([2, 3, 4]);
     expect(state.events.filter((e) => e.message.endsWith('zombies expected')).map((e) => e.message)).toEqual([
-      'Night 1 falls: 4 zombies expected',
-      'Night 2 falls: 5 zombies expected',
-      'Night 3 falls: 6 zombies expected',
+      'Night 1 falls: 2 zombies expected',
+      'Night 2 falls: 3 zombies expected',
+      'Night 3 falls: 4 zombies expected',
     ]);
   });
 

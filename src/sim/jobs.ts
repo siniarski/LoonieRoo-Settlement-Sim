@@ -10,6 +10,7 @@
 // survivor goes back to looking for work. Nobody gets stuck.
 
 import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
+import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
 import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item } from './items';
@@ -40,6 +41,8 @@ export interface Job {
   furnitureId: string | null;
   /** Guard only: the zombie being hunted. The job's x, y follow it. */
   zombieId: string | null;
+  /** Farm only: the plot to sow or harvest. */
+  plotId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
   /** Clean and scavenge: ticks of work done. */
@@ -112,6 +115,12 @@ export function reconcileJobs(state: SimState): void {
     }
   }
 
+  // Farm plots that are empty (sow) or ripe (harvest) get one farm job each.
+  const tending = new Set(state.jobs.filter((j) => j.type === 'farm').map((j) => j.plotId));
+  for (const plot of state.farm) {
+    if (needsWork(plot) && !tending.has(plot.id)) addJob(state, 'farm', plot.x, plot.y, null, null, null, null, plot.id);
+  }
+
   // Every zombie gets one guard job.
   const hunted = new Set(state.jobs.filter((j) => j.type === 'guard').map((j) => j.zombieId));
   for (const z of state.zombies) {
@@ -132,6 +141,11 @@ function invalidReason(state: SimState, job: Job, storage: Set<number>): string 
     case 'clean':
       if (!isDirty(state.grid, job.x, job.y)) return 'tile already clean';
       return isIndoors(state, job.x, job.y) ? null : 'tile is no longer indoors';
+    case 'farm': {
+      const plot = job.plotId ? getPlot(state, job.plotId) : undefined;
+      if (!plot) return 'plot gone';
+      return needsWork(plot) ? null : 'crop is growing';
+    }
     case 'guard': {
       const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
       if (!z) return 'zombie gone';
@@ -184,6 +198,7 @@ function addJob(
   itemId: string | null,
   furnitureId: string | null = null,
   zombieId: string | null = null,
+  plotId: string | null = null,
 ): Job {
   const job: Job = {
     id: `j${state.nextId++}`,
@@ -194,6 +209,7 @@ function addJob(
     itemId,
     furnitureId,
     zombieId,
+    plotId,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -259,6 +275,27 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workScavenge(state, s, job);
     case 'guard':
       return workGuard(state, s, job);
+    case 'farm':
+      return workFarm(state, s, job);
+  }
+}
+
+/** Sow an empty plot or harvest a ripe one, standing on it. */
+function workFarm(state: SimState, s: Survivor, job: Job): void {
+  const plot = job.plotId ? getPlot(state, job.plotId) : undefined;
+  if (!plot || !needsWork(plot)) return releaseSurvivor(state, s, 'plot no longer needs work');
+  if (!samePoint(s.pos, plot)) return goTo(state, s, job, [plotPoint(plot)]);
+  job.progress += 1;
+  if (job.progress < FARM_WORK) return;
+  if (isRipe(plot)) {
+    plot.planted = false;
+    plot.growth = 0;
+    spawnItem(state, 'food', plot.x, plot.y);
+    finishJob(state, s, job, `harvested food at (${plot.x}, ${plot.y})`);
+  } else {
+    plot.planted = true;
+    plot.growth = 0;
+    finishJob(state, s, job, `sowed (${plot.x}, ${plot.y})`);
   }
 }
 
@@ -434,7 +471,9 @@ function openJobsByDistance(state: SimState, type: JobType, from: Point): Job[] 
 function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
   const { grid, walkabilityVersion: v } = state;
   switch (job.type) {
-    case 'clean': {
+    case 'clean':
+    case 'farm': {
+      // Done standing on the tile.
       const goal = [{ x: job.x, y: job.y }];
       if (!canReach(grid, v, s.pos, goal)) return null;
       return pathPlan(state, s.pos, goal, null);

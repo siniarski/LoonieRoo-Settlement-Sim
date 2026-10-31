@@ -3,6 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { getTile, isWalkable } from './grid';
+import { GROW_TICKS } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
@@ -133,6 +134,18 @@ export function checkInvariants(state: SimState): string[] {
     else guarded.set(j.zombieId, (guarded.get(j.zombieId) ?? 0) + 1);
   }
   for (const [id, n] of guarded) if (n > 1) problems.push(`zombie ${id} has ${n} guard jobs`);
+
+  const plotTiles = new Set<string>();
+  const tendedPlots = new Map<string, number>();
+  for (const j of state.jobs) if (j.plotId) tendedPlots.set(j.plotId, (tendedPlots.get(j.plotId) ?? 0) + 1);
+  for (const plot of state.farm) {
+    const key = `${plot.x},${plot.y}`;
+    if (plotTiles.has(key)) problems.push(`two farm plots on (${key})`);
+    plotTiles.add(key);
+    if (getTile(grid, plot.x, plot.y) !== 'floor') problems.push(`farm plot ${plot.id} on non-floor (${key})`);
+    if (plot.growth < 0 || plot.growth > GROW_TICKS || (!plot.planted && plot.growth !== 0)) problems.push(`farm plot ${plot.id} has growth ${plot.growth}`);
+    if ((tendedPlots.get(plot.id) ?? 0) > 1) problems.push(`farm plot ${plot.id} has ${tendedPlots.get(plot.id)} jobs`);
+  }
 
   const roomsClaimed = new Set<number>();
   for (const d of state.roomDesignations) {

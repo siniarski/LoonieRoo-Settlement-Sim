@@ -9,6 +9,7 @@ import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
 import { spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
+import { addPlot, clearPlot, plotAt, removePlot } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { cancelMeal, wake } from './needs';
@@ -27,8 +28,10 @@ export type Command =
   // Designations: become jobs for survivors.
   | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' }
   | { type: 'designateRemove'; x: number; y: number }
-  /** Cancels a blueprint on the tile, else unmarks a crate there, else clears the purpose of the room the tile is in. */
+  /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
+  /** Makes this floor tile a farm plot (no furniture on it). Drag it over an area. */
+  | { type: 'designateFarm'; x: number; y: number }
   /** Marks the crate on this tile (if it has loot left) for scavenging. Paint it over an area. */
   | { type: 'designateScavenge'; x: number; y: number }
   | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
@@ -87,6 +90,11 @@ function execute(state: SimState, command: Command): CommandResult {
       return designateRemove(state, x, y);
     case 'cancelDesignation':
       return cancelDesignation(state, x, y);
+    case 'designateFarm':
+      if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) return unchanged();
+      if (plotAt(state, x, y)) return unchanged();
+      addPlot(state, x, y);
+      return changed();
     case 'designateScavenge': {
       const crate = furnitureAt(state, x, y);
       if (crate?.kind !== 'crate' || crate.loot === 0 || crate.scavenge) return unchanged();
@@ -124,7 +132,10 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
     if (f) removeFurniture(state, f);
   }
   if (tile === 'wall') evictFrom(state, { x, y });
-  if (tile !== 'floor') evictZombies(state, { x, y });
+  if (tile !== 'floor') {
+    evictZombies(state, { x, y });
+    clearPlot(state, { x, y });
+  }
   return changed();
 }
 
@@ -156,6 +167,11 @@ function cancelDesignation(state: SimState, x: number, y: number): CommandResult
   const bp = blueprintAt(state, x, y);
   if (bp) {
     cancelBlueprint(state, bp);
+    return changed();
+  }
+  const plot = plotAt(state, x, y);
+  if (plot) {
+    removePlot(state, plot);
     return changed();
   }
   const crate = furnitureAt(state, x, y);

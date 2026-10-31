@@ -8,6 +8,7 @@ import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
+import { GROW_TICKS, isRipe } from '../sim/farming';
 import { HEALTH_MAX } from '../sim/health';
 import { clockText, dayOf, isNight } from '../sim/time';
 import { REST_MAX, TIRED } from '../sim/rest';
@@ -24,7 +25,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', farm: 'Farm', build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -158,6 +159,10 @@ function statusText(state: SimState, view: ViewState): string {
 
 /** " · crate (3 left, marked)" etc. for the hovered tile's furniture, or ''. */
 function furnitureText(state: SimState, p: Point): string {
+  const plot = state.farm.find((x) => x.x === p.x && x.y === p.y);
+  if (plot) {
+    return ` · farm (${!plot.planted ? 'empty, needs sowing' : isRipe(plot) ? 'ripe' : `growing ${Math.floor((100 * plot.growth) / GROW_TICKS)}%`})`;
+  }
   const f = state.furniture.find((x) => x.x === p.x && x.y === p.y);
   if (!f) return '';
   if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
@@ -169,6 +174,7 @@ function furnitureText(state: SimState, p: Point): string {
 /** Tools whose action isn't obvious from "click or drag to place". */
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   scavenge: 'Drag a box over a ruin to mark its crates',
+  farm: 'Drag a box over open ground to lay out plots',
   remove: 'Drag over walls, doors, or furniture to take down',
   cancel: 'Drag to cancel plans, unmark crates, or clear room purposes',
 };
@@ -361,7 +367,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
     `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
-    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} h${p.haul} s${p.scavenge} c${p.clean}`,
+    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,
   ];

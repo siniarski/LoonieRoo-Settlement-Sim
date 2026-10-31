@@ -1,6 +1,6 @@
 // Zombies: crude night pressure (milestone 7).
 //
-// Each night brings one more zombie than the last (4 on the first night),
+// Each night brings one more zombie than the last (2 on the first night),
 // spread evenly through the night, each on an outdoor map-edge tile (sim
 // RNG). Each shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
@@ -23,8 +23,8 @@ export const ZOMBIE_HEALTH = 200;
 export const ZOMBIE_TICKS_PER_TILE = 6;
 export const ZOMBIE_DAMAGE = 40;
 export const ZOMBIE_ATTACK_EVERY = 10;
-/** Zombies on night 1; every night after brings one more. */
-export const FIRST_NIGHT_ZOMBIES = 4;
+/** Zombies on night 1; every night after brings one more. (Was 4: too much for night one.) */
+export const FIRST_NIGHT_ZOMBIES = 2;
 /** Safety cap on zombies alive at once (not a balance lever). */
 export const MAX_ZOMBIES = 20;
 /** Zombies never spawn this close (Manhattan) to a survivor. */
@@ -83,8 +83,8 @@ export function zombiesForNight(night: number): number {
 
 /**
  * Is this tick one of tonight's spawn times? Spawns are spread evenly over
- * the night, half an interval in: night 1 (4 zombies) spawns at 22:00,
- * 00:00, 02:00, 04:00.
+ * the night, half an interval in: night 1 (2 zombies) spawns at 23:00 and
+ * 03:00.
  */
 export function isSpawnTick(tick: number): boolean {
   const night = nightNumber(tick);

@@ -27,7 +27,7 @@ const MAP = [
   '.#....#..,..#....#......',
   '.######.....###D##..++..',
   '..........s.........d...',
-  '....,...........,.......',
+  '....,...~~~.....,.......',
   '..www......ff......c.c..',
   '...................c....',
 ];
@@ -67,6 +67,7 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 72) return { type: 'setHealth', survivorId: survivor.id, health: randomInt(driver, 0, 4) };
   if (roll < 73) return { type: 'spawnSurvivor', x, y };
   if (roll < 76) return { type: 'spawnZombie', x, y };
+  if (roll < 82) return { type: 'designateFarm', x, y };
   return null;
 }
 
@@ -90,6 +91,8 @@ describe('stuck-state invariant', () => {
       const state = cloneState(initial);
       const driver = { rng: seedRng(seed * 7919) }; // Player input, separate from sim RNG.
       const stillWithGoal = new Map<string, number>();
+      /** Last tick's position and needs state, to spot legitimate one-tick hold-ups. */
+      const before = new Map<string, { pos: string; moving: boolean; needs: string }>();
       const idleWithWork = new Map<string, number>();
       const onJob = new Map<string, { id: string; since: number }>();
 
@@ -107,7 +110,15 @@ describe('stuck-state invariant', () => {
           const where = `${s.name} at tick ${state.tick}: ${s.note}\n${dumpText(state)}`;
           if (s.note) notesSeen.add(s.note.split(' ')[0]!);
 
-          const still = s.goal && !s.move && s.id !== ordered ? (stillWithGoal.get(s.id) ?? 0) + 1 : 0;
+          // Legitimate extra standing ticks: being moved aside (a wall finished on your tile clears
+          // your path) and a need kicking in (dropping work for bed or food). Anything else repeated is a bug.
+          const prev = before.get(s.id);
+          const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}`;
+          const movedAside = prev !== undefined && !prev.moving && prev.pos !== `${s.pos.x},${s.pos.y}`;
+          const needKickedIn = prev !== undefined && prev.needs !== needs && needs !== '';
+          before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs });
+          const excused = s.id === ordered || movedAside || needKickedIn;
+          const still = s.goal && !s.move && !excused ? (stillWithGoal.get(s.id) ?? 0) + 1 : 0;
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
 
@@ -137,7 +148,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });
