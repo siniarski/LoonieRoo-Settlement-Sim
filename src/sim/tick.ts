@@ -19,6 +19,7 @@ import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
+import { updateArming } from './weapons';
 import { updateZombies } from './zombies';
 
 export const TICKS_PER_SECOND = 10;
@@ -38,8 +39,8 @@ export function tick(state: SimState): void {
   for (const s of state.survivors) {
     interruptForNeeds(state, s);
     updateMovement(state, s);
-    // Standing still: eat, then treat wounds, then sleep, then work.
-    if (!s.move && !s.goal && !updateMeal(state, s) && !updateTreatment(state, s) && !updateSleep(state, s)) {
+    // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then work.
+    if (!s.move && !s.goal && !updateMeal(state, s) && !updateTreatment(state, s) && !updateArming(state, s) && !updateSleep(state, s)) {
       updateWork(state, s);
     }
     updateRest(state, s);

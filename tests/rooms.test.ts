@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dumpRooms } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { loadScenario, type Scenario } from '../src/sim/scenario';
-import { completeStorageRooms, designationStatus, getRoomMap, reconcileRoomDesignations, roomAt } from '../src/sim/rooms';
+import { completeRooms, designationStatus, getRoomMap, reconcileRoomDesignations, roomAt } from '../src/sim/rooms';
 
 const HOUSE = [
   '..........',
@@ -87,7 +87,7 @@ describe('room designations and requirements', () => {
     const state = loadScenario(scenario(['.....', '.#D#.', '.#.#.', '.###.', '.....'], [{ x: 2, y: 2, purpose: 'storage' }]));
     const status = designationStatus(state, state.roomDesignations[0]!);
     expect(status.requirements.filter((r) => !r.met).map((r) => r.label)).toEqual(['at least 4 tiles']);
-    expect(completeStorageRooms(state).size).toBe(0);
+    expect(completeRooms(state, 'storage').size).toBe(0);
   });
 
   it('a designation outdoors is kept but reports not enclosed', () => {

@@ -20,6 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { PURPOSE_NAMES } from '../render/draw';
 
 export interface Hud {
   update(state: SimState, fps: number): void;
@@ -246,11 +247,11 @@ function roomText(state: SimState, hover: Point | null): string {
   const header = room
     ? `Room · ${room.tiles.length} tiles · ${room.doors.length} door${room.doors.length === 1 ? '' : 's'}`
     : 'Not a room (open to the outside)';
-  if (!designation) return `${header}\nno purpose · 7 Housing or 8 Storage to assign`;
+  if (!designation) return `${header}\nno purpose · assign one with a Rooms tool (B)`;
   const status = evaluateRoom(state, room, designation.purpose);
   return [
     header,
-    `${designation.purpose === 'housing' ? 'Housing' : 'Storage'} · ${status.complete ? 'complete' : 'INCOMPLETE'}`,
+    `${PURPOSE_NAMES[designation.purpose]} · ${status.complete ? 'complete' : 'INCOMPLETE'}`,
     ...status.requirements.map((r) => ` ${r.met ? '✓' : '✗'} ${r.label}`),
   ].join('\n');
 }
@@ -355,6 +356,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 function activity(state: SimState, s: Survivor): string {
   if (s.meal) return s.meal.progress > 0 ? 'eating' : 'going to eat';
   if (s.treatment) return s.treatment.progress > 0 ? 'bandaging wounds' : 'going for a bandage';
+  if (s.arming) return 'going for a weapon';
   if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;

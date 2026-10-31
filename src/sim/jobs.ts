@@ -14,12 +14,13 @@ import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
 import { worksThisTick } from './health';
 import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
-import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item } from './items';
+import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item, type ItemKind } from './items';
 import { JOB_TYPES, type JobType } from './jobTypes';
 import { canReach, findPathToAny } from './pathfinding';
 import { random } from './rng';
 import { damageZombie, getZombie } from './zombies';
-import { completeStorageRooms, getRoomMap, isIndoors, labelAt, reconcileRoomDesignations } from './rooms';
+import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
+import { blowDamage, wearWeapon } from './weapons';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
 import { getSurvivor, walk, type Survivor } from './survivors';
@@ -56,9 +57,11 @@ export const CLEAN_WORK = 15;
 /** Ticks to search a crate once; each search yields one find. */
 export const SCAVENGE_WORK = 40;
 /** Chance a find is food (rolled with the sim RNG). */
-export const SCAVENGE_FOOD_CHANCE = 0.5;
-/** Chance a find is wood; the rest are bandages. */
-export const SCAVENGE_WOOD_CHANCE = 0.35;
+export const SCAVENGE_FOOD_CHANCE = 0.45;
+/** Chance a find is wood. */
+export const SCAVENGE_WOOD_CHANCE = 0.3;
+/** Chance a find is a bandage; the rest are weapons. */
+export const SCAVENGE_BANDAGE_CHANCE = 0.15;
 /** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
 export const GUARD_ATTACK_EVERY = 10;
 export const GUARD_DAMAGE = 50;
@@ -81,9 +84,9 @@ export function reconcileJobs(state: SimState): void {
     if (!preconditionHolds(state, bp)) cancelBlueprint(state, bp);
   }
 
-  const storage = completeStorageRooms(state);
+  const stores = completeStoreRooms(state);
   for (const job of [...state.jobs]) {
-    const reason = invalidReason(state, job, storage);
+    const reason = invalidReason(state, job, stores);
     if (reason) removeJob(state, job, reason);
   }
 
@@ -101,13 +104,12 @@ export function reconcileJobs(state: SimState): void {
     if (dirt[i] === 1 && !cleaning.has(i) && isIndoors(state, x, y)) addJob(state, 'clean', x, y, null, null);
   }
 
-  // Loose items outside storage get a store job, if any storage room can take them.
-  if (storage.size > 0) {
-    const storing = new Set(state.jobs.filter(isStoreJob).map((j) => j.itemId));
-    for (const item of state.items) {
-      if (!item.pos || storing.has(item.id) || storage.has(labelAt(state, item.pos.x, item.pos.y))) continue;
-      addJob(state, 'haul', item.pos.x, item.pos.y, null, item.id);
-    }
+  // Loose items outside their home (armory for weapons, else storage) get a store job, if a room can take them.
+  const storing = new Set(state.jobs.filter(isStoreJob).map((j) => j.itemId));
+  for (const item of state.items) {
+    const home = homeFor(stores, item.kind);
+    if (!item.pos || home.size === 0 || storing.has(item.id) || home.has(labelAt(state, item.pos.x, item.pos.y))) continue;
+    addJob(state, 'haul', item.pos.x, item.pos.y, null, item.id);
   }
 
   // Marked crates with loot left get one scavenge job each.
@@ -139,7 +141,7 @@ function wantedJobType(bp: Blueprint): JobType {
   return bp.needsMaterial && !bp.delivered ? 'haul' : 'build';
 }
 
-function invalidReason(state: SimState, job: Job, storage: Set<number>): string | null {
+function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | null {
   switch (job.type) {
     case 'clean':
       if (!isDirty(state.grid, job.x, job.y)) return 'tile already clean';
@@ -164,7 +166,7 @@ function invalidReason(state: SimState, job: Job, storage: Set<number>): string 
     }
     case 'build':
     case 'haul': {
-      if (isStoreJob(job)) return storeInvalidReason(state, job, storage);
+      if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
       const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
       if (!bp) return 'designation cancelled';
       if (wantedJobType(bp) !== job.type) return 'designation moved on';
@@ -178,13 +180,14 @@ function invalidReason(state: SimState, job: Job, storage: Set<number>): string 
   }
 }
 
-function storeInvalidReason(state: SimState, job: Job, storage: Set<number>): string | null {
+function storeInvalidReason(state: SimState, job: Job, stores: StoreRooms): string | null {
   const item = job.itemId ? getItem(state, job.itemId) : undefined;
   if (!item) return 'item gone';
   if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
-  if (storage.size === 0) return 'no complete storage room';
+  const home = homeFor(stores, item.kind);
+  if (home.size === 0) return 'no complete storage room';
   if (item.pos) {
-    if (storage.has(labelAt(state, item.pos.x, item.pos.y))) return 'already in storage';
+    if (home.has(labelAt(state, item.pos.x, item.pos.y))) return 'already in storage';
     // Keep the job's tile in step with the item (it may have been dropped elsewhere).
     job.x = item.pos.x;
     job.y = item.pos.y;
@@ -312,7 +315,9 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   job.progress += 1;
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
-  if (damageZombie(state, z, GUARD_DAMAGE, s)) finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
+  if (!damageZombie(state, z, blowDamage(s, GUARD_DAMAGE), s)) return;
+  wearWeapon(state, s);
+  finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
 }
 
 /** Search a crate from next to it; each completed search drops one find by the survivor. */
@@ -324,11 +329,19 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   job.progress += 1;
   if (job.progress < SCAVENGE_WORK) return;
   const roll = random(state);
-  const kind = roll < SCAVENGE_FOOD_CHANCE ? 'food' : roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE ? 'wood' : 'bandage';
+  const kind = scavengeFind(roll);
   spawnItem(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0) crate.scavenge = false;
   finishJob(state, s, job, `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
+}
+
+/** Maps a [0, 1) roll to a find: food, wood, bandage, or weapon. */
+export function scavengeFind(roll: number): ItemKind {
+  if (roll < SCAVENGE_FOOD_CHANCE) return 'food';
+  if (roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE) return 'wood';
+  if (roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE + SCAVENGE_BANDAGE_CHANCE) return 'bandage';
+  return 'weapon';
 }
 
 function workClean(state: SimState, s: Survivor, job: Job): void {
@@ -378,9 +391,10 @@ function workHaul(state: SimState, s: Survivor, job: Job): void {
 }
 
 function carryToStorage(state: SimState, s: Survivor, job: Job, item: Item): void {
-  if (!job.dest || !storageTileFree(state, job, job.dest, completeStorageRooms(state))) {
+  const home = homeFor(completeStoreRooms(state), item.kind);
+  if (!job.dest || !storageTileFree(state, job, job.dest, home)) {
     // The reserved tile got taken (or the room changed): pick another.
-    job.dest = pickStorageTile(state, s.pos, job);
+    job.dest = pickStorageTile(state, s.pos, job, home);
     if (!job.dest) return releaseSurvivor(state, s, 'no free storage tile');
   }
   if (!samePoint(s.pos, job.dest)) return goTo(state, s, job, [job.dest]);
@@ -400,9 +414,8 @@ function storageTileFree(state: SimState, job: Job, p: Point, storage: Set<numbe
   );
 }
 
-/** Nearest free, reachable tile in any complete storage room. */
-function pickStorageTile(state: SimState, from: Point, job: Job): Point | null {
-  const storage = completeStorageRooms(state);
+/** Nearest free, reachable tile in any of the given complete rooms. */
+function pickStorageTile(state: SimState, from: Point, job: Job, storage: Set<number>): Point | null {
   const { rooms } = getRoomMap(state);
   const { width } = state.grid;
   const candidates: Point[] = [];
@@ -499,7 +512,7 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       if (isStoreJob(job)) {
         const item = job.itemId ? getItem(state, job.itemId) : undefined;
         if (!item?.pos || item.reservedBy !== null || !canReach(grid, v, s.pos, [item.pos])) return null;
-        const dest = pickStorageTile(state, item.pos, job);
+        const dest = pickStorageTile(state, item.pos, job, homeFor(completeStoreRooms(state), item.kind));
         return dest ? pathPlan(state, s.pos, [item.pos], item.id, dest) : null;
       }
       const site = neighbours4(grid, job.x, job.y).filter((p) => isWalkable(grid, p.x, p.y));

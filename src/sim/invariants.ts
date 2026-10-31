@@ -55,14 +55,16 @@ export function checkInvariants(state: SimState): string[] {
       occupied.add(key);
       if (!isWalkable(grid, item.pos.x, item.pos.y)) problems.push(`${item.id} inside a wall at (${key})`);
     }
-    if (item.carriedBy && survivors.get(item.carriedBy)?.carrying !== item.id) {
+    const bearer = item.carriedBy ? survivors.get(item.carriedBy) : undefined;
+    if (item.carriedBy && bearer?.carrying !== item.id && bearer?.weapon !== item.id) {
       problems.push(`${item.id} says carriedBy ${item.carriedBy}, who isn't carrying it`);
     }
     if (item.reservedBy) {
       const holder = survivors.get(item.reservedBy);
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
-      if (job?.itemId !== item.id && holder?.meal?.itemId !== item.id && holder?.treatment?.itemId !== item.id) {
-        problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job, meal, or treatment`);
+      const using = holder?.meal?.itemId === item.id || holder?.treatment?.itemId === item.id || holder?.arming === item.id;
+      if (job?.itemId !== item.id && !using) {
+        problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job, meal, treatment, or arming`);
       }
     }
   }
@@ -95,6 +97,17 @@ export function checkInvariants(state: SimState): string[] {
       else if (bandage.reservedBy !== s.id) problems.push(`${s.name} uses ${bandage.id}, reserved by ${bandage.reservedBy}`);
       if (s.jobId) problems.push(`${s.name} is treating wounds but holds job ${s.jobId}`);
       if (s.sleep || s.meal) problems.push(`${s.name} is treating wounds while sleeping or eating`);
+    }
+    if (s.weapon) {
+      const weapon = items.get(s.weapon);
+      if (!weapon || weapon.kind !== 'weapon') problems.push(`${s.name} wields missing weapon ${s.weapon}`);
+      else if (weapon.carriedBy !== s.id) problems.push(`${s.name} wields ${weapon.id}, carried by ${weapon.carriedBy}`);
+    }
+    if (s.arming) {
+      const weapon = items.get(s.arming);
+      if (!weapon || weapon.kind !== 'weapon') problems.push(`${s.name} is fetching missing weapon ${s.arming}`);
+      else if (weapon.reservedBy !== s.id || !weapon.pos) problems.push(`${s.name} is fetching ${weapon.id}, which isn't reserved on the ground`);
+      if (s.jobId || s.sleep || s.meal || s.treatment) problems.push(`${s.name} is fetching a weapon while busy with something else`);
     }
     if (s.meal) {
       const food = items.get(s.meal.itemId);

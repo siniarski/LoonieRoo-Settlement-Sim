@@ -31,8 +31,8 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
     if (r.label === 'has a door') notes.push('Needs a door: build one in its wall.');
   }
 
-  if (designation.purpose === 'storage') {
-    notes.push('Storage needs no furniture yet.');
+  if (designation.purpose !== 'housing') {
+    notes.push(`${designation.purpose === 'storage' ? 'Storage' : 'An armory'} needs no furniture yet.`);
     return { commands: [], notes };
   }
   return planHousing(state, room, notes);

@@ -80,6 +80,12 @@ export interface Survivor {
   treatment: { itemId: string; progress: number } | null;
   /** When hurt and no bandage was found, don't look again before this tick. */
   nextTreatTick: number;
+  /** Equipped weapon item (carried, separate from `carrying`); see weapons.ts. */
+  weapon: string | null;
+  /** Weapon item reserved while walking to pick it up. */
+  arming: string | null;
+  /** When no weapon was found, don't look again before this tick. */
+  nextArmTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -107,6 +113,9 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     hurtTick: -1,
     treatment: null,
     nextTreatTick: 0,
+    weapon: null,
+    arming: null,
+    nextArmTick: 0,
   };
   state.survivors.push(survivor);
   return survivor;

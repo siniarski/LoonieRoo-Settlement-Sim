@@ -75,6 +75,9 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
     const w = state.wanderers[roll % state.wanderers.length]!;
     return { type: roll < 88 ? 'acceptWanderer' : 'dismissWanderer', wandererId: w.id };
   }
+  // Weapons lying around (guards arm themselves) and the odd armory.
+  if (roll >= 90 && roll < 94) return { type: 'spawnWeapon', x, y };
+  if (roll >= 94 && roll < 96) return { type: 'designateRoom', x, y, purpose: 'armory' };
   return null;
 }
 
@@ -120,9 +123,9 @@ describe('stuck-state invariant', () => {
           if (s.note) notesSeen.add(s.note.split(' ')[0]!);
 
           // Legitimate extra standing ticks: being moved aside (a wall finished on your tile clears
-          // your path) and a need kicking in (dropping work for bed, food, or a bandage). Anything else repeated is a bug.
+          // your path) and a need kicking in (dropping work for bed, food, a bandage, or a weapon). Anything else repeated is a bug.
           const prev = before.get(s.id);
-          const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}${s.treatment ? 'treat' : ''}`;
+          const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}${s.treatment ? 'treat' : ''}${s.arming ? 'arm' : ''}`;
           const movedAside = prev !== undefined && !prev.moving && prev.pos !== `${s.pos.x},${s.pos.y}`;
           const needKickedIn = prev !== undefined && prev.needs !== needs && needs !== '';
           before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs });
@@ -131,7 +134,7 @@ describe('stuck-state invariant', () => {
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
 
-          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal;
+          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal && !s.arming;
           const idleTicks = idle && chooseJob(state, s) ? (idleWithWork.get(s.id) ?? 0) + 1 : 0;
           idleWithWork.set(s.id, idleTicks);
           expect(idleTicks, `idle with doable work: ${where}`).toBeLessThanOrEqual(MAX_IDLE_WITH_DOABLE_JOB);
@@ -166,7 +169,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated', 'armed'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

@@ -40,6 +40,7 @@ import type { SimState } from './state';
 import { isNight } from './time';
 import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
+import { cancelArming, dropWeapon, reconcileArming } from './weapons';
 
 export function isTired(state: SimState, s: Survivor): boolean {
   return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
@@ -82,6 +83,7 @@ export function reconcileNeeds(state: SimState): void {
       const item = getItem(state, s.treatment.itemId);
       if (!item || item.reservedBy !== s.id || !item.pos) cancelTreatment(state, s, 'bandage gone');
     }
+    reconcileArming(state, s);
     if (!s.sleep?.bedId) continue;
     const bed = getBed(state, s.sleep.bedId);
     if (bed && bed.occupant === s.id) continue;
@@ -157,6 +159,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
     return false;
   }
   if (s.jobId) releaseSurvivor(state, s, 'hungry');
+  cancelArming(state, s, 'hungry');
   food.reservedBy = s.id;
   s.meal = { itemId: food.id, progress: 0 };
   s.note = `going to eat at (${food.pos.x}, ${food.pos.y})`;
@@ -164,7 +167,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
 }
 
 /** Nearest unreserved item of a kind, on the ground, that this survivor can reach. */
-function nearestFreeItem(state: SimState, s: Survivor, kind: ItemKind): Item | undefined {
+export function nearestFreeItem(state: SimState, s: Survivor, kind: ItemKind): Item | undefined {
   return state.items
     .filter((i): i is Item & { pos: NonNullable<Item['pos']> } => i.kind === kind && i.pos !== null && i.reservedBy === null)
     .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos))
@@ -227,6 +230,7 @@ function startTreatment(state: SimState, s: Survivor): boolean {
     return false;
   }
   if (s.jobId) releaseSurvivor(state, s, 'going to treat wounds');
+  cancelArming(state, s, 'going to treat wounds');
   bandage.reservedBy = s.id;
   s.treatment = { itemId: bandage.id, progress: 0 };
   s.note = `going for a bandage at (${bandage.pos.x}, ${bandage.pos.y})`;
@@ -270,12 +274,14 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
   return s.satiety === 0 ? 'starvation' : (s.lastHurtBy ?? 'injuries');
 }
 
-/** Removes a survivor, releasing everything they hold (job, carried item, bed, food). */
+/** Removes a survivor, releasing everything they hold (job, carried item, bed, food, weapon). */
 export function killSurvivor(state: SimState, s: Survivor, cause: string): void {
   if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
   wake(state, s, cause);
   cancelMeal(state, s, cause);
   cancelTreatment(state, s, cause);
+  cancelArming(state, s, cause);
+  dropWeapon(state, s);
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   logEvent(state, `${s.name} died of ${cause}`);

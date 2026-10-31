@@ -5,7 +5,7 @@ import { isWalkable, type Point } from './grid';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
-export type ItemKind = 'wood' | 'food' | 'bandage';
+export type ItemKind = 'wood' | 'food' | 'bandage' | 'weapon';
 
 export interface Item {
   id: string;
@@ -14,6 +14,8 @@ export interface Item {
   carriedBy: string | null;
   /** Survivor who has claimed this item: for a haul job, to eat it (food), or to use it (bandage). */
   reservedBy: string | null;
+  /** Weapons: kills made with it so far (see weapons.ts). 0 for everything else. */
+  wear: number;
 }
 
 export function getItem(state: SimState, id: string): Item | undefined {
@@ -36,7 +38,7 @@ export function canHoldItem(state: SimState, x: number, y: number): boolean {
 
 /** Creates an item on the nearest free tile to (x, y). */
 export function spawnItem(state: SimState, kind: ItemKind, x: number, y: number): Item {
-  const item: Item = { id: `i${state.nextId++}`, kind, pos: null, carriedBy: null, reservedBy: null };
+  const item: Item = { id: `i${state.nextId++}`, kind, pos: null, carriedBy: null, reservedBy: null, wear: 0 };
   state.items.push(item);
   placeNear(state, item, { x, y });
   return item;

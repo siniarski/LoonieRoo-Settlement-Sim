@@ -18,6 +18,7 @@ import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms'
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
+import { cancelArming } from './weapons';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
 
@@ -50,6 +51,7 @@ export type Command =
   | { type: 'setHealth'; survivorId: string; health: number }
   // Debug/sandbox: drop a food item on (or near) a tile.
   | { type: 'spawnFood'; x: number; y: number }
+  | { type: 'spawnWeapon'; x: number; y: number }
   // Debug/sandbox: put a zombie on a floor tile (they only last until dawn).
   | { type: 'spawnZombie'; x: number; y: number };
 
@@ -127,8 +129,9 @@ function execute(state: SimState, command: Command): CommandResult {
       addZombie(state, x, y);
       return changed();
     case 'spawnFood':
+    case 'spawnWeapon':
       if (!isWalkable(state.grid, x, y)) return reject(`(${x}, ${y}) is not walkable`);
-      spawnItem(state, 'food', x, y);
+      spawnItem(state, command.type === 'spawnFood' ? 'food' : 'weapon', x, y);
       return changed();
     case 'moveSurvivor':
       return moveSurvivor(state, command.survivorId, x, y);
@@ -232,6 +235,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   wake(state, survivor, 'woken by an order');
   cancelMeal(state, survivor, 'meal interrupted by an order');
   cancelTreatment(state, survivor, 'treatment interrupted by an order');
+  cancelArming(state, survivor, 'interrupted by an order');
   setGoal(survivor, { x, y });
   return changed();
 }

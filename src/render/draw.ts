@@ -41,6 +41,7 @@ const COLOURS = {
     bed: '#c7a6ff',
     housing: '#6ea8ff',
     storage: '#e6be6e',
+    armory: '#d98c6a',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -90,14 +91,20 @@ const COLOURS = {
   bedFrame: '#5b4a7a',
   bedSheet: '#9c8cc4',
   bedPillow: '#e9e3f5',
-  room: { housing: 'rgba(110, 168, 255, 0.10)', storage: 'rgba(230, 190, 110, 0.10)' } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a' } satisfies Record<RoomPurpose, string>,
+  room: {
+    housing: 'rgba(110, 168, 255, 0.10)',
+    storage: 'rgba(230, 190, 110, 0.10)',
+    armory: 'rgba(217, 140, 106, 0.12)',
+  } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a' } satisfies Record<RoomPurpose, string>,
+  blade: '#cfd6dc',
+  hilt: '#6b4a2e',
   incomplete: '#ff8a7a',
   roomOutline: 'rgba(255, 255, 255, 0.35)',
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -356,7 +363,28 @@ function drawItem(
 ): void {
   if (kind === 'food') drawFood(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'bandage') drawBandage(ctx, camera, viewport, wx, wy, size);
+  else if (kind === 'weapon') drawWeapon(ctx, camera, viewport, wx, wy, size);
   else drawWood(ctx, camera, viewport, wx, wy, size);
+}
+
+/** A machete: a pale diagonal blade on a brown hilt. */
+function drawWeapon(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const s = size * 0.3;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = COLOURS.blade;
+  ctx.lineWidth = Math.max(2, size * 0.12);
+  ctx.beginPath();
+  ctx.moveTo(p.x - s * 0.3, p.y + s * 0.3);
+  ctx.lineTo(p.x + s, p.y - s);
+  ctx.stroke();
+  ctx.strokeStyle = COLOURS.hilt;
+  ctx.lineWidth = Math.max(2, size * 0.14);
+  ctx.beginPath();
+  ctx.moveTo(p.x - s, p.y + s);
+  ctx.lineTo(p.x - s * 0.3, p.y + s * 0.3);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
 }
 
 /** A white pad with a red cross. */
@@ -558,6 +586,7 @@ function drawSurvivor(
   ctx.stroke();
   const carried = s.carrying ? state.items.find((i) => i.id === s.carrying) : undefined;
   if (carried) drawItem(ctx, camera, viewport, carried.kind, world.x + 0.3, world.y + 0.25, size * 0.6);
+  if (s.weapon) drawWeapon(ctx, camera, viewport, world.x - 0.35, world.y + 0.05, size * 0.85);
 
   // Need bars under the survivor once they matter: rest (blue) below half or
   // while sleeping, food (orange) below half or while eating. Red when urgent.

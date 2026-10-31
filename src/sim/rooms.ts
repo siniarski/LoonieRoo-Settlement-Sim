@@ -11,10 +11,11 @@
 // the older one wins (reconcileRoomDesignations drops the newer).
 
 import { getTile, type Point } from './grid';
+import type { ItemKind } from './items';
 import type { SimState } from './state';
 
-export type RoomPurpose = 'housing' | 'storage';
-export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage'];
+export type RoomPurpose = 'housing' | 'storage' | 'armory';
+export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory'];
 
 export interface RoomDesignation {
   id: string;
@@ -206,13 +207,28 @@ export function designationStatus(state: SimState, d: RoomDesignation): RoomStat
   return evaluateRoom(state, roomAt(state, d.x, d.y), d.purpose);
 }
 
-/** Room indices of complete storage rooms. */
-export function completeStorageRooms(state: SimState): Set<number> {
+/** Room indices of complete rooms with this purpose. */
+export function completeRooms(state: SimState, purpose: RoomPurpose): Set<number> {
   const result = new Set<number>();
   for (const d of state.roomDesignations) {
-    if (d.purpose !== 'storage') continue;
+    if (d.purpose !== purpose) continue;
     const room = roomAt(state, d.x, d.y);
-    if (room && evaluateRoom(state, room, 'storage').complete) result.add(room.index);
+    if (room && evaluateRoom(state, room, purpose).complete) result.add(room.index);
   }
   return result;
+}
+
+/** Complete rooms that loose items get hauled to. */
+export interface StoreRooms {
+  storage: Set<number>;
+  armory: Set<number>;
+}
+
+export function completeStoreRooms(state: SimState): StoreRooms {
+  return { storage: completeRooms(state, 'storage'), armory: completeRooms(state, 'armory') };
+}
+
+/** Where an item belongs: weapons in an armory if there is one, everything else (and weapons otherwise) in storage. */
+export function homeFor(rooms: StoreRooms, kind: ItemKind): Set<number> {
+  return kind === 'weapon' && rooms.armory.size > 0 ? rooms.armory : rooms.storage;
 }
