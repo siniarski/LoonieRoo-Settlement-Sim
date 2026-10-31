@@ -20,6 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
 
 export interface Hud {
@@ -174,6 +175,7 @@ function furnitureText(state: SimState, p: Point): string {
   const f = state.furniture.find((x) => x.x === p.x && x.y === p.y);
   if (!f) return '';
   if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
+  if (f.kind === 'table') return ' · table';
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
 
@@ -301,7 +303,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
     const head = el('tr', '');
-    for (const label of ['Survivor', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -315,6 +317,12 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       name.title = 'Select';
       name.addEventListener('click', () => (view.selectedId = s.id));
       row.append(name);
+
+      const m = mood(state, s);
+      const moodCell = el('td', `prio-mood${isMiserable(state, s) ? ' low' : m >= 60 ? ' high' : ''}`);
+      moodCell.textContent = String(m);
+      moodCell.title = moodTitle(state, s);
+      row.append(moodCell);
 
       for (const type of JOB_TYPES) {
         const td = el('td', '');
@@ -345,7 +353,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !view.showPriorities;
       if (!view.showPriorities) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.priorities, activity(state, s)])]);
+      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);
@@ -353,8 +361,14 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   };
 }
 
+/** "Mood 55: ate at a table +10, hurt -10" (the tooltip, and what the debug panel shows). */
+function moodTitle(state: SimState, s: Survivor): string {
+  const factors = moodFactors(state, s).map(([label, effect]) => `${label} ${effect > 0 ? '+' : ''}${effect}`);
+  return `Mood ${mood(state, s)}${isMiserable(state, s) ? ' (miserable: works slower)' : ''}${factors.length ? `: ${factors.join(', ')}` : ''}`;
+}
+
 function activity(state: SimState, s: Survivor): string {
-  if (s.meal) return s.meal.progress > 0 ? 'eating' : 'going to eat';
+  if (s.meal) return s.meal.progress > 0 ? (s.meal.seat ? 'eating at a table' : 'eating') : s.carrying ? 'taking food to a table' : 'going to eat';
   if (s.treatment) return s.treatment.progress > 0 ? 'bandaging wounds' : 'going for a bandage';
   if (s.arming) return 'going for a weapon';
   if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
@@ -415,6 +429,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
     `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
+    `    ${moodTitle(state, s)}`,
     `    ${s.note ?? ''}`,
   ];
 }

@@ -42,7 +42,7 @@ export function isCritical(health: number): boolean {
   return health < HEALTH_CRITICAL;
 }
 
-/** Does work advance this tick? Hurt survivors lose one tick in HURT_WORK_SKIP_EVERY. */
-export function worksThisTick(tick: number, health: number): boolean {
-  return !isHurt(health) || tick % HURT_WORK_SKIP_EVERY !== 0;
+/** Does work advance this tick? Slowed survivors (hurt or miserable) lose one tick in HURT_WORK_SKIP_EVERY. */
+export function worksThisTick(tick: number, slowed: boolean): boolean {
+  return !slowed || tick % HURT_WORK_SKIP_EVERY !== 0;
 }

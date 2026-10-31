@@ -21,7 +21,7 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
   const room = roomAt(state, x, y);
   if (!room) return { commands: [], notes: ['Not an enclosed room: close it in with walls and a door first.'] };
   const designation = designationOf(state, room);
-  if (!designation) return { commands: [], notes: ['This room has no purpose yet: make it Housing or Storage first.'] };
+  if (!designation) return { commands: [], notes: ['This room has no purpose yet: give it one with a Rooms tool first.'] };
 
   const status = evaluateRoom(state, room, designation.purpose);
   const notes: string[] = [];
@@ -31,12 +31,16 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
     if (r.label === 'has a door') notes.push('Needs a door: build one in its wall.');
   }
 
+  if (designation.purpose === 'messhall') return planMessHall(state, room, notes);
   if (designation.purpose !== 'housing') {
     notes.push(`${designation.purpose === 'storage' ? 'Storage' : 'An armory'} needs no furniture yet.`);
     return { commands: [], notes };
   }
   return planHousing(state, room, notes);
 }
+
+/** Seats around one table in the open (its four sides). */
+const SEATS_PER_TABLE = 4;
 
 /** Beds for the colony, up to the room's capacity, along walls and away from doors. */
 function planHousing(state: SimState, room: Room, notes: string[]): Plan {
@@ -80,7 +84,39 @@ function bedsInOtherHousing(state: SimState, room: Room): number {
  * furniture, plan, or plot), not next to a door (keep doorways clear), and
  * against as many walls as possible. Ties go top-to-bottom, left-to-right.
  */
+/** Tables, one per SEATS_PER_TABLE survivors, out in the open so every side is a seat. */
+function planMessHall(state: SimState, room: Room, notes: string[]): Plan {
+  const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
+  const tablesHere =
+    state.furniture.filter((f) => f.kind === 'table' && inRoom(f)).length +
+    state.blueprints.filter((b) => b.target === 'table' && inRoom(b)).length;
+  const toAdd = Math.max(1, Math.ceil(state.survivors.length / SEATS_PER_TABLE)) - tablesHere;
+  if (toAdd <= 0) {
+    notes.push(`Already has ${tablesHere} table${tablesHere === 1 ? '' : 's'}: enough seats for the colony.`);
+    return { commands: [], notes };
+  }
+  // Fewest walls around first; skip spots next to a chosen table, so seats aren't shared.
+  const spots: Point[] = [];
+  for (const p of [...freeSpots(state, room)].sort((a, b) => a.walls - b.walls).map((c) => c.p)) {
+    if (spots.length === toAdd) break;
+    if (spots.some((q) => Math.abs(q.x - p.x) + Math.abs(q.y - p.y) <= 2)) continue;
+    spots.push(p);
+  }
+  const commands: Command[] = spots.map((p) => ({ type: 'designateBuild', x: p.x, y: p.y, structure: 'table' }));
+  notes.push(`Planned ${spots.length} table${spots.length === 1 ? '' : 's'} (seats for ${SEATS_PER_TABLE} each, colony of ${state.survivors.length}).`);
+  if (spots.length < toAdd) notes.push(`Only found room for ${spots.length}: clear some space.`);
+  return { commands, notes };
+}
+
 function bedSpots(state: SimState, room: Room): Point[] {
+  // Stable sort keeps scan order (y, then x) for equal wall counts.
+  return freeSpots(state, room)
+    .sort((a, b) => b.walls - a.walls)
+    .map((c) => c.p);
+}
+
+/** Free floor in the room, not next to a door, with how many walls touch it. In scan order. */
+function freeSpots(state: SimState, room: Room): { p: Point; walls: number }[] {
   const { grid } = state;
   const taken = new Set<string>([
     ...state.items.filter((i) => i.pos).map((i) => `${i.pos!.x},${i.pos!.y}`),
@@ -96,6 +132,5 @@ function bedSpots(state: SimState, room: Room): Point[] {
     if (around.includes('door')) continue;
     candidates.push({ p, walls: around.filter((t) => t === 'wall').length });
   }
-  // Stable sort keeps scan order (y, then x) for equal wall counts.
-  return candidates.sort((a, b) => b.walls - a.walls).map((c) => c.p);
+  return candidates;
 }

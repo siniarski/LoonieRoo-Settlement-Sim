@@ -2,10 +2,11 @@
 // Survivors can walk over them; items can't be dropped on them.
 //   bed    built by survivors; slept in (see needs.ts)
 //   crate  found in ruins; holds loot that survivors scavenge (see jobs.ts)
+//   table  built by survivors; makes a mess hall (see mess.ts)
 
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate';
+export type FurnitureKind = 'bed' | 'crate' | 'table';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;

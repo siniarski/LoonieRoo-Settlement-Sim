@@ -26,13 +26,13 @@ export function itemAt(state: SimState, x: number, y: number): Item | undefined 
   return state.items.find((i) => i.pos !== null && i.pos.x === x && i.pos.y === y);
 }
 
-/** A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or bed. */
+/** A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or furniture. */
 export function canHoldItem(state: SimState, x: number, y: number): boolean {
   return (
     isWalkable(state.grid, x, y) &&
     !itemAt(state, x, y) &&
     !state.furniture.some((f) => f.x === x && f.y === y) &&
-    !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || b.target === 'bed'))
+    !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || b.target === 'bed' || b.target === 'table'))
   );
 }
 

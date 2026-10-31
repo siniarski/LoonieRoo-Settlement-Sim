@@ -11,17 +11,22 @@ import type { SimState } from './state';
 import { evictZombies } from './zombies';
 
 /**
- * What the tile ends up as. 'floor' means "remove what's here": a bed if
- * there is one, otherwise the wall or door.
+ * What the tile ends up as. 'floor' means "remove what's here": furniture if
+ * there is some, otherwise the wall or door.
  */
-export type BuildTarget = 'wall' | 'door' | 'bed' | 'floor';
+export type BuildTarget = 'wall' | 'door' | 'bed' | 'table' | 'floor';
+
+/** Build targets that are furniture rather than a tile. */
+export function isFurnitureTarget(target: BuildTarget): target is 'bed' | 'table' {
+  return target === 'bed' || target === 'table';
+}
 
 export interface Blueprint {
   id: string;
   x: number;
   y: number;
   target: BuildTarget;
-  /** Walls, doors, and beds need one wood delivered before work can start. */
+  /** Walls, doors, beds, and tables need one wood delivered before work can start. */
   needsMaterial: boolean;
   delivered: boolean;
   workDone: number;
@@ -29,7 +34,7 @@ export interface Blueprint {
 }
 
 /** Ticks of work (10 ticks = 1s at 1x). */
-export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, bed: 25, floor: 20 };
+export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, bed: 25, table: 25, floor: 20 };
 
 export function getBlueprint(state: SimState, id: string): Blueprint | undefined {
   return state.blueprints.find((b) => b.id === id);
@@ -85,8 +90,9 @@ export function completeBlueprint(state: SimState, bp: Blueprint): void {
       evictZombies(state, bp); // zombies can stand on neither walls nor doors
       clearPlot(state, bp);
       return;
-    case 'bed': {
-      addFurniture(state, 'bed', bp.x, bp.y);
+    case 'bed':
+    case 'table': {
+      addFurniture(state, bp.target, bp.x, bp.y);
       const item = itemAt(state, bp.x, bp.y);
       if (item) dropItem(state, item, bp);
       return;

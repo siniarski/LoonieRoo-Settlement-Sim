@@ -31,7 +31,7 @@ describe('furnish planner', () => {
   it('explains when there is no room, or no purpose', () => {
     const state = setup(HOUSE, []);
     expect(planFurnish(state, 0, 0)).toEqual({ commands: [], notes: ['Not an enclosed room: close it in with walls and a door first.'] });
-    expect(planFurnish(state, 3, 3).notes).toEqual(['This room has no purpose yet: make it Housing or Storage first.']);
+    expect(planFurnish(state, 3, 3).notes).toEqual(['This room has no purpose yet: give it one with a Rooms tool first.']);
   });
 
   it('plans one bed per survivor, corners first, never next to the door', () => {
@@ -76,6 +76,17 @@ describe('furnish planner', () => {
     const plan = planFurnish(noDoor, 3, 3);
     expect(plan.notes[0]).toBe('Needs a door: build one in its wall.');
     expect(plan.commands).toHaveLength(2);
+  });
+
+  it('a mess hall gets a table per 4 survivors, in the open, tables apart', () => {
+    const hall = setup(HOUSE, [{ x: 3, y: 3, purpose: 'messhall' }]);
+    const tables = (state: SimState) =>
+      planFurnish(state, 3, 3).commands.map((c) => (c.type === 'designateBuild' && c.structure === 'table' ? `${c.x},${c.y}` : 'other'));
+    expect(tables(hall)).toEqual(['3,3']);
+    for (let i = 0; i < 3; i++) applyCommand(hall, { type: 'spawnSurvivor', x: 6 + i, y: 7 });
+    expect(tables(hall)).toEqual(['3,3', '6,3']);
+    for (const c of planFurnish(hall, 3, 3).commands) applyCommand(hall, c);
+    expect(planFurnish(hall, 3, 3).notes).toEqual(['Already has 2 tables: enough seats for the colony.']);
   });
 
   it('is pure: planning never changes state', () => {

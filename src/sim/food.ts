@@ -2,6 +2,8 @@
 // can use them without an import cycle (same pattern as rest.ts).
 // All values are integers so the sim stays exactly deterministic.
 
+import type { Point } from './grid';
+
 export const SATIETY_MAX = 3000;
 /** Below this a survivor stops working and goes to eat. */
 export const HUNGRY = 750;
@@ -19,6 +21,8 @@ export interface Meal {
   itemId: string;
   /** Ticks spent eating so far (0 while still walking to it). */
   progress: number;
+  /** Mess hall seat the food is carried to, or null to eat where the food lies. */
+  seat: Point | null;
 }
 
 /** Survivors start staggered by index (100%, 80%, 60%, 90%, then repeat), offset from rest. */

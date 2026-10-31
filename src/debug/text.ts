@@ -9,6 +9,7 @@ const BLUEPRINT_CHARS = {
   wall: ENTITY_CHARS.wallBlueprint,
   door: ENTITY_CHARS.doorBlueprint,
   bed: ENTITY_CHARS.bedBlueprint,
+  table: ENTITY_CHARS.tableBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

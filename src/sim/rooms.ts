@@ -14,8 +14,8 @@ import { getTile, type Point } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
-export type RoomPurpose = 'housing' | 'storage' | 'armory';
-export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory'];
+export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall';
+export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall'];
 
 export interface RoomDesignation {
   id: string;
@@ -178,6 +178,7 @@ export interface RoomStatus {
   complete: boolean;
   requirements: Requirement[];
   beds: number;
+  tables: number;
   size: number;
 }
 
@@ -188,7 +189,9 @@ export const MIN_STORAGE_TILES = 4;
 /** Requirements for a purpose. `room` is null when the anchor is outdoors. */
 export function evaluateRoom(state: SimState, room: Room | null, purpose: RoomPurpose): RoomStatus {
   const size = room?.tiles.length ?? 0;
-  const beds = room ? state.furniture.filter((f) => f.kind === 'bed' && labelAt(state, f.x, f.y) === room.index).length : 0;
+  const count = (kind: string) => (room ? state.furniture.filter((f) => f.kind === kind && labelAt(state, f.x, f.y) === room.index).length : 0);
+  const beds = count('bed');
+  const tables = count('table');
   const requirements: Requirement[] = [
     { label: 'enclosed by walls', met: room !== null },
     { label: 'has a door', met: (room?.doors.length ?? 0) > 0 },
@@ -196,10 +199,12 @@ export function evaluateRoom(state: SimState, room: Room | null, purpose: RoomPu
   if (purpose === 'housing') {
     requirements.push({ label: 'at least 1 bed', met: beds >= 1 });
     requirements.push({ label: `${TILES_PER_BED} tiles per bed`, met: beds === 0 || size >= beds * TILES_PER_BED });
+  } else if (purpose === 'messhall') {
+    requirements.push({ label: 'at least 1 table', met: tables >= 1 });
   } else {
     requirements.push({ label: `at least ${MIN_STORAGE_TILES} tiles`, met: size >= MIN_STORAGE_TILES });
   }
-  return { purpose, complete: requirements.every((r) => r.met), requirements, beds, size };
+  return { purpose, complete: requirements.every((r) => r.met), requirements, beds, tables, size };
 }
 
 /** Status for a designation (finds its room). */

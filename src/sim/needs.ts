@@ -31,7 +31,9 @@ import {
   isCritical,
   isHurt,
 } from './health';
-import { getItem, removeItem, type Item, type ItemKind } from './items';
+import { dropItem, getItem, removeItem, type Item, type ItemKind } from './items';
+import { pickSeat, seatUsable } from './mess';
+import { addThought, mournDeath } from './mood';
 import { getJob, releaseSurvivor } from './jobs';
 import { canReach, findPathToAny } from './pathfinding';
 import { BED_REGEN, FLOOR_REGEN, NIGHT_TIRED, REST_DRAIN, REST_MAX, TIRED } from './rest';
@@ -77,7 +79,7 @@ export function reconcileNeeds(state: SimState): void {
   for (const s of state.survivors) {
     if (s.meal) {
       const item = getItem(state, s.meal.itemId);
-      if (!item || item.reservedBy !== s.id || !item.pos) cancelMeal(state, s, 'food gone');
+      if (!item || item.reservedBy !== s.id || (!item.pos && item.carriedBy !== s.id)) cancelMeal(state, s, 'food gone');
     }
     if (s.treatment) {
       const item = getItem(state, s.treatment.itemId);
@@ -127,27 +129,49 @@ export function updateMeal(state: SimState, s: Survivor): boolean {
   if (!s.meal && !startMeal(state, s)) return false;
   const meal = s.meal!;
   const item = getItem(state, meal.itemId);
-  if (!item?.pos || item.reservedBy !== s.id) {
+  if (!item || item.reservedBy !== s.id || (!item.pos && item.carriedBy !== s.id)) {
     cancelMeal(state, s, 'food gone');
     return false;
   }
-  if (!samePoint(s.pos, item.pos)) {
-    const path = findPathToAny(state.grid, s.pos, [item.pos]);
-    if (!path || path.length === 0) {
-      cancelMeal(state, s, "can't reach the food");
-      s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
-      return false;
+  if (item.pos) {
+    if (!samePoint(s.pos, item.pos)) {
+      const path = findPathToAny(state.grid, s.pos, [item.pos]);
+      if (!path || path.length === 0) {
+        cancelMeal(state, s, "can't reach the food");
+        s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
+        return false;
+      }
+      walk(s, path, state.walkabilityVersion);
+      return true;
     }
-    walk(s, path, state.walkabilityVersion);
-    return true;
+    if (meal.seat && seatUsable(state, s, meal.seat)) {
+      // Pick it up and take it to the table.
+      item.pos = null;
+      item.carriedBy = s.id;
+      s.carrying = item.id;
+      s.note = `taking food to the mess hall at (${meal.seat.x}, ${meal.seat.y})`;
+    } else {
+      meal.seat = null;
+    }
+  }
+  if (meal.seat && meal.progress === 0) {
+    // Carrying it: head for the seat. If the seat stopped being one, eat right here.
+    const path = seatUsable(state, s, meal.seat) ? findPathToAny(state.grid, s.pos, [meal.seat]) : null;
+    if (!path) meal.seat = null;
+    else if (path.length > 0) {
+      walk(s, path, state.walkabilityVersion);
+      return true;
+    }
   }
   meal.progress += 1;
-  if (meal.progress === 1) s.note = `eating at (${item.pos.x}, ${item.pos.y})`;
+  if (meal.progress === 1) s.note = `eating ${meal.seat ? 'at a table' : 'standing'} at (${s.pos.x}, ${s.pos.y})`;
   if (meal.progress < EAT_TICKS) return true;
+  if (s.carrying === item.id) s.carrying = null;
   removeItem(state, item);
   s.satiety = Math.min(SATIETY_MAX, s.satiety + MEAL_VALUE);
+  addThought(state, s, meal.seat ? 'ateAtTable' : 'ateWithoutTable');
+  s.note = meal.seat ? 'ate a meal at a table' : 'ate a meal';
   s.meal = null;
-  s.note = 'ate a meal';
   return true;
 }
 
@@ -161,7 +185,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
   if (s.jobId) releaseSurvivor(state, s, 'hungry');
   cancelArming(state, s, 'hungry');
   food.reservedBy = s.id;
-  s.meal = { itemId: food.id, progress: 0 };
+  s.meal = { itemId: food.id, progress: 0, seat: pickSeat(state, s, food.pos) };
   s.note = `going to eat at (${food.pos.x}, ${food.pos.y})`;
   return true;
 }
@@ -178,6 +202,11 @@ export function nearestFreeItem(state: SimState, s: Survivor, kind: ItemKind): I
 export function cancelMeal(state: SimState, s: Survivor, note: string): void {
   if (!s.meal) return;
   const item = getItem(state, s.meal.itemId);
+  if (item && s.carrying === item.id) {
+    // Was carrying it to the mess hall: put it down here.
+    s.carrying = null;
+    dropItem(state, item, s.pos);
+  }
   if (item && item.reservedBy === s.id) item.reservedBy = null;
   s.meal = null;
   s.goal = null;
@@ -276,15 +305,16 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
 
 /** Removes a survivor, releasing everything they hold (job, carried item, bed, food, weapon). */
 export function killSurvivor(state: SimState, s: Survivor, cause: string): void {
+  cancelMeal(state, s, cause);
   if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
   wake(state, s, cause);
-  cancelMeal(state, s, cause);
   cancelTreatment(state, s, cause);
   cancelArming(state, s, cause);
   dropWeapon(state, s);
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   logEvent(state, `${s.name} died of ${cause}`);
+  mournDeath(state);
 }
 
 // --- Sleep ------------------------------------------------------------------
@@ -365,7 +395,10 @@ export function updateRest(state: SimState, s: Survivor): void {
   s.rest = Math.min(REST_MAX, s.rest + (inBed ? BED_REGEN : FLOOR_REGEN));
   // Stay in bed until healed enough to be up, but never sleep through hunger
   // (a starving sleeper would lose health instead of healing).
-  if (s.rest >= REST_MAX && (!isHurt(s.health) || isHungry(s))) wake(state, s, 'woke up rested');
+  if (s.rest >= REST_MAX && (!isHurt(s.health) || isHungry(s))) {
+    addThought(state, s, s.sleep.bedId ? 'sleptInBed' : 'sleptOnFloor');
+    wake(state, s, 'woke up rested');
+  }
 }
 
 /** Ends sleep (or the walk to bed) and frees the bed. Safe to call when awake. */

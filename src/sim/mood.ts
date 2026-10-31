@@ -1,0 +1,69 @@
+// Mood: 0..100, MOOD_BASE when nothing is going on, moved by recent thoughts.
+//
+// A thought is a timed memory ("ate at a table", "saw someone die"). One of
+// each kind at a time: a repeat refreshes the timer. Being hurt counts as a
+// thought while it lasts. Below MISERABLE, a survivor works at 3/4 speed,
+// like a hurt one.
+
+import { isHurt } from './health';
+import type { SimState } from './state';
+import type { Survivor } from './survivors';
+import { DAY_LENGTH } from './time';
+
+export type ThoughtKind = 'ateAtTable' | 'ateWithoutTable' | 'sleptInBed' | 'sleptOnFloor' | 'sawDeath';
+
+export interface Thought {
+  kind: ThoughtKind;
+  /** Forgotten at this tick. */
+  until: number;
+}
+
+export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; duration: number }> = {
+  ateAtTable: { label: 'ate at a table', effect: 10, duration: DAY_LENGTH },
+  ateWithoutTable: { label: 'ate without a table', effect: -5, duration: DAY_LENGTH },
+  sleptInBed: { label: 'slept in a bed', effect: 5, duration: DAY_LENGTH },
+  sleptOnFloor: { label: 'slept on the floor', effect: -10, duration: DAY_LENGTH },
+  sawDeath: { label: 'someone died', effect: -15, duration: 2 * DAY_LENGTH },
+};
+
+export const MOOD_BASE = 50;
+export const MOOD_MAX = 100;
+/** Below this a survivor is miserable and works at 3/4 speed. */
+export const MISERABLE = 30;
+/** While hurt (see health.ts). */
+export const HURT_MOOD = -10;
+
+export function addThought(state: SimState, s: Survivor, kind: ThoughtKind): void {
+  const until = state.tick + THOUGHTS[kind].duration;
+  const existing = s.thoughts.find((t) => t.kind === kind);
+  if (existing) existing.until = until;
+  else s.thoughts.push({ kind, until });
+}
+
+/** Drops thoughts whose time is up. Runs every tick, so `thoughts` stays short. */
+export function forgetThoughts(state: SimState, s: Survivor): void {
+  if (s.thoughts.some((t) => t.until <= state.tick)) s.thoughts = s.thoughts.filter((t) => t.until > state.tick);
+}
+
+/** What moves this survivor's mood right now, as [label, effect] pairs. */
+export function moodFactors(state: SimState, s: Survivor): [string, number][] {
+  const factors: [string, number][] = s.thoughts
+    .filter((t) => t.until > state.tick)
+    .map((t) => [THOUGHTS[t.kind].label, THOUGHTS[t.kind].effect]);
+  if (isHurt(s.health)) factors.push(['hurt', HURT_MOOD]);
+  return factors;
+}
+
+export function mood(state: SimState, s: Survivor): number {
+  const total = moodFactors(state, s).reduce((sum, [, effect]) => sum + effect, MOOD_BASE);
+  return Math.max(0, Math.min(MOOD_MAX, total));
+}
+
+export function isMiserable(state: SimState, s: Survivor): boolean {
+  return mood(state, s) < MISERABLE;
+}
+
+/** Everyone left in the colony remembers a death. */
+export function mournDeath(state: SimState): void {
+  for (const s of state.survivors) addThought(state, s, 'sawDeath');
+}

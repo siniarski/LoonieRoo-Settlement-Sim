@@ -28,8 +28,9 @@ export type Command =
   | { type: 'placeDoor'; x: number; y: number }
   | { type: 'clearTile'; x: number; y: number }
   | { type: 'placeBed'; x: number; y: number }
+  | { type: 'placeTable'; x: number; y: number }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' }
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' | 'table' }
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
@@ -99,9 +100,10 @@ function execute(state: SimState, command: Command): CommandResult {
       return setStructure(state, x, y, 'floor');
     }
     case 'placeBed':
+    case 'placeTable':
       if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not floor`);
       if (furnitureAt(state, x, y)) return unchanged();
-      addFurniture(state, 'bed', x, y);
+      addFurniture(state, command.type === 'placeBed' ? 'bed' : 'table', x, y);
       return changed();
     case 'designateBuild':
       return designateBuild(state, x, y, command.structure);
@@ -159,7 +161,7 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
   return changed();
 }
 
-function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'bed'): CommandResult {
+function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'bed' | 'table'): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === structure) return unchanged();
   if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) {

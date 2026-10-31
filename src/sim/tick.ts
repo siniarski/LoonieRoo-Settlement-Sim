@@ -20,6 +20,7 @@ import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
+import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
 
 export const TICKS_PER_SECOND = 10;
@@ -45,6 +46,7 @@ export function tick(state: SimState): void {
     }
     updateRest(state, s);
     updateSatiety(s);
+    forgetThoughts(state, s);
     const cause = updateHealth(state, s);
     if (cause) dying.push({ s, cause });
   }

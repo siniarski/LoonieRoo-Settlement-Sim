@@ -29,7 +29,7 @@ export function checkInvariants(state: SimState): string[] {
       const item = items.get(s.carrying);
       if (!item) problems.push(`${s.name} carries missing item ${s.carrying}`);
       else if (item.carriedBy !== s.id) problems.push(`${s.name} carries ${item.id} but it says carriedBy ${item.carriedBy}`);
-      if (!s.jobId) problems.push(`${s.name} carries ${s.carrying} with no job`);
+      if (!s.jobId && s.meal?.itemId !== s.carrying) problems.push(`${s.name} carries ${s.carrying} with no job or meal`);
     }
   }
 
@@ -115,6 +115,10 @@ export function checkInvariants(state: SimState): string[] {
       else if (food.reservedBy !== s.id) problems.push(`${s.name} eats ${food.id}, reserved by ${food.reservedBy}`);
       if (s.jobId) problems.push(`${s.name} is eating but holds job ${s.jobId}`);
       if (s.sleep) problems.push(`${s.name} is eating and sleeping at once`);
+      const seat = s.meal.seat;
+      if (seat && state.survivors.some((o) => o !== s && o.meal?.seat && o.meal.seat.x === seat.x && o.meal.seat.y === seat.y)) {
+        problems.push(`${s.name} shares mess hall seat (${seat.x}, ${seat.y})`);
+      }
     }
     if (!s.sleep) continue;
     if (s.jobId) problems.push(`${s.name} is sleeping but holds job ${s.jobId}`);

@@ -42,6 +42,8 @@ const COLOURS = {
     housing: '#6ea8ff',
     storage: '#e6be6e',
     armory: '#d98c6a',
+    table: '#d6aa78',
+    messhall: '#9ee0c0',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -74,9 +76,10 @@ const COLOURS = {
     wall: 'rgba(110, 180, 255, 0.35)',
     door: 'rgba(255, 190, 110, 0.35)',
     bed: 'rgba(199, 166, 255, 0.30)',
+    table: 'rgba(214, 170, 120, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -95,8 +98,11 @@ const COLOURS = {
     housing: 'rgba(110, 168, 255, 0.10)',
     storage: 'rgba(230, 190, 110, 0.10)',
     armory: 'rgba(217, 140, 106, 0.12)',
+    messhall: 'rgba(158, 224, 192, 0.10)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4' } satisfies Record<RoomPurpose, string>,
+  tableTop: '#8a6440',
+  tableEdge: '#5c4128',
   blade: '#cfd6dc',
   hilt: '#6b4a2e',
   incomplete: '#ff8a7a',
@@ -104,7 +110,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -163,6 +169,7 @@ export function draw(
   for (const plot of state.farm) drawPlot(ctx, camera, viewport, plot);
   for (const f of state.furniture) {
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
+    else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
@@ -256,7 +263,9 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
       ? `⚠ needs: ${missing.label}`
       : d.purpose === 'housing'
         ? `✓ ${status.beds} bed${status.beds === 1 ? '' : 's'}${bedsInUse(state, room) > 0 ? `, ${bedsInUse(state, room)} in use` : ''}`
-        : `✓ ${status.size} tiles`;
+        : d.purpose === 'messhall'
+          ? `✓ ${status.tables} table${status.tables === 1 ? '' : 's'}`
+          : `✓ ${status.size} tiles`;
     const text = `${PURPOSE_NAMES[d.purpose]}  ${detail}`;
     const anchor = room ? { x: (room.minX + room.maxX + 1) / 2, y: room.minY + 0.15 } : { x: d.x + 0.5, y: d.y + 0.15 };
     const p = worldToScreen(camera, viewport, anchor.x, anchor.y);
@@ -334,6 +343,17 @@ function drawBed(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewpo
   ctx.fillRect(r.x + pad + 1, r.y + pad + Math.round(r.h * 0.3), r.w - pad * 2 - 2, r.h - pad * 2 - Math.round(r.h * 0.3) - 1);
   ctx.fillStyle = COLOURS.bedPillow;
   ctx.fillRect(r.x + pad + 2, r.y + pad + 2, r.w - pad * 2 - 4, Math.max(2, Math.round(r.h * 0.2)));
+}
+
+/** A square wooden table top. */
+function drawTable(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number): void {
+  const r = tileRect(camera, viewport, x, y);
+  const pad = Math.max(1, Math.round(r.w * 0.15));
+  ctx.fillStyle = COLOURS.tableTop;
+  ctx.fillRect(r.x + pad, r.y + pad, r.w - pad * 2, r.h - pad * 2);
+  ctx.strokeStyle = COLOURS.tableEdge;
+  ctx.lineWidth = Math.max(1, r.w * 0.06);
+  ctx.strokeRect(r.x + pad, r.y + pad, r.w - pad * 2, r.h - pad * 2);
 }
 
 function drawDirt(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, size: number): void {

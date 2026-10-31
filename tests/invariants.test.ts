@@ -30,6 +30,9 @@ const MAP = [
   '....,...~~~.....,.......',
   '..www......ff..mm..c.c..',
   '...................c....',
+  '..####D####.............',
+  '..#...t...#.............',
+  '..#########.............',
 ];
 
 /** Holding a goal while standing still is fine for one tick (the claim tick). */
@@ -78,6 +81,14 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   // Weapons lying around (guards arm themselves) and the odd armory.
   if (roll >= 90 && roll < 94) return { type: 'spawnWeapon', x, y };
   if (roll >= 94 && roll < 96) return { type: 'designateRoom', x, y, purpose: 'armory' };
+  // Tables and mess halls, so some meals are carried to a seat.
+  if (roll >= 96 && roll < 100) return { type: 'designateBuild', x, y, structure: 'table' };
+  if (roll >= 100 && roll < 102) {
+    // Aim at a table, if any, so whatever room it stands in can become a working mess hall.
+    const tables = state.furniture.filter((f) => f.kind === 'table');
+    const at = tables.length > 0 ? tables[roll % tables.length]! : { x, y };
+    return { type: 'designateRoom', x: at.x, y: at.y, purpose: 'messhall' };
+  }
   return null;
 }
 
@@ -87,6 +98,7 @@ describe('stuck-state invariant', () => {
   let deaths = 0;
   /** Wanderer outcomes seen across all seeds. */
   const wandererEvents = new Set<string>();
+  let mealsAtTables = 0;
 
   for (const seed of [1, 2, 3, 4, 5]) {
     it(`holds under random designations, orders, and wall edits (seed ${seed})`, () => {
@@ -96,6 +108,7 @@ describe('stuck-state invariant', () => {
         rooms: [
           { x: 3, y: 3, purpose: 'housing' },
           { x: 14, y: 3, purpose: 'storage' },
+          { x: 3, y: 11, purpose: 'messhall' },
         ],
       });
       // Start at 18:00 so the run covers a whole night of zombies and the dawn retreat.
@@ -121,6 +134,7 @@ describe('stuck-state invariant', () => {
         for (const s of state.survivors) {
           const where = `${s.name} at tick ${state.tick}: ${s.note}\n${dumpText(state)}`;
           if (s.note) notesSeen.add(s.note.split(' ')[0]!);
+          if (s.note === 'ate a meal at a table') mealsAtTables += 1;
 
           // Legitimate extra standing ticks: being moved aside (a wall finished on your tile clears
           // your path) and a need kicking in (dropping work for bed, food, a bandage, or a weapon). Anything else repeated is a bug.
@@ -160,6 +174,10 @@ describe('stuck-state invariant', () => {
 
   it('saw survivors die along the way (death handling is exercised)', () => {
     expect(deaths).toBeGreaterThan(0);
+  });
+
+  it('saw meals carried to a mess hall table', () => {
+    expect(mealsAtTables).toBeGreaterThan(0);
   });
 
   it('saw wanderers arrive, join, and get turned away', () => {

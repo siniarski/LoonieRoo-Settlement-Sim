@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import type { Thought } from './mood';
 import { getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
@@ -86,6 +87,8 @@ export interface Survivor {
   arming: string | null;
   /** When no weapon was found, don't look again before this tick. */
   nextArmTick: number;
+  /** Recent memories that move mood (see mood.ts). */
+  thoughts: Thought[];
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -116,6 +119,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     weapon: null,
     arming: null,
     nextArmTick: 0,
+    thoughts: [],
   };
   state.survivors.push(survivor);
   return survivor;
