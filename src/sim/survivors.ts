@@ -10,7 +10,7 @@ import { getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
 import { initialSatiety, type Meal } from './food';
-import { HEALTH_MAX } from './health';
+import { HEALTH_MAX, HURT_STEP_TICKS, isHurt } from './health';
 import { initialRest, type Sleep } from './rest';
 import { random } from './rng';
 import { isIndoors } from './rooms';
@@ -68,6 +68,10 @@ export interface Survivor {
   lastHurtBy: string | null;
   /** Tick they were last hurt, -1 if never. Sleepers hurt this tick wake up. */
   hurtTick: number;
+  /** Set while heading to a bandage or applying it. */
+  treatment: { itemId: string; progress: number } | null;
+  /** When hurt and no bandage was found, don't look again before this tick. */
+  nextTreatTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number): Survivor {
@@ -93,6 +97,8 @@ export function addSurvivor(state: SimState, x: number, y: number): Survivor {
     health: HEALTH_MAX,
     lastHurtBy: null,
     hurtTick: -1,
+    treatment: null,
+    nextTreatTick: 0,
   };
   state.survivors.push(survivor);
   return survivor;
@@ -160,7 +166,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
-  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: TICKS_PER_TILE };
+  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE };
 }
 
 function trackDirt(state: SimState, p: Point): void {

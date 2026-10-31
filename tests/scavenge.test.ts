@@ -64,7 +64,7 @@ describe('scavenging', () => {
     expect(state.jobs).toEqual([]);
   });
 
-  it('finds are food or wood, rolled with the sim RNG (same seed, same finds)', () => {
+  it('finds are food, wood, or bandages, rolled with the sim RNG (same seed, same finds)', () => {
     const run = () => {
       const state = setup(['s..c', '....', '..c.']);
       markAll(state);
@@ -73,7 +73,7 @@ describe('scavenging', () => {
     };
     const kinds = run();
     expect(kinds).toHaveLength(2 * CRATE_LOOT);
-    expect(new Set(kinds)).toEqual(new Set(['food', 'wood']));
+    expect(new Set(kinds)).toEqual(new Set(['food', 'wood', 'bandage']));
     expect(run()).toEqual(kinds);
   });
 

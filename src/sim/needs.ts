@@ -20,8 +20,18 @@
 import { EAT_TICKS, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
 import { furnitureAt, type Furniture } from './furniture';
-import { AWAKE_HEAL_EVERY, HEALTH_MAX, SLEEP_HEAL, STARVE_DAMAGE } from './health';
-import { getItem, removeItem, type Item } from './items';
+import {
+  AWAKE_HEAL_EVERY,
+  BANDAGE_HEAL,
+  HEALTH_MAX,
+  SLEEP_HEAL,
+  STARVE_DAMAGE,
+  TREAT_RETRY_TICKS,
+  TREAT_TICKS,
+  isCritical,
+  isHurt,
+} from './health';
+import { getItem, removeItem, type Item, type ItemKind } from './items';
 import { getJob, releaseSurvivor } from './jobs';
 import { canReach, findPathToAny } from './pathfinding';
 import { BED_REGEN, FLOOR_REGEN, NIGHT_TIRED, REST_DRAIN, REST_MAX, TIRED } from './rest';
@@ -41,12 +51,16 @@ export function isTired(state: SimState, s: Survivor): boolean {
  * in and out of DANGER_RADIUS.)
  */
 export function onGuardDuty(state: SimState, s: Survivor): boolean {
-  return s.jobId !== null && getJob(state, s.jobId)?.type === 'guard';
+  // ...unless critically hurt: then they fall back to bed.
+  return !isCritical(s.health) && s.jobId !== null && getJob(state, s.jobId)?.type === 'guard';
 }
 
-/** Tired, and no zombie close enough to make lying down a bad idea. */
+/**
+ * Tired with no zombie close enough to make lying down a bad idea, or
+ * critically hurt (then bed is where they recover, zombies or not).
+ */
 export function wantsSleep(state: SimState, s: Survivor): boolean {
-  return isTired(state, s) && !zombieNear(state, s.pos);
+  return (isTired(state, s) && !zombieNear(state, s.pos)) || isCritical(s.health);
 }
 
 export function isHungry(s: Survivor): boolean {
@@ -63,6 +77,10 @@ export function reconcileNeeds(state: SimState): void {
     if (s.meal) {
       const item = getItem(state, s.meal.itemId);
       if (!item || item.reservedBy !== s.id || !item.pos) cancelMeal(state, s, 'food gone');
+    }
+    if (s.treatment) {
+      const item = getItem(state, s.treatment.itemId);
+      if (!item || item.reservedBy !== s.id || !item.pos) cancelTreatment(state, s, 'bandage gone');
     }
     if (!s.sleep?.bedId) continue;
     const bed = getBed(state, s.sleep.bedId);
@@ -82,11 +100,15 @@ export function reconcileNeeds(state: SimState): void {
  * to go to.
  */
 export function interruptForNeeds(state: SimState, s: Survivor): void {
-  if (!s.jobId || s.sleep || s.meal || onGuardDuty(state, s)) return;
-  if (wantsSleep(state, s)) {
+  if (!s.jobId || s.sleep || s.meal || s.treatment || onGuardDuty(state, s)) return;
+  if (isCritical(s.health)) {
+    releaseSurvivor(state, s, 'too badly hurt to work');
+  } else if (wantsSleep(state, s)) {
     releaseSurvivor(state, s, 'too tired to work');
+  } else if (isHurt(s.health) && state.tick >= s.nextTreatTick && nearestFreeItem(state, s, 'bandage')) {
+    releaseSurvivor(state, s, 'going to treat wounds');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
-    if (nearestFreeFood(state, s)) releaseSurvivor(state, s, 'hungry');
+    if (nearestFreeItem(state, s, 'food')) releaseSurvivor(state, s, 'hungry');
     else s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
   }
 }
@@ -129,7 +151,7 @@ export function updateMeal(state: SimState, s: Survivor): boolean {
 
 function startMeal(state: SimState, s: Survivor): boolean {
   if (!isHungry(s) || state.tick < s.nextMealTick) return false;
-  const food = nearestFreeFood(state, s);
+  const food = nearestFreeItem(state, s, 'food');
   if (!food?.pos) {
     s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
     return false;
@@ -141,10 +163,10 @@ function startMeal(state: SimState, s: Survivor): boolean {
   return true;
 }
 
-/** Nearest unreserved food on the ground that this survivor can reach. */
-function nearestFreeFood(state: SimState, s: Survivor): Item | undefined {
+/** Nearest unreserved item of a kind, on the ground, that this survivor can reach. */
+function nearestFreeItem(state: SimState, s: Survivor, kind: ItemKind): Item | undefined {
   return state.items
-    .filter((i): i is Item & { pos: NonNullable<Item['pos']> } => i.kind === 'food' && i.pos !== null && i.reservedBy === null)
+    .filter((i): i is Item & { pos: NonNullable<Item['pos']> } => i.kind === kind && i.pos !== null && i.reservedBy === null)
     .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos))
     .find((i) => canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
 }
@@ -155,6 +177,68 @@ export function cancelMeal(state: SimState, s: Survivor, note: string): void {
   const item = getItem(state, s.meal.itemId);
   if (item && item.reservedBy === s.id) item.reservedBy = null;
   s.meal = null;
+  s.goal = null;
+  s.path = [];
+  s.pathVersion = -1;
+  s.note = note;
+}
+
+// --- Treating wounds -------------------------------------------------------
+
+/**
+ * Runs when standing still, after eating and before sleep. A hurt survivor
+ * walks to the nearest free bandage and applies it where it lies.
+ */
+export function updateTreatment(state: SimState, s: Survivor): boolean {
+  if (s.sleep) return false;
+  if (!s.treatment && onGuardDuty(state, s)) return false; // after the fight
+  if (!s.treatment && !startTreatment(state, s)) return false;
+  const treatment = s.treatment!;
+  const item = getItem(state, treatment.itemId);
+  if (!item?.pos || item.reservedBy !== s.id) {
+    cancelTreatment(state, s, 'bandage gone');
+    return false;
+  }
+  if (!samePoint(s.pos, item.pos)) {
+    const path = findPathToAny(state.grid, s.pos, [item.pos]);
+    if (!path || path.length === 0) {
+      cancelTreatment(state, s, "can't reach the bandage");
+      s.nextTreatTick = state.tick + TREAT_RETRY_TICKS;
+      return false;
+    }
+    walk(s, path, state.walkabilityVersion);
+    return true;
+  }
+  treatment.progress += 1;
+  if (treatment.progress === 1) s.note = `bandaging wounds at (${item.pos.x}, ${item.pos.y})`;
+  if (treatment.progress < TREAT_TICKS) return true;
+  removeItem(state, item);
+  s.health = Math.min(HEALTH_MAX, s.health + BANDAGE_HEAL);
+  s.treatment = null;
+  s.note = 'treated wounds with a bandage';
+  return true;
+}
+
+function startTreatment(state: SimState, s: Survivor): boolean {
+  if (!isHurt(s.health) || state.tick < s.nextTreatTick) return false;
+  const bandage = nearestFreeItem(state, s, 'bandage');
+  if (!bandage?.pos) {
+    s.nextTreatTick = state.tick + TREAT_RETRY_TICKS;
+    return false;
+  }
+  if (s.jobId) releaseSurvivor(state, s, 'going to treat wounds');
+  bandage.reservedBy = s.id;
+  s.treatment = { itemId: bandage.id, progress: 0 };
+  s.note = `going for a bandage at (${bandage.pos.x}, ${bandage.pos.y})`;
+  return true;
+}
+
+/** Gives up the reserved bandage (if any). Safe to call when not treating. */
+export function cancelTreatment(state: SimState, s: Survivor, note: string): void {
+  if (!s.treatment) return;
+  const item = getItem(state, s.treatment.itemId);
+  if (item && item.reservedBy === s.id) item.reservedBy = null;
+  s.treatment = null;
   s.goal = null;
   s.path = [];
   s.pathVersion = -1;
@@ -191,6 +275,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
   wake(state, s, cause);
   cancelMeal(state, s, cause);
+  cancelTreatment(state, s, cause);
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   logEvent(state, `${s.name} died of ${cause}`);
@@ -272,7 +357,9 @@ export function updateRest(state: SimState, s: Survivor): void {
   }
   const inBed = s.sleep.bedId !== null && furnitureAt(state, s.pos.x, s.pos.y)?.id === s.sleep.bedId;
   s.rest = Math.min(REST_MAX, s.rest + (inBed ? BED_REGEN : FLOOR_REGEN));
-  if (s.rest >= REST_MAX) wake(state, s, 'woke up rested');
+  // Stay in bed until healed enough to be up, but never sleep through hunger
+  // (a starving sleeper would lose health instead of healing).
+  if (s.rest >= REST_MAX && (!isHurt(s.health) || isHungry(s))) wake(state, s, 'woke up rested');
 }
 
 /** Ends sleep (or the walk to bed) and frees the bed. Safe to call when awake. */

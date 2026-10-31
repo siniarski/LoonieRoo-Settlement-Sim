@@ -57,6 +57,8 @@ const COLOURS = {
   foodCan: '#b9c2c9',
   foodLabel: '#d9534f',
   foodRim: '#6f7880',
+  bandage: '#f4f1ea',
+  bandageCross: '#d9534f',
   selected: '#8cf0a4',
   path: 'rgba(140, 240, 164, 0.7)',
   goal: '#8cf0a4',
@@ -349,7 +351,20 @@ function drawItem(
   size: number,
 ): void {
   if (kind === 'food') drawFood(ctx, camera, viewport, wx, wy, size);
+  else if (kind === 'bandage') drawBandage(ctx, camera, viewport, wx, wy, size);
   else drawWood(ctx, camera, viewport, wx, wy, size);
+}
+
+/** A white pad with a red cross. */
+function drawBandage(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const s = size * 0.46;
+  ctx.fillStyle = COLOURS.bandage;
+  ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+  ctx.fillStyle = COLOURS.bandageCross;
+  const bar = Math.max(1, s * 0.22);
+  ctx.fillRect(p.x - bar / 2, p.y - s * 0.35, bar, s * 0.7);
+  ctx.fillRect(p.x - s * 0.35, p.y - bar / 2, s * 0.7, bar);
 }
 
 /** A tin can: easy to tell apart from wood planks at a glance. */

@@ -38,6 +38,7 @@ export const ENTITY_CHARS = {
   survivor: 's',
   wood: 'w',
   food: 'f',
+  bandage: 'm',
   dirt: ',',
   bed: 'b',
   crate: 'c',
@@ -64,6 +65,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.food:
       spawnItem(state, 'food', x, y);
+      return true;
+    case ENTITY_CHARS.bandage:
+      spawnItem(state, 'bandage', x, y);
       return true;
     case ENTITY_CHARS.dirt:
       setDirty(state.grid, x, y, true);

@@ -18,7 +18,7 @@ import type { Zombie } from './zombies';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */

@@ -9,7 +9,7 @@ import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { GROW_TICKS, isRipe } from '../sim/farming';
-import { HEALTH_MAX } from '../sim/health';
+import { HEALTH_MAX, isCritical, isHurt } from '../sim/health';
 import { clockText, dayOf, isNight } from '../sim/time';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
@@ -317,6 +317,8 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 
 function activity(state: SimState, s: Survivor): string {
   if (s.meal) return s.meal.progress > 0 ? 'eating' : 'going to eat';
+  if (s.treatment) return s.treatment.progress > 0 ? 'bandaging wounds' : 'going for a bandage';
+  if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   if (job) return `${job.type} (${job.x}, ${job.y})`;
@@ -371,7 +373,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   const p = s.priorities;
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
-    `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
+    `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,

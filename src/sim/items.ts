@@ -5,14 +5,14 @@ import { isWalkable, type Point } from './grid';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
-export type ItemKind = 'wood' | 'food';
+export type ItemKind = 'wood' | 'food' | 'bandage';
 
 export interface Item {
   id: string;
   kind: ItemKind;
   pos: Point | null;
   carriedBy: string | null;
-  /** Survivor who has claimed this item: for a haul job, or (food) to eat it. */
+  /** Survivor who has claimed this item: for a haul job, to eat it (food), or to use it (bandage). */
   reservedBy: string | null;
 }
 

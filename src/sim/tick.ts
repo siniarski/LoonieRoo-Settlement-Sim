@@ -12,6 +12,7 @@ import {
   updateRest,
   updateSatiety,
   updateSleep,
+  updateTreatment,
   wake,
 } from './needs';
 import { reconcileRoomDesignations } from './rooms';
@@ -35,8 +36,10 @@ export function tick(state: SimState): void {
   for (const s of state.survivors) {
     interruptForNeeds(state, s);
     updateMovement(state, s);
-    // Standing still: eat, then sleep, then work.
-    if (!s.move && !s.goal && !updateMeal(state, s) && !updateSleep(state, s)) updateWork(state, s);
+    // Standing still: eat, then treat wounds, then sleep, then work.
+    if (!s.move && !s.goal && !updateMeal(state, s) && !updateTreatment(state, s) && !updateSleep(state, s)) {
+      updateWork(state, s);
+    }
     updateRest(state, s);
     updateSatiety(s);
     const cause = updateHealth(state, s);

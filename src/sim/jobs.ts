@@ -12,6 +12,7 @@
 import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
 import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
+import { worksThisTick } from './health';
 import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item } from './items';
 import { JOB_TYPES, type JobType } from './jobTypes';
@@ -54,8 +55,10 @@ export interface Job {
 export const CLEAN_WORK = 15;
 /** Ticks to search a crate once; each search yields one find. */
 export const SCAVENGE_WORK = 40;
-/** Chance a find is food rather than wood (rolled with the sim RNG). */
-export const SCAVENGE_FOOD_CHANCE = 0.6;
+/** Chance a find is food (rolled with the sim RNG). */
+export const SCAVENGE_FOOD_CHANCE = 0.5;
+/** Chance a find is wood; the rest are bandages. */
+export const SCAVENGE_WOOD_CHANCE = 0.35;
 /** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
 export const GUARD_ATTACK_EVERY = 10;
 export const GUARD_DAMAGE = 50;
@@ -285,6 +288,7 @@ function workFarm(state: SimState, s: Survivor, job: Job): void {
   const plot = job.plotId ? getPlot(state, job.plotId) : undefined;
   if (!plot || !needsWork(plot)) return releaseSurvivor(state, s, 'plot no longer needs work');
   if (!samePoint(s.pos, plot)) return goTo(state, s, job, [plotPoint(plot)]);
+  if (!worksThisTick(state.tick, s.health)) return;
   job.progress += 1;
   if (job.progress < FARM_WORK) return;
   if (isRipe(plot)) {
@@ -304,6 +308,7 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
   if (!z) return releaseSurvivor(state, s, 'zombie gone');
   if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y));
+  if (!worksThisTick(state.tick, s.health)) return;
   job.progress += 1;
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
@@ -315,9 +320,11 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
   if (!crate || crate.loot <= 0) return releaseSurvivor(state, s, 'crate is empty');
   if (manhattan(s.pos, crate) !== 1) return goTo(state, s, job, neighbours4(state.grid, crate.x, crate.y));
+  if (!worksThisTick(state.tick, s.health)) return;
   job.progress += 1;
   if (job.progress < SCAVENGE_WORK) return;
-  const kind = random(state) < SCAVENGE_FOOD_CHANCE ? 'food' : 'wood';
+  const roll = random(state);
+  const kind = roll < SCAVENGE_FOOD_CHANCE ? 'food' : roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE ? 'wood' : 'bandage';
   spawnItem(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0) crate.scavenge = false;
@@ -327,6 +334,7 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
 function workClean(state: SimState, s: Survivor, job: Job): void {
   const target = { x: job.x, y: job.y };
   if (!samePoint(s.pos, target)) return goTo(state, s, job, [target]);
+  if (!worksThisTick(state.tick, s.health)) return;
   job.progress += 1;
   if (job.progress < CLEAN_WORK) return;
   setDirty(state.grid, job.x, job.y, false);
@@ -337,6 +345,7 @@ function workBuild(state: SimState, s: Survivor, job: Job): void {
   const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
   if (!bp) return releaseSurvivor(state, s, 'designation cancelled');
   if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
+  if (!worksThisTick(state.tick, s.health)) return;
   bp.workDone += 1;
   if (bp.workDone < bp.workRequired) return;
   completeBlueprint(state, bp);

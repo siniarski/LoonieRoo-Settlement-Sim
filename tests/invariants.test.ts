@@ -28,7 +28,7 @@ const MAP = [
   '.######.....###D##..++..',
   '..........s.........d...',
   '....,...~~~.....,.......',
-  '..www......ff......c.c..',
+  '..www......ff..mm..c.c..',
   '...................c....',
 ];
 
@@ -68,6 +68,8 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 73) return { type: 'spawnSurvivor', x, y };
   if (roll < 76) return { type: 'spawnZombie', x, y };
   if (roll < 82) return { type: 'designateFarm', x, y };
+  // Wound someone (hurt or critical, not lethal) so they slow down, rest, and look for bandages.
+  if (roll < 85) return { type: 'setHealth', survivorId: survivor.id, health: randomInt(driver, 150, 700) };
   return null;
 }
 
@@ -111,9 +113,9 @@ describe('stuck-state invariant', () => {
           if (s.note) notesSeen.add(s.note.split(' ')[0]!);
 
           // Legitimate extra standing ticks: being moved aside (a wall finished on your tile clears
-          // your path) and a need kicking in (dropping work for bed or food). Anything else repeated is a bug.
+          // your path) and a need kicking in (dropping work for bed, food, or a bandage). Anything else repeated is a bug.
           const prev = before.get(s.id);
-          const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}`;
+          const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}${s.treatment ? 'treat' : ''}`;
           const movedAside = prev !== undefined && !prev.moving && prev.pos !== `${s.pos.x},${s.pos.y}`;
           const needKickedIn = prev !== undefined && prev.needs !== needs && needs !== '';
           before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs });
@@ -148,7 +150,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

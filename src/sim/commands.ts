@@ -12,7 +12,7 @@ import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
 import { addPlot, clearPlot, plotAt, removePlot } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
-import { cancelMeal, wake } from './needs';
+import { cancelMeal, cancelTreatment, wake } from './needs';
 import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
 import type { SimState } from './state';
@@ -214,6 +214,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   if (survivor.jobId) releaseSurvivor(state, survivor, 'ordered elsewhere');
   wake(state, survivor, 'woken by an order');
   cancelMeal(state, survivor, 'meal interrupted by an order');
+  cancelTreatment(state, survivor, 'treatment interrupted by an order');
   setGoal(survivor, { x, y });
   return changed();
 }

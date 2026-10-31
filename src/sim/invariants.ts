@@ -61,8 +61,8 @@ export function checkInvariants(state: SimState): string[] {
     if (item.reservedBy) {
       const holder = survivors.get(item.reservedBy);
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
-      if (job?.itemId !== item.id && holder?.meal?.itemId !== item.id) {
-        problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job or meal`);
+      if (job?.itemId !== item.id && holder?.meal?.itemId !== item.id && holder?.treatment?.itemId !== item.id) {
+        problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job, meal, or treatment`);
       }
     }
   }
@@ -89,6 +89,13 @@ export function checkInvariants(state: SimState): string[] {
     if (s.satiety < 0 || s.satiety > SATIETY_MAX || !Number.isInteger(s.satiety)) problems.push(`${s.name} has satiety ${s.satiety}`);
     // Between ticks every living survivor has health; at 0 they are removed within the tick.
     if (s.health <= 0 || s.health > HEALTH_MAX || !Number.isInteger(s.health)) problems.push(`${s.name} has health ${s.health}`);
+    if (s.treatment) {
+      const bandage = items.get(s.treatment.itemId);
+      if (!bandage || bandage.kind !== 'bandage') problems.push(`${s.name} is treating with missing bandage ${s.treatment.itemId}`);
+      else if (bandage.reservedBy !== s.id) problems.push(`${s.name} uses ${bandage.id}, reserved by ${bandage.reservedBy}`);
+      if (s.jobId) problems.push(`${s.name} is treating wounds but holds job ${s.jobId}`);
+      if (s.sleep || s.meal) problems.push(`${s.name} is treating wounds while sleeping or eating`);
+    }
     if (s.meal) {
       const food = items.get(s.meal.itemId);
       if (!food || food.kind !== 'food') problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);
