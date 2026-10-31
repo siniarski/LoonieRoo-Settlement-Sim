@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAY_LENGTH, TICKS_PER_HOUR, clockText, darkness, dayOf, hourOf, isNight } from '../src/sim/time';
+import { DAY_LENGTH, NIGHT_TICKS, TICKS_PER_HOUR, clockText, darkness, dayOf, hourOf, isNight, nightNumber, ticksIntoNight } from '../src/sim/time';
 
 /** The tick at which a given day and hour is reached (game starts at 06:00 on day 1). */
 const at = (day: number, hour: number) => (day - 1) * DAY_LENGTH + (hour - 6) * TICKS_PER_HOUR;
@@ -33,5 +33,22 @@ describe('world clock', () => {
     expect(darkness(at(1, 22))).toBe(1);
     expect(darkness(at(2, 6))).toBeCloseTo(0.5);
     expect(darkness(at(2, 7))).toBe(0);
+  });
+});
+
+describe('nights', () => {
+  it('numbers nights from 1, across midnight', () => {
+    expect(nightNumber(at(1, 12))).toBeNull();
+    expect(nightNumber(at(1, 21))).toBe(1);
+    expect(nightNumber(at(2, 3))).toBe(1);
+    expect(nightNumber(at(2, 21.5))).toBe(2);
+    expect(nightNumber(at(3, 4.9))).toBe(2);
+  });
+
+  it('counts ticks into the night from 21:00', () => {
+    expect(NIGHT_TICKS).toBe(8 * TICKS_PER_HOUR);
+    expect(ticksIntoNight(at(1, 21))).toBe(0);
+    expect(ticksIntoNight(at(1, 23.5))).toBe(2.5 * TICKS_PER_HOUR);
+    expect(ticksIntoNight(at(2, 4))).toBe(7 * TICKS_PER_HOUR);
   });
 });

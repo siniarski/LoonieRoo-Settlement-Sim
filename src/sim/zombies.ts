@@ -1,7 +1,8 @@
 // Zombies: crude night pressure (milestone 7).
 //
-// At night a zombie spawns every SPAWN_EVERY ticks on an outdoor map-edge
-// tile (sim RNG), up to MAX_ZOMBIES. Each shambles toward the nearest
+// Each night brings one more zombie than the last (4 on the first night),
+// spread evenly through the night, each on an outdoor map-edge tile (sim
+// RNG). Each shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
 // ticks. Zombies only walk on floor: walls *and doors* stop them, so a
 // closed building is safe. With nobody reachable they wander. At dawn they
@@ -15,16 +16,17 @@ import { OUTDOORS, labelAt } from './rooms';
 import { manhattan, nearestTile, samePoint } from './space';
 import type { SimState } from './state';
 import type { Movement, Survivor } from './survivors';
-import { isNight } from './time';
+import { NIGHT_TICKS, isNight, nightNumber, ticksIntoNight } from './time';
 
 export const ZOMBIE_HEALTH = 200;
 /** Slower than survivors (4), so guards can catch them and runners can escape. */
 export const ZOMBIE_TICKS_PER_TILE = 6;
 export const ZOMBIE_DAMAGE = 40;
 export const ZOMBIE_ATTACK_EVERY = 10;
-/** Ticks between spawns at night (2 in-game hours). */
-export const SPAWN_EVERY = 400;
-export const MAX_ZOMBIES = 6;
+/** Zombies on night 1; every night after brings one more. */
+export const FIRST_NIGHT_ZOMBIES = 4;
+/** Safety cap on zombies alive at once (not a balance lever). */
+export const MAX_ZOMBIES = 20;
 /** Zombies never spawn this close (Manhattan) to a survivor. */
 export const SPAWN_MIN_DISTANCE = 8;
 /** Zombies re-pick their target and path this often. */
@@ -75,6 +77,24 @@ export function zombieNear(state: SimState, p: Point, radius = DANGER_RADIUS): b
   return state.zombies.some((z) => manhattan(z.pos, p) <= radius);
 }
 
+export function zombiesForNight(night: number): number {
+  return FIRST_NIGHT_ZOMBIES + night - 1;
+}
+
+/**
+ * Is this tick one of tonight's spawn times? Spawns are spread evenly over
+ * the night, half an interval in: night 1 (4 zombies) spawns at 22:00,
+ * 00:00, 02:00, 04:00.
+ */
+export function isSpawnTick(tick: number): boolean {
+  const night = nightNumber(tick);
+  if (night === null) return false;
+  const count = zombiesForNight(night);
+  const interval = Math.floor(NIGHT_TICKS / count);
+  const t = ticksIntoNight(tick) - Math.floor(interval / 2);
+  return t >= 0 && t % interval === 0 && t / interval < count;
+}
+
 /** Spawning, the dawn retreat, and every zombie's move or attack. Runs first each tick. */
 export function updateZombies(state: SimState): void {
   if (!isNight(state.tick)) {
@@ -85,7 +105,9 @@ export function updateZombies(state: SimState): void {
     }
     return;
   }
-  if (state.tick % SPAWN_EVERY === 0 && state.zombies.length < MAX_ZOMBIES) spawnAtEdge(state);
+  const night = nightNumber(state.tick)!;
+  if (ticksIntoNight(state.tick) === 0) logEvent(state, `Night ${night} falls: ${zombiesForNight(night)} zombies expected`);
+  if (isSpawnTick(state.tick) && state.zombies.length < MAX_ZOMBIES) spawnAtEdge(state);
   for (const z of state.zombies) updateZombie(state, z);
 }
 

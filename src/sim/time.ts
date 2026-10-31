@@ -34,6 +34,22 @@ export function isNight(tick: number): boolean {
   return h >= NIGHT_START || h < NIGHT_END;
 }
 
+/** Ticks in one night (21:00 to 05:00): 1600. */
+export const NIGHT_TICKS = (HOURS_PER_DAY - NIGHT_START + NIGHT_END) * TICKS_PER_HOUR;
+
+/** The night in progress (1 = the first night, starting 21:00 on day 1), or null by day. */
+export function nightNumber(tick: number): number | null {
+  if (!isNight(tick)) return null;
+  return hourOf(tick) >= NIGHT_START ? dayOf(tick) : dayOf(tick) - 1;
+}
+
+/** Ticks since the current night began at 21:00. Only meaningful at night. */
+export function ticksIntoNight(tick: number): number {
+  const h = hourOf(tick);
+  const hoursIn = h >= NIGHT_START ? h - NIGHT_START : h + HOURS_PER_DAY - NIGHT_START;
+  return Math.round(hoursIn * TICKS_PER_HOUR);
+}
+
 /** 0 in full day, 1 in full night, ramping linearly through dusk and dawn. For rendering. */
 export function darkness(tick: number): number {
   const h = hourOf(tick);
