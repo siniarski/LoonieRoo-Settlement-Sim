@@ -2,6 +2,7 @@
 // Returns human-readable problems; empty means healthy. Used by tests after
 // every tick and available to the debug panel. Read-only.
 
+import { STRUCTURE_HEALTH } from './breach';
 import { getTile, isWalkable } from './grid';
 import { GROW_TICKS } from './farming';
 import { SATIETY_MAX } from './food';
@@ -173,6 +174,15 @@ export function checkInvariants(state: SimState): string[] {
 
   for (const w of state.wanderers) {
     if (!isWalkable(grid, w.x, w.y)) problems.push(`wanderer ${w.name} on unwalkable (${w.x}, ${w.y})`);
+  }
+
+  for (let i = 0; i < grid.damage.length; i++) {
+    const d = grid.damage[i]!;
+    if (d === 0) continue;
+    const tile = grid.tiles[i]!;
+    const at = `(${i % grid.width}, ${Math.floor(i / grid.width)})`;
+    if (tile === 'floor') problems.push(`damage ${d} on floor ${at}`);
+    else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
   const roomsClaimed = new Set<number>();

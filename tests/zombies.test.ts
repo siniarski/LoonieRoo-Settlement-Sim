@@ -106,7 +106,7 @@ describe('zombies', () => {
     expect(state.events.at(-1)?.message).toBe(`${name} died of a zombie attack`);
   });
 
-  it('a closed building with a door keeps a survivor safe', () => {
+  it('a closed building keeps a survivor safe until the door gives', () => {
     const map = [
       'z..........',
       '...#####...',
@@ -115,9 +115,10 @@ describe('zombies', () => {
       '...........',
     ];
     const state = night(map);
-    for (let i = 0; i < 600; i++) tick(state);
+    // Nobody reachable: the zombie goes for the door instead (breach.test.ts covers the rest).
+    runUntil(state, () => state.grid.damage[3 * 11 + 5]! > 0);
     expect(state.survivors[0]!.health).toBe(1000);
-    expect(state.zombies[0]!.targetId).toBeNull(); // nobody reachable: it wanders
+    expect(state.zombies[0]!.targetId).toBe(state.survivors[0]!.id);
   });
 
   it('a guard hunts the zombie down and kills it', () => {

@@ -84,7 +84,7 @@ NOTES.md
 
 **Doors (milestone 1 decision, revised in milestone 7)**
 
-- Survivors can always walk through doors. Zombies can't: to them a door is a wall, so a closed building is safe. Pathfinding takes a `mover` (`'survivor' | 'zombie'`) for this. Locking and other faction rules come later.
+- Survivors can always walk through doors. Zombies can't walk through them: to a moving zombie a door is a wall. But a zombie that can't reach anyone batters doors (and walls) down; see breach.ts. Pathfinding takes a `mover` (`'survivor' | 'zombie'`) for this. Locking and other faction rules come later.
 - For flood fill, doors are room boundaries: they split rooms the way walls do, but survivors can path through them.
 
 ## Debugging and inspection conventions

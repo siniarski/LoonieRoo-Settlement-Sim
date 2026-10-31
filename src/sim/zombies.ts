@@ -4,10 +4,13 @@
 // spread evenly through the night, each on an outdoor map-edge tile (sim
 // RNG). Each shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
-// ticks. Zombies only walk on floor: walls *and doors* stop them, so a
-// closed building is safe. With nobody reachable they wander. At dawn they
-// all shamble off. Guards (jobs.ts) hunt them down.
+// ticks. Zombies only walk on floor: walls and doors stop them. With nobody
+// reachable, a zombie heads for the nearest survivor anyway, through doors
+// if it can and through walls if it must, battering whatever is in the way
+// (breach.ts). With no survivors at all they wander. At dawn they all
+// shamble off. Guards (jobs.ts) hunt them down.
 
+import { damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -155,14 +158,22 @@ function updateZombie(state: SimState, z: Zombie): void {
   const next = z.path[0];
   if (!next) return;
   if (!isPassable(state.grid, next.x, next.y, 'zombie')) {
-    z.path = []; // something got built in the way; re-plan next tick
+    // A door or wall on the way in: batter it. Anything else, re-plan next tick.
+    if (isStructure(getTile(state.grid, next.x, next.y)) && manhattan(z.pos, next) === 1) {
+      if (z.cooldown === 0) {
+        damageStructure(state, next.x, next.y, ZOMBIE_DAMAGE);
+        z.cooldown = ZOMBIE_ATTACK_EVERY;
+      }
+      return;
+    }
+    z.path = [];
     return;
   }
   z.path.shift();
   z.move = { from: { ...z.pos }, to: next, progress: 0, duration: ZOMBIE_TICKS_PER_TILE };
 }
 
-/** Chase the nearest reachable survivor, or wander one tile at random. */
+/** Chase the nearest reachable survivor; failing that, break in to the nearest one; or wander one tile at random. */
 function plan(state: SimState, z: Zombie): void {
   const { grid, walkabilityVersion: v } = state;
   const goalsFor = (s: Survivor) => [s.pos, ...neighbours4(grid, s.pos.x, s.pos.y)];
@@ -174,6 +185,16 @@ function plan(state: SimState, z: Zombie): void {
   if (target) {
     z.path = findPathToAny(grid, z.pos, goalsFor(target), 'zombie') ?? [];
     return;
+  }
+  // Nobody reachable: go for the nearest survivor through doors, or failing that through walls.
+  const victim = state.survivors.slice().sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))[0];
+  if (victim) {
+    const path = findPathToAny(grid, z.pos, goalsFor(victim), 'survivor') ?? findPathToAny(grid, z.pos, goalsFor(victim), 'breacher');
+    if (path && path.length > 0) {
+      z.targetId = victim.id;
+      z.path = path;
+      return;
+    }
   }
   const options = neighbours4(grid, z.pos.x, z.pos.y).filter((p) => isPassable(grid, p.x, p.y, 'zombie'));
   z.path = options.length > 0 ? [pick(state, options)] : [];

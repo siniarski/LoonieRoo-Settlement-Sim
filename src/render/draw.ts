@@ -5,6 +5,7 @@ import { GROW_TICKS, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
 import type { Point, Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
+import { STRUCTURE_HEALTH } from '../sim/breach';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
 import { darkness } from '../sim/time';
@@ -155,6 +156,14 @@ export function draw(
   }
 
   drawRoomTints(ctx, camera, viewport, state, range);
+
+  for (let y = range.y0; y <= range.y1; y++) {
+    for (let x = range.x0; x <= range.x1; x++) {
+      const damage = grid.damage[y * grid.width + x]!;
+      const tile = grid.tiles[y * grid.width + x];
+      if (damage > 0 && (tile === 'wall' || tile === 'door')) drawDamage(ctx, camera, viewport, x, y, damage / STRUCTURE_HEALTH[tile]);
+    }
+  }
 
   for (let y = range.y0; y <= range.y1; y++) {
     for (let x = range.x0; x <= range.x1; x++) {
@@ -354,6 +363,20 @@ function drawTable(ctx: CanvasRenderingContext2D, camera: Camera, viewport: View
   ctx.strokeStyle = COLOURS.tableEdge;
   ctx.lineWidth = Math.max(1, r.w * 0.06);
   ctx.strokeRect(r.x + pad, r.y + pad, r.w - pad * 2, r.h - pad * 2);
+}
+
+/** Battered wall or door: a red wash and cracks that grow with the damage (0..1). */
+function drawDamage(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, amount: number): void {
+  const r = tileRect(camera, viewport, x, y);
+  ctx.fillStyle = `rgba(255, 70, 50, ${0.12 + 0.4 * amount})`;
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.strokeStyle = 'rgba(20, 10, 10, 0.85)';
+  ctx.lineWidth = Math.max(1, r.w * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(r.x + r.w * 0.5, r.y + r.h * 0.1);
+  ctx.lineTo(r.x + r.w * 0.4, r.y + r.h * (0.1 + 0.4 * amount));
+  ctx.lineTo(r.x + r.w * (0.4 + 0.3 * amount), r.y + r.h * (0.1 + 0.8 * amount));
+  ctx.stroke();
 }
 
 function drawDirt(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, size: number): void {

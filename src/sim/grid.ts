@@ -15,6 +15,8 @@ export interface Grid {
   tiles: Tile[];
   /** 1 where a floor tile is dirty, else 0. Same indexing as tiles. Only floor can be dirty. */
   dirt: number[];
+  /** Damage taken by the wall or door on each tile (see breach.ts). 0 on floor. */
+  damage: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -26,6 +28,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     height,
     tiles: new Array<Tile>(width * height).fill(fill),
     dirt: new Array<number>(width * height).fill(0),
+    damage: new Array<number>(width * height).fill(0),
   };
 }
 
@@ -52,6 +55,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   if (grid.tiles[i] === tile) return false;
   grid.tiles[i] = tile;
   if (tile !== 'floor') grid.dirt[i] = 0;
+  grid.damage[i] = 0; // a new (or removed) structure starts undamaged
   return true;
 }
 

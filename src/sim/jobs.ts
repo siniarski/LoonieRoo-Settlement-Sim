@@ -14,7 +14,8 @@ import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
 import { isHurt, worksThisTick } from './health';
 import { isMiserable } from './mood';
-import { isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
+import { getTile, isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
+import { REPAIR_PER_TICK, repairStructure, structureDamage } from './breach';
 import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item, type ItemKind } from './items';
 import { JOB_TYPES, type JobType } from './jobTypes';
 import { canReach, findPathToAny } from './pathfinding';
@@ -113,6 +114,12 @@ export function reconcileJobs(state: SimState): void {
     addJob(state, 'haul', item.pos.x, item.pos.y, null, item.id);
   }
 
+  // Damaged walls and doors get one repair job each.
+  const repairing = new Set(state.jobs.filter(isRepairJob).map((j) => j.y * width + j.x));
+  for (let i = 0; i < state.grid.damage.length; i++) {
+    if (state.grid.damage[i]! > 0 && !repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
+  }
+
   // Marked crates with loot left get one scavenge job each.
   const searching = new Set(state.jobs.filter((j) => j.type === 'scavenge').map((j) => j.furnitureId));
   for (const f of state.furniture) {
@@ -132,6 +139,11 @@ export function reconcileJobs(state: SimState): void {
   for (const z of state.zombies) {
     if (!hunted.has(z.id)) addJob(state, 'guard', z.pos.x, z.pos.y, null, null, null, z.id);
   }
+}
+
+/** Repairs are build jobs with no blueprint: they fix a damaged wall or door at x, y. */
+export function isRepairJob(job: Job): boolean {
+  return job.type === 'build' && job.blueprintId === null;
 }
 
 export function isStoreJob(job: Job): boolean {
@@ -167,6 +179,7 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
     }
     case 'build':
     case 'haul': {
+      if (isRepairJob(job)) return structureDamage(state, job.x, job.y) > 0 ? null : 'nothing to repair';
       if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
       const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
       if (!bp) return 'designation cancelled';
@@ -356,6 +369,7 @@ function workClean(state: SimState, s: Survivor, job: Job): void {
 }
 
 function workBuild(state: SimState, s: Survivor, job: Job): void {
+  if (isRepairJob(job)) return workRepair(state, s, job);
   const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
   if (!bp) return releaseSurvivor(state, s, 'designation cancelled');
   if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
@@ -364,6 +378,14 @@ function workBuild(state: SimState, s: Survivor, job: Job): void {
   if (bp.workDone < bp.workRequired) return;
   completeBlueprint(state, bp);
   finishJob(state, s, job, bp.target === 'floor' ? `removed structure at (${bp.x}, ${bp.y})` : `built ${bp.target} at (${bp.x}, ${bp.y})`);
+}
+
+/** Patch up a damaged wall or door from a tile next to it. */
+function workRepair(state: SimState, s: Survivor, job: Job): void {
+  if (manhattan(s.pos, job) !== 1) return goTo(state, s, job, neighbours4(state.grid, job.x, job.y));
+  if (!worksThisTick(state.tick, isHurt(s.health) || isMiserable(state, s))) return;
+  if (repairStructure(state, job.x, job.y, REPAIR_PER_TICK) > 0) return;
+  finishJob(state, s, job, `repaired ${getTile(state.grid, job.x, job.y)} at (${job.x}, ${job.y})`);
 }
 
 function workHaul(state: SimState, s: Survivor, job: Job): void {

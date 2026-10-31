@@ -6,10 +6,14 @@
 
 import { getTile, inBounds, isWalkable, type Grid, type Point } from './grid';
 
-/** Who is moving: survivors open doors; zombies can't, so doors are walls to them. */
-export type Mover = 'survivor' | 'zombie';
+/**
+ * Who is moving: survivors open doors; zombies can't, so doors are walls to them.
+ * 'breacher' is a zombie planning to batter its way through: every tile is passable.
+ */
+export type Mover = 'survivor' | 'zombie' | 'breacher';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
+  if (mover === 'breacher') return inBounds(grid, x, y);
   return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
 }
 
