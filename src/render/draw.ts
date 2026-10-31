@@ -36,6 +36,7 @@ const COLOURS = {
     cancel: '#c9c9c9',
     scavenge: '#ffd166',
     farm: '#9ed36a',
+    furnish: '#c7a6ff',
     bed: '#c7a6ff',
     housing: '#6ea8ff',
     storage: '#e6be6e',

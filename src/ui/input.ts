@@ -45,6 +45,8 @@ export interface InputContext {
   /** Id of the survivor on (or stepping onto) a tile, if any. */
   survivorAt(tile: Point): string | null;
   command(cmd: Command): void;
+  /** Ask the auto-planner to furnish the room at this tile. */
+  furnish(tile: Point): void;
 }
 
 export interface Input {
@@ -75,7 +77,12 @@ export function attachInput(ctx: InputContext): Input {
 
   const apply = (tile: Point) => {
     if (!view.tool || !onMap(tile)) return;
-    ctx.command(getTool(view.tool).command(tile.x, tile.y, { instant: paintInstant }));
+    const tool = getTool(view.tool);
+    if (tool.furnish) ctx.furnish(tile);
+    else {
+      const cmd = tool.command(tile.x, tile.y, { instant: paintInstant });
+      if (cmd) ctx.command(cmd);
+    }
   };
 
   const onLeftDown = (tile: Point, shift: boolean) => {

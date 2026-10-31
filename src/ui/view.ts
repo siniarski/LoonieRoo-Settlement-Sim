@@ -16,6 +16,8 @@ export interface ViewState {
   selectedId: string | null;
   /** While dragging an area tool: the box being dragged out (tile corners). */
   areaDrag: { from: Point; to: Point } | null;
+  /** A short message for the player (e.g. the planner's notes), shown until `until` (performance.now ms). */
+  toast: { text: string; until: number } | null;
   hover: Point | null;
   speed: Speed;
   paused: boolean;

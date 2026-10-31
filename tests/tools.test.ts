@@ -46,6 +46,13 @@ describe('tools', () => {
     for (const c of CATEGORIES) expect(toolsIn(c.id).length, c.id).toBeLessThanOrEqual(9); // number keys 1-9
   });
 
+  it('Furnish hands clicks to the planner instead of issuing a command itself', () => {
+    const furnish = getTool('furnish');
+    expect(furnish.furnish).toBe(true);
+    expect(furnish.category).toBe('rooms');
+    expect(furnish.command(3, 3, designate)).toBeNull();
+  });
+
   it('number keys pick tools within the open category', () => {
     expect(toolForKey('structure', '1')?.id).toBe('wall');
     expect(toolForKey('structure', '2')?.id).toBe('door');

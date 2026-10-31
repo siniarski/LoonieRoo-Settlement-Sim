@@ -5,6 +5,7 @@ import { installGameHooks, type GameHandle } from './debug/hooks';
 import { centredOn, worldToScreen, type Viewport } from './render/camera';
 import { draw } from './render/draw';
 import { applyCommand } from './sim/commands';
+import { planFurnish } from './sim/planner';
 import type { Point } from './sim/grid';
 import type { SimState } from './sim/state';
 import { survivorAt } from './sim/survivors';
@@ -27,6 +28,9 @@ declare global {
   }
 }
 
+/** How long planner messages stay up. */
+const TOAST_MS = 6000;
+
 export interface App {
   handle: GameHandle;
   view: ViewState;
@@ -45,6 +49,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     tool: null,
     selectedId: null,
     areaDrag: null,
+    toast: null,
     hover: null,
     speed: 1,
     paused: false,
@@ -92,6 +97,12 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     mapSize: () => handle.state.grid,
     survivorAt: (tile) => survivorAt(handle.state, tile.x, tile.y)?.id ?? null,
     command: (cmd) => applyCommand(handle.state, cmd),
+    furnish: (tile) => {
+      // The planner only proposes; its commands go through the normal command path.
+      const plan = planFurnish(handle.state, tile.x, tile.y);
+      for (const cmd of plan.commands) applyCommand(handle.state, cmd);
+      view.toast = { text: plan.notes.join(' '), until: performance.now() + TOAST_MS };
+    },
   });
   const hud = createHud(hudRoot, view, (cmd) => applyCommand(handle.state, cmd));
 

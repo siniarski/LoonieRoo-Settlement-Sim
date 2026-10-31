@@ -70,8 +70,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const info = el('div', 'hud-info');
   const status = el('div', 'hud-status');
   const roomPanel = el('pre', 'hud-room');
+  const toast = el('div', 'hud-toast');
   const feed = el('div', 'hud-feed');
-  info.append(status, roomPanel, feed);
+  info.append(status, toast, roomPanel, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -100,6 +101,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         .map((e) => `Day ${dayOf(e.tick)} ${clockText(e.tick)}  ${e.message}`)
         .join('\n');
       feed.hidden = feedText === '';
+      const toastText = view.toast && performance.now() < view.toast.until ? view.toast.text : '';
+      toast.hidden = toastText === '';
+      if (toast.textContent !== toastText) toast.textContent = toastText;
       if (feedText !== lastFeed) feed.textContent = lastFeed = feedText;
 
       pauseButton.textContent = view.paused ? '▶ Resume' : '❚❚ Pause';
@@ -175,6 +179,7 @@ function furnitureText(state: SimState, p: Point): string {
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   scavenge: 'Drag a box over a ruin to mark its crates',
   farm: 'Drag a box over open ground to lay out plots',
+  furnish: 'Click a room: the planner adds what it needs',
   remove: 'Drag over walls, doors, or furniture to take down',
   cancel: 'Drag to cancel plans, unmark crates, or clear room purposes',
 };

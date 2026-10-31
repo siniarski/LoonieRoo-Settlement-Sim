@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'bed' | 'housing' | 'storage' | 'farm' | 'scavenge' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'bed' | 'housing' | 'storage' | 'farm' | 'furnish' | 'scavenge' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -35,9 +35,12 @@ export interface Tool {
   paints: boolean;
   /** Area tools drag out a box instead, applied to every tile in it on release. */
   area?: true;
+  /** The auto-planner: a click asks the planner to furnish the room (several commands at once). */
+  furnish?: true;
   /** Whether Shift (instant) does anything for this tool. */
   hasInstant: boolean;
-  command(x: number, y: number, ctx: ToolContext): Command;
+  /** Null for tools that don't map to a single command (Furnish: see `furnish`). */
+  command(x: number, y: number, ctx: ToolContext): Command | null;
 }
 
 export const TOOLS: readonly Tool[] = [
@@ -89,6 +92,15 @@ export const TOOLS: readonly Tool[] = [
     area: true,
     hasInstant: false,
     command: (x, y) => ({ type: 'designateFarm', x, y }),
+  },
+  {
+    id: 'furnish',
+    label: 'Furnish',
+    category: 'rooms',
+    paints: false,
+    furnish: true,
+    hasInstant: false,
+    command: () => null,
   },
   {
     id: 'scavenge',
