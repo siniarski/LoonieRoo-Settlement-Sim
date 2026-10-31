@@ -7,6 +7,7 @@ import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
+import { ZOMBIE_HEALTH } from './zombies';
 import type { SimState } from './state';
 
 export function checkInvariants(state: SimState): string[] {
@@ -116,6 +117,22 @@ export function checkInvariants(state: SimState): string[] {
     const s = survivors.get(f.occupant);
     if (s?.sleep?.bedId !== f.id) problems.push(`${f.id} occupied by ${f.occupant}, who isn't sleeping in it`);
   }
+
+  const zombieIds = new Set<string>();
+  for (const z of state.zombies) {
+    if (zombieIds.has(z.id)) problems.push(`duplicate zombie id ${z.id}`);
+    zombieIds.add(z.id);
+    if (getTile(grid, z.pos.x, z.pos.y) !== 'floor') problems.push(`zombie ${z.id} on non-floor (${z.pos.x}, ${z.pos.y})`);
+    if (z.move && getTile(grid, z.move.to.x, z.move.to.y) !== 'floor') problems.push(`zombie ${z.id} stepping off floor`);
+    if (z.health <= 0 || z.health > ZOMBIE_HEALTH) problems.push(`zombie ${z.id} has health ${z.health}`);
+  }
+  const guarded = new Map<string, number>();
+  for (const j of state.jobs) {
+    if (j.type !== 'guard') continue;
+    if (!j.zombieId || !zombieIds.has(j.zombieId)) problems.push(`${j.id} hunts missing zombie ${j.zombieId}`);
+    else guarded.set(j.zombieId, (guarded.get(j.zombieId) ?? 0) + 1);
+  }
+  for (const [id, n] of guarded) if (n > 1) problems.push(`zombie ${id} has ${n} guard jobs`);
 
   const roomsClaimed = new Set<number>();
   for (const d of state.roomDesignations) {

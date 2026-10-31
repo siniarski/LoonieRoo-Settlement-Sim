@@ -16,6 +16,7 @@ import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item } from
 import { JOB_TYPES, type JobType } from './jobTypes';
 import { canReach, findPathToAny } from './pathfinding';
 import { random } from './rng';
+import { damageZombie, getZombie } from './zombies';
 import { completeStorageRooms, getRoomMap, isIndoors, labelAt, reconcileRoomDesignations } from './rooms';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
@@ -37,6 +38,8 @@ export interface Job {
   itemId: string | null;
   /** Scavenge only: the crate being searched. */
   furnitureId: string | null;
+  /** Guard only: the zombie being hunted. The job's x, y follow it. */
+  zombieId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
   /** Clean and scavenge: ticks of work done. */
@@ -50,6 +53,9 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** Chance a find is food rather than wood (rolled with the sim RNG). */
 export const SCAVENGE_FOOD_CHANCE = 0.6;
+/** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
+export const GUARD_ATTACK_EVERY = 10;
+export const GUARD_DAMAGE = 50;
 /** How many nearest candidates a survivor checks per job type before giving up on that type. */
 const MAX_CANDIDATES = 8;
 /** An idle survivor with nothing doable looks again after this many ticks. */
@@ -105,6 +111,12 @@ export function reconcileJobs(state: SimState): void {
       addJob(state, 'scavenge', f.x, f.y, null, null, f.id);
     }
   }
+
+  // Every zombie gets one guard job.
+  const hunted = new Set(state.jobs.filter((j) => j.type === 'guard').map((j) => j.zombieId));
+  for (const z of state.zombies) {
+    if (!hunted.has(z.id)) addJob(state, 'guard', z.pos.x, z.pos.y, null, null, null, z.id);
+  }
 }
 
 export function isStoreJob(job: Job): boolean {
@@ -120,6 +132,13 @@ function invalidReason(state: SimState, job: Job, storage: Set<number>): string 
     case 'clean':
       if (!isDirty(state.grid, job.x, job.y)) return 'tile already clean';
       return isIndoors(state, job.x, job.y) ? null : 'tile is no longer indoors';
+    case 'guard': {
+      const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
+      if (!z) return 'zombie gone';
+      job.x = z.pos.x;
+      job.y = z.pos.y;
+      return null;
+    }
     case 'scavenge': {
       const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
       if (!crate) return 'crate gone';
@@ -164,6 +183,7 @@ function addJob(
   blueprintId: string | null,
   itemId: string | null,
   furnitureId: string | null = null,
+  zombieId: string | null = null,
 ): Job {
   const job: Job = {
     id: `j${state.nextId++}`,
@@ -173,6 +193,7 @@ function addJob(
     blueprintId,
     itemId,
     furnitureId,
+    zombieId,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -236,7 +257,19 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workHaul(state, s, job);
     case 'scavenge':
       return workScavenge(state, s, job);
+    case 'guard':
+      return workGuard(state, s, job);
   }
+}
+
+/** Hunt a zombie: close in, then hit it every GUARD_ATTACK_EVERY ticks until it drops. */
+function workGuard(state: SimState, s: Survivor, job: Job): void {
+  const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
+  if (!z) return releaseSurvivor(state, s, 'zombie gone');
+  if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y));
+  job.progress += 1;
+  if (job.progress % GUARD_ATTACK_EVERY !== 0) return;
+  if (damageZombie(state, z, GUARD_DAMAGE, s)) finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
 }
 
 /** Search a crate from next to it; each completed search drops one find by the survivor. */
@@ -406,8 +439,9 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       return pathPlan(state, s.pos, goal, null);
     }
     case 'build':
-    case 'scavenge': {
-      // Both are done from a tile next to the target.
+    case 'scavenge':
+    case 'guard': {
+      // All done from a tile next to the target (for guards, the zombie as of this tick).
       const goals = neighbours4(grid, job.x, job.y);
       if (!canReach(grid, v, s.pos, goals)) return null;
       return pathPlan(state, s.pos, goals, null);

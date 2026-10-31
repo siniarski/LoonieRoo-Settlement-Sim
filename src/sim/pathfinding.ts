@@ -4,7 +4,14 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { inBounds, isWalkable, type Grid, type Point } from './grid';
+import { getTile, inBounds, isWalkable, type Grid, type Point } from './grid';
+
+/** Who is moving: survivors open doors; zombies can't, so doors are walls to them. */
+export type Mover = 'survivor' | 'zombie';
+
+export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
+  return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
+}
 
 const DIRS: readonly Point[] = [
   { x: 0, y: -1 },
@@ -27,9 +34,15 @@ export function findPath(grid: Grid, start: Point, goal: Point): Point[] | null 
  * Shortest path to whichever goal is nearest (e.g. any tile next to a
  * blueprint). Unwalkable goals are ignored. Same conventions as findPath.
  */
-export function findPathToAny(grid: Grid, start: Point, goals: readonly Point[]): Point[] | null {
+export function findPathToAny(
+  grid: Grid,
+  start: Point,
+  goals: readonly Point[],
+  mover: Mover = 'survivor',
+): Point[] | null {
   if (!inBounds(grid, start.x, start.y)) return null;
-  const targets = goals.filter((g) => isWalkable(grid, g.x, g.y));
+  const passable = (x: number, y: number) => isPassable(grid, x, y, mover);
+  const targets = goals.filter((g) => passable(g.x, g.y));
   if (targets.length === 0) return null;
   if (targets.some((g) => g.x === start.x && g.y === start.y)) return [];
 
@@ -66,7 +79,7 @@ export function findPathToAny(grid: Grid, start: Point, goals: readonly Point[])
     for (const dir of DIRS) {
       const nx = cx + dir.x;
       const ny = cy + dir.y;
-      if (!isWalkable(grid, nx, ny)) continue;
+      if (!passable(nx, ny)) continue;
       const next = ny * width + nx;
       if (closed[next] || g >= gScore[next]!) continue;
       gScore[next] = g;
@@ -86,18 +99,20 @@ export function findPathToAny(grid: Grid, start: Point, goals: readonly Point[])
 // state: it never affects results, only speed, and a cloned state just
 // recomputes it.
 
-const componentCache = new WeakMap<Grid, { version: number; labels: Int32Array }>();
+const componentCache = new WeakMap<Grid, Partial<Record<Mover, { version: number; labels: Int32Array }>>>();
 
-function components(grid: Grid, version: number): Int32Array {
-  const cached = componentCache.get(grid);
+function components(grid: Grid, version: number, mover: Mover): Int32Array {
+  const perMover = componentCache.get(grid) ?? {};
+  const cached = perMover[mover];
   if (cached && cached.version === version) return cached.labels;
 
+  const passable = (x: number, y: number) => isPassable(grid, x, y, mover);
   const { width, height } = grid;
   const labels = new Int32Array(width * height).fill(-1);
   let next = 0;
   const queue: number[] = [];
   for (let i = 0; i < labels.length; i++) {
-    if (labels[i] !== -1 || !isWalkable(grid, i % width, Math.floor(i / width))) continue;
+    if (labels[i] !== -1 || !passable(i % width, Math.floor(i / width))) continue;
     labels[i] = next;
     queue.push(i);
     while (queue.length > 0) {
@@ -108,7 +123,7 @@ function components(grid: Grid, version: number): Int32Array {
         const nx = cx + dir.x;
         const ny = cy + dir.y;
         const n = ny * width + nx;
-        if (isWalkable(grid, nx, ny) && labels[n] === -1) {
+        if (passable(nx, ny) && labels[n] === -1) {
           labels[n] = next;
           queue.push(n);
         }
@@ -116,24 +131,33 @@ function components(grid: Grid, version: number): Int32Array {
     }
     next++;
   }
-  componentCache.set(grid, { version, labels });
+  perMover[mover] = { version, labels };
+  componentCache.set(grid, perMover);
   return labels;
 }
 
 /**
- * True if any walkable goal is reachable from `from`. `version` must be the
- * state's walkabilityVersion. An unwalkable `from` (e.g. inside a wall) can
- * step into any walkable neighbour.
+ * True if any passable goal is reachable from `from` for this mover.
+ * `version` must be the state's walkabilityVersion. An impassable `from`
+ * (e.g. inside a wall, or a zombie on a door tile) can step into any
+ * passable neighbour.
  */
-export function canReach(grid: Grid, version: number, from: Point, goals: readonly Point[]): boolean {
+export function canReach(
+  grid: Grid,
+  version: number,
+  from: Point,
+  goals: readonly Point[],
+  mover: Mover = 'survivor',
+): boolean {
   if (!inBounds(grid, from.x, from.y)) return false;
-  const labels = components(grid, version);
+  const labels = components(grid, version, mover);
+  const passable = (p: Point) => isPassable(grid, p.x, p.y, mover);
   const { width } = grid;
-  const starts = isWalkable(grid, from.x, from.y)
+  const starts = passable(from)
     ? [from]
-    : DIRS.map((d) => ({ x: from.x + d.x, y: from.y + d.y })).filter((p) => isWalkable(grid, p.x, p.y));
+    : DIRS.map((d) => ({ x: from.x + d.x, y: from.y + d.y })).filter(passable);
   const startLabels = new Set(starts.map((p) => labels[p.y * width + p.x]));
-  return goals.some((g) => isWalkable(grid, g.x, g.y) && startLabels.has(labels[g.y * width + g.x]!));
+  return goals.some((g) => passable(g) && startLabels.has(labels[g.y * width + g.x]!));
 }
 
 function reconstruct(cameFrom: Int32Array, end: number, width: number): Point[] {

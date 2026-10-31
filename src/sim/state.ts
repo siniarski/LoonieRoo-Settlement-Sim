@@ -11,12 +11,13 @@ import type { Job } from './jobs';
 import { seedRng } from './rng';
 import type { RoomDesignation } from './rooms';
 import type { Survivor } from './survivors';
+import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -33,6 +34,7 @@ export interface SimState {
   /** Bumped whenever a wall or door changes. Caches compare against it. */
   walkabilityVersion: number;
   survivors: Survivor[];
+  zombies: Zombie[];
   items: Item[];
   furniture: Furniture[];
   blueprints: Blueprint[];
@@ -62,6 +64,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     grid: createGrid(width, height),
     walkabilityVersion: 0,
     survivors: [],
+    zombies: [],
     items: [],
     furniture: [],
     blueprints: [],

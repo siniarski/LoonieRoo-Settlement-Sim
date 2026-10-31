@@ -66,6 +66,7 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   // Occasionally wound someone badly (they may die mid-job or mid-sleep) or add a survivor.
   if (roll < 72) return { type: 'setHealth', survivorId: survivor.id, health: randomInt(driver, 0, 4) };
   if (roll < 73) return { type: 'spawnSurvivor', x, y };
+  if (roll < 76) return { type: 'spawnZombie', x, y };
   return null;
 }
 
@@ -84,6 +85,8 @@ describe('stuck-state invariant', () => {
           { x: 14, y: 3, purpose: 'storage' },
         ],
       });
+      // Start at 18:00 so the run covers a whole night of zombies and the dawn retreat.
+      initial.tick = 12 * 200;
       const state = cloneState(initial);
       const driver = { rng: seedRng(seed * 7919) }; // Player input, separate from sim RNG.
       const stillWithGoal = new Map<string, number>();
@@ -134,7 +137,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

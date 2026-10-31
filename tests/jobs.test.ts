@@ -95,7 +95,7 @@ describe('job selection', () => {
   });
 
   it('picks the highest-priority job type first', () => {
-    const state = setup(inRoom('s,.w..'), { build: 3, haul: 3, scavenge: 3, clean: 1 });
+    const state = setup(inRoom('s,.w..'), { guard: 3, build: 3, haul: 3, scavenge: 3, clean: 1 });
     applyCommand(state, { type: 'designateBuild', x: 7, y: 2, structure: 'wall' });
     tick(state);
     expect(state.survivors[0]!.note).toMatch(/^took clean job/);

@@ -7,6 +7,7 @@ import { getTile, isWalkable, setTile, type Point } from './grid';
 import { dropItem, itemAt, spawnItem } from './items';
 import { nearestTile, samePoint } from './space';
 import type { SimState } from './state';
+import { evictZombies } from './zombies';
 
 /**
  * What the tile ends up as. 'floor' means "remove what's here": a bed if
@@ -80,6 +81,7 @@ export function completeBlueprint(state: SimState, bp: Blueprint): void {
     case 'door':
       if (setTile(state.grid, bp.x, bp.y, bp.target)) state.walkabilityVersion += 1;
       if (bp.target === 'wall') evictFrom(state, bp);
+      evictZombies(state, bp); // zombies can stand on neither walls nor doors
       return;
     case 'bed': {
       addFurniture(state, 'bed', bp.x, bp.y);

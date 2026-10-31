@@ -22,16 +22,31 @@ import { logEvent } from './events';
 import { furnitureAt, type Furniture } from './furniture';
 import { AWAKE_HEAL_EVERY, HEALTH_MAX, SLEEP_HEAL, STARVE_DAMAGE } from './health';
 import { getItem, removeItem, type Item } from './items';
-import { releaseSurvivor } from './jobs';
+import { getJob, releaseSurvivor } from './jobs';
 import { canReach, findPathToAny } from './pathfinding';
 import { BED_REGEN, FLOOR_REGEN, NIGHT_TIRED, REST_DRAIN, REST_MAX, TIRED } from './rest';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
 import { isNight } from './time';
+import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 
 export function isTired(state: SimState, s: Survivor): boolean {
   return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
+}
+
+/**
+ * A guard finishes the fight: needs don't pull them off a guard job. (Without
+ * this, a tired guard flip-flops between hunting and bed as the zombie drifts
+ * in and out of DANGER_RADIUS.)
+ */
+export function onGuardDuty(state: SimState, s: Survivor): boolean {
+  return s.jobId !== null && getJob(state, s.jobId)?.type === 'guard';
+}
+
+/** Tired, and no zombie close enough to make lying down a bad idea. */
+export function wantsSleep(state: SimState, s: Survivor): boolean {
+  return isTired(state, s) && !zombieNear(state, s.pos);
 }
 
 export function isHungry(s: Survivor): boolean {
@@ -67,8 +82,8 @@ export function reconcileNeeds(state: SimState): void {
  * to go to.
  */
 export function interruptForNeeds(state: SimState, s: Survivor): void {
-  if (!s.jobId || s.sleep || s.meal) return;
-  if (isTired(state, s)) {
+  if (!s.jobId || s.sleep || s.meal || onGuardDuty(state, s)) return;
+  if (wantsSleep(state, s)) {
     releaseSurvivor(state, s, 'too tired to work');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
     if (nearestFreeFood(state, s)) releaseSurvivor(state, s, 'hungry');
@@ -84,6 +99,7 @@ export function interruptForNeeds(state: SimState, s: Survivor): void {
  */
 export function updateMeal(state: SimState, s: Survivor): boolean {
   if (s.sleep) return false; // sleepers aren't woken to eat
+  if (!s.meal && onGuardDuty(state, s)) return false; // eat after the fight
   if (!s.meal && !startMeal(state, s)) return false;
   const meal = s.meal!;
   const item = getItem(state, meal.itemId);
@@ -167,7 +183,7 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
     s.health = Math.min(HEALTH_MAX, s.health + 1);
   }
   if (s.health > 0) return null;
-  return s.satiety === 0 ? 'starvation' : 'injuries';
+  return s.satiety === 0 ? 'starvation' : (s.lastHurtBy ?? 'injuries');
 }
 
 /** Removes a survivor, releasing everything they hold (job, carried item, bed, food). */
@@ -188,7 +204,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
  */
 export function updateSleep(state: SimState, s: Survivor): boolean {
   if (!s.sleep) {
-    if (!isTired(state, s)) return false;
+    if (!wantsSleep(state, s) || onGuardDuty(state, s)) return false;
     startSleep(state, s);
     return true;
   }

@@ -11,14 +11,22 @@ import {
   updateRest,
   updateSatiety,
   updateSleep,
+  wake,
 } from './needs';
 import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
+import { updateZombies } from './zombies';
 
 export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
+  // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
+  // zombies and survivors react to this tick's hits.
+  updateZombies(state);
+  for (const s of state.survivors) {
+    if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
+  }
   reconcileJobs(state);
   reconcileNeeds(state);
   const dying: { s: Survivor; cause: string }[] = [];

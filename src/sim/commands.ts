@@ -16,6 +16,7 @@ import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
+import { addZombie, evictZombies } from './zombies';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -40,7 +41,9 @@ export type Command =
   | { type: 'setSatiety'; survivorId: string; satiety: number }
   | { type: 'setHealth'; survivorId: string; health: number }
   // Debug/sandbox: drop a food item on (or near) a tile.
-  | { type: 'spawnFood'; x: number; y: number };
+  | { type: 'spawnFood'; x: number; y: number }
+  // Debug/sandbox: put a zombie on a floor tile (they only last until dawn).
+  | { type: 'spawnZombie'; x: number; y: number };
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -94,6 +97,10 @@ function execute(state: SimState, command: Command): CommandResult {
       return designateRoom(state, x, y, command.purpose);
     case 'spawnSurvivor':
       return spawnSurvivor(state, x, y);
+    case 'spawnZombie':
+      if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not floor`);
+      addZombie(state, x, y);
+      return changed();
     case 'spawnFood':
       if (!isWalkable(state.grid, x, y)) return reject(`(${x}, ${y}) is not walkable`);
       spawnItem(state, 'food', x, y);
@@ -117,6 +124,7 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
     if (f) removeFurniture(state, f);
   }
   if (tile === 'wall') evictFrom(state, { x, y });
+  if (tile !== 'floor') evictZombies(state, { x, y });
   return changed();
 }
 

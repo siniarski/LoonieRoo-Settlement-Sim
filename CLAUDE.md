@@ -82,9 +82,9 @@ NOTES.md
 - A* on the grid. Cache paths and invalidate only when the walkability map changes.
 - Use a single `walkabilityVersion` counter in state, bumped whenever a wall or door changes. Cached paths and rooms record the version they were computed at and are stale if it differs. This is the whole invalidation scheme until it proves too coarse.
 
-**Doors (milestone 1 decision)**
+**Doors (milestone 1 decision, revised in milestone 7)**
 
-- Doors are always walkable, for every entity. Locking and faction rules come later.
+- Survivors can always walk through doors. Zombies can't: to them a door is a wall, so a closed building is safe. Pathfinding takes a `mover` (`'survivor' | 'zombie'`) for this. Locking and other faction rules come later.
 - For flood fill, doors are room boundaries: they split rooms the way walls do, but survivors can path through them.
 
 ## Debugging and inspection conventions

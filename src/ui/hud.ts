@@ -24,7 +24,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -152,6 +152,7 @@ function statusText(state: SimState, view: ViewState): string {
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
     `food ${food}`,
+    ...(state.zombies.length > 0 ? [`ZOMBIES ${state.zombies.length}`] : []),
   ].join('  ·  ');
 }
 
@@ -333,6 +334,11 @@ function debugText(state: SimState, view: ViewState, fps: number): string {
     '',
     ...state.survivors.flatMap((s) => survivorLines(state, s, s.id === view.selectedId)),
     '',
+    ...state.zombies.map((z) => {
+      const target = state.survivors.find((s) => s.id === z.targetId);
+      return `  zombie ${z.id} at (${z.pos.x}, ${z.pos.y}) hp ${z.health}  ·  ${target ? `chasing ${target.name}` : 'wandering'}`;
+    }),
+    ...(state.zombies.length > 0 ? [''] : []),
     `jobs ${state.jobs.length} (${open} open)`,
     ...state.jobs.slice(0, DEBUG_JOB_LINES).map((j) => jobLine(state, j)),
     ...(state.jobs.length > DEBUG_JOB_LINES ? [`  … ${state.jobs.length - DEBUG_JOB_LINES} more`] : []),
@@ -355,7 +361,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
     `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
-    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio b${p.build} h${p.haul} s${p.scavenge} c${p.clean}`,
+    `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${s.note ?? ''}`,
   ];

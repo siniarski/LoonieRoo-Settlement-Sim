@@ -7,6 +7,7 @@ import { getJob } from '../sim/jobs';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
 import { darkness } from '../sim/time';
+import { ZOMBIE_HEALTH, type Zombie } from '../sim/zombies';
 import type { ItemKind } from '../sim/items';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
@@ -46,6 +47,10 @@ const COLOURS = {
   needLow: '#ff6a5c',
   health: '#7ee08a',
   night: '#0a1030',
+  zombie: '#7da35a',
+  zombieOutline: '#1f2a14',
+  zombieEye: '#ff5a4a',
+  zombieChase: 'rgba(255, 90, 74, 0.6)',
   foodCan: '#b9c2c9',
   foodLabel: '#d9534f',
   foodRim: '#6f7880',
@@ -164,6 +169,7 @@ export function draw(
     }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
+  for (const z of state.zombies) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
 }
@@ -402,6 +408,55 @@ function drawJobLink(
 
 function xy(p: Point): [number, number] {
   return [p.x, p.y];
+}
+
+/** A sickly green blob with red eyes; health bar once hurt; debug line to its target. */
+function drawZombie(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewport: Viewport,
+  state: SimState,
+  z: Zombie,
+  options: DrawOptions,
+  size: number,
+): void {
+  const world = survivorWorldPos(z, options.alpha);
+  const p = worldToScreen(camera, viewport, world.x, world.y);
+  const radius = Math.max(3, size * 0.34);
+  if (options.showDebug && z.targetId) {
+    const target = state.survivors.find((s) => s.id === z.targetId);
+    if (target) {
+      const tw = survivorWorldPos(target, options.alpha);
+      const tp = worldToScreen(camera, viewport, tw.x, tw.y);
+      ctx.strokeStyle = COLOURS.zombieChase;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(tp.x, tp.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.fillStyle = COLOURS.zombie;
+  ctx.strokeStyle = COLOURS.zombieOutline;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  const eye = Math.max(1, radius * 0.18);
+  ctx.fillStyle = COLOURS.zombieEye;
+  ctx.fillRect(p.x - radius * 0.4 - eye / 2, p.y - radius * 0.2, eye, eye);
+  ctx.fillRect(p.x + radius * 0.4 - eye / 2, p.y - radius * 0.2, eye, eye);
+  if (z.health < ZOMBIE_HEALTH) {
+    const w = Math.max(10, size * 0.8);
+    const h = Math.max(2, Math.round(size * 0.1));
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(p.x - w / 2, p.y + radius + 3, w, h);
+    ctx.fillStyle = COLOURS.needLow;
+    ctx.fillRect(p.x - w / 2, p.y + radius + 3, (w * z.health) / ZOMBIE_HEALTH, h);
+  }
 }
 
 function drawSurvivor(

@@ -64,6 +64,10 @@ export interface Survivor {
   nextMealTick: number;
   /** 0..HEALTH_MAX. At 0 the survivor dies; see needs.ts. */
   health: number;
+  /** What last hurt them (for the death message), e.g. "a zombie attack". */
+  lastHurtBy: string | null;
+  /** Tick they were last hurt, -1 if never. Sleepers hurt this tick wake up. */
+  hurtTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number): Survivor {
@@ -87,6 +91,8 @@ export function addSurvivor(state: SimState, x: number, y: number): Survivor {
     meal: null,
     nextMealTick: 0,
     health: HEALTH_MAX,
+    lastHurtBy: null,
+    hurtTick: -1,
   };
   state.survivors.push(survivor);
   return survivor;
