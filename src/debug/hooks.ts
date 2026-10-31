@@ -22,6 +22,8 @@ declare global {
 
 export interface GameHandle {
   state: SimState;
+  /** Where play started (scenario or loaded save): bug reports replay from here. */
+  initial: SimState;
 }
 
 export interface GameHookOptions {
@@ -35,6 +37,7 @@ export function installGameHooks(handle: GameHandle, options: GameHookOptions = 
     step: (n = 1) => step(handle.state, n),
     load: (scenario) => {
       handle.state = loadScenario(scenario);
+      handle.initial = cloneState(handle.state);
       options.onLoad?.();
     },
     command: (cmd) => applyCommand(handle.state, cmd),

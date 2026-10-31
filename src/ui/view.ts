@@ -23,4 +23,6 @@ export interface ViewState {
   paused: boolean;
   showDebug: boolean;
   showPriorities: boolean;
+  /** The Game menu (saves, files, bug report). */
+  showGame: boolean;
 }

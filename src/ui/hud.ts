@@ -20,8 +20,18 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
+
+/** The Game menu's actions (app.ts does the work). */
+export interface GameFiles {
+  save(slot: string): void;
+  load(slot: string): void;
+  exportSave(): void;
+  importFile(): void;
+  reportBug(): void;
+}
 
 export interface Hud {
   update(state: SimState, fps: number): void;
@@ -40,7 +50,7 @@ export function cyclePriority(p: Priority, backwards: boolean): Priority {
   return order[(i + (backwards ? order.length - 1 : 1)) % order.length]!;
 }
 
-export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Command) => void): Hud {
+export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Command) => void, files: GameFiles): Hud {
   root.innerHTML = '';
 
   const bar = el('div', 'hud-bar');
@@ -69,6 +79,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   prioritiesButton.textContent = 'P Priorities';
   prioritiesButton.addEventListener('click', () => (view.showPriorities = !view.showPriorities));
   bar.append(prioritiesButton);
+  const gameButton = el('button', 'hud-button');
+  gameButton.textContent = '≡ Game';
+  gameButton.addEventListener('click', () => (view.showGame = !view.showGame));
+  bar.append(gameButton);
 
   const info = el('div', 'hud-info');
   const status = el('div', 'hud-status');
@@ -81,11 +95,12 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
+  const game = createGamePanel(view, files);
   // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -122,6 +137,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         button.classList.toggle('active', !view.paused && speed === view.speed),
       );
       prioritiesButton.classList.toggle('active', view.showPriorities);
+      gameButton.classList.toggle('active', view.showGame);
+      game.update();
 
       const text = statusText(state, view);
       if (text !== lastStatus) status.textContent = lastStatus = text;
@@ -259,6 +276,59 @@ function roomText(state: SimState, hover: Point | null): string {
 }
 
 // --- Priority panel ---------------------------------------------------------
+
+/** Save slots, the autosave, file export/import, and bug reports. Rebuilt each time it opens (or a slot changes). */
+function createGamePanel(view: ViewState, files: GameFiles) {
+  const root = el('div', 'hud-game');
+  let last = '';
+  const button = (label: string, action: () => void) => {
+    const b = el('button', 'hud-button');
+    b.textContent = label;
+    b.addEventListener('click', () => {
+      action();
+      last = ''; // slot labels may have changed
+    });
+    return b;
+  };
+  const row = (label: string, ...buttons: HTMLButtonElement[]) => {
+    const r = el('div', 'hud-game-row');
+    const text = el('span', 'hud-game-label');
+    text.textContent = label;
+    r.append(text, ...buttons);
+    return r;
+  };
+  return {
+    root,
+    update() {
+      root.hidden = !view.showGame;
+      if (!view.showGame) {
+        last = '';
+        return;
+      }
+      const labels = [...SLOTS, AUTO_SLOT].map((s) => slotLabel(s) ?? '');
+      const key = labels.join('|');
+      if (key === last) return;
+      last = key;
+      root.replaceChildren();
+      const title = el('div', 'hud-game-title');
+      title.textContent = 'Game';
+      root.append(title);
+      for (const slot of SLOTS) {
+        const label = slotLabel(slot);
+        const load = button('Load', () => files.load(slot));
+        load.disabled = label === null;
+        root.append(row(`Slot ${slot}: ${label ?? 'empty'}`, button('Save', () => files.save(slot)), load));
+      }
+      const auto = slotLabel(AUTO_SLOT);
+      const loadAuto = button('Load', () => files.load(AUTO_SLOT));
+      loadAuto.disabled = auto === null;
+      root.append(row(`Autosave (each dawn): ${auto ?? 'none yet'}`, loadAuto));
+      root.append(
+        row('Files:', button('Export save', files.exportSave), button('Import…', files.importFile), button('Report bug', files.reportBug)),
+      );
+    },
+  };
+}
 
 /** People waiting at the edge, each with Take in / Turn away. Rebuilt only when the list or the times change. */
 function createWandererPanel(command: (cmd: Command) => void) {

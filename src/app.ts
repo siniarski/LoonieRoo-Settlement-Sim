@@ -7,10 +7,13 @@ import { draw } from './render/draw';
 import { applyCommand } from './sim/commands';
 import { planFurnish } from './sim/planner';
 import type { Point } from './sim/grid';
-import type { SimState } from './sim/state';
+import { loadFile, toBugReport, toSaveFile, type LoadResult } from './sim/savefile';
+import { cloneState, type SimState } from './sim/state';
+import { DAY_LENGTH, dayOf } from './sim/time';
+import { AUTO_SLOT, downloadText, fileStamp, loadFromSlot, pickTextFile, saveToSlot } from './ui/saves';
 import { survivorAt } from './sim/survivors';
 import { step } from './sim/tick';
-import { createHud } from './ui/hud';
+import { createHud, type GameFiles } from './ui/hud';
 import { attachInput } from './ui/input';
 import { MS_PER_TICK, ticksForFrame } from './ui/loop';
 import { isCategoryId, isToolId } from './ui/tools';
@@ -41,7 +44,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   const ctx2d = canvas.getContext('2d');
   if (!ctx2d) throw new Error('2D canvas not supported');
 
-  const handle: GameHandle = { state };
+  const handle: GameHandle = { state, initial: cloneState(state) };
   const view: ViewState = {
     camera: centredOn(state.grid.width, state.grid.height),
     buildOpen: false,
@@ -55,6 +58,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     paused: false,
     showDebug: false,
     showPriorities: true,
+    showGame: false,
     // Spread over the defaults so view state saved by older code gains new fields.
     ...saved,
   };
@@ -101,10 +105,39 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       // The planner only proposes; its commands go through the normal command path.
       const plan = planFurnish(handle.state, tile.x, tile.y);
       for (const cmd of plan.commands) applyCommand(handle.state, cmd);
-      view.toast = { text: plan.notes.join(' '), until: performance.now() + TOAST_MS };
+      toast(plan.notes.join(' '));
     },
   });
-  const hud = createHud(hudRoot, view, (cmd) => applyCommand(handle.state, cmd));
+  const toast = (text: string) => (view.toast = { text, until: performance.now() + TOAST_MS });
+  /** Replace the running game (a save, an import, a bug report) and start the bug-report log afresh. */
+  const replaceState = (result: LoadResult, from: string) => {
+    if (!result.ok) return toast(`Couldn't load ${from}: ${result.error}`);
+    handle.state = result.state;
+    handle.initial = cloneState(result.state);
+    view.camera = centredOn(handle.state.grid.width, handle.state.grid.height, view.camera.zoom);
+    view.paused = true; // look before you play
+    lastAutosaveDawn = dawns(handle.state.tick);
+    toast(`Loaded ${from}${result.kind === 'bug' ? ' (bug report, replayed)' : ''}. Paused: Space to play.`);
+  };
+  const files: GameFiles = {
+    save: (slot) => toast(saveToSlot(slot, handle.state) ?? `Saved to slot ${slot}.`),
+    load: (slot) => replaceState(loadFromSlot(slot), slot === AUTO_SLOT ? 'the autosave' : `slot ${slot}`),
+    exportSave: () => downloadText(`loonieroo-${fileStamp(handle.state)}.json`, toSaveFile(handle.state)),
+    importFile: () => {
+      void pickTextFile().then((text) => {
+        if (text !== null) replaceState(loadFile(text), 'the file');
+      });
+    },
+    reportBug: () => {
+      const note = window.prompt('What went wrong? (optional)') ?? '';
+      downloadText(`loonieroo-bug-${fileStamp(handle.state)}.json`, toBugReport(handle.initial, handle.state, note));
+      toast('Bug report downloaded: it replays the game from where you started to now.');
+    },
+  };
+  const hud = createHud(hudRoot, view, (cmd) => applyCommand(handle.state, cmd), files);
+  // Autosave at every dawn (06:00), when the night's zombies have gone.
+  const dawns = (tick: number) => Math.floor(tick / DAY_LENGTH); // tick 0 is 06:00
+  let lastAutosaveDawn = dawns(handle.state.tick);
 
   let accumulatorMs = 0;
   let last = performance.now();
@@ -121,6 +154,10 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       const result = ticksForFrame(accumulatorMs, frameMs, view.speed, view.paused);
       accumulatorMs = result.accumulatorMs;
       step(handle.state, result.ticks);
+      if (dawns(handle.state.tick) !== lastAutosaveDawn) {
+        lastAutosaveDawn = dawns(handle.state.tick);
+        if (saveToSlot(AUTO_SLOT, handle.state) === null) toast(`Autosaved at dawn, day ${dayOf(handle.state.tick)}.`);
+      }
 
       input.update(frameMs);
       ensureSelection();
