@@ -83,6 +83,8 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll >= 94 && roll < 96) return { type: 'designateRoom', x, y, purpose: 'armory' };
   // Tables and mess halls, so some meals are carried to a seat.
   if (roll >= 96 && roll < 100) return { type: 'designateBuild', x, y, structure: 'table' };
+  if (roll >= 102 && roll < 105) return { type: 'designateBuild', x, y, structure: 'workbench' };
+  if (roll >= 105 && roll < 108) return { type: 'setCraftTarget', kind: roll < 106 ? 'weapon' : 'bandage', count: roll % 4 };
   if (roll >= 100 && roll < 102) {
     // Aim at a table, if any, so whatever room it stands in can become a working mess hall.
     const tables = state.furniture.filter((f) => f.kind === 'table');
@@ -126,7 +128,10 @@ describe('stuck-state invariant', () => {
         const ordered = cmd?.type === 'moveSurvivor' && applyCommand(state, cmd).ok ? cmd.survivorId : null;
         if (cmd && cmd.type !== 'moveSurvivor') applyCommand(state, cmd);
 
+        const versionBefore = state.walkabilityVersion;
         tick(state);
+        // A wall or door finished this tick can cut a path: re-planning costs one standing tick.
+        const pathCut = state.walkabilityVersion !== versionBefore;
 
         const problems = checkInvariants(state);
         expect(problems, `tick ${state.tick}\n${dumpText(state)}`).toEqual([]);
@@ -143,7 +148,7 @@ describe('stuck-state invariant', () => {
           const movedAside = prev !== undefined && !prev.moving && prev.pos !== `${s.pos.x},${s.pos.y}`;
           const needKickedIn = prev !== undefined && prev.needs !== needs && needs !== '';
           before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs });
-          const excused = s.id === ordered || movedAside || needKickedIn;
+          const excused = s.id === ordered || movedAside || needKickedIn || pathCut;
           const still = s.goal && !s.move && !excused ? (stillWithGoal.get(s.id) ?? 0) + 1 : 0;
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
@@ -187,7 +192,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated', 'armed', 'repaired'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated', 'armed', 'repaired', 'crafted', 'brought'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

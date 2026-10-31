@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'bed' | 'table' | 'housing' | 'storage' | 'armory' | 'messhall' | 'farm' | 'furnish' | 'scavenge' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'bed' | 'table' | 'workbench' | 'housing' | 'storage' | 'armory' | 'messhall' | 'farm' | 'furnish' | 'scavenge' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -75,6 +75,14 @@ export const TOOLS: readonly Tool[] = [
     paints: true,
     hasInstant: true,
     command: (x, y, { instant }) => (instant ? { type: 'placeTable', x, y } : { type: 'designateBuild', x, y, structure: 'table' }),
+  },
+  {
+    id: 'workbench',
+    label: 'Workbench',
+    category: 'furniture',
+    paints: false,
+    hasInstant: true,
+    command: (x, y, { instant }) => (instant ? { type: 'placeWorkbench', x, y } : { type: 'designateBuild', x, y, structure: 'workbench' }),
   },
   {
     id: 'housing',

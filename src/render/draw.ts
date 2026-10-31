@@ -44,6 +44,7 @@ const COLOURS = {
     storage: '#e6be6e',
     armory: '#d98c6a',
     table: '#d6aa78',
+    workbench: '#be9664',
     messhall: '#9ee0c0',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
@@ -78,9 +79,10 @@ const COLOURS = {
     door: 'rgba(255, 190, 110, 0.35)',
     bed: 'rgba(199, 166, 255, 0.30)',
     table: 'rgba(214, 170, 120, 0.30)',
+    workbench: 'rgba(190, 150, 100, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -179,6 +181,7 @@ export function draw(
   for (const f of state.furniture) {
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
+    else if (f.kind === 'workbench') drawWorkbench(ctx, camera, viewport, f, size);
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
@@ -352,6 +355,23 @@ function drawBed(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewpo
   ctx.fillRect(r.x + pad + 1, r.y + pad + Math.round(r.h * 0.3), r.w - pad * 2 - 2, r.h - pad * 2 - Math.round(r.h * 0.3) - 1);
   ctx.fillStyle = COLOURS.bedPillow;
   ctx.fillRect(r.x + pad + 2, r.y + pad + 2, r.w - pad * 2 - 4, Math.max(2, Math.round(r.h * 0.2)));
+}
+
+/** A long bench with a saw and hammer on it; pips for wood brought in. */
+function drawWorkbench(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {
+  const r = tileRect(camera, viewport, f.x, f.y);
+  const pad = Math.max(1, Math.round(r.w * 0.08));
+  ctx.fillStyle = COLOURS.tableEdge;
+  ctx.fillRect(r.x + pad, r.y + r.h * 0.25, r.w - pad * 2, r.h * 0.5);
+  ctx.fillStyle = COLOURS.tableTop;
+  ctx.fillRect(r.x + pad + 1, r.y + r.h * 0.25 + 1, r.w - pad * 2 - 2, r.h * 0.5 - 2);
+  ctx.fillStyle = COLOURS.blade;
+  ctx.fillRect(r.x + r.w * 0.2, r.y + r.h * 0.4, r.w * 0.35, Math.max(1, r.h * 0.08));
+  ctx.fillStyle = COLOURS.hilt;
+  ctx.fillRect(r.x + r.w * 0.65, r.y + r.h * 0.33, Math.max(1, r.w * 0.08), r.h * 0.3);
+  const pip = Math.max(2, Math.round(size * 0.12));
+  ctx.fillStyle = COLOURS.wood;
+  for (let i = 0; i < f.stored; i++) ctx.fillRect(r.x + 2 + i * (pip + 1.5), r.y + r.h - pip - 2, pip, pip);
 }
 
 /** A square wooden table top. */

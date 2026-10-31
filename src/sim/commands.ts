@@ -19,6 +19,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
+import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
 
@@ -29,8 +30,11 @@ export type Command =
   | { type: 'clearTile'; x: number; y: number }
   | { type: 'placeBed'; x: number; y: number }
   | { type: 'placeTable'; x: number; y: number }
+  | { type: 'placeWorkbench'; x: number; y: number }
+  /** Keep this many of a craftable in stock (crafting.ts). */
+  | { type: 'setCraftTarget'; kind: CraftKind; count: number }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' | 'table' }
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' | 'table' | 'workbench' }
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
@@ -68,6 +72,14 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'setCraftTarget') {
+    const { kind, count } = command;
+    if (!isCraftKind(kind)) return reject(`can't craft ${String(kind)}`);
+    if (!Number.isInteger(count) || count < 0 || count > MAX_CRAFT_TARGET) return reject(`target must be 0-${MAX_CRAFT_TARGET}`);
+    if (state.craftTargets[kind] === count) return unchanged();
+    state.craftTargets[kind] = count;
+    return changed();
+  }
   if (command.type === 'acceptWanderer' || command.type === 'dismissWanderer') {
     const w = getWanderer(state, command.wandererId);
     if (!w) return reject(`no wanderer ${command.wandererId}`);
@@ -101,9 +113,10 @@ function execute(state: SimState, command: Command): CommandResult {
     }
     case 'placeBed':
     case 'placeTable':
+    case 'placeWorkbench':
       if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not floor`);
       if (furnitureAt(state, x, y)) return unchanged();
-      addFurniture(state, command.type === 'placeBed' ? 'bed' : 'table', x, y);
+      addFurniture(state, command.type === 'placeBed' ? 'bed' : command.type === 'placeTable' ? 'table' : 'workbench', x, y);
       return changed();
     case 'designateBuild':
       return designateBuild(state, x, y, command.structure);
@@ -161,7 +174,7 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
   return changed();
 }
 
-function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'bed' | 'table'): CommandResult {
+function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'bed' | 'table' | 'workbench'): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === structure) return unchanged();
   if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) {

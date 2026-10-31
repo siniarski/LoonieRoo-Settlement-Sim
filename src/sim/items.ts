@@ -2,6 +2,7 @@
 // An item is either on the ground (`pos`) or carried (`carriedBy`), never both.
 
 import { isWalkable, type Point } from './grid';
+import { isFurnitureTarget } from './designations';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
@@ -32,7 +33,7 @@ export function canHoldItem(state: SimState, x: number, y: number): boolean {
     isWalkable(state.grid, x, y) &&
     !itemAt(state, x, y) &&
     !state.furniture.some((f) => f.x === x && f.y === y) &&
-    !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || b.target === 'bed' || b.target === 'table'))
+    !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || isFurnitureTarget(b.target)))
   );
 }
 

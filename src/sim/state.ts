@@ -13,13 +13,14 @@ import { seedRng } from './rng';
 import type { RoomDesignation } from './rooms';
 import type { Survivor } from './survivors';
 import type { Wanderer } from './wanderers';
+import type { CraftKind } from './crafting';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -39,6 +40,8 @@ export interface SimState {
   zombies: Zombie[];
   /** People waiting at the edge to be taken in (see wanderers.ts). */
   wanderers: Wanderer[];
+  /** Stock to keep of each craftable (see crafting.ts). */
+  craftTargets: Record<CraftKind, number>;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -74,6 +77,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     survivors: [],
     zombies: [],
     wanderers: [],
+    craftTargets: { weapon: 0, bandage: 0 },
     items: [],
     furniture: [],
     farm: [],

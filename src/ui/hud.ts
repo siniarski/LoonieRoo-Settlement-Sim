@@ -20,6 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { CRAFTABLES, MAX_CRAFT_TARGET, RECIPES, craftStock } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
@@ -38,7 +39,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', farm: 'Farm', build: 'Build', haul: 'Haul', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -90,7 +91,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const toast = el('div', 'hud-toast');
   const feed = el('div', 'hud-feed');
   const wanderers = createWandererPanel(command);
-  info.append(status, toast, roomPanel, wanderers.root, feed);
+  const crafting = createCraftPanel(command);
+  info.append(status, toast, roomPanel, wanderers.root, crafting.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -149,6 +151,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
       priorities.update(state);
       wanderers.update(state);
+      crafting.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -193,6 +196,7 @@ function furnitureText(state: SimState, p: Point): string {
   if (!f) return '';
   if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
   if (f.kind === 'table') return ' · table';
+  if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
 
@@ -326,6 +330,46 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       root.append(
         row('Files:', button('Export save', files.exportSave), button('Import…', files.importFile), button('Report bug', files.reportBug)),
       );
+    },
+  };
+}
+
+/** Stock targets for the workbenches: shown once there is a workbench (or a plan for one). */
+function createCraftPanel(command: (cmd: Command) => void) {
+  const root = el('div', 'hud-craft');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const benches = state.furniture.filter((f) => f.kind === 'workbench').length;
+      const planned = state.blueprints.some((b) => b.target === 'workbench');
+      const rows = CRAFTABLES.map((k) => ({ k, have: craftStock(state, k), want: state.craftTargets[k] }));
+      const key = `${benches}|${planned}|${JSON.stringify(rows)}`;
+      if (key === last) return;
+      last = key;
+      root.hidden = benches === 0 && !planned;
+      root.replaceChildren();
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = benches === 0 ? 'Workbench orders (once the bench is built)' : `Workbench orders · ${benches} bench${benches === 1 ? '' : 'es'}`;
+      root.append(title);
+      for (const { k, have, want } of rows) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${RECIPES[k].label} (${RECIPES[k].wood} wood): have ${have}, keep`;
+        const set = (count: number) => command({ type: 'setCraftTarget', kind: k, count });
+        const less = el('button', 'hud-button');
+        less.textContent = '−';
+        less.disabled = want === 0;
+        less.addEventListener('click', () => set(want - 1));
+        const value = el('span', 'hud-craft-value');
+        value.textContent = String(want);
+        const more = el('button', 'hud-button');
+        more.textContent = '+';
+        more.disabled = want >= MAX_CRAFT_TARGET;
+        more.addEventListener('click', () => set(want + 1));
+        row.append(label, less, value, more);
+        root.append(row);
+      }
     },
   };
 }

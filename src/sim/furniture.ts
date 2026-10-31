@@ -3,10 +3,12 @@
 //   bed    built by survivors; slept in (see needs.ts)
 //   crate  found in ruins; holds loot that survivors scavenge (see jobs.ts)
 //   table  built by survivors; makes a mess hall (see mess.ts)
+//   workbench  built by survivors; crafting happens here (see crafting.ts)
 
+import { spawnItem } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;
@@ -22,6 +24,8 @@ export interface Furniture {
   loot: number;
   /** Crates: marked by the player for scavenging. */
   scavenge: boolean;
+  /** Workbenches: wood brought in for the next craft. Given back if the bench is removed. */
+  stored: number;
 }
 
 export function furnitureAt(state: SimState, x: number, y: number): Furniture | undefined {
@@ -41,6 +45,7 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     occupant: null,
     loot: kind === 'crate' ? CRATE_LOOT : 0,
     scavenge: false,
+    stored: 0,
   };
   state.furniture.push(f);
   return f;
@@ -49,4 +54,5 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
 export function removeFurniture(state: SimState, f: Furniture): void {
   const i = state.furniture.indexOf(f);
   if (i >= 0) state.furniture.splice(i, 1);
+  for (let n = 0; n < f.stored; n++) spawnItem(state, 'wood', f.x, f.y);
 }

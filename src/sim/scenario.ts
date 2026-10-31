@@ -44,6 +44,7 @@ export const ENTITY_CHARS = {
   dirt: ',',
   bed: 'b',
   table: 't',
+  workbench: 'k',
   crate: 'c',
   zombie: 'z',
   wanderer: 'v',
@@ -52,6 +53,7 @@ export const ENTITY_CHARS = {
   doorBlueprint: 'd',
   bedBlueprint: 'B',
   tableBlueprint: 'T',
+  workbenchBlueprint: 'K',
   removeBlueprint: 'x',
 } as const;
 
@@ -109,6 +111,12 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.tableBlueprint:
       addBlueprint(state, x, y, 'table');
+      return true;
+    case ENTITY_CHARS.workbench:
+      addFurniture(state, 'workbench', x, y);
+      return true;
+    case ENTITY_CHARS.workbenchBlueprint:
+      addBlueprint(state, x, y, 'workbench');
       return true;
     default:
       return false;
