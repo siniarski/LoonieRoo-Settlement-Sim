@@ -17,7 +17,9 @@ import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
+import { getWanderer, removeWanderer } from './wanderers';
 import { addZombie, evictZombies } from './zombies';
+import { logEvent } from './events';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -39,6 +41,9 @@ export type Command =
   | { type: 'spawnSurvivor'; x: number; y: number }
   | { type: 'moveSurvivor'; survivorId: string; x: number; y: number }
   | { type: 'setPriority'; survivorId: string; jobType: JobType; priority: Priority }
+  // Wanderers waiting at the edge: take them in (they become a survivor) or send them away.
+  | { type: 'acceptWanderer'; wandererId: string }
+  | { type: 'dismissWanderer'; wandererId: string }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
   | { type: 'setRest'; survivorId: string; rest: number }
   | { type: 'setSatiety'; survivorId: string; satiety: number }
@@ -60,6 +65,18 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'acceptWanderer' || command.type === 'dismissWanderer') {
+    const w = getWanderer(state, command.wandererId);
+    if (!w) return reject(`no wanderer ${command.wandererId}`);
+    removeWanderer(state, w);
+    if (command.type === 'acceptWanderer') {
+      addSurvivor(state, w.x, w.y, w.name);
+      logEvent(state, `${w.name} joined the colony`);
+    } else {
+      logEvent(state, `${w.name} was turned away`);
+    }
+    return changed();
+  }
   if (command.type === 'setRest') return setNeed(state, command.survivorId, 'rest', command.rest, REST_MAX);
   if (command.type === 'setSatiety') return setNeed(state, command.survivorId, 'satiety', command.satiety, SATIETY_MAX);
   if (command.type === 'setHealth') return setNeed(state, command.survivorId, 'health', command.health, HEALTH_MAX);

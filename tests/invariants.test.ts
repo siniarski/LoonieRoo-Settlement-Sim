@@ -70,6 +70,11 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll < 82) return { type: 'designateFarm', x, y };
   // Wound someone (hurt or critical, not lethal) so they slow down, rest, and look for bandages.
   if (roll < 85) return { type: 'setHealth', survivorId: survivor.id, health: randomInt(driver, 150, 700) };
+  // Answer a waiting wanderer (or leave them to give up on their own).
+  if (roll < 90 && state.wanderers.length > 0) {
+    const w = state.wanderers[roll % state.wanderers.length]!;
+    return { type: roll < 88 ? 'acceptWanderer' : 'dismissWanderer', wandererId: w.id };
+  }
   return null;
 }
 
@@ -77,6 +82,8 @@ describe('stuck-state invariant', () => {
   /** Outcomes seen across all seeds (tests in a file run in order). */
   const notesSeen = new Set<string>();
   let deaths = 0;
+  /** Wanderer outcomes seen across all seeds. */
+  const wandererEvents = new Set<string>();
 
   for (const seed of [1, 2, 3, 4, 5]) {
     it(`holds under random designations, orders, and wall edits (seed ${seed})`, () => {
@@ -136,6 +143,11 @@ describe('stuck-state invariant', () => {
         }
       }
 
+      for (const e of state.events) {
+        for (const outcome of ['a wanderer', 'joined', 'turned away', 'gave up', 'walled out']) {
+          if (e.message.includes(outcome)) wandererEvents.add(outcome);
+        }
+      }
       deaths += state.events.filter((e) => e.message.includes(' died of ')).length;
 
       const replayed = replay(initial, state.commandLog, state.tick);
@@ -145,6 +157,10 @@ describe('stuck-state invariant', () => {
 
   it('saw survivors die along the way (death handling is exercised)', () => {
     expect(deaths).toBeGreaterThan(0);
+  });
+
+  it('saw wanderers arrive, join, and get turned away', () => {
+    expect([...wandererEvents].sort()).toEqual(expect.arrayContaining(['a wanderer', 'joined', 'turned away']));
   });
 
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {

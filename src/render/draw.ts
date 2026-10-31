@@ -15,6 +15,7 @@ import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose 
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
+import type { Wanderer } from '../sim/wanderers';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
 import { survivorWorldPos } from './interp';
 
@@ -45,6 +46,8 @@ const COLOURS = {
   survivor: '#f2e6c9',
   survivorOutline: '#1a1d1b',
   survivorAsleep: '#8a8fa8',
+  wanderer: '#9a9a8c',
+  wandererMark: '#fff3c4',
   rest: '#7fb2ff',
   satiety: '#ffb35c',
   needLow: '#ff6a5c',
@@ -179,6 +182,7 @@ export function draw(
     }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
+  for (const w of state.wanderers) drawWanderer(ctx, camera, viewport, w, size);
   for (const z of state.zombies) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
@@ -450,6 +454,32 @@ function xy(p: Point): [number, number] {
 }
 
 /** A sickly green blob with red eyes; health bar once hurt; debug line to its target. */
+/** A greyed survivor with a "?" above: waiting to be taken in. */
+function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number): void {
+  const p = worldToScreen(camera, viewport, w.x + 0.5, w.y + 0.5);
+  const radius = Math.max(3, size * 0.32);
+  ctx.fillStyle = COLOURS.wanderer;
+  ctx.strokeStyle = COLOURS.survivorOutline;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([3, 2]);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = COLOURS.wandererMark;
+  ctx.font = `bold ${Math.round(Math.max(10, size * 0.5))}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('?', p.x, p.y);
+  if (size >= MIN_LABEL_PX) {
+    ctx.fillStyle = COLOURS.label;
+    ctx.font = `${Math.round(Math.min(14, size * 0.45))}px ui-monospace, Consolas, monospace`;
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(w.name, p.x, p.y - radius - 3);
+  }
+}
+
 function drawZombie(
   ctx: CanvasRenderingContext2D,
   camera: Camera,

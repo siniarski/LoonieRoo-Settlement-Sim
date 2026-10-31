@@ -22,7 +22,15 @@ export const TICKS_PER_TILE = 4;
 /** Chance that stepping onto an indoor floor tile leaves dirt on it. Uses the sim RNG. */
 export const DIRT_CHANCE = 1 / 30;
 
-const NAMES = ['Ash', 'Bea', 'Cal', 'Dee', 'Eli', 'Fen', 'Gus', 'Hal', 'Ivy', 'Jo'];
+const NAMES = [
+  'Ash', 'Bea', 'Cal', 'Dee', 'Eli', 'Fen', 'Gus', 'Hal', 'Ivy', 'Jo', 'Kit', 'Lou', 'Max',
+  'Nell', 'Oz', 'Pip', 'Quin', 'Rae', 'Sam', 'Tess', 'Uma', 'Vic', 'Wren', 'Xan', 'Yan', 'Zed',
+];
+
+/** Hands out names in order (its own counter, so ids of other entities don't shift names). */
+export function nextSurvivorName(state: SimState): string {
+  return NAMES[state.namesGiven++ % NAMES.length]!;
+}
 
 export interface Movement {
   from: Point;
@@ -74,11 +82,11 @@ export interface Survivor {
   nextTreatTick: number;
 }
 
-export function addSurvivor(state: SimState, x: number, y: number): Survivor {
+export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
   const n = state.nextId++;
   const survivor: Survivor = {
     id: `s${n}`,
-    name: NAMES[(n - 1) % NAMES.length]!,
+    name: name ?? nextSurvivorName(state),
     pos: { x, y },
     move: null,
     goal: null,

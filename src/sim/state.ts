@@ -12,13 +12,14 @@ import type { Job } from './jobs';
 import { seedRng } from './rng';
 import type { RoomDesignation } from './rooms';
 import type { Survivor } from './survivors';
+import type { Wanderer } from './wanderers';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -36,6 +37,8 @@ export interface SimState {
   walkabilityVersion: number;
   survivors: Survivor[];
   zombies: Zombie[];
+  /** People waiting at the edge to be taken in (see wanderers.ts). */
+  wanderers: Wanderer[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -47,6 +50,8 @@ export interface SimState {
   jobs: Job[];
   /** Next numeric id for entities. Ids are strings like "s1", "i7", "b12", "j20". */
   nextId: number;
+  /** How many survivor names have been handed out (survivors.ts). */
+  namesGiven: number;
   /** Every command that changed state, in order. seed + initial state + this = replay. */
   commandLog: LoggedCommand[];
   /** Notable happenings (deaths, ...), newest last, capped. See events.ts. */
@@ -68,6 +73,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     walkabilityVersion: 0,
     survivors: [],
     zombies: [],
+    wanderers: [],
     items: [],
     furniture: [],
     farm: [],
@@ -75,6 +81,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     roomDesignations: [],
     jobs: [],
     nextId: 1,
+    namesGiven: 0,
     commandLog: [],
     events: [],
   };

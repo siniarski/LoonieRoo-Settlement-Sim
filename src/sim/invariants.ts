@@ -154,6 +154,10 @@ export function checkInvariants(state: SimState): string[] {
     if ((tendedPlots.get(plot.id) ?? 0) > 1) problems.push(`farm plot ${plot.id} has ${tendedPlots.get(plot.id)} jobs`);
   }
 
+  for (const w of state.wanderers) {
+    if (!isWalkable(grid, w.x, w.y)) problems.push(`wanderer ${w.name} on unwalkable (${w.x}, ${w.y})`);
+  }
+
   const roomsClaimed = new Set<number>();
   for (const d of state.roomDesignations) {
     if (getTile(grid, d.x, d.y) !== 'floor') problems.push(`room designation ${d.id} anchored on non-floor`);

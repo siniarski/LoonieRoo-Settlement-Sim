@@ -19,6 +19,11 @@ function clockTicks(tick: number): number {
   return tick + START_HOUR * TICKS_PER_HOUR;
 }
 
+/** Ticks since midnight, 0 <= t < DAY_LENGTH. */
+export function tickOfDay(tick: number): number {
+  return clockTicks(tick) % DAY_LENGTH;
+}
+
 /** Day number, starting at 1. */
 export function dayOf(tick: number): number {
   return Math.floor(clockTicks(tick) / DAY_LENGTH) + 1;

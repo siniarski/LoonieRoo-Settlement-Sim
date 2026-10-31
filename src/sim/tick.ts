@@ -18,6 +18,7 @@ import {
 import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
+import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateZombies } from './zombies';
 
 export const TICKS_PER_SECOND = 10;
@@ -27,6 +28,7 @@ export function tick(state: SimState): void {
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
   updateFarm(state);
+  updateWanderers(state);
   for (const s of state.survivors) {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }
@@ -52,6 +54,7 @@ export function tick(state: SimState): void {
   // run at the start, for commands applied in between).
   reconcileRoomDesignations(state);
   reconcileNeeds(state);
+  reconcileWanderers(state);
   state.tick += 1;
 }
 

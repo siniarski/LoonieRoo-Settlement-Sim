@@ -13,7 +13,7 @@ export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'sur
   return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
 }
 
-const DIRS: readonly Point[] = [
+export const DIRS: readonly Point[] = [
   { x: 0, y: -1 },
   { x: 1, y: 0 },
   { x: 0, y: 1 },

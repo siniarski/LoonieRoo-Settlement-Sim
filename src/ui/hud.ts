@@ -1,4 +1,4 @@
-// Top bar (speed, Build, Priorities), status line, room checklist, build
+// Top bar (speed, Build, Priorities), status line, room checklist, wanderers, build
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
@@ -10,7 +10,8 @@ import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { GROW_TICKS, isRipe } from '../sim/farming';
 import { HEALTH_MAX, isCritical, isHurt } from '../sim/health';
-import { clockText, dayOf, isNight } from '../sim/time';
+import { TICKS_PER_HOUR, clockText, dayOf, isNight } from '../sim/time';
+import { patienceLeft, spareBeds } from '../sim/wanderers';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { designationOf, designationStatus, evaluateRoom, getRoomMap, roomAt } from '../sim/rooms';
 import type { SimState } from '../sim/state';
@@ -72,7 +73,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const roomPanel = el('pre', 'hud-room');
   const toast = el('div', 'hud-toast');
   const feed = el('div', 'hud-feed');
-  info.append(status, toast, roomPanel, feed);
+  const wanderers = createWandererPanel(command);
+  info.append(status, toast, roomPanel, wanderers.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -127,6 +129,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       if (room !== lastRoom) roomPanel.textContent = lastRoom = room;
 
       priorities.update(state);
+      wanderers.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -253,6 +256,40 @@ function roomText(state: SimState, hover: Point | null): string {
 }
 
 // --- Priority panel ---------------------------------------------------------
+
+/** People waiting at the edge, each with Take in / Turn away. Rebuilt only when the list or the times change. */
+function createWandererPanel(command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const spare = spareBeds(state);
+      const rows = state.wanderers.map((w) => ({ w, left: Math.ceil(patienceLeft(state, w) / (TICKS_PER_HOUR / 6)) * 10 }));
+      const key = `${spare}|${rows.map((r) => `${r.w.id}:${r.left}`).join(',')}`;
+      if (key === last) return;
+      last = key;
+      root.hidden = rows.length === 0;
+      root.replaceChildren();
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = `Wanderers waiting · ${spare > 0 ? `${spare} spare bed${spare === 1 ? '' : 's'}` : 'no spare beds'}`;
+      root.append(title);
+      for (const { w, left } of rows) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${w.name} at (${w.x}, ${w.y}) · leaves in ${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}m`;
+        const accept = el('button', 'hud-button');
+        accept.textContent = 'Take in';
+        accept.addEventListener('click', () => command({ type: 'acceptWanderer', wandererId: w.id }));
+        const dismiss = el('button', 'hud-button');
+        dismiss.textContent = 'Turn away';
+        dismiss.addEventListener('click', () => command({ type: 'dismissWanderer', wandererId: w.id }));
+        row.append(label, accept, dismiss);
+        root.append(row);
+      }
+    },
+  };
+}
 
 function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const root = el('div', 'hud-priorities');

@@ -11,6 +11,7 @@ import { replay } from './replay';
 import type { RoomPurpose } from './rooms';
 import { createState, type LoggedCommand, type SimState } from './state';
 import { addSurvivor } from './survivors';
+import { addWanderer } from './wanderers';
 import { addZombie } from './zombies';
 
 export interface Scenario {
@@ -43,6 +44,7 @@ export const ENTITY_CHARS = {
   bed: 'b',
   crate: 'c',
   zombie: 'z',
+  wanderer: 'v',
   farmPlot: '~',
   wallBlueprint: '+',
   doorBlueprint: 'd',
@@ -83,6 +85,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.farmPlot:
       addPlot(state, x, y);
+      return true;
+    case ENTITY_CHARS.wanderer:
+      addWanderer(state, x, y);
       return true;
     case ENTITY_CHARS.zombie:
       addZombie(state, x, y);
