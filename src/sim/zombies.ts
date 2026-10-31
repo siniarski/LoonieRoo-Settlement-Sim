@@ -20,7 +20,7 @@ import { isNight } from './time';
 export const ZOMBIE_HEALTH = 200;
 /** Slower than survivors (4), so guards can catch them and runners can escape. */
 export const ZOMBIE_TICKS_PER_TILE = 6;
-export const ZOMBIE_DAMAGE = 60;
+export const ZOMBIE_DAMAGE = 40;
 export const ZOMBIE_ATTACK_EVERY = 10;
 /** Ticks between spawns at night (2 in-game hours). */
 export const SPAWN_EVERY = 400;

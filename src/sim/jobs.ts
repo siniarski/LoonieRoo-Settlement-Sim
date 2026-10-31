@@ -268,7 +268,8 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   if (!z) return releaseSurvivor(state, s, 'zombie gone');
   if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y));
   job.progress += 1;
-  if (job.progress % GUARD_ATTACK_EVERY !== 0) return;
+  // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
+  if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
   if (damageZombie(state, z, GUARD_DAMAGE, s)) finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
 }
 

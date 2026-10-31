@@ -99,6 +99,16 @@ describe('zombies', () => {
     expect(state.jobs).toEqual([]);
   });
 
+  it('balance: one healthy guard beats a basic zombie and keeps at least 80% health', () => {
+    for (const gap of [3, 10, 20]) {
+      const state = night([`z${'.'.repeat(gap)}s`, '.'.repeat(gap + 2)], { guard: 3 });
+      const s = state.survivors[0]!;
+      runUntil(state, (st) => st.zombies.length === 0, 600);
+      expect(state.survivors, `gap ${gap}`).toEqual([s]);
+      expect(s.health, `gap ${gap}`).toBeGreaterThanOrEqual(800);
+    }
+  });
+
   it('a tired or hungry guard finishes the fight before bed or food', () => {
     const state = night(['z.............b.f..s'], { guard: 3 });
     const s = state.survivors[0]!;
