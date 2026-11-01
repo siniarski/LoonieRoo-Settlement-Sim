@@ -32,6 +32,7 @@ export interface GameFiles {
   exportSave(): void;
   importFile(): void;
   reportBug(): void;
+  newWorld(): void;
 }
 
 export interface Hud {
@@ -334,6 +335,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       root.append(
         row('Files:', button('Export save', files.exportSave), button('Import…', files.importFile), button('Report bug', files.reportBug)),
       );
+      root.append(row('A fresh start somewhere else:', button('New world', files.newWorld)));
     },
   };
 }

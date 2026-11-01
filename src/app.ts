@@ -10,6 +10,7 @@ import type { Point } from './sim/grid';
 import { loadFile, toBugReport, toSaveFile, type LoadResult } from './sim/savefile';
 import { cloneState, type SimState } from './sim/state';
 import { DAY_LENGTH, dayOf } from './sim/time';
+import { createWorld } from './sim/worldgen';
 import { AUTO_SLOT, downloadText, fileStamp, loadFromSlot, pickTextFile, saveToSlot } from './ui/saves';
 import { survivorAt } from './sim/survivors';
 import { step } from './sim/tick';
@@ -127,6 +128,10 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       void pickTextFile().then((text) => {
         if (text !== null) replaceState(loadFile(text), 'the file');
       });
+    },
+    newWorld: () => {
+      if (!window.confirm('Start a new world? Unsaved progress here is lost.')) return;
+      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9)), kind: 'save' }, 'a new world');
     },
     reportBug: () => {
       const note = window.prompt('What went wrong? (optional)') ?? '';

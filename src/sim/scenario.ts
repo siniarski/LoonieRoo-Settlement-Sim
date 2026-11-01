@@ -28,6 +28,7 @@ export const TILE_CHARS: Record<Tile, string> = {
   floor: '.',
   wall: '#',
   door: 'D',
+  water: '%',
 };
 
 /**

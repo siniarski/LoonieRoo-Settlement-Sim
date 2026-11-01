@@ -3,7 +3,7 @@
 import type { Blueprint, BuildTarget } from '../sim/designations';
 import { GROW_TICKS, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
-import type { Point, Tile } from '../sim/grid';
+import { GROUNDS, type Ground, type Point, type Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
 import { STRUCTURE_HEALTH } from '../sim/breach';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
@@ -28,7 +28,16 @@ const COLOURS = {
     floor: '#262b27',
     wall: '#8b919c',
     door: '#a8713a',
+    water: '#24465e',
   } satisfies Record<Tile, string>,
+  ground: {
+    grass: '#262b27',
+    dirt: '#2e2a24',
+    road: '#36383a',
+    forest: '#1f2a1f',
+    bridge: '#4a3a28',
+  } satisfies Record<Ground, string>,
+  waterRipple: 'rgba(160, 200, 230, 0.18)',
   wallTop: '#b2b8c2',
   doorFrame: '#5a3c1e',
   tools: {
@@ -161,7 +170,7 @@ export function draw(
   for (let y = range.y0; y <= range.y1; y++) {
     for (let x = range.x0; x <= range.x1; x++) {
       const tile = grid.tiles[y * grid.width + x];
-      if (tile !== undefined) drawTile(ctx, camera, viewport, x, y, tile, size);
+      if (tile !== undefined) drawTile(ctx, camera, viewport, x, y, tile, grid.ground[y * grid.width + x]!, size);
     }
   }
 
@@ -761,11 +770,16 @@ function drawTile(
   x: number,
   y: number,
   tile: Tile,
+  ground: number,
   size: number,
 ): void {
   const r = tileRect(camera, viewport, x, y);
-  ctx.fillStyle = COLOURS.tiles[tile === 'door' ? 'floor' : tile];
+  ctx.fillStyle = tile === 'floor' || tile === 'door' ? COLOURS.ground[GROUNDS[ground] ?? 'grass'] : COLOURS.tiles[tile];
   ctx.fillRect(r.x, r.y, r.w, r.h);
+  if (tile === 'water' && size >= 8) {
+    ctx.fillStyle = COLOURS.waterRipple;
+    ctx.fillRect(r.x + r.w * ((x * 7 + y * 3) % 5) * 0.15, r.y + r.h * 0.45, r.w * 0.3, Math.max(1, r.h * 0.08));
+  }
 
   if (tile === 'wall') {
     // A lighter top edge so wall runs read as solid blocks.

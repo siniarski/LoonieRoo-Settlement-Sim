@@ -13,7 +13,7 @@ import { getTile, inBounds, isWalkable, type Grid, type Point } from './grid';
 export type Mover = 'survivor' | 'zombie' | 'breacher';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
-  if (mover === 'breacher') return inBounds(grid, x, y);
+  if (mover === 'breacher') return inBounds(grid, x, y) && getTile(grid, x, y) !== 'water';
   return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
 }
 

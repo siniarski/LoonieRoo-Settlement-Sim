@@ -1,7 +1,15 @@
 // Tiles, walls, doors. The grid is a row-major array of tile names so it
 // serialises as plain JSON. All coordinates are integer tile coordinates.
 
-export type Tile = 'floor' | 'wall' | 'door';
+/** Water blocks everyone and is never part of a room; see worldgen.ts. */
+export type Tile = 'floor' | 'wall' | 'door' | 'water';
+
+/**
+ * What the ground looks like under a floor tile. Visual only: nothing in the
+ * sim reads it (yet), so roads and forest paths cost the same to walk.
+ */
+export const GROUNDS = ['grass', 'dirt', 'road', 'forest', 'bridge'] as const;
+export type Ground = (typeof GROUNDS)[number];
 
 export interface Point {
   x: number;
@@ -17,6 +25,10 @@ export interface Grid {
   dirt: number[];
   /** Damage taken by the wall or door on each tile (see breach.ts). 0 on floor. */
   damage: number[];
+  /** Index into GROUNDS per tile (visual). */
+  ground: number[];
+  /** 1 where some survivor has seen the tile (fog of war, see fog.ts). New grids start fully explored. */
+  explored: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -29,6 +41,8 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     tiles: new Array<Tile>(width * height).fill(fill),
     dirt: new Array<number>(width * height).fill(0),
     damage: new Array<number>(width * height).fill(0),
+    ground: new Array<number>(width * height).fill(0),
+    explored: new Array<number>(width * height).fill(1),
   };
 }
 

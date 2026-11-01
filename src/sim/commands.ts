@@ -185,6 +185,7 @@ const changed = (): CommandResult => ({ ok: true, changed: true });
 const unchanged = (): CommandResult => ({ ok: true, changed: false });
 
 function setStructure(state: SimState, x: number, y: number, tile: Tile): CommandResult {
+  if (getTile(state.grid, x, y) === 'water') return reject(`(${x}, ${y}) is water`);
   if (!setTile(state.grid, x, y, tile)) return unchanged();
   // Any wall/door/floor change can alter walkability or room boundaries.
   state.walkabilityVersion += 1;

@@ -6,8 +6,7 @@
 // were building survives the reload and only the code changes.
 
 import { createApp, type App } from './app';
-import sandbox from './scenarios/sandbox.json';
-import { loadScenario, type Scenario } from './sim/scenario';
+import { createWorld } from './sim/worldgen';
 import { SCHEMA_VERSION, type SimState } from './sim/state';
 import type { ViewState } from './ui/view';
 
@@ -24,7 +23,13 @@ const hot = import.meta.hot?.data as HotData | undefined;
 // State saved by code with a different SimState shape is discarded, not migrated.
 const kept = hot?.state?.schemaVersion === SCHEMA_VERSION ? hot.state : undefined;
 if (hot?.state && !kept) console.info('[hmr] sim state shape changed; reloading the scenario');
-const app: App = createApp(canvas, hud, kept ?? loadScenario(sandbox as Scenario), hot?.view);
+const app: App = createApp(canvas, hud, kept ?? createWorld(worldSeed()), hot?.view);
+
+/** ?seed=123 in the URL picks the world; otherwise a random one (the UI may use Math.random; the sim never does). */
+function worldSeed(): number {
+  const fromUrl = Number(new URLSearchParams(location.search).get('seed'));
+  return Number.isInteger(fromUrl) && fromUrl > 0 ? fromUrl : Math.floor(Math.random() * 1e9);
+}
 
 if (import.meta.hot) {
   import.meta.hot.accept();

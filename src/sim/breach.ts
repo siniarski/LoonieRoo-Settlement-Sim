@@ -11,7 +11,7 @@ import { getTile, setTile, tileIndex, type Tile } from './grid';
 import type { SimState } from './state';
 
 /** Damage a structure takes before it breaks. Zombies hit for 40, every 10 ticks. */
-export const STRUCTURE_HEALTH: Record<Exclude<Tile, 'floor'>, number> = { door: 400, wall: 1200 };
+export const STRUCTURE_HEALTH: Record<'wall' | 'door', number> = { door: 400, wall: 1200 };
 /** Damage a repairer removes per tick of work: half a zombie's rate, so repairs slow a breach but can't stop it alone. */
 export const REPAIR_PER_TICK = 2;
 

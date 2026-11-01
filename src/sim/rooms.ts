@@ -38,8 +38,14 @@ export interface Room {
   maxY: number;
 }
 
-/** Label for floor tiles connected to the map edge. */
+/** Label for floor tiles that are outside: see computeRooms. */
 export const OUTDOORS = -1;
+/**
+ * A region of floor bigger than this is outdoors, however it is bounded. With
+ * "touches water", this keeps "outdoors" from depending on the map edge, which a
+ * big world can't afford to flood-fill out to.
+ */
+export const MAX_ROOM_TILES = 600;
 /** Label for walls and doors. */
 export const NOT_FLOOR = -2;
 
@@ -80,6 +86,7 @@ export function computeRooms(grid: SimState['grid']): RoomMap {
     const region: number[] = [start];
     const doorSet = new Set<number>();
     labels[start] = -4;
+    // Outdoors: touches the map edge or water, or is too big to be a room.
     let touchesEdge = false;
     for (let head = 0; head < region.length; head++) {
       const i = region[head]!;
@@ -92,12 +99,13 @@ export function computeRooms(grid: SimState['grid']): RoomMap {
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         const n = ny * width + nx;
         if (tiles[n] === 'door') doorSet.add(n);
+        if (tiles[n] === 'water') touchesEdge = true;
         if (labels[n] !== UNSEEN) continue;
         labels[n] = -4;
         region.push(n);
       }
     }
-    if (touchesEdge) {
+    if (touchesEdge || region.length > MAX_ROOM_TILES) {
       for (const i of region) labels[i] = OUTDOORS;
       continue;
     }
