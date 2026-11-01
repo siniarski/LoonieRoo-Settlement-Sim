@@ -75,7 +75,7 @@ export function createMinimap(view: ViewState) {
       const seen = (x: number, y: number) => grid.explored[y * grid.width + x] === 1;
       for (const p of state.pointsOfInterest) dot(p.x, p.y, '#ffd166', 3);
       for (const z of state.zombies) if (seen(z.pos.x, z.pos.y)) dot(z.pos.x, z.pos.y, '#ff5a4a');
-      for (const herd of state.herds) if (seen(herd.x, herd.y)) dot(herd.x, herd.y, '#ff5a4a', 4);
+      for (const herd of state.herds) if (herd.heard || seen(herd.x, herd.y)) dot(herd.x, herd.y, '#ff5a4a', 4);
       for (const s of state.survivors) dot(s.pos.x, s.pos.y, '#ffffff');
       // What the main view shows (the canvas fills the window).
       const tiles = TILE_PX * view.camera.zoom;

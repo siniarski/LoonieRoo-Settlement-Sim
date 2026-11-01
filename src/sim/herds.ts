@@ -22,6 +22,8 @@ import { MAX_ZOMBIES, addZombie, zombieHealthForNight } from './zombies';
 export const WAKE_RADIUS = 10;
 export const HERD_TICKS_PER_TILE = 8;
 export const MATERIALIZE_RADIUS = 24;
+/** Survivors hear a herd coming from this far (Manhattan): a warning, and its marker shows through the fog. */
+export const WARN_RADIUS = 48;
 /** Each day from day 2, at this hour, a herd may set out (HERD_CHANCE), and some head past the colony. */
 export const HERD_HOUR = 8;
 export const HERD_CHANCE = 0.5;
@@ -41,6 +43,8 @@ export interface Herd {
   to: Point;
   size: number;
   nextStepTick: number;
+  /** Heard coming (within WARN_RADIUS of someone): warned once, and shown through the fog. */
+  heard: boolean;
 }
 
 export function herdSize(day: number): number {
@@ -50,6 +54,7 @@ export function herdSize(day: number): number {
 export function updateHerds(state: SimState): void {
   if (dayOf(state.tick) >= 2 && tickOfDay(state.tick) === HERD_HOUR * TICKS_PER_HOUR && random(state) < HERD_CHANCE) startHerd(state);
   for (const h of [...state.herds]) {
+    if (!h.heard && state.survivors.some((s) => manhattan(s.pos, h) <= WARN_RADIUS)) warn(state, h);
     if (state.survivors.some((s) => manhattan(s.pos, h) <= MATERIALIZE_RADIUS)) {
       materialize(state, h);
       continue;
@@ -85,8 +90,24 @@ function startHerd(state: SimState): void {
     to = { x: width - 1 - from.x, y: height - 1 - from.y };
   }
   const size = herdSize(dayOf(state.tick));
-  state.herds.push({ id: `h${state.nextId++}`, x: from.x, y: from.y, to, size, nextStepTick: state.tick });
+  state.herds.push({ id: `h${state.nextId++}`, x: from.x, y: from.y, to, size, nextStepTick: state.tick, heard: false });
   logEvent(state, `A herd of about ${size} is on the move somewhere out there`);
+}
+
+/** "A herd of 6 is coming from the north-east (x, y)", relative to the colony's middle. */
+function warn(state: SimState, h: Herd): void {
+  h.heard = true;
+  const cx = state.survivors.reduce((a, s) => a + s.pos.x, 0) / state.survivors.length;
+  const cy = state.survivors.reduce((a, s) => a + s.pos.y, 0) / state.survivors.length;
+  logEvent(state, `A herd of ${h.size} is coming from the ${direction(h.x - cx, h.y - cy)} (${h.x}, ${h.y})`);
+}
+
+/** Compass direction of an offset (y grows southwards). */
+export function direction(dx: number, dy: number): string {
+  if (dx === 0 && dy === 0) return 'nearby';
+  const ns = Math.abs(dy) * 2 < Math.abs(dx) ? '' : dy < 0 ? 'north' : 'south';
+  const ew = Math.abs(dx) * 2 < Math.abs(dy) ? '' : dx < 0 ? 'west' : 'east';
+  return ns && ew ? `${ns}-${ew}` : ns || ew;
 }
 
 const clamp = (v: number, size: number) => Math.max(0, Math.min(size - 1, v));

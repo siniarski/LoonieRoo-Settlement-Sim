@@ -17,6 +17,7 @@ import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
 import type { Wanderer } from '../sim/wanderers';
+import type { Herd } from '../sim/herds';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
 import { survivorWorldPos } from './interp';
 
@@ -239,6 +240,10 @@ export function draw(
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
   for (const a of state.exploreAreas) drawAreaBox(ctx, camera, viewport, { from: { x: a.x0, y: a.y0 }, to: { x: a.x1, y: a.y1 } }, COLOURS.tools.explore);
+  for (const h of state.herds) {
+    const onScreen = h.x >= range.x0 && h.x <= range.x1 && h.y >= range.y0 && h.y <= range.y1;
+    if (onScreen && (h.heard || shown(h.x, h.y))) drawHerd(ctx, camera, viewport, h, size);
+  }
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
@@ -597,6 +602,24 @@ function xy(p: Point): [number, number] {
 }
 
 /** A sickly green blob with red eyes; health bar once hurt; debug line to its target. */
+/** A herd on the move: a red haze with its size, drawn even in the fog once heard. */
+function drawHerd(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, h: Herd, size: number): void {
+  const p = worldToScreen(camera, viewport, h.x + 0.5, h.y + 0.5);
+  const r = Math.max(6, size * 1.2);
+  ctx.fillStyle = 'rgba(255, 90, 74, 0.25)';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 90, 74, 0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#ffd0c8';
+  ctx.font = `bold ${Math.round(Math.max(10, size * 0.5))}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(h.size), p.x, p.y);
+}
+
 /** A greyed survivor with a "?" above: waiting to be taken in. */
 function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number): void {
   const p = worldToScreen(camera, viewport, w.x + 0.5, w.y + 0.5);

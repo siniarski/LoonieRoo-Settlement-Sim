@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
 import { isExplored } from '../src/sim/fog';
-import { HERD_TICKS_PER_TILE, MATERIALIZE_RADIUS, WAKE_RADIUS } from '../src/sim/herds';
+import { HERD_TICKS_PER_TILE, MATERIALIZE_RADIUS, WAKE_RADIUS, WARN_RADIUS, direction } from '../src/sim/herds';
 import { checkInvariants } from '../src/sim/invariants';
 import { NO_JOBS } from '../src/sim/jobTypes';
 import { loadScenario } from '../src/sim/scenario';
@@ -63,7 +63,7 @@ describe('herds', () => {
   it('cross the map as a marker, a tile every few ticks, and leave at the far side', () => {
     const state = field(40, 60);
     state.survivors[0]!.pos = { x: 0, y: 0 };
-    state.herds.push({ id: 'h1', x: 39, y: 59, to: { x: 39, y: 30 }, size: 4, nextStepTick: state.tick });
+    state.herds.push({ id: 'h1', x: 39, y: 59, to: { x: 39, y: 30 }, size: 4, nextStepTick: state.tick, heard: false });
     for (let i = 0; i < 10 * HERD_TICKS_PER_TILE; i++) tick(state);
     expect(state.herds[0]!.y).toBe(59 - 10);
     runUntil(state, () => state.herds.length === 0, 40 * HERD_TICKS_PER_TILE);
@@ -73,7 +73,7 @@ describe('herds', () => {
   it(`break up into real zombies within ${MATERIALIZE_RADIUS} of a survivor, and walk on where the herd was going`, () => {
     const state = field(120, 9);
     state.survivors[0]!.pos = { x: 0, y: 0 };
-    state.herds.push({ id: 'h1', x: 60, y: 8, to: { x: 119, y: 8 }, size: 4, nextStepTick: state.tick });
+    state.herds.push({ id: 'h1', x: 60, y: 8, to: { x: 119, y: 8 }, size: 4, nextStepTick: state.tick, heard: false });
     state.survivors[0]!.pos = { x: 60 - MATERIALIZE_RADIUS, y: 8 };
     tick(state);
     expect(state.herds).toEqual([]);
@@ -97,6 +97,24 @@ describe('herds', () => {
     };
     expect(herd()).not.toBe('[]');
     expect(herd()).toBe(herd());
+  });
+});
+
+describe('hearing a herd coming', () => {
+  it(`warns once, with a direction, when it comes within ${WARN_RADIUS}`, () => {
+    const state = field(120, 9);
+    state.survivors[0]!.pos = { x: 10, y: 4 };
+    state.herds.push({ id: 'h1', x: 119, y: 4, to: { x: 0, y: 4 }, size: 5, nextStepTick: state.tick, heard: false });
+    runUntil(state, () => state.herds[0]?.heard === true, 2000);
+    expect(state.herds[0]!.x).toBe(10 + WARN_RADIUS);
+    expect(state.events.at(-1)!.message).toBe(`A herd of 5 is coming from the east (${10 + WARN_RADIUS}, 4)`);
+    const warnings = () => state.events.filter((e) => e.message.startsWith('A herd of 5 is coming')).length;
+    runUntil(state, () => state.herds.length === 0, 2000);
+    expect(warnings()).toBe(1);
+  });
+
+  it('names directions the way a compass does', () => {
+    expect([direction(10, 0), direction(0, -10), direction(-10, 10), direction(3, -10), direction(0, 0)]).toEqual(['east', 'north', 'south-west', 'north', 'nearby']);
   });
 });
 
