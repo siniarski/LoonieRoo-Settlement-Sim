@@ -46,6 +46,7 @@ export const ENTITY_CHARS = {
   table: 't',
   workbench: 'k',
   crate: 'c',
+  tree: 'Y',
   zombie: 'z',
   wanderer: 'v',
   farmPlot: '~',
@@ -102,6 +103,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.crate:
       addFurniture(state, 'crate', x, y);
+      return true;
+    case ENTITY_CHARS.tree:
+      addFurniture(state, 'tree', x, y);
       return true;
     case ENTITY_CHARS.bedBlueprint:
       addBlueprint(state, x, y, 'bed');

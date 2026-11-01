@@ -90,6 +90,8 @@ const COLOURS = {
   sprout: '#6fbf4a',
   ripe: '#e8c45a',
   crate: '#7a5a35',
+  leaves: '#3f7d3a',
+  trunk: '#5a3f26',
   crateSlat: '#5a4026',
   crateEmpty: '#4a4038',
   crateMarked: '#ffd166',
@@ -182,6 +184,7 @@ export function draw(
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'workbench') drawWorkbench(ctx, camera, viewport, f, size);
+    else if (f.kind === 'tree') drawTree(ctx, camera, viewport, f, size);
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
@@ -372,6 +375,27 @@ function drawWorkbench(ctx: CanvasRenderingContext2D, camera: Camera, viewport: 
   const pip = Math.max(2, Math.round(size * 0.12));
   ctx.fillStyle = COLOURS.wood;
   for (let i = 0; i < f.stored; i++) ctx.fillRect(r.x + 2 + i * (pip + 1.5), r.y + r.h - pip - 2, pip, pip);
+}
+
+/** A round canopy on a trunk: thinner as it's chopped, a stump when bare, dashed when marked. */
+function drawTree(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {
+  const p = worldToScreen(camera, viewport, f.x + 0.5, f.y + 0.5);
+  ctx.fillStyle = COLOURS.trunk;
+  ctx.fillRect(p.x - size * 0.07, p.y - size * 0.05, size * 0.14, size * 0.38);
+  if (f.loot > 0) {
+    ctx.fillStyle = COLOURS.leaves;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y - size * 0.08, size * (0.18 + 0.08 * f.loot), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (f.scavenge) {
+    ctx.strokeStyle = COLOURS.crateMarked;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    const r = tileRect(camera, viewport, f.x, f.y);
+    ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
+    ctx.setLineDash([]);
+  }
 }
 
 /** A square wooden table top. */

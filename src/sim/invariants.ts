@@ -134,7 +134,8 @@ export function checkInvariants(state: SimState): string[] {
   for (const j of state.jobs) if (j.furnitureId) scavengeJobs.set(j.furnitureId, (scavengeJobs.get(j.furnitureId) ?? 0) + 1);
   for (const f of state.furniture) {
     if (f.loot < 0 || !Number.isInteger(f.loot)) problems.push(`${f.id} has loot ${f.loot}`);
-    if (f.scavenge && (f.kind !== 'crate' || f.loot === 0)) problems.push(`${f.id} marked for scavenging with nothing to find`);
+    // Crates are unmarked when searched out; trees stay marked while bare (they grow back).
+    if (f.scavenge && !(f.kind === 'tree' || (f.kind === 'crate' && f.loot > 0))) problems.push(`${f.id} marked for scavenging with nothing to find`);
     if ((scavengeJobs.get(f.id) ?? 0) > 1) problems.push(`${f.id} has ${scavengeJobs.get(f.id)} scavenge jobs`);
     if (f.occupant && f.kind !== 'bed') problems.push(`${f.kind} ${f.id} has an occupant`);
   }

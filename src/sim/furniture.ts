@@ -4,14 +4,18 @@
 //   crate  found in ruins; holds loot that survivors scavenge (see jobs.ts)
 //   table  built by survivors; makes a mess hall (see mess.ts)
 //   workbench  built by survivors; crafting happens here (see crafting.ts)
+//   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
 import { spawnItem } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'tree';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;
+/** Wood on a grown tree. A chopped tree grows one back every TREE_REGROW_TICKS (two days), up to this. */
+export const TREE_WOOD = 3;
+export const TREE_REGROW_TICKS = 2 * 4800; // two in-game days (one a day gave a big surplus: see NOTES.md)
 
 export interface Furniture {
   id: string;
@@ -20,9 +24,9 @@ export interface Furniture {
   y: number;
   /** Beds: the survivor who has claimed it (walking to it or asleep in it). */
   occupant: string | null;
-  /** Crates: finds left. 0 for beds and searched-out crates. */
+  /** Crates: finds left. Trees: wood left. 0 for everything else. */
   loot: number;
-  /** Crates: marked by the player for scavenging. */
+  /** Crates and trees: marked by the player for scavenging (or chopping). Trees stay marked as they regrow. */
   scavenge: boolean;
   /** Workbenches: wood brought in for the next craft. Given back if the bench is removed. */
   stored: number;
@@ -43,12 +47,18 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     x,
     y,
     occupant: null,
-    loot: kind === 'crate' ? CRATE_LOOT : 0,
+    loot: kind === 'crate' ? CRATE_LOOT : kind === 'tree' ? TREE_WOOD : 0,
     scavenge: false,
     stored: 0,
   };
   state.furniture.push(f);
   return f;
+}
+
+/** Trees grow back a piece of wood each TREE_REGROW_TICKS (up to TREE_WOOD). */
+export function regrowTrees(state: SimState): void {
+  if (state.tick % TREE_REGROW_TICKS !== 0) return;
+  for (const f of state.furniture) if (f.kind === 'tree' && f.loot < TREE_WOOD) f.loot += 1;
 }
 
 export function removeFurniture(state: SimState, f: Furniture): void {

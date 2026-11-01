@@ -131,7 +131,7 @@ function execute(state: SimState, command: Command): CommandResult {
       return changed();
     case 'designateScavenge': {
       const crate = furnitureAt(state, x, y);
-      if (crate?.kind !== 'crate' || crate.loot === 0 || crate.scavenge) return unchanged();
+      if ((crate?.kind !== 'crate' && crate?.kind !== 'tree') || (crate.kind === 'crate' && crate.loot === 0) || crate.scavenge) return unchanged();
       crate.scavenge = true;
       return changed();
     }
@@ -210,7 +210,7 @@ function cancelDesignation(state: SimState, x: number, y: number): CommandResult
     return changed();
   }
   const crate = furnitureAt(state, x, y);
-  if (crate?.kind === 'crate') {
+  if (crate?.kind === 'crate' || crate?.kind === 'tree') {
     if (!crate.scavenge) return unchanged();
     crate.scavenge = false;
     return changed();

@@ -196,6 +196,7 @@ function furnitureText(state: SimState, p: Point): string {
   if (!f) return '';
   if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
   if (f.kind === 'table') return ' · table';
+  if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
   if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
@@ -204,11 +205,11 @@ function furnitureText(state: SimState, p: Point): string {
 
 /** Tools whose action isn't obvious from "click or drag to place". */
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
-  scavenge: 'Drag a box over a ruin to mark its crates',
+  scavenge: 'Drag a box over a ruin or trees to mark crates and trees',
   farm: 'Drag a box over open ground to lay out plots',
   furnish: 'Click a room: the planner adds what it needs',
   remove: 'Drag over walls, doors, or furniture to take down',
-  cancel: 'Drag to cancel plans, unmark crates, or clear room purposes',
+  cancel: 'Drag to cancel plans, unmark crates and trees, or clear room purposes',
 };
 
 function createBuildBar(view: ViewState) {

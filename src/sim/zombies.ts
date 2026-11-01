@@ -1,7 +1,7 @@
 // Zombies: crude night pressure (milestone 7).
 //
 // Each night brings one more zombie than the last (2 on the first night),
-// spread evenly through the night, each on an outdoor map-edge tile (sim
+// spread evenly through the night (in groups from night 4), each on an outdoor map-edge tile (sim
 // RNG). Each shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
 // ticks. Zombies only walk on floor: walls and doors stop them. With nobody
@@ -84,18 +84,30 @@ export function zombiesForNight(night: number): number {
   return FIRST_NIGHT_ZOMBIES + night - 1;
 }
 
+/** From night 4 zombies come in groups: pairs on nights 4-6, threes on 7-9, and so on. */
+export function groupSize(night: number): number {
+  return Math.ceil(night / 3);
+}
+
 /**
- * Is this tick one of tonight's spawn times? Spawns are spread evenly over
- * the night, half an interval in: night 1 (2 zombies) spawns at 23:00 and
- * 03:00.
+ * How many zombies arrive at this tick (0 on most ticks). Groups are spread
+ * evenly over the night, half an interval in: night 1 (2 zombies, singly)
+ * spawns at 23:00 and 03:00; night 4 (5 zombies) as 2, 2, then 1.
  */
-export function isSpawnTick(tick: number): boolean {
+export function spawnsAt(tick: number): number {
   const night = nightNumber(tick);
-  if (night === null) return false;
+  if (night === null) return 0;
   const count = zombiesForNight(night);
-  const interval = Math.floor(NIGHT_TICKS / count);
+  const size = groupSize(night);
+  const groups = Math.ceil(count / size);
+  const interval = Math.floor(NIGHT_TICKS / groups);
   const t = ticksIntoNight(tick) - Math.floor(interval / 2);
-  return t >= 0 && t % interval === 0 && t / interval < count;
+  if (t < 0 || t % interval !== 0 || t / interval >= groups) return 0;
+  return Math.min(size, count - (t / interval) * size);
+}
+
+export function isSpawnTick(tick: number): boolean {
+  return spawnsAt(tick) > 0;
 }
 
 /** Spawning, the dawn retreat, and every zombie's move or attack. Runs first each tick. */
@@ -110,11 +122,13 @@ export function updateZombies(state: SimState): void {
   }
   const night = nightNumber(state.tick)!;
   if (ticksIntoNight(state.tick) === 0) logEvent(state, `Night ${night} falls: ${zombiesForNight(night)} zombies expected`);
-  if (isSpawnTick(state.tick) && state.zombies.length < MAX_ZOMBIES) spawnAtEdge(state);
+  const arriving = Math.min(spawnsAt(state.tick), MAX_ZOMBIES - state.zombies.length);
+  if (arriving > 0) spawnAtEdge(state, arriving);
   for (const z of state.zombies) updateZombie(state, z);
 }
 
-function spawnAtEdge(state: SimState): void {
+/** A group of `n` zombies at one outdoor edge spot (the rest on the nearest free outdoor tiles). */
+function spawnAtEdge(state: SimState, n: number): void {
   const { width, height } = state.grid;
   const edge: Point[] = [];
   for (let x = 0; x < width; x++) edge.push({ x, y: 0 }, { x, y: height - 1 });
@@ -128,7 +142,13 @@ function spawnAtEdge(state: SimState): void {
   if (candidates.length === 0) return;
   const p = pick(state, candidates);
   addZombie(state, p.x, p.y);
-  logEvent(state, `A zombie appeared at (${p.x}, ${p.y})`);
+  for (let i = 1; i < n; i++) {
+    const free = (x: number, y: number) =>
+      getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.zombies.some((z) => z.pos.x === x && z.pos.y === y);
+    const q = nearestTile(state.grid, p, free) ?? p;
+    addZombie(state, q.x, q.y);
+  }
+  logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }
 
 function updateZombie(state: SimState, z: Zombie): void {

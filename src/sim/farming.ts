@@ -5,6 +5,7 @@
 // Sowing and harvesting are both the `farm` job type (jobs.ts). Harvested
 // food lands on the plot and is hauled to storage like any other item.
 
+import { regrowTrees } from './furniture';
 import { getTile, type Point } from './grid';
 import type { SimState } from './state';
 
@@ -58,6 +59,7 @@ export function clearPlot(state: SimState, p: Point): void {
 
 /** Crops grow every tick; plots whose tile stopped being floor (wall or door built) are lost. */
 export function updateFarm(state: SimState): void {
+  regrowTrees(state);
   for (const plot of [...state.farm]) {
     if (getTile(state.grid, plot.x, plot.y) !== 'floor') {
       removePlot(state, plot);

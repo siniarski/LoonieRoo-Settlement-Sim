@@ -132,7 +132,7 @@ export function reconcileJobs(state: SimState): void {
   // Marked crates with loot left get one scavenge job each.
   const searching = new Set(state.jobs.filter((j) => j.type === 'scavenge').map((j) => j.furnitureId));
   for (const f of state.furniture) {
-    if (f.kind === 'crate' && f.scavenge && f.loot > 0 && !searching.has(f.id)) {
+    if ((f.kind === 'crate' || f.kind === 'tree') && f.scavenge && f.loot > 0 && !searching.has(f.id)) {
       addJob(state, 'scavenge', f.x, f.y, null, null, f.id);
     }
   }
@@ -193,7 +193,7 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
       if (!crate) return 'crate gone';
       if (!crate.scavenge) return 'no longer marked for scavenging';
-      return crate.loot > 0 ? null : 'crate is empty';
+      return crate.loot > 0 ? null : crate.kind === 'tree' ? 'tree is bare' : 'crate is empty';
     }
     case 'build':
     case 'haul': {
@@ -362,12 +362,12 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   if (!worksThisTick(state.tick, isHurt(s.health) || isMiserable(state, s))) return;
   job.progress += 1;
   if (job.progress < SCAVENGE_WORK) return;
-  const roll = random(state);
-  const kind = scavengeFind(roll);
+  // Trees only ever give wood (no roll); crates roll their find.
+  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
   spawnItem(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
-  if (crate.loot === 0) crate.scavenge = false;
-  finishJob(state, s, job, `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
+  if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false; // trees stay marked: they grow back
+  finishJob(state, s, job, crate.kind === 'tree' ? `chopped wood from (${crate.x}, ${crate.y}), ${crate.loot} left` : `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
 }
 
 /** Maps a [0, 1) roll to a find: food, wood, bandage, or weapon. */
