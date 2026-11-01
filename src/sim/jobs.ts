@@ -14,7 +14,7 @@ import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
 import { BANDAGE_HEAL, HEALTH_MAX, TREAT_TICKS, isHurt, worksThisTick } from './health';
 import { isPatient } from './medicine';
-import { getExploreArea, isExplored, scoutTarget } from './fog';
+import { getExploreArea, isExplored, scoutTarget, scoutingOver } from './fog';
 import { isMiserable } from './mood';
 import { getTile, isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { REPAIR_PER_TICK, repairStructure, structureDamage } from './breach';
@@ -27,9 +27,9 @@ import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileR
 import { blowDamage, wearWeapon } from './weapons';
 import { CRAFT_WORK, RECIPES, wantedCraft } from './crafting';
 import { startLeisure } from './leisure';
-import { manhattan, samePoint } from './space';
+import { manhattan, nearestTile, samePoint } from './space';
 import type { SimState } from './state';
-import { getSurvivor, walk, type Survivor } from './survivors';
+import { getSurvivor, setGoal, walk, type Survivor } from './survivors';
 
 /**
  * Haul jobs come in two kinds:
@@ -464,9 +464,27 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
 }
 
 /** Walk to the nearest unexplored tile in the area (seeing round you as you go), and on to the next, until it's all seen. */
+/** Runs every tick before movement: a scout still out (even mid-walk) at SCOUT_HOME_HOUR turns for home. */
+export function interruptScouting(state: SimState, s: Survivor): void {
+  if (s.jobId && scoutingOver(state.tick) && getJob(state, s.jobId)?.type === 'scout') headHome(state, s);
+}
+
+/** Evening: drop the scouting and walk back to your own bed, or to the others. */
+function headHome(state: SimState, s: Survivor): void {
+  releaseSurvivor(state, s, 'heading home before dark');
+  s.note = 'heading home before dark';
+  const bed = state.furniture.find((f) => f.owner === s.id);
+  const others = state.survivors.filter((o) => o !== s);
+  const home = bed ?? (others.length > 0 ? { x: Math.round(others.reduce((a, o) => a + o.pos.x, 0) / others.length), y: Math.round(others.reduce((a, o) => a + o.pos.y, 0) / others.length) } : null);
+  if (!home) return;
+  const spot = nearestTile(state.grid, home, (x, y) => isWalkable(state.grid, x, y) && canReach(state.grid, state.walkabilityVersion, s.pos, [{ x, y }]));
+  if (spot && !samePoint(spot, s.pos)) setGoal(s, spot);
+}
+
 function workScout(state: SimState, s: Survivor, job: Job): void {
   const area = job.areaId ? getExploreArea(state, job.areaId) : undefined;
   if (!area) return releaseSurvivor(state, s, 'area explored');
+  if (scoutingOver(state.tick)) return headHome(state, s);
   const target = isExplored(state, job.x, job.y) ? scoutTarget(state, area, s.pos) : { x: job.x, y: job.y };
   if (!target) return finishJob(state, s, job, `scouted (${area.x0}, ${area.y0})-(${area.x1}, ${area.y1}) as far as it goes`);
   job.x = target.x;
@@ -692,6 +710,7 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       return pathPlan(state, s.pos, goals, null);
     }
     case 'scout': {
+      if (scoutingOver(state.tick)) return null;
       const area = job.areaId ? getExploreArea(state, job.areaId) : undefined;
       const target = area ? scoutTarget(state, area, s.pos) : null;
       if (!target) return null;

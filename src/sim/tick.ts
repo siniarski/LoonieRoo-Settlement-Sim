@@ -2,7 +2,7 @@
 // frame, never what a tick means.
 
 import { updateFarm } from './farming';
-import { reconcileJobs, updateWork } from './jobs';
+import { interruptScouting, reconcileJobs, updateWork } from './jobs';
 import {
   interruptForNeeds,
   killSurvivor,
@@ -22,7 +22,7 @@ import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
 import { updateBreakdown, updateLeisure } from './leisure';
-import { reconcileExploreAreas, updateFog } from './fog';
+import { reconcileExploreAreas, reconcilePointsOfInterest, updateFog } from './fog';
 import { updateHerds } from './herds';
 import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
@@ -37,6 +37,7 @@ export function tick(state: SimState): void {
   updateFarm(state);
   updateWanderers(state);
   reconcileExploreAreas(state);
+  reconcilePointsOfInterest(state);
   for (const s of state.survivors) {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }
@@ -47,6 +48,7 @@ export function tick(state: SimState): void {
   for (const s of state.survivors) {
     updateBreakdown(state, s);
     interruptForNeeds(state, s);
+    interruptScouting(state, s);
     updateMovement(state, s);
     // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
     // (not mid-breakdown). A need taking over ends any rec-room visit.

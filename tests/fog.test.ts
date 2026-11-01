@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
-import { SIGHT_RADIUS, isExplored } from '../src/sim/fog';
+import { SCOUT_HOME_HOUR, SIGHT_RADIUS, isExplored, scoutingOver } from '../src/sim/fog';
+import { DAY_LENGTH, TICKS_PER_HOUR } from '../src/sim/time';
 import { checkInvariants } from '../src/sim/invariants';
 import { NO_JOBS } from '../src/sim/jobTypes';
 import { loadScenario } from '../src/sim/scenario';
@@ -71,5 +72,36 @@ describe('exploring', () => {
     for (let i = 0; i < 100; i++) tick(state);
     expect(state.jobs).toMatchObject([{ type: 'scout', reservedBy: null }]);
     expect(checkInvariants(state)).toEqual([]);
+  });
+});
+
+describe('scouting through the day', () => {
+  it(`scouts stop at ${SCOUT_HOME_HOUR}:00 and head home, and go out again in the morning`, () => {
+    const state = dark(STRIP, { scout: 3 });
+    state.tick = (SCOUT_HOME_HOUR - 6) * TICKS_PER_HOUR - 30; // half an hour before
+    applyCommand(state, { type: 'designateExplore', x0: 40, y0: 0, x1: 59, y1: 2 });
+    const s = state.survivors[0]!;
+    runUntil(state, () => s.jobId !== null, 20);
+    runUntil(state, () => s.note === 'heading home before dark', 100);
+    expect(s.jobId).toBeNull();
+    for (let i = 0; i < 100; i++) tick(state);
+    expect(s.jobId).toBeNull(); // nobody takes the scout job in the evening
+    state.tick = DAY_LENGTH; // skip the night (and its zombies): 06:00 next day
+    runUntil(state, () => s.jobId !== null, 50); // out scouting again
+    expect(scoutingOver(state.tick)).toBe(false);
+  });
+
+  it('a newly seen crate marks its ruin, once, and the mark goes when the crates are empty', () => {
+    const state = dark(['s' + '.'.repeat(19) + 'c.c' + '.'.repeat(7)], { scavenge: 3 });
+    expect(state.pointsOfInterest).toEqual([]);
+    applyCommand(state, { type: 'moveSurvivor', survivorId: state.survivors[0]!.id, x: 16, y: 0 });
+    runUntil(state, () => state.pointsOfInterest.length > 0);
+    expect(state.pointsOfInterest).toMatchObject([{ x: 20, y: 0, label: 'ruin with crates' }]);
+    expect(state.events.at(-1)!.message).toBe('Found a ruin with crates at (20, 0)');
+    runUntil(state, () => isExplored(state, 22, 0));
+    expect(state.pointsOfInterest).toHaveLength(1);
+    for (const f of state.furniture) f.loot = 0;
+    for (let i = 0; i < 60; i++) tick(state);
+    expect(state.pointsOfInterest).toEqual([]);
   });
 });
