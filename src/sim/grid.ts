@@ -36,6 +36,8 @@ export interface Grid {
    */
   dirtList: number[];
   damageList: number[];
+  /** Locked doors (tile indices): survivors have keys; raiders must break them (visitors.ts). */
+  locked: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -52,6 +54,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     explored: new Array<number>(width * height).fill(1),
     dirtList: [],
     damageList: [],
+    locked: [],
   };
 }
 
@@ -82,6 +85,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
     drop(grid.dirtList, i);
   }
   setDamage(grid, i, 0); // a new (or removed) structure starts undamaged
+  drop(grid.locked, i); // and unlocked
   return true;
 }
 
@@ -117,6 +121,10 @@ function drop(list: number[], i: number): void {
 /** Doors are always walkable (milestone 1 decision, see NOTES.md). */
 export function isWalkableTile(tile: Tile): boolean {
   return tile === 'floor' || tile === 'door' || tile === 'barricade';
+}
+
+export function isLocked(grid: Grid, x: number, y: number): boolean {
+  return inBounds(grid, x, y) && grid.locked.includes(tileIndex(grid, x, y));
 }
 
 export function isWalkable(grid: Grid, x: number, y: number): boolean {

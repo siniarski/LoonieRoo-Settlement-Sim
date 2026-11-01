@@ -4,16 +4,18 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { getTile, inBounds, isWalkable, type Grid, type Point } from './grid';
+import { getTile, inBounds, isLocked, isWalkable, type Grid, type Point } from './grid';
 
 /**
  * Who is moving: survivors open doors; zombies can't, so doors are walls to them.
  * 'breacher' is a zombie planning to batter its way through: every tile is passable.
  */
-export type Mover = 'survivor' | 'zombie' | 'breacher';
+export type Mover = 'survivor' | 'zombie' | 'breacher' | 'raider';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
   if (mover === 'breacher') return inBounds(grid, x, y) && getTile(grid, x, y) !== 'water';
+  // Raiders open doors, unless they're locked.
+  if (mover === 'raider') return getTile(grid, x, y) === 'floor' || (getTile(grid, x, y) === 'door' && !isLocked(grid, x, y));
   return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
 }
 

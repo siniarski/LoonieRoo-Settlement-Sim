@@ -2,6 +2,7 @@
 // Returns human-readable problems; empty means healthy. Used by tests after
 // every tick and available to the debug panel. Read-only.
 
+import { isPassable } from './pathfinding';
 import { everyone } from './expeditions';
 import { STRUCTURE_HEALTH } from './breach';
 import { getTile, inBounds, isWalkable } from './grid';
@@ -163,8 +164,10 @@ export function checkInvariants(state: SimState): string[] {
   for (const z of state.zombies) {
     if (zombieIds.has(z.id)) problems.push(`duplicate zombie id ${z.id}`);
     zombieIds.add(z.id);
-    if (getTile(grid, z.pos.x, z.pos.y) !== 'floor') problems.push(`zombie ${z.id} on non-floor (${z.pos.x}, ${z.pos.y})`);
-    if (z.move && getTile(grid, z.move.to.x, z.move.to.y) !== 'floor') problems.push(`zombie ${z.id} stepping off floor`);
+    // Zombies stand on floor; raiders may also stand in an unlocked doorway.
+    const standable = (x: number, y: number) => isPassable(grid, x, y, z.kind === 'raider' ? 'raider' : 'zombie');
+    if (!standable(z.pos.x, z.pos.y)) problems.push(`zombie ${z.id} on non-floor (${z.pos.x}, ${z.pos.y})`);
+    if (z.move && !standable(z.move.to.x, z.move.to.y)) problems.push(`zombie ${z.id} stepping off floor`);
     if (z.health <= 0 || z.health > z.maxHealth) problems.push(`zombie ${z.id} has health ${z.health}`);
   }
   const guarded = new Map<string, number>();
@@ -207,6 +210,7 @@ export function checkInvariants(state: SimState): string[] {
     else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
+  for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);
   for (const d of state.dormant) if (!inBounds(grid, d.x, d.y)) problems.push(`dormant zombie ${d.id} off the map`);
   for (const h of state.herds) if (!inBounds(grid, h.x, h.y) || !inBounds(grid, h.to.x, h.to.y) || h.size <= 0) problems.push(`herd ${h.id} is off the map or empty`);
   for (const a of state.exploreAreas) {

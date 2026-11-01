@@ -21,6 +21,7 @@ import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
 import { sendExpedition } from './expeditions';
+import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
 import { damageStructure, isStructure } from './breach';
 import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
@@ -60,6 +61,10 @@ export type Command =
   | { type: 'dismissWanderer'; wandererId: string }
   /** Send survivors off the map to a point of interest (expeditions.ts). */
   | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
+  /** Take a trader's offer (visitors.ts). */
+  | { type: 'trade'; traderId: string; offer: number }
+  /** Lock or unlock a door: raiders can't open locked ones. */
+  | { type: 'toggleLock'; x: number; y: number }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
   | { type: 'setRest'; survivorId: string; rest: number }
   | { type: 'setSatiety'; survivorId: string; satiety: number }
@@ -127,6 +132,23 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!Number.isInteger(count) || count < 0 || count > MAX_CRAFT_TARGET) return reject(`target must be 0-${MAX_CRAFT_TARGET}`);
     if (state.craftTargets[kind] === count) return unchanged();
     state.craftTargets[kind] = count;
+    return changed();
+  }
+  if (command.type === 'trade') {
+    const failed = trade(state, command.traderId, command.offer);
+    return failed ? reject(failed) : changed();
+  }
+  if (command.type === 'toggleLock') {
+    const { x, y } = command;
+    if (getTile(state.grid, x, y) !== 'door') return reject(`(${x}, ${y}) is not a door`);
+    const i = y * state.grid.width + x;
+    const at = state.grid.locked.indexOf(i);
+    if (at >= 0) state.grid.locked.splice(at, 1);
+    else {
+      state.grid.locked.push(i);
+      evictZombies(state, { x, y }); // a raider in the doorway is shut out
+    }
+    state.walkabilityVersion += 1; // raiders' paths change
     return changed();
   }
   if (command.type === 'sendExpedition') {

@@ -18,6 +18,7 @@ import { addBlueprint } from './designations';
 import { addThought } from './mood';
 import { hasTrait } from './skills';
 import { maybeInfect } from './infection';
+import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
 import { pick, randomInt } from './rng';
@@ -50,7 +51,7 @@ export const FRONTIER_MIN = 20;
 export const FRONTIER_MAX = 32;
 
 /** night: arrives after dark, leaves at dawn. static: woke up in a ruin (herds.ts). herd: broke off a passing herd. */
-export type ZombieKind = 'night' | 'static' | 'herd';
+export type ZombieKind = 'night' | 'static' | 'herd' | 'raider';
 /** Zombies never spawn this close (Manhattan) to a survivor. */
 export const SPAWN_MIN_DISTANCE = 8;
 /** Zombies re-pick their target and path this often. */
@@ -144,6 +145,16 @@ export function spawnsAt(tick: number, total?: number): number {
   return Math.min(size, count - (t / interval) * size);
 }
 
+/** The first tick of a night. */
+export function nightFallsNow(tick: number): boolean {
+  return nightNumber(tick) !== null && ticksIntoNight(tick) === 0;
+}
+
+/** Raiders open unlocked doors; zombies don't open any. */
+function moverOf(z: Zombie): 'zombie' | 'raider' {
+  return z.kind === 'raider' ? 'raider' : 'zombie';
+}
+
 export function isSpawnTick(tick: number): boolean {
   return spawnsAt(tick) > 0;
 }
@@ -152,10 +163,11 @@ export function isSpawnTick(tick: number): boolean {
 export function updateZombies(state: SimState): void {
   if (!isNight(state.tick)) {
     state.zombiesTonight = null;
-    // Only the night's arrivals leave; zombies from ruins and herds stay out in the day.
-    const n = state.zombies.filter((z) => z.kind === 'night').length;
+    // Only the night's arrivals (and raiders) leave; zombies from ruins and herds stay out in the day.
+    const leaves = (z: Zombie) => z.kind === 'night' || z.kind === 'raider';
+    const n = state.zombies.filter(leaves).length;
     if (n > 0) {
-      state.zombies = state.zombies.filter((z) => z.kind !== 'night');
+      state.zombies = state.zombies.filter((z) => !leaves(z));
       logEvent(state, `${n} zombie${n === 1 ? '' : 's'} shambled off at dawn`);
     }
     updateAll(state);
@@ -242,7 +254,7 @@ function updateZombie(state: SimState, z: Zombie): void {
   }
   const next = z.path[0];
   if (!next) return;
-  if (!isPassable(state.grid, next.x, next.y, 'zombie')) {
+  if (!isPassable(state.grid, next.x, next.y, moverOf(z))) {
     // A door or wall on the way in: batter it. Anything else, re-plan next tick.
     if (isStructure(getTile(state.grid, next.x, next.y)) && manhattan(z.pos, next) === 1) {
       if (z.cooldown === 0) {
@@ -270,10 +282,10 @@ function plan(state: SimState, z: Zombie): void {
   const target = noticed
     .slice()
     .sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))
-    .find((s) => canReach(grid, v, z.pos, goalsFor(s), 'zombie'));
+    .find((s) => canReach(grid, v, z.pos, goalsFor(s), moverOf(z)));
   z.targetId = target?.id ?? null;
   if (target) {
-    z.path = findPathToAny(grid, z.pos, goalsFor(target), 'zombie') ?? [];
+    z.path = findPathToAny(grid, z.pos, goalsFor(target), moverOf(z)) ?? [];
     return;
   }
   // Nobody reachable: go for the nearest survivor through doors, or failing that through walls.
@@ -287,7 +299,7 @@ function plan(state: SimState, z: Zombie): void {
     }
   }
   z.targetId = null;
-  const options = neighbours4(grid, z.pos.x, z.pos.y).filter((p) => isPassable(grid, p.x, p.y, 'zombie'));
+  const options = neighbours4(grid, z.pos.x, z.pos.y).filter((p) => isPassable(grid, p.x, p.y, moverOf(z)));
   if (z.heading) {
     // On with the herd: a path if there is one, else the step that gets closest.
     const path = findPathToAny(grid, z.pos, [z.heading], 'zombie');
@@ -303,12 +315,13 @@ function plan(state: SimState, z: Zombie): void {
 }
 
 function hit(state: SimState, z: Zombie, s: Survivor): void {
-  s.health = Math.max(0, s.health - (hasTrait(s, 'tough') ? Math.round((ZOMBIE_DAMAGE * 3) / 4) : ZOMBIE_DAMAGE));
-  s.lastHurtBy = 'a zombie attack';
+  const damage = z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE;
+  s.health = Math.max(0, s.health - (hasTrait(s, 'tough') ? Math.round((damage * 3) / 4) : damage));
+  s.lastHurtBy = z.kind === 'raider' ? 'a raider' : 'a zombie attack';
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
-  maybeInfect(state, s, z.id);
+  if (z.kind !== 'raider') maybeInfect(state, s, z.id);
   z.cooldown = ZOMBIE_ATTACK_EVERY;
 }
 

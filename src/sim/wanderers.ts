@@ -96,7 +96,7 @@ export function reconcileWanderers(state: SimState): void {
 }
 
 /** Out at the edge of what you've seen, a short walk from someone, on open ground. */
-function frontierSpot(state: SimState, taken: Set<string>): Point | null {
+export function frontierSpot(state: SimState, taken: Set<string>): Point | null {
   if (state.survivors.length === 0 || !state.grid.explored.includes(0)) return null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const s = pick(state, state.survivors);

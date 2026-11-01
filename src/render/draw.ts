@@ -53,6 +53,7 @@ const COLOURS = {
     cancel: '#c9c9c9',
     scavenge: '#ffd166',
     explore: '#9fc3ff',
+    lock: '#c9a227',
     farm: '#9ed36a',
     furnish: '#c7a6ff',
     bed: '#c7a6ff',
@@ -194,7 +195,7 @@ export function draw(
         const r = tileRect(camera, viewport, x, y);
         ctx.fillStyle = COLOURS.fog;
         ctx.fillRect(r.x, r.y, r.w, r.h);
-      } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size);
+      } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size, tile === 'door' && grid.locked.includes(i));
     }
   }
 
@@ -265,6 +266,7 @@ export function draw(
     if (onScreen && (h.heard || shown(h.x, h.y))) drawHerd(ctx, camera, viewport, h, size);
   }
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
+  for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
@@ -710,7 +712,7 @@ function drawHerd(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
 }
 
 /** A greyed survivor with a "?" above: waiting to be taken in. */
-function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number): void {
+function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number, mark = '?'): void {
   const p = worldToScreen(camera, viewport, w.x + 0.5, w.y + 0.5);
   const radius = Math.max(3, size * 0.32);
   ctx.fillStyle = COLOURS.wanderer;
@@ -726,7 +728,7 @@ function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: V
   ctx.font = `bold ${Math.round(Math.max(10, size * 0.5))}px ui-monospace, Consolas, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('?', p.x, p.y);
+  ctx.fillText(mark, p.x, p.y);
   if (size >= MIN_LABEL_PX) {
     ctx.fillStyle = COLOURS.label;
     ctx.font = `${Math.round(Math.min(14, size * 0.45))}px ui-monospace, Consolas, monospace`;
@@ -762,7 +764,7 @@ function drawZombie(
       ctx.setLineDash([]);
     }
   }
-  ctx.fillStyle = COLOURS.zombie;
+  ctx.fillStyle = z.kind === 'raider' ? '#9a5a4a' : COLOURS.zombie;
   ctx.strokeStyle = COLOURS.zombieOutline;
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -897,6 +899,7 @@ function drawTile(
   tile: Tile,
   ground: number,
   size: number,
+  locked = false,
 ): void {
   const r = tileRect(camera, viewport, x, y);
   ctx.fillStyle = tile === 'floor' || tile === 'door' ? COLOURS.ground[GROUNDS[ground] ?? 'grass'] : COLOURS.tiles[tile];
@@ -924,6 +927,14 @@ function drawTile(
     // A lighter top edge so wall runs read as solid blocks.
     ctx.fillStyle = COLOURS.wallTop;
     ctx.fillRect(r.x, r.y, r.w, Math.max(1, Math.round(size * 0.15)));
+  } else if (tile === 'door' && locked) {
+    ctx.fillStyle = COLOURS.doorFrame;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(r.x + r.w * 0.35, r.y + r.h * 0.4, r.w * 0.3, r.h * 0.3);
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = Math.max(1, r.w * 0.06);
+    ctx.strokeRect(r.x + r.w * 0.4, r.y + r.h * 0.22, r.w * 0.2, r.h * 0.2);
   } else if (tile === 'door') {
     const inset = Math.round(size * 0.12);
     ctx.fillStyle = COLOURS.doorFrame;

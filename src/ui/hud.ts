@@ -100,7 +100,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const wanderers = createWandererPanel(command);
   const crafting = createCraftPanel(command);
   const expeditions = createExpeditionPanel(view, command);
-  info.append(status, toast, roomPanel, wanderers.root, crafting.root, expeditions.root, feed);
+  const traders = createTraderPanel(command);
+  info.append(status, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -164,6 +165,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       wanderers.update(state);
       crafting.update(state);
       expeditions.update(state);
+      traders.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -358,6 +360,39 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         size.append(option);
       }
       root.append(row('A fresh start somewhere else:', size, button('New world', () => files.newWorld(Number(size.value)))));
+    },
+  };
+}
+
+/** A trader's offers, each with a Trade button. */
+function createTraderPanel(command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const key = JSON.stringify([state.traders, state.items.length]);
+      if (key === last) return;
+      last = key;
+      root.hidden = state.traders.length === 0;
+      root.replaceChildren();
+      for (const t of state.traders) {
+        const title = el('div', 'hud-wanderers-title');
+        title.textContent = `Trader at (${t.x}, ${t.y})`;
+        root.append(title);
+        t.offers.forEach((o, i) => {
+          const row = el('div', 'hud-wanderer');
+          const label = el('span', 'hud-wanderer-label');
+          const have = state.items.filter((it) => it.kind === o.want && it.pos !== null && it.reservedBy === null).length;
+          label.textContent = `${o.giveCount} ${o.give} for ${o.wantCount} ${o.want} (you have ${have})`;
+          const go = el('button', 'hud-button');
+          go.textContent = 'Trade';
+          go.disabled = have < o.wantCount;
+          go.addEventListener('click', () => command({ type: 'trade', traderId: t.id, offer: i }));
+          row.append(label, go);
+          root.append(row);
+        });
+      }
     },
   };
 }
