@@ -19,7 +19,8 @@ export type ThoughtKind =
   | 'sawDeath'
   | 'attacked'
   | 'relaxed'
-  | 'vented';
+  | 'vented'
+  | 'hotMeal';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -36,6 +37,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   attacked: { label: 'attacked by a zombie', effect: -10, duration: DAY_LENGTH / 2 },
   relaxed: { label: 'relaxed in the rec room', effect: 10, duration: DAY_LENGTH },
   vented: { label: 'got it out of their system', effect: 15, duration: DAY_LENGTH },
+  hotMeal: { label: 'had a hot meal', effect: 5, duration: DAY_LENGTH / 2 },
 };
 
 export const MOOD_BASE = 50;

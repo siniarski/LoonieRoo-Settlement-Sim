@@ -4,13 +4,14 @@
 //   crate  found in ruins; holds loot that survivors scavenge (see jobs.ts)
 //   table  built by survivors; makes a mess hall (see mess.ts)
 //   workbench  built by survivors; crafting happens here (see crafting.ts)
+//   stove  built by survivors; cooking happens here (see crafting.ts)
 //   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see zombies.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
 import { spawnItem } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'tree' | 'trap';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;
@@ -33,7 +34,7 @@ export interface Furniture {
   loot: number;
   /** Crates and trees: marked by the player for scavenging (or chopping). Trees stay marked as they regrow. */
   scavenge: boolean;
-  /** Workbenches: wood brought in for the next craft. Given back if the bench is removed. */
+  /** Stations (workbench, stove): input brought in for the next job. Given back if the station is removed. */
   stored: number;
 }
 
@@ -92,5 +93,5 @@ export function removeFurniture(state: SimState, f: Furniture): void {
   const i = state.furniture.indexOf(f);
   if (i >= 0) state.furniture.splice(i, 1);
   indexes.delete(state.furniture);
-  for (let n = 0; n < f.stored; n++) spawnItem(state, 'wood', f.x, f.y);
+  for (let n = 0; n < f.stored; n++) spawnItem(state, f.kind === 'stove' ? 'food' : 'wood', f.x, f.y);
 }

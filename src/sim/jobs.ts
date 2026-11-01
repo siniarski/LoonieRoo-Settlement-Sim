@@ -25,7 +25,7 @@ import { random } from './rng';
 import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
 import { blowDamage, wearWeapon } from './weapons';
-import { CRAFT_WORK, RECIPES, wantedCraft } from './crafting';
+import { CRAFT_WORK, RECIPES, isStation, wantedCraft } from './crafting';
 import { startLeisure } from './leisure';
 import { manhattan, nearestTile, samePoint } from './space';
 import type { SimState } from './state';
@@ -141,11 +141,13 @@ export function reconcileJobs(state: SimState): void {
     if (isPatient(p) && !treating.has(p.id)) addJob(state, 'doctor', p.pos.x, p.pos.y, null, null).patientId = p.id;
   }
 
-  // While a craftable is below its stock target, every workbench offers one craft job.
-  if (wantedCraft(state)) {
-    const crafting = new Set(state.jobs.filter((j) => j.type === 'craft').map((j) => j.furnitureId));
+  // While anything a station makes is wanted, every such station offers one job: craft at a workbench, cook at a stove.
+  const wanted = { workbench: wantedCraft(state, 'workbench'), stove: wantedCraft(state, 'stove') };
+  if (wanted.workbench || wanted.stove) {
+    const stationed = new Set(state.jobs.filter((j) => j.type === 'craft' || j.type === 'cook').map((j) => j.furnitureId));
     for (const f of state.furniture) {
-      if (f.kind === 'workbench' && !crafting.has(f.id)) addJob(state, 'craft', f.x, f.y, null, null, f.id);
+      if (!isStation(f.kind) || !wanted[f.kind] || stationed.has(f.id)) continue;
+      addJob(state, f.kind === 'stove' ? 'cook' : 'craft', f.x, f.y, null, null, f.id);
     }
   }
 
@@ -214,14 +216,16 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       }
       return null;
     }
-    case 'craft': {
-      if (!job.furnitureId || !getFurniture(state, job.furnitureId)) return 'workbench gone';
+    case 'craft':
+    case 'cook': {
+      const station = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+      if (!station || !isStation(station.kind)) return 'station gone';
       if (job.itemId) {
         const item = getItem(state, job.itemId);
         if (!item) return 'item gone';
         if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
       }
-      return wantedCraft(state) ? null : 'stocks are full';
+      return wantedCraft(state, station.kind) ? null : 'stocks are full';
     }
     case 'scavenge': {
       const crate = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
@@ -350,6 +354,7 @@ export function updateWork(state: SimState, s: Survivor): void {
     case 'scavenge':
       return workScavenge(state, s, job);
     case 'craft':
+    case 'cook':
       return workCraft(state, s, job);
     case 'doctor':
       return workDoctor(state, s, job);
@@ -420,20 +425,22 @@ export function scavengeFind(roll: number): ItemKind {
   return 'weapon';
 }
 
-/** Bring wood to the bench one piece at a time, then make the most-wanted craftable. */
+/** Bring the input to the station one piece at a time, then make the most-wanted thing it makes. */
 function workCraft(state: SimState, s: Survivor, job: Job): void {
   const bench = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
-  const kind = wantedCraft(state);
-  if (!bench) return releaseSurvivor(state, s, 'workbench gone');
+  if (!bench || !isStation(bench.kind)) return releaseSurvivor(state, s, 'station gone');
+  const kind = wantedCraft(state, bench.kind);
   if (!kind) return releaseSurvivor(state, s, 'stocks are full');
   const site = neighbours4(state.grid, bench.x, bench.y);
-  const cost = RECIPES[kind].wood;
+  const recipe = RECIPES[kind];
+  const cost = recipe.count;
+  const station = bench.kind === 'stove' ? 'the stove' : 'the workbench';
 
   if (bench.stored < cost) {
     let item = job.itemId ? getItem(state, job.itemId) : undefined;
     if (!item) {
-      item = freeWoodFor(state, s.pos, site);
-      if (!item) return releaseSurvivor(state, s, 'no wood to craft with');
+      item = freeItemFor(state, recipe.input, s.pos, site);
+      if (!item) return releaseSurvivor(state, s, `no ${recipe.input} for ${station}`);
       job.itemId = item.id;
       item.reservedBy = s.id;
     }
@@ -443,14 +450,14 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
       item.pos = null;
       item.carriedBy = s.id;
       s.carrying = item.id;
-      s.note = 'picked up wood for the workbench';
+      s.note = `picked up ${recipe.input} for ${station}`;
     }
     if (manhattan(s.pos, bench) !== 1) return goTo(state, s, job, site);
     removeItem(state, item);
     s.carrying = null;
     job.itemId = null;
     bench.stored += 1;
-    s.note = `brought wood to the workbench (${bench.stored}/${cost})`;
+    s.note = `brought ${recipe.input} to ${station} (${bench.stored}/${cost})`;
     return;
   }
 
@@ -460,7 +467,8 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   if (job.progress < CRAFT_WORK) return;
   bench.stored -= cost;
   spawnItem(state, kind, s.pos.x, s.pos.y);
-  finishJob(state, s, job, `crafted ${kind === 'weapon' ? 'a weapon' : 'a bandage'} at (${bench.x}, ${bench.y})`);
+  const made = { weapon: 'crafted a weapon', bandage: 'crafted a bandage', meal: 'cooked a hot meal' }[kind];
+  finishJob(state, s, job, `${made} at (${bench.x}, ${bench.y})`);
 }
 
 /** Walk to the nearest unexplored tile in the area (seeing round you as you go), and on to the next, until it's all seen. */
@@ -520,11 +528,6 @@ function workDoctor(state: SimState, s: Survivor, job: Job): void {
   s.carrying = null;
   patient.health = Math.min(HEALTH_MAX, patient.health + BANDAGE_HEAL);
   finishJob(state, s, job, `treated ${patient.name}'s wounds`);
-}
-
-/** Nearest free wood the survivor can reach and carry on to the site. */
-function freeWoodFor(state: SimState, from: Point, site: Point[]): (Item & { pos: Point }) | undefined {
-  return freeItemFor(state, 'wood', from, site);
 }
 
 /** Nearest free item of a kind that the survivor can reach and carry on to the site. */
@@ -725,14 +728,16 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       const bandage = freeItemFor(state, 'bandage', s.pos, site);
       return bandage ? pathPlan(state, s.pos, [bandage.pos], bandage.id) : null;
     }
-    case 'craft': {
+    case 'craft':
+    case 'cook': {
       const bench = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
-      const kind = wantedCraft(state);
-      if (!bench || !kind) return null;
+      if (!bench || !isStation(bench.kind)) return null;
+      const kind = wantedCraft(state, bench.kind);
+      if (!kind) return null;
       const site = neighbours4(grid, bench.x, bench.y).filter((p) => isWalkable(grid, p.x, p.y));
-      if (bench.stored >= RECIPES[kind].wood) return canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
-      const wood = freeWoodFor(state, s.pos, site);
-      return wood ? pathPlan(state, s.pos, [wood.pos], wood.id) : null;
+      if (bench.stored >= RECIPES[kind].count) return canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
+      const input = freeItemFor(state, RECIPES[kind].input, s.pos, site);
+      return input ? pathPlan(state, s.pos, [input.pos], input.id) : null;
     }
     case 'haul': {
       if (isStoreJob(job)) {

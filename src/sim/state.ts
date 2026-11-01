@@ -23,7 +23,7 @@ import type { Zombie } from './zombies';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 28;
+export const SCHEMA_VERSION = 29;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -44,7 +44,7 @@ export interface SimState {
   /** People waiting at the edge to be taken in (see wanderers.ts). */
   wanderers: Wanderer[];
   /** Stock to keep of each craftable (see crafting.ts). */
-  craftTargets: Record<CraftKind, number>;
+  craftTargets: Record<Exclude<CraftKind, 'meal'>, number>;
   /** Zombies due tonight, fixed at nightfall (zombies.ts); null by day. */
   zombiesTonight: number | null;
   /** Boxes the player wants scouted (fog.ts). */

@@ -17,7 +17,7 @@
 //
 // Constants live in rest.ts and food.ts.
 
-import { EAT_TICKS, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
+import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
 import { furnitureAt, type Furniture } from './furniture';
 import {
@@ -169,8 +169,10 @@ export function updateMeal(state: SimState, s: Survivor): boolean {
   if (meal.progress < EAT_TICKS) return true;
   if (s.carrying === item.id) s.carrying = null;
   removeItem(state, item);
-  s.satiety = Math.min(SATIETY_MAX, s.satiety + MEAL_VALUE);
+  const hot = item.kind === 'meal';
+  s.satiety = Math.min(SATIETY_MAX, s.satiety + (hot ? HOT_MEAL_VALUE : MEAL_VALUE));
   addThought(state, s, meal.seat ? 'ateAtTable' : 'ateWithoutTable');
+  if (hot) addThought(state, s, 'hotMeal');
   s.note = meal.seat ? 'ate a meal at a table' : 'ate a meal';
   s.meal = null;
   return true;
@@ -178,7 +180,8 @@ export function updateMeal(state: SimState, s: Survivor): boolean {
 
 function startMeal(state: SimState, s: Survivor): boolean {
   if (!isHungry(s) || state.tick < s.nextMealTick) return false;
-  const food = nearestFreeItem(state, s, 'food');
+  // A hot meal if there's one to be had, else raw food.
+  const food = nearestFreeItem(state, s, 'meal') ?? nearestFreeItem(state, s, 'food');
   if (!food?.pos) {
     s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
     return false;

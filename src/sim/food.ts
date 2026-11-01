@@ -11,6 +11,8 @@ export const HUNGRY = 750;
 export const SATIETY_DRAIN = 1;
 /** Satiety from eating one food item (capped at SATIETY_MAX). */
 export const MEAL_VALUE = 2000;
+/** A hot meal (cooked at a stove) fills more. */
+export const HOT_MEAL_VALUE = 2600;
 /** Ticks it takes to eat. */
 export const EAT_TICKS = 30;
 /** A hungry survivor who found no food looks again after this many ticks. */

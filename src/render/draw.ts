@@ -61,6 +61,7 @@ const COLOURS = {
     armory: '#d98c6a',
     table: '#d6aa78',
     workbench: '#be9664',
+    stove: '#8a8f96',
     barricade: '#aa7846',
     trap: '#b8bec6',
     messhall: '#9ee0c0',
@@ -102,10 +103,11 @@ const COLOURS = {
     barricade: 'rgba(170, 120, 70, 0.30)',
     trap: 'rgba(184, 190, 198, 0.30)',
     table: 'rgba(214, 170, 120, 0.30)',
+    stove: 'rgba(120, 124, 130, 0.30)',
     workbench: 'rgba(190, 150, 100, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', barricade: '#aa7846', trap: '#b8bec6', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -220,6 +222,7 @@ export function draw(
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'workbench') drawWorkbench(ctx, camera, viewport, f, size);
+    else if (f.kind === 'stove') drawStove(ctx, camera, viewport, f);
     else if (f.kind === 'tree') drawTree(ctx, camera, viewport, f, size);
     else if (f.kind === 'trap') drawTrap(ctx, camera, viewport, f);
     else drawCrate(ctx, camera, viewport, f, size);
@@ -466,6 +469,16 @@ function drawTrap(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
   }
 }
 
+/** A dark iron stove with a glowing door. */
+function drawStove(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture): void {
+  const r = tileRect(camera, viewport, f.x, f.y);
+  const pad = Math.max(1, Math.round(r.w * 0.12));
+  ctx.fillStyle = '#3a3d42';
+  ctx.fillRect(r.x + pad, r.y + pad, r.w - pad * 2, r.h - pad * 2);
+  ctx.fillStyle = f.stored > 0 ? '#ff9a3b' : '#6b4a2e';
+  ctx.fillRect(r.x + r.w * 0.3, r.y + r.h * 0.5, r.w * 0.4, r.h * 0.25);
+}
+
 /** A square wooden table top. */
 function drawTable(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number): void {
   const r = tileRect(camera, viewport, x, y);
@@ -517,6 +530,7 @@ function drawItem(
   size: number,
 ): void {
   if (kind === 'food') drawFood(ctx, camera, viewport, wx, wy, size);
+  else if (kind === 'meal') drawMeal(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'bandage') drawBandage(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'weapon') drawWeapon(ctx, camera, viewport, wx, wy, size);
   else drawWood(ctx, camera, viewport, wx, wy, size);
@@ -540,6 +554,26 @@ function drawWeapon(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Vie
   ctx.lineTo(p.x - s * 0.3, p.y + s * 0.3);
   ctx.stroke();
   ctx.lineCap = 'butt';
+}
+
+/** A steaming bowl. */
+function drawMeal(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const r = size * 0.22;
+  ctx.fillStyle = '#c9a26b';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#e8743b';
+  ctx.fillRect(p.x - r, p.y - r * 0.15, r * 2, r * 0.3);
+  ctx.strokeStyle = 'rgba(240, 240, 240, 0.7)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(p.x - r * 0.3, p.y - r * 0.4);
+  ctx.lineTo(p.x - r * 0.1, p.y - r * 1.1);
+  ctx.moveTo(p.x + r * 0.3, p.y - r * 0.4);
+  ctx.lineTo(p.x + r * 0.5, p.y - r * 1.1);
+  ctx.stroke();
 }
 
 /** A white pad with a red cross. */

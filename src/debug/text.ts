@@ -13,6 +13,7 @@ const BLUEPRINT_CHARS = {
   workbench: ENTITY_CHARS.workbenchBlueprint,
   barricade: ENTITY_CHARS.barricadeBlueprint,
   trap: ENTITY_CHARS.trapBlueprint,
+  stove: ENTITY_CHARS.stoveBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

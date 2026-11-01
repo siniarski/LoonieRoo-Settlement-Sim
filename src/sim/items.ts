@@ -7,7 +7,7 @@ import { furnitureAt } from './furniture';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
-export type ItemKind = 'wood' | 'food' | 'bandage' | 'weapon';
+export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'weapon';
 
 export interface Item {
   id: string;

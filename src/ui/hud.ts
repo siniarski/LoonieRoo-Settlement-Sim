@@ -20,7 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
-import { CRAFTABLES, MAX_CRAFT_TARGET, RECIPES, craftStock } from '../sim/crafting';
+import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
@@ -42,7 +42,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -177,7 +177,7 @@ function statusText(state: SimState, view: ViewState): string {
     hover && hover.x >= 0 && hover.y >= 0 && hover.x < width && hover.y < height ? tiles[hover.y * width + hover.x] : undefined;
   const selected = state.survivors.find((s) => s.id === view.selectedId);
   const wood = state.items.filter((i) => i.kind === 'wood').length;
-  const food = state.items.filter((i) => i.kind === 'food').length;
+  const food = state.items.filter((i) => i.kind === 'food' || i.kind === 'meal').length;
   const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : 'select';
   return [
     mode,
@@ -207,6 +207,7 @@ function furnitureText(state: SimState, p: Point): string {
   if (f.kind === 'trap') return ` · spike trap (${f.loot} left)`;
   if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
   if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;
+  if (f.kind === 'stove') return ` · stove${f.stored > 0 ? ` (${f.stored} food in)` : ''}`;
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
 
@@ -363,7 +364,7 @@ function createCraftPanel(command: (cmd: Command) => void) {
     update(state: SimState) {
       const benches = state.furniture.filter((f) => f.kind === 'workbench').length;
       const planned = state.blueprints.some((b) => b.target === 'workbench');
-      const rows = CRAFTABLES.map((k) => ({ k, have: craftStock(state, k), want: state.craftTargets[k] }));
+      const rows = ORDERABLE.map((k) => ({ k: k as Exclude<CraftKind, 'meal'>, have: craftStock(state, k), want: state.craftTargets[k as Exclude<CraftKind, 'meal'>] }));
       const key = `${benches}|${planned}|${JSON.stringify(rows)}`;
       if (key === last) return;
       last = key;
@@ -375,7 +376,7 @@ function createCraftPanel(command: (cmd: Command) => void) {
       for (const { k, have, want } of rows) {
         const row = el('div', 'hud-wanderer');
         const label = el('span', 'hud-wanderer-label');
-        label.textContent = `${RECIPES[k].label} (${RECIPES[k].wood} wood): have ${have}, keep`;
+        label.textContent = `${RECIPES[k].label} (${RECIPES[k].count} ${RECIPES[k].input}): have ${have}, keep`;
         const set = (count: number) => command({ type: 'setCraftTarget', kind: k, count });
         const less = el('button', 'hud-button');
         less.textContent = '−';

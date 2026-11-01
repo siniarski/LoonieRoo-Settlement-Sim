@@ -117,7 +117,7 @@ export function checkInvariants(state: SimState): string[] {
     if (s.breakdown && s.jobId) problems.push(`${s.name} holds job ${s.jobId} mid-breakdown`);
     if (s.meal) {
       const food = items.get(s.meal.itemId);
-      if (!food || food.kind !== 'food') problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);
+      if (!food || (food.kind !== 'food' && food.kind !== 'meal')) problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);
       else if (food.reservedBy !== s.id) problems.push(`${s.name} eats ${food.id}, reserved by ${food.reservedBy}`);
       if (s.jobId) problems.push(`${s.name} is eating but holds job ${s.jobId}`);
       if (s.sleep) problems.push(`${s.name} is eating and sleeping at once`);

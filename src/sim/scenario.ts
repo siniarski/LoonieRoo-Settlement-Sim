@@ -48,6 +48,7 @@ export const ENTITY_CHARS = {
   table: 't',
   workbench: 'k',
   trap: '^',
+  stove: 'o',
   crate: 'c',
   tree: 'Y',
   zombie: 'z',
@@ -60,6 +61,8 @@ export const ENTITY_CHARS = {
   workbenchBlueprint: 'K',
   barricadeBlueprint: '-',
   trapBlueprint: '_',
+  stoveBlueprint: 'O',
+  meal: 'h',
   removeBlueprint: 'x',
 } as const;
 
@@ -127,11 +130,20 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
     case ENTITY_CHARS.trap:
       addFurniture(state, 'trap', x, y);
       return true;
+    case ENTITY_CHARS.stove:
+      addFurniture(state, 'stove', x, y);
+      return true;
     case ENTITY_CHARS.barricadeBlueprint:
       addBlueprint(state, x, y, 'barricade');
       return true;
     case ENTITY_CHARS.trapBlueprint:
       addBlueprint(state, x, y, 'trap');
+      return true;
+    case ENTITY_CHARS.stoveBlueprint:
+      addBlueprint(state, x, y, 'stove');
+      return true;
+    case ENTITY_CHARS.meal:
+      spawnItem(state, 'meal', x, y);
       return true;
     case ENTITY_CHARS.workbenchBlueprint:
       addBlueprint(state, x, y, 'workbench');

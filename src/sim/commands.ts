@@ -34,11 +34,11 @@ export type Command =
   | { type: 'placeTable'; x: number; y: number }
   | { type: 'placeWorkbench'; x: number; y: number }
   /** Keep this many of a craftable in stock (crafting.ts). */
-  | { type: 'setCraftTarget'; kind: CraftKind; count: number }
+  | { type: 'setCraftTarget'; kind: Exclude<CraftKind, 'meal'>; count: number }
   /** Give a bed to a survivor (their only one), or take it back with null. */
   | { type: 'assignBed'; bedId: string; survivorId: string | null }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'trap' }
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'stove' | 'trap' }
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
@@ -221,7 +221,7 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
   return changed();
 }
 
-function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'trap'): CommandResult {
+function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'stove' | 'trap'): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === structure) return unchanged();
   if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) {

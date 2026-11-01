@@ -14,11 +14,11 @@ import { evictZombies } from './zombies';
  * What the tile ends up as. 'floor' means "remove what's here": furniture if
  * there is some, otherwise the wall or door.
  */
-export type BuildTarget = 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'trap' | 'floor';
+export type BuildTarget = 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'stove' | 'trap' | 'floor';
 
 /** Build targets that are furniture rather than a tile. */
-export function isFurnitureTarget(target: BuildTarget): target is 'bed' | 'table' | 'workbench' | 'trap' {
-  return target === 'bed' || target === 'table' || target === 'workbench' || target === 'trap';
+export function isFurnitureTarget(target: BuildTarget): target is 'bed' | 'table' | 'workbench' | 'stove' | 'trap' {
+  return target === 'bed' || target === 'table' || target === 'workbench' || target === 'stove' || target === 'trap';
 }
 
 export interface Blueprint {
@@ -34,7 +34,7 @@ export interface Blueprint {
 }
 
 /** Ticks of work (10 ticks = 1s at 1x). */
-export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, barricade: 15, bed: 25, table: 25, workbench: 40, trap: 20, floor: 20 };
+export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, barricade: 15, bed: 25, table: 25, workbench: 40, stove: 40, trap: 20, floor: 20 };
 
 export function getBlueprint(state: SimState, id: string): Blueprint | undefined {
   return state.blueprints.find((b) => b.id === id);
@@ -94,6 +94,7 @@ export function completeBlueprint(state: SimState, bp: Blueprint): void {
     case 'bed':
     case 'table':
     case 'workbench':
+    case 'stove':
     case 'trap': {
       addFurniture(state, bp.target, bp.x, bp.y);
       const item = itemAt(state, bp.x, bp.y);
