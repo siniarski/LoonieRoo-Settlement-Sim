@@ -1,6 +1,7 @@
 // Zombies: crude night pressure (milestone 7).
 //
-// Each night brings one more zombie than the last (2 on the first night),
+// Each night brings one more zombie than the last (2 on the first night, plus
+// one per SURVIVORS_PER_EXTRA_ZOMBIE survivors), each a little tougher,
 // spread evenly through the night (in groups from night 4), each on an outdoor map-edge tile (sim
 // RNG). Each shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
@@ -22,7 +23,11 @@ import type { SimState } from './state';
 import type { Movement, Survivor } from './survivors';
 import { NIGHT_TICKS, isNight, nightNumber, ticksIntoNight } from './time';
 
+/** A night-1 zombie's health; later nights add ZOMBIE_HEALTH_PER_NIGHT each (balance pass 2). */
 export const ZOMBIE_HEALTH = 200;
+export const ZOMBIE_HEALTH_PER_NIGHT = 20;
+/** One more zombie each night per this many survivors, counted at nightfall (balance pass 2). */
+export const SURVIVORS_PER_EXTRA_ZOMBIE = 4;
 /** Slower than survivors (4), so guards can catch them and runners can escape. */
 export const ZOMBIE_TICKS_PER_TILE = 6;
 export const ZOMBIE_DAMAGE = 40;
@@ -46,6 +51,8 @@ export interface Zombie {
   /** Survivor being chased, or null when wandering. */
   targetId: string | null;
   health: number;
+  /** Health when it arrived (later nights bring tougher ones). */
+  maxHealth: number;
   /** Ticks until the next attack is allowed. */
   cooldown: number;
   /** Re-plan no earlier than this tick (or sooner, when the path runs out). */
@@ -56,14 +63,15 @@ export function getZombie(state: SimState, id: string): Zombie | undefined {
   return state.zombies.find((z) => z.id === id);
 }
 
-export function addZombie(state: SimState, x: number, y: number): Zombie {
+export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE_HEALTH): Zombie {
   const z: Zombie = {
     id: `z${state.nextId++}`,
     pos: { x, y },
     move: null,
     path: [],
     targetId: null,
-    health: ZOMBIE_HEALTH,
+    health,
+    maxHealth: health,
     cooldown: 0,
     nextThinkTick: 0,
   };
@@ -81,8 +89,17 @@ export function zombieNear(state: SimState, p: Point, radius = DANGER_RADIUS): b
   return state.zombies.some((z) => manhattan(z.pos, p) <= radius);
 }
 
-export function zombiesForNight(night: number): number {
-  return FIRST_NIGHT_ZOMBIES + night - 1;
+export function zombiesForNight(night: number, colony = 0): number {
+  return FIRST_NIGHT_ZOMBIES + night - 1 + Math.floor(colony / SURVIVORS_PER_EXTRA_ZOMBIE);
+}
+
+export function zombieHealthForNight(night: number): number {
+  return ZOMBIE_HEALTH + ZOMBIE_HEALTH_PER_NIGHT * (night - 1);
+}
+
+/** Tonight's total: fixed at nightfall from the colony's size then. */
+function tonight(state: SimState, night: number): number {
+  return state.zombiesTonight ?? zombiesForNight(night, state.survivors.length);
 }
 
 /** From night 4 zombies come in groups: pairs on nights 4-6, threes on 7-9, and so on. */
@@ -95,10 +112,10 @@ export function groupSize(night: number): number {
  * evenly over the night, half an interval in: night 1 (2 zombies, singly)
  * spawns at 23:00 and 03:00; night 4 (5 zombies) as 2, 2, then 1.
  */
-export function spawnsAt(tick: number): number {
+export function spawnsAt(tick: number, total?: number): number {
   const night = nightNumber(tick);
   if (night === null) return 0;
-  const count = zombiesForNight(night);
+  const count = total ?? zombiesForNight(night);
   const size = groupSize(night);
   const groups = Math.ceil(count / size);
   const interval = Math.floor(NIGHT_TICKS / groups);
@@ -114,6 +131,7 @@ export function isSpawnTick(tick: number): boolean {
 /** Spawning, the dawn retreat, and every zombie's move or attack. Runs first each tick. */
 export function updateZombies(state: SimState): void {
   if (!isNight(state.tick)) {
+    state.zombiesTonight = null;
     if (state.zombies.length > 0) {
       const n = state.zombies.length;
       state.zombies = [];
@@ -122,14 +140,17 @@ export function updateZombies(state: SimState): void {
     return;
   }
   const night = nightNumber(state.tick)!;
-  if (ticksIntoNight(state.tick) === 0) logEvent(state, `Night ${night} falls: ${zombiesForNight(night)} zombies expected`);
-  const arriving = Math.min(spawnsAt(state.tick), MAX_ZOMBIES - state.zombies.length);
-  if (arriving > 0) spawnAtEdge(state, arriving);
+  if (ticksIntoNight(state.tick) === 0) {
+    state.zombiesTonight = zombiesForNight(night, state.survivors.length);
+    logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected`);
+  }
+  const arriving = Math.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
+  if (arriving > 0) spawnAtEdge(state, arriving, zombieHealthForNight(night));
   for (const z of state.zombies) updateZombie(state, z);
 }
 
 /** A group of `n` zombies at one outdoor edge spot (the rest on the nearest free outdoor tiles). */
-function spawnAtEdge(state: SimState, n: number): void {
+function spawnAtEdge(state: SimState, n: number, health: number): void {
   const { width, height } = state.grid;
   const edge: Point[] = [];
   for (let x = 0; x < width; x++) edge.push({ x, y: 0 }, { x, y: height - 1 });
@@ -142,12 +163,12 @@ function spawnAtEdge(state: SimState, n: number): void {
   );
   if (candidates.length === 0) return;
   const p = pick(state, candidates);
-  addZombie(state, p.x, p.y);
+  addZombie(state, p.x, p.y, health);
   for (let i = 1; i < n; i++) {
     const free = (x: number, y: number) =>
       getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.zombies.some((z) => z.pos.x === x && z.pos.y === y);
     const q = nearestTile(state.grid, p, free) ?? p;
-    addZombie(state, q.x, q.y);
+    addZombie(state, q.x, q.y, health);
   }
   logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }

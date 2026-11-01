@@ -7,7 +7,7 @@ import { NO_JOBS } from '../src/sim/jobTypes';
 import { loadScenario } from '../src/sim/scenario';
 import type { SimState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
-import { groupSize, spawnsAt, zombiesForNight } from '../src/sim/zombies';
+import { groupSize, spawnsAt, zombieHealthForNight, zombiesForNight } from '../src/sim/zombies';
 import { DAY_LENGTH, nightNumber } from '../src/sim/time';
 
 function runUntil(state: SimState, done: (s: SimState) => boolean, max = 2000): number {
@@ -77,5 +77,29 @@ describe('zombie groups', () => {
     const [a, b] = state.zombies;
     expect(Math.abs(a!.pos.x - b!.pos.x) + Math.abs(a!.pos.y - b!.pos.y)).toBe(1);
     expect(state.events.at(-1)!.message).toMatch(/^A group of 2 zombies appeared at/);
+  });
+});
+
+describe('zombie scaling (balance pass 2)', () => {
+  it('one more zombie per 4 survivors, and tougher every night', () => {
+    expect([0, 3, 4, 8, 13].map((n) => zombiesForNight(1, n))).toEqual([2, 2, 3, 4, 5]);
+    expect([1, 2, 10].map(zombieHealthForNight)).toEqual([200, 220, 380]);
+  });
+
+  it("tonight's count is fixed at nightfall from the colony's size then, and the zombies arrive at full health", () => {
+    const row = '.'.repeat(41);
+    const map = Array.from({ length: 21 }, (_, y) => (y === 10 ? `${'.'.repeat(18)}sssss${'.'.repeat(18)}` : row));
+    const state = loadScenario({ seed: 5, map });
+    for (const s of state.survivors) s.priorities = { ...NO_JOBS };
+    state.tick = DAY_LENGTH + 15 * 200; // nightfall, night 2
+    tick(state);
+    expect(state.zombiesTonight).toBe(zombiesForNight(2, 5)); // 3 + 1
+    expect(state.events.at(-1)!.message).toBe('Night 2 falls: 4 zombies expected');
+    while (state.zombies.length === 0) tick(state);
+    expect(state.zombies[0]).toMatchObject({ health: zombieHealthForNight(2), maxHealth: zombieHealthForNight(2) });
+    // Dawn clears it.
+    while (nightNumber(state.tick) !== null) tick(state);
+    tick(state);
+    expect(state.zombiesTonight).toBeNull();
   });
 });

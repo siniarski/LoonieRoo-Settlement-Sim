@@ -9,7 +9,7 @@ import { STRUCTURE_HEALTH } from '../sim/breach';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
 import { darkness } from '../sim/time';
-import { ZOMBIE_HEALTH, type Zombie } from '../sim/zombies';
+import type { Zombie } from '../sim/zombies';
 import type { ItemKind } from '../sim/items';
 import { REST_MAX, TIRED } from '../sim/rest';
 import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
@@ -639,13 +639,13 @@ function drawZombie(
   ctx.fillStyle = COLOURS.zombieEye;
   ctx.fillRect(p.x - radius * 0.4 - eye / 2, p.y - radius * 0.2, eye, eye);
   ctx.fillRect(p.x + radius * 0.4 - eye / 2, p.y - radius * 0.2, eye, eye);
-  if (z.health < ZOMBIE_HEALTH) {
+  if (z.health < z.maxHealth) {
     const w = Math.max(10, size * 0.8);
     const h = Math.max(2, Math.round(size * 0.1));
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(p.x - w / 2, p.y + radius + 3, w, h);
     ctx.fillStyle = COLOURS.needLow;
-    ctx.fillRect(p.x - w / 2, p.y + radius + 3, (w * z.health) / ZOMBIE_HEALTH, h);
+    ctx.fillRect(p.x - w / 2, p.y + radius + 3, (w * z.health) / z.maxHealth, h);
   }
 }
 
