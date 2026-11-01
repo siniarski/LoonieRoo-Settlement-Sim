@@ -89,3 +89,18 @@ describe('traits', () => {
     expect(state.survivors.at(-1)!.traits).toEqual(['quick']);
   });
 });
+
+describe('roads', () => {
+  it('are a tick quicker per tile, for everyone', () => {
+    const state = loadScenario({ seed: 1, map: ['s.....', '......'] });
+    const s = state.survivors[0]!;
+    s.priorities = { ...NO_JOBS };
+    for (let x = 0; x < 6; x++) state.grid.ground[x] = 2; // road along the top row
+    applyCommand(state, { type: 'moveSurvivor', survivorId: s.id, x: 5, y: 0 });
+    tick(state);
+    expect(s.move?.duration).toBe(TICKS_PER_TILE - 1);
+    s.traits = ['quick'];
+    runUntil(state, () => s.move?.progress === 0 && s.move.from.x > 0);
+    expect(s.move?.duration).toBe(TICKS_PER_TILE - 2);
+  });
+});

@@ -8,7 +8,7 @@
 
 import { hasTrait, type Trait } from './skills';
 import type { Thought } from './mood';
-import { getTile, setDirty, type Point } from './grid';
+import { GROUNDS, getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type JobType, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
 import { initialSatiety, type Meal } from './food';
@@ -20,6 +20,8 @@ import type { SimState } from './state';
 
 /** Ticks to cross one tile (4 ticks = 0.4s at 1x). */
 export const TICKS_PER_TILE = 4;
+/** Ground indices (GROUNDS) that are quicker to walk on. */
+const ROAD_GROUNDS = [GROUNDS.indexOf('road'), GROUNDS.indexOf('bridge')];
 
 /** Chance that stepping onto an indoor floor tile leaves dirt on it. Uses the sim RNG. */
 export const DIRT_CHANCE = 1 / 30;
@@ -205,7 +207,9 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
-  const pace = (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0);
+  // Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.
+  const road = ROAD_GROUNDS.includes(state.grid.ground[next.y * state.grid.width + next.x]!);
+  const pace = Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0));
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: pace };
 }
 
