@@ -20,6 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { seasonOf } from '../sim/seasons';
 import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
@@ -118,7 +119,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
   return {
     update(state, fps) {
-      const clockLine = `Day ${dayOf(state.tick)} · ${clockText(state.tick)} ${isNight(state.tick) ? '☾' : '☀'}`;
+      const weather = state.weather === 'clear' ? '' : `, ${state.weather}`;
+      const clockLine = `Day ${dayOf(state.tick)} · ${clockText(state.tick)} ${isNight(state.tick) ? '☾' : '☀'} · ${seasonOf(state.tick)}${weather}`;
       if (clockLine !== lastClock) clock.textContent = lastClock = clockLine;
       clock.classList.toggle('night', isNight(state.tick));
 

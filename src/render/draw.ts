@@ -232,6 +232,12 @@ export function draw(
     if (item.pos && shown(item.pos.x, item.pos.y)) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
   }
 
+  // Weather: a cool wash for rain, a pale one for snow.
+  if (state.weather !== 'clear') {
+    ctx.fillStyle = state.weather === 'rain' ? 'rgba(90, 120, 160, 0.12)' : 'rgba(230, 236, 245, 0.10)';
+    ctx.fillRect(0, 0, viewport.width, viewport.height);
+  }
+
   // Night falls over the world, but not over survivors, previews, or labels, so play stays readable.
   const dark = darkness(state.tick);
   if (dark > 0) {

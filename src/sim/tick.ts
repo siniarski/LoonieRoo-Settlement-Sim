@@ -24,6 +24,7 @@ import { updateArming } from './weapons';
 import { updateBreakdown, updateLeisure } from './leisure';
 import { reconcileExploreAreas, reconcilePointsOfInterest, updateFog } from './fog';
 import { updateHerds } from './herds';
+import { updateWeather } from './seasons';
 import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
 
@@ -34,6 +35,7 @@ export function tick(state: SimState): void {
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
   updateHerds(state);
+  updateWeather(state);
   updateFarm(state);
   updateWanderers(state);
   reconcileExploreAreas(state);

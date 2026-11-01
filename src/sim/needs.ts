@@ -17,6 +17,7 @@
 //
 // Constants live in rest.ts and food.ts.
 
+import { isCold } from './seasons';
 import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
 import { furnitureAt, type Furniture } from './furniture';
@@ -299,6 +300,8 @@ export function updateSatiety(s: Survivor): void {
 export function updateHealth(state: SimState, s: Survivor): string | null {
   if (s.satiety === 0) {
     s.health = Math.max(0, s.health - STARVE_DAMAGE);
+  } else if (isCold(state, s)) {
+    // No healing in the cold (seasons.ts takes its toll separately).
   } else if (s.health > 0 && s.sleep?.asleep) {
     s.health = Math.min(HEALTH_MAX, s.health + SLEEP_HEAL * (inInfirmary(state, s) ? INFIRMARY_HEAL_FACTOR : 1));
   } else if (s.health > 0 && !isHungry(s) && state.tick % AWAKE_HEAL_EVERY === 0) {
