@@ -7,7 +7,7 @@ import { MAX_ROOM_TILES, roomAt } from '../src/sim/rooms';
 import { loadScenario } from '../src/sim/scenario';
 import { createState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
-import { CHUNK, START_CLEAR_RADIUS, WORLD_SIZES, createWorld, generateChunk, layout, lootFor } from '../src/sim/worldgen';
+import { CHUNK, GENERATE_RADIUS, START_CLEAR_RADIUS, WORLD_SIZES, createWorld, generateChunk, layout, lootFor } from '../src/sim/worldgen';
 
 const SIZE = 128; // smaller than the real world, to keep the suite quick
 
@@ -96,5 +96,35 @@ describe('world sizes', () => {
       for (let i = 0; i < 50; i++) tick(state);
       expect(checkInvariants(state)).toEqual([]);
     }
+  });
+});
+
+describe('lazy generation', () => {
+  it('a new world generates only the chunks round the start', () => {
+    const world = createWorld(9, 512);
+    const n = 512 / CHUNK;
+    expect(world.world!.generated.filter((g) => g === 1)).toHaveLength((2 * GENERATE_RADIUS + 1) ** 2);
+    expect(world.world!.generated.length).toBe(n * n);
+    expect(world.grid.tiles[0]).toBe('floor'); // far corner: not made yet
+  });
+
+  it('chunks appear ahead of a survivor as they walk, the same as if made up front', () => {
+    const lazy = createWorld(9, 256);
+    const s = lazy.survivors[0]!;
+    const before = lazy.world!.generated.filter((g) => g === 1).length;
+    s.pos = { x: 250, y: 128 }; // teleported to the east edge
+    tick(lazy);
+    expect(lazy.world!.generated.filter((g) => g === 1).length).toBeGreaterThan(before);
+    // Compare a newly made chunk with the same chunk generated on its own.
+    const alone = createState({ seed: 9, width: 256, height: 256 });
+    generateChunk(alone, layout(9, 256), 7, 4);
+    for (let y = 4 * CHUNK; y < 5 * CHUNK; y++) {
+      for (let x = 7 * CHUNK; x < 8 * CHUNK; x++) expect(lazy.grid.tiles[y * 256 + x]).toBe(alone.grid.tiles[y * 256 + x]);
+    }
+    expect(checkInvariants(lazy)).toEqual([]);
+  });
+
+  it('hand-made maps have no world to generate', () => {
+    expect(loadScenario({ seed: 1, map: ['s..'] }).world).toBeNull();
   });
 });

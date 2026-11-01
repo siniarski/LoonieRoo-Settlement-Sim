@@ -16,13 +16,14 @@ import type { Wanderer } from './wanderers';
 import type { CraftKind } from './crafting';
 import type { ExploreArea, PointOfInterest } from './fog';
 import type { DormantZombie, Herd } from './herds';
+import type { WorldInfo } from './worldgen';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 27;
+export const SCHEMA_VERSION = 28;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -54,6 +55,8 @@ export interface SimState {
   herds: Herd[];
   /** Things scouts found worth a note: ruins with loot, and so on (fog.ts). */
   pointsOfInterest: PointOfInterest[];
+  /** Generated worlds: what's been generated so far (worldgen.ts). Null on hand-made maps. */
+  world: WorldInfo | null;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -95,6 +98,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     dormant: [],
     herds: [],
     pointsOfInterest: [],
+    world: null,
     items: [],
     furniture: [],
     farm: [],

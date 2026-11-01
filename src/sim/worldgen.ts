@@ -7,18 +7,31 @@
 //  - Generation runs chunk by chunk (CHUNK x CHUNK tiles). Buildings sit in
 //    cells that never cross a chunk border; roads, water and forest are
 //    per-tile functions, so they line up across borders by construction.
-//  - Today every chunk is generated up front. Lazy generation later only
-//    changes *when* generateChunk is called. (Entity ids come from
-//    state.nextId, so they do depend on generation order; ids are labels,
-//    nothing else.)
+//  - Chunks are generated lazily: the start area when the world is made,
+//    then any chunk within GENERATE_RADIUS chunks of a survivor, well ahead
+//    of what they can see (ensureGeneratedAround, called from fog.ts).
+//    (Entity ids come from state.nextId, so they do depend on generation
+//    order; ids are labels, nothing else.)
 
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
-import { GROUNDS, inBounds, setTile, tileIndex, type Ground, type Point } from './grid';
+import { GROUNDS, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { spawnItem } from './items';
 import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
 
 export const CHUNK = 32;
+/** Chunks this far (in chunks, each way) from any survivor are always generated. */
+export const GENERATE_RADIUS = 2;
+
+/** What a generated world needs to make more of itself (null on hand-made maps). */
+export interface WorldInfo {
+  seed: number;
+  size: number;
+  /** Chunks a side. */
+  chunks: number;
+  /** 1 per generated chunk, row-major. */
+  generated: number[];
+}
 /** World sizes on offer (tiles a side, multiples of CHUNK). Development uses the small ones. */
 export const WORLD_SIZES = [64, 128, 256, 512] as const;
 export const WORLD_SIZE = 128;
@@ -229,12 +242,68 @@ function startCamp(state: SimState, l: Layout): void {
   for (let i = 0; i < 10; i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
 }
 
-/** A fresh world: terrain chunk by chunk, the start camp, and fog over everything not near it. */
+/**
+ * Generates any missing chunk within GENERATE_RADIUS of a point. New terrain can change
+ * walkability, so this bumps the version and moves anything left standing in a wall.
+ */
+export function ensureGeneratedAround(state: SimState, p: Point): void {
+  const world = state.world;
+  if (!world) return;
+  const pcx = Math.floor(p.x / CHUNK);
+  const pcy = Math.floor(p.y / CHUNK);
+  let l: Layout | null = null;
+  for (let cy = Math.max(0, pcy - GENERATE_RADIUS); cy <= Math.min(world.chunks - 1, pcy + GENERATE_RADIUS); cy++) {
+    for (let cx = Math.max(0, pcx - GENERATE_RADIUS); cx <= Math.min(world.chunks - 1, pcx + GENERATE_RADIUS); cx++) {
+      const i = cy * world.chunks + cx;
+      if (world.generated[i] === 1) continue;
+      world.generated[i] = 1;
+      l ??= layout(world.seed, world.size);
+      generateChunk(state, l, cx, cy);
+      settle(state, cx, cy);
+      state.walkabilityVersion += 1;
+    }
+  }
+}
+
+/** Anything in a freshly generated chunk that ended up on a wall or water steps to the nearest open tile. */
+function settle(state: SimState, cx: number, cy: number): void {
+  const inChunk = (q: Point) => Math.floor(q.x / CHUNK) === cx && Math.floor(q.y / CHUNK) === cy;
+  const open = (x: number, y: number) => isWalkable(state.grid, x, y);
+  const floorOnly = (x: number, y: number) => state.grid.tiles[tileIndex(state.grid, x, y)] === 'floor';
+  for (const z of state.zombies) {
+    if (!inChunk(z.pos) || floorOnly(z.pos.x, z.pos.y)) continue;
+    z.pos = nearestAcross(state, z.pos, floorOnly) ?? z.pos;
+    z.move = null;
+    z.path = [];
+  }
+  for (const s of state.survivors) {
+    if (!inChunk(s.pos) || open(s.pos.x, s.pos.y)) continue;
+    s.pos = nearestAcross(state, s.pos, open) ?? s.pos;
+    s.move = null;
+    s.path = [];
+    s.pathVersion = -1;
+  }
+}
+
+/** The nearest accepted tile in growing square rings, across anything (nearestTile only spreads over walkable ground). */
+function nearestAcross(state: SimState, p: Point, accept: (x: number, y: number) => boolean): Point | null {
+  for (let r = 1; r <= CHUNK; r++) {
+    for (let y = p.y - r; y <= p.y + r; y++) {
+      for (let x = p.x - r; x <= p.x + r; x++) {
+        if (Math.max(Math.abs(x - p.x), Math.abs(y - p.y)) === r && inBounds(state.grid, x, y) && accept(x, y)) return { x, y };
+      }
+    }
+  }
+  return null;
+}
+
+/** A fresh world: the start area's chunks, the start camp, and fog over everything not near it. */
 export function createWorld(seed: number, size = WORLD_SIZE): SimState {
   const state = createState({ seed, width: size, height: size });
   const l = layout(seed, size);
   const chunks = Math.ceil(size / CHUNK);
-  for (let cy = 0; cy < chunks; cy++) for (let cx = 0; cx < chunks; cx++) generateChunk(state, l, cx, cy);
+  state.world = { seed, size, chunks, generated: new Array<number>(chunks * chunks).fill(0) };
+  ensureGeneratedAround(state, l.start);
   startCamp(state, l);
   state.grid.explored.fill(0);
   for (let y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++) {

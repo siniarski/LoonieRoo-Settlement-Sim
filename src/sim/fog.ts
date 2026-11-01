@@ -16,6 +16,7 @@ import { logEvent } from './events';
 import { furnitureAt } from './furniture';
 import { canReach } from './pathfinding';
 import { hourOf, isNight } from './time';
+import { ensureGeneratedAround } from './worldgen';
 import { manhattan } from './space';
 import type { SimState } from './state';
 
@@ -82,7 +83,10 @@ export function scoutingOver(tick: number): boolean {
 
 /** Everyone sees around them, every tick. */
 export function updateFog(state: SimState): void {
-  for (const s of state.survivors) revealAround(state, s.pos);
+  for (const s of state.survivors) {
+    ensureGeneratedAround(state, s.pos); // the world exists well ahead of what anyone sees
+    revealAround(state, s.pos);
+  }
 }
 
 export function getExploreArea(state: SimState, id: string): ExploreArea | undefined {

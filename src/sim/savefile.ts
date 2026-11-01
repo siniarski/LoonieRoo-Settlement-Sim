@@ -5,6 +5,10 @@
 // game up to the moment it was filed (rule 1: seed + initial state + commands
 // = the full game). Files from a different schema version are refused, not
 // migrated, same as hot reload.
+//
+// The grid's per-tile layers are run-length encoded on the way out (a world is
+// mostly long runs of grass and fog), and decoded on the way in. Files
+// without the encoding still load.
 
 import { replay } from './replay';
 import { SCHEMA_VERSION, cloneState, type LoggedCommand, type SimState } from './state';
@@ -28,9 +32,49 @@ interface BugReport {
 
 export type LoadResult = { ok: true; state: SimState; kind: 'save' | 'bug' } | { ok: false; error: string };
 
+/** The grid layers worth compressing. */
+const LAYERS = ['tiles', 'ground', 'explored', 'dirt', 'damage'] as const;
+
+/** [value, count, value, count, ...]. */
+export function runLengthEncode<T>(values: readonly T[]): (T | number)[] {
+  const out: (T | number)[] = [];
+  for (let i = 0; i < values.length; ) {
+    let j = i + 1;
+    while (j < values.length && values[j] === values[i]) j++;
+    out.push(values[i]!, j - i);
+    i = j;
+  }
+  return out;
+}
+
+export function runLengthDecode<T>(encoded: readonly (T | number)[]): T[] {
+  const out: T[] = [];
+  for (let k = 0; k < encoded.length; k += 2) {
+    const value = encoded[k] as T;
+    for (let n = 0; n < (encoded[k + 1] as number); n++) out.push(value);
+  }
+  return out;
+}
+
+/** A copy of the state with the grid's layers run-length encoded (marked `rle: true`). */
+function pack(state: SimState): unknown {
+  const grid: Record<string, unknown> = { ...state.grid, rle: true };
+  for (const layer of LAYERS) grid[layer] = runLengthEncode(state.grid[layer] as unknown[]);
+  return { ...state, grid };
+}
+
+/** Undoes pack (and passes unpacked states through). */
+function unpack(state: SimState): SimState {
+  const grid = state.grid as unknown as Record<string, unknown>;
+  if (grid.rle !== true) return state;
+  const out: Record<string, unknown> = { ...grid };
+  delete out.rle;
+  for (const layer of LAYERS) out[layer] = runLengthDecode(grid[layer] as unknown[]);
+  return { ...state, grid: out as unknown as SimState['grid'] };
+}
+
 export function toSaveFile(state: SimState): string {
-  const file: SaveFile = { format: 'loonieroo-save', schemaVersion: SCHEMA_VERSION, state };
-  return JSON.stringify(file);
+  return JSON.stringify({ format: 'loonieroo-save', schemaVersion: SCHEMA_VERSION, state: pack(state) });
 }
 
 /**
@@ -38,11 +82,11 @@ export function toSaveFile(state: SimState): string {
  * report carries only the commands logged since then.
  */
 export function toBugReport(initial: SimState, state: SimState, note = ''): string {
-  const report: BugReport = {
+  const report = {
     format: 'loonieroo-bug',
     schemaVersion: SCHEMA_VERSION,
     note,
-    initial,
+    initial: pack(initial),
     commands: state.commandLog.slice(initial.commandLog.length),
     tick: state.tick,
   };
@@ -65,11 +109,11 @@ export function loadFile(text: string): LoadResult {
   }
   if (file.format === 'loonieroo-save') {
     if (!file.state) return { ok: false, error: 'save has no state' };
-    return { ok: true, state: cloneState(file.state), kind: 'save' };
+    return { ok: true, state: cloneState(unpack(file.state)), kind: 'save' };
   }
   if (!file.initial || !file.commands || typeof file.tick !== 'number') return { ok: false, error: 'bug report is incomplete' };
   try {
-    const initial = cloneState(file.initial);
+    const initial = cloneState(unpack(file.initial));
     return { ok: true, state: replay(initial, file.commands, file.tick), kind: 'bug' };
   } catch (err) {
     return { ok: false, error: `bug report did not replay: ${String(err)}` };
