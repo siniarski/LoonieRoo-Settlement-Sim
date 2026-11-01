@@ -40,7 +40,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -178,7 +178,7 @@ function statusText(state: SimState, view: ViewState): string {
   return [
     mode,
     selected ? `${selected.name} selected (right-click to move)` : 'nobody selected',
-    hover && tile ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}` : '—',
+    hover && tile ? (state.grid.explored[hover.y * width + hover.x] === 1 ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}` : `(${hover.x}, ${hover.y}) unexplored`) : '—',
     `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
@@ -210,6 +210,7 @@ function furnitureText(state: SimState, p: Point): string {
 /** Tools whose action isn't obvious from "click or drag to place". */
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   scavenge: 'Drag a box over a ruin or trees to mark crates and trees',
+  explore: 'Drag a box into the dark: a scout goes and looks (up to 64 tiles a side)',
   farm: 'Drag a box over open ground to lay out plots',
   furnish: 'Click a room: the planner adds what it needs',
   remove: 'Drag over walls, doors, or furniture to take down',

@@ -194,6 +194,10 @@ export function checkInvariants(state: SimState): string[] {
     else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
+  for (const a of state.exploreAreas) {
+    if (a.x0 > a.x1 || a.y0 > a.y1 || a.x0 < 0 || a.y0 < 0 || a.x1 >= grid.width || a.y1 >= grid.height) problems.push(`explore area ${a.id} is not a box on the map`);
+  }
+
   const roomsClaimed = new Set<number>();
   for (const d of state.roomDesignations) {
     if (getTile(grid, d.x, d.y) !== 'floor') problems.push(`room designation ${d.id} anchored on non-floor`);

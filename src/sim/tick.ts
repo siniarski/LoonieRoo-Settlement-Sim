@@ -22,6 +22,7 @@ import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
 import { updateBreakdown, updateLeisure } from './leisure';
+import { reconcileExploreAreas, updateFog } from './fog';
 import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
 
@@ -33,6 +34,7 @@ export function tick(state: SimState): void {
   updateZombies(state);
   updateFarm(state);
   updateWanderers(state);
+  reconcileExploreAreas(state);
   for (const s of state.survivors) {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }
@@ -65,6 +67,8 @@ export function tick(state: SimState): void {
   reconcileRoomDesignations(state);
   reconcileNeeds(state);
   reconcileWanderers(state);
+  // Everyone looks round where they now stand.
+  updateFog(state);
   state.tick += 1;
 }
 

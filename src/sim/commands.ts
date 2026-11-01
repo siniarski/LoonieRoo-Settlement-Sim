@@ -19,6 +19,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
+import { MAX_EXPLORE_SIDE, isExplored } from './fog';
 import { damageStructure, isStructure } from './breach';
 import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
@@ -46,6 +47,8 @@ export type Command =
   /** Marks the crate on this tile (if it has loot left) for scavenging. Paint it over an area. */
   | { type: 'designateScavenge'; x: number; y: number }
   | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
+  /** Scout a box of unexplored ground (fog.ts); corners in any order. */
+  | { type: 'designateExplore'; x0: number; y0: number; x1: number; y1: number }
   // Survivors.
   | { type: 'spawnSurvivor'; x: number; y: number }
   | { type: 'moveSurvivor'; survivorId: string; x: number; y: number }
@@ -67,6 +70,9 @@ export type Command =
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
+/** Plans the player can only make on ground someone has seen. */
+const DESIGNATIONS = new Set<Command['type']>(['designateBuild', 'designateRemove', 'designateRoom', 'designateScavenge', 'designateFarm']);
+
 export function applyCommand(state: SimState, command: Command): CommandResult {
   const result = execute(state, command);
   if (result.ok && result.changed) {
@@ -77,6 +83,18 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'designateExplore') {
+    const x0 = Math.max(0, Math.min(command.x0, command.x1));
+    const y0 = Math.max(0, Math.min(command.y0, command.y1));
+    const x1 = Math.min(state.grid.width - 1, Math.max(command.x0, command.x1), x0 + MAX_EXPLORE_SIDE - 1);
+    const y1 = Math.min(state.grid.height - 1, Math.max(command.y0, command.y1), y0 + MAX_EXPLORE_SIDE - 1);
+    if (![command.x0, command.y0, command.x1, command.y1].every(Number.isInteger) || x1 < x0 || y1 < y0) return reject('not a box on the map');
+    let dark = false;
+    for (let y = y0; y <= y1 && !dark; y++) for (let x = x0; x <= x1 && !dark; x++) dark = !isExplored(state, x, y);
+    if (!dark) return reject('already explored');
+    state.exploreAreas.push({ id: `e${state.nextId++}`, x0, y0, x1, y1 });
+    return changed();
+  }
   if (command.type === 'assignBed') {
     const bed = state.furniture.find((f) => f.id === command.bedId && f.kind === 'bed');
     if (!bed) return reject(`no bed ${command.bedId}`);
@@ -124,6 +142,7 @@ function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setHealth') return setNeed(state, command.survivorId, 'health', command.health, HEALTH_MAX);
   const { x, y } = command;
   if (!inBounds(state.grid, x, y)) return reject(`(${x}, ${y}) is out of bounds`);
+  if (DESIGNATIONS.has(command.type) && !isExplored(state, x, y)) return reject(`(${x}, ${y}) is unexplored`);
   switch (command.type) {
     case 'placeWall':
       if (survivorAt(state, x, y)) return reject(`(${x}, ${y}) is occupied`);

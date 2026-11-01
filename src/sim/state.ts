@@ -14,13 +14,14 @@ import type { RoomDesignation } from './rooms';
 import type { Survivor } from './survivors';
 import type { Wanderer } from './wanderers';
 import type { CraftKind } from './crafting';
+import type { ExploreArea } from './fog';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -44,6 +45,8 @@ export interface SimState {
   craftTargets: Record<CraftKind, number>;
   /** Zombies due tonight, fixed at nightfall (zombies.ts); null by day. */
   zombiesTonight: number | null;
+  /** Boxes the player wants scouted (fog.ts). */
+  exploreAreas: ExploreArea[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -81,6 +84,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     wanderers: [],
     craftTargets: { weapon: 0, bandage: 0 },
     zombiesTonight: null,
+    exploreAreas: [],
     items: [],
     furniture: [],
     farm: [],

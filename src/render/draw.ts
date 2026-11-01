@@ -21,6 +21,7 @@ import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } fro
 import { survivorWorldPos } from './interp';
 
 const COLOURS = {
+  fog: '#07080a',
   background: '#0d0f0e',
   mapEdge: '#3a3f3b',
   gridLine: 'rgba(255, 255, 255, 0.05)',
@@ -46,6 +47,7 @@ const COLOURS = {
     remove: '#ff7a7a',
     cancel: '#c9c9c9',
     scavenge: '#ffd166',
+    explore: '#9fc3ff',
     farm: '#9ed36a',
     furnish: '#c7a6ff',
     bed: '#c7a6ff',
@@ -166,11 +168,20 @@ export function draw(
 
   const size = tileSize(camera);
   const range = visibleTiles(camera, viewport, grid.width, grid.height);
+  /** On screen and explored: everything else is skipped (big maps, fog of war). */
+  const shown = (x: number, y: number) =>
+    x >= range.x0 && x <= range.x1 && y >= range.y0 && y <= range.y1 && grid.explored[y * grid.width + x] === 1;
 
   for (let y = range.y0; y <= range.y1; y++) {
     for (let x = range.x0; x <= range.x1; x++) {
-      const tile = grid.tiles[y * grid.width + x];
-      if (tile !== undefined) drawTile(ctx, camera, viewport, x, y, tile, grid.ground[y * grid.width + x]!, size);
+      const i = y * grid.width + x;
+      const tile = grid.tiles[i];
+      if (tile === undefined) continue;
+      if (grid.explored[i] !== 1) {
+        const r = tileRect(camera, viewport, x, y);
+        ctx.fillStyle = COLOURS.fog;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+      } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size);
     }
   }
 
@@ -196,6 +207,7 @@ export function draw(
 
   for (const plot of state.farm) drawPlot(ctx, camera, viewport, plot);
   for (const f of state.furniture) {
+    if (!shown(f.x, f.y)) continue;
     if (f.kind === 'bed') drawBed(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'workbench') drawWorkbench(ctx, camera, viewport, f, size);
@@ -204,7 +216,7 @@ export function draw(
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
   for (const item of state.items) {
-    if (item.pos) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
+    if (item.pos && shown(item.pos.x, item.pos.y)) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
   }
 
   // Night falls over the world, but not over survivors, previews, or labels, so play stays readable.
@@ -226,8 +238,9 @@ export function draw(
     }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
-  for (const w of state.wanderers) drawWanderer(ctx, camera, viewport, w, size);
-  for (const z of state.zombies) drawZombie(ctx, camera, viewport, state, z, options, size);
+  for (const a of state.exploreAreas) drawAreaBox(ctx, camera, viewport, { from: { x: a.x0, y: a.y0 }, to: { x: a.x1, y: a.y1 } }, COLOURS.tools.explore);
+  for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
+  for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
 }

@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'bed' | 'table' | 'workbench' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'farm' | 'furnish' | 'scavenge' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'bed' | 'table' | 'workbench' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -41,6 +41,8 @@ export interface Tool {
   hasInstant: boolean;
   /** Null for tools that don't map to a single command (Furnish: see `furnish`). */
   command(x: number, y: number, ctx: ToolContext): Command | null;
+  /** Area tools only: one command for the whole box instead of one per tile. */
+  boxCommand?(from: Point, to: Point): Command;
 }
 
 export const TOOLS: readonly Tool[] = [
@@ -182,6 +184,16 @@ export const TOOLS: readonly Tool[] = [
     paints: true,
     hasInstant: false,
     command: (x, y) => ({ type: 'cancelDesignation', x, y }),
+  },
+  {
+    id: 'explore',
+    label: 'Explore',
+    category: 'orders',
+    paints: false,
+    area: true,
+    hasInstant: false,
+    command: () => null,
+    boxCommand: (from, to) => ({ type: 'designateExplore', x0: from.x, y0: from.y, x1: to.x, y1: to.y }),
   },
 ];
 

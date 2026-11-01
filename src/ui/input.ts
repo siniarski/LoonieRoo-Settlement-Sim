@@ -151,7 +151,9 @@ export function attachInput(ctx: InputContext): Input {
     if (e.button === 0 && view.areaDrag) {
       const { from, to } = view.areaDrag;
       view.areaDrag = null;
-      tilesInBox(from, to).forEach(apply);
+      const tool = view.tool ? getTool(view.tool) : null;
+      if (tool?.boxCommand) ctx.command(tool.boxCommand(from, to));
+      else tilesInBox(from, to).forEach(apply);
     }
     painting = null;
     panning = null;

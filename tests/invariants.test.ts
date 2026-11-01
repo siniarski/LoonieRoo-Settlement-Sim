@@ -89,6 +89,8 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll >= 105 && roll < 108) return { type: 'setCraftTarget', kind: roll < 106 ? 'weapon' : 'bandage', count: roll % 4 };
   // Flip the storage room to a rec room and back, so idle survivors sometimes go and relax.
   if (roll >= 111 && roll < 115 && isStructure(getTile(state.grid, x, y))) return { type: 'damageStructure', x, y, amount: 40 * (1 + (roll % 5)) };
+  // Scout the dark strip at the bottom right (if any of it is still dark).
+  if (roll >= 115 && roll < 118) return { type: 'designateExplore', x0: 12, y0: 10, x1: 23, y1: 12 };
   if (roll >= 108 && roll < 111) return { type: 'designateRoom', x: 14, y: 3, purpose: roll < 110 ? 'recroom' : 'storage' };
   if (roll >= 100 && roll < 102) {
     // Aim at a table, if any, so whatever room it stands in can become a working mess hall.
@@ -118,6 +120,8 @@ describe('stuck-state invariant', () => {
           { x: 3, y: 11, purpose: 'messhall' },
         ],
       });
+      // The bottom-right strip starts unexplored, so fog and scouting are exercised.
+      for (let y = 10; y <= 12; y++) for (let x = 12; x <= 23; x++) initial.grid.explored[y * initial.grid.width + x] = 0;
       // Start at 18:00 so the run covers a whole night of zombies and the dawn retreat.
       initial.tick = 12 * 200;
       const state = cloneState(initial);

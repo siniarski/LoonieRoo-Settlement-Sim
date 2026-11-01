@@ -14,6 +14,7 @@ import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
 import { BANDAGE_HEAL, HEALTH_MAX, TREAT_TICKS, isHurt, worksThisTick } from './health';
 import { isPatient } from './medicine';
+import { getExploreArea, isExplored, scoutTarget } from './fog';
 import { isMiserable } from './mood';
 import { getTile, isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { REPAIR_PER_TICK, repairStructure, structureDamage } from './breach';
@@ -52,6 +53,8 @@ export interface Job {
   plotId: string | null;
   /** Doctor only: the survivor being treated. The job's x, y follow them. */
   patientId: string | null;
+  /** Scout only: the explore area. The job's x, y are the current target tile. */
+  areaId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
   /** Clean and scavenge: ticks of work done. */
@@ -125,6 +128,12 @@ export function reconcileJobs(state: SimState): void {
     if (state.grid.damage[i]! > 0 && !repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
   }
 
+  // Every explore area gets one scout job.
+  const scouting = new Set(state.jobs.filter((j) => j.type === 'scout').map((j) => j.areaId));
+  for (const a of state.exploreAreas) {
+    if (!scouting.has(a.id)) addJob(state, 'scout', Math.floor((a.x0 + a.x1) / 2), Math.floor((a.y0 + a.y1) / 2), null, null).areaId = a.id;
+  }
+
   // Every patient (hurt, resting in bed) gets one doctor job.
   const treating = new Set(state.jobs.filter((j) => j.type === 'doctor').map((j) => j.patientId));
   for (const p of state.survivors) {
@@ -190,6 +199,8 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       job.y = z.pos.y;
       return null;
     }
+    case 'scout':
+      return job.areaId && getExploreArea(state, job.areaId) ? null : 'area explored';
     case 'doctor': {
       const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
       if (!patient || !isPatient(patient)) return 'patient is up and about';
@@ -271,6 +282,7 @@ function addJob(
     zombieId,
     plotId,
     patientId: null,
+    areaId: null,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -340,6 +352,8 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workCraft(state, s, job);
     case 'doctor':
       return workDoctor(state, s, job);
+    case 'scout':
+      return workScout(state, s, job);
     case 'guard':
       return workGuard(state, s, job);
     case 'farm':
@@ -446,6 +460,17 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   bench.stored -= cost;
   spawnItem(state, kind, s.pos.x, s.pos.y);
   finishJob(state, s, job, `crafted ${kind === 'weapon' ? 'a weapon' : 'a bandage'} at (${bench.x}, ${bench.y})`);
+}
+
+/** Walk to the nearest unexplored tile in the area (seeing round you as you go), and on to the next, until it's all seen. */
+function workScout(state: SimState, s: Survivor, job: Job): void {
+  const area = job.areaId ? getExploreArea(state, job.areaId) : undefined;
+  if (!area) return releaseSurvivor(state, s, 'area explored');
+  const target = isExplored(state, job.x, job.y) ? scoutTarget(state, area, s.pos) : { x: job.x, y: job.y };
+  if (!target) return finishJob(state, s, job, `scouted (${area.x0}, ${area.y0})-(${area.x1}, ${area.y1}) as far as it goes`);
+  job.x = target.x;
+  job.y = target.y;
+  if (!samePoint(s.pos, target)) return goTo(state, s, job, [target]);
 }
 
 /** Fetch a bandage, carry it to the patient's bedside, and treat them. */
@@ -664,6 +689,14 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       const goals = neighbours4(grid, job.x, job.y);
       if (!canReach(grid, v, s.pos, goals)) return null;
       return pathPlan(state, s.pos, goals, null);
+    }
+    case 'scout': {
+      const area = job.areaId ? getExploreArea(state, job.areaId) : undefined;
+      const target = area ? scoutTarget(state, area, s.pos) : null;
+      if (!target) return null;
+      job.x = target.x;
+      job.y = target.y;
+      return pathPlan(state, s.pos, [target], null);
     }
     case 'doctor': {
       const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
