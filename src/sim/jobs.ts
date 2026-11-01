@@ -106,12 +106,13 @@ export function reconcileJobs(state: SimState): void {
   }
 
   // Cleaning is indoors only: nobody scrubs the street.
-  const { width, dirt } = state.grid;
+  // (Lists, not a scan of the whole map; sorted so jobs come in map order, as they always have.)
+  const { width } = state.grid;
   const cleaning = new Set(state.jobs.filter((j) => j.type === 'clean').map((j) => j.y * width + j.x));
-  for (let i = 0; i < dirt.length; i++) {
+  for (const i of [...state.grid.dirtList].sort((a, b) => a - b)) {
     const x = i % width;
     const y = Math.floor(i / width);
-    if (dirt[i] === 1 && !cleaning.has(i) && isIndoors(state, x, y)) addJob(state, 'clean', x, y, null, null);
+    if (!cleaning.has(i) && isIndoors(state, x, y)) addJob(state, 'clean', x, y, null, null);
   }
 
   // Loose items outside their home (armory for weapons, else storage) get a store job, if a room can take them.
@@ -124,8 +125,8 @@ export function reconcileJobs(state: SimState): void {
 
   // Damaged walls and doors get one repair job each.
   const repairing = new Set(state.jobs.filter(isRepairJob).map((j) => j.y * width + j.x));
-  for (let i = 0; i < state.grid.damage.length; i++) {
-    if (state.grid.damage[i]! > 0 && !repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
+  for (const i of [...state.grid.damageList].sort((a, b) => a - b)) {
+    if (!repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
   }
 
   // Every explore area gets one scout job.

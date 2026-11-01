@@ -185,6 +185,13 @@ export function checkInvariants(state: SimState): string[] {
     if (!isWalkable(grid, w.x, w.y)) problems.push(`wanderer ${w.name} on unwalkable (${w.x}, ${w.y})`);
   }
 
+  const listed = (arr: number[], list: number[], name: string) => {
+    const want = arr.flatMap((v, i) => (v !== 0 ? [i] : []));
+    const have = [...list].sort((a, b) => a - b);
+    if (want.length !== have.length || want.some((v, k) => v !== have[k])) problems.push(`${name} list out of step with the map`);
+  };
+  listed(grid.dirt, grid.dirtList, 'dirt');
+  listed(grid.damage, grid.damageList, 'damage');
   for (let i = 0; i < grid.damage.length; i++) {
     const d = grid.damage[i]!;
     if (d === 0) continue;

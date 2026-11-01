@@ -7,7 +7,7 @@
 
 import { addBlueprint, blueprintAt, cancelBlueprint } from './designations';
 import { logEvent } from './events';
-import { getTile, setTile, tileIndex, type Tile } from './grid';
+import { getTile, setDamage, setTile, tileIndex, type Tile } from './grid';
 import type { SimState } from './state';
 
 /** Damage a structure takes before it breaks. Zombies hit for 40, every 10 ticks. */
@@ -28,7 +28,7 @@ export function damageStructure(state: SimState, x: number, y: number, amount: n
   const tile = getTile(state.grid, x, y);
   if (!isStructure(tile)) return false;
   const i = tileIndex(state.grid, x, y);
-  state.grid.damage[i] = state.grid.damage[i]! + amount;
+  setDamage(state.grid, i, state.grid.damage[i]! + amount);
   if (state.grid.damage[i]! < STRUCTURE_HEALTH[tile]) return false;
   setTile(state.grid, x, y, 'floor'); // also clears the damage
   state.walkabilityVersion += 1;
@@ -43,6 +43,6 @@ export function damageStructure(state: SimState, x: number, y: number, amount: n
 export function repairStructure(state: SimState, x: number, y: number, amount: number): number {
   if (!isStructure(getTile(state.grid, x, y))) return 0;
   const i = tileIndex(state.grid, x, y);
-  state.grid.damage[i] = Math.max(0, state.grid.damage[i]! - amount);
+  setDamage(state.grid, i, Math.max(0, state.grid.damage[i]! - amount));
   return state.grid.damage[i]!;
 }

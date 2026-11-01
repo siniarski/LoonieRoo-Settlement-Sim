@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { STRUCTURE_HEALTH, structureDamage } from '../src/sim/breach';
+import { setDamage } from '../src/sim/grid';
 import { checkInvariants } from '../src/sim/invariants';
 import { NO_JOBS } from '../src/sim/jobTypes';
 import { loadScenario } from '../src/sim/scenario';
@@ -69,7 +70,7 @@ describe('breaching', () => {
 
   it('survivors repair damaged doors from beside them', () => {
     const state = setup(['#D#', 's..'], { build: 3 }, false);
-    state.grid.damage[1] = 250;
+    setDamage(state.grid, 1, 250);
     tick(state);
     expect(state.jobs).toMatchObject([{ type: 'build', x: 1, y: 0, blueprintId: null }]);
     runUntil(state, () => state.survivors[0]!.note === 'repaired door at (1, 0)');
@@ -79,7 +80,7 @@ describe('breaching', () => {
 
   it('a repair job is dropped when its door is gone, and the repairer moves on', () => {
     const state = setup(['#D#', '...', '...', 's..'], { build: 3 }, false);
-    state.grid.damage[1] = 250;
+    setDamage(state.grid, 1, 250);
     tick(state);
     const s = state.survivors[0]!;
     expect(s.jobId).not.toBeNull();
@@ -108,7 +109,7 @@ describe('breaching', () => {
 
   it('removing a damaged wall clears its damage, and a new wall starts whole', () => {
     const state = setup(['s#.'], {}, false);
-    state.grid.damage[1] = 500;
+    setDamage(state.grid, 1, 500);
     applyCommand(state, { type: 'clearTile', x: 1, y: 0 });
     expect(damageAt(state, 1, 0)).toBe(0);
     applyCommand(state, { type: 'placeWall', x: 1, y: 0 });

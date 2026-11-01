@@ -152,3 +152,20 @@ describe('wanderers', () => {
     expect(new Set(names).size).toBe(3);
   });
 });
+
+describe('wanderers on a partly explored map', () => {
+  it('turn up at the edge of explored ground, a short walk away, not at the map edge', () => {
+    const map = Array.from({ length: 80 }, (_, y) => (y === 40 ? '.'.repeat(40) + 's' + '.'.repeat(39) : '.'.repeat(80)));
+    const state = loadScenario({ seed: 3, map });
+    for (const s of state.survivors) s.priorities = { ...DEFAULT_PRIORITIES, build: 0, clean: 0 };
+    state.grid.explored.fill(0);
+    state.tick = at(2, ARRIVAL_HOUR) - 1;
+    tick(state); // looks round: a circle of explored ground
+    tick(state);
+    const w = state.wanderers[0]!;
+    const seen = (x: number, y: number) => state.grid.explored[y * 80 + x] === 1;
+    expect(seen(w.x, w.y)).toBe(true);
+    expect([seen(w.x + 1, w.y), seen(w.x - 1, w.y), seen(w.x, w.y + 1), seen(w.x, w.y - 1)]).toContain(false);
+    expect(w.x === 0 || w.y === 0 || w.x === 79 || w.y === 79).toBe(false);
+  });
+});

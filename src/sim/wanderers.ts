@@ -1,20 +1,25 @@
 // Wanderers: new survivors arriving by day.
 //
-// From day 2 a wanderer turns up at ARRIVAL_HOUR on a floor tile at the map edge
-// (sim RNG); a second comes at SECOND_ARRIVAL_HOUR if there is a spare bed.
+// From day 2 a wanderer turns up at ARRIVAL_HOUR at the edge of explored ground,
+// a short walk from the colony (on a fully explored map: at the map edge; sim RNG); a second comes at SECOND_ARRIVAL_HOUR if there is a spare bed.
 // They wait where they arrived. The player takes them in (they become a
 // survivor) or turns them away; ignored for WANDERER_PATIENCE ticks, or still
 // waiting at nightfall, they leave on their own.
 
 import { logEvent } from './events';
-import { getTile, isWalkable, type Point } from './grid';
+import { getTile, inBounds, isWalkable, type Point } from './grid';
 import { DIRS } from './pathfinding';
-import { pick } from './rng';
+import { pick, randomInt } from './rng';
+import { isExplored } from './fog';
+import { OUTDOORS, labelAt } from './rooms';
+import { nearestTile } from './space';
 import type { SimState } from './state';
 import { nextSurvivorName } from './survivors';
 import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight, tickOfDay } from './time';
 
 export const ARRIVAL_HOUR = 10;
+/** How far from a survivor to look for an arrival spot (roughly). */
+const ARRIVAL_DISTANCE = 24;
 /** A second wanderer comes at this hour, but only if there is a spare bed. */
 export const SECOND_ARRIVAL_HOUR = 14;
 /** How long a wanderer waits for an answer: 3 in-game hours. */
@@ -85,7 +90,36 @@ export function reconcileWanderers(state: SimState): void {
   }
 }
 
+/** Out at the edge of what you've seen, a short walk from someone, on open ground. */
+function frontierSpot(state: SimState, taken: Set<string>): Point | null {
+  if (state.survivors.length === 0 || !state.grid.explored.includes(0)) return null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const s = pick(state, state.survivors);
+    const near = {
+      x: Math.max(0, Math.min(state.grid.width - 1, s.pos.x + randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1))),
+      y: Math.max(0, Math.min(state.grid.height - 1, s.pos.y + randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1))),
+    };
+    const ok = (x: number, y: number) =>
+      isExplored(state, x, y) &&
+      getTile(state.grid, x, y) === 'floor' &&
+      labelAt(state, x, y) === OUTDOORS &&
+      !taken.has(`${x},${y}`) &&
+      DIRS.some((d) => inBounds(state.grid, x + d.x, y + d.y) && !isExplored(state, x + d.x, y + d.y));
+    const p = nearestTile(state.grid, near, ok);
+    if (p) return p;
+  }
+  return null;
+}
+
 function arrive(state: SimState): void {
+  const taken0 = new Set(state.wanderers.map((w) => `${w.x},${w.y}`));
+  const spot = frontierSpot(state, taken0);
+  if (spot) {
+    const w = addWanderer(state, spot.x, spot.y);
+    logEvent(state, `${w.name}, a wanderer, is waiting at (${spot.x}, ${spot.y}): take them in?`);
+    return;
+  }
+  // A fully explored map (a scenario): they come in from the edge.
   const { width, height } = state.grid;
   const edge: Point[] = [];
   for (let x = 0; x < width; x++) edge.push({ x, y: 0 }, { x, y: height - 1 });
