@@ -44,6 +44,8 @@ export interface InputContext {
   mapSize(): { width: number; height: number };
   /** Id of the survivor on (or stepping onto) a tile, if any. */
   survivorAt(tile: Point): string | null;
+  /** Id of the bed on a tile, if any. */
+  bedAt(tile: Point): string | null;
   command(cmd: Command): void;
   /** Ask the auto-planner to furnish the room at this tile. */
   furnish(tile: Point): void;
@@ -96,8 +98,12 @@ export function attachInput(ctx: InputContext): Input {
       if (getTool(view.tool).paints) painting = tile;
       return;
     }
-    // Select mode: pick a survivor, or clear the selection on empty ground.
-    view.selectedId = ctx.survivorAt(tile);
+    // Select mode: pick a survivor; with someone picked, a click on a bed gives it to them;
+    // anywhere else clears the selection.
+    const who = ctx.survivorAt(tile);
+    const bed = who ? null : ctx.bedAt(tile);
+    if (!who && bed && view.selectedId) ctx.command({ type: 'assignBed', bedId: bed, survivorId: view.selectedId });
+    else view.selectedId = who;
   };
 
   const onRightClick = (tile: Point) => {

@@ -181,7 +181,7 @@ function statusText(state: SimState, view: ViewState): string {
   const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : 'select';
   return [
     mode,
-    selected ? `${selected.name} selected (right-click to move)` : 'nobody selected',
+    selected ? `${selected.name} selected (right-click to move, click a bed to give it to them)` : 'nobody selected',
     hover && tile ? (state.grid.explored[hover.y * width + hover.x] === 1 ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}` : `(${hover.x}, ${hover.y}) unexplored`) : '—',
     `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,

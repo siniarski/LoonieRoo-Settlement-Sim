@@ -13,6 +13,7 @@ import { DAY_LENGTH, dayOf } from './sim/time';
 import { createWorld } from './sim/worldgen';
 import { AUTO_SLOT, downloadText, fileStamp, loadFromSlot, pickTextFile, saveToSlot } from './ui/saves';
 import { survivorAt } from './sim/survivors';
+import { furnitureAt } from './sim/furniture';
 import { step } from './sim/tick';
 import { createHud, type GameFiles } from './ui/hud';
 import { attachInput } from './ui/input';
@@ -102,6 +103,10 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     viewport: () => viewport,
     mapSize: () => handle.state.grid,
     survivorAt: (tile) => survivorAt(handle.state, tile.x, tile.y)?.id ?? null,
+    bedAt: (tile) => {
+      const f = furnitureAt(handle.state, tile.x, tile.y);
+      return f?.kind === 'bed' ? f.id : null;
+    },
     command: (cmd) => applyCommand(handle.state, cmd),
     furnish: (tile) => {
       // The planner only proposes; its commands go through the normal command path.

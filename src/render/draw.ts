@@ -312,6 +312,7 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
   ctx.font = `${Math.round(Math.max(10, Math.min(13, size * 0.5)))}px ui-monospace, Consolas, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
   for (const d of state.roomDesignations) {
     const room = roomAt(state, d.x, d.y);
     const status = evaluateRoom(state, room, d.purpose);
@@ -323,11 +324,19 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
         : d.purpose === 'messhall'
           ? `✓ ${status.tables} table${status.tables === 1 ? '' : 's'}`
           : `✓ ${status.size} tiles`;
-    const text = `${PURPOSE_NAMES[d.purpose]}  ${detail}`;
-    const anchor = room ? { x: (room.minX + room.maxX + 1) / 2, y: room.minY + 0.15 } : { x: d.x + 0.5, y: d.y + 0.15 };
+    // Too wide for the room on screen: just the name and a tick or warning sign.
+    const roomPx = room ? (room.maxX - room.minX + 1) * size : Infinity;
+    const full = `${PURPOSE_NAMES[d.purpose]}  ${detail}`;
+    const text = ctx.measureText(full).width + 8 <= roomPx ? full : `${PURPOSE_NAMES[d.purpose]} ${missing ? '⚠' : '✓'}`;
+    // On the room's top wall, so it never covers what's inside.
+    const anchor = room ? { x: (room.minX + room.maxX + 1) / 2, y: room.minY - 0.85 } : { x: d.x + 0.5, y: d.y + 0.15 };
     const p = worldToScreen(camera, viewport, anchor.x, anchor.y);
     const w = ctx.measureText(text).width + 8;
     const h = Math.round(Math.max(10, Math.min(13, size * 0.5))) + 4;
+    // Step down past any label already drawn where this one would go.
+    const hits = (y: number) => placed.some((r) => p.x - w / 2 < r.x1 && p.x + w / 2 > r.x0 && y < r.y1 && y + h > r.y0);
+    for (let tries = 0; tries < 4 && hits(p.y); tries++) p.y += h + 2;
+    placed.push({ x0: p.x - w / 2, y0: p.y, x1: p.x + w / 2, y1: p.y + h });
     ctx.fillStyle = COLOURS.labelBg;
     ctx.fillRect(p.x - w / 2, p.y, w, h);
     ctx.fillStyle = missing ? COLOURS.incomplete : COLOURS.roomLabel[d.purpose];
