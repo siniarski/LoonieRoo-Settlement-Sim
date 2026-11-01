@@ -332,7 +332,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   logEvent(state, `${s.name} died of ${cause}`);
-  mournDeath(state);
+  mournDeath(state, s);
 }
 
 // --- Sleep ------------------------------------------------------------------

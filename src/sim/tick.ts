@@ -25,6 +25,7 @@ import { updateBreakdown, updateLeisure } from './leisure';
 import { reconcileExploreAreas, reconcilePointsOfInterest, updateFog } from './fog';
 import { updateHerds } from './herds';
 import { updateWeather } from './seasons';
+import { updateRelationships } from './relationships';
 import { forgetThoughts } from './mood';
 import { ZOMBIE_HEALTH, addZombie, updateZombies } from './zombies';
 import { updateInfection } from './infection';
@@ -37,6 +38,7 @@ export function tick(state: SimState): void {
   updateZombies(state);
   updateHerds(state);
   updateWeather(state);
+  updateRelationships(state);
   updateFarm(state);
   updateWanderers(state);
   reconcileExploreAreas(state);

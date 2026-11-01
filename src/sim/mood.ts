@@ -8,6 +8,7 @@
 import { HUNGRY } from './food';
 import { isHurt } from './health';
 import { TRAIT_INFO } from './skills';
+import { forget } from './relationships';
 import { INFECTED_MOOD } from './infection';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
@@ -24,7 +25,8 @@ export type ThoughtKind =
   | 'vented'
   | 'hotMeal'
   | 'soaked'
-  | 'cold';
+  | 'cold'
+  | 'lostFriend';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -44,6 +46,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   hotMeal: { label: 'had a hot meal', effect: 5, duration: DAY_LENGTH / 2 },
   soaked: { label: 'got soaked', effect: -3, duration: DAY_LENGTH / 4 },
   cold: { label: 'out in the cold', effect: -10, duration: DAY_LENGTH / 4 },
+  lostFriend: { label: 'lost a friend', effect: -25, duration: 3 * DAY_LENGTH },
 };
 
 export const MOOD_BASE = 50;
@@ -88,7 +91,8 @@ export function isMiserable(state: SimState, s: Survivor): boolean {
   return mood(state, s) < MISERABLE;
 }
 
-/** Everyone left in the colony remembers a death. */
-export function mournDeath(state: SimState): void {
-  for (const s of state.survivors) addThought(state, s, 'sawDeath');
+/** Everyone left in the colony remembers a death; friends of the dead take it hardest. */
+export function mournDeath(state: SimState, dead: Survivor): void {
+  const friends = forget(state, dead);
+  for (const s of state.survivors) addThought(state, s, friends.has(s.id) ? 'lostFriend' : 'sawDeath');
 }

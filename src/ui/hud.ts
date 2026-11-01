@@ -23,6 +23,7 @@ import type { ViewState } from './view';
 import { seasonOf } from '../sim/seasons';
 import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { INFECTION_TURN } from '../sim/infection';
+import { describeRelations } from '../sim/relationships';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -453,7 +454,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       const row = el('tr', s.id === view.selectedId ? 'selected' : '');
       const name = el('td', 'prio-name');
       name.textContent = s.name;
-      name.title = `Select · ${describeSkills(s)}`;
+      name.title = [`Select · ${describeSkills(s)}`, describeRelations(state, s)].filter(Boolean).join(' · ');
       name.addEventListener('click', () => (view.selectedId = s.id));
       row.append(name);
 

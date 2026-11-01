@@ -115,6 +115,9 @@ export function checkInvariants(state: SimState): string[] {
       if (state.survivors.some((o) => o !== s && o.leisure?.x === s.leisure!.x && o.leisure.y === s.leisure!.y)) problems.push(`${s.name} shares a rec room spot`);
     }
     if (s.infection !== null && (s.infection < 0 || !Number.isInteger(s.infection))) problems.push(`${s.name} has infection ${s.infection}`);
+    for (const [id, v] of Object.entries(s.opinions)) {
+      if (!survivors.has(id) || id === s.id || v < -100 || v > 100) problems.push(`${s.name} has an opinion ${v} of ${id}`);
+    }
     if (s.breakdown && s.jobId) problems.push(`${s.name} holds job ${s.jobId} mid-breakdown`);
     if (s.meal) {
       const food = items.get(s.meal.itemId);

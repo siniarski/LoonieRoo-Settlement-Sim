@@ -11,6 +11,7 @@
 // "vented", a good thought, so it doesn't happen again straight away.
 
 import { logEvent } from './events';
+import { lashOut } from './relationships';
 import { furnitureAt } from './furniture';
 import { isWalkable, type Point } from './grid';
 import { IDLE_RETRY_TICKS, releaseSurvivor, seekJob } from './jobs';
@@ -123,4 +124,5 @@ export function updateBreakdown(state: SimState, s: Survivor): void {
   s.breakdown = { until: state.tick + BREAKDOWN_TICKS };
   s.note = 'having a breakdown';
   logEvent(state, `${s.name} is having a breakdown`);
+  lashOut(state, s);
 }

@@ -99,6 +99,8 @@ export interface Survivor {
   traits: Trait[];
   /** Ticks an infection has been running, or null (infection.ts). */
   infection: number | null;
+  /** What they think of others, by survivor id, -100..100 (relationships.ts). */
+  opinions: Record<string, number>;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -135,6 +137,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     xp: {},
     traits: [],
     infection: null,
+    opinions: {},
   };
   state.survivors.push(survivor);
   return survivor;
