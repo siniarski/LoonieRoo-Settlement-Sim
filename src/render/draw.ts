@@ -47,6 +47,7 @@ const COLOURS = {
     workbench: '#be9664',
     messhall: '#9ee0c0',
     recroom: '#ec9fdc',
+    infirmary: '#f4f1ea',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -106,8 +107,9 @@ const COLOURS = {
     armory: 'rgba(217, 140, 106, 0.12)',
     messhall: 'rgba(158, 224, 192, 0.10)',
     recroom: 'rgba(236, 160, 220, 0.10)',
+    infirmary: 'rgba(240, 240, 240, 0.10)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -117,7 +119,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -278,7 +280,7 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, camera: Camera, viewport:
     const missing = status.requirements.find((r) => !r.met);
     const detail = missing
       ? `⚠ needs: ${missing.label}`
-      : d.purpose === 'housing'
+      : d.purpose === 'housing' || d.purpose === 'infirmary'
         ? `✓ ${status.beds} bed${status.beds === 1 ? '' : 's'}${bedsInUse(state, room) > 0 ? `, ${bedsInUse(state, room)} in use` : ''}`
         : d.purpose === 'messhall'
           ? `✓ ${status.tables} table${status.tables === 1 ? '' : 's'}`

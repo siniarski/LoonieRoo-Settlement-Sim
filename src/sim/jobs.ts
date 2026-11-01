@@ -12,7 +12,8 @@
 import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
 import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
 import { getFurniture } from './furniture';
-import { isHurt, worksThisTick } from './health';
+import { BANDAGE_HEAL, HEALTH_MAX, TREAT_TICKS, isHurt, worksThisTick } from './health';
+import { isPatient } from './medicine';
 import { isMiserable } from './mood';
 import { getTile, isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { REPAIR_PER_TICK, repairStructure, structureDamage } from './breach';
@@ -49,6 +50,8 @@ export interface Job {
   zombieId: string | null;
   /** Farm only: the plot to sow or harvest. */
   plotId: string | null;
+  /** Doctor only: the survivor being treated. The job's x, y follow them. */
+  patientId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
   /** Clean and scavenge: ticks of work done. */
@@ -122,6 +125,12 @@ export function reconcileJobs(state: SimState): void {
     if (state.grid.damage[i]! > 0 && !repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
   }
 
+  // Every patient (hurt, resting in bed) gets one doctor job.
+  const treating = new Set(state.jobs.filter((j) => j.type === 'doctor').map((j) => j.patientId));
+  for (const p of state.survivors) {
+    if (isPatient(p) && !treating.has(p.id)) addJob(state, 'doctor', p.pos.x, p.pos.y, null, null).patientId = p.id;
+  }
+
   // While a craftable is below its stock target, every workbench offers one craft job.
   if (wantedCraft(state)) {
     const crafting = new Set(state.jobs.filter((j) => j.type === 'craft').map((j) => j.furnitureId));
@@ -179,6 +188,18 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       if (!z) return 'zombie gone';
       job.x = z.pos.x;
       job.y = z.pos.y;
+      return null;
+    }
+    case 'doctor': {
+      const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
+      if (!patient || !isPatient(patient)) return 'patient is up and about';
+      job.x = patient.pos.x;
+      job.y = patient.pos.y;
+      if (job.itemId) {
+        const item = getItem(state, job.itemId);
+        if (!item) return 'item gone';
+        if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
+      }
       return null;
     }
     case 'craft': {
@@ -249,6 +270,7 @@ function addJob(
     furnitureId,
     zombieId,
     plotId,
+    patientId: null,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -316,6 +338,8 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workScavenge(state, s, job);
     case 'craft':
       return workCraft(state, s, job);
+    case 'doctor':
+      return workDoctor(state, s, job);
     case 'guard':
       return workGuard(state, s, job);
     case 'farm':
@@ -424,11 +448,46 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   finishJob(state, s, job, `crafted ${kind === 'weapon' ? 'a weapon' : 'a bandage'} at (${bench.x}, ${bench.y})`);
 }
 
+/** Fetch a bandage, carry it to the patient's bedside, and treat them. */
+function workDoctor(state: SimState, s: Survivor, job: Job): void {
+  const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
+  if (!patient || !isPatient(patient)) return releaseSurvivor(state, s, 'patient is up and about');
+  const site = neighbours4(state.grid, patient.pos.x, patient.pos.y);
+  let item = job.itemId ? getItem(state, job.itemId) : undefined;
+  if (!item) {
+    item = freeItemFor(state, 'bandage', s.pos, site);
+    if (!item) return releaseSurvivor(state, s, 'no bandages');
+    job.itemId = item.id;
+    item.reservedBy = s.id;
+  }
+  if (s.carrying !== item.id) {
+    if (!item.pos) return releaseSurvivor(state, s, 'item taken by someone else');
+    if (!samePoint(s.pos, item.pos)) return goTo(state, s, job, [item.pos]);
+    item.pos = null;
+    item.carriedBy = s.id;
+    s.carrying = item.id;
+    s.note = `picked up a bandage for ${patient.name}`;
+  }
+  if (manhattan(s.pos, patient.pos) !== 1) return goTo(state, s, job, site);
+  if (!worksThisTick(state.tick, isHurt(s.health) || isMiserable(state, s))) return;
+  job.progress += 1;
+  if (job.progress < TREAT_TICKS) return;
+  removeItem(state, item);
+  s.carrying = null;
+  patient.health = Math.min(HEALTH_MAX, patient.health + BANDAGE_HEAL);
+  finishJob(state, s, job, `treated ${patient.name}'s wounds`);
+}
+
 /** Nearest free wood the survivor can reach and carry on to the site. */
 function freeWoodFor(state: SimState, from: Point, site: Point[]): (Item & { pos: Point }) | undefined {
+  return freeItemFor(state, 'wood', from, site);
+}
+
+/** Nearest free item of a kind that the survivor can reach and carry on to the site. */
+function freeItemFor(state: SimState, kind: ItemKind, from: Point, site: Point[]): (Item & { pos: Point }) | undefined {
   const { grid, walkabilityVersion: v } = state;
   const free = state.items
-    .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === 'wood')
+    .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === kind)
     .sort((a, b) => manhattan(from, a.pos) - manhattan(from, b.pos));
   return free.slice(0, MAX_CANDIDATES).find((i) => canReach(grid, v, from, [i.pos]) && canReach(grid, v, i.pos, site));
 }
@@ -605,6 +664,13 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       const goals = neighbours4(grid, job.x, job.y);
       if (!canReach(grid, v, s.pos, goals)) return null;
       return pathPlan(state, s.pos, goals, null);
+    }
+    case 'doctor': {
+      const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
+      if (!patient) return null;
+      const site = neighbours4(grid, patient.pos.x, patient.pos.y).filter((p) => isWalkable(grid, p.x, p.y));
+      const bandage = freeItemFor(state, 'bandage', s.pos, site);
+      return bandage ? pathPlan(state, s.pos, [bandage.pos], bandage.id) : null;
     }
     case 'craft': {
       const bench = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;

@@ -32,8 +32,9 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
   }
 
   if (designation.purpose === 'messhall') return planMessHall(state, room, notes);
+  if (designation.purpose === 'infirmary') return planInfirmary(state, room, notes);
   if (designation.purpose !== 'housing') {
-    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '' }[designation.purpose];
+    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '', infirmary: '' }[designation.purpose];
     notes.push(`${name} needs no furniture yet.`);
     return { commands: [], notes };
   }
@@ -42,6 +43,8 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
 
 /** Seats around one table in the open (its four sides). */
 const SEATS_PER_TABLE = 4;
+/** Infirmary beds the planner wants: one per this many survivors. */
+const INFIRMARY_PATIENTS_PER_BED = 4;
 
 /** Beds for the colony, up to the room's capacity, along walls and away from doors. */
 function planHousing(state: SimState, room: Room, notes: string[]): Plan {
@@ -107,6 +110,22 @@ function planMessHall(state: SimState, room: Room, notes: string[]): Plan {
   notes.push(`Planned ${spots.length} table${spots.length === 1 ? '' : 's'} (seats for ${SEATS_PER_TABLE} each, colony of ${state.survivors.length}).`);
   if (spots.length < toAdd) notes.push(`Only found room for ${spots.length}: clear some space.`);
   return { commands, notes };
+}
+
+/** One infirmary bed per INFIRMARY_PATIENTS_PER_BED survivors (at least one), along the walls. */
+function planInfirmary(state: SimState, room: Room, notes: string[]): Plan {
+  const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
+  const bedsHere =
+    state.furniture.filter((f) => f.kind === 'bed' && inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
+  const toAdd = Math.max(1, Math.ceil(state.survivors.length / INFIRMARY_PATIENTS_PER_BED)) - bedsHere;
+  if (toAdd <= 0) {
+    notes.push(`Already has ${bedsHere} bed${bedsHere === 1 ? '' : 's'}: enough for the colony.`);
+    return { commands: [], notes };
+  }
+  const spots = bedSpots(state, room).slice(0, toAdd);
+  notes.push(`Planned ${spots.length} infirmary bed${spots.length === 1 ? '' : 's'} (one per ${INFIRMARY_PATIENTS_PER_BED} survivors).`);
+  if (spots.length < toAdd) notes.push(`Only found room for ${spots.length}: clear some space.`);
+  return { commands: spots.map((p) => ({ type: 'designateBuild', x: p.x, y: p.y, structure: 'bed' })), notes };
 }
 
 function bedSpots(state: SimState, room: Room): Point[] {

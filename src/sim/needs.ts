@@ -43,6 +43,7 @@ import { isNight } from './time';
 import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
+import { INFIRMARY_HEAL_FACTOR, inInfirmary, isInfirmaryBed } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
   return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
@@ -295,7 +296,7 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
   if (s.satiety === 0) {
     s.health = Math.max(0, s.health - STARVE_DAMAGE);
   } else if (s.health > 0 && s.sleep?.asleep) {
-    s.health = Math.min(HEALTH_MAX, s.health + SLEEP_HEAL);
+    s.health = Math.min(HEALTH_MAX, s.health + SLEEP_HEAL * (inInfirmary(state, s) ? INFIRMARY_HEAL_FACTOR : 1));
   } else if (s.health > 0 && !isHungry(s) && state.tick % AWAKE_HEAL_EVERY === 0) {
     s.health = Math.min(HEALTH_MAX, s.health + 1);
   }
@@ -378,10 +379,13 @@ function startSleep(state: SimState, s: Survivor): void {
 }
 
 /** Nearest unoccupied, reachable bed (Manhattan order, ties by furniture order). */
+/** Hurt survivors try infirmary beds first; everyone else saves them for the hurt. Then nearest. */
 function nearestFreeBed(state: SimState, s: Survivor): Furniture | undefined {
+  const wantsInfirmary = isHurt(s.health);
+  const rank = (f: Furniture) => (isInfirmaryBed(state, f) === wantsInfirmary ? 0 : 1);
   return state.furniture
     .filter((f) => f.kind === 'bed' && f.occupant === null)
-    .sort((a, b) => manhattan(s.pos, a) - manhattan(s.pos, b))
+    .sort((a, b) => rank(a) - rank(b) || manhattan(s.pos, a) - manhattan(s.pos, b))
     .find((f) => canReach(state.grid, state.walkabilityVersion, s.pos, [f]));
 }
 
