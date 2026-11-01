@@ -74,8 +74,9 @@ describe('farming', () => {
     }
   });
 
-  it('three survivors with 12 plots and no other food live through three days', () => {
-    // Walled all round: no outdoor edge, so no zombies; a big room, so plenty of floor.
+  it('three survivors with 12 plots live through three days on what they grow', () => {
+    // Walled all round: no outdoor edge, so no zombies; a big room, so plenty of floor. Three
+    // cans bridge the first harvest (hungry and sleeping rough, they'd be miserable and slow).
     const inner = (row: string) => `#${row}#`;
     const map = [
       '#'.repeat(16),
@@ -84,7 +85,7 @@ describe('farming', () => {
       inner('..~~~~~~......'),
       inner('..............'),
       inner('...s..s..s....'),
-      inner('..............'),
+      inner('...........fff'),
       '#'.repeat(16),
     ];
     const state = setup(map);

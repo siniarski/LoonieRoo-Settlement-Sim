@@ -89,6 +89,10 @@ export interface Survivor {
   nextArmTick: number;
   /** Recent memories that move mood (see mood.ts). */
   thoughts: Thought[];
+  /** Heading to, or unwinding at, a rec room spot (leisure.ts). */
+  leisure: { x: number; y: number; progress: number } | null;
+  /** Mid-breakdown until this tick: no work (leisure.ts). */
+  breakdown: { until: number } | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -120,6 +124,8 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     arming: null,
     nextArmTick: 0,
     thoughts: [],
+    leisure: null,
+    breakdown: null,
   };
   state.survivors.push(survivor);
   return survivor;

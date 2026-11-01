@@ -20,6 +20,7 @@ import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
+import { updateBreakdown, updateLeisure } from './leisure';
 import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
 
@@ -38,11 +39,15 @@ export function tick(state: SimState): void {
   reconcileNeeds(state);
   const dying: { s: Survivor; cause: string }[] = [];
   for (const s of state.survivors) {
+    updateBreakdown(state, s);
     interruptForNeeds(state, s);
     updateMovement(state, s);
-    // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then work.
-    if (!s.move && !s.goal && !updateMeal(state, s) && !updateTreatment(state, s) && !updateArming(state, s) && !updateSleep(state, s)) {
-      updateWork(state, s);
+    // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
+    // (not mid-breakdown). A need taking over ends any rec-room visit.
+    if (!s.move && !s.goal) {
+      const needs = updateMeal(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateSleep(state, s);
+      if (needs) s.leisure = null;
+      else if (!s.breakdown && !updateLeisure(state, s)) updateWork(state, s);
     }
     updateRest(state, s);
     updateSatiety(s);

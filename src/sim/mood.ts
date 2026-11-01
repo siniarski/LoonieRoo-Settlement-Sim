@@ -1,16 +1,25 @@
 // Mood: 0..100, MOOD_BASE when nothing is going on, moved by recent thoughts.
 //
 // A thought is a timed memory ("ate at a table", "saw someone die"). One of
-// each kind at a time: a repeat refreshes the timer. Being hurt counts as a
-// thought while it lasts. Below MISERABLE, a survivor works at 3/4 speed,
-// like a hurt one.
+// each kind at a time: a repeat refreshes the timer. Being hurt or hungry
+// counts as a thought while it lasts. Below MISERABLE, a survivor works at
+// 3/4 speed, like a hurt one; breakdowns and the rec room are in leisure.ts.
 
+import { HUNGRY } from './food';
 import { isHurt } from './health';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
 
-export type ThoughtKind = 'ateAtTable' | 'ateWithoutTable' | 'sleptInBed' | 'sleptOnFloor' | 'sawDeath';
+export type ThoughtKind =
+  | 'ateAtTable'
+  | 'ateWithoutTable'
+  | 'sleptInBed'
+  | 'sleptOnFloor'
+  | 'sawDeath'
+  | 'attacked'
+  | 'relaxed'
+  | 'vented';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -24,6 +33,9 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   sleptInBed: { label: 'slept in a bed', effect: 5, duration: DAY_LENGTH },
   sleptOnFloor: { label: 'slept on the floor', effect: -10, duration: DAY_LENGTH },
   sawDeath: { label: 'someone died', effect: -15, duration: 2 * DAY_LENGTH },
+  attacked: { label: 'attacked by a zombie', effect: -10, duration: DAY_LENGTH / 2 },
+  relaxed: { label: 'relaxed in the rec room', effect: 10, duration: DAY_LENGTH },
+  vented: { label: 'got it out of their system', effect: 15, duration: DAY_LENGTH },
 };
 
 export const MOOD_BASE = 50;
@@ -32,6 +44,8 @@ export const MOOD_MAX = 100;
 export const MISERABLE = 30;
 /** While hurt (see health.ts). */
 export const HURT_MOOD = -10;
+/** While hungry (see food.ts). */
+export const HUNGRY_MOOD = -10;
 
 export function addThought(state: SimState, s: Survivor, kind: ThoughtKind): void {
   const until = state.tick + THOUGHTS[kind].duration;
@@ -51,6 +65,7 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
     .filter((t) => t.until > state.tick)
     .map((t) => [THOUGHTS[t.kind].label, THOUGHTS[t.kind].effect]);
   if (isHurt(s.health)) factors.push(['hurt', HURT_MOOD]);
+  if (s.satiety < HUNGRY) factors.push(['hungry', HUNGRY_MOOD]);
   return factors;
 }
 

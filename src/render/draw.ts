@@ -46,6 +46,7 @@ const COLOURS = {
     table: '#d6aa78',
     workbench: '#be9664',
     messhall: '#9ee0c0',
+    recroom: '#ec9fdc',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -104,8 +105,9 @@ const COLOURS = {
     storage: 'rgba(230, 190, 110, 0.10)',
     armory: 'rgba(217, 140, 106, 0.12)',
     messhall: 'rgba(158, 224, 192, 0.10)',
+    recroom: 'rgba(236, 160, 220, 0.10)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -115,7 +117,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -702,7 +704,7 @@ function drawSurvivor(
     ctx.font = `${Math.round(Math.min(14, size * 0.45))}px ui-monospace, Consolas, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(asleep ? `${s.name} z` : s.name, p.x, p.y - radius - 3);
+    ctx.fillText(asleep ? `${s.name} z` : s.breakdown ? `${s.name} !` : s.name, p.x, p.y - radius - 3);
   }
 }
 

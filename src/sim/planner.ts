@@ -33,7 +33,8 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
 
   if (designation.purpose === 'messhall') return planMessHall(state, room, notes);
   if (designation.purpose !== 'housing') {
-    notes.push(`${designation.purpose === 'storage' ? 'Storage' : 'An armory'} needs no furniture yet.`);
+    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '' }[designation.purpose];
+    notes.push(`${name} needs no furniture yet.`);
     return { commands: [], notes };
   }
   return planHousing(state, room, notes);

@@ -110,6 +110,12 @@ export function checkInvariants(state: SimState): string[] {
       else if (weapon.reservedBy !== s.id || !weapon.pos) problems.push(`${s.name} is fetching ${weapon.id}, which isn't reserved on the ground`);
       if (s.jobId || s.sleep || s.meal || s.treatment) problems.push(`${s.name} is fetching a weapon while busy with something else`);
     }
+    if (s.leisure) {
+      if (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.breakdown) problems.push(`${s.name} is relaxing while busy with something else`);
+      if (!isWalkable(grid, s.leisure.x, s.leisure.y)) problems.push(`${s.name} relaxes on unwalkable (${s.leisure.x}, ${s.leisure.y})`);
+      if (state.survivors.some((o) => o !== s && o.leisure?.x === s.leisure!.x && o.leisure.y === s.leisure!.y)) problems.push(`${s.name} shares a rec room spot`);
+    }
+    if (s.breakdown && s.jobId) problems.push(`${s.name} holds job ${s.jobId} mid-breakdown`);
     if (s.meal) {
       const food = items.get(s.meal.itemId);
       if (!food || food.kind !== 'food') problems.push(`${s.name} is eating missing food ${s.meal.itemId}`);

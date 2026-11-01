@@ -12,6 +12,7 @@
 
 import { damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
+import { addThought } from './mood';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
 import { pick } from './rng';
@@ -225,6 +226,7 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
   s.lastHurtBy = 'a zombie attack';
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
+  addThought(state, s, 'attacked');
   z.cooldown = ZOMBIE_ATTACK_EVERY;
 }
 

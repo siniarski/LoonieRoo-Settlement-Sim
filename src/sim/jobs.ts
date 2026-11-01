@@ -24,6 +24,7 @@ import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
 import { blowDamage, wearWeapon } from './weapons';
 import { CRAFT_WORK, RECIPES, wantedCraft } from './crafting';
+import { startLeisure } from './leisure';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
 import { getSurvivor, walk, type Survivor } from './survivors';
@@ -294,7 +295,9 @@ export function releaseSurvivor(state: SimState, s: Survivor, reason: string): v
 export function updateWork(state: SimState, s: Survivor): void {
   if (!s.jobId) {
     if (state.tick < s.nextSeekTick) return;
-    if (!seekJob(state, s)) s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
+    if (seekJob(state, s)) return;
+    s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
+    startLeisure(state, s);
     return;
   }
   const job = getJob(state, s.jobId);

@@ -29,6 +29,8 @@ function wantsWeapon(state: SimState, s: Survivor): boolean {
     !s.sleep &&
     !s.meal &&
     !s.treatment &&
+    !s.breakdown &&
+    !s.leisure &&
     !wantsSleep(state, s) &&
     state.tick >= s.nextArmTick
   );

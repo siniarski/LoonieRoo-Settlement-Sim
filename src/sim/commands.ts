@@ -19,6 +19,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
+import { damageStructure, isStructure } from './breach';
 import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
@@ -57,6 +58,8 @@ export type Command =
   // Debug/sandbox: drop a food item on (or near) a tile.
   | { type: 'spawnFood'; x: number; y: number }
   | { type: 'spawnWeapon'; x: number; y: number }
+  // Debug: batter the wall or door at a tile, as a zombie would (it may break).
+  | { type: 'damageStructure'; x: number; y: number; amount: number }
   // Debug/sandbox: put a zombie on a floor tile (they only last until dawn).
   | { type: 'spawnZombie'; x: number; y: number };
 
@@ -72,6 +75,13 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'damageStructure') {
+    const { x, y, amount } = command;
+    if (!isStructure(getTile(state.grid, x, y))) return reject(`(${x}, ${y}) is not a wall or door`);
+    if (!Number.isInteger(amount) || amount <= 0) return reject('damage must be a positive integer');
+    damageStructure(state, x, y, amount);
+    return changed();
+  }
   if (command.type === 'setCraftTarget') {
     const { kind, count } = command;
     if (!isCraftKind(kind)) return reject(`can't craft ${String(kind)}`);
@@ -251,6 +261,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   cancelMeal(state, survivor, 'meal interrupted by an order');
   cancelTreatment(state, survivor, 'treatment interrupted by an order');
   cancelArming(state, survivor, 'interrupted by an order');
+  survivor.leisure = null;
   setGoal(survivor, { x, y });
   return changed();
 }

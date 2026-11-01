@@ -9,7 +9,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
+import { isStructure } from '../src/sim/breach';
 import { applyCommand, type Command } from '../src/sim/commands';
+import { getTile } from '../src/sim/grid';
 import { checkInvariants } from '../src/sim/invariants';
 import { chooseJob } from '../src/sim/jobs';
 import { JOB_TYPES, type Priority } from '../src/sim/jobTypes';
@@ -85,6 +87,9 @@ function randomCommand(state: SimState, driver: { rng: number }): Command | null
   if (roll >= 96 && roll < 100) return { type: 'designateBuild', x, y, structure: 'table' };
   if (roll >= 102 && roll < 105) return { type: 'designateBuild', x, y, structure: 'workbench' };
   if (roll >= 105 && roll < 108) return { type: 'setCraftTarget', kind: roll < 106 ? 'weapon' : 'bandage', count: roll % 4 };
+  // Flip the storage room to a rec room and back, so idle survivors sometimes go and relax.
+  if (roll >= 111 && roll < 115 && isStructure(getTile(state.grid, x, y))) return { type: 'damageStructure', x, y, amount: 40 * (1 + (roll % 5)) };
+  if (roll >= 108 && roll < 111) return { type: 'designateRoom', x: 14, y: 3, purpose: roll < 110 ? 'recroom' : 'storage' };
   if (roll >= 100 && roll < 102) {
     // Aim at a table, if any, so whatever room it stands in can become a working mess hall.
     const tables = state.furniture.filter((f) => f.kind === 'table');
@@ -153,7 +158,8 @@ describe('stuck-state invariant', () => {
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
 
-          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal && !s.arming;
+          // Mid-breakdown is deliberately idle. Relaxing is not excused: a job turning up must end it.
+          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal && !s.arming && !s.breakdown;
           const idleTicks = idle && chooseJob(state, s) ? (idleWithWork.get(s.id) ?? 0) + 1 : 0;
           idleWithWork.set(s.id, idleTicks);
           expect(idleTicks, `idle with doable work: ${where}`).toBeLessThanOrEqual(MAX_IDLE_WITH_DOABLE_JOB);
@@ -192,7 +198,7 @@ describe('stuck-state invariant', () => {
   it('exercised every outcome across the seeds (guards against a vacuous run)', () => {
     // 'stopped:' is usually overwritten in the same tick by the next job, so
     // invalid-job recovery is covered by dedicated tests in jobs.test.ts.
-    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated', 'armed', 'repaired', 'crafted', 'brought'];
+    const expected = ['took', 'picked', 'built', 'removed', 'delivered', 'stored', 'cleaned', 'arrived', 'going', 'asleep', 'no', 'woke', 'eating', 'ate', 'scavenged', 'attacked', 'killed', 'sowed', 'harvested', 'treated', 'armed', 'repaired', 'crafted', 'brought', 'relaxing', 'having'];
     expect(expected.filter((n) => !notesSeen.has(n)), `seen: ${[...notesSeen].join(', ')}`).toEqual([]);
   });
 });

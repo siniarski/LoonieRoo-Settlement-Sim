@@ -486,6 +486,8 @@ function activity(state: SimState, s: Survivor): string {
   if (s.meal) return s.meal.progress > 0 ? (s.meal.seat ? 'eating at a table' : 'eating') : s.carrying ? 'taking food to a table' : 'going to eat';
   if (s.treatment) return s.treatment.progress > 0 ? 'bandaging wounds' : 'going for a bandage';
   if (s.arming) return 'going for a weapon';
+  if (s.breakdown) return 'having a breakdown';
+  if (s.leisure) return s.leisure.progress > 0 ? 'relaxing' : 'going to relax';
   if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
