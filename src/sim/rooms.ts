@@ -14,8 +14,8 @@ import { getTile, type Point } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
-export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary';
-export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary'];
+export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks';
+export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary', 'barracks'];
 
 export interface RoomDesignation {
   id: string;
@@ -196,7 +196,7 @@ export function evaluateRoom(state: SimState, room: Room | null, purpose: RoomPu
     { label: 'enclosed by walls', met: room !== null },
     { label: 'has a door', met: (room?.doors.length ?? 0) > 0 },
   ];
-  if (purpose === 'housing') {
+  if (purpose === 'housing' || purpose === 'barracks') {
     requirements.push({ label: 'at least 1 bed', met: beds >= 1 });
     requirements.push({ label: `${TILES_PER_BED} tiles per bed`, met: beds === 0 || size >= beds * TILES_PER_BED });
   } else if (purpose === 'infirmary') {

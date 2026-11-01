@@ -34,6 +34,8 @@ export type Command =
   | { type: 'placeWorkbench'; x: number; y: number }
   /** Keep this many of a craftable in stock (crafting.ts). */
   | { type: 'setCraftTarget'; kind: CraftKind; count: number }
+  /** Give a bed to a survivor (their only one), or take it back with null. */
+  | { type: 'assignBed'; bedId: string; survivorId: string | null }
   // Designations: become jobs for survivors.
   | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'bed' | 'table' | 'workbench' }
   | { type: 'designateRemove'; x: number; y: number }
@@ -75,6 +77,21 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
+  if (command.type === 'assignBed') {
+    const bed = state.furniture.find((f) => f.id === command.bedId && f.kind === 'bed');
+    if (!bed) return reject(`no bed ${command.bedId}`);
+    const who = command.survivorId;
+    if (who !== null && !getSurvivor(state, who)) return reject(`no survivor ${who}`);
+    if (bed.owner === who) return unchanged();
+    for (const f of state.furniture) if (who !== null && f.owner === who) f.owner = null;
+    bed.owner = who;
+    // Someone else asleep in it (or on the way) moves out next tick.
+    if (bed.occupant && bed.occupant !== who) {
+      const sleeper = getSurvivor(state, bed.occupant);
+      if (sleeper) wake(state, sleeper, 'their bed was given away');
+    }
+    return changed();
+  }
   if (command.type === 'damageStructure') {
     const { x, y, amount } = command;
     if (!isStructure(getTile(state.grid, x, y))) return reject(`(${x}, ${y}) is not a wall or door`);

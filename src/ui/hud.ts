@@ -194,7 +194,10 @@ function furnitureText(state: SimState, p: Point): string {
   }
   const f = state.furniture.find((x) => x.x === p.x && x.y === p.y);
   if (!f) return '';
-  if (f.kind === 'bed') return ` · bed${f.occupant ? ' (in use)' : ''}`;
+  if (f.kind === 'bed') {
+    const owner = f.owner ? state.survivors.find((s) => s.id === f.owner)?.name : undefined;
+    return ` · ${owner ? `${owner}'s bed` : 'bed'}${f.occupant ? ' (in use)' : ''}`;
+  }
   if (f.kind === 'table') return ' · table';
   if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
   if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;

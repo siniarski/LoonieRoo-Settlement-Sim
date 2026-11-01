@@ -144,6 +144,9 @@ export function checkInvariants(state: SimState): string[] {
     if (f.scavenge && !(f.kind === 'tree' || (f.kind === 'crate' && f.loot > 0))) problems.push(`${f.id} marked for scavenging with nothing to find`);
     if ((scavengeJobs.get(f.id) ?? 0) > 1) problems.push(`${f.id} has ${scavengeJobs.get(f.id)} scavenge jobs`);
     if (f.occupant && f.kind !== 'bed') problems.push(`${f.kind} ${f.id} has an occupant`);
+    if (f.owner && (f.kind !== 'bed' || !survivors.has(f.owner))) problems.push(`${f.kind} ${f.id} owned by ${f.owner}, who isn't here`);
+    if (f.owner && f.occupant && f.occupant !== f.owner) problems.push(`${f.owner}'s bed ${f.id} is used by ${f.occupant}`);
+    if (f.owner && state.furniture.some((g) => g !== f && g.owner === f.owner)) problems.push(`${f.owner} owns more than one bed`);
   }
   for (const f of state.furniture) {
     if (!f.occupant) continue;

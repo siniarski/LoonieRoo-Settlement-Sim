@@ -14,6 +14,7 @@ import {
   updateSleep,
   updateTreatment,
   wake,
+  wakeLightSleepers,
 } from './needs';
 import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
@@ -35,6 +36,7 @@ export function tick(state: SimState): void {
   for (const s of state.survivors) {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }
+  wakeLightSleepers(state);
   reconcileJobs(state);
   reconcileNeeds(state);
   const dying: { s: Survivor; cause: string }[] = [];

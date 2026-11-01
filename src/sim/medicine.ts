@@ -7,7 +7,7 @@
 //
 // The infirmary is a room with beds. Hurt survivors pick its beds first and
 // heal INFIRMARY_HEAL_FACTOR times as fast in them; others only use them when
-// there's no other bed.
+// there's no other bed. Barracks beds are the guards' (see needs.ts: light sleepers).
 
 import { getFurniture, type Furniture } from './furniture';
 import { isHurt } from './health';
@@ -24,6 +24,16 @@ export function isPatient(s: Survivor): boolean {
 /** Is this bed in a complete infirmary? */
 export function isInfirmaryBed(state: SimState, bed: Furniture): boolean {
   return completeRooms(state, 'infirmary').has(labelAt(state, bed.x, bed.y));
+}
+
+/** Is this bed in a complete barracks? */
+export function isBarracksBed(state: SimState, bed: Furniture): boolean {
+  return completeRooms(state, 'barracks').has(labelAt(state, bed.x, bed.y));
+}
+
+/** Guards: anyone with guarding switched on. They prefer barracks beds and sleep lightly there. */
+export function isGuard(s: Survivor): boolean {
+  return s.priorities.guard > 0;
 }
 
 /** Is this survivor resting in an infirmary bed right now? */

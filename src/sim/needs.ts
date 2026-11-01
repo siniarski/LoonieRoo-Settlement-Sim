@@ -43,7 +43,7 @@ import { isNight } from './time';
 import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
-import { INFIRMARY_HEAL_FACTOR, inInfirmary, isInfirmaryBed } from './medicine';
+import { INFIRMARY_HEAL_FACTOR, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
   return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
@@ -312,6 +312,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   cancelTreatment(state, s, cause);
   cancelArming(state, s, cause);
   dropWeapon(state, s);
+  for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   logEvent(state, `${s.name} died of ${cause}`);
@@ -367,6 +368,8 @@ function startSleep(state: SimState, s: Survivor): void {
     return;
   }
   bed.occupant = s.id;
+  // Your first ordinary bed becomes yours (infirmary beds stay shared).
+  if (bed.owner === null && !isInfirmaryBed(state, bed) && !state.furniture.some((f) => f.owner === s.id)) bed.owner = s.id;
   s.sleep = { bedId: bed.id, asleep: false };
   s.note = `going to bed at (${bed.x}, ${bed.y})`;
   if (samePoint(s.pos, bed)) {
@@ -379,12 +382,18 @@ function startSleep(state: SimState, s: Survivor): void {
 }
 
 /** Nearest unoccupied, reachable bed (Manhattan order, ties by furniture order). */
-/** Hurt survivors try infirmary beds first; everyone else saves them for the hurt. Then nearest. */
+/**
+ * Which bed: never someone else's. The hurt try infirmary beds first, everyone else
+ * saves them for the hurt; then your own bed; then guards take barracks beds and
+ * others leave them; then nearest.
+ */
 function nearestFreeBed(state: SimState, s: Survivor): Furniture | undefined {
-  const wantsInfirmary = isHurt(s.health);
-  const rank = (f: Furniture) => (isInfirmaryBed(state, f) === wantsInfirmary ? 0 : 1);
+  const hurt = isHurt(s.health);
+  const guard = isGuard(s);
+  const rank = (f: Furniture) =>
+    (isInfirmaryBed(state, f) === hurt ? 0 : 4) + (f.owner === s.id ? 0 : 2) + (isBarracksBed(state, f) === guard ? 0 : 1);
   return state.furniture
-    .filter((f) => f.kind === 'bed' && f.occupant === null)
+    .filter((f) => f.kind === 'bed' && f.occupant === null && (f.owner === null || f.owner === s.id))
     .sort((a, b) => rank(a) - rank(b) || manhattan(s.pos, a) - manhattan(s.pos, b))
     .find((f) => canReach(state.grid, state.walkabilityVersion, s.pos, [f]));
 }
@@ -406,6 +415,15 @@ export function updateRest(state: SimState, s: Survivor): void {
 }
 
 /** Ends sleep (or the walk to bed) and frees the bed. Safe to call when awake. */
+/** Guards asleep in a barracks bed wake when a zombie comes within DANGER_RADIUS (others only when hit). */
+export function wakeLightSleepers(state: SimState): void {
+  for (const s of state.survivors) {
+    if (!s.sleep?.asleep || !s.sleep.bedId || !isGuard(s) || isCritical(s.health)) continue;
+    const bed = getBed(state, s.sleep.bedId);
+    if (bed && isBarracksBed(state, bed) && zombieNear(state, s.pos)) wake(state, s, 'woken for guard duty');
+  }
+}
+
 export function wake(state: SimState, s: Survivor, note: string): void {
   if (!s.sleep) return;
   const bed = s.sleep.bedId ? getBed(state, s.sleep.bedId) : undefined;

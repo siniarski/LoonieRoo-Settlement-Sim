@@ -33,8 +33,9 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
 
   if (designation.purpose === 'messhall') return planMessHall(state, room, notes);
   if (designation.purpose === 'infirmary') return planInfirmary(state, room, notes);
+  if (designation.purpose === 'barracks') return planBarracks(state, room, notes);
   if (designation.purpose !== 'housing') {
-    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '', infirmary: '' }[designation.purpose];
+    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '', infirmary: '', barracks: '' }[designation.purpose];
     notes.push(`${name} needs no furniture yet.`);
     return { commands: [], notes };
   }
@@ -124,6 +125,24 @@ function planInfirmary(state: SimState, room: Room, notes: string[]): Plan {
   }
   const spots = bedSpots(state, room).slice(0, toAdd);
   notes.push(`Planned ${spots.length} infirmary bed${spots.length === 1 ? '' : 's'} (one per ${INFIRMARY_PATIENTS_PER_BED} survivors).`);
+  if (spots.length < toAdd) notes.push(`Only found room for ${spots.length}: clear some space.`);
+  return { commands: spots.map((p) => ({ type: 'designateBuild', x: p.x, y: p.y, structure: 'bed' })), notes };
+}
+
+/** A bed for every guard (guarding switched on), up to the room's capacity. */
+function planBarracks(state: SimState, room: Room, notes: string[]): Plan {
+  const capacity = Math.floor(room.tiles.length / TILES_PER_BED);
+  const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
+  const bedsHere =
+    state.furniture.filter((f) => f.kind === 'bed' && inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
+  const guards = state.survivors.filter((s) => s.priorities.guard > 0).length;
+  const toAdd = Math.min(capacity, Math.max(1, guards)) - bedsHere;
+  if (toAdd <= 0) {
+    notes.push(`Already has ${bedsHere} bed${bedsHere === 1 ? '' : 's'} for ${guards} guard${guards === 1 ? '' : 's'}.`);
+    return { commands: [], notes };
+  }
+  const spots = bedSpots(state, room).slice(0, toAdd);
+  notes.push(`Planned ${spots.length} bed${spots.length === 1 ? '' : 's'} for the guards (room holds ${capacity}, ${guards} guarding).`);
   if (spots.length < toAdd) notes.push(`Only found room for ${spots.length}: clear some space.`);
   return { commands: spots.map((p) => ({ type: 'designateBuild', x: p.x, y: p.y, structure: 'bed' })), notes };
 }

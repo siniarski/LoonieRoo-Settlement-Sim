@@ -24,6 +24,8 @@ export interface Furniture {
   y: number;
   /** Beds: the survivor who has claimed it (walking to it or asleep in it). */
   occupant: string | null;
+  /** Beds: whose bed it is (claimed on first night, or assigned). Nobody else sleeps in it. Never set on infirmary beds. */
+  owner: string | null;
   /** Crates: finds left. Trees: wood left. 0 for everything else. */
   loot: number;
   /** Crates and trees: marked by the player for scavenging (or chopping). Trees stay marked as they regrow. */
@@ -47,6 +49,7 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     x,
     y,
     occupant: null,
+    owner: null,
     loot: kind === 'crate' ? CRATE_LOOT : kind === 'tree' ? TREE_WOOD : 0,
     scavenge: false,
     stored: 0,
