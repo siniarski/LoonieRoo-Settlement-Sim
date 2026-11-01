@@ -22,6 +22,7 @@ import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './to
 import type { ViewState } from './view';
 import { seasonOf } from '../sim/seasons';
 import { TRAIT_INFO, describeSkills } from '../sim/skills';
+import { INFECTION_TURN } from '../sim/infection';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -379,7 +380,7 @@ function createCraftPanel(command: (cmd: Command) => void) {
       for (const { k, have, want } of rows) {
         const row = el('div', 'hud-wanderer');
         const label = el('span', 'hud-wanderer-label');
-        label.textContent = `${RECIPES[k].label} (${RECIPES[k].count} ${RECIPES[k].input}): have ${have}, keep`;
+        label.textContent = `${RECIPES[k].label} (${RECIPES[k].count} ${RECIPES[k].input}${RECIPES[k].workshopOnly ? ', workshop' : ''}): have ${have}, keep`;
         const set = (count: number) => command({ type: 'setCraftTarget', kind: k, count });
         const less = el('button', 'hud-button');
         less.textContent = '−';
@@ -509,7 +510,7 @@ function moodTitle(state: SimState, s: Survivor): string {
 
 function activity(state: SimState, s: Survivor): string {
   if (s.meal) return s.meal.progress > 0 ? (s.meal.seat ? 'eating at a table' : 'eating') : s.carrying ? 'taking food to a table' : 'going to eat';
-  if (s.treatment) return s.treatment.progress > 0 ? 'bandaging wounds' : 'going for a bandage';
+  if (s.treatment) return s.treatment.progress > 0 ? 'treating themselves' : 'going for a remedy';
   if (s.arming) return 'going for a weapon';
   if (s.breakdown) return 'having a breakdown';
   if (s.leisure) return s.leisure.progress > 0 ? 'relaxing' : 'going to relax';
@@ -568,7 +569,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
   const p = s.priorities;
   return [
     `${selected ? '▶' : ' '} ${s.name} [${s.id}] at ${at(s.pos)}  ${moving}${s.carrying ? `  carrying ${state.items.find((i) => i.id === s.carrying)?.kind ?? s.carrying}` : ''}`,
-    `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
+    `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}${s.infection !== null ? ` INFECTED ${Math.round((100 * s.infection) / INFECTION_TURN)}%` : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
     `    ${moodTitle(state, s)}  ·  ${describeSkills(s)}`,

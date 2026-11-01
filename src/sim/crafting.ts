@@ -12,24 +12,28 @@
 
 import type { FurnitureKind } from './furniture';
 import type { ItemKind } from './items';
+import { completeRooms, labelAt } from './rooms';
 import type { SimState } from './state';
 
-export type CraftKind = 'weapon' | 'bandage' | 'meal';
+export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal';
 export type Station = Extract<FurnitureKind, 'workbench' | 'stove'>;
-export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'meal'];
+export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'meal'];
 /** What the player sets targets for (the Workbench orders panel). */
-export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage'];
+export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine'];
 
 export interface Recipe {
   station: Station;
   input: ItemKind;
   count: number;
   label: string;
+  /** Only a workbench in a complete workshop can make it. */
+  workshopOnly?: true;
 }
 
 export const RECIPES: Record<CraftKind, Recipe> = {
   weapon: { station: 'workbench', input: 'wood', count: 2, label: 'Weapons' },
   bandage: { station: 'workbench', input: 'wood', count: 1, label: 'Bandages' },
+  medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine', workshopOnly: true },
   meal: { station: 'stove', input: 'food', count: 1, label: 'Hot meals' },
 };
 
@@ -38,6 +42,8 @@ export const STATION_INPUT: Record<Station, ItemKind> = { workbench: 'wood', sto
 
 /** Ticks of work once the input is in. */
 export const CRAFT_WORK = 60;
+/** At a workbench in a complete workshop. */
+export const WORKSHOP_CRAFT_WORK = 40;
 /** Highest stock target the player can set. */
 export const MAX_CRAFT_TARGET = 20;
 /** Hot meals the cooks keep ready, per survivor. */
@@ -61,6 +67,15 @@ function target(state: SimState, kind: CraftKind): number {
 }
 
 /** The first craftable for this station below its target, or null when stocks are full. */
-export function wantedCraft(state: SimState, station: Station = 'workbench'): CraftKind | null {
-  return CRAFTABLES.find((k) => RECIPES[k].station === station && craftStock(state, k) < target(state, k)) ?? null;
+export function wantedCraft(state: SimState, station: Station = 'workbench', inWorkshop = false): CraftKind | null {
+  return (
+    CRAFTABLES.find(
+      (k) => RECIPES[k].station === station && (inWorkshop || !RECIPES[k].workshopOnly) && craftStock(state, k) < target(state, k),
+    ) ?? null
+  );
+}
+
+/** Is this station in a complete workshop? */
+export function inWorkshop(state: SimState, f: { x: number; y: number }): boolean {
+  return completeRooms(state, 'workshop').has(labelAt(state, f.x, f.y));
 }

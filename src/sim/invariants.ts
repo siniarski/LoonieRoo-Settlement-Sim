@@ -93,7 +93,7 @@ export function checkInvariants(state: SimState): string[] {
     if (s.health <= 0 || s.health > HEALTH_MAX || !Number.isInteger(s.health)) problems.push(`${s.name} has health ${s.health}`);
     if (s.treatment) {
       const bandage = items.get(s.treatment.itemId);
-      if (!bandage || bandage.kind !== 'bandage') problems.push(`${s.name} is treating with missing bandage ${s.treatment.itemId}`);
+      if (!bandage || (bandage.kind !== 'bandage' && bandage.kind !== 'medicine')) problems.push(`${s.name} is treating with missing bandage ${s.treatment.itemId}`);
       else if (bandage.reservedBy !== s.id) problems.push(`${s.name} uses ${bandage.id}, reserved by ${bandage.reservedBy}`);
       if (s.jobId) problems.push(`${s.name} is treating wounds but holds job ${s.jobId}`);
       if (s.sleep || s.meal) problems.push(`${s.name} is treating wounds while sleeping or eating`);
@@ -114,6 +114,7 @@ export function checkInvariants(state: SimState): string[] {
       if (!isWalkable(grid, s.leisure.x, s.leisure.y)) problems.push(`${s.name} relaxes on unwalkable (${s.leisure.x}, ${s.leisure.y})`);
       if (state.survivors.some((o) => o !== s && o.leisure?.x === s.leisure!.x && o.leisure.y === s.leisure!.y)) problems.push(`${s.name} shares a rec room spot`);
     }
+    if (s.infection !== null && (s.infection < 0 || !Number.isInteger(s.infection))) problems.push(`${s.name} has infection ${s.infection}`);
     if (s.breakdown && s.jobId) problems.push(`${s.name} holds job ${s.jobId} mid-breakdown`);
     if (s.meal) {
       const food = items.get(s.meal.itemId);

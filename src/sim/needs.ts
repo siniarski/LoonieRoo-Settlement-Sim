@@ -44,7 +44,7 @@ import { isNight } from './time';
 import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
-import { INFIRMARY_HEAL_FACTOR, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed } from './medicine';
+import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
   return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
@@ -111,7 +111,7 @@ export function interruptForNeeds(state: SimState, s: Survivor): void {
     releaseSurvivor(state, s, 'too badly hurt to work');
   } else if (wantsSleep(state, s)) {
     releaseSurvivor(state, s, 'too tired to work');
-  } else if (isHurt(s.health) && state.tick >= s.nextTreatTick && nearestFreeItem(state, s, 'bandage')) {
+  } else if (state.tick >= s.nextTreatTick && nearestRemedy(state, s)) {
     releaseSurvivor(state, s, 'going to treat wounds');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
     if (nearestFreeItem(state, s, 'food')) releaseSurvivor(state, s, 'hungry');
@@ -251,15 +251,24 @@ export function updateTreatment(state: SimState, s: Survivor): boolean {
   if (treatment.progress === 1) s.note = `bandaging wounds at (${item.pos.x}, ${item.pos.y})`;
   if (treatment.progress < TREAT_TICKS) return true;
   removeItem(state, item);
-  s.health = Math.min(HEALTH_MAX, s.health + BANDAGE_HEAL);
+  applyRemedy(s, item.kind);
   s.treatment = null;
-  s.note = 'treated wounds with a bandage';
+  s.note = item.kind === 'medicine' ? 'took medicine for the infection' : 'treated wounds with a bandage';
   return true;
 }
 
+/** The nearest free thing that would help: medicine if infected, else a bandage if hurt. */
+function nearestRemedy(state: SimState, s: Survivor): Item | undefined {
+  for (const kind of remediesFor(s)) {
+    const found = nearestFreeItem(state, s, kind);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 function startTreatment(state: SimState, s: Survivor): boolean {
-  if (!isHurt(s.health) || state.tick < s.nextTreatTick) return false;
-  const bandage = nearestFreeItem(state, s, 'bandage');
+  if (remediesFor(s).length === 0 || state.tick < s.nextTreatTick) return false;
+  const bandage = nearestRemedy(state, s);
   if (!bandage?.pos) {
     s.nextTreatTick = state.tick + TREAT_RETRY_TICKS;
     return false;
@@ -268,7 +277,7 @@ function startTreatment(state: SimState, s: Survivor): boolean {
   cancelArming(state, s, 'going to treat wounds');
   bandage.reservedBy = s.id;
   s.treatment = { itemId: bandage.id, progress: 0 };
-  s.note = `going for a bandage at (${bandage.pos.x}, ${bandage.pos.y})`;
+  s.note = `going for ${bandage.kind === 'medicine' ? 'medicine' : 'a bandage'} at (${bandage.pos.x}, ${bandage.pos.y})`;
   return true;
 }
 

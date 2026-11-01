@@ -26,7 +26,8 @@ import { reconcileExploreAreas, reconcilePointsOfInterest, updateFog } from './f
 import { updateHerds } from './herds';
 import { updateWeather } from './seasons';
 import { forgetThoughts } from './mood';
-import { updateZombies } from './zombies';
+import { ZOMBIE_HEALTH, addZombie, updateZombies } from './zombies';
+import { updateInfection } from './infection';
 
 export const TICKS_PER_SECOND = 10;
 
@@ -62,11 +63,15 @@ export function tick(state: SimState): void {
     updateRest(state, s);
     updateSatiety(s);
     forgetThoughts(state, s);
-    const cause = updateHealth(state, s);
+    const cause = updateHealth(state, s) ?? updateInfection(state, s);
     if (cause) dying.push({ s, cause });
   }
   // Deaths after the loop, so the survivor array isn't spliced while iterating it.
-  for (const { s, cause } of dying) killSurvivor(state, s, cause);
+  for (const { s, cause } of dying) {
+    killSurvivor(state, s, cause);
+    // The infection's victims get up again.
+    if (cause === 'the infection') addZombie(state, s.pos.x, s.pos.y, ZOMBIE_HEALTH, 'static');
+  }
   // Work finished this tick may have covered a room's anchor tile or removed a bed
   // someone sleeps in; tidy up now so state is consistent between ticks (both also
   // run at the start, for commands applied in between).

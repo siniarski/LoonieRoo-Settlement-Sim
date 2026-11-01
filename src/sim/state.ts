@@ -24,7 +24,7 @@ import type { Zombie } from './zombies';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 31;
+export const SCHEMA_VERSION = 32;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -95,7 +95,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     survivors: [],
     zombies: [],
     wanderers: [],
-    craftTargets: { weapon: 0, bandage: 0 },
+    craftTargets: { weapon: 0, bandage: 0, medicine: 0 },
     zombiesTonight: null,
     exploreAreas: [],
     dormant: [],

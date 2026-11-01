@@ -17,6 +17,7 @@ import { furnitureAt, removeFurniture } from './furniture';
 import { addBlueprint } from './designations';
 import { addThought } from './mood';
 import { hasTrait } from './skills';
+import { maybeInfect } from './infection';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
 import { pick, randomInt } from './rng';
@@ -307,6 +308,7 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
+  maybeInfect(state, s, z.id);
   z.cooldown = ZOMBIE_ATTACK_EVERY;
 }
 

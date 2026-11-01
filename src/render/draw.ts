@@ -68,6 +68,7 @@ const COLOURS = {
     recroom: '#ec9fdc',
     infirmary: '#f4f1ea',
     barracks: '#c3d48c',
+    workshop: '#d6b47c',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -132,8 +133,9 @@ const COLOURS = {
     recroom: 'rgba(236, 160, 220, 0.10)',
     infirmary: 'rgba(240, 240, 240, 0.10)',
     barracks: 'rgba(170, 190, 120, 0.12)',
+    workshop: 'rgba(190, 150, 100, 0.12)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -143,7 +145,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -537,6 +539,7 @@ function drawItem(
 ): void {
   if (kind === 'food') drawFood(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'meal') drawMeal(ctx, camera, viewport, wx, wy, size);
+  else if (kind === 'medicine') drawMedicine(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'bandage') drawBandage(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'weapon') drawWeapon(ctx, camera, viewport, wx, wy, size);
   else drawWood(ctx, camera, viewport, wx, wy, size);
@@ -560,6 +563,17 @@ function drawWeapon(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Vie
   ctx.lineTo(p.x - s * 0.3, p.y + s * 0.3);
   ctx.stroke();
   ctx.lineCap = 'butt';
+}
+
+/** A green bottle. */
+function drawMedicine(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const s = size * 0.2;
+  ctx.fillStyle = '#4caf6a';
+  ctx.fillRect(p.x - s * 0.6, p.y - s * 0.4, s * 1.2, s * 1.4);
+  ctx.fillRect(p.x - s * 0.25, p.y - s * 0.9, s * 0.5, s * 0.5);
+  ctx.fillStyle = '#f4f1ea';
+  ctx.fillRect(p.x - s * 0.4, p.y, s * 0.8, s * 0.35);
 }
 
 /** A steaming bowl. */

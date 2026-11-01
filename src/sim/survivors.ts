@@ -97,6 +97,8 @@ export interface Survivor {
   /** Practice per job type (skills.ts). */
   xp: Partial<Record<JobType, number>>;
   traits: Trait[];
+  /** Ticks an infection has been running, or null (infection.ts). */
+  infection: number | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -132,6 +134,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     breakdown: null,
     xp: {},
     traits: [],
+    infection: null,
   };
   state.survivors.push(survivor);
   return survivor;

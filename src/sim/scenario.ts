@@ -63,6 +63,7 @@ export const ENTITY_CHARS = {
   trapBlueprint: '_',
   stoveBlueprint: 'O',
   meal: 'h',
+  medicine: '!',
   removeBlueprint: 'x',
 } as const;
 
@@ -144,6 +145,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.meal:
       spawnItem(state, 'meal', x, y);
+      return true;
+    case ENTITY_CHARS.medicine:
+      spawnItem(state, 'medicine', x, y);
       return true;
     case ENTITY_CHARS.workbenchBlueprint:
       addBlueprint(state, x, y, 'workbench');

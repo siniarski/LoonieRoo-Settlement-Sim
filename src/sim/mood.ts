@@ -8,6 +8,7 @@
 import { HUNGRY } from './food';
 import { isHurt } from './health';
 import { TRAIT_INFO } from './skills';
+import { INFECTED_MOOD } from './infection';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
@@ -73,6 +74,7 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
     .map((t) => [THOUGHTS[t.kind].label, THOUGHTS[t.kind].effect]);
   if (isHurt(s.health)) factors.push(['hurt', HURT_MOOD]);
   if (s.satiety < HUNGRY) factors.push(['hungry', HUNGRY_MOOD]);
+  if (s.infection !== null) factors.push(['infected', INFECTED_MOOD]);
   for (const t of s.traits) if (TRAIT_INFO[t].mood !== 0) factors.push([TRAIT_INFO[t].label, TRAIT_INFO[t].mood]);
   return factors;
 }
