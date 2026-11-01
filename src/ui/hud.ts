@@ -468,8 +468,10 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   return {
     root,
     update(state: SimState) {
-      root.hidden = !view.showPriorities;
-      if (!view.showPriorities) return;
+      // Build mode takes the bottom of the screen: the panel steps aside until it closes.
+      const shown = view.showPriorities && !view.buildOpen;
+      root.hidden = !shown;
+      if (!shown) return;
       // Rebuild only when something shown in the table changed.
       const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
