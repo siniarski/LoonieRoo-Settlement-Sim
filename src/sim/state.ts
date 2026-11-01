@@ -15,13 +15,14 @@ import type { Survivor } from './survivors';
 import type { Wanderer } from './wanderers';
 import type { CraftKind } from './crafting';
 import type { ExploreArea } from './fog';
+import type { DormantZombie, Herd } from './herds';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -47,6 +48,10 @@ export interface SimState {
   zombiesTonight: number | null;
   /** Boxes the player wants scouted (fog.ts). */
   exploreAreas: ExploreArea[];
+  /** Zombies asleep in the world, not yet real (herds.ts). */
+  dormant: DormantZombie[];
+  /** Herds on the move, as markers (herds.ts). */
+  herds: Herd[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -85,6 +90,8 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     craftTargets: { weapon: 0, bandage: 0 },
     zombiesTonight: null,
     exploreAreas: [],
+    dormant: [],
+    herds: [],
     items: [],
     furniture: [],
     farm: [],

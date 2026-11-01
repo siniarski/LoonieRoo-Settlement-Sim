@@ -31,7 +31,7 @@ const MAP = [
   '..........s.........d...',
   '....,...~~~.....,.......',
   '..www......ff..mm..c.c..',
-  '...................c....',
+  '...................c..k.',
   '..####D####.............',
   '..#...t...#.............',
   '..#########.............',
@@ -120,6 +120,8 @@ describe('stuck-state invariant', () => {
           { x: 3, y: 11, purpose: 'messhall' },
         ],
       });
+      // A standing order at the workbench, so crafting always gets exercised.
+      initial.craftTargets = { weapon: 1, bandage: 2 };
       // The bottom-right strip starts unexplored, so fog and scouting are exercised.
       for (let y = 10; y <= 12; y++) for (let x = 12; x <= 23; x++) initial.grid.explored[y * initial.grid.width + x] = 0;
       // Start at 18:00 so the run covers a whole night of zombies and the dawn retreat.
@@ -128,7 +130,7 @@ describe('stuck-state invariant', () => {
       const driver = { rng: seedRng(seed * 7919) }; // Player input, separate from sim RNG.
       const stillWithGoal = new Map<string, number>();
       /** Last tick's position and needs state, to spot legitimate one-tick hold-ups. */
-      const before = new Map<string, { pos: string; moving: boolean; needs: string }>();
+      const before = new Map<string, { pos: string; moving: boolean; needs: string; jobId: string | null }>();
       const idleWithWork = new Map<string, number>();
       const onJob = new Map<string, { id: string; since: number }>();
 
@@ -156,8 +158,10 @@ describe('stuck-state invariant', () => {
           const needs = `${s.sleep ? 'sleep' : ''}${s.meal ? 'meal' : ''}${s.treatment ? 'treat' : ''}${s.arming ? 'arm' : ''}`;
           const movedAside = prev !== undefined && !prev.moving && prev.pos !== `${s.pos.x},${s.pos.y}`;
           const needKickedIn = prev !== undefined && prev.needs !== needs && needs !== '';
-          before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs });
-          const excused = s.id === ordered || movedAside || needKickedIn || pathCut;
+          // A job cancelled under you, and straight on to the next: one more claim tick.
+          const jobSwitched = prev !== undefined && prev.jobId !== null && s.jobId !== null && prev.jobId !== s.jobId;
+          before.set(s.id, { pos: `${s.pos.x},${s.pos.y}`, moving: s.move !== null, needs, jobId: s.jobId });
+          const excused = s.id === ordered || movedAside || needKickedIn || pathCut || jobSwitched;
           const still = s.goal && !s.move && !excused ? (stillWithGoal.get(s.id) ?? 0) + 1 : 0;
           stillWithGoal.set(s.id, still);
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);

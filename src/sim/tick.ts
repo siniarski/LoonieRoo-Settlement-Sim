@@ -23,6 +23,7 @@ import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
 import { updateBreakdown, updateLeisure } from './leisure';
 import { reconcileExploreAreas, updateFog } from './fog';
+import { updateHerds } from './herds';
 import { forgetThoughts } from './mood';
 import { updateZombies } from './zombies';
 
@@ -32,6 +33,7 @@ export function tick(state: SimState): void {
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
+  updateHerds(state);
   updateFarm(state);
   updateWanderers(state);
   reconcileExploreAreas(state);

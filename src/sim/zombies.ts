@@ -16,7 +16,8 @@ import { logEvent } from './events';
 import { addThought } from './mood';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
-import { pick } from './rng';
+import { pick, randomInt } from './rng';
+import { isExplored } from './fog';
 import { OUTDOORS, labelAt } from './rooms';
 import { manhattan, nearestTile, samePoint } from './space';
 import type { SimState } from './state';
@@ -35,7 +36,15 @@ export const ZOMBIE_ATTACK_EVERY = 10;
 /** Zombies on night 1; every night after brings one more. (Was 4: too much for night one.) */
 export const FIRST_NIGHT_ZOMBIES = 2;
 /** Safety cap on zombies alive at once (not a balance lever). */
-export const MAX_ZOMBIES = 20;
+export const MAX_ZOMBIES = 60;
+/** Static and herd zombies only go for survivors this close (Manhattan); night zombies go for anyone. */
+export const AGGRO_RADIUS = 20;
+/** Night zombies arrive in the dark this far (Manhattan, roughly) from a survivor, past explored ground. */
+export const FRONTIER_MIN = 20;
+export const FRONTIER_MAX = 32;
+
+/** night: arrives after dark, leaves at dawn. static: woke up in a ruin (herds.ts). herd: broke off a passing herd. */
+export type ZombieKind = 'night' | 'static' | 'herd';
 /** Zombies never spawn this close (Manhattan) to a survivor. */
 export const SPAWN_MIN_DISTANCE = 8;
 /** Zombies re-pick their target and path this often. */
@@ -57,13 +66,16 @@ export interface Zombie {
   cooldown: number;
   /** Re-plan no earlier than this tick (or sooner, when the path runs out). */
   nextThinkTick: number;
+  kind: ZombieKind;
+  /** Herd zombies: where the herd was going. They carry on there when nobody's near. */
+  heading: Point | null;
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
   return state.zombies.find((z) => z.id === id);
 }
 
-export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE_HEALTH): Zombie {
+export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE_HEALTH, kind: ZombieKind = 'night'): Zombie {
   const z: Zombie = {
     id: `z${state.nextId++}`,
     pos: { x, y },
@@ -74,6 +86,8 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
     maxHealth: health,
     cooldown: 0,
     nextThinkTick: 0,
+    kind,
+    heading: null,
   };
   state.zombies.push(z);
   return z;
@@ -132,11 +146,13 @@ export function isSpawnTick(tick: number): boolean {
 export function updateZombies(state: SimState): void {
   if (!isNight(state.tick)) {
     state.zombiesTonight = null;
-    if (state.zombies.length > 0) {
-      const n = state.zombies.length;
-      state.zombies = [];
+    // Only the night's arrivals leave; zombies from ruins and herds stay out in the day.
+    const n = state.zombies.filter((z) => z.kind === 'night').length;
+    if (n > 0) {
+      state.zombies = state.zombies.filter((z) => z.kind !== 'night');
       logEvent(state, `${n} zombie${n === 1 ? '' : 's'} shambled off at dawn`);
     }
+    updateAll(state);
     return;
   }
   const night = nightNumber(state.tick)!;
@@ -145,24 +161,44 @@ export function updateZombies(state: SimState): void {
     logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected`);
   }
   const arriving = Math.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
-  if (arriving > 0) spawnAtEdge(state, arriving, zombieHealthForNight(night));
-  for (const z of state.zombies) updateZombie(state, z);
+  if (arriving > 0) spawnGroup(state, arriving, zombieHealthForNight(night));
+  updateAll(state);
 }
 
-/** A group of `n` zombies at one outdoor edge spot (the rest on the nearest free outdoor tiles). */
-function spawnAtEdge(state: SimState, n: number, health: number): void {
+function updateAll(state: SimState): void {
+  for (const z of state.zombies) updateZombie(state, z);
+  // Herd zombies that reached the herd's destination wander off the map.
+  state.zombies = state.zombies.filter((z) => !(z.kind === 'herd' && z.heading && manhattan(z.pos, z.heading) <= 1 && !z.move));
+}
+
+/** Where tonight's next group arrives: in the dark past explored ground, or (on a fully explored map) at the edge. */
+function spawnPoint(state: SimState): Point | null {
+  const open = (x: number, y: number) =>
+    getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.survivors.some((s) => manhattan(s.pos, { x, y }) < SPAWN_MIN_DISTANCE);
+  if (state.survivors.length > 0 && state.grid.explored.includes(0)) {
+    // A few tries: a spot out past someone, then the nearest dark open tile to it.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const s = pick(state, state.survivors);
+      const dx = randomInt(state, -FRONTIER_MAX, FRONTIER_MAX + 1);
+      const dy = randomInt(state, -FRONTIER_MAX, FRONTIER_MAX + 1);
+      if (Math.abs(dx) + Math.abs(dy) < FRONTIER_MIN) continue;
+      const near = { x: Math.max(0, Math.min(state.grid.width - 1, s.pos.x + dx)), y: Math.max(0, Math.min(state.grid.height - 1, s.pos.y + dy)) };
+      const p = nearestTile(state.grid, near, (x, y) => !isExplored(state, x, y) && open(x, y));
+      if (p && manhattan(p, near) <= FRONTIER_MAX) return p;
+    }
+  }
   const { width, height } = state.grid;
   const edge: Point[] = [];
   for (let x = 0; x < width; x++) edge.push({ x, y: 0 }, { x, y: height - 1 });
   for (let y = 1; y < height - 1; y++) edge.push({ x: 0, y }, { x: width - 1, y });
-  const candidates = edge.filter(
-    (p) =>
-      getTile(state.grid, p.x, p.y) === 'floor' &&
-      labelAt(state, p.x, p.y) === OUTDOORS &&
-      !state.survivors.some((s) => manhattan(s.pos, p) < SPAWN_MIN_DISTANCE),
-  );
-  if (candidates.length === 0) return;
-  const p = pick(state, candidates);
+  const candidates = edge.filter((p) => open(p.x, p.y));
+  return candidates.length > 0 ? pick(state, candidates) : null;
+}
+
+/** A group of `n` night zombies at one spot (the rest on the nearest free outdoor tiles). */
+function spawnGroup(state: SimState, n: number, health: number): void {
+  const p = spawnPoint(state);
+  if (!p) return;
   addZombie(state, p.x, p.y, health);
   for (let i = 1; i < n; i++) {
     const free = (x: number, y: number) =>
@@ -215,11 +251,16 @@ function updateZombie(state: SimState, z: Zombie): void {
   z.move = { from: { ...z.pos }, to: next, progress: 0, duration: ZOMBIE_TICKS_PER_TILE };
 }
 
-/** Chase the nearest reachable survivor; failing that, break in to the nearest one; or wander one tile at random. */
+/**
+ * Chase the nearest reachable survivor; failing that, break in to the nearest one; failing
+ * that, a herd zombie walks on towards where the herd was going, and others wander. Static and
+ * herd zombies only notice survivors within AGGRO_RADIUS.
+ */
 function plan(state: SimState, z: Zombie): void {
   const { grid, walkabilityVersion: v } = state;
   const goalsFor = (s: Survivor) => [s.pos, ...neighbours4(grid, s.pos.x, s.pos.y)];
-  const target = state.survivors
+  const noticed = z.kind === 'night' ? state.survivors : state.survivors.filter((s) => manhattan(z.pos, s.pos) <= AGGRO_RADIUS);
+  const target = noticed
     .slice()
     .sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))
     .find((s) => canReach(grid, v, z.pos, goalsFor(s), 'zombie'));
@@ -229,7 +270,7 @@ function plan(state: SimState, z: Zombie): void {
     return;
   }
   // Nobody reachable: go for the nearest survivor through doors, or failing that through walls.
-  const victim = state.survivors.slice().sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))[0];
+  const victim = noticed.slice().sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))[0];
   if (victim) {
     const path = findPathToAny(grid, z.pos, goalsFor(victim), 'survivor') ?? findPathToAny(grid, z.pos, goalsFor(victim), 'breacher');
     if (path && path.length > 0) {
@@ -238,7 +279,19 @@ function plan(state: SimState, z: Zombie): void {
       return;
     }
   }
+  z.targetId = null;
   const options = neighbours4(grid, z.pos.x, z.pos.y).filter((p) => isPassable(grid, p.x, p.y, 'zombie'));
+  if (z.heading) {
+    // On with the herd: a path if there is one, else the step that gets closest.
+    const path = findPathToAny(grid, z.pos, [z.heading], 'zombie');
+    if (path && path.length > 0) {
+      z.path = path.slice(0, REPATH_EVERY);
+      return;
+    }
+    const best = options.sort((a, b) => manhattan(a, z.heading!) - manhattan(b, z.heading!))[0];
+    z.path = best && manhattan(best, z.heading) < manhattan(z.pos, z.heading) ? [best] : [];
+    return;
+  }
   z.path = options.length > 0 ? [pick(state, options)] : [];
 }
 

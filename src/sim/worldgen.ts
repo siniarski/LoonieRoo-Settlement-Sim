@@ -195,6 +195,14 @@ function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
     if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || state.furniture.some((f) => f.x === x && f.y === y)) continue;
     addFurniture(state, 'crate', x, y).loot = lootFor(dist);
   }
+  // Asleep inside: none near the start, more the further out.
+  if (dist < START_CLEAR_RADIUS + 24) return;
+  const sleepers = hash(l.seed, cx0, cy0, 23) % (2 + Math.floor(dist / 60));
+  for (let n = 0; n < sleepers; n++) {
+    const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 24) % (w - 2));
+    const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 25) % (h - 2));
+    state.dormant.push({ id: `d${state.nextId++}`, x, y });
+  }
 }
 
 /** Finds in a crate this far from the start: CRATE_LOOT nearby, up to three times that at the far edge. */

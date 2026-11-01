@@ -185,6 +185,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
   }
   if (s.jobId) releaseSurvivor(state, s, 'hungry');
   cancelArming(state, s, 'hungry');
+  cancelTreatment(state, s, 'hungry'); // eat first; the bandage can wait
   food.reservedBy = s.id;
   s.meal = { itemId: food.id, progress: 0, seat: pickSeat(state, s, food.pos) };
   s.note = `going to eat at (${food.pos.x}, ${food.pos.y})`;

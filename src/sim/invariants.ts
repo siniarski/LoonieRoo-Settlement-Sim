@@ -3,7 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { STRUCTURE_HEALTH } from './breach';
-import { getTile, isWalkable } from './grid';
+import { getTile, inBounds, isWalkable } from './grid';
 import { GROW_TICKS } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
@@ -194,6 +194,8 @@ export function checkInvariants(state: SimState): string[] {
     else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
+  for (const d of state.dormant) if (!inBounds(grid, d.x, d.y)) problems.push(`dormant zombie ${d.id} off the map`);
+  for (const h of state.herds) if (!inBounds(grid, h.x, h.y) || !inBounds(grid, h.to.x, h.to.y) || h.size <= 0) problems.push(`herd ${h.id} is off the map or empty`);
   for (const a of state.exploreAreas) {
     if (a.x0 > a.x1 || a.y0 > a.y1 || a.x0 < 0 || a.y0 < 0 || a.x1 >= grid.width || a.y1 >= grid.height) problems.push(`explore area ${a.id} is not a box on the map`);
   }
