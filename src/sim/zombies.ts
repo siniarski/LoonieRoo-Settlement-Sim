@@ -16,6 +16,7 @@ import { logEvent } from './events';
 import { furnitureAt, removeFurniture } from './furniture';
 import { addBlueprint } from './designations';
 import { addThought } from './mood';
+import { hasTrait } from './skills';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
 import { pick, randomInt } from './rng';
@@ -301,7 +302,7 @@ function plan(state: SimState, z: Zombie): void {
 }
 
 function hit(state: SimState, z: Zombie, s: Survivor): void {
-  s.health = Math.max(0, s.health - ZOMBIE_DAMAGE);
+  s.health = Math.max(0, s.health - (hasTrait(s, 'tough') ? Math.round((ZOMBIE_DAMAGE * 3) / 4) : ZOMBIE_DAMAGE));
   s.lastHurtBy = 'a zombie attack';
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;

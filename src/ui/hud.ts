@@ -20,6 +20,7 @@ import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
 import type { ViewState } from './view';
+import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -415,7 +416,7 @@ function createWandererPanel(command: (cmd: Command) => void) {
       for (const { w, left } of rows) {
         const row = el('div', 'hud-wanderer');
         const label = el('span', 'hud-wanderer-label');
-        label.textContent = `${w.name} at (${w.x}, ${w.y}) · leaves in ${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}m`;
+        label.textContent = `${w.name}${w.traits.length ? ` (${w.traits.map((t) => TRAIT_INFO[t].label).join(', ')})` : ''} at (${w.x}, ${w.y}) · leaves in ${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}m`;
         const accept = el('button', 'hud-button');
         accept.textContent = 'Take in';
         accept.addEventListener('click', () => command({ type: 'acceptWanderer', wandererId: w.id }));
@@ -449,7 +450,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       const row = el('tr', s.id === view.selectedId ? 'selected' : '');
       const name = el('td', 'prio-name');
       name.textContent = s.name;
-      name.title = 'Select';
+      name.title = `Select · ${describeSkills(s)}`;
       name.addEventListener('click', () => (view.selectedId = s.id));
       row.append(name);
 
@@ -568,7 +569,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
     `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
-    `    ${moodTitle(state, s)}`,
+    `    ${moodTitle(state, s)}  ·  ${describeSkills(s)}`,
     `    ${s.note ?? ''}`,
   ];
 }

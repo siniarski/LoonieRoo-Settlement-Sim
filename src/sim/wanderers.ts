@@ -15,6 +15,7 @@ import { OUTDOORS, labelAt } from './rooms';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 import { nextSurvivorName } from './survivors';
+import { rollTraits, type Trait } from './skills';
 import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight, tickOfDay } from './time';
 
 export const ARRIVAL_HOUR = 10;
@@ -32,6 +33,8 @@ export interface Wanderer {
   y: number;
   /** Tick at which they give up and leave. */
   leavesTick: number;
+  /** What they'd bring (skills.ts): shown before you decide. */
+  traits: Trait[];
 }
 
 export function getWanderer(state: SimState, id: string): Wanderer | undefined {
@@ -39,8 +42,10 @@ export function getWanderer(state: SimState, id: string): Wanderer | undefined {
 }
 
 export function addWanderer(state: SimState, x: number, y: number): Wanderer {
+  const id = `v${state.nextId++}`;
   const w: Wanderer = {
-    id: `v${state.nextId++}`,
+    id,
+    traits: rollTraits(id),
     name: nextSurvivorName(state),
     x,
     y,

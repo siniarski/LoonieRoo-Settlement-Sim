@@ -6,9 +6,10 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { hasTrait, type Trait } from './skills';
 import type { Thought } from './mood';
 import { getTile, setDirty, type Point } from './grid';
-import { DEFAULT_PRIORITIES, type Priorities } from './jobTypes';
+import { DEFAULT_PRIORITIES, type JobType, type Priorities } from './jobTypes';
 import { findPath } from './pathfinding';
 import { initialSatiety, type Meal } from './food';
 import { HEALTH_MAX, HURT_STEP_TICKS, isHurt } from './health';
@@ -93,6 +94,9 @@ export interface Survivor {
   leisure: { x: number; y: number; progress: number } | null;
   /** Mid-breakdown until this tick: no work (leisure.ts). */
   breakdown: { until: number } | null;
+  /** Practice per job type (skills.ts). */
+  xp: Partial<Record<JobType, number>>;
+  traits: Trait[];
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -126,6 +130,8 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     thoughts: [],
     leisure: null,
     breakdown: null,
+    xp: {},
+    traits: [],
   };
   state.survivors.push(survivor);
   return survivor;
@@ -193,7 +199,8 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
-  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE };
+  const pace = (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0);
+  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: pace };
 }
 
 function trackDirt(state: SimState, p: Point): void {

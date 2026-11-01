@@ -130,7 +130,7 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!w) return reject(`no wanderer ${command.wandererId}`);
     removeWanderer(state, w);
     if (command.type === 'acceptWanderer') {
-      addSurvivor(state, w.x, w.y, w.name);
+      addSurvivor(state, w.x, w.y, w.name).traits = [...w.traits];
       logEvent(state, `${w.name} joined the colony`);
     } else {
       logEvent(state, `${w.name} was turned away`);

@@ -18,6 +18,7 @@ import { GROUNDS, inBounds, isWalkable, setTile, tileIndex, type Ground, type Po
 import { spawnItem } from './items';
 import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
+import { rollTraits } from './skills';
 
 export const CHUNK = 32;
 /** Chunks this far (in chunks, each way) from any survivor are always generated. */
@@ -237,7 +238,10 @@ function startCamp(state: SimState, l: Layout): void {
     }
   }
   for (const dx of [1, 3, 5]) addFurniture(state, 'bed', x0 + dx, y0 + 1);
-  for (const dx of [-2, 0, 2]) addSurvivor(state, sx + dx, sy + 1);
+  for (const dx of [-2, 0, 2]) {
+    const s = addSurvivor(state, sx + dx, sy + 1);
+    s.traits = rollTraits(s.id);
+  }
   for (let i = 0; i < 12; i++) spawnItem(state, 'wood', sx - 6 + (i % 4), sy + 3 + Math.floor(i / 4));
   for (let i = 0; i < 10; i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
 }
