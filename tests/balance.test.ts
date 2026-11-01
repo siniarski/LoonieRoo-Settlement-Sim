@@ -27,14 +27,14 @@ describe('trees', () => {
     expect(tree.loot).toBe(TREE_WOOD);
     expect(applyCommand(state, { type: 'designateScavenge', x: 3, y: 0 })).toEqual({ ok: true, changed: true });
     runUntil(state, () => tree.loot === 0);
-    expect(state.items.map((i) => i.kind)).toEqual(['wood', 'wood', 'wood']);
+    expect(state.items.map((i) => i.kind)).toEqual(Array(TREE_WOOD).fill('wood'));
     expect(state.survivors[0]!.note).toBe('chopped wood from (3, 0), 0 left');
     expect(tree.scavenge).toBe(true);
     // Regrowth comes on the day boundary; then the marked tree is chopped again.
     state.tick = TREE_REGROW_TICKS;
     tick(state);
     expect(tree.loot).toBe(1);
-    runUntil(state, () => state.items.filter((i) => i.kind === 'wood').length === 4);
+    runUntil(state, () => state.items.filter((i) => i.kind === 'wood').length === TREE_WOOD + 1);
   });
 
   it('unmarked trees are left alone; Cancel unmarks', () => {

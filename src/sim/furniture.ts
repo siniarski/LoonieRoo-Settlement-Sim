@@ -16,9 +16,9 @@ export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'tree' | '
 export const CRATE_LOOT = 5;
 /** Spikes left on a new trap. */
 export const TRAP_CHARGES = 3;
-/** Wood on a grown tree. A chopped tree grows one back every TREE_REGROW_TICKS (two days), up to this. */
-export const TREE_WOOD = 3;
-export const TREE_REGROW_TICKS = 2 * 4800; // two in-game days (one a day gave a big surplus: see NOTES.md)
+/** Wood on a grown tree. A chopped tree grows one back every TREE_REGROW_TICKS (three days), up to this. Was 3 every 2 days: generated forests flooded the map with wood. */
+export const TREE_WOOD = 2;
+export const TREE_REGROW_TICKS = 3 * 4800; // three in-game days
 
 export interface Furniture {
   id: string;
