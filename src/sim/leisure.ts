@@ -11,6 +11,7 @@
 // "vented", a good thought, so it doesn't happen again straight away.
 
 import { logEvent } from './events';
+import { furnitureAt } from './furniture';
 import { isWalkable, type Point } from './grid';
 import { IDLE_RETRY_TICKS, releaseSurvivor, seekJob } from './jobs';
 import { addThought, isMiserable, mood } from './mood';
@@ -83,7 +84,7 @@ function spotFree(state: SimState, s: Survivor, p: Point): boolean {
   return (
     rooms.has(labelAt(state, p.x, p.y)) &&
     isWalkable(state.grid, p.x, p.y) &&
-    !state.furniture.some((f) => f.x === p.x && f.y === p.y) &&
+    !furnitureAt(state, p.x, p.y) &&
     !state.survivors.some((o) => o !== s && o.leisure && o.leisure.x === p.x && o.leisure.y === p.y)
   );
 }

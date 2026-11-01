@@ -3,6 +3,7 @@
 
 import { isWalkable, type Point } from './grid';
 import { isFurnitureTarget } from './designations';
+import { furnitureAt } from './furniture';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
@@ -32,7 +33,7 @@ export function canHoldItem(state: SimState, x: number, y: number): boolean {
   return (
     isWalkable(state.grid, x, y) &&
     !itemAt(state, x, y) &&
-    !state.furniture.some((f) => f.x === x && f.y === y) &&
+    !furnitureAt(state, x, y) &&
     !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || isFurnitureTarget(b.target)))
   );
 }
@@ -59,6 +60,13 @@ export function removeItem(state: SimState, item: Item): void {
 
 function placeNear(state: SimState, item: Item, near: Point): void {
   item.pos = null; // so it doesn't count as occupying its own old tile
+  // Tiles already holding an item, gathered once (not a scan of every item per tile tried).
+  const held = new Set(state.items.flatMap((i) => (i.pos ? [`${i.pos.x},${i.pos.y}`] : [])));
+  const free = (x: number, y: number) =>
+    isWalkable(state.grid, x, y) &&
+    !held.has(`${x},${y}`) &&
+    !furnitureAt(state, x, y) &&
+    !state.blueprints.some((b) => b.x === x && b.y === y && (b.target === 'wall' || isFurnitureTarget(b.target)));
   // If the whole map is full, leave it where it was asked to go.
-  item.pos = nearestTile(state.grid, near, (x, y) => canHoldItem(state, x, y)) ?? { x: near.x, y: near.y };
+  item.pos = nearestTile(state.grid, near, free) ?? { x: near.x, y: near.y };
 }

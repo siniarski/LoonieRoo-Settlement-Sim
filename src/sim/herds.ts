@@ -24,7 +24,7 @@ export const HERD_TICKS_PER_TILE = 8;
 export const MATERIALIZE_RADIUS = 24;
 /** Each day from day 2, at this hour, a herd may set out (HERD_CHANCE), and some head past the colony. */
 export const HERD_HOUR = 8;
-export const HERD_CHANCE = 0.6;
+export const HERD_CHANCE = 0.5;
 export const HERD_TOWARD_COLONY = 0.4;
 
 export interface DormantZombie {
@@ -44,7 +44,7 @@ export interface Herd {
 }
 
 export function herdSize(day: number): number {
-  return 3 + Math.floor(day / 2);
+  return 2 + Math.floor(day / 3); // was 3 + day/2: two of three world runs were wiped out by day 12
 }
 
 export function updateHerds(state: SimState): void {

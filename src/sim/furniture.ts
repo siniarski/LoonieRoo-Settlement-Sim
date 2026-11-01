@@ -34,12 +34,32 @@ export interface Furniture {
   stored: number;
 }
 
+/**
+ * Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never
+ * moves, and only addFurniture/removeFurniture change the list, so they drop the cache.
+ * (A generated world has thousands of trees: scanning the list per tile was the cost.)
+ */
+const indexes = new WeakMap<Furniture[], { byTile: Map<string, Furniture>; byId: Map<string, Furniture> }>();
+
+function index(state: SimState) {
+  let found = indexes.get(state.furniture);
+  if (!found) {
+    found = { byTile: new Map(), byId: new Map() };
+    for (const f of state.furniture) {
+      if (!found.byTile.has(`${f.x},${f.y}`)) found.byTile.set(`${f.x},${f.y}`, f);
+      found.byId.set(f.id, f);
+    }
+    indexes.set(state.furniture, found);
+  }
+  return found;
+}
+
 export function furnitureAt(state: SimState, x: number, y: number): Furniture | undefined {
-  return state.furniture.find((f) => f.x === x && f.y === y);
+  return index(state).byTile.get(`${x},${y}`);
 }
 
 export function getFurniture(state: SimState, id: string): Furniture | undefined {
-  return state.furniture.find((f) => f.id === id);
+  return index(state).byId.get(id);
 }
 
 export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y: number): Furniture {
@@ -55,6 +75,7 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     stored: 0,
   };
   state.furniture.push(f);
+  indexes.delete(state.furniture);
   return f;
 }
 
@@ -67,5 +88,6 @@ export function regrowTrees(state: SimState): void {
 export function removeFurniture(state: SimState, f: Furniture): void {
   const i = state.furniture.indexOf(f);
   if (i >= 0) state.furniture.splice(i, 1);
+  indexes.delete(state.furniture);
   for (let n = 0; n < f.stored; n++) spawnItem(state, 'wood', f.x, f.y);
 }

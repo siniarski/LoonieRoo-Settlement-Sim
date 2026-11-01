@@ -12,7 +12,7 @@
 //    state.nextId, so they do depend on generation order; ids are labels,
 //    nothing else.)
 
-import { addFurniture, CRATE_LOOT } from './furniture';
+import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, inBounds, setTile, tileIndex, type Ground, type Point } from './grid';
 import { spawnItem } from './items';
 import { createState, type SimState } from './state';
@@ -192,7 +192,7 @@ function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
   for (let n = 0; n < crates; n++) {
     const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 21) % (w - 2));
     const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 22) % (h - 2));
-    if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || state.furniture.some((f) => f.x === x && f.y === y)) continue;
+    if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || furnitureAt(state, x, y)) continue;
     addFurniture(state, 'crate', x, y).loot = lootFor(dist);
   }
   // Asleep inside: none near the start, more the further out.
