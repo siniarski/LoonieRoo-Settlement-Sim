@@ -129,9 +129,9 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
         if (text !== null) replaceState(loadFile(text), 'the file');
       });
     },
-    newWorld: () => {
-      if (!window.confirm('Start a new world? Unsaved progress here is lost.')) return;
-      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9)), kind: 'save' }, 'a new world');
+    newWorld: (size) => {
+      if (!window.confirm(`Start a new ${size}×${size} world? Unsaved progress here is lost.`)) return;
+      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9), size), kind: 'save' }, `a new ${size}×${size} world`);
     },
     reportBug: () => {
       const note = window.prompt('What went wrong? (optional)') ?? '';

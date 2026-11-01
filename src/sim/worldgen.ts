@@ -19,7 +19,9 @@ import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
 
 export const CHUNK = 32;
-export const WORLD_SIZE = 256;
+/** World sizes on offer (tiles a side, multiples of CHUNK). Development uses the small ones. */
+export const WORLD_SIZES = [64, 128, 256, 512] as const;
+export const WORLD_SIZE = 128;
 /** Building cells: CHUNK must be a multiple, so buildings never cross chunks. */
 const CELL = 16;
 /** Kept clear around the start, so the first day is calm. */

@@ -22,6 +22,7 @@ import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './to
 import type { ViewState } from './view';
 import { CRAFTABLES, MAX_CRAFT_TARGET, RECIPES, craftStock } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
+import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
 
@@ -32,7 +33,7 @@ export interface GameFiles {
   exportSave(): void;
   importFile(): void;
   reportBug(): void;
-  newWorld(): void;
+  newWorld(size: number): void;
 }
 
 export interface Hud {
@@ -300,11 +301,11 @@ function createGamePanel(view: ViewState, files: GameFiles) {
     });
     return b;
   };
-  const row = (label: string, ...buttons: HTMLButtonElement[]) => {
+  const row = (label: string, ...controls: HTMLElement[]) => {
     const r = el('div', 'hud-game-row');
     const text = el('span', 'hud-game-label');
     text.textContent = label;
-    r.append(text, ...buttons);
+    r.append(text, ...controls);
     return r;
   };
   return {
@@ -336,7 +337,15 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       root.append(
         row('Files:', button('Export save', files.exportSave), button('Import…', files.importFile), button('Report bug', files.reportBug)),
       );
-      root.append(row('A fresh start somewhere else:', button('New world', files.newWorld)));
+      const size = el('select', 'hud-select');
+      for (const n of WORLD_SIZES) {
+        const option = el('option', '');
+        option.value = String(n);
+        option.textContent = `${n}×${n}`;
+        option.selected = n === WORLD_SIZE;
+        size.append(option);
+      }
+      root.append(row('A fresh start somewhere else:', size, button('New world', () => files.newWorld(Number(size.value)))));
     },
   };
 }

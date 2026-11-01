@@ -7,7 +7,7 @@ import { MAX_ROOM_TILES, roomAt } from '../src/sim/rooms';
 import { loadScenario } from '../src/sim/scenario';
 import { createState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
-import { CHUNK, START_CLEAR_RADIUS, createWorld, generateChunk, layout, lootFor } from '../src/sim/worldgen';
+import { CHUNK, START_CLEAR_RADIUS, WORLD_SIZES, createWorld, generateChunk, layout, lootFor } from '../src/sim/worldgen';
 
 const SIZE = 128; // smaller than the real world, to keep the suite quick
 
@@ -83,5 +83,18 @@ describe('world generation', () => {
     expect(checkInvariants(state)).toEqual([]);
     for (let i = 0; i < 300; i++) tick(state);
     expect(checkInvariants(state)).toEqual([]);
+  });
+});
+
+describe('world sizes', () => {
+  it('every offered size generates a consistent, runnable world', () => {
+    for (const size of WORLD_SIZES.filter((n) => n <= 256)) {
+      const state = createWorld(11, size);
+      expect(state.grid.width).toBe(size);
+      expect(state.survivors).toHaveLength(3);
+      expect(checkInvariants(state)).toEqual([]);
+      for (let i = 0; i < 50; i++) tick(state);
+      expect(checkInvariants(state)).toEqual([]);
+    }
   });
 });
