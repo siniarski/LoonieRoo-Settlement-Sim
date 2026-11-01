@@ -56,7 +56,9 @@ describe('tools', () => {
   it('number keys pick tools within the open category', () => {
     expect(toolForKey('structure', '1')?.id).toBe('wall');
     expect(toolForKey('structure', '2')?.id).toBe('door');
-    expect(toolForKey('structure', '3')).toBeUndefined();
+    expect(toolForKey('structure', '3')?.id).toBe('barricade');
+    expect(toolForKey('structure', '4')?.id).toBe('trap');
+    expect(toolForKey('structure', '5')).toBeUndefined();
     expect(toolForKey('orders', '1')?.id).toBe('scavenge');
     expect(toolForKey('orders', '3')?.id).toBe('cancel');
     expect(toolForKey('rooms', 'x')).toBeUndefined();

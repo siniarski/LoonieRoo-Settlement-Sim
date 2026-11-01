@@ -31,7 +31,11 @@ const COLOURS = {
     wall: '#8b919c',
     door: '#a8713a',
     water: '#24465e',
+    barricade: '#262b27',
   } satisfies Record<Tile, string>,
+  plank: '#7a5a35',
+  plankEdge: '#4a3420',
+  spike: '#b8bec6',
   ground: {
     grass: '#262b27',
     dirt: '#2e2a24',
@@ -57,6 +61,8 @@ const COLOURS = {
     armory: '#d98c6a',
     table: '#d6aa78',
     workbench: '#be9664',
+    barricade: '#aa7846',
+    trap: '#b8bec6',
     messhall: '#9ee0c0',
     recroom: '#ec9fdc',
     infirmary: '#f4f1ea',
@@ -93,11 +99,13 @@ const COLOURS = {
     wall: 'rgba(110, 180, 255, 0.35)',
     door: 'rgba(255, 190, 110, 0.35)',
     bed: 'rgba(199, 166, 255, 0.30)',
+    barricade: 'rgba(170, 120, 70, 0.30)',
+    trap: 'rgba(184, 190, 198, 0.30)',
     table: 'rgba(214, 170, 120, 0.30)',
     workbench: 'rgba(190, 150, 100, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', barricade: '#aa7846', trap: '#b8bec6', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -213,6 +221,7 @@ export function draw(
     else if (f.kind === 'table') drawTable(ctx, camera, viewport, f.x, f.y);
     else if (f.kind === 'workbench') drawWorkbench(ctx, camera, viewport, f, size);
     else if (f.kind === 'tree') drawTree(ctx, camera, viewport, f, size);
+    else if (f.kind === 'trap') drawTrap(ctx, camera, viewport, f);
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
@@ -428,6 +437,23 @@ function drawTree(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
     const r = tileRect(camera, viewport, f.x, f.y);
     ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
     ctx.setLineDash([]);
+  }
+}
+
+/** Spikes, one row per charge left. */
+function drawTrap(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture): void {
+  const r = tileRect(camera, viewport, f.x, f.y);
+  ctx.fillStyle = COLOURS.spike;
+  for (let row = 0; row < f.loot; row++) {
+    const y = r.y + r.h * (0.3 + 0.22 * row);
+    for (let k = 0; k < 3; k++) {
+      const x = r.x + r.w * (0.22 + 0.28 * k);
+      ctx.beginPath();
+      ctx.moveTo(x - r.w * 0.08, y + r.h * 0.12);
+      ctx.lineTo(x, y - r.h * 0.06);
+      ctx.lineTo(x + r.w * 0.08, y + r.h * 0.12);
+      ctx.fill();
+    }
   }
 }
 
@@ -812,6 +838,20 @@ function drawTile(
   const r = tileRect(camera, viewport, x, y);
   ctx.fillStyle = tile === 'floor' || tile === 'door' ? COLOURS.ground[GROUNDS[ground] ?? 'grass'] : COLOURS.tiles[tile];
   ctx.fillRect(r.x, r.y, r.w, r.h);
+  if (tile === 'barricade') {
+    // Two crossed planks.
+    ctx.strokeStyle = COLOURS.plankEdge;
+    ctx.lineWidth = Math.max(2, r.w * 0.22);
+    ctx.beginPath();
+    ctx.moveTo(r.x + r.w * 0.15, r.y + r.h * 0.15);
+    ctx.lineTo(r.x + r.w * 0.85, r.y + r.h * 0.85);
+    ctx.moveTo(r.x + r.w * 0.85, r.y + r.h * 0.15);
+    ctx.lineTo(r.x + r.w * 0.15, r.y + r.h * 0.85);
+    ctx.stroke();
+    ctx.strokeStyle = COLOURS.plank;
+    ctx.lineWidth = Math.max(1, r.w * 0.14);
+    ctx.stroke();
+  }
   if (tile === 'water' && size >= 8) {
     ctx.fillStyle = COLOURS.waterRipple;
     ctx.fillRect(r.x + r.w * ((x * 7 + y * 3) % 5) * 0.15, r.y + r.h * 0.45, r.w * 0.3, Math.max(1, r.h * 0.08));

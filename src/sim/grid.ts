@@ -2,7 +2,7 @@
 // serialises as plain JSON. All coordinates are integer tile coordinates.
 
 /** Water blocks everyone and is never part of a room; see worldgen.ts. */
-export type Tile = 'floor' | 'wall' | 'door' | 'water';
+export type Tile = 'floor' | 'wall' | 'door' | 'water' | 'barricade';
 
 /**
  * What the ground looks like under a floor tile. Visual only: nothing in the
@@ -116,7 +116,7 @@ function drop(list: number[], i: number): void {
 
 /** Doors are always walkable (milestone 1 decision, see NOTES.md). */
 export function isWalkableTile(tile: Tile): boolean {
-  return tile === 'floor' || tile === 'door';
+  return tile === 'floor' || tile === 'door' || tile === 'barricade';
 }
 
 export function isWalkable(grid: Grid, x: number, y: number): boolean {

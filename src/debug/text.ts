@@ -11,6 +11,8 @@ const BLUEPRINT_CHARS = {
   bed: ENTITY_CHARS.bedBlueprint,
   table: ENTITY_CHARS.tableBlueprint,
   workbench: ENTITY_CHARS.workbenchBlueprint,
+  barricade: ENTITY_CHARS.barricadeBlueprint,
+  trap: ENTITY_CHARS.trapBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

@@ -29,6 +29,7 @@ export const TILE_CHARS: Record<Tile, string> = {
   wall: '#',
   door: 'D',
   water: '%',
+  barricade: '=',
 };
 
 /**
@@ -46,6 +47,7 @@ export const ENTITY_CHARS = {
   bed: 'b',
   table: 't',
   workbench: 'k',
+  trap: '^',
   crate: 'c',
   tree: 'Y',
   zombie: 'z',
@@ -56,6 +58,8 @@ export const ENTITY_CHARS = {
   bedBlueprint: 'B',
   tableBlueprint: 'T',
   workbenchBlueprint: 'K',
+  barricadeBlueprint: '-',
+  trapBlueprint: '_',
   removeBlueprint: 'x',
 } as const;
 
@@ -119,6 +123,15 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.workbench:
       addFurniture(state, 'workbench', x, y);
+      return true;
+    case ENTITY_CHARS.trap:
+      addFurniture(state, 'trap', x, y);
+      return true;
+    case ENTITY_CHARS.barricadeBlueprint:
+      addBlueprint(state, x, y, 'barricade');
+      return true;
+    case ENTITY_CHARS.trapBlueprint:
+      addBlueprint(state, x, y, 'trap');
       return true;
     case ENTITY_CHARS.workbenchBlueprint:
       addBlueprint(state, x, y, 'workbench');

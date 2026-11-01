@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'bed' | 'table' | 'workbench' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'bed' | 'table' | 'workbench' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -61,6 +61,22 @@ export const TOOLS: readonly Tool[] = [
     paints: true,
     hasInstant: true,
     command: (x, y, { instant }) => (instant ? { type: 'placeDoor', x, y } : { type: 'designateBuild', x, y, structure: 'door' }),
+  },
+  {
+    id: 'barricade',
+    label: 'Barricade',
+    category: 'structure',
+    paints: true,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateBuild', x, y, structure: 'barricade' }),
+  },
+  {
+    id: 'trap',
+    label: 'Spike trap',
+    category: 'structure',
+    paints: true,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateBuild', x, y, structure: 'trap' }),
   },
   {
     id: 'bed',

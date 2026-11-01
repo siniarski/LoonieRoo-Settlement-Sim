@@ -14,11 +14,11 @@ import { evictZombies } from './zombies';
  * What the tile ends up as. 'floor' means "remove what's here": furniture if
  * there is some, otherwise the wall or door.
  */
-export type BuildTarget = 'wall' | 'door' | 'bed' | 'table' | 'workbench' | 'floor';
+export type BuildTarget = 'wall' | 'door' | 'barricade' | 'bed' | 'table' | 'workbench' | 'trap' | 'floor';
 
 /** Build targets that are furniture rather than a tile. */
-export function isFurnitureTarget(target: BuildTarget): target is 'bed' | 'table' | 'workbench' {
-  return target === 'bed' || target === 'table' || target === 'workbench';
+export function isFurnitureTarget(target: BuildTarget): target is 'bed' | 'table' | 'workbench' | 'trap' {
+  return target === 'bed' || target === 'table' || target === 'workbench' || target === 'trap';
 }
 
 export interface Blueprint {
@@ -34,7 +34,7 @@ export interface Blueprint {
 }
 
 /** Ticks of work (10 ticks = 1s at 1x). */
-export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, bed: 25, table: 25, workbench: 40, floor: 20 };
+export const BUILD_WORK: Record<BuildTarget, number> = { wall: 30, door: 20, barricade: 15, bed: 25, table: 25, workbench: 40, trap: 20, floor: 20 };
 
 export function getBlueprint(state: SimState, id: string): Blueprint | undefined {
   return state.blueprints.find((b) => b.id === id);
@@ -47,7 +47,7 @@ export function blueprintAt(state: SimState, x: number, y: number): Blueprint | 
 /** Can something be removed here? */
 export function hasRemovable(state: SimState, x: number, y: number): boolean {
   const tile = getTile(state.grid, x, y);
-  return tile === 'wall' || tile === 'door' || furnitureAt(state, x, y) !== undefined;
+  return tile === 'wall' || tile === 'door' || tile === 'barricade' || furnitureAt(state, x, y) !== undefined;
 }
 
 /** Building needs empty floor (no furniture); removing needs something to remove. */
@@ -85,14 +85,16 @@ export function completeBlueprint(state: SimState, bp: Blueprint): void {
   switch (bp.target) {
     case 'wall':
     case 'door':
+    case 'barricade':
       if (setTile(state.grid, bp.x, bp.y, bp.target)) state.walkabilityVersion += 1;
       if (bp.target === 'wall') evictFrom(state, bp);
-      evictZombies(state, bp); // zombies can stand on neither walls nor doors
+      evictZombies(state, bp); // zombies can stand on none of these
       clearPlot(state, bp);
       return;
     case 'bed':
     case 'table':
-    case 'workbench': {
+    case 'workbench':
+    case 'trap': {
       addFurniture(state, bp.target, bp.x, bp.y);
       const item = itemAt(state, bp.x, bp.y);
       if (item) dropItem(state, item, bp);

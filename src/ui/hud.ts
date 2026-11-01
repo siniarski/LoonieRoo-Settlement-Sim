@@ -204,6 +204,7 @@ function furnitureText(state: SimState, p: Point): string {
     return ` · ${owner ? `${owner}'s bed` : 'bed'}${f.occupant ? ' (in use)' : ''}`;
   }
   if (f.kind === 'table') return ' · table';
+  if (f.kind === 'trap') return ` · spike trap (${f.loot} left)`;
   if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
   if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;

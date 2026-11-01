@@ -197,7 +197,7 @@ export function checkInvariants(state: SimState): string[] {
     if (d === 0) continue;
     const tile = grid.tiles[i]!;
     const at = `(${i % grid.width}, ${Math.floor(i / grid.width)})`;
-    if (tile !== 'wall' && tile !== 'door') problems.push(`damage ${d} on ${tile} ${at}`);
+    if (tile !== 'wall' && tile !== 'door' && tile !== 'barricade') problems.push(`damage ${d} on ${tile} ${at}`);
     else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 

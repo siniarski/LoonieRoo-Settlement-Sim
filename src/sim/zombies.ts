@@ -13,6 +13,8 @@
 
 import { damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
+import { furnitureAt, removeFurniture } from './furniture';
+import { addBlueprint } from './designations';
 import { addThought } from './mood';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -32,6 +34,8 @@ export const SURVIVORS_PER_EXTRA_ZOMBIE = 4;
 /** Slower than survivors (4), so guards can catch them and runners can escape. */
 export const ZOMBIE_TICKS_PER_TILE = 6;
 export const ZOMBIE_DAMAGE = 40;
+/** What a spike trap does to the zombie that steps on it. */
+export const TRAP_DAMAGE = 100;
 export const ZOMBIE_ATTACK_EVERY = 10;
 /** Zombies on night 1; every night after brings one more. (Was 4: too much for night one.) */
 export const FIRST_NIGHT_ZOMBIES = 2;
@@ -227,6 +231,7 @@ function updateZombie(state: SimState, z: Zombie): void {
     if (z.move.progress < z.move.duration) return;
     z.pos = z.move.to;
     z.move = null;
+    if (springTrap(state, z)) return;
   }
 
   if (state.tick >= z.nextThinkTick || z.path.length === 0) {
@@ -302,6 +307,23 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
   z.cooldown = ZOMBIE_ATTACK_EVERY;
+}
+
+/** Spikes: TRAP_DAMAGE to a zombie stepping on a trap. A spent trap goes, leaving a plan to rebuild it. Returns true if the zombie died. */
+function springTrap(state: SimState, z: Zombie): boolean {
+  const trap = furnitureAt(state, z.pos.x, z.pos.y);
+  if (trap?.kind !== 'trap' || trap.loot <= 0) return false;
+  trap.loot -= 1;
+  z.health = Math.max(0, z.health - TRAP_DAMAGE);
+  if (trap.loot === 0) {
+    removeFurniture(state, trap);
+    addBlueprint(state, trap.x, trap.y, 'trap');
+    logEvent(state, `A spike trap at (${trap.x}, ${trap.y}) is spent`);
+  }
+  if (z.health > 0) return false;
+  removeZombie(state, z);
+  logEvent(state, 'A spike trap killed a zombie');
+  return true;
 }
 
 /** A guard's blow. Returns true if the zombie died (and was removed). */
