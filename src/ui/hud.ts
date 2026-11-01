@@ -22,6 +22,7 @@ import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './to
 import type { ViewState } from './view';
 import { CRAFTABLES, MAX_CRAFT_TARGET, RECIPES, craftStock } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
+import { createMinimap } from './minimap';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
@@ -100,11 +101,12 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
   const game = createGamePanel(view, files);
+  const minimap = createMinimap(view);
   // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, minimap.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -143,6 +145,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       prioritiesButton.classList.toggle('active', view.showPriorities);
       gameButton.classList.toggle('active', view.showGame);
       game.update();
+      minimap.update(state);
 
       const text = statusText(state, view);
       if (text !== lastStatus) status.textContent = lastStatus = text;

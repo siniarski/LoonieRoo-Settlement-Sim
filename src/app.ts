@@ -60,6 +60,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     showDebug: false,
     showPriorities: true,
     showGame: false,
+    showMinimap: true,
     // Spread over the defaults so view state saved by older code gains new fields.
     ...saved,
   };

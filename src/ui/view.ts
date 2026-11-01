@@ -25,4 +25,6 @@ export interface ViewState {
   showPriorities: boolean;
   /** The Game menu (saves, files, bug report). */
   showGame: boolean;
+  /** The minimap (M). */
+  showMinimap: boolean;
 }

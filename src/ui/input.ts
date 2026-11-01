@@ -12,7 +12,7 @@
 //   Esc            put the tool down, then close build mode, then deselect
 // Always:
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
-//   P priorities · Space pause · ` debug panel · Home recentre
+//   P priorities · M minimap · Space pause · ` debug panel · Home recentre
 
 import { centredOn, panByScreen, screenToTile, zoomAt, type Viewport } from '../render/camera';
 import type { Command } from '../sim/commands';
@@ -188,6 +188,8 @@ export function attachInput(ctx: InputContext): Input {
       view.showDebug = !view.showDebug;
     } else if (key === 'p') {
       view.showPriorities = !view.showPriorities;
+    } else if (key === 'm') {
+      view.showMinimap = !view.showMinimap;
     } else if (key === 'Home') {
       const { width, height } = ctx.mapSize();
       view.camera = centredOn(width, height, view.camera.zoom);

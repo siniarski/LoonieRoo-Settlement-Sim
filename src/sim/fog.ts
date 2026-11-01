@@ -18,6 +18,14 @@ export const SIGHT_RADIUS = 8;
 /** Explore boxes are capped at this many tiles a side. */
 export const MAX_EXPLORE_SIDE = 64;
 
+/** A marker for something found while exploring (shown on the minimap). */
+export interface PointOfInterest {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+}
+
 export interface ExploreArea {
   id: string;
   x0: number;
