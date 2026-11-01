@@ -18,13 +18,14 @@ import type { ExploreArea, PointOfInterest } from './fog';
 import type { DormantZombie, Herd } from './herds';
 import type { WorldInfo } from './worldgen';
 import type { Weather } from './seasons';
+import type { Expedition } from './expeditions';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 33;
+export const SCHEMA_VERSION = 34;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -60,6 +61,8 @@ export interface SimState {
   world: WorldInfo | null;
   /** Today's weather, rolled at dawn (seasons.ts). */
   weather: Weather;
+  /** Survivors away off the map (expeditions.ts). */
+  expeditions: Expedition[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -103,6 +106,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     pointsOfInterest: [],
     world: null,
     weather: 'clear',
+    expeditions: [],
     items: [],
     furniture: [],
     farm: [],

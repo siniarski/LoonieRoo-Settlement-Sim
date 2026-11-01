@@ -99,7 +99,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const feed = el('div', 'hud-feed');
   const wanderers = createWandererPanel(command);
   const crafting = createCraftPanel(command);
-  info.append(status, toast, roomPanel, wanderers.root, crafting.root, feed);
+  const expeditions = createExpeditionPanel(view, command);
+  info.append(status, toast, roomPanel, wanderers.root, crafting.root, expeditions.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -162,6 +163,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       priorities.update(state);
       wanderers.update(state);
       crafting.update(state);
+      expeditions.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -356,6 +358,45 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         size.append(option);
       }
       root.append(row('A fresh start somewhere else:', size, button('New world', () => files.newWorld(Number(size.value)))));
+    },
+  };
+}
+
+/** Known ruins to send the selected survivor to, and who's away. Shown once there's a point of interest or an expedition out. */
+function createExpeditionPanel(view: ViewState, command: (cmd: Command) => void) {
+  const root = el('div', 'hud-craft');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const selected = state.survivors.find((s) => s.id === view.selectedId);
+      const away = state.expeditions.map((x) => ({ x, hours: Math.ceil((x.returnTick - state.tick) / TICKS_PER_HOUR) }));
+      const key = JSON.stringify([selected?.id ?? null, state.pointsOfInterest.map((p) => p.id), away.map((a) => [a.x.id, a.hours])]);
+      if (key === last) return;
+      last = key;
+      root.hidden = state.pointsOfInterest.length === 0 && away.length === 0;
+      root.replaceChildren();
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = 'Expeditions';
+      root.append(title);
+      for (const p of state.pointsOfInterest.slice(0, 5)) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${p.label} at (${p.x}, ${p.y})`;
+        const send = el('button', 'hud-button');
+        send.textContent = selected ? `Send ${selected.name}` : 'Select someone to send';
+        send.disabled = !selected;
+        send.addEventListener('click', () => {
+          if (selected) command({ type: 'sendExpedition', survivorIds: [selected.id], poiId: p.id });
+        });
+        row.append(label, send);
+        root.append(row);
+      }
+      for (const { x, hours } of away) {
+        const row = el('div', 'hud-wanderer-label');
+        row.textContent = `${x.members.map((s) => s.name).join(', ')} → ${x.target.label} (${x.target.x}, ${x.target.y}), back in about ${hours}h`;
+        root.append(row);
+      }
     },
   };
 }

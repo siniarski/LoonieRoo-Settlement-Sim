@@ -2,6 +2,7 @@
 // Returns human-readable problems; empty means healthy. Used by tests after
 // every tick and available to the debug panel. Read-only.
 
+import { everyone } from './expeditions';
 import { STRUCTURE_HEALTH } from './breach';
 import { getTile, inBounds, isWalkable } from './grid';
 import { GROW_TICKS } from './farming';
@@ -14,7 +15,8 @@ import type { SimState } from './state';
 export function checkInvariants(state: SimState): string[] {
   const problems: string[] = [];
   const { grid } = state;
-  const survivors = new Map(state.survivors.map((s) => [s.id, s]));
+  // Expedition members are away, but their ids (beds, opinions, weapons) are still in use.
+  const survivors = new Map(everyone(state).map((s) => [s.id, s]));
   const jobs = new Map(state.jobs.map((j) => [j.id, j]));
   const items = new Map(state.items.map((i) => [i.id, i]));
 

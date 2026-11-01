@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable } from './designations';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
@@ -19,6 +20,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
+import { sendExpedition } from './expeditions';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
 import { damageStructure, isStructure } from './breach';
 import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
@@ -56,6 +58,8 @@ export type Command =
   // Wanderers waiting at the edge: take them in (they become a survivor) or send them away.
   | { type: 'acceptWanderer'; wandererId: string }
   | { type: 'dismissWanderer'; wandererId: string }
+  /** Send survivors off the map to a point of interest (expeditions.ts). */
+  | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
   | { type: 'setRest'; survivorId: string; rest: number }
   | { type: 'setSatiety'; survivorId: string; satiety: number }
@@ -124,6 +128,26 @@ function execute(state: SimState, command: Command): CommandResult {
     if (state.craftTargets[kind] === count) return unchanged();
     state.craftTargets[kind] = count;
     return changed();
+  }
+  if (command.type === 'sendExpedition') {
+    const members = command.survivorIds.map((id) => getSurvivor(state, id));
+    if (members.some((s) => !s) || new Set(command.survivorIds).size !== members.length) return reject('no such survivor');
+    if (!state.pointsOfInterest.some((p) => p.id === command.poiId)) return reject(`no point of interest ${command.poiId}`);
+    for (const s of members as Survivor[]) {
+      // Drop everything here: work, meals, errands, bed, leisure.
+      if (s.jobId) releaseSurvivor(state, s, 'off on an expedition');
+      wake(state, s, 'off on an expedition');
+      cancelMeal(state, s, 'off on an expedition');
+      cancelTreatment(state, s, 'off on an expedition');
+      cancelArming(state, s, 'off on an expedition');
+      s.leisure = null;
+      s.breakdown = null;
+      s.goal = null;
+      s.move = null;
+      s.path = [];
+    }
+    const failed = sendExpedition(state, members as Survivor[], command.poiId);
+    return failed ? reject(failed) : changed();
   }
   if (command.type === 'acceptWanderer' || command.type === 'dismissWanderer') {
     const w = getWanderer(state, command.wandererId);

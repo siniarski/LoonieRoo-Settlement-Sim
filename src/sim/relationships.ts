@@ -7,6 +7,7 @@
 // than a stranger's (mood.ts).
 
 import { logEvent } from './events';
+import { everyone } from './expeditions';
 import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
@@ -68,7 +69,7 @@ export function lashOut(state: SimState, s: Survivor): void {
 /** Someone died: forget them. Returns the ids of those who counted them a friend. */
 export function forget(state: SimState, dead: Survivor): Set<string> {
   const friends = new Set<string>();
-  for (const s of state.survivors) {
+  for (const s of everyone(state)) {
     if (opinion(s, dead) >= FRIEND) friends.add(s.id);
     delete s.opinions[dead.id];
   }
