@@ -7,7 +7,7 @@ import { furnitureAt } from './furniture';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 
-export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots';
+export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots' | 'gun' | 'ammo';
 
 export interface Item {
   id: string;
@@ -16,7 +16,7 @@ export interface Item {
   carriedBy: string | null;
   /** Survivor who has claimed this item: for a haul job, to eat it (food), or to use it (bandage). */
   reservedBy: string | null;
-  /** Weapons: kills made with it so far (see weapons.ts). Clothing: wear (clothing.ts). 0 for everything else. */
+  /** Weapons: kills made with it so far (see weapons.ts). Clothing: wear (clothing.ts). Guns: rounds loaded. 0 for everything else. */
   wear: number;
 }
 

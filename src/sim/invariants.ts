@@ -104,12 +104,12 @@ export function checkInvariants(state: SimState): string[] {
     }
     if (s.weapon) {
       const weapon = items.get(s.weapon);
-      if (!weapon || weapon.kind !== 'weapon') problems.push(`${s.name} wields missing weapon ${s.weapon}`);
+      if (!weapon || (weapon.kind !== 'weapon' && weapon.kind !== 'gun')) problems.push(`${s.name} wields missing weapon ${s.weapon}`);
       else if (weapon.carriedBy !== s.id) problems.push(`${s.name} wields ${weapon.id}, carried by ${weapon.carriedBy}`);
     }
     if (s.arming) {
       const weapon = items.get(s.arming);
-      if (!weapon || weapon.kind !== 'weapon') problems.push(`${s.name} is fetching missing weapon ${s.arming}`);
+      if (!weapon || (weapon.kind !== 'weapon' && weapon.kind !== 'gun' && weapon.kind !== 'ammo')) problems.push(`${s.name} is fetching missing weapon ${s.arming}`);
       else if (weapon.reservedBy !== s.id || !weapon.pos) problems.push(`${s.name} is fetching ${weapon.id}, which isn't reserved on the ground`);
       if (s.jobId || s.sleep || s.meal || s.treatment) problems.push(`${s.name} is fetching a weapon while busy with something else`);
     }

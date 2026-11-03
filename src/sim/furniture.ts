@@ -6,12 +6,13 @@
 //   workbench  built by survivors; crafting happens here (see crafting.ts)
 //   stove  built by survivors; cooking happens here (see crafting.ts)
 //   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see zombies.ts)
+//   tower  a watchtower: see further and shoot further from it (see towers.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
 import { spawnItem, type ItemKind } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;

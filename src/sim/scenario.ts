@@ -68,11 +68,15 @@ export const ENTITY_CHARS = {
   coat: 'C',
   armour: 'A',
   boots: 'U',
+  gun: 'G',
+  ammo: 'a',
+  tower: 'H',
+  towerBlueprint: 'j',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
-const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots'] as const;
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
@@ -160,6 +164,12 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.medicine:
       spawnItem(state, 'medicine', x, y);
+      return true;
+    case ENTITY_CHARS.tower:
+      addFurniture(state, 'tower', x, y);
+      return true;
+    case ENTITY_CHARS.towerBlueprint:
+      addBlueprint(state, x, y, 'tower');
       return true;
     case ENTITY_CHARS.workbenchBlueprint:
       addBlueprint(state, x, y, 'workbench');

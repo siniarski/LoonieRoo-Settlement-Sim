@@ -14,6 +14,7 @@ const BLUEPRINT_CHARS = {
   barricade: ENTITY_CHARS.barricadeBlueprint,
   trap: ENTITY_CHARS.trapBlueprint,
   stove: ENTITY_CHARS.stoveBlueprint,
+  tower: ENTITY_CHARS.towerBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

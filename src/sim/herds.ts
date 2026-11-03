@@ -18,6 +18,7 @@ import { manhattan, nearestTile } from './space';
 import type { SimState } from './state';
 import { TICKS_PER_HOUR, dayOf, tickOfDay } from './time';
 import { MAX_ZOMBIES, addZombie, zombieHealthForNight } from './zombies';
+import { TOWER_WARN_FACTOR, hasTower } from './towers';
 
 export const WAKE_RADIUS = 10;
 export const HERD_TICKS_PER_TILE = 8;
@@ -53,8 +54,9 @@ export function herdSize(day: number): number {
 
 export function updateHerds(state: SimState): void {
   if (dayOf(state.tick) >= 2 && tickOfDay(state.tick) === HERD_HOUR * TICKS_PER_HOUR && random(state) < HERD_CHANCE) startHerd(state);
+  const warnRadius = hasTower(state) ? WARN_RADIUS * TOWER_WARN_FACTOR : WARN_RADIUS;
   for (const h of [...state.herds]) {
-    if (!h.heard && state.survivors.some((s) => manhattan(s.pos, h) <= WARN_RADIUS)) warn(state, h);
+    if (!h.heard && state.survivors.some((s) => manhattan(s.pos, h) <= warnRadius)) warn(state, h);
     if (state.survivors.some((s) => manhattan(s.pos, h) <= MATERIALIZE_RADIUS)) {
       materialize(state, h);
       continue;

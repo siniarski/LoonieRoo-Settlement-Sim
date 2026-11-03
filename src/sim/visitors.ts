@@ -53,6 +53,8 @@ const OFFERS: readonly Offer[] = [
   { give: 'meal', giveCount: 3, want: 'wood', wantCount: 2 },
   { give: 'cloth', giveCount: 3, want: 'food', wantCount: 3 },
   { give: 'coat', giveCount: 1, want: 'food', wantCount: 4 },
+  { give: 'gun', giveCount: 1, want: 'food', wantCount: 6 },
+  { give: 'ammo', giveCount: 2, want: 'wood', wantCount: 3 },
 ];
 
 export function updateVisitors(state: SimState): void {

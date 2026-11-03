@@ -15,11 +15,11 @@ import type { ItemKind } from './items';
 import { completeRooms, labelAt } from './rooms';
 import type { SimState } from './state';
 
-export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots';
+export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots' | 'ammo';
 export type Station = Extract<FurnitureKind, 'workbench' | 'stove'>;
-export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'coat', 'armour', 'boots', 'meal'];
+export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'coat', 'armour', 'boots', 'meal'];
 /** What the player sets targets for (the Workbench orders panel). */
-export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'coat', 'armour', 'boots'];
+export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'coat', 'armour', 'boots'];
 
 export interface Recipe {
   station: Station;
@@ -34,6 +34,7 @@ export const RECIPES: Record<CraftKind, Recipe> = {
   weapon: { station: 'workbench', input: 'wood', count: 2, label: 'Weapons' },
   bandage: { station: 'workbench', input: 'wood', count: 1, label: 'Bandages' },
   medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine', workshopOnly: true },
+  ammo: { station: 'workbench', input: 'wood', count: 2, label: 'Ammo (hand-loaded)', workshopOnly: true },
   coat: { station: 'workbench', input: 'cloth', count: 2, label: 'Coats' },
   armour: { station: 'workbench', input: 'cloth', count: 3, label: 'Padded armour' },
   boots: { station: 'workbench', input: 'cloth', count: 1, label: 'Boots' },

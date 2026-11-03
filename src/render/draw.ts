@@ -65,6 +65,7 @@ const COLOURS = {
     stove: '#8a8f96',
     barricade: '#aa7846',
     trap: '#b8bec6',
+    tower: '#96704a',
     messhall: '#9ee0c0',
     recroom: '#ec9fdc',
     infirmary: '#f4f1ea',
@@ -107,9 +108,10 @@ const COLOURS = {
     table: 'rgba(214, 170, 120, 0.30)',
     stove: 'rgba(120, 124, 130, 0.30)',
     workbench: 'rgba(190, 150, 100, 0.30)',
+    tower: 'rgba(150, 110, 70, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -228,6 +230,7 @@ export function draw(
     else if (f.kind === 'stove') drawStove(ctx, camera, viewport, f);
     else if (f.kind === 'tree') drawTree(ctx, camera, viewport, f, size);
     else if (f.kind === 'trap') drawTrap(ctx, camera, viewport, f);
+    else if (FURNITURE_GLYPHS[f.kind]) drawGlyph(ctx, camera, viewport, f.x + 0.5, f.y + 0.5, size * 1.7, FURNITURE_GLYPHS[f.kind]!);
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
@@ -548,12 +551,19 @@ function drawItem(
   else drawGlyph(ctx, camera, viewport, wx, wy, size, GLYPHS[kind] ?? ['#cccccc', '?']);
 }
 
+/** Furniture without a drawing of its own. */
+export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string]>> = {
+  tower: ['#7a5636', 'T'],
+};
+
 /** Items without a drawing of their own: a coloured tile with a letter. */
 export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   cloth: ['#c9b8a0', 'c'],
   coat: ['#8a5a3a', 'C'],
   armour: ['#7a8088', 'A'],
   boots: ['#4a3626', 'B'],
+  gun: ['#2e3238', 'G'],
+  ammo: ['#b08a2e', 'a'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {

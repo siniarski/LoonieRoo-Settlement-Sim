@@ -186,6 +186,8 @@ export function updateZombies(state: SimState): void {
 
 function updateAll(state: SimState): void {
   for (const z of state.zombies) updateZombie(state, z);
+  // Static zombies that came to look at a noise stop looking.
+  for (const z of state.zombies) if (z.kind === 'static' && z.heading && manhattan(z.pos, z.heading) <= 1) z.heading = null;
   // Herd zombies that reached the herd's destination wander off the map.
   state.zombies = state.zombies.filter((z) => !(z.kind === 'herd' && z.heading && manhattan(z.pos, z.heading) <= 1 && !z.move));
 }

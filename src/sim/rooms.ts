@@ -245,7 +245,7 @@ export function completeStoreRooms(state: SimState): StoreRooms {
   return { storage: completeRooms(state, 'storage'), armory: completeRooms(state, 'armory') };
 }
 
-/** Where an item belongs: weapons in an armory if there is one, everything else (and weapons otherwise) in storage. */
+/** Where an item belongs: weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage. */
 export function homeFor(rooms: StoreRooms, kind: ItemKind): Set<number> {
-  return kind === 'weapon' && rooms.armory.size > 0 ? rooms.armory : rooms.storage;
+  return (kind === 'weapon' || kind === 'gun' || kind === 'ammo') && rooms.armory.size > 0 ? rooms.armory : rooms.storage;
 }

@@ -24,7 +24,9 @@ import { canReach, findPathToAny } from './pathfinding';
 import { random } from './rng';
 import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
-import { blowDamage, wearWeapon } from './weapons';
+import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
+import { makeNoise } from './noise';
+import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
 import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
 import { startLeisure } from './leisure';
 import { manhattan, nearestTile, samePoint } from './space';
@@ -68,14 +70,16 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
 export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
-  ['food', 0.4],
-  ['wood', 0.27],
+  ['food', 0.38],
+  ['wood', 0.26],
   ['bandage', 0.12],
   ['cloth', 0.1],
-  ['weapon', 0.06],
+  ['weapon', 0.05],
+  ['ammo', 0.03],
   ['coat', 0.02],
   ['boots', 0.02],
   ['armour', 0.01],
+  ['gun', 0.01],
 ];
 /** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
 export const GUARD_ATTACK_EVERY = 10;
@@ -341,7 +345,7 @@ export function updateWork(state: SimState, s: Survivor): void {
     if (state.tick < s.nextSeekTick) return;
     if (seekJob(state, s)) return;
     s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
-    startLeisure(state, s);
+    if (!keepWatch(state, s)) startLeisure(state, s);
     return;
   }
   const job = getJob(state, s.jobId);
@@ -397,11 +401,24 @@ function workFarm(state: SimState, s: Survivor, job: Job): void {
 function workGuard(state: SimState, s: Survivor, job: Job): void {
   const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
   if (!z) return releaseSurvivor(state, s, 'zombie gone');
-  if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y));
+  // With a loaded gun: shoot from where you stand if you can, else close in a tile at a time.
+  const gun = loadedGun(state, s);
+  const range = GUN_RANGE + (onTower(state, s) ? TOWER_RANGE_BONUS : 0);
+  if (gun && manhattan(s.pos, z.pos) > 1 && manhattan(s.pos, z.pos) <= range && clearShot(state.grid, s.pos, z.pos)) {
+    if (workStep(state, s, 'guard') === 0) return;
+    job.progress += 1;
+    if (job.progress % GUN_EVERY !== 1) return;
+    gun.wear -= 1;
+    makeNoise(state, s.pos, 'gunfire');
+    if (!damageZombie(state, z, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'), s)) return;
+    return finishJob(state, s, job, `shot a zombie at (${z.pos.x}, ${z.pos.y})`);
+  }
+  if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y), gun ? 1 : undefined);
   if (workStep(state, s, 'guard') === 0) return;
   job.progress += 1;
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
+  makeNoise(state, s.pos, 'fighting');
   if (!damageZombie(state, z, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'), s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
@@ -580,6 +597,7 @@ function workBuild(state: SimState, s: Survivor, job: Job): void {
   bp.workDone += step;
   if (bp.workDone < bp.workRequired) return;
   completeBlueprint(state, bp);
+  makeNoise(state, bp, 'building');
   finishJob(state, s, job, bp.target === 'floor' ? `removed structure at (${bp.x}, ${bp.y})` : `built ${bp.target} at (${bp.x}, ${bp.y})`);
 }
 
@@ -589,6 +607,7 @@ function workRepair(state: SimState, s: Survivor, job: Job): void {
   const step = workStep(state, s, 'build');
   if (step === 0) return;
   if (repairStructure(state, job.x, job.y, REPAIR_PER_TICK * step) > 0) return;
+  makeNoise(state, job, 'building');
   finishJob(state, s, job, `repaired ${getTile(state.grid, job.x, job.y)} at (${job.x}, ${job.y})`);
 }
 
@@ -656,13 +675,39 @@ function pickStorageTile(state: SimState, from: Point, job: Job, storage: Set<nu
   return candidates.find((p) => canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
 }
 
-function goTo(state: SimState, s: Survivor, job: Job, goals: Point[]): void {
+/** Walk towards the goals (only the first `steps` tiles, to look again sooner). */
+function goTo(state: SimState, s: Survivor, job: Job, goals: Point[], steps?: number): void {
   const path = findPathToAny(state.grid, s.pos, goals);
   if (!path || path.length === 0) {
     releaseSurvivor(state, s, `can't reach ${job.type} job at (${job.x}, ${job.y})`);
     return;
   }
-  walk(s, path, state.walkabilityVersion);
+  walk(s, steps ? path.slice(0, steps) : path, state.walkabilityVersion);
+}
+
+/** No wall, door or barricade on the line between two tiles (Bresenham, ends excluded). */
+export function clearShot(grid: SimState['grid'], a: Point, b: Point): boolean {
+  let x = a.x;
+  let y = a.y;
+  const dx = Math.abs(b.x - a.x);
+  const dy = -Math.abs(b.y - a.y);
+  const sx = a.x < b.x ? 1 : -1;
+  const sy = a.y < b.y ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y += sy;
+    }
+    if (x === b.x && y === b.y) return true;
+    const t = getTile(grid, x, y);
+    if (t === 'wall' || t === 'door' || t === 'barricade') return false;
+  }
 }
 
 function finishJob(state: SimState, s: Survivor, job: Job, note: string): void {
@@ -797,7 +842,8 @@ function claim(state: SimState, s: Survivor, job: Job, plan: Plan, why: string):
     const item = getItem(state, plan.itemId);
     if (item) item.reservedBy = s.id;
   }
-  walk(s, plan.path, state.walkabilityVersion);
+  // A guard with a loaded gun looks before walking in: they may be able to shoot from here.
+  if (!(job.type === 'guard' && loadedGun(state, s))) walk(s, plan.path, state.walkabilityVersion);
   s.note = `took ${job.type} job at (${job.x}, ${job.y}): ${why}`;
 }
 
