@@ -331,6 +331,12 @@ export function draw(
     if (onScreen && (h.heard || shown(h.x, h.y))) drawHerd(ctx, camera, viewport, h, size);
   }
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
+  // Neighbours' people in their compounds: a wanderer's look, marked with their settlement's first letter.
+  for (const n of state.settlements) {
+    n.residents.forEach((r, i) => {
+      if (shown(r.x, r.y)) drawWanderer(ctx, camera, viewport, { id: `${n.id}r${i}`, name: '', x: r.x, y: r.y } as Wanderer, size, n.name[0]!);
+    });
+  }
   for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const a of state.animals) {

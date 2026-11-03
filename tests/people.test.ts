@@ -112,7 +112,7 @@ describe('settlements', () => {
 
   it('gifts warm them; snubs and enemies show in the events', () => {
     const state = setup(['s.ffff']);
-    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: 0 });
+    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: 0, people: 8, food: 32, defence: 1, ties: {}, unfolded: true, residents: [], lastRaid: -1 });
     expect(applyCommand(state, { type: 'giftSettlement', settlementId: 'n1' }).ok).toBe(true);
     expect(state.settlements[0]!.reputation).toBe(GIFT_REP);
     expect(state.items.filter((i) => i.kind === 'food')).toHaveLength(1);
@@ -123,7 +123,7 @@ describe('settlements', () => {
 
   it('a friendly settlement sends someone to join', () => {
     const state = setup(['s....']);
-    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: FRIENDLY });
+    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: FRIENDLY, people: 8, food: 32, defence: 1, ties: {}, unfolded: true, residents: [], lastRaid: -1 });
     state.tick = 5 * DAY_LENGTH - 6 * TICKS_PER_HOUR; // day 5, 12:00... minus a little
     while (state.wanderers.length === 0 && state.tick < 6 * DAY_LENGTH) tick(state);
     expect(state.wanderers).toHaveLength(1);

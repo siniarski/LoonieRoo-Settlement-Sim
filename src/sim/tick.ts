@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { updateColonies } from './colonies';
 import { updateTasks } from './talk';
 import { keepOrder } from './orders';
 import { updateFarm } from './farming';
@@ -77,6 +78,7 @@ export function tick(state: SimState): void {
   updateDogs(state);
   updateTasks(state);
   updateSettlements(state);
+  updateColonies(state);
   updateFamily(state);
   updateHerds(state);
   updateWeather(state);

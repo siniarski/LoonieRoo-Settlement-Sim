@@ -110,6 +110,7 @@ describe('lazy generation', () => {
 
   it('chunks appear ahead of a survivor as they walk, the same as if made up front', () => {
     const lazy = createWorld(9, 256);
+    lazy.settlements = []; // a neighbour's compound would unfold there too
     const s = lazy.survivors[0]!;
     const before = lazy.world!.generated.filter((g) => g === 1).length;
     s.pos = { x: 250, y: 128 }; // teleported to the east edge

@@ -56,7 +56,7 @@ describe('the radio', () => {
   it('a powered radio hears a call; requests can be met for goodwill', () => {
     const state = loadScenario({ seed: 3, map: ['s.I.E', 'fffff'] });
     state.furniture.find((f) => f.kind === 'generator')!.stored = 2;
-    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: 0 });
+    state.settlements.push({ id: 'n1', name: 'Testville', x: 0, y: 0, reputation: 0, people: 8, food: 32, defence: 1, ties: {}, unfolded: true, residents: [], lastRaid: -1 });
     let day = 1;
     while (state.requests.length === 0 && !state.pointsOfInterest.some((p) => p.label === DISTRESS_LABEL) && day < 40) {
       state.tick = day * DAY_LENGTH + (RADIO_HOUR - 6) * TICKS_PER_HOUR;

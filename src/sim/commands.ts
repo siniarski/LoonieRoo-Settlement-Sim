@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { raidSettlement } from './colonies';
 import { talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
@@ -95,6 +96,8 @@ export type Command =
   | { type: 'amputate'; survivorId: string }
   /** Send food to a neighbouring settlement (settlements.ts). */
   | { type: 'giftSettlement'; settlementId: string }
+  /** Send your armed people to raid a neighbour for food (colonies.ts). */
+  | { type: 'raidSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
   | { type: 'trade'; traderId: string; offer: number }
   /** Set a tile alight on purpose (fire.ts). */
@@ -155,6 +158,10 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'raidSettlement') {
+    const why = raidSettlement(state, command.settlementId);
+    return why ? reject(why) : changed();
   }
   if (command.type === 'talk') {
     const you = controlled(state);

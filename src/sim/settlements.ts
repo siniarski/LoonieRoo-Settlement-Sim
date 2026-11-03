@@ -19,6 +19,18 @@ export interface Settlement {
   x: number;
   y: number;
   reputation: number;
+  /** Off-screen life (colonies.ts): how many live there, food in days of eating, walls 0-5. */
+  people: number;
+  food: number;
+  defence: number;
+  /** What it thinks of the other settlements, by id, -100..100. */
+  ties: Record<string, number>;
+  /** Built as a real compound once you came near. */
+  unfolded: boolean;
+  /** Where its people stand in the compound (drawn; not simulated one by one yet). */
+  residents: Point[];
+  /** Tick you last raided it, -1 if never. */
+  lastRaid: number;
 }
 
 export const TRADE_REP = 5;
@@ -47,8 +59,15 @@ export function placeSettlements(state: SimState, start: Point, seed: number): v
       p = { x: Math.floor(hashRoll(seed, i, attempt, 1) * size), y: Math.floor(hashRoll(seed, i, attempt, 2) * size) };
       if (Math.abs(p.x - start.x) + Math.abs(p.y - start.y) >= size / 3) break;
     }
-    state.settlements.push({ id: `n${state.nextId++}`, name: NAMES[(seed + i) % NAMES.length]!, x: p.x, y: p.y, reputation: 0 });
+    const people = 5 + Math.floor(hashRoll(seed, i, 3) * 8);
+    newSettlement(state, NAMES[(seed + i) % NAMES.length]!, p.x, p.y, people, people * 3, Math.floor(hashRoll(seed, i, 4) * 3));
   }
+}
+
+export function newSettlement(state: SimState, name: string, x: number, y: number, people: number, food: number, defence: number): Settlement {
+  const n: Settlement = { id: `n${state.nextId++}`, name, x, y, reputation: 0, people, food, defence, ties: {}, unfolded: false, residents: [], lastRaid: -1 };
+  state.settlements.push(n);
+  return n;
 }
 
 export function adjustReputation(state: SimState, s: Settlement, by: number): void {
@@ -68,7 +87,9 @@ export function traderFrom(state: SimState): Settlement | null {
 export function updateSettlements(state: SimState): void {
   if (tickOfDay(state.tick) !== 12 * TICKS_PER_HOUR || dayOf(state.tick) % FRIENDLY_SEND_DAYS !== 0) return;
   for (const s of state.settlements) {
-    if (s.reputation < FRIENDLY) continue;
+    // They send one of their own: a place with few left keeps them.
+    if (s.reputation < FRIENDLY || s.people <= 3) continue;
+    s.people -= 1;
     const spot = frontierSpot(state, new Set(state.wanderers.map((w) => `${w.x},${w.y}`)));
     if (!spot) return;
     const w = addWanderer(state, spot.x, spot.y);
@@ -83,7 +104,9 @@ export function giveGift(state: SimState, id: string): string | null {
   const food = state.items.filter((i) => i.kind === 'food' && i.pos !== null && i.reservedBy === null);
   if (food.length < GIFT_FOOD) return `need ${GIFT_FOOD} free food`;
   for (const f of food.slice(0, GIFT_FOOD)) state.items.splice(state.items.indexOf(f), 1);
-  adjustReputation(state, s, GIFT_REP);
+  // Food to a starving place is remembered twice over.
+  adjustReputation(state, s, s.food <= 0 ? GIFT_REP * 2 : GIFT_REP);
+  s.food += GIFT_FOOD;
   logEvent(state, `Sent ${GIFT_FOOD} food to ${s.name} (they think better of you)`);
   return null;
 }

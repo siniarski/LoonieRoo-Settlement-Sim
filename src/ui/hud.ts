@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { hungerOf, isFallen } from '../sim/colonies';
 import { describeTasks } from '../sim/talk';
 import { storyLines } from '../sim/story';
 import { describeOrder } from '../sim/orders';
@@ -525,12 +526,21 @@ function createSettlementPanel(command: (cmd: Command) => void) {
         const row = el('div', 'hud-wanderer');
         const label = el('span', 'hud-wanderer-label');
         const mood = n.reputation <= HOSTILE ? 'hostile' : n.reputation >= FRIENDLY ? 'friendly' : 'wary';
-        label.textContent = `${n.name} (${n.x}, ${n.y}): ${mood} ${n.reputation}`;
+        label.textContent = isFallen(n)
+          ? `${n.name} (${n.x}, ${n.y}): fallen, nobody left`
+          : `${n.name} (${n.x}, ${n.y}): ${mood} ${n.reputation} · ${n.people} people, ${hungerOf(n)}, walls ${n.defence}/5`;
         const gift = el('button', 'hud-button');
         gift.textContent = `Gift ${GIFT_FOOD} food`;
         gift.disabled = food < GIFT_FOOD;
         gift.addEventListener('click', () => command({ type: 'giftSettlement', settlementId: n.id }));
-        row.append(label, gift);
+        const raid = el('button', 'hud-button');
+        raid.textContent = 'Raid';
+        raid.title = 'Send everyone armed to take their food. They will count you an enemy, win or lose.';
+        raid.addEventListener('click', () => {
+          if (window.confirm(`Raid ${n.name}? They will count you an enemy.`)) command({ type: 'raidSettlement', settlementId: n.id });
+        });
+        if (isFallen(n)) row.append(label);
+        else row.append(label, gift, raid);
         root.append(row);
       }
       for (const r of state.requests) {
