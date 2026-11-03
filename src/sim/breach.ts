@@ -15,6 +15,13 @@ export const STRUCTURE_HEALTH: Record<'wall' | 'door' | 'barricade', number> = {
 /** Damage a repairer removes per tick of work: half a zombie's rate, so repairs slow a breach but can't stop it alone. */
 export const REPAIR_PER_TICK = 2;
 
+/** What it takes to break this structure (reinforced ones take more; defences.ts). */
+export function structureHealth(grid: SimState['grid'], i: number): number {
+  const tile = grid.tiles[i]!;
+  if (!isStructure(tile)) return 0;
+  return grid.reinforced.includes(i) ? STRUCTURE_HEALTH[tile] * 2.5 : STRUCTURE_HEALTH[tile];
+}
+
 export function isStructure(tile: Tile | undefined): tile is 'wall' | 'door' | 'barricade' {
   return tile === 'wall' || tile === 'door' || tile === 'barricade';
 }
@@ -29,7 +36,7 @@ export function damageStructure(state: SimState, x: number, y: number, amount: n
   if (!isStructure(tile)) return false;
   const i = tileIndex(state.grid, x, y);
   setDamage(state.grid, i, state.grid.damage[i]! + amount);
-  if (state.grid.damage[i]! < STRUCTURE_HEALTH[tile]) return false;
+  if (state.grid.damage[i]! < structureHealth(state.grid, i)) return false;
   setTile(state.grid, x, y, 'floor'); // also clears the damage
   state.walkabilityVersion += 1;
   const planned = blueprintAt(state, x, y);

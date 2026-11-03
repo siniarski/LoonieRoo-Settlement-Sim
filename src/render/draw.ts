@@ -5,7 +5,7 @@ import { growTicks, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
 import { GROUNDS, type Ground, type Point, type Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
-import { STRUCTURE_HEALTH } from '../sim/breach';
+import { structureHealth } from '../sim/breach';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
 import { darkness } from '../sim/time';
@@ -91,6 +91,10 @@ const COLOURS = {
     perimeter: '#6eb4ff',
     lab: '#c8dcff',
     beacon: '#ff5a5a',
+    turret: '#78828c',
+    lure: '#dcc850',
+    pit: '#3c3228',
+    reinforce: '#a0aab4',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -139,9 +143,13 @@ const COLOURS = {
     radio: 'rgba(160, 200, 160, 0.30)',
     lab: 'rgba(200, 220, 255, 0.30)',
     beacon: 'rgba(255, 90, 90, 0.30)',
+    turret: 'rgba(120, 130, 140, 0.30)',
+    lure: 'rgba(220, 200, 80, 0.30)',
+    pit: 'rgba(60, 50, 40, 0.30)',
+    reinforce: 'rgba(160, 170, 180, 0.35)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', heater: '#e6783c', coop: '#c8aa6e', radio: '#a0c8a0', lab: '#c8dcff', beacon: '#ff5a5a', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', heater: '#e6783c', coop: '#c8aa6e', radio: '#a0c8a0', lab: '#c8dcff', beacon: '#ff5a5a', turret: '#78828c', lure: '#dcc850', pit: '#3c3228', reinforce: '#a0aab4', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -240,7 +248,7 @@ export function draw(
     for (let x = range.x0; x <= range.x1; x++) {
       const damage = grid.damage[y * grid.width + x]!;
       const tile = grid.tiles[y * grid.width + x];
-      if (damage > 0 && (tile === 'wall' || tile === 'door')) drawDamage(ctx, camera, viewport, x, y, damage / STRUCTURE_HEALTH[tile]);
+      if (damage > 0 && (tile === 'wall' || tile === 'door')) drawDamage(ctx, camera, viewport, x, y, damage / structureHealth(grid, y * grid.width + x));
     }
   }
 
@@ -678,6 +686,9 @@ export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string
   radio: ['#4a6a4a', 'r'],
   lab: ['#5a7aa0', 'L'],
   beacon: ['#b43030', 'B'],
+  turret: ['#50585f', 'G'],
+  lure: ['#a09030', '!'],
+  pit: ['#2a221a', 'o'],
 };
 
 /** Items without a drawing of their own: a coloured tile with a letter. */
@@ -695,6 +706,7 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   hammer: ['#707880', 'H'],
   medkit: ['#c84040', '+'],
   sample: ['#7ab06a', 's'],
+  scrap: ['#8a8f96', '#'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {

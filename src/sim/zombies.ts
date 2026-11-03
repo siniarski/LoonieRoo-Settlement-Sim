@@ -30,6 +30,7 @@ import { threatScale } from './director';
 import { maybeCapture } from './prisoners';
 import { maybeSample, siegeFactor } from './endgame';
 import { maybeWound } from './wounds';
+import { fallInPit } from './defences';
 import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
@@ -93,6 +94,8 @@ export interface Zombie {
   variant: Variant;
   /** Screamers: has it screamed yet? */
   screamed: boolean;
+  /** In a pit until this tick (defences.ts). */
+  stuckUntil: number;
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
@@ -114,6 +117,7 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
     heading: null,
     variant: 'walker',
     screamed: false,
+    stuckUntil: 0,
   };
   state.zombies.push(z);
   return z;
@@ -257,6 +261,7 @@ function spawnGroup(state: SimState, n: number, health: number): void {
 
 function updateZombie(state: SimState, z: Zombie): void {
   z.cooldown = Math.max(0, z.cooldown - 1);
+  if (state.tick < z.stuckUntil) return; // in a pit
 
   // Standing next to someone: attack instead of moving.
   if (!z.move) {
@@ -283,6 +288,7 @@ function updateZombie(state: SimState, z: Zombie): void {
     z.pos = z.move.to;
     z.move = null;
     if (springTrap(state, z)) return;
+    fallInPit(state, z);
   }
 
   if (state.tick >= z.nextThinkTick || z.path.length === 0) {

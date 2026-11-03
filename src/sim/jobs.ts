@@ -9,7 +9,7 @@
 // releaseSurvivor() frees the reservation, drops anything carried, and the
 // survivor goes back to looking for work. Nobody gets stuck.
 
-import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
+import { cancelBlueprint, completeBlueprint, getBlueprint, materialFor, preconditionHolds, type Blueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
 import { getFurniture } from './furniture';
@@ -34,6 +34,7 @@ import { isWet } from './seasons';
 import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight, isPowered } from './power';
 import { CURE_SAMPLES, RESEARCH_WORK, researchWanted, studied } from './endgame';
 import { policyOn } from './policies';
+import { TURRET_AMMO_MAX, seen } from './defences';
 import { isNight } from './time';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
@@ -85,8 +86,9 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
 export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
-  ['food', 0.35],
-  ['wood', 0.23],
+  ['food', 0.31],
+  ['wood', 0.21],
+  ['scrap', 0.06],
   ['book', 0.02],
   ['bandage', 0.12],
   ['cloth', 0.12],
@@ -153,7 +155,7 @@ export function reconcileJobs(state: SimState): void {
   // Generators short of fuel get one fuel haul each.
   const fuelling = new Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
   for (const f of state.furniture) {
-    if ((f.kind === 'generator' || f.kind === 'heater') && f.stored < FUEL_MAX && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
+    if (f.kind in FUEL && f.stored < fuelMax(f.kind) && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
   }
 
   // Damaged walls and doors get one repair job each.
@@ -233,7 +235,13 @@ export function isStoreJob(job: Job): boolean {
   return job.type === 'haul' && job.blueprintId === null && job.furnitureId === null;
 }
 
-/** Fuel hauls: wood to a generator or heater (`furnitureId`). */
+/** What each fed piece of furniture takes, and how much it holds. */
+const FUEL = { generator: 'wood', heater: 'wood', turret: 'ammo' } as const;
+function fuelMax(kind: string): number {
+  return kind === 'turret' ? TURRET_AMMO_MAX : FUEL_MAX;
+}
+
+/** Fuel hauls: wood to a generator or heater, ammo to a turret (`furnitureId`). */
 export function isFuelJob(job: Job): boolean {
   return job.type === 'haul' && job.furnitureId !== null;
 }
@@ -316,13 +324,13 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
       if (isFuelJob(job)) {
         const g = getFurniture(state, job.furnitureId!);
-        if (!g || (g.kind !== 'generator' && g.kind !== 'heater')) return 'generator gone';
+        if (!g || !(g.kind in FUEL)) return 'generator gone';
         if (job.itemId) {
           const item = getItem(state, job.itemId);
           if (!item) return 'item gone';
           if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
         }
-        return g.stored < FUEL_MAX ? null : 'generator is full';
+        return g.stored < fuelMax(g.kind) ? null : `${g.kind} is full`;
       }
       const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
       if (!bp) return 'designation cancelled';
@@ -802,12 +810,13 @@ function workHaul(state: SimState, s: Survivor, job: Job): void {
 /** Carry a piece of wood to a generator and feed it in. */
 function workFuel(state: SimState, s: Survivor, job: Job): void {
   const g = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
-  if (!g || (g.kind !== 'generator' && g.kind !== 'heater')) return releaseSurvivor(state, s, `${g?.kind ?? 'generator'} gone`);
+  if (!g || !(g.kind in FUEL)) return releaseSurvivor(state, s, `${g?.kind ?? 'generator'} gone`);
+  const fuel = FUEL[g.kind as keyof typeof FUEL];
   const site = neighbours4(state.grid, g.x, g.y);
   let item = job.itemId ? getItem(state, job.itemId) : undefined;
   if (!item) {
-    item = freeItemFor(state, 'wood', s.pos, site);
-    if (!item) return releaseSurvivor(state, s, `no wood for the ${g.kind}`);
+    item = freeItemFor(state, fuel, s.pos, site);
+    if (!item) return releaseSurvivor(state, s, `no ${fuel} for the ${g.kind}`);
     job.itemId = item.id;
     item.reservedBy = s.id;
   }
@@ -822,8 +831,8 @@ function workFuel(state: SimState, s: Survivor, job: Job): void {
   removeItem(state, item);
   s.carrying = null;
   g.stored += 1;
-  g.storedKind = 'wood';
-  finishJob(state, s, job, `fuelled the ${g.kind} at (${g.x}, ${g.y})`);
+  g.storedKind = fuel;
+  finishJob(state, s, job, `${fuel === 'ammo' ? 'loaded' : 'fuelled'} the ${g.kind} at (${g.x}, ${g.y})`);
 }
 
 function carryToStorage(state: SimState, s: Survivor, job: Job, item: Item): void {
@@ -1004,6 +1013,8 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
     case 'firefight':
     case 'hunt':
     case 'guard': {
+      // In the dark, nobody goes after a zombie they can't see (defences.ts).
+      if (job.type === 'guard' && !seen(state, job)) return null;
       // All done from a tile next to the target (for guards, the zombie as of this tick).
       const goals = neighbours4(grid, job.x, job.y);
       if (!canReach(grid, v, s.pos, goals)) return null;
@@ -1054,11 +1065,15 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       const site = neighbours4(grid, job.x, job.y).filter((p) => isWalkable(grid, p.x, p.y));
       if (site.length === 0) return null;
       if (isFuelJob(job)) {
-        const wood = freeItemFor(state, 'wood', s.pos, site);
-        return wood ? pathPlan(state, s.pos, [wood.pos], wood.id) : null;
+        const f = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+        const fuel = f && f.kind in FUEL ? FUEL[f.kind as keyof typeof FUEL] : 'wood';
+        const item = freeItemFor(state, fuel, s.pos, site);
+        return item ? pathPlan(state, s.pos, [item.pos], item.id) : null;
       }
+      const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
+      const material = bp ? materialFor(bp.target) : 'wood';
       const free = state.items
-        .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === 'wood')
+        .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === material)
         .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos));
       for (const item of free.slice(0, MAX_CANDIDATES)) {
         if (!canReach(grid, v, s.pos, [item.pos]) || !canReach(grid, v, item.pos, site)) continue;

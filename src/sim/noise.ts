@@ -14,7 +14,7 @@ import { MAX_ZOMBIES, addZombie, zombieHealthForNight } from './zombies';
 import { giveVariant } from './zombieKinds';
 
 /** How far each kind of noise carries. */
-export const NOISE = { building: 10, fighting: 6, gunfire: 30, generator: 12, scream: 30 } as const;
+export const NOISE = { building: 10, fighting: 6, gunfire: 30, generator: 12, scream: 30, lure: 25 } as const;
 export type NoiseKind = keyof typeof NOISE;
 /** Herds hear from this many times further than a noise's radius. */
 export const HERD_HEARING = 2;

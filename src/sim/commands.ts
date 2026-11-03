@@ -50,7 +50,7 @@ export type Command =
   /** Give a bed to a survivor (their only one), or take it back with null. */
   | { type: 'assignBed'; bedId: string; survivorId: string | null }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | FurnitureTarget }
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | 'reinforce' | FurnitureTarget }
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
@@ -361,9 +361,15 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
   return changed();
 }
 
-function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'barricade' | FurnitureTarget): CommandResult {
+function designateBuild(state: SimState, x: number, y: number, structure: 'wall' | 'door' | 'barricade' | 'reinforce' | FurnitureTarget): CommandResult {
   const existing = blueprintAt(state, x, y);
   if (existing?.target === structure) return unchanged();
+  if (structure === 'reinforce') {
+    if (!isStructure(getTile(state.grid, x, y)) || state.grid.reinforced.includes(y * state.grid.width + x)) return unchanged();
+    if (existing) cancelBlueprint(state, existing);
+    addBlueprint(state, x, y, 'reinforce');
+    return changed();
+  }
   if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) {
     return reject(`(${x}, ${y}) is not empty floor; remove what's there first`);
   }

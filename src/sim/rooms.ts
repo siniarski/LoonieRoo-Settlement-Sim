@@ -33,7 +33,7 @@ export const STORE_CATEGORIES: readonly StoreCategory[] = ['food', 'materials', 
 
 export function categoryOf(kind: ItemKind): StoreCategory | null {
   if (kind === 'food' || kind === 'meal') return 'food';
-  if (kind === 'wood' || kind === 'cloth') return 'materials';
+  if (kind === 'wood' || kind === 'cloth' || kind === 'scrap') return 'materials';
   if (kind === 'bandage' || kind === 'medicine') return 'medical';
   return kind === 'corpse' ? null : 'gear';
 }

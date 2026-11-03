@@ -11,6 +11,7 @@
 //   generator, lamp, fridge  power (see power.ts); a generator's stored is its fuel, its loot the burn timer
 //   heater a brazier: warmth outdoors on cold nights, fuelled like a generator (power.ts)
 //   coop   chickens: lays food (farming.ts)
+//   turret, lure, pit  defences (defences.ts); a turret's stored is ammo boxes, its loot the rounds left in one
 //   lab, beacon  the endgame: research a cure, or call for evacuation (endgame.ts)
 //   radio  powered: hears distress calls and neighbours' asks (radio.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
@@ -18,7 +19,7 @@
 import { spawnItem, type ItemKind } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'heater' | 'coop' | 'radio' | 'lab' | 'beacon';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'heater' | 'coop' | 'radio' | 'lab' | 'beacon' | 'turret' | 'lure' | 'pit';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;

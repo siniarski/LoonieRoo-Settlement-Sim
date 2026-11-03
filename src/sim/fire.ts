@@ -21,6 +21,7 @@ import type { SimState } from './state';
 import { leaveCorpse } from './corpses';
 import { removeZombie } from './zombies';
 import { isWet } from './seasons';
+import { isReinforced } from './defences';
 
 export interface Fire {
   x: number;
@@ -51,6 +52,7 @@ export function fireAt(state: SimState, x: number, y: number): Fire | undefined 
 /** Can a fire here keep going (and catch from a neighbour)? */
 export function burnable(state: SimState, x: number, y: number): boolean {
   const t = getTile(state.grid, x, y);
+  if (isReinforced(state, x, y)) return false;
   return t === 'wall' || t === 'door' || t === 'barricade' || (t === 'floor' && furnitureAt(state, x, y) !== undefined);
 }
 

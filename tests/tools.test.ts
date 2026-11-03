@@ -60,7 +60,8 @@ describe('tools', () => {
     expect(toolForKey('structure', '3')?.id).toBe('barricade');
     expect(toolForKey('structure', '4')?.id).toBe('trap');
     expect(toolForKey('structure', '5')?.id).toBe('tower');
-    expect(toolForKey('structure', '6')).toBeUndefined();
+    expect(toolForKey('structure', '6')?.id).toBe('reinforce');
+    expect(toolForKey('structure', '0')).toBeUndefined();
     expect(toolForKey('orders', '1')?.id).toBe('furnish');
     expect(toolForKey('orders', '2')?.id).toBe('scavenge');
     expect(toolForKey('orders', '4')?.id).toBe('cancel');

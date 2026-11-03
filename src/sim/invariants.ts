@@ -5,7 +5,7 @@
 import { isPassable } from './pathfinding';
 import { moverOf } from './zombies';
 import { everyone } from './expeditions';
-import { STRUCTURE_HEALTH } from './breach';
+import { structureHealth } from './breach';
 import { getTile, inBounds, isWalkable } from './grid';
 import { growTicks } from './farming';
 import { SATIETY_MAX } from './food';
@@ -230,7 +230,7 @@ export function checkInvariants(state: SimState): string[] {
     const tile = grid.tiles[i]!;
     const at = `(${i % grid.width}, ${Math.floor(i / grid.width)})`;
     if (tile !== 'wall' && tile !== 'door' && tile !== 'barricade') problems.push(`damage ${d} on ${tile} ${at}`);
-    else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
+    else if (d < 0 || d >= structureHealth(grid, i) || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
   const fireTiles = new Set<string>();
@@ -258,6 +258,7 @@ export function checkInvariants(state: SimState): string[] {
   for (const p of state.prisoners) if (!isWalkable(grid, p.x, p.y)) problems.push(`prisoner ${p.id} in a wall`);
   for (const d of state.dogs) if (!isWalkable(grid, d.pos.x, d.pos.y) || d.health <= 0) problems.push(`dog ${d.id} is in a wall or dead`);
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
+  for (const i of grid.reinforced) if (grid.tiles[i] !== 'wall' && grid.tiles[i] !== 'door' && grid.tiles[i] !== 'barricade') problems.push(`reinforcement on a ${grid.tiles[i]} at ${i}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);
   for (const d of state.dormant) if (!inBounds(grid, d.x, d.y)) problems.push(`dormant zombie ${d.id} off the map`);
   for (const h of state.herds) if (!inBounds(grid, h.x, h.y) || !inBounds(grid, h.to.x, h.to.y) || h.size <= 0) problems.push(`herd ${h.id} is off the map or empty`);

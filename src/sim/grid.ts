@@ -38,6 +38,8 @@ export interface Grid {
   damageList: number[];
   /** Locked doors (tile indices): survivors have keys; raiders must break them (visitors.ts). */
   locked: number[];
+  /** Structures reinforced with scrap (tile indices; defences.ts). */
+  reinforced: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -55,6 +57,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     dirtList: [],
     damageList: [],
     locked: [],
+    reinforced: [],
   };
 }
 
@@ -86,6 +89,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   }
   setDamage(grid, i, 0); // a new (or removed) structure starts undamaged
   drop(grid.locked, i); // and unlocked
+  drop(grid.reinforced, i); // and plain
   return true;
 }
 

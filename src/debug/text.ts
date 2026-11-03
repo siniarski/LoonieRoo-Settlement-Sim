@@ -25,6 +25,10 @@ const BLUEPRINT_CHARS = {
   radio: ENTITY_CHARS.radioBlueprint,
   lab: ENTITY_CHARS.labBlueprint,
   beacon: ENTITY_CHARS.beaconBlueprint,
+  turret: ENTITY_CHARS.turretBlueprint,
+  lure: ENTITY_CHARS.lureBlueprint,
+  pit: ENTITY_CHARS.pitBlueprint,
+  reinforce: ENTITY_CHARS.reinforceBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 
