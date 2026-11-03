@@ -44,6 +44,7 @@ import { isNight } from './time';
 import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
+import { cancelDressing, reconcileDressing, undress } from './clothing';
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
@@ -88,6 +89,7 @@ export function reconcileNeeds(state: SimState): void {
       if (!item || item.reservedBy !== s.id || !item.pos) cancelTreatment(state, s, 'bandage gone');
     }
     reconcileArming(state, s);
+    reconcileDressing(state, s);
     if (!s.sleep?.bedId) continue;
     const bed = getBed(state, s.sleep.bedId);
     if (bed && bed.occupant === s.id) continue;
@@ -189,6 +191,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
   }
   if (s.jobId) releaseSurvivor(state, s, 'hungry');
   cancelArming(state, s, 'hungry');
+  cancelDressing(state, s, 'hungry');
   cancelTreatment(state, s, 'hungry'); // eat first; the bandage can wait
   food.reservedBy = s.id;
   s.meal = { itemId: food.id, progress: 0, seat: pickSeat(state, s, food.pos) };
@@ -275,6 +278,7 @@ function startTreatment(state: SimState, s: Survivor): boolean {
   }
   if (s.jobId) releaseSurvivor(state, s, 'going to treat wounds');
   cancelArming(state, s, 'going to treat wounds');
+  cancelDressing(state, s, 'going to treat wounds');
   bandage.reservedBy = s.id;
   s.treatment = { itemId: bandage.id, progress: 0 };
   s.note = `going for ${bandage.kind === 'medicine' ? 'medicine' : 'a bandage'} at (${bandage.pos.x}, ${bandage.pos.y})`;
@@ -327,7 +331,9 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   wake(state, s, cause);
   cancelTreatment(state, s, cause);
   cancelArming(state, s, cause);
+  cancelDressing(state, s, cause);
   dropWeapon(state, s);
+  undress(state, s);
   for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);

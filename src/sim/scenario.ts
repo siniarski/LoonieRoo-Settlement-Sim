@@ -64,8 +64,15 @@ export const ENTITY_CHARS = {
   stoveBlueprint: 'O',
   meal: 'h',
   medicine: '!',
+  cloth: 'L',
+  coat: 'C',
+  armour: 'A',
+  boots: 'U',
   removeBlueprint: 'x',
 } as const;
+
+/** Item kinds placed straight from their map char (the rest have cases below). */
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
@@ -73,6 +80,11 @@ const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
 
 /** Floor plus something on it. Returns false if `char` isn't an entity char. */
 function placeEntity(state: SimState, char: string, x: number, y: number): boolean {
+  const simple = SIMPLE_ITEMS.find((k) => ENTITY_CHARS[k] === char);
+  if (simple) {
+    spawnItem(state, simple, x, y);
+    return true;
+  }
   switch (char) {
     case ENTITY_CHARS.survivor:
       addSurvivor(state, x, y);

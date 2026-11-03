@@ -544,7 +544,32 @@ function drawItem(
   else if (kind === 'medicine') drawMedicine(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'bandage') drawBandage(ctx, camera, viewport, wx, wy, size);
   else if (kind === 'weapon') drawWeapon(ctx, camera, viewport, wx, wy, size);
-  else drawWood(ctx, camera, viewport, wx, wy, size);
+  else if (kind === 'wood') drawWood(ctx, camera, viewport, wx, wy, size);
+  else drawGlyph(ctx, camera, viewport, wx, wy, size, GLYPHS[kind] ?? ['#cccccc', '?']);
+}
+
+/** Items without a drawing of their own: a coloured tile with a letter. */
+export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
+  cloth: ['#c9b8a0', 'c'],
+  coat: ['#8a5a3a', 'C'],
+  armour: ['#7a8088', 'A'],
+  boots: ['#4a3626', 'B'],
+};
+
+function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {
+  const p = worldToScreen(camera, viewport, wx, wy);
+  const s = size * 0.5;
+  ctx.fillStyle = colour;
+  ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(p.x - s / 2 + 0.5, p.y - s / 2 + 0.5, s - 1, s - 1);
+  if (s < 8) return;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.round(s * 0.7)}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, p.x, p.y + 1);
 }
 
 /** A machete: a pale diagonal blade on a brown hilt. */
@@ -806,13 +831,19 @@ function drawSurvivor(
     ctx.stroke();
   }
   const asleep = s.sleep?.asleep === true;
+  // Clothing shows as the outline: brown for a coat, grey for armour; boots as a dark bar below.
+  const body = s.body ? state.items.find((i) => i.id === s.body) : undefined;
   ctx.fillStyle = asleep ? COLOURS.survivorAsleep : COLOURS.survivor;
-  ctx.strokeStyle = COLOURS.survivorOutline;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = body ? (GLYPHS[body.kind]?.[0] ?? COLOURS.survivorOutline) : COLOURS.survivorOutline;
+  ctx.lineWidth = body ? 3 : 2;
   ctx.beginPath();
   ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+  if (s.feet) {
+    ctx.fillStyle = GLYPHS.boots![0];
+    ctx.fillRect(p.x - radius * 0.6, p.y + radius - 1, radius * 1.2, Math.max(2, radius * 0.3));
+  }
   const carried = s.carrying ? state.items.find((i) => i.id === s.carrying) : undefined;
   if (carried) drawItem(ctx, camera, viewport, carried.kind, world.x + 0.3, world.y + 0.25, size * 0.6);
   if (s.weapon) drawWeapon(ctx, camera, viewport, world.x - 0.35, world.y + 0.05, size * 0.85);

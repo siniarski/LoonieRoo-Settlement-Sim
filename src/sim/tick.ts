@@ -21,6 +21,7 @@ import type { SimState } from './state';
 import { updateMovement, type Survivor } from './survivors';
 import { reconcileWanderers, updateWanderers } from './wanderers';
 import { updateArming } from './weapons';
+import { updateDressing } from './clothing';
 import { updateBreakdown, updateLeisure } from './leisure';
 import { reconcileExploreAreas, reconcilePointsOfInterest, updateFog } from './fog';
 import { updateHerds } from './herds';
@@ -62,7 +63,7 @@ export function tick(state: SimState): void {
     // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
     // (not mid-breakdown). A need taking over ends any rec-room visit.
     if (!s.move && !s.goal) {
-      const needs = updateMeal(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateSleep(state, s);
+      const needs = updateMeal(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
       if (needs) s.leisure = null;
       else if (!s.breakdown && !updateLeisure(state, s)) updateWork(state, s);
     }

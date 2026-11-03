@@ -17,7 +17,8 @@ import { furnitureAt, removeFurniture } from './furniture';
 import { addBlueprint } from './designations';
 import { addThought } from './mood';
 import { hasTrait } from './skills';
-import { maybeInfect } from './infection';
+import { INFECTION_CHANCE, maybeInfect } from './infection';
+import { armourDamage, wearing } from './clothing';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -316,12 +317,13 @@ function plan(state: SimState, z: Zombie): void {
 
 function hit(state: SimState, z: Zombie, s: Survivor): void {
   const damage = z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE;
-  s.health = Math.max(0, s.health - (hasTrait(s, 'tough') ? Math.round((damage * 3) / 4) : damage));
+  const armoured = wearing(state, s, 'armour') !== undefined;
+  s.health = Math.max(0, s.health - armourDamage(state, s, hasTrait(s, 'tough') ? Math.round((damage * 3) / 4) : damage));
   s.lastHurtBy = z.kind === 'raider' ? 'a raider' : 'a zombie attack';
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
-  if (z.kind !== 'raider') maybeInfect(state, s, z.id);
+  if (z.kind !== 'raider') maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);
   z.cooldown = ZOMBIE_ATTACK_EVERY;
 }
 

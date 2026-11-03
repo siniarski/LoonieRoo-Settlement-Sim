@@ -24,6 +24,7 @@ export const ARM_RETRY_TICKS = 50;
 function wantsWeapon(state: SimState, s: Survivor): boolean {
   return (
     s.weapon === null &&
+    !s.dressing &&
     s.priorities.guard > 0 &&
     !s.jobId &&
     !s.sleep &&

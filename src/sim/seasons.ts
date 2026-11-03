@@ -11,7 +11,9 @@ import { addThought } from './mood';
 import { random } from './rng';
 import { isIndoors } from './rooms';
 import type { SimState } from './state';
-import { DAY_LENGTH, dayOf, isNight } from './time';
+import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight } from './time';
+import { wearOut, wearing } from './clothing';
+import type { Survivor } from './survivors';
 
 export const SEASON_DAYS = 5;
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
@@ -36,9 +38,9 @@ export function cropGrows(state: SimState): number {
   return growth;
 }
 
-/** Out of doors on a winter night. */
-export function isCold(state: SimState, s: { pos: { x: number; y: number } }): boolean {
-  return seasonOf(state.tick) === 'winter' && isNight(state.tick) && !isIndoors(state, s.pos.x, s.pos.y);
+/** Out of doors on a winter night without a coat. */
+export function isCold(state: SimState, s: Survivor): boolean {
+  return seasonOf(state.tick) === 'winter' && isNight(state.tick) && !isIndoors(state, s.pos.x, s.pos.y) && !wearing(state, s, 'coat');
 }
 
 /** Dawn's weather roll, and the weather's effect on people outdoors. Runs every tick. */
@@ -50,8 +52,14 @@ export function updateWeather(state: SimState): void {
   }
   const coldNight = seasonOf(state.tick) === 'winter' && isNight(state.tick);
   if (!coldNight && state.weather !== 'rain') return;
-  for (const s of state.survivors) {
+  for (const s of [...state.survivors]) {
     if (isIndoors(state, s.pos.x, s.pos.y)) continue;
+    // A coat keeps the weather off, and wears a little for each hour it does.
+    const coat = wearing(state, s, 'coat');
+    if (coat) {
+      if (state.tick % TICKS_PER_HOUR === 0) wearOut(state, s, coat);
+      continue;
+    }
     if (state.weather === 'rain' && !coldNight) addThought(state, s, 'soaked');
     if (coldNight) {
       addThought(state, s, 'cold');

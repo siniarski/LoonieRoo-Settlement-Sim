@@ -11,6 +11,7 @@ import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
+import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 
 export function checkInvariants(state: SimState): string[] {
@@ -59,13 +60,13 @@ export function checkInvariants(state: SimState): string[] {
       if (!isWalkable(grid, item.pos.x, item.pos.y)) problems.push(`${item.id} inside a wall at (${key})`);
     }
     const bearer = item.carriedBy ? survivors.get(item.carriedBy) : undefined;
-    if (item.carriedBy && bearer?.carrying !== item.id && bearer?.weapon !== item.id) {
+    if (item.carriedBy && bearer?.carrying !== item.id && bearer?.weapon !== item.id && bearer?.body !== item.id && bearer?.feet !== item.id) {
       problems.push(`${item.id} says carriedBy ${item.carriedBy}, who isn't carrying it`);
     }
     if (item.reservedBy) {
       const holder = survivors.get(item.reservedBy);
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
-      const using = holder?.meal?.itemId === item.id || holder?.treatment?.itemId === item.id || holder?.arming === item.id;
+      const using = holder?.meal?.itemId === item.id || holder?.treatment?.itemId === item.id || holder?.arming === item.id || holder?.dressing === item.id;
       if (job?.itemId !== item.id && !using) {
         problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job, meal, treatment, or arming`);
       }
@@ -111,6 +112,16 @@ export function checkInvariants(state: SimState): string[] {
       if (!weapon || weapon.kind !== 'weapon') problems.push(`${s.name} is fetching missing weapon ${s.arming}`);
       else if (weapon.reservedBy !== s.id || !weapon.pos) problems.push(`${s.name} is fetching ${weapon.id}, which isn't reserved on the ground`);
       if (s.jobId || s.sleep || s.meal || s.treatment) problems.push(`${s.name} is fetching a weapon while busy with something else`);
+    }
+    for (const slot of ['body', 'feet'] as const) {
+      const id = s[slot];
+      const worn = id ? items.get(id) : undefined;
+      if (id && (!worn || worn.carriedBy !== s.id || !isGarment(worn.kind) || SLOT_OF[worn.kind] !== slot)) problems.push(`${s.name} wears ${id} on ${slot}, which doesn't fit`);
+    }
+    if (s.dressing) {
+      const item = items.get(s.dressing);
+      if (!item || item.reservedBy !== s.id || !item.pos) problems.push(`${s.name} is fetching ${s.dressing}, which isn't reserved on the ground`);
+      if (s.jobId || s.sleep || s.meal || s.treatment || s.arming) problems.push(`${s.name} is fetching clothing while busy with something else`);
     }
     if (s.leisure) {
       if (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.breakdown) problems.push(`${s.name} is relaxing while busy with something else`);

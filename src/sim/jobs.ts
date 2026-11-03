@@ -25,7 +25,7 @@ import { random } from './rng';
 import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
 import { blowDamage, wearWeapon } from './weapons';
-import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, wantedCraft } from './crafting';
+import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
 import { startLeisure } from './leisure';
 import { manhattan, nearestTile, samePoint } from './space';
 import type { SimState } from './state';
@@ -66,12 +66,17 @@ export interface Job {
 export const CLEAN_WORK = 15;
 /** Ticks to search a crate once; each search yields one find. */
 export const SCAVENGE_WORK = 40;
-/** Chance a find is food (rolled with the sim RNG). */
-export const SCAVENGE_FOOD_CHANCE = 0.45;
-/** Chance a find is wood. */
-export const SCAVENGE_WOOD_CHANCE = 0.3;
-/** Chance a find is a bandage; the rest are weapons. */
-export const SCAVENGE_BANDAGE_CHANCE = 0.15;
+/** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
+export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
+  ['food', 0.4],
+  ['wood', 0.27],
+  ['bandage', 0.12],
+  ['cloth', 0.1],
+  ['weapon', 0.06],
+  ['coat', 0.02],
+  ['boots', 0.02],
+  ['armour', 0.01],
+];
 /** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
 export const GUARD_ATTACK_EVERY = 10;
 export const GUARD_DAMAGE = 50;
@@ -419,12 +424,14 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   finishJob(state, s, job, crate.kind === 'tree' ? `chopped wood from (${crate.x}, ${crate.y}), ${crate.loot} left` : `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
 }
 
-/** Maps a [0, 1) roll to a find: food, wood, bandage, or weapon. */
+/** Maps a [0, 1) roll to a find (SCAVENGE_TABLE). */
 export function scavengeFind(roll: number): ItemKind {
-  if (roll < SCAVENGE_FOOD_CHANCE) return 'food';
-  if (roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE) return 'wood';
-  if (roll < SCAVENGE_FOOD_CHANCE + SCAVENGE_WOOD_CHANCE + SCAVENGE_BANDAGE_CHANCE) return 'bandage';
-  return 'weapon';
+  let at = 0;
+  for (const [kind, chance] of SCAVENGE_TABLE) {
+    at += chance;
+    if (roll < at) return kind;
+  }
+  return SCAVENGE_TABLE.at(-1)![0];
 }
 
 /** Bring the input to the station one piece at a time, then make the most-wanted thing it makes. */
@@ -432,8 +439,14 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   const bench = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
   if (!bench || !isStation(bench.kind)) return releaseSurvivor(state, s, 'station gone');
   const workshop = inWorkshop(state, bench);
-  const kind = wantedCraft(state, bench.kind, workshop);
+  const kind = stationCraft(state, bench);
   if (!kind) return releaseSurvivor(state, s, 'stocks are full');
+  if (bench.stored > 0 && bench.storedKind !== RECIPES[kind].input) {
+    // Nothing wanted uses what's in it any more: put that back out.
+    for (let n = 0; n < bench.stored; n++) spawnItem(state, bench.storedKind ?? 'wood', bench.x, bench.y);
+    bench.stored = 0;
+    bench.storedKind = null;
+  }
   const site = neighbours4(state.grid, bench.x, bench.y);
   const recipe = RECIPES[kind];
   const cost = recipe.count;
@@ -460,6 +473,7 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
     s.carrying = null;
     job.itemId = null;
     bench.stored += 1;
+    bench.storedKind = recipe.input;
     s.note = `brought ${recipe.input} to ${station} (${bench.stored}/${cost})`;
     return;
   }
@@ -470,8 +484,9 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   job.progress += step;
   if (job.progress < (workshop ? WORKSHOP_CRAFT_WORK : CRAFT_WORK)) return;
   bench.stored -= cost;
+  if (bench.stored === 0) bench.storedKind = null;
   spawnItem(state, kind, s.pos.x, s.pos.y);
-  const made = { weapon: 'crafted a weapon', bandage: 'crafted a bandage', medicine: 'made medicine', meal: 'cooked a hot meal' }[kind];
+  const made = kind === 'meal' ? 'cooked a hot meal' : kind === 'medicine' ? 'made medicine' : `crafted ${kind === 'armour' || kind === 'boots' ? '' : 'a '}${kind}`;
   finishJob(state, s, job, `${made} at (${bench.x}, ${bench.y})`);
 }
 
@@ -740,10 +755,10 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
     case 'cook': {
       const bench = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
       if (!bench || !isStation(bench.kind)) return null;
-      const kind = wantedCraft(state, bench.kind, inWorkshop(state, bench));
+      const kind = stationCraft(state, bench);
       if (!kind) return null;
       const site = neighbours4(grid, bench.x, bench.y).filter((p) => isWalkable(grid, p.x, p.y));
-      if (bench.stored >= RECIPES[kind].count) return canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
+      if (bench.stored >= RECIPES[kind].count && bench.storedKind === RECIPES[kind].input) return canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
       const input = freeItemFor(state, RECIPES[kind].input, s.pos, site);
       return input ? pathPlan(state, s.pos, [input.pos], input.id) : null;
     }

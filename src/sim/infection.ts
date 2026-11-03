@@ -25,9 +25,9 @@ function roll(a: number, b: number): number {
 }
 
 /** A zombie's hit: maybe it infects. */
-export function maybeInfect(state: SimState, s: Survivor, zombieId: string): void {
+export function maybeInfect(state: SimState, s: Survivor, zombieId: string, chance = INFECTION_CHANCE): void {
   if (s.infection !== null) return;
-  if (roll(Number(zombieId.replace(/\D/g, '')), state.tick) >= INFECTION_CHANCE) return;
+  if (roll(Number(zombieId.replace(/\D/g, '')), state.tick) >= chance) return;
   s.infection = 0;
   logEvent(state, `${s.name} was bitten and is infected: medicine can cure it`);
 }

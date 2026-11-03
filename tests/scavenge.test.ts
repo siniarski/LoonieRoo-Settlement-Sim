@@ -4,7 +4,7 @@ import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { CRATE_LOOT } from '../src/sim/furniture';
 import { checkInvariants } from '../src/sim/invariants';
-import { SCAVENGE_WORK } from '../src/sim/jobs';
+import { SCAVENGE_TABLE, SCAVENGE_WORK } from '../src/sim/jobs';
 import { roomAt } from '../src/sim/rooms';
 import { loadScenario, type Scenario } from '../src/sim/scenario';
 import type { SimState } from '../src/sim/state';
@@ -49,7 +49,7 @@ describe('scavenging', () => {
     runUntil(state, (st) => st.items.length === 1);
     const s = state.survivors[0]!;
     expect(s.pos).toEqual({ x: 3, y: 0 });
-    expect(s.note).toMatch(/^scavenged (food|wood) from \(4, 0\), 4 left$/);
+    expect(s.note).toMatch(/^scavenged \w+ from \(4, 0\), 4 left$/);
     expect(crates(state)[0]!.loot).toBe(CRATE_LOOT - 1);
   });
 
@@ -64,7 +64,7 @@ describe('scavenging', () => {
     expect(state.jobs).toEqual([]);
   });
 
-  it('finds are food, wood, bandages, or weapons, rolled with the sim RNG (same seed, same finds)', () => {
+  it('finds come from the scavenge table, rolled with the sim RNG (same seed, same finds)', () => {
     const run = () => {
       const state = setup(['s..c', '....', '..c.']);
       markAll(state);
@@ -73,7 +73,9 @@ describe('scavenging', () => {
     };
     const kinds = run();
     expect(kinds).toHaveLength(2 * CRATE_LOOT);
-    expect(new Set(kinds)).toEqual(new Set(['food', 'wood', 'bandage', 'weapon']));
+    const table = SCAVENGE_TABLE.map(([k]) => k);
+    expect(kinds.every((k) => table.includes(k))).toBe(true);
+    expect(new Set(kinds).size).toBeGreaterThanOrEqual(3);
     expect(run()).toEqual(kinds);
   });
 

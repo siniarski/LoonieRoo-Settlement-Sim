@@ -10,16 +10,16 @@
 // Workbench products follow the player's stock targets. Hot meals follow the
 // colony: MEALS_PER_SURVIVOR each, while there's raw food to cook.
 
-import type { FurnitureKind } from './furniture';
+import type { Furniture, FurnitureKind } from './furniture';
 import type { ItemKind } from './items';
 import { completeRooms, labelAt } from './rooms';
 import type { SimState } from './state';
 
-export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal';
+export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots';
 export type Station = Extract<FurnitureKind, 'workbench' | 'stove'>;
-export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'meal'];
+export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'coat', 'armour', 'boots', 'meal'];
 /** What the player sets targets for (the Workbench orders panel). */
-export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine'];
+export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'coat', 'armour', 'boots'];
 
 export interface Recipe {
   station: Station;
@@ -34,11 +34,11 @@ export const RECIPES: Record<CraftKind, Recipe> = {
   weapon: { station: 'workbench', input: 'wood', count: 2, label: 'Weapons' },
   bandage: { station: 'workbench', input: 'wood', count: 1, label: 'Bandages' },
   medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine', workshopOnly: true },
+  coat: { station: 'workbench', input: 'cloth', count: 2, label: 'Coats' },
+  armour: { station: 'workbench', input: 'cloth', count: 3, label: 'Padded armour' },
+  boots: { station: 'workbench', input: 'cloth', count: 1, label: 'Boots' },
   meal: { station: 'stove', input: 'food', count: 1, label: 'Hot meals' },
 };
-
-/** What each station takes in (so it can be given back if the station goes). */
-export const STATION_INPUT: Record<Station, ItemKind> = { workbench: 'wood', stove: 'food' };
 
 /** Ticks of work once the input is in. */
 export const CRAFT_WORK = 60;
@@ -57,22 +57,35 @@ export function isStation(kind: FurnitureKind): kind is Station {
   return kind === 'workbench' || kind === 'stove';
 }
 
-/** Items of this kind the colony has spare: on the ground or being hauled, not wielded. */
+/** Items of this kind the colony has spare: on the ground or being hauled, not wielded or worn. */
 export function craftStock(state: SimState, kind: ItemKind): number {
-  return state.items.filter((i) => i.kind === kind && !state.survivors.some((s) => s.weapon === i.id)).length;
+  return state.items.filter((i) => i.kind === kind && !state.survivors.some((s) => s.weapon === i.id || s.body === i.id || s.feet === i.id)).length;
 }
 
 function target(state: SimState, kind: CraftKind): number {
   return kind === 'meal' ? MEALS_PER_SURVIVOR * state.survivors.length : state.craftTargets[kind];
 }
 
+/** Craftables for this station below their target, in CRAFTABLES order. */
+export function wantedCrafts(state: SimState, station: Station = 'workbench', inWorkshop = false): CraftKind[] {
+  return CRAFTABLES.filter(
+    (k) => RECIPES[k].station === station && (inWorkshop || !RECIPES[k].workshopOnly) && craftStock(state, k) < target(state, k),
+  );
+}
+
 /** The first craftable for this station below its target, or null when stocks are full. */
 export function wantedCraft(state: SimState, station: Station = 'workbench', inWorkshop = false): CraftKind | null {
-  return (
-    CRAFTABLES.find(
-      (k) => RECIPES[k].station === station && (inWorkshop || !RECIPES[k].workshopOnly) && craftStock(state, k) < target(state, k),
-    ) ?? null
-  );
+  return wantedCrafts(state, station, inWorkshop)[0] ?? null;
+}
+
+/**
+ * What this station should make next: something that uses what's already in it if possible,
+ * else the first wanted thing. Null when stocks are full.
+ */
+export function stationCraft(state: SimState, f: Furniture): CraftKind | null {
+  if (!isStation(f.kind)) return null;
+  const wanted = wantedCrafts(state, f.kind, inWorkshop(state, f));
+  return wanted.find((k) => f.stored > 0 && RECIPES[k].input === f.storedKind) ?? wanted[0] ?? null;
 }
 
 /** Is this station in a complete workshop? */

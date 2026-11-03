@@ -24,6 +24,7 @@ import { seasonOf } from '../sim/seasons';
 import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { INFECTION_TURN } from '../sim/infection';
 import { describeRelations } from '../sim/relationships';
+import { describeClothing } from '../sim/clothing';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -215,7 +216,7 @@ function furnitureText(state: SimState, p: Point): string {
   if (f.kind === 'table') return ' · table';
   if (f.kind === 'trap') return ` · spike trap (${f.loot} left)`;
   if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
-  if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} wood in)` : ''}`;
+  if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} ${f.storedKind ?? 'wood'} in)` : ''}`;
   if (f.kind === 'stove') return ` · stove${f.stored > 0 ? ` (${f.stored} food in)` : ''}`;
   return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
@@ -530,7 +531,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       const row = el('tr', s.id === view.selectedId ? 'selected' : '');
       const name = el('td', 'prio-name');
       name.textContent = s.name;
-      name.title = [`Select · ${describeSkills(s)}`, describeRelations(state, s)].filter(Boolean).join(' · ');
+      name.title = [`Select · ${describeSkills(s)}`, describeClothing(state, s), describeRelations(state, s)].filter(Boolean).join(' · ');
       name.addEventListener('click', () => (view.selectedId = s.id));
       row.append(name);
 
@@ -589,6 +590,7 @@ function activity(state: SimState, s: Survivor): string {
   if (s.meal) return s.meal.progress > 0 ? (s.meal.seat ? 'eating at a table' : 'eating') : s.carrying ? 'taking food to a table' : 'going to eat';
   if (s.treatment) return s.treatment.progress > 0 ? 'treating themselves' : 'going for a remedy';
   if (s.arming) return 'going for a weapon';
+  if (s.dressing) return 'going for clothing';
   if (s.breakdown) return 'having a breakdown';
   if (s.leisure) return s.leisure.progress > 0 ? 'relaxing' : 'going to relax';
   if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
@@ -649,7 +651,7 @@ function survivorLines(state: SimState, s: Survivor, selected: boolean): string[
     `    health ${Math.round((100 * s.health) / HEALTH_MAX)}%${isCritical(s.health) ? ' CRITICAL' : isHurt(s.health) ? ' HURT' : ''}${s.infection !== null ? ` INFECTED ${Math.round((100 * s.infection) / INFECTION_TURN)}%` : ''}  ·  rest ${Math.round((100 * s.rest) / REST_MAX)}%${s.rest < TIRED ? ' TIRED' : ''}  ·  food ${Math.round((100 * s.satiety) / SATIETY_MAX)}%${s.satiety < HUNGRY ? ' HUNGRY' : ''}  ·  ${activity(state, s)}`,
     `    job ${job ? `${job.id} ${job.type} ${at(job)}` : s.sleep || s.meal ? `none: ${activity(state, s)}` : `none: ${explainIdle(state, s)}`}  ·  prio g${p.guard} b${p.build} f${p.farm} h${p.haul} s${p.scavenge} c${p.clean}`,
     `    goal ${s.goal ? `${at(s.goal)}, ${remaining} tiles left` : '—'}  ·  ${cache}`,
-    `    ${moodTitle(state, s)}  ·  ${describeSkills(s)}`,
+    `    ${moodTitle(state, s)}  ·  ${describeSkills(s)}  ·  wearing ${describeClothing(state, s) || 'nothing much'}`,
     `    ${s.note ?? ''}`,
   ];
 }

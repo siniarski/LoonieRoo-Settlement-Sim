@@ -20,6 +20,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
+import { cancelDressing } from './clothing';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -162,6 +163,7 @@ function execute(state: SimState, command: Command): CommandResult {
       cancelMeal(state, s, 'off on an expedition');
       cancelTreatment(state, s, 'off on an expedition');
       cancelArming(state, s, 'off on an expedition');
+      cancelDressing(state, s, 'off on an expedition');
       s.leisure = null;
       s.breakdown = null;
       s.goal = null;
@@ -344,6 +346,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   cancelMeal(state, survivor, 'meal interrupted by an order');
   cancelTreatment(state, survivor, 'treatment interrupted by an order');
   cancelArming(state, survivor, 'interrupted by an order');
+  cancelDressing(state, survivor, 'interrupted by an order');
   survivor.leisure = null;
   setGoal(survivor, { x, y });
   return changed();

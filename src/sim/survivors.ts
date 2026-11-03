@@ -7,6 +7,7 @@
 // saying why (never stuck).
 
 import { hasTrait, type Trait } from './skills';
+import { trapStep } from './clothing';
 import type { Thought } from './mood';
 import { GROUNDS, getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type JobType, type Priorities } from './jobTypes';
@@ -103,6 +104,12 @@ export interface Survivor {
   infection: number | null;
   /** What they think of others, by survivor id, -100..100 (relationships.ts). */
   opinions: Record<string, number>;
+  /** Worn clothing items (carried, like the weapon): a coat or armour, and boots (clothing.ts). */
+  body: string | null;
+  feet: string | null;
+  /** Garment or cloth reserved while walking to it. */
+  dressing: string | null;
+  nextDressTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -140,6 +147,10 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     traits: [],
     infection: null,
     opinions: {},
+    body: null,
+    feet: null,
+    dressing: null,
+    nextDressTick: 0,
   };
   state.survivors.push(survivor);
   return survivor;
@@ -180,6 +191,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
     s.pos = s.move.to;
     s.move = null;
     trackDirt(state, s.pos);
+    trapStep(state, s);
     // Fall through so the next step starts this same tick (no stutter per tile).
   }
 

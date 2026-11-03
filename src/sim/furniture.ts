@@ -8,7 +8,7 @@
 //   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see zombies.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
-import { spawnItem } from './items';
+import { spawnItem, type ItemKind } from './items';
 import type { SimState } from './state';
 
 export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap';
@@ -36,6 +36,8 @@ export interface Furniture {
   scavenge: boolean;
   /** Stations (workbench, stove): input brought in for the next job. Given back if the station is removed. */
   stored: number;
+  /** What `stored` is (wood, cloth, food); null when empty. */
+  storedKind: ItemKind | null;
 }
 
 /**
@@ -77,6 +79,7 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     loot: kind === 'crate' ? CRATE_LOOT : kind === 'tree' ? TREE_WOOD : kind === 'trap' ? TRAP_CHARGES : 0,
     scavenge: false,
     stored: 0,
+    storedKind: null,
   };
   state.furniture.push(f);
   indexes.delete(state.furniture);
@@ -93,5 +96,5 @@ export function removeFurniture(state: SimState, f: Furniture): void {
   const i = state.furniture.indexOf(f);
   if (i >= 0) state.furniture.splice(i, 1);
   indexes.delete(state.furniture);
-  for (let n = 0; n < f.stored; n++) spawnItem(state, f.kind === 'stove' ? 'food' : 'wood', f.x, f.y);
+  for (let n = 0; n < f.stored; n++) spawnItem(state, f.storedKind ?? 'wood', f.x, f.y);
 }
