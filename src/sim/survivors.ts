@@ -9,6 +9,7 @@
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
 import { startingAge } from './family';
+import { legSlowed, type Limb, type Wound } from './wounds';
 import { HYDRATION_MAX, type Drink } from './water';
 import type { Thought } from './mood';
 import { GROUNDS, getTile, setDirty, type Point } from './grid';
@@ -136,6 +137,11 @@ export interface Survivor {
   /** Kills made, and hours kept watch on a tower at night (for earned traits, skills.ts). */
   kills: number;
   watchHours: number;
+  /** A wound to an arm or leg, healing by `until`; bleeding until bandaged (wounds.ts). */
+  wound: Wound | null;
+  bleeding: boolean;
+  /** The limb an infecting bite went into, while an amputation could still save them. */
+  bitten: Limb | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -190,6 +196,9 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     shift: 'day',
     kills: 0,
     watchHours: 0,
+    wound: null,
+    bleeding: false,
+    bitten: null,
   };
   state.survivors.push(survivor);
   return survivor;
@@ -260,7 +269,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
   const next = s.path.shift()!;
   // Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.
   const road = ROAD_GROUNDS.includes(state.grid.ground[next.y * state.grid.width + next.x]!);
-  const pace = Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0));
+  const pace = Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0));
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: pace };
 }
 

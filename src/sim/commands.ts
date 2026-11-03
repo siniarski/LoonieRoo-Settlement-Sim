@@ -26,6 +26,8 @@ import { stopReading } from './books';
 import { giveGift } from './settlements';
 import { decidePrisoner } from './prisoners';
 import { fulfilRequest } from './radio';
+import { isPolicy, type Policy } from './policies';
+import { amputate } from './wounds';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -81,6 +83,10 @@ export type Command =
   | { type: 'planPerimeter'; x0: number; y0: number; x1: number; y1: number }
   /** Send a neighbour what they asked for on the radio (radio.ts). */
   | { type: 'fulfilRequest'; requestId: string }
+  /** Switch a colony policy on or off (policies.ts). */
+  | { type: 'setPolicy'; policy: Policy; on: boolean }
+  /** Take off an infected survivor's bitten limb, while it can still save them (wounds.ts). */
+  | { type: 'amputate'; survivorId: string }
   /** Send food to a neighbouring settlement (settlements.ts). */
   | { type: 'giftSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
@@ -192,6 +198,19 @@ function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'planPerimeter') return planPerimeter(state, command.x0, command.y0, command.x1, command.y1);
   if (command.type === 'fulfilRequest') {
     const failed = fulfilRequest(state, command.requestId);
+    return failed ? reject(failed) : changed();
+  }
+  if (command.type === 'setPolicy') {
+    if (!isPolicy(command.policy)) return reject(`unknown policy ${String(command.policy)}`);
+    const on = state.policies.includes(command.policy);
+    if (on === command.on) return unchanged();
+    state.policies = command.on ? [...state.policies, command.policy] : state.policies.filter((p) => p !== command.policy);
+    return changed();
+  }
+  if (command.type === 'amputate') {
+    const s = getSurvivor(state, command.survivorId);
+    if (!s) return reject(`no survivor ${command.survivorId}`);
+    const failed = amputate(state, s);
     return failed ? reject(failed) : changed();
   }
   if (command.type === 'giftSettlement') {

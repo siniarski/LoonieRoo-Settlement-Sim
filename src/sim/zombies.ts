@@ -29,6 +29,7 @@ import { makeNoise } from './noise';
 import { threatScale } from './director';
 import { maybeCapture } from './prisoners';
 import { maybeSample, siegeFactor } from './endgame';
+import { maybeWound } from './wounds';
 import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
@@ -362,12 +363,17 @@ function plan(state: SimState, z: Zombie): void {
 function hit(state: SimState, z: Zombie, s: Survivor): void {
   const damage = z.kind === 'raider' ? RAIDER_DAMAGE : VARIANTS[z.variant].damage;
   const armoured = wearing(state, s, 'armour') !== undefined;
+  const limb = maybeWound(state, s, z.id);
   s.health = Math.max(0, s.health - armourDamage(state, s, hasTrait(s, 'tough') ? Math.round((damage * 3) / 4) : damage));
   s.lastHurtBy = z.kind === 'raider' ? 'a raider' : 'a zombie attack';
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
-  if (z.kind !== 'raider') maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);
+  if (z.kind !== 'raider') {
+    const was = s.infection;
+    maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);
+    if (was === null && s.infection !== null) s.bitten = limb;
+  }
   z.cooldown = ZOMBIE_ATTACK_EVERY;
 }
 

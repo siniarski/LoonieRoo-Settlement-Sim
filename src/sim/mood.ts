@@ -12,6 +12,7 @@ import { forget } from './relationships';
 import { INFECTED_MOOD } from './infection';
 import { SICK_MOOD } from './corpses';
 import { THIRSTY_MOOD, isThirsty } from './water';
+import { LEADER_MOOD, RATIONED_MOOD, policyOn } from './policies';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
@@ -31,7 +32,8 @@ export type ThoughtKind =
   | 'lostFriend'
   | 'stench'
   | 'paidRespects'
-  | 'dog';
+  | 'dog'
+  | 'lostLeader';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -55,6 +57,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   stench: { label: 'the stench of the dead', effect: -8, duration: DAY_LENGTH / 4 },
   paidRespects: { label: 'paid their respects', effect: 15, duration: 2 * DAY_LENGTH },
   dog: { label: 'spent time with a dog', effect: 5, duration: DAY_LENGTH / 2 },
+  lostLeader: { label: 'lost our leader', effect: -20, duration: 2 * DAY_LENGTH },
 };
 
 export const MOOD_BASE = 50;
@@ -88,6 +91,8 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
   if (s.infection !== null) factors.push(['infected', INFECTED_MOOD]);
   if (s.sick !== null) factors.push(['sick', SICK_MOOD]);
   if (isThirsty(s)) factors.push(['thirsty', THIRSTY_MOOD]);
+  if (policyOn(state, 'rationing')) factors.push(['on rations', RATIONED_MOOD]);
+  if (state.leaderId && state.leaderId !== s.id && state.survivors.some((o) => o.id === state.leaderId)) factors.push(['a good leader', LEADER_MOOD]);
   for (const t of s.traits) if (TRAIT_INFO[t].mood !== 0) factors.push([TRAIT_INFO[t].label, TRAIT_INFO[t].mood]);
   return factors;
 }
@@ -104,8 +109,11 @@ export function isMiserable(state: SimState, s: Survivor): boolean {
 /** Everyone left in the colony remembers a death; friends of the dead take it hardest. */
 export function mournDeath(state: SimState, dead: Survivor): void {
   const friends = forget(state, dead);
+  const wasLeader = state.leaderId === dead.id;
+  if (wasLeader) state.leaderId = null;
   for (const s of state.survivors) {
     addThought(state, s, friends.has(s.id) ? 'lostFriend' : 'sawDeath');
     if (friends.has(s.id)) earnTrait(state, s, 'haunted', `lost ${dead.name}`);
+    if (wasLeader) addThought(state, s, 'lostLeader');
   }
 }

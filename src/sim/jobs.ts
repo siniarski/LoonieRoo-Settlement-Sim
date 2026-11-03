@@ -33,6 +33,8 @@ import { startReading } from './books';
 import { isWet } from './seasons';
 import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight, isPowered } from './power';
 import { CURE_SAMPLES, RESEARCH_WORK, researchWanted, studied } from './endgame';
+import { policyOn } from './policies';
+import { isNight } from './time';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
 import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
@@ -963,7 +965,9 @@ export function seekJob(state: SimState, s: Survivor): boolean {
 export function chooseJob(state: SimState, s: Survivor): { job: Job; plan: Plan; why: string } | null {
   for (const type of typesByPriority(s)) {
     const open = openJobsByDistance(state, type, s.pos);
-    for (const job of open.slice(0, MAX_CANDIDATES)) {
+    // Curfew: at night, only guards, firefighters and doctors work outdoors.
+    const curfew = policyOn(state, 'curfew') && isNight(state.tick) && type !== 'guard' && type !== 'firefight' && type !== 'doctor';
+    for (const job of open.filter((j) => !curfew || isIndoors(state, j.x, j.y)).slice(0, MAX_CANDIDATES)) {
       const plan = planJob(state, s, job);
       if (plan) return { job, plan, why: `priority ${s.priorities[type]}, nearest of ${open.length} open` };
     }

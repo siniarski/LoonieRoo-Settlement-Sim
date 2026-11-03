@@ -46,6 +46,7 @@ import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
 import { cancelDressing, reconcileDressing, undress } from './clothing';
 import { leaveCorpse } from './corpses';
+import { quarantined, satietyDrains } from './policies';
 import { stopReading } from './books';
 import { DRINK_RETRY_TICKS, cancelDrink, findWater, thirstInterrupts } from './water';
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
@@ -71,7 +72,7 @@ export function onGuardDuty(state: SimState, s: Survivor): boolean {
  * critically hurt (then bed is where they recover, zombies or not).
  */
 export function wantsSleep(state: SimState, s: Survivor): boolean {
-  return (isTired(state, s) && !zombieNear(state, s.pos)) || isCritical(s.health);
+  return (isTired(state, s) && !zombieNear(state, s.pos)) || isCritical(s.health) || quarantined(state, s);
 }
 
 export function isHungry(s: Survivor): boolean {
@@ -307,8 +308,8 @@ export function cancelTreatment(state: SimState, s: Survivor, note: string): voi
 }
 
 /** Satiety drains every tick, awake or asleep. */
-export function updateSatiety(s: Survivor): void {
-  s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
+export function updateSatiety(state: SimState, s: Survivor): void {
+  if (satietyDrains(state)) s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
 }
 
 // --- Health -----------------------------------------------------------------

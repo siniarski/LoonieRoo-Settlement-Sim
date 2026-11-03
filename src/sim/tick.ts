@@ -41,6 +41,8 @@ import { updateDirector } from './director';
 import { updatePrisoners } from './prisoners';
 import { updateRadio } from './radio';
 import { updateEndgame } from './endgame';
+import { updateLeader } from './policies';
+import { updateWounds } from './wounds';
 import { countWatch } from './towers';
 import { stopReading, updateReading } from './books';
 import { updateDogs } from './dogs';
@@ -63,6 +65,7 @@ export function tick(state: SimState): void {
   updatePrisoners(state);
   updateRadio(state);
   updateEndgame(state);
+  updateLeader(state);
   updateSpoilage(state);
   updateDogs(state);
   updateSettlements(state);
@@ -98,7 +101,8 @@ export function tick(state: SimState): void {
       } else if (!s.breakdown && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
     }
     updateRest(state, s);
-    updateSatiety(s);
+    updateSatiety(state, s);
+    updateWounds(state, s);
     updateHydration(state, s);
     countWatch(state, s);
     forgetThoughts(state, s);

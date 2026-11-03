@@ -249,6 +249,7 @@ export function checkInvariants(state: SimState): string[] {
       if (!book || book.kind !== 'book' || book.reservedBy !== s.id || !book.pos) problems.push(`${s.name} is reading ${s.reading.itemId}, which isn't a reserved book on the ground`);
       if (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.dressing || s.drink || s.leisure) problems.push(`${s.name} is reading while busy with something else`);
     }
+    if (s.bitten !== null && s.infection === null) problems.push(`${s.name} has a bite with no infection`);
     if (s.childUntil !== null && s.jobId) problems.push(`${s.name} is a child with job ${s.jobId}`);
     if (s.cartLoad.length > 0 && (!s.jobId || !s.cart || !s.carrying)) problems.push(`${s.name} has a loaded cart with no haul on`);
     if (s.cart && (items.get(s.cart)?.kind !== 'cart' || items.get(s.cart)?.carriedBy !== s.id)) problems.push(`${s.name} pushes ${s.cart}, which isn't their cart`);

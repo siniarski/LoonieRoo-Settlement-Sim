@@ -15,6 +15,7 @@ import { zombiesForNight } from './zombies';
 import { manhattan } from './space';
 import { everyone } from './expeditions';
 import { daysToSiege } from './endgame';
+import { canAmputate } from './wounds';
 
 export type AlertLevel = 'danger' | 'warn' | 'info';
 
@@ -79,6 +80,8 @@ export function alerts(state: SimState): Alert[] {
     if (state.harsh && s.hydration === 0) add('danger', `${s.name} is dying of thirst`, s.pos);
     else if (state.harsh && s.hydration < THIRSTY / 2) add('warn', `${s.name} is thirsty`, s.pos);
     if (s.sick !== null) add('warn', `${s.name} is sick (medicine helps)`, s.pos);
+    if (s.bleeding) add('warn', `${s.name} is bleeding (a bandage stops it)`, s.pos);
+    if (canAmputate(s)) add('danger', `${s.name}'s bitten ${s.bitten} could come off and save them (overview: amputate)`, s.pos);
   }
 
   // Stocks and the season.

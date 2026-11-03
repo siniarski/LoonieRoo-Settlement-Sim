@@ -28,13 +28,14 @@ import type { Animal } from './animals';
 import type { Prisoner } from './prisoners';
 import type { SupplyRequest } from './radio';
 import { newEndgame, type Endgame } from './endgame';
+import type { Policy } from './policies';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 46;
+export const SCHEMA_VERSION = 47;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -96,6 +97,10 @@ export interface SimState {
   requests: SupplyRequest[];
   /** The two ways to win (endgame.ts). */
   endgame: Endgame;
+  /** Colony policies switched on (policies.ts). */
+  policies: Policy[];
+  /** The colony's leader, settled each dawn (policies.ts). */
+  leaderId: string | null;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -151,6 +156,8 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     prisoners: [],
     requests: [],
     endgame: newEndgame(),
+    policies: [],
+    leaderId: null,
     items: [],
     furniture: [],
     farm: [],

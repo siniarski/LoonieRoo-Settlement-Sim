@@ -15,6 +15,8 @@ import type { SimState } from '../sim/state';
 import { HYDRATION_MAX } from '../sim/water';
 import { threatScale } from '../sim/director';
 import { CURE_SAMPLES } from '../sim/endgame';
+import { POLICIES, POLICY_INFO } from '../sim/policies';
+import { canAmputate } from '../sim/wounds';
 import { dayOf } from '../sim/time';
 import type { ViewState } from './view';
 
@@ -91,6 +93,13 @@ export function createOverview(view: ViewState, command: (cmd: Command) => void)
           doing,
         ];
         for (const c of cells) row.append(el('td', '', c));
+        if (canAmputate(s)) {
+          const cut = el('button', 'hud-button', `Amputate ${s.bitten}`);
+          cut.addEventListener('click', () => command({ type: 'amputate', survivorId: s.id }));
+          const td = el('td', '');
+          td.append(cut);
+          row.append(td);
+        }
         table.append(row);
       }
       const away = state.expeditions.flatMap((x) => x.members.map((m) => m.name));
@@ -117,6 +126,19 @@ export function createOverview(view: ViewState, command: (cmd: Command) => void)
           root.append(row);
         }
       }
+
+      // Policies and the leader.
+      const leader = state.survivors.find((s) => s.id === state.leaderId);
+      root.append(el('div', 'hud-overview-head', `Policies · leader: ${leader ? leader.name : 'nobody yet'}`));
+      const prow = el('div', 'hud-wanderer');
+      for (const p of POLICIES) {
+        const on = state.policies.includes(p);
+        const b = el('button', `hud-button${on ? ' active' : ''}`, `${on ? '✓' : '✗'} ${p}`);
+        b.title = POLICY_INFO[p];
+        b.addEventListener('click', () => command({ type: 'setPolicy', policy: p, on: !on }));
+        prow.append(b);
+      }
+      root.append(prow);
 
       // Everything else.
       const eg = state.endgame;

@@ -14,6 +14,7 @@ import { logEvent } from './events';
 import type { JobType } from './jobTypes';
 import { isMiserable } from './mood';
 import { ELDER } from './family';
+import { armSlowed } from './wounds';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 
@@ -22,7 +23,7 @@ export const MAX_LEVEL = 10;
 /** Extra guard damage per guard level. */
 export const GUARD_DAMAGE_PER_LEVEL = 5;
 
-export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick' | 'hardened' | 'vigilant' | 'haunted';
+export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick' | 'hardened' | 'vigilant' | 'haunted' | 'lostArm' | 'lostLeg';
 /** The traits people are born with (rollTraits); the rest are earned (earnTrait). */
 export const TRAITS: readonly Trait[] = ['tough', 'lazy', 'greenThumb', 'cheerful', 'gloomy', 'quick'];
 
@@ -41,6 +42,8 @@ export const TRAIT_INFO: Record<Trait, { label: string; about: string; mood: num
   hardened: { label: 'hardened', about: `hits ${HARDENED_DAMAGE} harder (earned: many kills)`, mood: 0 },
   vigilant: { label: 'vigilant', about: `sees ${VIGILANT_SIGHT} tiles further (earned: nights on watch)`, mood: 0 },
   haunted: { label: 'haunted', about: 'never quite got over losing a friend', mood: -5 },
+  lostArm: { label: 'one-armed', about: 'works slower (an amputation)', mood: -5 },
+  lostLeg: { label: 'one-legged', about: 'walks slower (an amputation)', mood: -5 },
 };
 
 /** Experience leaves its mark (once). */
@@ -74,7 +77,7 @@ function toolBonus(state: SimState, s: Survivor, type: JobType): number {
 }
 
 export function workStep(state: SimState, s: Survivor, type: JobType): number {
-  const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy') || s.sick !== null || s.age >= ELDER;
+  const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy') || s.sick !== null || s.age >= ELDER || armSlowed(s);
   if (!worksThisTick(state.tick, slowed)) return 0;
   s.xp[type] = (s.xp[type] ?? 0) + 1;
   return 1 + (state.tick % 20 < skillLevel(s, type) ? 1 : 0) + toolBonus(state, s, type);

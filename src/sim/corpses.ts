@@ -20,7 +20,10 @@ import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { addThought } from './mood';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, dayOf } from './time';
+import { getRoomMap } from './rooms';
+import { seasonOf } from './seasons';
+import { policyOn } from './policies';
 
 export const CORPSE_ROT = DAY_LENGTH / 2;
 export const CORPSE_GONE = DAY_LENGTH;
@@ -32,6 +35,11 @@ export const SICK_TICKS = DAY_LENGTH;
 /** A sick survivor loses 1 health this often. */
 export const SICK_DAMAGE_EVERY = 40;
 export const SICK_MOOD = -10;
+/** Contagion (spreadSickness). */
+export const CONTAGION = 0.1;
+export const CONTAGION_RADIUS = 2;
+export const CRAMPED_TILES = 6;
+export const FLU_CHANCE = 0.15;
 
 export function leaveCorpse(state: SimState, p: { x: number; y: number }, name: string | null): void {
   if (!state.harsh) return;
@@ -48,6 +56,7 @@ export function updateCorpses(state: SimState): void {
   if (!state.harsh) return;
   for (const s of state.survivors) updateSickness(state, s);
   if (state.tick % CORPSE_CHECK_EVERY !== 0) return;
+  spreadSickness(state);
   const corpses = state.items.filter((i) => i.kind === 'corpse');
   if (corpses.length === 0) return;
   // Zombies' bodies go in the end; a survivor's waits for burial.
@@ -60,6 +69,37 @@ export function updateCorpses(state: SimState): void {
     if (s.sick === null && hashRoll(idNumber(s.id), state.tick) < SICK_CHANCE) {
       s.sick = SICK_TICKS;
       logEvent(state, `${s.name} fell sick from the rotting dead (medicine helps)`);
+    }
+  }
+}
+
+/**
+ * Sickness is catching: every check, each sick survivor up and about (not in bed, not under
+ * quarantine) may pass it to anyone within CONTAGION_RADIUS indoors, twice as likely in a
+ * cramped room (under CRAMPED_TILES a head). In autumn and winter a flu may also start at dawn.
+ */
+function spreadSickness(state: SimState): void {
+  const season = seasonOf(state.tick);
+  if (state.tick % DAY_LENGTH === 0 && (season === 'autumn' || season === 'winter') && hashRoll(dayOf(state.tick), 0xf1e) < FLU_CHANCE) {
+    const s = state.survivors[Math.floor(hashRoll(dayOf(state.tick), 1) * state.survivors.length)];
+    if (s && s.sick === null) {
+      s.sick = SICK_TICKS;
+      logEvent(state, `${s.name} has come down with the flu (it's catching: quarantine helps, medicine cures)`);
+    }
+  }
+  const { rooms } = getRoomMap(state);
+  for (const carrier of state.survivors) {
+    if (carrier.sick === null || carrier.sleep?.asleep || policyOn(state, 'quarantine')) continue;
+    const label = labelAt(state, carrier.pos.x, carrier.pos.y);
+    if (label < 0) continue;
+    const room = rooms[label]!;
+    const heads = state.survivors.filter((o) => labelAt(state, o.pos.x, o.pos.y) === label).length;
+    const chance = CONTAGION * (room.tiles.length / heads < CRAMPED_TILES ? 2 : 1);
+    for (const o of state.survivors) {
+      if (o === carrier || o.sick !== null || manhattan(o.pos, carrier.pos) > CONTAGION_RADIUS) continue;
+      if (hashRoll(idNumber(o.id), idNumber(carrier.id), state.tick) >= chance) continue;
+      o.sick = SICK_TICKS;
+      logEvent(state, `${o.name} caught it from ${carrier.name}`);
     }
   }
 }
