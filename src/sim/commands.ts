@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
@@ -119,7 +120,9 @@ export type Command =
   /** Group orders (orders.ts): follow whoever you control, hold a spot (here, or where they stand), or settle into the colony's jobs. */
   | { type: 'setOrder'; survivorId: string; order: 'follow' | 'hold' | 'settle'; x?: number; y?: number }
   /** The same order to everyone within earshot of the survivor you control. */
-  | { type: 'shout'; order: 'follow' | 'hold' | 'settle' };
+  | { type: 'shout'; order: 'follow' | 'hold' | 'settle' }
+  /** Talk to a survivor (talk.ts); without an id, the nearest one to the survivor you control. */
+  | { type: 'talk'; survivorId?: string };
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -152,6 +155,17 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'talk') {
+    const you = controlled(state);
+    const s = command.survivorId
+      ? getSurvivor(state, command.survivorId)
+      : you
+        ? state.survivors.filter((o) => o !== you).sort((a, b) => Math.abs(a.pos.x - you.pos.x) + Math.abs(a.pos.y - you.pos.y) - (Math.abs(b.pos.x - you.pos.x) + Math.abs(b.pos.y - you.pos.y)))[0]
+        : undefined;
+    if (!s) return reject(command.survivorId ? `no survivor ${command.survivorId}` : 'nobody to talk to');
+    const why = talk(state, s);
+    return why ? reject(why) : changed();
   }
   if (command.type === 'setOrder') {
     const s = getSurvivor(state, command.survivorId);

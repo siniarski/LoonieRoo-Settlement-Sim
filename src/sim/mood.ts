@@ -33,7 +33,11 @@ export type ThoughtKind =
   | 'stench'
   | 'paidRespects'
   | 'dog'
-  | 'lostLeader';
+  | 'lostLeader'
+  | 'wentHome'
+  | 'laidToRest'
+  | 'petFound'
+  | 'burnedThePast';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -58,6 +62,10 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   paidRespects: { label: 'paid their respects', effect: 15, duration: 2 * DAY_LENGTH },
   dog: { label: 'spent time with a dog', effect: 5, duration: DAY_LENGTH / 2 },
   lostLeader: { label: 'lost our leader', effect: -20, duration: 2 * DAY_LENGTH },
+  wentHome: { label: 'saw to their old home', effect: 10, duration: 3 * DAY_LENGTH },
+  laidToRest: { label: 'laid their dead to rest', effect: 20, duration: 4 * DAY_LENGTH },
+  petFound: { label: 'their dog was found', effect: 15, duration: 3 * DAY_LENGTH },
+  burnedThePast: { label: 'burned the past', effect: 15, duration: 3 * DAY_LENGTH },
 };
 
 export const MOOD_BASE = 50;

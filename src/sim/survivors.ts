@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { makeStory, type Story } from './story';
 import type { Order } from './orders';
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
@@ -146,6 +147,8 @@ export interface Survivor {
   bitten: Limb | null;
   /** Follow or hold (orders.ts); null is settled, working the colony's jobs. */
   order: Order | null;
+  /** Who they were before (story.ts). */
+  story: Story;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -205,6 +208,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     bleedUntil: 0,
     bitten: null,
     order: null,
+    story: makeStory(`s${n}`),
   };
   state.survivors.push(survivor);
   return survivor;

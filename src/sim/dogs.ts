@@ -31,6 +31,8 @@ export interface Dog {
   nextThinkTick: number;
   /** Last time it barked (so it isn't every tick). */
   barkedTick: number;
+  /** A lost pet sitting at its old home until someone comes for it (talk.ts). */
+  waiting: boolean;
 }
 
 export const DOG_HEALTH = 300;
@@ -49,7 +51,7 @@ const DOG_NAMES = ['Rex', 'Bess', 'Scout', 'Moss', 'Patch', 'Juno', 'Biscuit', '
 
 export function addDog(state: SimState, x: number, y: number): Dog {
   const n = state.nextId++;
-  const dog: Dog = { id: `g${n}`, name: DOG_NAMES[n % DOG_NAMES.length]!, pos: { x, y }, move: null, path: [], health: DOG_HEALTH, cooldown: 0, nextThinkTick: 0, barkedTick: -BARK_EVERY };
+  const dog: Dog = { id: `g${n}`, name: DOG_NAMES[n % DOG_NAMES.length]!, pos: { x, y }, move: null, path: [], health: DOG_HEALTH, cooldown: 0, nextThinkTick: 0, barkedTick: -BARK_EVERY, waiting: false };
   state.dogs.push(dog);
   return dog;
 }
@@ -67,8 +69,18 @@ export function updateDogs(state: SimState): void {
   }
 }
 
+export function getDogById(state: SimState, id: string): Dog | undefined {
+  return state.dogs.find((d) => d.id === id);
+}
+
 function updateDog(state: SimState, dog: Dog): void {
   dog.cooldown = Math.max(0, dog.cooldown - 1);
+  if (dog.waiting) {
+    const found = state.survivors.find((s) => manhattan(s.pos, dog.pos) <= 2);
+    if (!found) return;
+    dog.waiting = false;
+    logEvent(state, `${found.name} found ${dog.name}, waiting at the house`);
+  }
   if (dog.move) {
     dog.move.progress += 1;
     if (dog.move.progress < dog.move.duration) return;

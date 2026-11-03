@@ -1,5 +1,6 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
+import type { Task } from '../sim/talk';
 import type { Blueprint, BuildTarget } from '../sim/designations';
 import { growTicks, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
@@ -323,6 +324,7 @@ export function draw(
     }
     if (s.id === options.selectedId && s.goal) drawGoal(ctx, camera, viewport, s.goal, size);
   }
+  for (const t of state.tasks) drawTask(ctx, camera, viewport, t, size);
   for (const a of state.exploreAreas) drawAreaBox(ctx, camera, viewport, { from: { x: a.x0, y: a.y0 }, to: { x: a.x1, y: a.y1 } }, COLOURS.tools.explore);
   for (const h of state.herds) {
     const onScreen = h.x >= range.x0 && h.x <= range.x1 && h.y >= range.y0 && h.y <= range.y1;
@@ -966,6 +968,27 @@ function drawZombie(
     ctx.fillStyle = COLOURS.needLow;
     ctx.fillRect(p.x - w / 2, p.y + radius + 3, (w * z.health) / z.maxHealth, h);
   }
+}
+
+/** A task's spot: a gold diamond (shown through fog, like a heard herd), labelled once zoomed in. */
+function drawTask(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, t: Task, size: number): void {
+  const p = worldToScreen(camera, viewport, t.x + 0.5, t.y + 0.5);
+  const r = Math.max(4, size * 0.4);
+  ctx.strokeStyle = COLOURS.controlled;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y - r);
+  ctx.lineTo(p.x + r, p.y);
+  ctx.lineTo(p.x, p.y + r);
+  ctx.lineTo(p.x - r, p.y);
+  ctx.closePath();
+  ctx.stroke();
+  if (size < MIN_LABEL_PX) return;
+  ctx.fillStyle = COLOURS.controlled;
+  ctx.font = `${Math.round(Math.min(13, size * 0.42))}px ui-monospace, Consolas, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText({ home: 'old home', bury: 'the dead', pet: 'the dog', burn: 'burn this' }[t.kind], p.x, p.y - r - 2);
 }
 
 function drawSurvivor(

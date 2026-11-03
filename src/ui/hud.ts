@@ -2,6 +2,8 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { describeTasks } from '../sim/talk';
+import { storyLines } from '../sim/story';
 import { describeOrder } from '../sim/orders';
 import { NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type PresetId, type Settings } from '../sim/difficulty';
 import { controlled } from '../sim/control';
@@ -116,9 +118,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const traders = createTraderPanel(command);
   const neighbours = createSettlementPanel(command);
   const prisoners = createPrisonerPanel(command);
+  const story = createStoryPanel(view, command);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
-  info.append(status, controlLine, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
+  info.append(status, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -153,7 +156,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · F let go`
+        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · T talk · F let go`
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';
@@ -197,6 +200,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       traders.update(state);
       neighbours.update(state);
       prisoners.update(state);
+      story.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -425,6 +429,44 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       });
       root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
       root.append(row('Sandbox:', start, zombies, weather, progression, winter));
+    },
+  };
+}
+
+/** The selected survivor's story so far, what they've asked of you, and a Talk button. */
+function createStoryPanel(view: ViewState, command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const s = state.survivors.find((x) => x.id === view.selectedId && x.id !== state.control?.survivorId);
+      const told = s ? storyLines(s.story).slice(0, s.story.told) : [];
+      const asks = s ? describeTasks(state, s) : [];
+      const key = JSON.stringify([s?.id ?? null, told.length, asks]);
+      if (key === last) return;
+      last = key;
+      root.hidden = !s;
+      root.replaceChildren();
+      if (!s) return;
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = `${s.name}'s story`;
+      root.append(title);
+      for (const line of told.length > 0 ? told.map((l) => `"${l}"`) : ["You don't know much about them yet."]) {
+        const p = el('div', 'hud-story-line');
+        p.textContent = line;
+        root.append(p);
+      }
+      for (const ask of asks) {
+        const p = el('div', 'hud-story-ask');
+        p.textContent = `${s.name} ${ask}`;
+        root.append(p);
+      }
+      const talkButton = el('button', 'hud-button');
+      talkButton.textContent = `Talk to ${s.name}`;
+      talkButton.title = 'Once every couple of hours. While you control someone, they need to be next to them (or press T).';
+      talkButton.addEventListener('click', () => command({ type: 'talk', survivorId: s.id }));
+      root.append(talkButton);
     },
   };
 }
