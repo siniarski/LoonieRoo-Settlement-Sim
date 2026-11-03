@@ -69,7 +69,7 @@ export function alerts(state: SimState): Alert[] {
   if (eg.won) add('info', eg.won === 'cure' ? 'You found the cure. You have won' : 'The helicopter came. You have won');
   else if (eg.evacuation !== null) add('warn', `The helicopter comes at dawn on day ${dayOf(eg.evacuation)}: hold out (the last night is a siege)`);
   const toSiege = daysToSiege(state.tick);
-  if (toSiege <= 2) add(toSiege === 0 ? 'danger' : 'warn', toSiege === 0 ? 'Siege tonight: twice the zombies' : `Siege in ${toSiege} night${toSiege === 1 ? '' : 's'}`);
+  if (toSiege <= 2) add(toSiege === 0 ? 'danger' : 'warn', toSiege === 0 ? 'Siege tonight: a quarter more zombies' : `Siege in ${toSiege} night${toSiege === 1 ? '' : 's'}`);
 
   // People.
   for (const s of people) {

@@ -140,6 +140,7 @@ export interface Survivor {
   /** A wound to an arm or leg, healing by `until`; bleeding until bandaged (wounds.ts). */
   wound: Wound | null;
   bleeding: boolean;
+  bleedUntil: number;
   /** The limb an infecting bite went into, while an amputation could still save them. */
   bitten: Limb | null;
 }
@@ -198,6 +199,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     watchHours: 0,
     wound: null,
     bleeding: false,
+    bleedUntil: 0,
     bitten: null,
   };
   state.survivors.push(survivor);

@@ -5,8 +5,8 @@
 // study (jobs.ts): bring one to the bench, work RESEARCH_WORK, and it's
 // studied. CURE_SAMPLES studied and the colony has a cure.
 //
-// Evacuation: a powered beacon and a powered radio get through to the
-// military. A helicopter is promised for the dawn EVAC_DAYS later; the night
+// Evacuation: from day EVAC_FROM_DAY, a powered beacon and a powered radio get
+// through to the military. A helicopter is promised for the dawn EVAC_DAYS later; the night
 // before it is the worst siege of all (EVAC_SIEGE times the zombies). Anyone
 // still alive at that dawn is flown out.
 //
@@ -31,12 +31,16 @@ export interface Endgame {
 }
 
 export const SAMPLE_CHANCE = 0.15;
-export const CURE_SAMPLES = 15;
+export const CURE_SAMPLES = 40;
 export const RESEARCH_WORK = 200;
 export const EVAC_DAYS = 3;
+/** The military only answers from this day on (a year in). */
+export const EVAC_FROM_DAY = 20;
 export const EVAC_SIEGE = 3;
 export const SIEGE_EVERY = 7;
-export const SIEGE_FACTOR = 2;
+/** The first siege night (balance pass 5: night 7 was too soon). */
+export const FIRST_SIEGE = 14;
+export const SIEGE_FACTOR = 1.25;
 
 export function newEndgame(): Endgame {
   return { cure: 0, evacuation: null, won: null };
@@ -52,12 +56,13 @@ export function siegeFactor(state: SimState, night: number): number {
   const evac = state.endgame.evacuation;
   // The helicopter comes at 06:00; the night before began at 21:00 the day before.
   if (evac !== null && dayOf(evac) - 1 === night) return EVAC_SIEGE;
-  return night % SIEGE_EVERY === 0 ? SIEGE_FACTOR : 1;
+  return night >= FIRST_SIEGE && night % SIEGE_EVERY === 0 ? SIEGE_FACTOR : 1;
 }
 
 /** Days to the next siege night (0: tonight). */
 export function daysToSiege(tick: number): number {
   const day = dayOf(tick);
+  if (day < FIRST_SIEGE) return FIRST_SIEGE - day;
   return (SIEGE_EVERY - (day % SIEGE_EVERY)) % SIEGE_EVERY;
 }
 
@@ -77,11 +82,11 @@ export function updateEndgame(state: SimState): void {
   const eg = state.endgame;
   if (state.tick % DAY_LENGTH === 0 && state.tick > 0) {
     const ahead = daysToSiege(state.tick);
-    if (ahead === 2) logEvent(state, `A siege is coming in two nights (night ${dayOf(state.tick) + 2}): twice the zombies. Get ready`);
+    if (ahead === 2) logEvent(state, `A siege is coming in two nights (night ${dayOf(state.tick) + 2}): a quarter more zombies. Get ready`);
   }
   if (eg.won !== null) return;
   if (eg.evacuation === null) {
-    if (!hasRadio(state) || !state.furniture.some((f) => f.kind === 'beacon' && isPowered(state, f))) return;
+    if (dayOf(state.tick) < EVAC_FROM_DAY || !hasRadio(state) || !state.furniture.some((f) => f.kind === 'beacon' && isPowered(state, f))) return;
     // The dawn EVAC_DAYS days on.
     eg.evacuation = (Math.floor(state.tick / DAY_LENGTH) + EVAC_DAYS) * DAY_LENGTH;
     logEvent(state, `The beacon got through: a helicopter will come at dawn on day ${dayOf(eg.evacuation)}. The night before will be the worst yet. Hold out`);

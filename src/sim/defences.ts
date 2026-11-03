@@ -41,7 +41,7 @@ export const TURRET_EVERY = 20;
 export const TURRET_DAMAGE = 100;
 export const TURRET_AMMO_MAX = 2;
 export const PIT_TICKS = 100;
-export const NIGHT_SIGHT = 5;
+export const NIGHT_SIGHT = 8;
 export const TOWER_NIGHT_SIGHT = 10;
 
 export function isReinforced(state: SimState, x: number, y: number): boolean {

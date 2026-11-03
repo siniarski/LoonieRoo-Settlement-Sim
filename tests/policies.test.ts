@@ -70,6 +70,7 @@ describe('wounds and amputation', () => {
     const state = loadScenario({ seed: 1, map: ['s'] });
     const s = state.survivors[0]!;
     s.bleeding = true;
+    s.bleedUntil = 1e9;
     const h = s.health;
     for (let t = 0; t < BLEED_EVERY * 4; t++) {
       state.tick = t;

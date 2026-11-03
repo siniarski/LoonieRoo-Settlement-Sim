@@ -1,6 +1,6 @@
 // Wounds: a zombie or raider blow sometimes lands on an arm or a leg
 // (WOUND_CHANCE, a hash). The wound bleeds (a health point every
-// BLEED_EVERY ticks) until a bandage stops it, and slows its owner for
+// BLEED_EVERY ticks) for BLEED_TICKS or until a bandage stops it, and slows its owner for
 // WOUND_TICKS: an arm wound slows work, a leg wound slows walking.
 //
 // A bite that infects is remembered by limb. Within AMPUTATE_WINDOW of the
@@ -22,9 +22,11 @@ export interface Wound {
   until: number;
 }
 
-export const WOUND_CHANCE = 0.25;
+export const WOUND_CHANCE = 0.15;
 export const WOUND_TICKS = 2 * DAY_LENGTH;
 export const BLEED_EVERY = 15;
+/** Bleeding stops by itself after this (sooner with a bandage). Balance pass 5: it ran on until bandaged, and bandages ran out. */
+export const BLEED_TICKS = 300;
 /** Ticks of infection within which an amputation saves them. */
 export const AMPUTATE_WINDOW = INFECTION_TURN / 4;
 export const AMPUTATION_COST = 300;
@@ -35,12 +37,14 @@ export function maybeWound(state: SimState, s: Survivor, attackerId: string): Li
   if (!s.wound && hashRoll(idNumber(attackerId), state.tick, idNumber(s.id), 2) < WOUND_CHANCE) {
     s.wound = { limb, until: state.tick + WOUND_TICKS };
     s.bleeding = true;
+    s.bleedUntil = state.tick + BLEED_TICKS;
   }
   return limb;
 }
 
 export function updateWounds(state: SimState, s: Survivor): void {
   if (s.wound && state.tick >= s.wound.until) s.wound = null;
+  if (s.bleeding && state.tick >= s.bleedUntil) s.bleeding = false;
   if (s.bleeding && state.tick % BLEED_EVERY === 0) {
     s.health = Math.max(0, s.health - 1);
     s.lastHurtBy = 'bleeding';
@@ -68,6 +72,7 @@ export function amputate(state: SimState, s: Survivor): string | null {
   s.infection = null;
   s.bitten = null;
   s.bleeding = true;
+  s.bleedUntil = state.tick + BLEED_TICKS;
   s.health = Math.max(1, s.health - AMPUTATION_COST);
   s.lastHurtBy = 'an amputation';
   const trait = limb === 'arm' ? 'lostArm' : 'lostLeg';

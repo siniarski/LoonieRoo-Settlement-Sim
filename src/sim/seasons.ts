@@ -29,7 +29,7 @@ export const SNOW_CHANCE = 0.4;
 /** The top of the dawn roll is a weather event: a blizzard in winter, a heatwave in summer, a storm otherwise. */
 export const EVENT_CHANCE = 0.15;
 /** In a storm, the chance each hour that lightning strikes near the colony. */
-export const LIGHTNING_CHANCE = 0.3;
+export const LIGHTNING_CHANCE = 0.08;
 
 /** Rain, snow, storms and blizzards wet things (crops, collectors, fires). */
 export function isWet(w: Weather): boolean {
