@@ -275,7 +275,14 @@ export function draw(
 
   // Weather: a cool wash for rain, a pale one for snow.
   if (state.weather !== 'clear') {
-    ctx.fillStyle = state.weather === 'rain' ? 'rgba(90, 120, 160, 0.12)' : 'rgba(230, 236, 245, 0.10)';
+    ctx.fillStyle = {
+      rain: 'rgba(90, 120, 160, 0.12)',
+      storm: 'rgba(60, 70, 110, 0.22)',
+      snow: 'rgba(230, 236, 245, 0.10)',
+      blizzard: 'rgba(235, 240, 250, 0.28)',
+      heatwave: 'rgba(255, 170, 80, 0.12)',
+      clear: 'rgba(0, 0, 0, 0)',
+    }[state.weather];
     ctx.fillRect(0, 0, viewport.width, viewport.height);
   }
 
@@ -880,7 +887,9 @@ function drawZombie(
 ): void {
   const world = survivorWorldPos(z, options.alpha);
   const p = worldToScreen(camera, viewport, world.x, world.y);
-  const radius = Math.max(3, size * 0.34);
+  // Brutes are big, runners and crawlers small.
+  const scale = z.variant === 'brute' ? 1.35 : z.variant === 'walker' || z.variant === 'screamer' ? 1 : 0.8;
+  const radius = Math.max(3, size * 0.34 * scale);
   if (options.showDebug && z.targetId) {
     const target = state.survivors.find((s) => s.id === z.targetId);
     if (target) {
@@ -896,7 +905,7 @@ function drawZombie(
       ctx.setLineDash([]);
     }
   }
-  ctx.fillStyle = z.kind === 'raider' ? '#9a5a4a' : COLOURS.zombie;
+  ctx.fillStyle = z.kind === 'raider' ? '#9a5a4a' : { walker: COLOURS.zombie, runner: '#8fbf5a', brute: '#4f6b3a', screamer: '#9a7ab8', crawler: '#6a7a5a' }[z.variant];
   ctx.strokeStyle = COLOURS.zombieOutline;
   ctx.lineWidth = 2;
   ctx.beginPath();

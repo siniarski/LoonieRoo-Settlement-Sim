@@ -10,11 +10,12 @@ import { getTile, inBounds, isLocked, isWalkable, type Grid, type Point } from '
  * Who is moving: survivors open doors; zombies can't, so doors are walls to them.
  * 'breacher' is a zombie planning to batter its way through: every tile is passable.
  */
-export type Mover = 'survivor' | 'zombie' | 'breacher' | 'raider';
+export type Mover = 'survivor' | 'zombie' | 'breacher' | 'raider' | 'crawler';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
   if (mover === 'breacher') return inBounds(grid, x, y) && getTile(grid, x, y) !== 'water';
   // Raiders open doors, unless they're locked.
+  if (mover === 'crawler') return getTile(grid, x, y) === 'floor' || getTile(grid, x, y) === 'barricade';
   if (mover === 'raider') return getTile(grid, x, y) === 'floor' || (getTile(grid, x, y) === 'door' && !isLocked(grid, x, y));
   return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
 }

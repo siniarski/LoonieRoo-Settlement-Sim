@@ -30,6 +30,7 @@ import { makeNoise } from './noise';
 import { DOUSE_WORK, STOVE_FIRE_CHANCE, douse, fireAt, ignite } from './fire';
 import { hashRoll } from './hash';
 import { startReading } from './books';
+import { isWet } from './seasons';
 import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight } from './power';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
@@ -507,7 +508,7 @@ function workFirefight(state: SimState, s: Survivor, job: Job): void {
   if (manhattan(s.pos, fire) !== 1) return goTo(state, s, job, neighbours4(state.grid, fire.x, fire.y));
   const step = workStep(state, s, 'firefight');
   if (step === 0) return;
-  job.progress += step * (state.weather === 'clear' ? 1 : 2);
+  job.progress += step * (isWet(state.weather) ? 2 : 1);
   if (job.progress < DOUSE_WORK) return;
   douse(state, fire);
   finishJob(state, s, job, `put out a fire at (${fire.x}, ${fire.y})`);

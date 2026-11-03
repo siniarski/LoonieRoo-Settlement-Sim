@@ -20,6 +20,7 @@ import { itemAt, removeItem } from './items';
 import type { SimState } from './state';
 import { leaveCorpse } from './corpses';
 import { removeZombie } from './zombies';
+import { isWet } from './seasons';
 
 export interface Fire {
   x: number;
@@ -67,7 +68,7 @@ export function douse(state: SimState, f: Fire): void {
 
 export function updateFires(state: SimState): void {
   if (state.fires.length === 0) return;
-  const wet = state.weather !== 'clear';
+  const wet = isWet(state.weather);
   for (const f of [...state.fires]) {
     for (const s of state.survivors) {
       if (s.pos.x !== f.x || s.pos.y !== f.y) continue;
@@ -84,7 +85,8 @@ export function updateFires(state: SimState): void {
     }
     if (state.tick % SPREAD_EVERY === 0 && burnable(state, f.x, f.y)) {
       for (const n of neighbours4(state.grid, f.x, f.y)) {
-        if (burnable(state, n.x, n.y) && !fireAt(state, n.x, n.y) && hashRoll(n.x, n.y, state.tick) < SPREAD_CHANCE) ignite(state, n.x, n.y);
+        const chance = state.weather === 'heatwave' ? 2 * SPREAD_CHANCE : SPREAD_CHANCE;
+        if (burnable(state, n.x, n.y) && !fireAt(state, n.x, n.y) && hashRoll(n.x, n.y, state.tick) < chance) ignite(state, n.x, n.y);
       }
     }
     f.left -= wet ? 2 : 1;

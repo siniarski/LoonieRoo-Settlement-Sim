@@ -19,6 +19,7 @@ import type { SimState } from './state';
 import { TICKS_PER_HOUR, dayOf, tickOfDay } from './time';
 import { MAX_ZOMBIES, addZombie, zombieHealthForNight } from './zombies';
 import { TOWER_WARN_FACTOR, hasTower } from './towers';
+import { giveVariant } from './zombieKinds';
 
 export const WAKE_RADIUS = 10;
 export const HERD_TICKS_PER_TILE = 8;
@@ -124,6 +125,7 @@ function materialize(state: SimState, h: Herd): void {
     const p = nearestTile(state.grid, { x: h.x, y: h.y }, free);
     if (!p) break;
     const z = addZombie(state, p.x, p.y, zombieHealthForNight(dayOf(state.tick)), 'herd');
+    giveVariant(z, dayOf(state.tick));
     z.heading = { ...h.to };
   }
   if (n > 0) logEvent(state, `A herd of ${n} zombies is passing near (${h.x}, ${h.y})`);
@@ -139,7 +141,7 @@ function wakeDormant(state: SimState): void {
     state.dormant.splice(state.dormant.indexOf(d), 1);
     const p = getTile(state.grid, d.x, d.y) === 'floor' ? d : nearestTile(state.grid, d, (x, y) => getTile(state.grid, x, y) === 'floor');
     if (!p || !inBounds(state.grid, p.x, p.y)) continue;
-    addZombie(state, p.x, p.y, zombieHealthForNight(dayOf(state.tick)), 'static');
+    giveVariant(addZombie(state, p.x, p.y, zombieHealthForNight(dayOf(state.tick)), 'static'), dayOf(state.tick));
     woke += 1;
     where ??= { x: p.x, y: p.y };
   }

@@ -18,6 +18,7 @@ import { pick, random } from './rng';
 import type { SimState } from './state';
 import { TICKS_PER_HOUR, dayOf, isNight, tickOfDay } from './time';
 import { frontierSpot } from './wanderers';
+import { threatScale } from './director';
 import { SNUB_REP, TRADE_REP, adjustReputation, getSettlement, isHostile, traderFrom } from './settlements';
 import { addZombie, nightFallsNow } from './zombies';
 
@@ -75,7 +76,7 @@ export function updateVisitors(state: SimState): void {
   const day = dayOf(state.tick);
   if (day >= TRADER_FIRST_DAY && (day - TRADER_FIRST_DAY) % TRADER_EVERY === 0 && tickOfDay(state.tick) === TRADER_HOUR * TICKS_PER_HOUR) arrive(state);
   const enemy = state.settlements.find(isHostile);
-  if (day >= RAID_FIRST_DAY && nightFallsNow(state.tick) && random(state) < (enemy ? HOSTILE_RAID_CHANCE : RAID_CHANCE)) raid(state, day, enemy?.name);
+  if (day >= RAID_FIRST_DAY && nightFallsNow(state.tick) && random(state) < (enemy ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * threatScale(state)) raid(state, day, enemy?.name);
 }
 
 function arrive(state: SimState): void {

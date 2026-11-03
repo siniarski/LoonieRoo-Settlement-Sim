@@ -24,6 +24,9 @@ import { FIREBOMB_CHANCE, ignite } from './fire';
 import { hashRoll, idNumber } from './hash';
 import { LAMP_DETER, litLamps } from './power';
 import { hitDog } from './dogs';
+import { VARIANTS, giveVariant, type Variant } from './zombieKinds';
+import { makeNoise } from './noise';
+import { threatScale } from './director';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -82,6 +85,10 @@ export interface Zombie {
   kind: ZombieKind;
   /** Herd zombies: where the herd was going. They carry on there when nobody's near. */
   heading: Point | null;
+  /** What sort of zombie (zombieKinds.ts). Raiders are always walkers. */
+  variant: Variant;
+  /** Screamers: has it screamed yet? */
+  screamed: boolean;
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
@@ -101,6 +108,8 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
     nextThinkTick: 0,
     kind,
     heading: null,
+    variant: 'walker',
+    screamed: false,
   };
   state.zombies.push(z);
   return z;
@@ -156,9 +165,9 @@ export function nightFallsNow(tick: number): boolean {
   return nightNumber(tick) !== null && ticksIntoNight(tick) === 0;
 }
 
-/** Raiders open unlocked doors; zombies don't open any. */
-function moverOf(z: Zombie): 'zombie' | 'raider' {
-  return z.kind === 'raider' ? 'raider' : 'zombie';
+/** Raiders open unlocked doors; zombies don't open any; crawlers get under barricades. */
+export function moverOf(z: Zombie): 'zombie' | 'raider' | 'crawler' {
+  return z.kind === 'raider' ? 'raider' : z.variant === 'crawler' ? 'crawler' : 'zombie';
 }
 
 export function isSpawnTick(tick: number): boolean {
@@ -181,7 +190,8 @@ export function updateZombies(state: SimState): void {
   }
   const night = nightNumber(state.tick)!;
   if (ticksIntoNight(state.tick) === 0) {
-    state.zombiesTonight = zombiesForNight(night, state.survivors.length);
+    // The storyteller scales it by how the colony is doing (director.ts).
+    state.zombiesTonight = Math.max(1, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state)));
     logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected`);
   }
   const arriving = Math.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
@@ -229,12 +239,13 @@ function spawnPoint(state: SimState): Point | null {
 function spawnGroup(state: SimState, n: number, health: number): void {
   const p = spawnPoint(state);
   if (!p) return;
-  addZombie(state, p.x, p.y, health);
+  const night = nightNumber(state.tick) ?? 1;
+  giveVariant(addZombie(state, p.x, p.y, health), night);
   for (let i = 1; i < n; i++) {
     const free = (x: number, y: number) =>
       getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.zombies.some((z) => z.pos.x === x && z.pos.y === y);
     const q = nearestTile(state.grid, p, free) ?? p;
-    addZombie(state, q.x, q.y, health);
+    giveVariant(addZombie(state, q.x, q.y, health), night);
   }
   logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }
@@ -283,7 +294,7 @@ function updateZombie(state: SimState, z: Zombie): void {
         if (z.kind === 'raider' && hashRoll(idNumber(z.id), state.tick) < FIREBOMB_CHANCE && ignite(state, next.x, next.y)) {
           logEvent(state, `Raiders firebombed the ${getTile(state.grid, next.x, next.y)} at (${next.x}, ${next.y})`);
         }
-        damageStructure(state, next.x, next.y, ZOMBIE_DAMAGE);
+        damageStructure(state, next.x, next.y, ZOMBIE_DAMAGE * VARIANTS[z.variant].battering);
         z.cooldown = ZOMBIE_ATTACK_EVERY;
       }
       return;
@@ -292,7 +303,7 @@ function updateZombie(state: SimState, z: Zombie): void {
     return;
   }
   z.path.shift();
-  z.move = { from: { ...z.pos }, to: next, progress: 0, duration: ZOMBIE_TICKS_PER_TILE };
+  z.move = { from: { ...z.pos }, to: next, progress: 0, duration: VARIANTS[z.variant].ticksPerTile };
 }
 
 /**
@@ -309,6 +320,11 @@ function plan(state: SimState, z: Zombie): void {
     .sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))
     .find((s) => canReach(grid, v, z.pos, goalsFor(s), moverOf(z)));
   z.targetId = target?.id ?? null;
+  if (target && z.variant === 'screamer' && !z.screamed) {
+    z.screamed = true;
+    logEvent(state, `A screamer shrieked at (${z.pos.x}, ${z.pos.y})!`);
+    makeNoise(state, z.pos, 'scream');
+  }
   if (target) {
     z.path = findPathToAny(grid, z.pos, goalsFor(target), moverOf(z)) ?? [];
     return;
@@ -340,7 +356,7 @@ function plan(state: SimState, z: Zombie): void {
 }
 
 function hit(state: SimState, z: Zombie, s: Survivor): void {
-  const damage = z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE;
+  const damage = z.kind === 'raider' ? RAIDER_DAMAGE : VARIANTS[z.variant].damage;
   const armoured = wearing(state, s, 'armour') !== undefined;
   s.health = Math.max(0, s.health - armourDamage(state, s, hasTrait(s, 'tough') ? Math.round((damage * 3) / 4) : damage));
   s.lastHurtBy = z.kind === 'raider' ? 'a raider' : 'a zombie attack';

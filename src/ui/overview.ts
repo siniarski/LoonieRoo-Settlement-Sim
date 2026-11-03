@@ -13,6 +13,7 @@ import { STORE_CATEGORIES, designationStatus } from '../sim/rooms';
 import { SATIETY_MAX } from '../sim/food';
 import type { SimState } from '../sim/state';
 import { HYDRATION_MAX } from '../sim/water';
+import { threatScale } from '../sim/director';
 import type { ViewState } from './view';
 
 const MAX_ALERTS = 6;
@@ -66,7 +67,7 @@ export function createOverview(view: ViewState, command: (cmd: Command) => void)
       root.hidden = !view.showOverview;
       if (!view.showOverview || frame++ % 15 !== 0) return;
       root.replaceChildren();
-      root.append(el('div', 'hud-game-title', 'Colony overview (O to close)'));
+      root.append(el('div', 'hud-game-title', `Colony overview (O to close) · threat x${threatScale(state).toFixed(1)}`));
 
       // People.
       const table = el('table', 'hud-overview-table');

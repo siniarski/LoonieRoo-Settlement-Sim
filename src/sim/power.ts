@@ -110,7 +110,7 @@ export function updateSpoilage(state: SimState): void {
   if (!state.harsh || state.tick % SPOIL_CHECK_EVERY !== 0) return;
   const season = seasonOf(state.tick);
   if (season === 'winter') return;
-  const rate = season === 'summer' ? 2 : 1;
+  const rate = (season === 'summer' ? 2 : 1) + (state.weather === 'heatwave' ? 1 : 0);
   const stores = completeRooms(state, 'storage');
   const fridges = state.furniture.filter((f) => f.kind === 'fridge' && isPowered(state, f));
   let rotted = 0;

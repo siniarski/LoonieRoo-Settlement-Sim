@@ -3,6 +3,7 @@
 // every tick and available to the debug panel. Read-only.
 
 import { isPassable } from './pathfinding';
+import { moverOf } from './zombies';
 import { everyone } from './expeditions';
 import { STRUCTURE_HEALTH } from './breach';
 import { getTile, inBounds, isWalkable } from './grid';
@@ -186,7 +187,7 @@ export function checkInvariants(state: SimState): string[] {
     if (zombieIds.has(z.id)) problems.push(`duplicate zombie id ${z.id}`);
     zombieIds.add(z.id);
     // Zombies stand on floor; raiders may also stand in an unlocked doorway.
-    const standable = (x: number, y: number) => isPassable(grid, x, y, z.kind === 'raider' ? 'raider' : 'zombie');
+    const standable = (x: number, y: number) => isPassable(grid, x, y, moverOf(z));
     if (!standable(z.pos.x, z.pos.y)) problems.push(`zombie ${z.id} on non-floor (${z.pos.x}, ${z.pos.y})`);
     if (z.move && !standable(z.move.to.x, z.move.to.y)) problems.push(`zombie ${z.id} stepping off floor`);
     if (z.health <= 0 || z.health > z.maxHealth) problems.push(`zombie ${z.id} has health ${z.health}`);
