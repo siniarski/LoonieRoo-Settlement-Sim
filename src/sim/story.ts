@@ -22,12 +22,20 @@ export interface Story {
   nextTalk: number;
   /** Tasks they've asked for so far (talk.ts). */
   asked: TaskKind[];
+  /** Index into TOWNS: where they lived. People from the same town may know each other. */
+  town: number;
+  /** Survivors they've found they knew from before, by id. */
+  knew: string[];
+  /** Told the others what they did (their regret). */
+  confessed: boolean;
 }
 
 export const STORY_JOBS = [
   'a nurse', 'a mechanic', 'a teacher', 'a farmer', 'a soldier', 'a cook', 'a police officer',
   'a carpenter', 'a paramedic', 'a lorry driver', 'an electrician', 'a priest', 'a shop clerk', 'a student',
 ];
+/** Few enough that people from the same one turn up now and then. */
+export const TOWNS = ['Brackley', 'Hollin', 'Marsh End', 'Coldwater', 'Pike\'s Cross', 'Elmstead'];
 export const PRIDES = [
   'Kept a ward running for three days after the power went',
   'Got half the street out before the bridge came down',
@@ -71,6 +79,9 @@ export function makeStory(id: string): Story {
     told: 0,
     nextTalk: 0,
     asked: [],
+    town: Math.floor(hashRoll(n, 0x59) * TOWNS.length),
+    knew: [],
+    confessed: false,
   };
 }
 
@@ -83,7 +94,7 @@ function lostOne(n: number): Story['lost'] {
 export function storyLines(story: Story): string[] {
   const { lost } = story;
   return [
-    `I was ${STORY_JOBS[story.job]}. ${PRIDES[story.pride]}.`,
+    `I was ${STORY_JOBS[story.job]} in ${TOWNS[story.town]}. ${PRIDES[story.pride]}.`,
     lost.dead
       ? `My ${lost.relation}, ${lost.name}. They didn't make it, and I left them where they fell. They deserve a grave.`
       : `My ${lost.relation}, ${lost.name}. I don't know where they are. I tell myself that's better.`,

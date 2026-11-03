@@ -7,6 +7,9 @@ import { addSurvivor, type Survivor } from '../src/sim/survivors';
 import { TALK_EVERY, talk, updateTasks, type TaskKind } from '../src/sim/talk';
 import { tick } from '../src/sim/tick';
 import { setTile } from '../src/sim/grid';
+import { spawnItem } from '../src/sim/items';
+import { newSettlement } from '../src/sim/settlements';
+import { DAY_LENGTH, TICKS_PER_HOUR } from '../src/sim/time';
 
 /** An open 80x80 field with two survivors side by side. */
 function field(): { state: SimState; you: Survivor; them: Survivor } {
@@ -130,3 +133,65 @@ describe('tasks', () => {
   });
 });
 
+
+describe('more of their stories', () => {
+  it('people from the same town recognise each other', () => {
+    const state = createState({ seed: 1, width: 80, height: 80 });
+    const a = addSurvivor(state, 40, 40);
+    const b = addSurvivor(state, 41, 40);
+    b.story.town = a.story.town;
+    expect(talk(state, a)).toBeNull();
+    expect(a.story.knew).toEqual([]); // b hasn't said where they're from yet
+    expect(talk(state, b)).toBeNull();
+    expect(b.story.knew).toEqual([a.id]);
+    expect(a.opinions[b.id]).toBeGreaterThanOrEqual(20);
+  });
+
+  it('once everything is told, they confess to the others', () => {
+    const { state, you, them } = field();
+    them.story.told = storyLines(them.story).length;
+    expect(talk(state, them)).toBeNull();
+    expect(them.story.confessed).toBe(true);
+    expect(you.opinions[them.id]).toBeLessThan(0);
+    expect(them.thoughts.some((t) => t.kind === 'confessed')).toBe(true);
+  });
+
+  it('radio: at noon with a powered radio, the missing relative answers or nobody does', () => {
+    const outcomes = new Set<string>();
+    for (let n = 1; n < 400 && outcomes.size < 2; n++) {
+      if (makeStory(`s${n}`).lost.dead) continue;
+      const state = loadScenario({ seed: 1, map: ['EI.'.padEnd(40, '.'), ''.padEnd(40, '.')] });
+      state.grid.explored.fill(0);
+      state.grid.explored[0] = 1;
+      state.furniture.find((f) => f.kind === 'generator')!.stored = 4;
+      state.nextId = n;
+      const s = addSurvivor(state, 5, 1);
+      talkUntil(state, s, 'radio');
+      state.tick = (Math.floor(state.tick / DAY_LENGTH) + 1) * DAY_LENGTH + 6 * TICKS_PER_HOUR; // noon
+      updateTasks(state);
+      expect(state.tasks).toEqual([]);
+      outcomes.add(state.wanderers.some((w) => w.name === s.story.lost.name) ? 'answered' : 'silence');
+    }
+    expect([...outcomes].sort()).toEqual(['answered', 'silence']);
+  });
+
+  it('medicine: carried to their friend at a neighbouring settlement', () => {
+    const { state, you, them } = field();
+    const friend = newSettlement(state, 'Saint Agnes', 70, 40, 6, 20, 1);
+    friend.unfolded = true;
+    them.story.told = 2;
+    talkUntil(state, them, 'medicine');
+    const task = state.tasks[0]!;
+    expect(task.targetId).toBe(friend.id);
+    const med = spawnItem(state, 'medicine', 40, 41);
+    med.pos = null;
+    med.carriedBy = you.id;
+    you.carrying = med.id;
+    you.pos = { x: 66, y: 40 };
+    state.tick = Math.ceil(state.tick / 10) * 10;
+    updateTasks(state);
+    expect(state.tasks).toEqual([]);
+    expect(you.carrying).toBeNull();
+    expect(friend.reputation).toBe(15);
+  });
+});

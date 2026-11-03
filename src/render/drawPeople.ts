@@ -156,7 +156,7 @@ export function drawTask(ctx: CanvasRenderingContext2D, camera: Camera, viewport
   ctx.font = `${Math.round(Math.min(13, size * 0.42))}px ui-monospace, Consolas, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText({ home: 'old home', bury: 'the dead', pet: 'the dog', burn: 'burn this' }[t.kind], p.x, p.y - r - 2);
+  ctx.fillText({ home: 'old home', bury: 'the dead', pet: 'the dog', burn: 'burn this', radio: 'radio call', medicine: 'medicine here' }[t.kind], p.x, p.y - r - 2);
 }
 
 export function drawSurvivor(
