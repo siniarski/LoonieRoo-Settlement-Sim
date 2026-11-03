@@ -11,6 +11,7 @@ import { TRAIT_INFO } from './skills';
 import { forget } from './relationships';
 import { INFECTED_MOOD } from './infection';
 import { SICK_MOOD } from './corpses';
+import { THIRSTY_MOOD, isThirsty } from './water';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
@@ -84,6 +85,7 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
   if (s.satiety < HUNGRY) factors.push(['hungry', HUNGRY_MOOD]);
   if (s.infection !== null) factors.push(['infected', INFECTED_MOOD]);
   if (s.sick !== null) factors.push(['sick', SICK_MOOD]);
+  if (isThirsty(s)) factors.push(['thirsty', THIRSTY_MOOD]);
   for (const t of s.traits) if (TRAIT_INFO[t].mood !== 0) factors.push([TRAIT_INFO[t].label, TRAIT_INFO[t].mood]);
   return factors;
 }

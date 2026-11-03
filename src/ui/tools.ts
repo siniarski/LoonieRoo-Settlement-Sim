@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -118,6 +118,24 @@ export const TOOLS: readonly Tool[] = [
     hasInstant: false,
     command: (x, y) => ({ type: 'designateBuild', x, y, structure: 'stove' }),
   },
+  ...(
+    [
+      ['well', 'Well'],
+      ['collector', 'Rain collector'],
+      ['generator', 'Generator'],
+      ['lamp', 'Lamp'],
+      ['fridge', 'Fridge'],
+    ] as const
+  ).map(
+    ([id, label]): Tool => ({
+      id,
+      label,
+      category: 'furniture',
+      paints: false,
+      hasInstant: false,
+      command: (x, y) => ({ type: 'designateBuild', x, y, structure: id }),
+    }),
+  ),
   {
     id: 'housing',
     label: 'Housing',

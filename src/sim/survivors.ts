@@ -8,6 +8,7 @@
 
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
+import { HYDRATION_MAX, type Drink } from './water';
 import type { Thought } from './mood';
 import { GROUNDS, getTile, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type JobType, type Priorities } from './jobTypes';
@@ -112,6 +113,11 @@ export interface Survivor {
   nextDressTick: number;
   /** Ticks of sickness left, or null (corpses.ts). */
   sick: number | null;
+  /** 0..HYDRATION_MAX; only drains in a harsh game (water.ts). */
+  hydration: number;
+  /** Set while heading to water or drinking. */
+  drink: Drink | null;
+  nextDrinkTick: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -154,6 +160,9 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     dressing: null,
     nextDressTick: 0,
     sick: null,
+    hydration: HYDRATION_MAX,
+    drink: null,
+    nextDrinkTick: 0,
   };
   state.survivors.push(survivor);
   return survivor;

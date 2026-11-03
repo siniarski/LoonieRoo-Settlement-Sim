@@ -28,6 +28,7 @@ import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } f
 import { makeNoise } from './noise';
 import { DOUSE_WORK, STOVE_FIRE_CHANCE, douse, fireAt, ignite } from './fire';
 import { hashRoll } from './hash';
+import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight } from './power';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
 import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
@@ -135,6 +136,12 @@ export function reconcileJobs(state: SimState): void {
     addJob(state, 'haul', item.pos.x, item.pos.y, null, item.id);
   }
 
+  // Generators short of fuel get one fuel haul each.
+  const fuelling = new Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
+  for (const f of state.furniture) {
+    if (f.kind === 'generator' && f.stored < FUEL_MAX && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
+  }
+
   // Damaged walls and doors get one repair job each.
   const repairing = new Set(state.jobs.filter(isRepairJob).map((j) => j.y * width + j.x));
   for (const i of [...state.grid.damageList].sort((a, b) => a - b)) {
@@ -196,7 +203,12 @@ export function isRepairJob(job: Job): boolean {
 }
 
 export function isStoreJob(job: Job): boolean {
-  return job.type === 'haul' && job.blueprintId === null;
+  return job.type === 'haul' && job.blueprintId === null && job.furnitureId === null;
+}
+
+/** Fuel hauls: wood to a generator (`furnitureId`). */
+export function isFuelJob(job: Job): boolean {
+  return job.type === 'haul' && job.furnitureId !== null;
 }
 
 function wantedJobType(bp: Blueprint): JobType {
@@ -257,6 +269,16 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
     case 'haul': {
       if (isRepairJob(job)) return structureDamage(state, job.x, job.y) > 0 ? null : 'nothing to repair';
       if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
+      if (isFuelJob(job)) {
+        const g = getFurniture(state, job.furnitureId!);
+        if (!g || g.kind !== 'generator') return 'generator gone';
+        if (job.itemId) {
+          const item = getItem(state, job.itemId);
+          if (!item) return 'item gone';
+          if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
+        }
+        return g.stored < FUEL_MAX ? null : 'generator is full';
+      }
       const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
       if (!bp) return 'designation cancelled';
       if (wantedJobType(bp) !== job.type) return 'designation moved on';
@@ -432,7 +454,8 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
   makeNoise(state, s.pos, 'fighting');
-  if (!damageZombie(state, z, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'), s)) return;
+  const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
+  if (!damageZombie(state, z, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
 }
@@ -642,6 +665,7 @@ function workRepair(state: SimState, s: Survivor, job: Job): void {
 }
 
 function workHaul(state: SimState, s: Survivor, job: Job): void {
+  if (isFuelJob(job)) return workFuel(state, s, job);
   const item = job.itemId ? getItem(state, job.itemId) : undefined;
   if (!item) return releaseSurvivor(state, s, 'item gone');
 
@@ -664,6 +688,33 @@ function workHaul(state: SimState, s: Survivor, job: Job): void {
   s.carrying = null;
   bp.delivered = true;
   finishJob(state, s, job, `delivered ${item.kind} to (${bp.x}, ${bp.y})`);
+}
+
+/** Carry a piece of wood to a generator and feed it in. */
+function workFuel(state: SimState, s: Survivor, job: Job): void {
+  const g = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+  if (!g || g.kind !== 'generator') return releaseSurvivor(state, s, 'generator gone');
+  const site = neighbours4(state.grid, g.x, g.y);
+  let item = job.itemId ? getItem(state, job.itemId) : undefined;
+  if (!item) {
+    item = freeItemFor(state, 'wood', s.pos, site);
+    if (!item) return releaseSurvivor(state, s, 'no wood for the generator');
+    job.itemId = item.id;
+    item.reservedBy = s.id;
+  }
+  if (s.carrying !== item.id) {
+    if (!item.pos) return releaseSurvivor(state, s, 'item taken by someone else');
+    if (!samePoint(s.pos, item.pos)) return goTo(state, s, job, [item.pos]);
+    item.pos = null;
+    item.carriedBy = s.id;
+    s.carrying = item.id;
+  }
+  if (manhattan(s.pos, g) !== 1) return goTo(state, s, job, site);
+  removeItem(state, item);
+  s.carrying = null;
+  g.stored += 1;
+  g.storedKind = 'wood';
+  finishJob(state, s, job, `fuelled the generator at (${g.x}, ${g.y})`);
 }
 
 function carryToStorage(state: SimState, s: Survivor, job: Job, item: Item): void {
@@ -847,6 +898,10 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       }
       const site = neighbours4(grid, job.x, job.y).filter((p) => isWalkable(grid, p.x, p.y));
       if (site.length === 0) return null;
+      if (isFuelJob(job)) {
+        const wood = freeItemFor(state, 'wood', s.pos, site);
+        return wood ? pathPlan(state, s.pos, [wood.pos], wood.id) : null;
+      }
       const free = state.items
         .filter((i): i is Item & { pos: Point } => i.pos !== null && i.reservedBy === null && i.kind === 'wood')
         .sort((a, b) => manhattan(s.pos, a.pos) - manhattan(s.pos, b.pos));

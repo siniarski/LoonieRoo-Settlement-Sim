@@ -85,7 +85,7 @@ describe('corpses', () => {
   });
 
   it('a rotting corpse sickens those nearby; medicine cures it', () => {
-    const state = setup(['s.&.', '....']);
+    const state = setup(['s.&.', 'W...']);
     state.harsh = true;
     const s = state.survivors[0]!;
     state.items[0]!.wear = -CORPSE_ROT;

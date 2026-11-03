@@ -7,12 +7,14 @@
 //   stove  built by survivors; cooking happens here (see crafting.ts)
 //   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see zombies.ts)
 //   tower  a watchtower: see further and shoot further from it (see towers.ts)
+//   well, collector  clean water (see water.ts); a collector's loot is the water in it
+//   generator, lamp, fridge  power (see power.ts); a generator's stored is its fuel, its loot the burn timer
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
 import { spawnItem, type ItemKind } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;
@@ -31,7 +33,7 @@ export interface Furniture {
   occupant: string | null;
   /** Beds: whose bed it is (claimed on first night, or assigned). Nobody else sleeps in it. Never set on infirmary beds. */
   owner: string | null;
-  /** Crates: finds left. Trees: wood left. Traps: charges left. 0 for everything else. */
+  /** Crates: finds left. Trees: wood left. Traps: charges left. Collectors: water. Generators: ticks into the current wood. 0 for everything else. */
   loot: number;
   /** Crates and trees: marked by the player for scavenging (or chopping). Trees stay marked as they regrow. */
   scavenge: boolean;

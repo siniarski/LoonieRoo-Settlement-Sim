@@ -14,8 +14,9 @@
 //    order; ids are labels, nothing else.)
 
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
-import { GROUNDS, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
-import { spawnItem } from './items';
+import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
+import { itemAt, spawnItem } from './items';
+import { nearestTile } from './space';
 import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
 import { rollTraits } from './skills';
@@ -244,7 +245,13 @@ function startCamp(state: SimState, l: Layout): void {
   }
   for (let i = 0; i < 12; i++) spawnItem(state, 'wood', sx - 6 + (i % 4), sy + 3 + Math.floor(i / 4));
   for (let i = 0; i < 10; i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
+  // A rain collector with some water in it, so nobody has to find the river on day one.
+  const c = nearestTile(state.grid, { x: sx + 5, y: sy + 1 }, (x, y) => getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y) && !itemAt(state, x, y));
+  if (c) addFurniture(state, 'collector', c.x, c.y).loot = START_WATER;
 }
+
+/** Water in the start camp's rain collector. */
+export const START_WATER = 12;
 
 /**
  * Generates any missing chunk within GENERATE_RADIUS of a point. New terrain can change

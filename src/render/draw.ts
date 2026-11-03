@@ -18,6 +18,7 @@ import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
 import type { Wanderer } from '../sim/wanderers';
 import type { Herd } from '../sim/herds';
+import { LAMP_LIGHT, litLamps } from '../sim/power';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
 import { survivorWorldPos } from './interp';
 
@@ -54,6 +55,11 @@ const COLOURS = {
     scavenge: '#ffd166',
     explore: '#9fc3ff',
     lock: '#c9a227',
+    well: '#5a8cc8',
+    collector: '#5a8cc8',
+    generator: '#c8b450',
+    lamp: '#ffe678',
+    fridge: '#c8dcf0',
     farm: '#9ed36a',
     furnish: '#c7a6ff',
     bed: '#c7a6ff',
@@ -111,9 +117,14 @@ const COLOURS = {
     stove: 'rgba(120, 124, 130, 0.30)',
     workbench: 'rgba(190, 150, 100, 0.30)',
     tower: 'rgba(150, 110, 70, 0.30)',
+    well: 'rgba(90, 140, 200, 0.30)',
+    collector: 'rgba(90, 140, 200, 0.30)',
+    generator: 'rgba(200, 180, 80, 0.30)',
+    lamp: 'rgba(255, 230, 120, 0.30)',
+    fridge: 'rgba(200, 220, 240, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -238,6 +249,16 @@ export function draw(
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
   for (const f of state.fires) if (shown(f.x, f.y)) drawFire(ctx, camera, viewport, f.x, f.y, state.tick);
+  // Lamplight: a warm pool round each lit lamp.
+  for (const l of litLamps(state)) {
+    if (!shown(l.x, l.y)) continue;
+    const c = worldToScreen(camera, viewport, l.x + 0.5, l.y + 0.5);
+    const glow = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, size * (LAMP_LIGHT + 0.5));
+    glow.addColorStop(0, 'rgba(255, 220, 140, 0.30)');
+    glow.addColorStop(1, 'rgba(255, 220, 140, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(c.x - size * (LAMP_LIGHT + 1), c.y - size * (LAMP_LIGHT + 1), size * (2 * LAMP_LIGHT + 2), size * (2 * LAMP_LIGHT + 2));
+  }
   for (const item of state.items) {
     if (item.pos && shown(item.pos.x, item.pos.y)) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
   }
@@ -575,6 +596,11 @@ function drawFire(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
 /** Furniture without a drawing of its own. */
 export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string]>> = {
   tower: ['#7a5636', 'T'],
+  well: ['#3c6496', 'W'],
+  collector: ['#4a7ab4', 'R'],
+  generator: ['#8c7a2e', 'E'],
+  lamp: ['#b4a046', 'l'],
+  fridge: ['#a0b4c8', 'F'],
 };
 
 /** Items without a drawing of their own: a coloured tile with a letter. */

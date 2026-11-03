@@ -73,10 +73,23 @@ export const ENTITY_CHARS = {
   corpse: '&',
   tower: 'H',
   towerBlueprint: 'j',
+  well: 'W',
+  wellBlueprint: 'Q',
+  collector: 'R',
+  collectorBlueprint: 'q',
+  generator: 'E',
+  generatorBlueprint: 'e',
+  lamp: 'l',
+  lampBlueprint: 'i',
+  fridge: 'F',
+  fridgeBlueprint: 'r',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
+/** Furniture and blueprints placed straight from their map char. */
+const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge'] as const;
+
 const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
@@ -88,6 +101,16 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
   const simple = SIMPLE_ITEMS.find((k) => ENTITY_CHARS[k] === char);
   if (simple) {
     spawnItem(state, simple, x, y);
+    return true;
+  }
+  const furniture = SIMPLE_FURNITURE.find((k) => ENTITY_CHARS[k] === char);
+  if (furniture) {
+    addFurniture(state, furniture, x, y);
+    return true;
+  }
+  const planned = SIMPLE_FURNITURE.find((k) => ENTITY_CHARS[`${k}Blueprint`] === char);
+  if (planned) {
+    addBlueprint(state, x, y, planned);
     return true;
   }
   switch (char) {

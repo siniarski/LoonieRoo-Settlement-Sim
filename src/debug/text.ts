@@ -15,6 +15,11 @@ const BLUEPRINT_CHARS = {
   trap: ENTITY_CHARS.trapBlueprint,
   stove: ENTITY_CHARS.stoveBlueprint,
   tower: ENTITY_CHARS.towerBlueprint,
+  well: ENTITY_CHARS.wellBlueprint,
+  collector: ENTITY_CHARS.collectorBlueprint,
+  generator: ENTITY_CHARS.generatorBlueprint,
+  lamp: ENTITY_CHARS.lampBlueprint,
+  fridge: ENTITY_CHARS.fridgeBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

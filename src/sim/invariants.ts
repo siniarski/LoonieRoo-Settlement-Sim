@@ -12,6 +12,7 @@ import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
 import { labelAt } from './rooms';
 import { SLOT_OF, isGarment } from './clothing';
+import { HYDRATION_MAX } from './water';
 import type { SimState } from './state';
 
 export function checkInvariants(state: SimState): string[] {
@@ -226,6 +227,10 @@ export function checkInvariants(state: SimState): string[] {
     const key = `${f.x},${f.y}`;
     if (fireTiles.has(key) || !inBounds(grid, f.x, f.y) || f.left <= 0) problems.push(`fire at (${key}) is doubled, off the map or out`);
     fireTiles.add(key);
+  }
+  for (const s of state.survivors) {
+    if (s.hydration < 0 || s.hydration > HYDRATION_MAX || !Number.isInteger(s.hydration)) problems.push(`${s.name} has hydration ${s.hydration}`);
+    if (s.drink && (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.dressing)) problems.push(`${s.name} is drinking while busy with something else`);
   }
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);

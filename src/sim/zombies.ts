@@ -22,6 +22,7 @@ import { armourDamage, wearing } from './clothing';
 import { leaveCorpse } from './corpses';
 import { FIREBOMB_CHANCE, ignite } from './fire';
 import { hashRoll, idNumber } from './hash';
+import { LAMP_DETER, litLamps } from './power';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -197,8 +198,12 @@ function updateAll(state: SimState): void {
 
 /** Where tonight's next group arrives: in the dark past explored ground, or (on a fully explored map) at the edge. */
 function spawnPoint(state: SimState): Point | null {
+  const lamps = litLamps(state);
   const open = (x: number, y: number) =>
-    getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.survivors.some((s) => manhattan(s.pos, { x, y }) < SPAWN_MIN_DISTANCE);
+    getTile(state.grid, x, y) === 'floor' &&
+    labelAt(state, x, y) === OUTDOORS &&
+    !state.survivors.some((s) => manhattan(s.pos, { x, y }) < SPAWN_MIN_DISTANCE) &&
+    !lamps.some((l) => manhattan(l, { x, y }) < LAMP_DETER);
   if (state.survivors.length > 0 && state.grid.explored.includes(0)) {
     // A few tries: a spot out past someone, then the nearest dark open tile to it.
     for (let attempt = 0; attempt < 8; attempt++) {

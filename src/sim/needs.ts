@@ -46,6 +46,7 @@ import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
 import { cancelDressing, reconcileDressing, undress } from './clothing';
 import { leaveCorpse } from './corpses';
+import { DRINK_RETRY_TICKS, cancelDrink, findWater, thirstInterrupts } from './water';
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
@@ -109,11 +110,14 @@ export function reconcileNeeds(state: SimState): void {
  * to go to.
  */
 export function interruptForNeeds(state: SimState, s: Survivor): void {
-  if (!s.jobId || s.sleep || s.meal || s.treatment || onGuardDuty(state, s)) return;
+  if (!s.jobId || s.sleep || s.meal || s.drink || s.treatment || onGuardDuty(state, s)) return;
   if (isCritical(s.health)) {
     releaseSurvivor(state, s, 'too badly hurt to work');
   } else if (wantsSleep(state, s)) {
     releaseSurvivor(state, s, 'too tired to work');
+  } else if (thirstInterrupts(state, s)) {
+    if (findWater(state, s.pos)) releaseSurvivor(state, s, 'thirsty');
+    else s.nextDrinkTick = state.tick + DRINK_RETRY_TICKS;
   } else if (state.tick >= s.nextTreatTick && nearestRemedy(state, s)) {
     releaseSurvivor(state, s, 'going to treat wounds');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
@@ -193,6 +197,7 @@ function startMeal(state: SimState, s: Survivor): boolean {
   if (s.jobId) releaseSurvivor(state, s, 'hungry');
   cancelArming(state, s, 'hungry');
   cancelDressing(state, s, 'hungry');
+  cancelDrink(s, 'hungry');
   cancelTreatment(state, s, 'hungry'); // eat first; the bandage can wait
   food.reservedBy = s.id;
   s.meal = { itemId: food.id, progress: 0, seat: pickSeat(state, s, food.pos) };
