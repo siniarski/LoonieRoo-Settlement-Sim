@@ -2,7 +2,7 @@
 // fixed schedule.
 //
 // threatScale multiplies the night's zombie count and the chance of a raid:
-// up THREAT_PER_WEALTH for every WEALTH_STEP things the colony owns (a rich
+// up THREAT_PER_WEALTH for every WEALTH_STEP goods the colony owns (a rich
 // colony draws more attention), down THREAT_PER_DEATH for each death in the
 // last day and a half (a beaten colony gets a breather), within
 // [MIN_THREAT, MAX_THREAT]. And when things are dire (two or more dead lately,
@@ -29,7 +29,8 @@ export function recentDeaths(state: SimState): number {
 }
 
 export function threatScale(state: SimState): number {
-  const wealth = state.items.filter((i) => i.kind !== 'corpse').length;
+  // Goods, not raw wood and food (a woodpile isn't what draws raiders; balance pass 4).
+  const wealth = state.items.filter((i) => i.kind !== 'corpse' && i.kind !== 'wood' && i.kind !== 'food').length;
   const scale = 1 + THREAT_PER_WEALTH * Math.floor(wealth / WEALTH_STEP) - THREAT_PER_DEATH * recentDeaths(state);
   return Math.max(MIN_THREAT, Math.min(MAX_THREAT, scale));
 }

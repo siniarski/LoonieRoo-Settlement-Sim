@@ -72,7 +72,7 @@ describe('weather events', () => {
 
 describe('the storyteller', () => {
   it('eases off after deaths, and leans on a rich colony', () => {
-    const state = loadScenario({ seed: 1, map: ['s' + 'f'.repeat(29), 'f'.repeat(30), 'f'.repeat(30), 'f'.repeat(30)] });
+    const state = loadScenario({ seed: 1, map: ['s' + 'm'.repeat(29), 'm'.repeat(30), 'm'.repeat(30), 'm'.repeat(30)] });
     expect(threatScale(state)).toBeCloseTo(1.1);
     for (let i = 0; i < 5; i++) logEvent(state, `Bea died of testing`);
     expect(threatScale(state)).toBe(MIN_THREAT);
