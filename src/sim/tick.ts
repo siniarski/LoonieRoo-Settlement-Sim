@@ -36,6 +36,10 @@ import { updateFires } from './fire';
 import { updateCorpses } from './corpses';
 import { updateCollectors, updateDrink, updateHydration } from './water';
 import { updatePower, updateSpoilage } from './power';
+import { stopReading, updateReading } from './books';
+import { updateDogs } from './dogs';
+import { updateSettlements } from './settlements';
+import { updateFamily } from './family';
 
 export const TICKS_PER_SECOND = 10;
 
@@ -48,6 +52,9 @@ export function tick(state: SimState): void {
   updateCollectors(state);
   updatePower(state);
   updateSpoilage(state);
+  updateDogs(state);
+  updateSettlements(state);
+  updateFamily(state);
   updateHerds(state);
   updateWeather(state);
   updateRelationships(state);
@@ -73,8 +80,10 @@ export function tick(state: SimState): void {
     // (not mid-breakdown). A need taking over ends any rec-room visit.
     if (!s.move && !s.goal) {
       const needs = updateMeal(state, s) || updateDrink(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
-      if (needs) s.leisure = null;
-      else if (!s.breakdown && !updateLeisure(state, s)) updateWork(state, s);
+      if (needs) {
+        s.leisure = null;
+        stopReading(state, s, s.note ?? '');
+      } else if (!s.breakdown && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
     }
     updateRest(state, s);
     updateSatiety(s);

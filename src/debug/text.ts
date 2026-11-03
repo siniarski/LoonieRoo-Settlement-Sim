@@ -45,6 +45,7 @@ export function dumpText(state: SimState): string {
   for (const bp of state.blueprints) put(bp.x, bp.y, BLUEPRINT_CHARS[bp.target]);
   for (const item of state.items) if (item.pos) put(item.pos.x, item.pos.y, ENTITY_CHARS[item.kind]);
   for (const w of state.wanderers) put(w.x, w.y, ENTITY_CHARS.wanderer);
+  for (const d of state.dogs) put(d.pos.x, d.pos.y, ENTITY_CHARS.dog);
   for (const z of state.zombies) put(z.pos.x, z.pos.y, ENTITY_CHARS.zombie);
   for (const s of state.survivors) put(s.pos.x, s.pos.y, ENTITY_CHARS.survivor);
   return rows.map((r) => r.join('')).join('\n');

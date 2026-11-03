@@ -46,6 +46,7 @@ import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
 import { cancelDressing, reconcileDressing, undress } from './clothing';
 import { leaveCorpse } from './corpses';
+import { stopReading } from './books';
 import { DRINK_RETRY_TICKS, cancelDrink, findWater, thirstInterrupts } from './water';
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
@@ -338,6 +339,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   cancelTreatment(state, s, cause);
   cancelArming(state, s, cause);
   cancelDressing(state, s, cause);
+  stopReading(state, s, cause);
   dropWeapon(state, s);
   undress(state, s);
   // The infection's victims get up again (tick.ts); everyone else stays where they fell.

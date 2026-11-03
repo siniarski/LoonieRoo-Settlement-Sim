@@ -67,7 +67,8 @@ export function checkInvariants(state: SimState): string[] {
     if (item.reservedBy) {
       const holder = survivors.get(item.reservedBy);
       const job = holder?.jobId ? jobs.get(holder.jobId) : undefined;
-      const using = holder?.meal?.itemId === item.id || holder?.treatment?.itemId === item.id || holder?.arming === item.id || holder?.dressing === item.id;
+      const using =
+        holder?.meal?.itemId === item.id || holder?.treatment?.itemId === item.id || holder?.arming === item.id || holder?.dressing === item.id || holder?.reading?.itemId === item.id;
       if (job?.itemId !== item.id && !using) {
         problems.push(`${item.id} reserved by ${item.reservedBy} without a matching haul job, meal, treatment, or arming`);
       }
@@ -232,6 +233,15 @@ export function checkInvariants(state: SimState): string[] {
     if (s.hydration < 0 || s.hydration > HYDRATION_MAX || !Number.isInteger(s.hydration)) problems.push(`${s.name} has hydration ${s.hydration}`);
     if (s.drink && (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.dressing)) problems.push(`${s.name} is drinking while busy with something else`);
   }
+  for (const s of state.survivors) {
+    if (s.reading) {
+      const book = items.get(s.reading.itemId);
+      if (!book || book.kind !== 'book' || book.reservedBy !== s.id || !book.pos) problems.push(`${s.name} is reading ${s.reading.itemId}, which isn't a reserved book on the ground`);
+      if (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.dressing || s.drink || s.leisure) problems.push(`${s.name} is reading while busy with something else`);
+    }
+    if (s.childUntil !== null && s.jobId) problems.push(`${s.name} is a child with job ${s.jobId}`);
+  }
+  for (const d of state.dogs) if (!isWalkable(grid, d.pos.x, d.pos.y) || d.health <= 0) problems.push(`dog ${d.id} is in a wall or dead`);
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);
   for (const d of state.dormant) if (!inBounds(grid, d.x, d.y)) problems.push(`dormant zombie ${d.id} off the map`);

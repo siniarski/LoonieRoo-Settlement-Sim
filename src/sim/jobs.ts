@@ -28,6 +28,7 @@ import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } f
 import { makeNoise } from './noise';
 import { DOUSE_WORK, STOVE_FIRE_CHANCE, douse, fireAt, ignite } from './fire';
 import { hashRoll } from './hash';
+import { startReading } from './books';
 import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight } from './power';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
@@ -74,8 +75,9 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
 export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
-  ['food', 0.38],
-  ['wood', 0.26],
+  ['food', 0.37],
+  ['wood', 0.25],
+  ['book', 0.02],
   ['bandage', 0.12],
   ['cloth', 0.1],
   ['weapon', 0.05],
@@ -378,7 +380,7 @@ export function updateWork(state: SimState, s: Survivor): void {
     if (state.tick < s.nextSeekTick) return;
     if (seekJob(state, s)) return;
     s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
-    if (!keepWatch(state, s)) startLeisure(state, s);
+    if (!keepWatch(state, s) && !startReading(state, s)) startLeisure(state, s);
     return;
   }
   const job = getJob(state, s.jobId);
@@ -831,6 +833,7 @@ export function chooseJob(state: SimState, s: Survivor): { job: Job; plan: Plan;
 }
 
 export function typesByPriority(s: Survivor): JobType[] {
+  if (s.childUntil !== null) return []; // children don't work
   return JOB_TYPES.filter((t) => s.priorities[t] > 0).sort(
     (a, b) => s.priorities[a] - s.priorities[b] || JOB_TYPES.indexOf(a) - JOB_TYPES.indexOf(b),
   );

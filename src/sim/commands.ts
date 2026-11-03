@@ -22,6 +22,8 @@ import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
 import { cancelDressing } from './clothing';
 import { cancelDrink } from './water';
+import { stopReading } from './books';
+import { giveGift } from './settlements';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -64,6 +66,8 @@ export type Command =
   | { type: 'dismissWanderer'; wandererId: string }
   /** Send survivors off the map to a point of interest (expeditions.ts). */
   | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
+  /** Send food to a neighbouring settlement (settlements.ts). */
+  | { type: 'giftSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
   | { type: 'trade'; traderId: string; offer: number }
   /** Set a tile alight on purpose (fire.ts). */
@@ -139,6 +143,10 @@ function execute(state: SimState, command: Command): CommandResult {
     state.craftTargets[kind] = count;
     return changed();
   }
+  if (command.type === 'giftSettlement') {
+    const failed = giveGift(state, command.settlementId);
+    return failed ? reject(failed) : changed();
+  }
   if (command.type === 'trade') {
     const failed = trade(state, command.traderId, command.offer);
     return failed ? reject(failed) : changed();
@@ -160,6 +168,7 @@ function execute(state: SimState, command: Command): CommandResult {
     const members = command.survivorIds.map((id) => getSurvivor(state, id));
     if (members.some((s) => !s) || new Set(command.survivorIds).size !== members.length) return reject('no such survivor');
     if (!state.pointsOfInterest.some((p) => p.id === command.poiId)) return reject(`no point of interest ${command.poiId}`);
+    if ((members as Survivor[]).some((s) => s.childUntil !== null)) return reject('children stay home');
     for (const s of members as Survivor[]) {
       // Drop everything here: work, meals, errands, bed, leisure.
       if (s.jobId) releaseSurvivor(state, s, 'off on an expedition');
@@ -169,6 +178,7 @@ function execute(state: SimState, command: Command): CommandResult {
       cancelArming(state, s, 'off on an expedition');
       cancelDressing(state, s, 'off on an expedition');
       cancelDrink(s, 'off on an expedition');
+      stopReading(state, s, 'off on an expedition');
       s.leisure = null;
       s.breakdown = null;
       s.goal = null;
@@ -355,6 +365,7 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   cancelArming(state, survivor, 'interrupted by an order');
   cancelDressing(state, survivor, 'interrupted by an order');
   cancelDrink(survivor, 'interrupted by an order');
+  stopReading(state, survivor, 'interrupted by an order');
   survivor.leisure = null;
   setGoal(survivor, { x, y });
   return changed();
@@ -377,6 +388,7 @@ function setPriority(state: SimState, id: string, jobType: unknown, priority: un
   if (!survivor) return reject(`no survivor ${id}`);
   if (!isJobType(jobType)) return reject(`unknown job type ${String(jobType)}`);
   if (!isPriority(priority)) return reject(`priority must be 0-4, got ${String(priority)}`);
+  if (survivor.childUntil !== null) return reject(`${survivor.name} is a child`);
   if (survivor.priorities[jobType] === priority) return unchanged();
   survivor.priorities[jobType] = priority;
   // Re-evaluate soon rather than waiting out an idle back-off.

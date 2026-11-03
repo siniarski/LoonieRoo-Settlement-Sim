@@ -25,6 +25,7 @@ import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { INFECTION_TURN } from '../sim/infection';
 import { describeRelations } from '../sim/relationships';
 import { describeClothing } from '../sim/clothing';
+import { FRIENDLY, GIFT_FOOD, HOSTILE } from '../sim/settlements';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -102,7 +103,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const crafting = createCraftPanel(command);
   const expeditions = createExpeditionPanel(view, command);
   const traders = createTraderPanel(command);
-  info.append(status, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, feed);
+  const neighbours = createSettlementPanel(command);
+  info.append(status, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -167,6 +169,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       crafting.update(state);
       expeditions.update(state);
       traders.update(state);
+      neighbours.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -365,6 +368,38 @@ function createGamePanel(view: ViewState, files: GameFiles) {
   };
 }
 
+/** Neighbouring settlements: what they think of you, and a gift button. */
+function createSettlementPanel(command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const key = JSON.stringify([state.settlements, state.items.length]);
+      if (key === last) return;
+      last = key;
+      root.hidden = state.settlements.length === 0;
+      root.replaceChildren();
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = 'Neighbours';
+      root.append(title);
+      const food = state.items.filter((i) => i.kind === 'food' && i.pos !== null && i.reservedBy === null).length;
+      for (const n of state.settlements) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        const mood = n.reputation <= HOSTILE ? 'hostile' : n.reputation >= FRIENDLY ? 'friendly' : 'wary';
+        label.textContent = `${n.name} (${n.x}, ${n.y}): ${mood} ${n.reputation}`;
+        const gift = el('button', 'hud-button');
+        gift.textContent = `Gift ${GIFT_FOOD} food`;
+        gift.disabled = food < GIFT_FOOD;
+        gift.addEventListener('click', () => command({ type: 'giftSettlement', settlementId: n.id }));
+        row.append(label, gift);
+        root.append(row);
+      }
+    },
+  };
+}
+
 /** A trader's offers, each with a Trade button. */
 function createTraderPanel(command: (cmd: Command) => void) {
   const root = el('div', 'hud-wanderers');
@@ -379,7 +414,8 @@ function createTraderPanel(command: (cmd: Command) => void) {
       root.replaceChildren();
       for (const t of state.traders) {
         const title = el('div', 'hud-wanderers-title');
-        title.textContent = `Trader at (${t.x}, ${t.y})`;
+        const from = state.settlements.find((n) => n.id === t.from);
+        title.textContent = `Trader${from ? ` from ${from.name}` : ''} at (${t.x}, ${t.y})`;
         root.append(title);
         t.offers.forEach((o, i) => {
           const row = el('div', 'hud-wanderer');
@@ -591,6 +627,9 @@ function activity(state: SimState, s: Survivor): string {
   if (s.treatment) return s.treatment.progress > 0 ? 'treating themselves' : 'going for a remedy';
   if (s.arming) return 'going for a weapon';
   if (s.dressing) return 'going for clothing';
+  if (s.drink) return s.drink.progress > 0 ? 'drinking' : 'going for a drink';
+  if (s.reading) return s.reading.progress > 0 ? 'reading' : 'going to read';
+  if (s.childUntil !== null && !s.sleep && !s.meal) return 'playing (a child)';
   if (s.breakdown) return 'having a breakdown';
   if (s.leisure) return s.leisure.progress > 0 ? 'relaxing' : 'going to relax';
   if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';

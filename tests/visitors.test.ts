@@ -48,7 +48,7 @@ describe('traders', () => {
 
   it("refuses a trade you can't pay for", () => {
     const state = setup(['s.........']);
-    state.traders.push({ id: 't1', x: 5, y: 0, leavesTick: 1e9, offers: [{ give: 'weapon', giveCount: 1, want: 'food', wantCount: 4 }] });
+    state.traders.push({ id: 't1', x: 5, y: 0, leavesTick: 1e9, offers: [{ give: 'weapon', giveCount: 1, want: 'food', wantCount: 4 }], from: null, traded: false });
     expect(applyCommand(state, { type: 'trade', traderId: 't1', offer: 0 }).ok).toBe(false);
   });
 });

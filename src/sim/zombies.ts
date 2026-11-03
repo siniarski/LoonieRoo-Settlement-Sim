@@ -23,6 +23,7 @@ import { leaveCorpse } from './corpses';
 import { FIREBOMB_CHANCE, ignite } from './fire';
 import { hashRoll, idNumber } from './hash';
 import { LAMP_DETER, litLamps } from './power';
+import { hitDog } from './dogs';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -247,6 +248,15 @@ function updateZombie(state: SimState, z: Zombie): void {
     const victim = adjacent.find((s) => s.id === z.targetId) ?? adjacent[0];
     if (victim) {
       if (z.cooldown === 0) hit(state, z, victim);
+      return;
+    }
+    // Nobody to hit but a dog: the dog, then.
+    const dog = state.dogs.find((d) => manhattan(d.pos, z.pos) <= 1);
+    if (dog) {
+      if (z.cooldown === 0) {
+        hitDog(state, dog, z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE);
+        z.cooldown = ZOMBIE_ATTACK_EVERY;
+      }
       return;
     }
   }

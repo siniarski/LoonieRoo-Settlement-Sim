@@ -6,8 +6,9 @@ import { isFurnitureTarget } from './designations';
 import { furnitureAt } from './furniture';
 import { nearestTile } from './space';
 import type { SimState } from './state';
+import { bookSubject } from './books';
 
-export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots' | 'gun' | 'ammo' | 'corpse';
+export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots' | 'gun' | 'ammo' | 'corpse' | 'book';
 
 export interface Item {
   id: string;
@@ -18,7 +19,7 @@ export interface Item {
   reservedBy: string | null;
   /** Weapons: kills made with it so far (see weapons.ts). Clothing: wear (clothing.ts). Guns: rounds loaded. Corpses: tick of death. 0 for everything else. */
   wear: number;
-  /** Corpses: the survivor's name (null for a zombie). Null for everything else. */
+  /** Corpses: the survivor's name (null for a zombie). Books: the subject (books.ts). Null for everything else. */
   tag: string | null;
 }
 
@@ -43,6 +44,7 @@ export function canHoldItem(state: SimState, x: number, y: number): boolean {
 /** Creates an item on the nearest free tile to (x, y). */
 export function spawnItem(state: SimState, kind: ItemKind, x: number, y: number): Item {
   const item: Item = { id: `i${state.nextId++}`, kind, pos: null, carriedBy: null, reservedBy: null, wear: 0, tag: null };
+  if (kind === 'book') item.tag = bookSubject(item.id);
   state.items.push(item);
   placeNear(state, item, { x, y });
   return item;

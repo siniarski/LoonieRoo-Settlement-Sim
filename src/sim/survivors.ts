@@ -8,6 +8,7 @@
 
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
+import { startingAge } from './family';
 import { HYDRATION_MAX, type Drink } from './water';
 import type { Thought } from './mood';
 import { GROUNDS, getTile, setDirty, type Point } from './grid';
@@ -118,6 +119,12 @@ export interface Survivor {
   /** Set while heading to water or drinking. */
   drink: Drink | null;
   nextDrinkTick: number;
+  /** Heading to a book, or reading it (books.ts). */
+  reading: { itemId: string; progress: number } | null;
+  /** Years (family.ts). */
+  age: number;
+  /** Children: the tick they grow up. Null for adults. */
+  childUntil: number | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -163,6 +170,9 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     hydration: HYDRATION_MAX,
     drink: null,
     nextDrinkTick: 0,
+    reading: null,
+    age: startingAge(`s${n}`),
+    childUntil: null,
   };
   state.survivors.push(survivor);
   return survivor;

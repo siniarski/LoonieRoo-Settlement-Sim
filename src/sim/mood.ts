@@ -30,7 +30,8 @@ export type ThoughtKind =
   | 'cold'
   | 'lostFriend'
   | 'stench'
-  | 'paidRespects';
+  | 'paidRespects'
+  | 'dog';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -53,6 +54,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   lostFriend: { label: 'lost a friend', effect: -25, duration: 3 * DAY_LENGTH },
   stench: { label: 'the stench of the dead', effect: -8, duration: DAY_LENGTH / 4 },
   paidRespects: { label: 'paid their respects', effect: 15, duration: 2 * DAY_LENGTH },
+  dog: { label: 'spent time with a dog', effect: 5, duration: DAY_LENGTH / 2 },
 };
 
 export const MOOD_BASE = 50;

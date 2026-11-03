@@ -21,13 +21,16 @@ import type { Weather } from './seasons';
 import type { Expedition } from './expeditions';
 import type { Trader } from './visitors';
 import type { Fire } from './fire';
+import type { Knowledge } from './books';
+import type { Dog } from './dogs';
+import type { Settlement } from './settlements';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 39;
+export const SCHEMA_VERSION = 40;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -74,6 +77,11 @@ export interface SimState {
    * worlds; hand-made maps opt in (so tests of other things don't have to feed and water everyone).
    */
   harsh: boolean;
+  /** What the colony has learned from books (books.ts). */
+  knowledge: Knowledge[];
+  dogs: Dog[];
+  /** Neighbours in a generated world (settlements.ts). */
+  settlements: Settlement[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -109,7 +117,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     survivors: [],
     zombies: [],
     wanderers: [],
-    craftTargets: { weapon: 0, bandage: 0, medicine: 0, ammo: 0, coat: 0, armour: 0, boots: 0 },
+    craftTargets: { weapon: 0, bandage: 0, medicine: 0, ammo: 0, gun: 0, coat: 0, armour: 0, boots: 0 },
     zombiesTonight: null,
     exploreAreas: [],
     dormant: [],
@@ -121,6 +129,9 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     traders: [],
     fires: [],
     harsh: false,
+    knowledge: [],
+    dogs: [],
+    settlements: [],
     items: [],
     furniture: [],
     farm: [],

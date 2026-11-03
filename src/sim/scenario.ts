@@ -13,6 +13,7 @@ import { createState, type LoggedCommand, type SimState } from './state';
 import { addSurvivor } from './survivors';
 import { addWanderer } from './wanderers';
 import { addZombie } from './zombies';
+import { addDog } from './dogs';
 
 export interface Scenario {
   name?: string;
@@ -71,6 +72,8 @@ export const ENTITY_CHARS = {
   gun: 'G',
   ammo: 'a',
   corpse: '&',
+  book: 'N',
+  dog: 'g',
   tower: 'H',
   towerBlueprint: 'j',
   well: 'W',
@@ -90,7 +93,7 @@ export const ENTITY_CHARS = {
 /** Furniture and blueprints placed straight from their map char. */
 const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge'] as const;
 
-const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse'] as const;
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
@@ -188,6 +191,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.medicine:
       spawnItem(state, 'medicine', x, y);
+      return true;
+    case ENTITY_CHARS.dog:
+      addDog(state, x, y);
       return true;
     case ENTITY_CHARS.tower:
       addFurniture(state, 'tower', x, y);

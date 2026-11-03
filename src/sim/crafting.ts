@@ -11,15 +11,16 @@
 // colony: MEALS_PER_SURVIVOR each, while there's raw food to cook.
 
 import type { Furniture, FurnitureKind } from './furniture';
+import type { Knowledge } from './books';
 import type { ItemKind } from './items';
 import { completeRooms, labelAt } from './rooms';
 import type { SimState } from './state';
 
-export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots' | 'ammo';
+export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots' | 'ammo' | 'gun';
 export type Station = Extract<FurnitureKind, 'workbench' | 'stove'>;
-export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'coat', 'armour', 'boots', 'meal'];
+export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots', 'meal'];
 /** What the player sets targets for (the Workbench orders panel). */
-export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'coat', 'armour', 'boots'];
+export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots'];
 
 export interface Recipe {
   station: Station;
@@ -28,15 +29,18 @@ export interface Recipe {
   label: string;
   /** Only a workbench in a complete workshop can make it. */
   workshopOnly?: true;
+  /** Something the colony has to have read up on first (books.ts). */
+  needs?: Knowledge;
 }
 
 export const RECIPES: Record<CraftKind, Recipe> = {
   weapon: { station: 'workbench', input: 'wood', count: 2, label: 'Weapons' },
   bandage: { station: 'workbench', input: 'wood', count: 1, label: 'Bandages' },
   medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine', workshopOnly: true },
-  ammo: { station: 'workbench', input: 'wood', count: 2, label: 'Ammo (hand-loaded)', workshopOnly: true },
+  ammo: { station: 'workbench', input: 'wood', count: 2, label: 'Ammo (hand-loaded)', workshopOnly: true, needs: 'gunsmithing' },
+  gun: { station: 'workbench', input: 'wood', count: 4, label: 'Guns', workshopOnly: true, needs: 'gunsmithing' },
   coat: { station: 'workbench', input: 'cloth', count: 2, label: 'Coats' },
-  armour: { station: 'workbench', input: 'cloth', count: 3, label: 'Padded armour' },
+  armour: { station: 'workbench', input: 'cloth', count: 3, label: 'Padded armour', needs: 'tailoring' },
   boots: { station: 'workbench', input: 'cloth', count: 1, label: 'Boots' },
   meal: { station: 'stove', input: 'food', count: 1, label: 'Hot meals' },
 };
@@ -70,7 +74,11 @@ function target(state: SimState, kind: CraftKind): number {
 /** Craftables for this station below their target, in CRAFTABLES order. */
 export function wantedCrafts(state: SimState, station: Station = 'workbench', inWorkshop = false): CraftKind[] {
   return CRAFTABLES.filter(
-    (k) => RECIPES[k].station === station && (inWorkshop || !RECIPES[k].workshopOnly) && craftStock(state, k) < target(state, k),
+    (k) =>
+      RECIPES[k].station === station &&
+      (inWorkshop || !RECIPES[k].workshopOnly) &&
+      (!RECIPES[k].needs || state.knowledge.includes(RECIPES[k].needs!)) &&
+      craftStock(state, k) < target(state, k),
   );
 }
 

@@ -11,6 +11,8 @@
 import { logEvent } from './events';
 import { HEALTH_MAX } from './health';
 import { scavengeFind } from './jobs';
+import { EXPEDITION_DOG_CHANCE, addDog } from './dogs';
+import { hashRoll, idNumber } from './hash';
 import { spawnItem } from './items';
 import { mournDeath } from './mood';
 import { random } from './rng';
@@ -71,6 +73,11 @@ function returnHome(state: SimState, x: Expedition): void {
   for (const s of x.members) {
     if (random(state) < deathChance) {
       lost.push(s);
+      // What they carried is lost with them.
+      for (const id of [s.weapon, s.body, s.feet, s.carrying]) {
+        const item = id ? state.items.find((i) => i.id === id) : undefined;
+        if (item) state.items.splice(state.items.indexOf(item), 1);
+      }
       continue;
     }
     if (sleepers.length > 0 && random(state) < INJURY_CHANCE) {
@@ -100,6 +107,10 @@ function returnHome(state: SimState, x: Expedition): void {
   const parts = [`brought back ${found} find${found === 1 ? '' : 's'}`];
   if (hurt.length) parts.push(`${hurt.map((s) => s.name).join(', ')} hurt`);
   if (lost.length) parts.push(`${lost.map((s) => s.name).join(', ')} didn't come back`);
+  if (back.length > 0 && hashRoll(idNumber(x.id), 0xd09) < EXPEDITION_DOG_CHANCE) {
+    const dog = addDog(state, x.home.x, x.home.y);
+    parts.push(`and a dog, ${dog.name}, followed them home`);
+  }
   logEvent(state, `The expedition to the ${x.target.label} is back: ${parts.join('; ')}`);
 }
 

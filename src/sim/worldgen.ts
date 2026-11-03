@@ -17,6 +17,7 @@ import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { itemAt, spawnItem } from './items';
 import { nearestTile } from './space';
+import { placeSettlements } from './settlements';
 import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
 import { rollTraits } from './skills';
@@ -317,6 +318,7 @@ export function createWorld(seed: number, size = WORLD_SIZE): SimState {
   ensureGeneratedAround(state, l.start);
   startCamp(state, l);
   state.harsh = true;
+  placeSettlements(state, l.start, seed);
   state.grid.explored.fill(0);
   for (let y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++) {
     for (let x = l.start.x - START_REVEAL_RADIUS; x <= l.start.x + START_REVEAL_RADIUS; x++) {

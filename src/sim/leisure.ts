@@ -13,6 +13,7 @@
 
 import { logEvent } from './events';
 import { lashOut } from './relationships';
+import { stopReading } from './books';
 import { furnitureAt } from './furniture';
 import { isWalkable, type Point } from './grid';
 import { IDLE_RETRY_TICKS, releaseSurvivor, seekJob } from './jobs';
@@ -129,6 +130,7 @@ export function updateBreakdown(state: SimState, s: Survivor): void {
   if (random(state) >= BREAKDOWN_CHANCE) return;
   if (s.jobId) releaseSurvivor(state, s, 'having a breakdown');
   s.leisure = null;
+  stopReading(state, s, 'having a breakdown');
   s.breakdown = { until: state.tick + BREAKDOWN_TICKS };
   s.note = 'having a breakdown';
   logEvent(state, `${s.name} is having a breakdown`);

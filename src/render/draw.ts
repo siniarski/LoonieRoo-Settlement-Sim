@@ -18,6 +18,7 @@ import type { Survivor } from '../sim/survivors';
 import type { ToolId } from '../ui/tools';
 import type { Wanderer } from '../sim/wanderers';
 import type { Herd } from '../sim/herds';
+import type { Dog } from '../sim/dogs';
 import { LAMP_LIGHT, litLamps } from '../sim/power';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
 import { survivorWorldPos } from './interp';
@@ -296,6 +297,7 @@ export function draw(
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
   for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
+  for (const d of state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(ctx, camera, viewport, d, options.alpha, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
 }
@@ -593,6 +595,26 @@ function drawFire(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
   ctx.fill();
 }
 
+/** A dog: a small brown body with a darker head, and its name when zoomed in. */
+function drawDog(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, d: Dog, alpha: number, size: number): void {
+  const t = d.move ? Math.min(1, (d.move.progress + alpha) / d.move.duration) : 0;
+  const wx = d.move ? d.move.from.x + (d.move.to.x - d.move.from.x) * t : d.pos.x;
+  const wy = d.move ? d.move.from.y + (d.move.to.y - d.move.from.y) * t : d.pos.y;
+  const p = worldToScreen(camera, viewport, wx + 0.5, wy + 0.5);
+  const r = Math.max(2, size * 0.2);
+  ctx.fillStyle = '#8a5a2e';
+  ctx.fillRect(p.x - r * 1.3, p.y - r * 0.6, r * 2.2, r * 1.2);
+  ctx.fillStyle = '#5a3a1e';
+  ctx.fillRect(p.x + r * 0.7, p.y - r, r, r);
+  if (size >= MIN_LABEL_PX) {
+    ctx.fillStyle = COLOURS.label;
+    ctx.font = `${Math.round(Math.min(11, size * 0.35))}px ui-monospace, Consolas, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(d.name, p.x, p.y - r - 2);
+  }
+}
+
 /** Furniture without a drawing of its own. */
 export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string]>> = {
   tower: ['#7a5636', 'T'],
@@ -612,6 +634,7 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   gun: ['#2e3238', 'G'],
   ammo: ['#b08a2e', 'a'],
   corpse: ['#5a4a4a', '+'],
+  book: ['#6a3a7a', 'b'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {
@@ -879,7 +902,8 @@ function drawSurvivor(
 ): void {
   const world = survivorWorldPos(s, options.alpha);
   const p = worldToScreen(camera, viewport, world.x, world.y);
-  const radius = Math.max(3, size * 0.32);
+  // Children are smaller.
+  const radius = Math.max(3, size * (s.childUntil !== null ? 0.22 : 0.32));
 
   if (s.id === options.selectedId) {
     ctx.strokeStyle = COLOURS.selected;
