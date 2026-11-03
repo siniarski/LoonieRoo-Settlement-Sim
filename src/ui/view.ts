@@ -27,4 +27,6 @@ export interface ViewState {
   showGame: boolean;
   /** The minimap (M). */
   showMinimap: boolean;
+  /** The colony overview (O). */
+  showOverview: boolean;
 }

@@ -26,6 +26,7 @@ import { INFECTION_TURN } from '../sim/infection';
 import { describeRelations } from '../sim/relationships';
 import { describeClothing } from '../sim/clothing';
 import { FRIENDLY, GIFT_FOOD, HOSTILE } from '../sim/settlements';
+import { createAlertList, createOverview } from './overview';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -93,6 +94,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   gameButton.textContent = '≡ Game';
   gameButton.addEventListener('click', () => (view.showGame = !view.showGame));
   bar.append(gameButton);
+  const overviewButton = el('button', 'hud-button');
+  overviewButton.textContent = 'O Overview';
+  overviewButton.addEventListener('click', () => (view.showOverview = !view.showOverview));
+  bar.append(overviewButton);
 
   const info = el('div', 'hud-info');
   const status = el('div', 'hud-status');
@@ -104,7 +109,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const expeditions = createExpeditionPanel(view, command);
   const traders = createTraderPanel(command);
   const neighbours = createSettlementPanel(command);
-  info.append(status, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, feed);
+  const alertList = createAlertList(view);
+  const overview = createOverview(view, command);
+  info.append(status, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -115,7 +122,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, minimap.root, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, overview.root, minimap.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -154,6 +161,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       );
       prioritiesButton.classList.toggle('active', view.showPriorities);
       gameButton.classList.toggle('active', view.showGame);
+      overviewButton.classList.toggle('active', view.showOverview);
+      alertList.update(state);
+      overview.update(state);
       game.update();
       minimap.update(state);
 

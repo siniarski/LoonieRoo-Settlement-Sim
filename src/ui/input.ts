@@ -196,6 +196,8 @@ export function attachInput(ctx: InputContext): Input {
       view.showPriorities = !view.showPriorities;
     } else if (key === 'm') {
       view.showMinimap = !view.showMinimap;
+    } else if (key === 'o') {
+      view.showOverview = !view.showOverview;
     } else if (key === 'Home') {
       const { width, height } = ctx.mapSize();
       view.camera = centredOn(width, height, view.camera.zoom);
