@@ -3,6 +3,11 @@ import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { DIAGONAL_PCT, stepTarget } from '../src/sim/control';
 import { SATIETY_MAX } from '../src/sim/food';
+import { HYDRATION_MAX } from '../src/sim/water';
+import { spawnItem } from '../src/sim/items';
+import { ENTITY_CHARS } from '../src/sim/scenario';
+
+const WELL = (ENTITY_CHARS as Record<string, string>).well!;
 import { checkInvariants } from '../src/sim/invariants';
 import { replay } from '../src/sim/replay';
 import { loadScenario } from '../src/sim/scenario';
@@ -95,6 +100,46 @@ describe('direct control', () => {
     cmd(state, { type: 'use', x: 1, y: 1 });
     run(state, 60);
     expect(state.items.length).toBe(items + 1);
+  });
+
+  it('use: drink at a well, sleep in a bed until rested, wake when hurt', () => {
+    const state = loadScenario({ seed: 1, map: [`s${WELL}.`, 'b..'] });
+    const s = state.survivors[0]!;
+    cmd(state, { type: 'takeControl', survivorId: s.id });
+    s.hydration = 10;
+    cmd(state, { type: 'use', x: 1, y: 0 });
+    run(state, 30);
+    expect(s.hydration).toBeGreaterThan(HYDRATION_MAX - 40);
+    s.rest = 100;
+    cmd(state, { type: 'use', x: 0, y: 1 }); // climbs in
+    run(state, 6);
+    expect(s.pos).toEqual({ x: 0, y: 1 });
+    cmd(state, { type: 'use', x: 0, y: 1 });
+    run(state, 100);
+    expect(s.rest).toBeGreaterThan(400);
+    s.hurtTick = state.tick;
+    tick(state);
+    expect(state.control!.busy).toBeNull();
+  });
+
+  it('use: medicine you carry cures your infection; one on the ground you need is used, not picked up', () => {
+    const state = loadScenario({ seed: 1, map: ['sm.'] });
+    const s = state.survivors[0]!;
+    cmd(state, { type: 'takeControl', survivorId: s.id });
+    s.health = 500;
+    cmd(state, { type: 'use', x: 1, y: 0 }); // the bandage
+    run(state, 40);
+    expect(s.health).toBeGreaterThan(500);
+    expect(state.items.filter((i) => i.kind === 'bandage')).toEqual([]);
+    s.infection = 100;
+    const med = spawnItem(state, 'medicine', 0, 0);
+    med.pos = null;
+    med.carriedBy = s.id;
+    s.carrying = med.id;
+    cmd(state, { type: 'use', x: 0, y: 0 });
+    run(state, 40);
+    expect(s.infection).toBeNull();
+    expect(s.carrying).toBeNull();
   });
 
   it('moving interrupts a search', () => {

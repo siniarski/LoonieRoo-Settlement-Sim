@@ -12,7 +12,8 @@
 //   Esc            put the tool down, then close build mode, then deselect
 // Direct control (F takes over the selected survivor, F again hands them back):
 //   WASD/arrows  walk (8 ways) · Left click  swing at / shoot towards a tile
-//   Right click  use a tile next to you (pick up, wear, eat, search) · E  use what's in front
+//   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep) · E  use what's in front,
+//                else underfoot (on a bed, or bare floor: sleep)
 //   V  shout "follow me" to everyone near · H  shout "hold here" (each where they stand) · T  talk to whoever's nearest
 //   L  shout "loot that room" (the one under the mouse)
 // Always:

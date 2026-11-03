@@ -35,7 +35,8 @@ export function checkInvariants(state: SimState): string[] {
       const item = items.get(s.carrying);
       if (!item) problems.push(`${s.name} carries missing item ${s.carrying}`);
       else if (item.carriedBy !== s.id) problems.push(`${s.name} carries ${item.id} but it says carriedBy ${item.carriedBy}`);
-      if (!s.jobId && s.meal?.itemId !== s.carrying) problems.push(`${s.name} carries ${s.carrying} with no job or meal`);
+      // Whoever you control carries what they like (control.ts).
+      if (!s.jobId && s.meal?.itemId !== s.carrying && state.control?.survivorId !== s.id) problems.push(`${s.name} carries ${s.carrying} with no job or meal`);
     }
   }
 

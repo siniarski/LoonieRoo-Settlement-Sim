@@ -11,7 +11,7 @@ import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Point, type Tile } from './grid';
-import { spawnItem } from './items';
+import { dropItem, spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
 import { addPlot, clearPlot, isCrop, plotAt, removePlot, type Crop } from './farming';
@@ -592,7 +592,13 @@ function takeControl(state: SimState, id: string | null): CommandResult {
     if (!state.control) return unchanged();
     const was = controlled(state);
     state.control = null;
-    if (was) was.note = 'back to their own devices';
+    if (was) {
+      // On their own they only carry things for a job: whatever you had them holding goes down.
+      const carried = was.carrying ? state.items.find((i) => i.id === was.carrying) : undefined;
+      was.carrying = null;
+      if (carried) dropItem(state, carried, was.pos);
+      was.note = 'back to their own devices';
+    }
     return changed();
   }
   const survivor = getSurvivor(state, id);

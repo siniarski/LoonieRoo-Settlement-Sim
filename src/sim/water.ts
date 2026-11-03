@@ -69,7 +69,7 @@ export function updateCollectors(state: SimState): void {
 }
 
 /** What's drinkable from tile (x, y): a well, a collector with water, or open water. */
-function sourceAt(state: SimState, x: number, y: number): WaterSource | null {
+export function sourceAt(state: SimState, x: number, y: number): WaterSource | null {
   const f = furnitureAt(state, x, y);
   if (f?.kind === 'well') return 'well';
   if (f?.kind === 'collector' && f.loot > 0) return 'collector';

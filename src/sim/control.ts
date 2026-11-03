@@ -5,15 +5,23 @@
 // bleed and heal. Input arrives as commands like everything else (rule 5):
 //   steer   the held direction (sent when the keys change, not every frame)
 //   swing   attack towards a tile: the zombie in front, else a shot with a loaded gun
-//   use     pick up, put on, eat, or search what's on a tile next to you
+//   use     pick up, put on, eat, search, treat yourself (medicine, a bandage), drink (a well,
+//           a rain collector, the river) or
+//           sleep (a bed; your own tile with nothing on it is the floor) at a tile next to you
 // Movement stays tile to tile (rule 10), in eight directions; a diagonal costs
 // 1.5 steps and can't cut a corner. A blocked diagonal slides along the wall.
-// Searching and eating take time; moving or swinging interrupts them.
+// Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
+// and so does being hurt while asleep.
 
 import { hitResident, meetResident, residentAt, type Resident } from './residents';
 import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
-import { getFurniture, type Furniture } from './furniture';
+import { furnitureAt, getFurniture, type Furniture } from './furniture';
+import { DRINK_TICKS, HYDRATION_MAX, sourceAt } from './water';
+import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX } from './rest';
+import { samePoint } from './space';
+import { applyRemedy, remediesFor } from './medicine';
+import { TREAT_TICKS } from './health';
 import { inBounds, type Point } from './grid';
 import { dropItem, getItem, itemAt, removeItem, type Item } from './items';
 import { spawnFind } from './difficulty';
@@ -42,7 +50,7 @@ export interface Control {
   /** No swing or shot before this tick. */
   nextSwing: number;
   /** A timed action in progress: searching a crate or tree, or eating. */
-  busy: { what: 'search' | 'eat'; targetId: string; progress: number; duration: number } | null;
+  busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat'; targetId: string; progress: number; duration: number } | null;
 }
 
 export function controlled(state: SimState): Survivor | undefined {
@@ -87,6 +95,7 @@ export function stepTarget(state: SimState, from: Point, dx: number, dy: number)
 
 function updateBusy(state: SimState, s: Survivor, c: Control): void {
   const busy = c.busy!;
+  if (busy.what === 'sleep') return sleepTick(state, s, c, busy);
   busy.progress += 1;
   if (busy.progress < busy.duration) return;
   c.busy = null;
@@ -99,6 +108,24 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
     s.note = `ate ${item.kind === 'meal' ? 'a hot meal' : 'some food'}`;
     return;
   }
+  if (busy.what === 'treat') {
+    const item = getItem(state, busy.targetId);
+    if (!item || (item.carriedBy !== s.id && !item.pos)) return;
+    applyRemedy(s, item.kind);
+    if (s.carrying === item.id) s.carrying = null;
+    removeItem(state, item);
+    s.note = item.kind === 'medicine' ? 'took the medicine' : 'bandaged up';
+    return;
+  }
+  if (busy.what === 'drink') {
+    const [x, y] = busy.targetId.split(',').map(Number) as [number, number];
+    const source = sourceAt(state, x, y);
+    if (!source) return;
+    s.hydration = HYDRATION_MAX;
+    if (source === 'collector') furnitureAt(state, x, y)!.loot -= 1;
+    s.note = 'had a drink';
+    return;
+  }
   const crate = getFurniture(state, busy.targetId);
   if (!crate || crate.loot <= 0 || !nextTo(s.pos, crate)) return;
   const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
@@ -106,6 +133,21 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
   crate.loot -= 1;
   if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false;
   s.note = crate.kind === 'tree' ? 'chopped some wood' : `found ${kind}`;
+}
+
+/** Asleep: rest comes back (faster in a bed) until full, or until something hurts you. */
+function sleepTick(state: SimState, s: Survivor, c: Control, busy: NonNullable<Control['busy']>): void {
+  if (s.hurtTick === state.tick) {
+    c.busy = null;
+    s.note = 'woken by an attack!';
+    return;
+  }
+  // updateRest still drains a tick's worth; this makes up for it.
+  s.rest = Math.min(REST_MAX, s.rest + REST_DRAIN + (busy.targetId === 'floor' ? FLOOR_REGEN : BED_REGEN));
+  busy.progress = s.rest;
+  if (s.rest < REST_MAX) return;
+  c.busy = null;
+  s.note = 'woke up rested';
 }
 
 /** Within one tile, diagonals included. */
@@ -211,9 +253,28 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   const person = residentAt(state, target);
   if (person) return meetResident(state, s, person) ?? `talked with ${person.name}`;
   const item = itemAt(state, target.x, target.y);
+  // A remedy you need is used, not picked up: on the ground next to you, or the one you carry (use your own tile).
+  const carriedRemedy = s.carrying && samePoint(target, s.pos) ? getItem(state, s.carrying) : undefined;
+  const remedy = [item, carriedRemedy].find((i) => i && !i.reservedBy && remediesFor(s).includes(i.kind));
+  if (remedy) {
+    c.busy = { what: 'treat', targetId: remedy.id, progress: 0, duration: TREAT_TICKS };
+    return remedy.kind === 'medicine' ? 'taking medicine' : 'bandaging';
+  }
   if (item && !item.reservedBy) return take(state, s, c, item);
   const crate = state.furniture.find((f) => f.x === target.x && f.y === target.y && (f.kind === 'crate' || f.kind === 'tree'));
   if (crate) return search(s, c, crate);
+  const source = sourceAt(state, target.x, target.y);
+  if (source) {
+    c.busy = { what: 'drink', targetId: `${target.x},${target.y}`, progress: 0, duration: DRINK_TICKS };
+    return 'drinking';
+  }
+  const bed = furnitureAt(state, target.x, target.y);
+  if (bed?.kind === 'bed' && samePoint(bed, s.pos)) return lieDown(s, c, bed.id);
+  if (bed?.kind === 'bed') {
+    // Climb in first: one step onto it, then use it again (or E) to sleep.
+    s.move = { from: { ...s.pos }, to: { x: bed.x, y: bed.y }, progress: 0, duration: stepPace(state, s, bed) };
+    return 'getting into bed';
+  }
   // Nothing there: put down what you're carrying.
   const carried = s.carrying ? getItem(state, s.carrying) : undefined;
   if (carried) {
@@ -221,7 +282,15 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
     dropItem(state, carried, target);
     return `put down the ${carried.kind}`;
   }
+  // Nothing at all underfoot: sleep rough.
+  if (samePoint(target, s.pos)) return lieDown(s, c, 'floor');
   return null;
+}
+
+function lieDown(s: Survivor, c: Control, where: string): string {
+  if (s.rest >= REST_MAX) return 'not tired';
+  c.busy = { what: 'sleep', targetId: where, progress: s.rest, duration: REST_MAX };
+  return where === 'floor' ? 'sleeping on the floor' : 'asleep in bed';
 }
 
 function take(state: SimState, s: Survivor, c: Control, item: Item): string {
