@@ -80,7 +80,7 @@ describe('infection', () => {
     applyCommand(state, { type: 'setRest', survivorId: ash.id, rest: 0 });
     runUntil(state, () => ash.sleep?.asleep === true);
     ash.infection = 50;
-    state.items.push({ id: 'i900', kind: 'medicine', pos: { x: 5, y: 2 }, carriedBy: null, reservedBy: null, wear: 0 });
+    state.items.push({ id: 'i900', kind: 'medicine', pos: { x: 5, y: 2 }, carriedBy: null, reservedBy: null, wear: 0, tag: null });
     runUntil(state, () => bea.note === `cured ${ash.name}'s infection`);
     expect(ash.infection).toBeNull();
   });

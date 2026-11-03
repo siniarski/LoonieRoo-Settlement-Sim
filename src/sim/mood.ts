@@ -10,6 +10,7 @@ import { isHurt } from './health';
 import { TRAIT_INFO } from './skills';
 import { forget } from './relationships';
 import { INFECTED_MOOD } from './infection';
+import { SICK_MOOD } from './corpses';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
@@ -26,7 +27,9 @@ export type ThoughtKind =
   | 'hotMeal'
   | 'soaked'
   | 'cold'
-  | 'lostFriend';
+  | 'lostFriend'
+  | 'stench'
+  | 'paidRespects';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -47,6 +50,8 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   soaked: { label: 'got soaked', effect: -3, duration: DAY_LENGTH / 4 },
   cold: { label: 'out in the cold', effect: -10, duration: DAY_LENGTH / 4 },
   lostFriend: { label: 'lost a friend', effect: -25, duration: 3 * DAY_LENGTH },
+  stench: { label: 'the stench of the dead', effect: -8, duration: DAY_LENGTH / 4 },
+  paidRespects: { label: 'paid their respects', effect: 15, duration: 2 * DAY_LENGTH },
 };
 
 export const MOOD_BASE = 50;
@@ -78,6 +83,7 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
   if (isHurt(s.health)) factors.push(['hurt', HURT_MOOD]);
   if (s.satiety < HUNGRY) factors.push(['hungry', HUNGRY_MOOD]);
   if (s.infection !== null) factors.push(['infected', INFECTED_MOOD]);
+  if (s.sick !== null) factors.push(['sick', SICK_MOOD]);
   for (const t of s.traits) if (TRAIT_INFO[t].mood !== 0) factors.push([TRAIT_INFO[t].label, TRAIT_INFO[t].mood]);
   return factors;
 }

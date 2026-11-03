@@ -32,6 +32,8 @@ import { updateVisitors } from './visitors';
 import { forgetThoughts } from './mood';
 import { ZOMBIE_HEALTH, addZombie, updateZombies } from './zombies';
 import { updateInfection } from './infection';
+import { updateFires } from './fire';
+import { updateCorpses } from './corpses';
 
 export const TICKS_PER_SECOND = 10;
 
@@ -39,6 +41,8 @@ export function tick(state: SimState): void {
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
+  updateFires(state);
+  updateCorpses(state);
   updateHerds(state);
   updateWeather(state);
   updateRelationships(state);

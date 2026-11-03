@@ -43,7 +43,8 @@ describe('tools', () => {
     expect(new Set(TOOLS.map((t) => t.id)).size).toBe(TOOLS.length);
     const categorised = CATEGORIES.flatMap((c) => toolsIn(c.id));
     expect(categorised).toHaveLength(TOOLS.length);
-    for (const c of CATEGORIES) expect(toolsIn(c.id).length, c.id).toBeLessThanOrEqual(9); // number keys 1-9
+    for (const c of CATEGORIES) expect(toolsIn(c.id).length, c.id).toBeLessThanOrEqual(10); // number keys 1-9, then 0
+    expect(toolForKey('rooms', '0')?.id).toBe(toolsIn('rooms')[9]?.id);
   });
 
   it('Furnish hands clicks to the planner instead of issuing a command itself', () => {

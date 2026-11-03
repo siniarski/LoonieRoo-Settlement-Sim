@@ -14,8 +14,8 @@ import { getTile, type Point } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
-export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop';
-export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary', 'barracks', 'workshop'];
+export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'graveyard';
+export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary', 'barracks', 'workshop', 'graveyard'];
 
 export interface RoomDesignation {
   id: string;
@@ -239,13 +239,15 @@ export function completeRooms(state: SimState, purpose: RoomPurpose): Set<number
 export interface StoreRooms {
   storage: Set<number>;
   armory: Set<number>;
+  graveyard: Set<number>;
 }
 
 export function completeStoreRooms(state: SimState): StoreRooms {
-  return { storage: completeRooms(state, 'storage'), armory: completeRooms(state, 'armory') };
+  return { storage: completeRooms(state, 'storage'), armory: completeRooms(state, 'armory'), graveyard: completeRooms(state, 'graveyard') };
 }
 
-/** Where an item belongs: weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage. */
+/** Where an item belongs: the dead in a graveyard; weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage. */
 export function homeFor(rooms: StoreRooms, kind: ItemKind): Set<number> {
+  if (kind === 'corpse') return rooms.graveyard; // the dead go nowhere else
   return (kind === 'weapon' || kind === 'gun' || kind === 'ammo') && rooms.armory.size > 0 ? rooms.armory : rooms.storage;
 }

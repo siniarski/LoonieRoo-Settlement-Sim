@@ -43,7 +43,7 @@ export function disarm(view: BuildView): void {
 /**
  * Keys that mean something in or for build mode. Returns true if handled.
  *   B          toggle build mode
- *   1-9        (build mode) arm the nth tool of the open category
+ *   1-9, 0     (build mode) arm the nth tool of the open category (0 is the tenth)
  *   Tab / E    (build mode) next category; Shift+Tab / Q previous
  *   Escape     disarm the tool, then close build mode, then clear the selection
  */

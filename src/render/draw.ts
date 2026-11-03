@@ -71,6 +71,8 @@ const COLOURS = {
     infirmary: '#f4f1ea',
     barracks: '#c3d48c',
     workshop: '#d6b47c',
+    graveyard: '#b4b4c8',
+    burn: '#ff7a2e',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -137,8 +139,9 @@ const COLOURS = {
     infirmary: 'rgba(240, 240, 240, 0.10)',
     barracks: 'rgba(170, 190, 120, 0.12)',
     workshop: 'rgba(190, 150, 100, 0.12)',
+    graveyard: 'rgba(120, 120, 140, 0.14)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a', graveyard: '#b4b4c8' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -148,7 +151,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop', graveyard: 'Graveyard' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -234,6 +237,7 @@ export function draw(
     else drawCrate(ctx, camera, viewport, f, size);
   }
   for (const bp of state.blueprints) drawBlueprint(ctx, camera, viewport, bp, size);
+  for (const f of state.fires) if (shown(f.x, f.y)) drawFire(ctx, camera, viewport, f.x, f.y, state.tick);
   for (const item of state.items) {
     if (item.pos && shown(item.pos.x, item.pos.y)) drawItem(ctx, camera, viewport, item.kind, item.pos.x + 0.5, item.pos.y + 0.5, size);
   }
@@ -551,6 +555,23 @@ function drawItem(
   else drawGlyph(ctx, camera, viewport, wx, wy, size, GLYPHS[kind] ?? ['#cccccc', '?']);
 }
 
+/** Flames: two flickering tongues (the flicker comes from the tick, so it's stable when paused). */
+function drawFire(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, x: number, y: number, tick: number): void {
+  const r = tileRect(camera, viewport, x, y);
+  const flicker = ((tick + x * 7 + y * 13) % 6) / 6;
+  ctx.fillStyle = 'rgba(255, 90, 20, 0.55)';
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.fillStyle = `rgba(255, ${170 + Math.round(60 * flicker)}, 60, 0.85)`;
+  ctx.beginPath();
+  ctx.moveTo(r.x + r.w * 0.2, r.y + r.h * 0.9);
+  ctx.lineTo(r.x + r.w * (0.35 + 0.1 * flicker), r.y + r.h * 0.2);
+  ctx.lineTo(r.x + r.w * 0.5, r.y + r.h * 0.9);
+  ctx.lineTo(r.x + r.w * (0.65 - 0.1 * flicker), r.y + r.h * 0.35);
+  ctx.lineTo(r.x + r.w * 0.8, r.y + r.h * 0.9);
+  ctx.closePath();
+  ctx.fill();
+}
+
 /** Furniture without a drawing of its own. */
 export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string]>> = {
   tower: ['#7a5636', 'T'],
@@ -564,6 +585,7 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   boots: ['#4a3626', 'B'],
   gun: ['#2e3238', 'G'],
   ammo: ['#b08a2e', 'a'],
+  corpse: ['#5a4a4a', '+'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {

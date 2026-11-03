@@ -28,6 +28,7 @@ import { damageStructure, isStructure } from './breach';
 import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
+import { ignite } from './fire';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -64,6 +65,8 @@ export type Command =
   | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
   /** Take a trader's offer (visitors.ts). */
   | { type: 'trade'; traderId: string; offer: number }
+  /** Set a tile alight on purpose (fire.ts). */
+  | { type: 'ignite'; x: number; y: number }
   /** Lock or unlock a door: raiders can't open locked ones. */
   | { type: 'toggleLock'; x: number; y: number }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
@@ -81,7 +84,7 @@ export type Command =
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
 /** Plans the player can only make on ground someone has seen. */
-const DESIGNATIONS = new Set<Command['type']>(['designateBuild', 'designateRemove', 'designateRoom', 'designateScavenge', 'designateFarm']);
+const DESIGNATIONS = new Set<Command['type']>(['ignite', 'designateBuild', 'designateRemove', 'designateRoom', 'designateScavenge', 'designateFarm']);
 
 export function applyCommand(state: SimState, command: Command): CommandResult {
   const result = execute(state, command);
@@ -231,6 +234,8 @@ function execute(state: SimState, command: Command): CommandResult {
     }
     case 'designateRoom':
       return designateRoom(state, x, y, command.purpose);
+    case 'ignite':
+      return ignite(state, x, y) ? changed() : unchanged();
     case 'spawnSurvivor':
       return spawnSurvivor(state, x, y);
     case 'spawnZombie':

@@ -19,6 +19,9 @@ import { addThought } from './mood';
 import { hasTrait } from './skills';
 import { INFECTION_CHANCE, maybeInfect } from './infection';
 import { armourDamage, wearing } from './clothing';
+import { leaveCorpse } from './corpses';
+import { FIREBOMB_CHANCE, ignite } from './fire';
+import { hashRoll, idNumber } from './hash';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -261,6 +264,10 @@ function updateZombie(state: SimState, z: Zombie): void {
     // A door or wall on the way in: batter it. Anything else, re-plan next tick.
     if (isStructure(getTile(state.grid, next.x, next.y)) && manhattan(z.pos, next) === 1) {
       if (z.cooldown === 0) {
+        // Raiders sometimes throw a firebomb instead.
+        if (z.kind === 'raider' && hashRoll(idNumber(z.id), state.tick) < FIREBOMB_CHANCE && ignite(state, next.x, next.y)) {
+          logEvent(state, `Raiders firebombed the ${getTile(state.grid, next.x, next.y)} at (${next.x}, ${next.y})`);
+        }
         damageStructure(state, next.x, next.y, ZOMBIE_DAMAGE);
         z.cooldown = ZOMBIE_ATTACK_EVERY;
       }
@@ -342,6 +349,7 @@ function springTrap(state: SimState, z: Zombie): boolean {
   }
   if (z.health > 0) return false;
   removeZombie(state, z);
+  leaveCorpse(state, z.pos, null);
   logEvent(state, 'A spike trap killed a zombie');
   return true;
 }
@@ -351,6 +359,7 @@ export function damageZombie(state: SimState, z: Zombie, amount: number, by: Sur
   z.health = Math.max(0, z.health - amount);
   if (z.health > 0) return false;
   removeZombie(state, z);
+  leaveCorpse(state, z.pos, null);
   logEvent(state, `${by.name} killed a zombie`);
   return true;
 }

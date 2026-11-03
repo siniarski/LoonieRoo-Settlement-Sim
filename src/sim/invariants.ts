@@ -221,6 +221,13 @@ export function checkInvariants(state: SimState): string[] {
     else if (d < 0 || d >= STRUCTURE_HEALTH[tile] || !Number.isInteger(d)) problems.push(`${tile} at ${at} has damage ${d}`);
   }
 
+  const fireTiles = new Set<string>();
+  for (const f of state.fires) {
+    const key = `${f.x},${f.y}`;
+    if (fireTiles.has(key) || !inBounds(grid, f.x, f.y) || f.left <= 0) problems.push(`fire at (${key}) is doubled, off the map or out`);
+    fireTiles.add(key);
+  }
+  for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);
   for (const d of state.dormant) if (!inBounds(grid, d.x, d.y)) problems.push(`dormant zombie ${d.id} off the map`);
   for (const h of state.herds) if (!inBounds(grid, h.x, h.y) || !inBounds(grid, h.to.x, h.to.y) || h.size <= 0) problems.push(`herd ${h.id} is off the map or empty`);

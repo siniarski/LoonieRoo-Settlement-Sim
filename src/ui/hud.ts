@@ -47,7 +47,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', firefight: 'Fire', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -254,7 +254,7 @@ function createBuildBar(view: ViewState) {
     tools.innerHTML = '';
     toolButtons = toolsIn(category).map((tool, i) => {
       const button = el('button', 'hud-button build-tool');
-      button.textContent = `${i + 1} ${tool.label}`;
+      button.textContent = `${(i + 1) % 10} ${tool.label}`;
       button.title = tool.hasInstant ? 'Hold Shift while placing to build instantly' : '';
       button.addEventListener('click', () => chooseTool(view, tool.id, tool.category));
       tools.append(button);

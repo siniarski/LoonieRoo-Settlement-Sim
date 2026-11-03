@@ -309,6 +309,7 @@ export function createWorld(seed: number, size = WORLD_SIZE): SimState {
   state.world = { seed, size, chunks, generated: new Array<number>(chunks * chunks).fill(0) };
   ensureGeneratedAround(state, l.start);
   startCamp(state, l);
+  state.harsh = true;
   state.grid.explored.fill(0);
   for (let y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++) {
     for (let x = l.start.x - START_REVEAL_RADIUS; x <= l.start.x + START_REVEAL_RADIUS; x++) {

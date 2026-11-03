@@ -20,13 +20,14 @@ import type { WorldInfo } from './worldgen';
 import type { Weather } from './seasons';
 import type { Expedition } from './expeditions';
 import type { Trader } from './visitors';
+import type { Fire } from './fire';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 37;
+export const SCHEMA_VERSION = 38;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -66,6 +67,13 @@ export interface SimState {
   expeditions: Expedition[];
   /** Traders waiting to swap goods (visitors.ts). */
   traders: Trader[];
+  /** Burning tiles (fire.ts). */
+  fires: Fire[];
+  /**
+   * The harsher survival rules: corpses and sickness, thirst, spoiling food. On in generated
+   * worlds; hand-made maps opt in (so tests of other things don't have to feed and water everyone).
+   */
+  harsh: boolean;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -111,6 +119,8 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     weather: 'clear',
     expeditions: [],
     traders: [],
+    fires: [],
+    harsh: false,
     items: [],
     furniture: [],
     farm: [],

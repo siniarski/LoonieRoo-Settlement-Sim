@@ -26,6 +26,9 @@ import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, isIndoors, labelAt, reconcileRoomDesignations, type StoreRooms } from './rooms';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { makeNoise } from './noise';
+import { DOUSE_WORK, STOVE_FIRE_CHANCE, douse, fireAt, ignite } from './fire';
+import { hashRoll } from './hash';
+import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
 import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
 import { startLeisure } from './leisure';
@@ -174,6 +177,12 @@ export function reconcileJobs(state: SimState): void {
     if (needsWork(plot) && !tending.has(plot.id)) addJob(state, 'farm', plot.x, plot.y, null, null, null, null, plot.id);
   }
 
+  // Every fire gets one firefight job.
+  const fighting = new Set(state.jobs.filter((j) => j.type === 'firefight').map((j) => j.y * width + j.x));
+  for (const f of state.fires) {
+    if (!fighting.has(f.y * width + f.x)) addJob(state, 'firefight', f.x, f.y, null, null);
+  }
+
   // Every zombie gets one guard job.
   const hunted = new Set(state.jobs.filter((j) => j.type === 'guard').map((j) => j.zombieId));
   for (const z of state.zombies) {
@@ -213,6 +222,8 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
     }
     case 'scout':
       return job.areaId && getExploreArea(state, job.areaId) ? null : 'area explored';
+    case 'firefight':
+      return fireAt(state, job.x, job.y) ? null : 'fire is out';
     case 'doctor': {
       const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
       if (!patient || !isPatient(patient)) return 'patient is up and about';
@@ -371,6 +382,8 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workScout(state, s, job);
     case 'guard':
       return workGuard(state, s, job);
+    case 'firefight':
+      return workFirefight(state, s, job);
     case 'farm':
       return workFarm(state, s, job);
   }
@@ -422,6 +435,19 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   if (!damageZombie(state, z, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'), s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
+}
+
+/** Beat a fire out from next to it. */
+function workFirefight(state: SimState, s: Survivor, job: Job): void {
+  const fire = fireAt(state, job.x, job.y);
+  if (!fire) return releaseSurvivor(state, s, 'fire is out');
+  if (manhattan(s.pos, fire) !== 1) return goTo(state, s, job, neighbours4(state.grid, fire.x, fire.y));
+  const step = workStep(state, s, 'firefight');
+  if (step === 0) return;
+  job.progress += step * (state.weather === 'clear' ? 1 : 2);
+  if (job.progress < DOUSE_WORK) return;
+  douse(state, fire);
+  finishJob(state, s, job, `put out a fire at (${fire.x}, ${fire.y})`);
 }
 
 /** Search a crate from next to it; each completed search drops one find by the survivor. */
@@ -503,6 +529,10 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
   bench.stored -= cost;
   if (bench.stored === 0) bench.storedKind = null;
   spawnItem(state, kind, s.pos.x, s.pos.y);
+  // Now and then the stove sets something alight.
+  if (kind === 'meal' && hashRoll(bench.x, bench.y, state.tick) < STOVE_FIRE_CHANCE && ignite(state, bench.x, bench.y)) {
+    logEvent(state, `The stove at (${bench.x}, ${bench.y}) caught fire!`);
+  }
   const made = kind === 'meal' ? 'cooked a hot meal' : kind === 'medicine' ? 'made medicine' : `crafted ${kind === 'armour' || kind === 'boots' ? '' : 'a '}${kind}`;
   finishJob(state, s, job, `${made} at (${bench.x}, ${bench.y})`);
 }
@@ -774,6 +804,7 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
     }
     case 'build':
     case 'scavenge':
+    case 'firefight':
     case 'guard': {
       // All done from a tile next to the target (for guards, the zombie as of this tick).
       const goals = neighbours4(grid, job.x, job.y);

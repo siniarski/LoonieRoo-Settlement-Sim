@@ -46,7 +46,7 @@ export function skillLevel(s: Survivor, type: JobType): number {
  * lazy: 3/4 speed), else 1, or 2 on the ticks their skill earns. Practice counts either way it works.
  */
 export function workStep(state: SimState, s: Survivor, type: JobType): number {
-  const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy');
+  const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy') || s.sick !== null;
   if (!worksThisTick(state.tick, slowed)) return 0;
   s.xp[type] = (s.xp[type] ?? 0) + 1;
   return 1 + (state.tick % 20 < skillLevel(s, type) ? 1 : 0);

@@ -38,7 +38,7 @@ describe('doctor', () => {
     wound(state, ash, HEALTH_CRITICAL - 50);
     runUntil(state, () => ash.sleep?.asleep === true);
     // A bandage turns up only now (awake, Ash would have used it himself).
-    state.items.push({ id: 'i900', kind: 'bandage', pos: { x: 5, y: 2 }, carriedBy: null, reservedBy: null, wear: 0 });
+    state.items.push({ id: 'i900', kind: 'bandage', pos: { x: 5, y: 2 }, carriedBy: null, reservedBy: null, wear: 0, tag: null });
     const before = ash.health;
     runUntil(state, () => bea.note === `treated ${ash.name}'s wounds`);
     expect(ash.health).toBeGreaterThanOrEqual(before + BANDAGE_HEAL);

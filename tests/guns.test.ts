@@ -49,7 +49,7 @@ describe('guns', () => {
   it('a loaded gun shoots from range (no walking up to it), using rounds', () => {
     const state = setup(['s.........', '..........'], { guard: 3 });
     const s = state.survivors[0]!;
-    state.items.push({ id: 'g1', kind: 'gun', pos: null, carriedBy: s.id, reservedBy: null, wear: 3 });
+    state.items.push({ id: 'g1', kind: 'gun', pos: null, carriedBy: s.id, reservedBy: null, wear: 3, tag: null });
     s.weapon = 'g1';
     state.tick = NIGHT;
     state.zombiesTonight = 0;

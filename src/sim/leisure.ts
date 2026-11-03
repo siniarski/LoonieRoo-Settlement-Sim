@@ -3,7 +3,8 @@
 // Leisure: a survivor with nothing doable to do, in a mood below RELAX_BELOW
 // and not already relaxed today, walks to a free spot in a complete rec room
 // and unwinds for RELAX_TICKS ("relaxed", a good thought). A job turning up
-// ends it: they go and take it.
+// ends it: they go and take it. Someone grieving a death goes to a graveyard
+// instead, if there is one, and pays their respects (a bigger lift, once).
 //
 // Breakdowns: a miserable survivor (see mood.ts) may break down. Rolled
 // every BREAKDOWN_CHECK_EVERY ticks (sim RNG). For BREAKDOWN_TICKS they drop
@@ -35,13 +36,19 @@ export const BREAKDOWN_TICKS = 600;
 
 /** Called when an idle survivor found no job. Returns true if they set off to relax. */
 export function startLeisure(state: SimState, s: Survivor): boolean {
-  if (s.leisure || s.breakdown || mood(state, s) >= RELAX_BELOW || s.thoughts.some((t) => t.kind === 'relaxed')) return false;
-  const spot = pickSpot(state, s);
+  if (s.leisure || s.breakdown || mood(state, s) >= RELAX_BELOW) return false;
+  const has = (kind: string) => s.thoughts.some((t) => t.kind === kind);
+  const grieving = (has('lostFriend') || has('sawDeath')) && !has('paidRespects');
+  const at: LeisurePlace | null = grieving && completeRooms(state, 'graveyard').size > 0 ? 'graveyard' : has('relaxed') ? null : 'recroom';
+  if (!at) return false;
+  const spot = pickSpot(state, s, at);
   if (!spot) return false;
-  s.leisure = { x: spot.x, y: spot.y, progress: 0 };
-  s.note = `going to relax at (${spot.x}, ${spot.y})`;
+  s.leisure = { x: spot.x, y: spot.y, progress: 0, at };
+  s.note = at === 'graveyard' ? `going to the graveyard at (${spot.x}, ${spot.y})` : `going to relax at (${spot.x}, ${spot.y})`;
   return true;
 }
+
+export type LeisurePlace = 'recroom' | 'graveyard';
 
 /** Runs when standing still, after sleep, before work. Returns true if leisure handled this tick. */
 export function updateLeisure(state: SimState, s: Survivor): boolean {
@@ -55,7 +62,7 @@ export function updateLeisure(state: SimState, s: Survivor): boolean {
     s.leisure = was;
   }
   const spot = { x: s.leisure.x, y: s.leisure.y };
-  if (!spotFree(state, s, spot)) {
+  if (!spotFree(state, s, spot, s.leisure.at)) {
     s.leisure = null;
     s.note = 'rec room spot gone';
     return false;
@@ -71,17 +78,18 @@ export function updateLeisure(state: SimState, s: Survivor): boolean {
     return true;
   }
   s.leisure.progress += 1;
-  if (s.leisure.progress === 1) s.note = `relaxing at (${spot.x}, ${spot.y})`;
+  const mourning = s.leisure.at === 'graveyard';
+  if (s.leisure.progress === 1) s.note = mourning ? `paying respects at (${spot.x}, ${spot.y})` : `relaxing at (${spot.x}, ${spot.y})`;
   if (s.leisure.progress < RELAX_TICKS) return true;
   s.leisure = null;
-  addThought(state, s, 'relaxed');
-  s.note = 'relaxed in the rec room';
+  addThought(state, s, mourning ? 'paidRespects' : 'relaxed');
+  s.note = mourning ? 'paid their respects' : 'relaxed in the rec room';
   return true;
 }
 
-/** A free floor tile in a complete rec room: walkable, no furniture, nobody else relaxing there. */
-function spotFree(state: SimState, s: Survivor, p: Point): boolean {
-  const rooms = completeRooms(state, 'recroom');
+/** A free floor tile in a complete rec room (or graveyard): walkable, no furniture, nobody else there. */
+function spotFree(state: SimState, s: Survivor, p: Point, at: LeisurePlace): boolean {
+  const rooms = completeRooms(state, at);
   return (
     rooms.has(labelAt(state, p.x, p.y)) &&
     isWalkable(state.grid, p.x, p.y) &&
@@ -90,8 +98,8 @@ function spotFree(state: SimState, s: Survivor, p: Point): boolean {
   );
 }
 
-function pickSpot(state: SimState, s: Survivor): Point | null {
-  const rooms = completeRooms(state, 'recroom');
+function pickSpot(state: SimState, s: Survivor, at: LeisurePlace): Point | null {
+  const rooms = completeRooms(state, at);
   if (rooms.size === 0) return null;
   const { rooms: all } = getRoomMap(state);
   const { width } = state.grid;
@@ -99,7 +107,7 @@ function pickSpot(state: SimState, s: Survivor): Point | null {
   for (const index of [...rooms].sort((a, b) => a - b)) {
     for (const i of all[index]!.tiles) {
       const p = { x: i % width, y: Math.floor(i / width) };
-      if (spotFree(state, s, p)) spots.push(p);
+      if (spotFree(state, s, p, at)) spots.push(p);
     }
   }
   spots.sort((a, b) => manhattan(s.pos, a) - manhattan(s.pos, b));

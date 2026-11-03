@@ -94,7 +94,7 @@ export interface Survivor {
   /** Recent memories that move mood (see mood.ts). */
   thoughts: Thought[];
   /** Heading to, or unwinding at, a rec room spot (leisure.ts). */
-  leisure: { x: number; y: number; progress: number } | null;
+  leisure: { x: number; y: number; progress: number; at: 'recroom' | 'graveyard' } | null;
   /** Mid-breakdown until this tick: no work (leisure.ts). */
   breakdown: { until: number } | null;
   /** Practice per job type (skills.ts). */
@@ -110,6 +110,8 @@ export interface Survivor {
   /** Garment or cloth reserved while walking to it. */
   dressing: string | null;
   nextDressTick: number;
+  /** Ticks of sickness left, or null (corpses.ts). */
+  sick: number | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -151,6 +153,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     feet: null,
     dressing: null,
     nextDressTick: 0,
+    sick: null,
   };
   state.survivors.push(survivor);
   return survivor;

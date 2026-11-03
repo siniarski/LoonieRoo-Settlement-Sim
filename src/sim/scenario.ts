@@ -70,13 +70,14 @@ export const ENTITY_CHARS = {
   boots: 'U',
   gun: 'G',
   ammo: 'a',
+  corpse: '&',
   tower: 'H',
   towerBlueprint: 'j',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
-const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo'] as const;
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),

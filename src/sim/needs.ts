@@ -45,6 +45,7 @@ import { zombieNear } from './zombies';
 import { walk, type Survivor } from './survivors';
 import { cancelArming, dropWeapon, reconcileArming } from './weapons';
 import { cancelDressing, reconcileDressing, undress } from './clothing';
+import { leaveCorpse } from './corpses';
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
@@ -334,6 +335,8 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   cancelDressing(state, s, cause);
   dropWeapon(state, s);
   undress(state, s);
+  // The infection's victims get up again (tick.ts); everyone else stays where they fell.
+  if (cause !== 'the infection') leaveCorpse(state, s.pos, s.name);
   for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);

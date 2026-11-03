@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
 
@@ -183,6 +183,14 @@ export const TOOLS: readonly Tool[] = [
     command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'workshop' }),
   },
   {
+    id: 'graveyard',
+    label: 'Graveyard',
+    category: 'rooms',
+    paints: false,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'graveyard' }),
+  },
+  {
     id: 'furnish',
     label: 'Furnish',
     category: 'rooms',
@@ -235,6 +243,14 @@ export const TOOLS: readonly Tool[] = [
     command: (x, y) => ({ type: 'toggleLock', x, y }),
   },
   {
+    id: 'burn',
+    label: 'Burn',
+    category: 'orders',
+    paints: false,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'ignite', x, y }),
+  },
+  {
     id: 'farm',
     label: 'Farm',
     category: 'orders',
@@ -274,7 +290,7 @@ export function tilesInBox(a: Point, b: Point): Point[] {
 
 /** Number keys pick tools within the open category: '1' is the first. */
 export function toolForKey(category: CategoryId, key: string): Tool | undefined {
-  const n = Number(key);
+  const n = key === '0' ? 10 : Number(key); // 0 is the tenth
   return Number.isInteger(n) && n >= 1 ? toolsIn(category)[n - 1] : undefined;
 }
 

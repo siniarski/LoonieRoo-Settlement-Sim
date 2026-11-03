@@ -35,7 +35,7 @@ export function planFurnish(state: SimState, x: number, y: number): Plan {
   if (designation.purpose === 'infirmary') return planInfirmary(state, room, notes);
   if (designation.purpose === 'barracks') return planBarracks(state, room, notes);
   if (designation.purpose !== 'housing') {
-    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '', infirmary: '', barracks: '', workshop: 'A workshop (build a workbench in it)' }[designation.purpose];
+    const name = { storage: 'Storage', armory: 'An armory', recroom: 'A rec room', housing: '', messhall: '', infirmary: '', barracks: '', workshop: 'A workshop (build a workbench in it)', graveyard: 'A graveyard' }[designation.purpose];
     notes.push(`${name} needs no furniture yet.`);
     return { commands: [], notes };
   }

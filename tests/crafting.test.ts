@@ -71,7 +71,7 @@ describe('crafting', () => {
     for (let i = 0; i < 100; i++) tick(state);
     expect(state.jobs).toMatchObject([{ type: 'craft', reservedBy: null }]);
     // Wood turns up (as if a scavenger brought it back).
-    state.items.push({ id: 'i900', kind: 'wood', pos: { x: 5, y: 0 }, carriedBy: null, reservedBy: null, wear: 0 });
+    state.items.push({ id: 'i900', kind: 'wood', pos: { x: 5, y: 0 }, carriedBy: null, reservedBy: null, wear: 0, tag: null });
     runUntil(state, () => count(state, 'bandage') === 1);
   });
 
