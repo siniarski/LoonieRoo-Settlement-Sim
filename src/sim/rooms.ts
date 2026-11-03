@@ -23,6 +23,19 @@ export interface RoomDesignation {
   x: number;
   y: number;
   purpose: RoomPurpose;
+  /** Storage rooms: kinds of thing not wanted here (the stockpile filter). */
+  refuses?: StoreCategory[];
+}
+
+/** What storage rooms can be told to take or refuse. */
+export type StoreCategory = 'food' | 'materials' | 'medical' | 'gear';
+export const STORE_CATEGORIES: readonly StoreCategory[] = ['food', 'materials', 'medical', 'gear'];
+
+export function categoryOf(kind: ItemKind): StoreCategory | null {
+  if (kind === 'food' || kind === 'meal') return 'food';
+  if (kind === 'wood' || kind === 'cloth') return 'materials';
+  if (kind === 'bandage' || kind === 'medicine') return 'medical';
+  return kind === 'corpse' ? null : 'gear';
 }
 
 export interface Room {
@@ -240,14 +253,26 @@ export interface StoreRooms {
   storage: Set<number>;
   armory: Set<number>;
   graveyard: Set<number>;
+  /** Storage rooms that take each category (the stockpile filters). */
+  storageFor: Record<StoreCategory, Set<number>>;
 }
 
 export function completeStoreRooms(state: SimState): StoreRooms {
-  return { storage: completeRooms(state, 'storage'), armory: completeRooms(state, 'armory'), graveyard: completeRooms(state, 'graveyard') };
+  const storage = completeRooms(state, 'storage');
+  const refusing = (c: StoreCategory) =>
+    new Set(state.roomDesignations.filter((d) => d.purpose === 'storage' && d.refuses?.includes(c)).map((d) => labelAt(state, d.x, d.y)));
+  const storageFor = Object.fromEntries(
+    STORE_CATEGORIES.map((c) => {
+      const no = refusing(c);
+      return [c, new Set([...storage].filter((r) => !no.has(r)))];
+    }),
+  ) as Record<StoreCategory, Set<number>>;
+  return { storage, armory: completeRooms(state, 'armory'), graveyard: completeRooms(state, 'graveyard'), storageFor };
 }
 
-/** Where an item belongs: the dead in a graveyard; weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage. */
+/** Where an item belongs: the dead in a graveyard; weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage that takes it. */
 export function homeFor(rooms: StoreRooms, kind: ItemKind): Set<number> {
   if (kind === 'corpse') return rooms.graveyard; // the dead go nowhere else
-  return (kind === 'weapon' || kind === 'gun' || kind === 'ammo') && rooms.armory.size > 0 ? rooms.armory : rooms.storage;
+  if ((kind === 'weapon' || kind === 'gun' || kind === 'ammo') && rooms.armory.size > 0) return rooms.armory;
+  return rooms.storageFor[categoryOf(kind) ?? 'gear'];
 }

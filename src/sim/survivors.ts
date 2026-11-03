@@ -125,6 +125,10 @@ export interface Survivor {
   age: number;
   /** Children: the tick they grow up. Null for adults. */
   childUntil: number | null;
+  /** A cart (carried item) lets a hauler take several things at once (jobs.ts). */
+  cart: string | null;
+  /** What's in the cart besides `carrying`, on a store haul. */
+  cartLoad: string[];
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -173,6 +177,8 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     reading: null,
     age: startingAge(`s${n}`),
     childUntil: null,
+    cart: null,
+    cartLoad: [],
   };
   state.survivors.push(survivor);
   return survivor;

@@ -15,7 +15,7 @@ import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { cancelMeal, cancelTreatment, wake } from './needs';
 import { REST_MAX } from './rest';
-import { ROOM_PURPOSES, designationOf, roomAt, type RoomPurpose } from './rooms';
+import { ROOM_PURPOSES, STORE_CATEGORIES, designationOf, roomAt, type RoomPurpose, type StoreCategory } from './rooms';
 import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
@@ -66,6 +66,8 @@ export type Command =
   | { type: 'dismissWanderer'; wandererId: string }
   /** Send survivors off the map to a point of interest (expeditions.ts). */
   | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
+  /** Stockpile filter: let the storage room at (x, y) take a category of things, or not. */
+  | { type: 'setStorageFilter'; x: number; y: number; category: StoreCategory; accept: boolean }
   /** Send food to a neighbouring settlement (settlements.ts). */
   | { type: 'giftSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
@@ -141,6 +143,18 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!Number.isInteger(count) || count < 0 || count > MAX_CRAFT_TARGET) return reject(`target must be 0-${MAX_CRAFT_TARGET}`);
     if (state.craftTargets[kind] === count) return unchanged();
     state.craftTargets[kind] = count;
+    return changed();
+  }
+  if (command.type === 'setStorageFilter') {
+    const room = roomAt(state, command.x, command.y);
+    const d = room ? designationOf(state, room) : undefined;
+    if (!d || d.purpose !== 'storage') return reject('not a storage room');
+    if (!STORE_CATEGORIES.includes(command.category)) return reject(`unknown category ${String(command.category)}`);
+    const refuses = new Set(d.refuses ?? []);
+    if (refuses.has(command.category) !== command.accept) return unchanged();
+    if (command.accept) refuses.delete(command.category);
+    else refuses.add(command.category);
+    d.refuses = STORE_CATEGORIES.filter((c) => refuses.has(c));
     return changed();
   }
   if (command.type === 'giftSettlement') {

@@ -11,6 +11,7 @@
 // empty slot puts on the nearest free garment for it (like guards arming), and
 // one whose garment is half worn mends it with a piece of cloth.
 // Cloth comes from crates and traders; workbenches make clothing from it.
+// (Haulers pick up a cart the same way: see jobs.ts.)
 
 import { logEvent } from './events';
 import { furnitureAt } from './furniture';
@@ -91,7 +92,12 @@ function startDressing(state: SimState, s: Survivor): boolean {
   if (!free(state, s)) return false;
   // Guards would rather have armour; everyone else a coat.
   const body: Garment[] = s.priorities.guard > 0 ? ['armour', 'coat'] : ['coat', 'armour'];
-  const wants: ItemKind[] = [...(s.body ? [] : body), ...(s.feet ? [] : (['boots'] as const)), ...(needsMending(state, s) ? (['cloth'] as const) : [])];
+  const wants: ItemKind[] = [
+    ...(s.body ? [] : body),
+    ...(s.feet ? [] : (['boots'] as const)),
+    ...(s.cart || s.priorities.haul === 0 ? [] : (['cart'] as const)),
+    ...(needsMending(state, s) ? (['cloth'] as const) : []),
+  ];
   const item = wants.map((k) => nearestFreeItem(state, s, k)).find((i) => i?.pos);
   if (!item?.pos) {
     s.nextDressTick = state.tick + DRESS_RETRY_TICKS;
@@ -133,7 +139,7 @@ export function updateDressing(state: SimState, s: Survivor): boolean {
     s.note = `mended their ${worn.kind}`;
     return true;
   }
-  const slot = isGarment(item.kind) ? SLOT_OF[item.kind] : null;
+  const slot = isGarment(item.kind) ? SLOT_OF[item.kind] : item.kind === 'cart' ? 'cart' : null;
   if (!slot || s[slot]) {
     item.reservedBy = null;
     return true;
@@ -142,7 +148,7 @@ export function updateDressing(state: SimState, s: Survivor): boolean {
   item.carriedBy = s.id;
   item.reservedBy = null;
   s[slot] = item.id;
-  s.note = `put on ${item.kind}`;
+  s.note = item.kind === 'cart' ? 'took a cart for hauling' : `put on ${item.kind}`;
   return true;
 }
 
@@ -167,7 +173,7 @@ export function reconcileDressing(state: SimState, s: Survivor): void {
 
 /** Takes everything off where the survivor stands (death). */
 export function undress(state: SimState, s: Survivor): void {
-  for (const slot of ['body', 'feet'] as const) {
+  for (const slot of ['body', 'feet', 'cart'] as const) {
     const item = s[slot] ? getItem(state, s[slot]!) : undefined;
     s[slot] = null;
     if (item) dropItem(state, item, s.pos);

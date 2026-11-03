@@ -61,7 +61,15 @@ export function checkInvariants(state: SimState): string[] {
       if (!isWalkable(grid, item.pos.x, item.pos.y)) problems.push(`${item.id} inside a wall at (${key})`);
     }
     const bearer = item.carriedBy ? survivors.get(item.carriedBy) : undefined;
-    if (item.carriedBy && bearer?.carrying !== item.id && bearer?.weapon !== item.id && bearer?.body !== item.id && bearer?.feet !== item.id) {
+    if (
+      item.carriedBy &&
+      bearer?.carrying !== item.id &&
+      bearer?.weapon !== item.id &&
+      bearer?.body !== item.id &&
+      bearer?.feet !== item.id &&
+      bearer?.cart !== item.id &&
+      !bearer?.cartLoad.includes(item.id)
+    ) {
       problems.push(`${item.id} says carriedBy ${item.carriedBy}, who isn't carrying it`);
     }
     if (item.reservedBy) {
@@ -240,6 +248,8 @@ export function checkInvariants(state: SimState): string[] {
       if (s.jobId || s.sleep || s.meal || s.treatment || s.arming || s.dressing || s.drink || s.leisure) problems.push(`${s.name} is reading while busy with something else`);
     }
     if (s.childUntil !== null && s.jobId) problems.push(`${s.name} is a child with job ${s.jobId}`);
+    if (s.cartLoad.length > 0 && (!s.jobId || !s.cart || !s.carrying)) problems.push(`${s.name} has a loaded cart with no haul on`);
+    if (s.cart && (items.get(s.cart)?.kind !== 'cart' || items.get(s.cart)?.carriedBy !== s.id)) problems.push(`${s.name} pushes ${s.cart}, which isn't their cart`);
   }
   for (const d of state.dogs) if (!isWalkable(grid, d.pos.x, d.pos.y) || d.health <= 0) problems.push(`dog ${d.id} is in a wall or dead`);
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);

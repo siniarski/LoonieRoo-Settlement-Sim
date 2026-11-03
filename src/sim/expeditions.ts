@@ -74,7 +74,7 @@ function returnHome(state: SimState, x: Expedition): void {
     if (random(state) < deathChance) {
       lost.push(s);
       // What they carried is lost with them.
-      for (const id of [s.weapon, s.body, s.feet, s.carrying]) {
+      for (const id of [s.weapon, s.body, s.feet, s.cart, s.carrying]) {
         const item = id ? state.items.find((i) => i.id === id) : undefined;
         if (item) state.items.splice(state.items.indexOf(item), 1);
       }

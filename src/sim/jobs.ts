@@ -69,6 +69,9 @@ export interface Job {
   reservedBy: string | null;
 }
 
+/** Things a cart holds, and how far round the first one a hauler gathers the rest. */
+export const CART_LOAD = 4;
+export const CART_REACH = 4;
 /** Ticks to clean one tile. */
 export const CLEAN_WORK = 15;
 /** Ticks to search a crate once; each search yields one find. */
@@ -365,6 +368,11 @@ export function releaseSurvivor(state: SimState, s: Survivor, reason: string): v
     if (item) dropItem(state, item, s.pos);
     s.carrying = null;
   }
+  for (const id of s.cartLoad) {
+    const item = getItem(state, id);
+    if (item) dropItem(state, item, s.pos);
+  }
+  s.cartLoad = [];
   s.jobId = null;
   s.goal = null;
   s.path = [];
@@ -678,6 +686,7 @@ function workHaul(state: SimState, s: Survivor, job: Job): void {
     item.carriedBy = s.id;
     s.carrying = item.id;
     s.note = `picked up ${item.kind}`;
+    if (isStoreJob(job) && s.cart) loadCart(state, s, item);
     // Fall through and head for the destination this same tick.
   }
 
@@ -731,7 +740,41 @@ function carryToStorage(state: SimState, s: Survivor, job: Job, item: Item): voi
   item.carriedBy = null;
   item.reservedBy = null;
   s.carrying = null;
-  finishJob(state, s, job, `stored ${item.kind} at (${job.dest.x}, ${job.dest.y})`);
+  // Unload the cart on the nearest free storage tiles (or here, if there are none).
+  const extra = s.cartLoad.length;
+  for (const id of s.cartLoad) {
+    const load = getItem(state, id);
+    if (!load) continue;
+    const spot = pickStorageTile(state, s.pos, job, homeFor(completeStoreRooms(state), load.kind));
+    load.carriedBy = null;
+    load.reservedBy = null;
+    if (spot) load.pos = spot;
+    else dropItem(state, load, s.pos);
+  }
+  s.cartLoad = [];
+  finishJob(state, s, job, `stored ${item.kind}${extra ? ` and ${extra} more from the cart` : ''} at (${job.dest.x}, ${job.dest.y})`);
+}
+
+/** With a cart: take up to CART_LOAD - 1 more loose things from round here that belong in some store room. */
+function loadCart(state: SimState, s: Survivor, first: Item): void {
+  const stores = completeStoreRooms(state);
+  const astray = (i: Item & { pos: Point }) => {
+    const home = homeFor(stores, i.kind);
+    return home.size > 0 && !home.has(labelAt(state, i.pos.x, i.pos.y));
+  };
+  const extra = state.items
+    .filter(
+      (i): i is Item & { pos: Point } =>
+        i.pos !== null && i.reservedBy === null && manhattan(i.pos, s.pos) <= CART_REACH && astray(i as Item & { pos: Point }),
+    )
+    .sort((a, b) => manhattan(a.pos, s.pos) - manhattan(b.pos, s.pos))
+    .slice(0, CART_LOAD - 1);
+  for (const i of extra as Item[]) {
+    i.pos = null;
+    i.carriedBy = s.id;
+    s.cartLoad.push(i.id);
+  }
+  if (extra.length > 0) s.note = `loaded ${first.kind} and ${extra.length} more into the cart`;
 }
 
 /** A storage tile is free if it can hold an item and no other active store job has reserved it. */

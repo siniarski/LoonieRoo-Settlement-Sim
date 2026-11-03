@@ -16,11 +16,11 @@ import type { ItemKind } from './items';
 import { completeRooms, labelAt } from './rooms';
 import type { SimState } from './state';
 
-export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots' | 'ammo' | 'gun';
+export type CraftKind = 'weapon' | 'bandage' | 'medicine' | 'meal' | 'coat' | 'armour' | 'boots' | 'ammo' | 'gun' | 'cart';
 export type Station = Extract<FurnitureKind, 'workbench' | 'stove'>;
-export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots', 'meal'];
+export const CRAFTABLES: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots', 'cart', 'meal'];
 /** What the player sets targets for (the Workbench orders panel). */
-export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots'];
+export const ORDERABLE: readonly CraftKind[] = ['weapon', 'bandage', 'medicine', 'ammo', 'gun', 'coat', 'armour', 'boots', 'cart'];
 
 export interface Recipe {
   station: Station;
@@ -42,6 +42,7 @@ export const RECIPES: Record<CraftKind, Recipe> = {
   coat: { station: 'workbench', input: 'cloth', count: 2, label: 'Coats' },
   armour: { station: 'workbench', input: 'cloth', count: 3, label: 'Padded armour', needs: 'tailoring' },
   boots: { station: 'workbench', input: 'cloth', count: 1, label: 'Boots' },
+  cart: { station: 'workbench', input: 'wood', count: 3, label: 'Carts' },
   meal: { station: 'stove', input: 'food', count: 1, label: 'Hot meals' },
 };
 
@@ -64,7 +65,7 @@ export function isStation(kind: FurnitureKind): kind is Station {
 
 /** Items of this kind the colony has spare: on the ground or being hauled, not wielded or worn. */
 export function craftStock(state: SimState, kind: ItemKind): number {
-  return state.items.filter((i) => i.kind === kind && !state.survivors.some((s) => s.weapon === i.id || s.body === i.id || s.feet === i.id)).length;
+  return state.items.filter((i) => i.kind === kind && !state.survivors.some((s) => s.weapon === i.id || s.body === i.id || s.feet === i.id || s.cart === i.id)).length;
 }
 
 function target(state: SimState, kind: CraftKind): number {

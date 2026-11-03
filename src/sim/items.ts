@@ -8,7 +8,7 @@ import { nearestTile } from './space';
 import type { SimState } from './state';
 import { bookSubject } from './books';
 
-export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots' | 'gun' | 'ammo' | 'corpse' | 'book';
+export type ItemKind = 'wood' | 'food' | 'meal' | 'bandage' | 'medicine' | 'weapon' | 'cloth' | 'coat' | 'armour' | 'boots' | 'gun' | 'ammo' | 'corpse' | 'book' | 'cart';
 
 export interface Item {
   id: string;

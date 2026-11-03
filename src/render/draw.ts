@@ -635,6 +635,7 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   ammo: ['#b08a2e', 'a'],
   corpse: ['#5a4a4a', '+'],
   book: ['#6a3a7a', 'b'],
+  cart: ['#7a6040', 'K'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {

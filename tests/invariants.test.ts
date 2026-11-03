@@ -121,7 +121,7 @@ describe('stuck-state invariant', () => {
         ],
       });
       // A standing order at the workbench, so crafting always gets exercised.
-      initial.craftTargets = { weapon: 1, bandage: 2, medicine: 0, ammo: 0, gun: 0, coat: 0, armour: 0, boots: 0 };
+      initial.craftTargets = { weapon: 1, bandage: 2, medicine: 0, ammo: 0, gun: 0, coat: 0, armour: 0, boots: 0, cart: 0 };
       // The bottom-right strip starts unexplored, so fog and scouting are exercised.
       for (let y = 10; y <= 12; y++) for (let x = 12; x <= 23; x++) initial.grid.explored[y * initial.grid.width + x] = 0;
       // Start at 18:00 so the run covers a whole night of zombies and the dawn retreat.
