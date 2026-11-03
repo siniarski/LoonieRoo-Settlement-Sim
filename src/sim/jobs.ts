@@ -31,7 +31,8 @@ import { DOUSE_WORK, STOVE_FIRE_CHANCE, douse, fireAt, ignite } from './fire';
 import { hashRoll } from './hash';
 import { startReading } from './books';
 import { isWet } from './seasons';
-import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight } from './power';
+import { FUEL_MAX, LIGHT_DAMAGE_PCT, inLight, isPowered } from './power';
+import { CURE_SAMPLES, RESEARCH_WORK, researchWanted, studied } from './endgame';
 import { logEvent } from './events';
 import { TOWER_RANGE_BONUS, keepWatch, onTower } from './towers';
 import { CRAFT_WORK, RECIPES, WORKSHOP_CRAFT_WORK, inWorkshop, isStation, stationCraft, wantedCraft } from './crafting';
@@ -201,6 +202,15 @@ export function reconcileJobs(state: SimState): void {
     if (!fighting.has(f.y * width + f.x)) addJob(state, 'firefight', f.x, f.y, null, null);
   }
 
+  // A powered lab bench gets a research job while there's a cure to find and something to study.
+  if (researchWanted(state)) {
+    const researching = new Set(state.jobs.filter((j) => j.type === 'research').map((j) => j.furnitureId));
+    const samples = state.items.some((i) => i.kind === 'sample' && i.pos !== null);
+    for (const f of state.furniture) {
+      if (f.kind === 'lab' && !researching.has(f.id) && (f.stored > 0 || samples) && isPowered(state, f)) addJob(state, 'research', f.x, f.y, null, null, f.id);
+    }
+  }
+
   // Every animal marked for hunting gets one hunt job.
   const hunting = new Set(state.jobs.filter((j) => j.type === 'hunt').map((j) => j.animalId));
   for (const a of state.animals) if (a.hunted && !hunting.has(a.id)) addJob(state, 'hunt', a.pos.x, a.pos.y, null, null).animalId = a.id;
@@ -251,6 +261,17 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       return job.areaId && getExploreArea(state, job.areaId) ? null : 'area explored';
     case 'firefight':
       return fireAt(state, job.x, job.y) ? null : 'fire is out';
+    case 'research': {
+      const lab = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+      if (!lab || lab.kind !== 'lab') return 'lab gone';
+      if (!researchWanted(state)) return 'nothing left to find';
+      if (job.itemId) {
+        const item = getItem(state, job.itemId);
+        if (!item) return 'item gone';
+        if (item.carriedBy && item.carriedBy !== job.reservedBy) return 'item taken by someone else';
+      }
+      return isPowered(state, lab) ? null : 'the lab has no power';
+    }
     case 'hunt': {
       const a = job.animalId ? getAnimal(state, job.animalId) : undefined;
       if (!a) return 'the animal got away';
@@ -436,6 +457,8 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workFirefight(state, s, job);
     case 'hunt':
       return workHunt(state, s, job);
+    case 'research':
+      return workResearch(state, s, job);
     case 'farm':
       return workFarm(state, s, job);
   }
@@ -486,6 +509,46 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   if (!damageZombie(state, z, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
+}
+
+/** Bring a sample to the lab bench (it holds one), then study it. */
+function workResearch(state: SimState, s: Survivor, job: Job): void {
+  const lab = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+  if (!lab || lab.kind !== 'lab') return releaseSurvivor(state, s, 'lab gone');
+  const site = neighbours4(state.grid, lab.x, lab.y);
+  if (lab.stored === 0) {
+    let item = job.itemId ? getItem(state, job.itemId) : undefined;
+    if (!item) {
+      item = freeItemFor(state, 'sample', s.pos, site);
+      if (!item) return releaseSurvivor(state, s, 'no samples to study');
+      job.itemId = item.id;
+      item.reservedBy = s.id;
+    }
+    if (s.carrying !== item.id) {
+      if (!item.pos) return releaseSurvivor(state, s, 'item taken by someone else');
+      if (!samePoint(s.pos, item.pos)) return goTo(state, s, job, [item.pos]);
+      item.pos = null;
+      item.carriedBy = s.id;
+      s.carrying = item.id;
+    }
+    if (manhattan(s.pos, lab) !== 1) return goTo(state, s, job, site);
+    removeItem(state, item);
+    s.carrying = null;
+    job.itemId = null;
+    lab.stored = 1;
+    lab.storedKind = 'sample';
+    s.note = 'brought a sample to the lab';
+    return;
+  }
+  if (manhattan(s.pos, lab) !== 1) return goTo(state, s, job, site);
+  const step = workStep(state, s, 'research');
+  if (step === 0) return;
+  job.progress += step;
+  if (job.progress < RESEARCH_WORK) return;
+  lab.stored = 0;
+  lab.storedKind = null;
+  studied(state);
+  finishJob(state, s, job, `studied a sample (${state.endgame.cure}/${CURE_SAMPLES})`);
 }
 
 /** Close in on the animal a few tiles at a time (it moves), then take it down. */
@@ -957,6 +1020,14 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
       const site = neighbours4(grid, patient.pos.x, patient.pos.y).filter((p) => isWalkable(grid, p.x, p.y));
       const remedy = remediesFor(patient).map((k) => freeItemFor(state, k, s.pos, site)).find((i) => i !== undefined);
       return remedy ? pathPlan(state, s.pos, [remedy.pos], remedy.id) : null;
+    }
+    case 'research': {
+      const lab = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
+      if (!lab) return null;
+      const site = neighbours4(grid, lab.x, lab.y).filter((p) => isWalkable(grid, p.x, p.y));
+      if (lab.stored > 0) return canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
+      const sample = freeItemFor(state, 'sample', s.pos, site);
+      return sample ? pathPlan(state, s.pos, [sample.pos], sample.id) : null;
     }
     case 'craft':
     case 'cook': {

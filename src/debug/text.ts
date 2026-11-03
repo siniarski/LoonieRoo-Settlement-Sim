@@ -23,6 +23,8 @@ const BLUEPRINT_CHARS = {
   heater: ENTITY_CHARS.heaterBlueprint,
   coop: ENTITY_CHARS.coopBlueprint,
   radio: ENTITY_CHARS.radioBlueprint,
+  lab: ENTITY_CHARS.labBlueprint,
+  beacon: ENTITY_CHARS.beaconBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

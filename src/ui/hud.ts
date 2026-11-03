@@ -51,7 +51,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', firefight: 'Fire', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', hunt: 'Hunt', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', firefight: 'Fire', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', research: 'Lab', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', hunt: 'Hunt', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;

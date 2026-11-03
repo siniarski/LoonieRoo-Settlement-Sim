@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'cell' | 'radio' | 'perimeter' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'cell' | 'radio' | 'lab' | 'beacon' | 'perimeter' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'utilities' | 'rooms' | 'land' | 'orders';
 
@@ -129,6 +129,8 @@ export const TOOLS: readonly Tool[] = [
       ['fridge', 'Fridge'],
       ['heater', 'Heater'],
       ['radio', 'Radio'],
+      ['lab', 'Lab bench'],
+      ['beacon', 'Beacon'],
     ] as const
   ).map(
     ([id, label]): Tool => ({

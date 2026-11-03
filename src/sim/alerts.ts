@@ -14,6 +14,7 @@ import { THIRSTY } from './water';
 import { zombiesForNight } from './zombies';
 import { manhattan } from './space';
 import { everyone } from './expeditions';
+import { daysToSiege } from './endgame';
 
 export type AlertLevel = 'danger' | 'warn' | 'info';
 
@@ -61,6 +62,13 @@ export function alerts(state: SimState): Alert[] {
     const night = dayOf(state.tick);
     add('info', `Night in ${NIGHT_START - hour}h: about ${zombiesForNight(night, people.length)} zombies expected`);
   }
+
+  // The endgame and sieges.
+  const eg = state.endgame;
+  if (eg.won) add('info', eg.won === 'cure' ? 'You found the cure. You have won' : 'The helicopter came. You have won');
+  else if (eg.evacuation !== null) add('warn', `The helicopter comes at dawn on day ${dayOf(eg.evacuation)}: hold out (the last night is a siege)`);
+  const toSiege = daysToSiege(state.tick);
+  if (toSiege <= 2) add(toSiege === 0 ? 'danger' : 'warn', toSiege === 0 ? 'Siege tonight: twice the zombies' : `Siege in ${toSiege} night${toSiege === 1 ? '' : 's'}`);
 
   // People.
   for (const s of people) {

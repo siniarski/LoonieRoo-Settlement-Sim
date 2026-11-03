@@ -78,7 +78,7 @@ describe('corpses', () => {
     killSurvivor(harsh, harsh.survivors[0]!, 'testing');
     const z = addZombie(harsh, 2, 0, 10, 'static');
     damageZombie(harsh, z, 50, harsh.survivors[0]!);
-    expect(harsh.items.map((i) => [i.kind, i.tag])).toEqual([
+    expect(harsh.items.filter((i) => i.kind === 'corpse').map((i) => [i.kind, i.tag])).toEqual([
       ['corpse', 'Ash'],
       ['corpse', null],
     ]);

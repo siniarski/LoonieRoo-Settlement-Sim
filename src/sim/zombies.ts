@@ -28,6 +28,7 @@ import { VARIANTS, giveVariant, type Variant } from './zombieKinds';
 import { makeNoise } from './noise';
 import { threatScale } from './director';
 import { maybeCapture } from './prisoners';
+import { maybeSample, siegeFactor } from './endgame';
 import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
@@ -193,8 +194,9 @@ export function updateZombies(state: SimState): void {
   const night = nightNumber(state.tick)!;
   if (ticksIntoNight(state.tick) === 0) {
     // The storyteller scales it by how the colony is doing (director.ts).
-    state.zombiesTonight = Math.max(1, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state)));
-    logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected`);
+    state.zombiesTonight = Math.max(1, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state) * siegeFactor(state, night)));
+    const siege = siegeFactor(state, night) > 1;
+    logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected${siege ? ' (a SIEGE night)' : ''}`);
   }
   const arriving = Math.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
   if (arriving > 0) spawnGroup(state, arriving, zombieHealthForNight(night));
@@ -393,6 +395,7 @@ export function damageZombie(state: SimState, z: Zombie, amount: number, by: Sur
   if (z.health > 0) return false;
   removeZombie(state, z);
   by.kills += 1;
+  maybeSample(state, z.id, z.pos);
   if (by.kills === HARDENED_KILLS) earnTrait(state, by, 'hardened', `${HARDENED_KILLS} kills`);
   if (maybeCapture(state, z, by.name)) return true;
   leaveCorpse(state, z.pos, null);

@@ -14,6 +14,8 @@ import { SATIETY_MAX } from '../sim/food';
 import type { SimState } from '../sim/state';
 import { HYDRATION_MAX } from '../sim/water';
 import { threatScale } from '../sim/director';
+import { CURE_SAMPLES } from '../sim/endgame';
+import { dayOf } from '../sim/time';
 import type { ViewState } from './view';
 
 const MAX_ALERTS = 6;
@@ -117,6 +119,11 @@ export function createOverview(view: ViewState, command: (cmd: Command) => void)
       }
 
       // Everything else.
+      const eg = state.endgame;
+      root.append(
+        el('div', 'hud-overview-head', 'Endgame'),
+        el('div', 'hud-overview-text', eg.won ? `Won: ${eg.won === 'cure' ? 'the cure' : 'evacuated'}` : `Cure: ${eg.cure}/${CURE_SAMPLES} samples studied (lab bench, powered) · Evacuation: ${eg.evacuation === null ? 'build a beacon and a radio, both powered' : `helicopter at dawn on day ${dayOf(eg.evacuation)}`}`),
+      );
       const known = state.knowledge.map((k) => `${k} (${KNOWLEDGE[k]})`);
       root.append(el('div', 'hud-overview-head', 'Known'), el('div', 'hud-overview-text', known.join('; ') || 'nothing from books yet'));
       if (state.settlements.length > 0) {

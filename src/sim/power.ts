@@ -44,7 +44,7 @@ export const SPOIL_CHECK_EVERY = 100;
 export const FOOD_SHELF = 4 * DAY_LENGTH;
 export const MEAL_SHELF = DAY_LENGTH;
 
-const CONSUMERS = ['lamp', 'fridge', 'radio'] as const;
+const CONSUMERS = ['lamp', 'fridge', 'radio', 'lab', 'beacon'] as const;
 
 function generators(state: SimState): Furniture[] {
   return state.furniture.filter((f) => f.kind === 'generator');

@@ -27,13 +27,14 @@ import type { Settlement } from './settlements';
 import type { Animal } from './animals';
 import type { Prisoner } from './prisoners';
 import type { SupplyRequest } from './radio';
+import { newEndgame, type Endgame } from './endgame';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 45;
+export const SCHEMA_VERSION = 46;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -93,6 +94,8 @@ export interface SimState {
   prisoners: Prisoner[];
   /** Neighbours' asks, heard on the radio (radio.ts). */
   requests: SupplyRequest[];
+  /** The two ways to win (endgame.ts). */
+  endgame: Endgame;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -147,6 +150,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     lastRelief: -1e9,
     prisoners: [],
     requests: [],
+    endgame: newEndgame(),
     items: [],
     furniture: [],
     farm: [],
