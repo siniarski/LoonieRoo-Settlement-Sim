@@ -3,8 +3,9 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { meetResident } from './residents';
 import { raidSettlement } from './colonies';
-import { talk } from './talk';
+import { TALK_RANGE, talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
@@ -167,6 +168,14 @@ function execute(state: SimState, command: Command): CommandResult {
   }
   if (command.type === 'talk') {
     const you = controlled(state);
+    // In person, a neighbour's resident close by counts too (residents.ts).
+    if (you && !command.survivorId) {
+      const r = state.residents.find((x) => Math.max(Math.abs(x.pos.x - you.pos.x), Math.abs(x.pos.y - you.pos.y)) <= TALK_RANGE);
+      if (r) {
+        const why = meetResident(state, you, r);
+        return why ? reject(why) : changed();
+      }
+    }
     const s = command.survivorId
       ? getSurvivor(state, command.survivorId)
       : you

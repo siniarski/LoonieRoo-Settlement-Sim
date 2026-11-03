@@ -1,5 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
+import { isHostile } from '../sim/settlements';
+import { worldPos } from './interp';
 import { GROUNDS, type Point, type Tile } from '../sim/grid';
 import { structureHealth } from '../sim/breach';
 import { darkness } from '../sim/time';
@@ -155,10 +157,11 @@ export function draw(
   }
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
   // Neighbours' people in their compounds: a wanderer's look, marked with their settlement's first letter.
-  for (const n of state.settlements) {
-    n.residents.forEach((r, i) => {
-      if (shown(r.x, r.y)) drawWanderer(ctx, camera, viewport, { id: `${n.id}r${i}`, name: '', x: r.x, y: r.y } as Wanderer, size, n.name[0]!);
-    });
+  for (const r of state.residents) {
+    if (!shown(r.pos.x, r.pos.y)) continue;
+    const n = state.settlements.find((x) => x.id === r.settlementId);
+    const at = worldPos(r, options.alpha);
+    drawWanderer(ctx, camera, viewport, { id: r.id, name: r.name, x: at.x - 0.5, y: at.y - 0.5 } as Wanderer, size, n?.name[0] ?? '?', n !== undefined && isHostile(n));
   }
   for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);

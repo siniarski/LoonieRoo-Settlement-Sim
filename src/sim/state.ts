@@ -24,6 +24,7 @@ import type { Fire } from './fire';
 import type { Knowledge } from './books';
 import type { Dog } from './dogs';
 import type { Settlement } from './settlements';
+import type { Resident } from './residents';
 import type { Animal } from './animals';
 import type { Prisoner } from './prisoners';
 import type { SupplyRequest } from './radio';
@@ -38,7 +39,7 @@ import { NORMAL, type Settings } from './difficulty';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 54;
+export const SCHEMA_VERSION = 55;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -92,6 +93,8 @@ export interface SimState {
   dogs: Dog[];
   /** Neighbours in a generated world (settlements.ts). */
   settlements: Settlement[];
+  /** Neighbours' people, in their unfolded compounds (residents.ts). */
+  residents: Resident[];
   /** Wild animals (animals.ts). */
   animals: Animal[];
   /** When the storyteller last left a cache (director.ts). */
@@ -161,6 +164,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     knowledge: [],
     dogs: [],
     settlements: [],
+    residents: [],
     animals: [],
     lastRelief: -1e9,
     prisoners: [],

@@ -63,10 +63,10 @@ export function drawHerd(ctx: CanvasRenderingContext2D, camera: Camera, viewport
 }
 
 /** A greyed survivor with a "?" above: waiting to be taken in. */
-export function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number, mark = '?'): void {
+export function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, w: Wanderer, size: number, mark = '?', enemy = false): void {
   const p = worldToScreen(camera, viewport, w.x + 0.5, w.y + 0.5);
   const radius = Math.max(3, size * 0.32);
-  ctx.fillStyle = COLOURS.wanderer;
+  ctx.fillStyle = enemy ? COLOURS.enemy : COLOURS.wanderer;
   ctx.strokeStyle = COLOURS.survivorOutline;
   ctx.lineWidth = 2;
   ctx.setLineDash([3, 2]);

@@ -27,8 +27,8 @@ export interface Settlement {
   ties: Record<string, number>;
   /** Built as a real compound once you came near. */
   unfolded: boolean;
-  /** Where its people stand in the compound (drawn; not simulated one by one yet). */
-  residents: Point[];
+  /** Day you last talked with one of its people in person (residents.ts), -1 if never. */
+  lastTalk: number;
   /** Tick you last raided it, -1 if never. */
   lastRaid: number;
 }
@@ -65,7 +65,7 @@ export function placeSettlements(state: SimState, start: Point, seed: number): v
 }
 
 export function newSettlement(state: SimState, name: string, x: number, y: number, people: number, food: number, defence: number): Settlement {
-  const n: Settlement = { id: `n${state.nextId++}`, name, x, y, reputation: 0, people, food, defence, ties: {}, unfolded: false, residents: [], lastRaid: -1 };
+  const n: Settlement = { id: `n${state.nextId++}`, name, x, y, reputation: 0, people, food, defence, ties: {}, unfolded: false, lastTalk: -1, lastRaid: -1 };
   state.settlements.push(n);
   return n;
 }

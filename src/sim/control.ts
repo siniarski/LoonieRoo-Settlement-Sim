@@ -10,6 +10,7 @@
 // 1.5 steps and can't cut a corner. A blocked diagonal slides along the wall.
 // Searching and eating take time; moving or swinging interrupts them.
 
+import { hitResident, meetResident, residentAt, type Resident } from './residents';
 import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
 import { getFurniture, type Furniture } from './furniture';
@@ -135,6 +136,13 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     if (killed) wearWeapon(state, s);
     return killed ? 'killed it' : 'hit it';
   }
+  const person = residentToHit(state, s.pos, c.facing);
+  if (person) {
+    c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
+    makeNoise(state, s.pos, 'fighting');
+    const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
+    return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
+  }
   const gun = loadedGun(state, s);
   const shotAt = gun ? state.zombies.find((z) => z.pos.x === target.x && z.pos.y === target.y) : undefined;
   if (gun && shotAt && Math.abs(shotAt.pos.x - s.pos.x) + Math.abs(shotAt.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, shotAt.pos)) {
@@ -149,6 +157,13 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   // A swing at nothing still takes the time.
   c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
   return 'swung at nothing';
+}
+
+/** A resident (residents.ts) in front of you, or right next to you. */
+function residentToHit(state: SimState, pos: Point, facing: Point): Resident | undefined {
+  const ahead = residentAt(state, { x: pos.x + facing.x, y: pos.y + facing.y });
+  if (ahead) return ahead;
+  return state.residents.find((r) => Math.abs(r.pos.x - pos.x) + Math.abs(r.pos.y - pos.y) === 1);
 }
 
 /** Someone of yours standing between you and a tile (Bresenham, like clearShot). */
@@ -193,6 +208,8 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   if (s.move || !nextTo(s.pos, target)) return null;
   const face = towards(s.pos, target);
   if (face) c.facing = face;
+  const person = residentAt(state, target);
+  if (person) return meetResident(state, s, person) ?? `talked with ${person.name}`;
   const item = itemAt(state, target.x, target.y);
   if (item && !item.reservedBy) return take(state, s, c, item);
   const crate = state.furniture.find((f) => f.x === target.x && f.y === target.y && (f.kind === 'crate' || f.kind === 'tree'));

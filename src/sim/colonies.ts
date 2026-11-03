@@ -13,9 +13,9 @@
 //   splits  past SPLIT_AT people, a would-be leader leaves with a few to found their own
 //   falls   at none left it falls, and its compound is a ruin with the dead still in it
 // When anyone of yours comes within UNFOLD_RADIUS, the settlement unfolds into a
-// real compound: walls with a door, a bed a head, tables, and its people standing
-// about (residents, drawn but not yet simulated one by one).
+// real compound: walls with a door, a bed a head, tables, and its people (residents.ts).
 
+import { syncResidents } from './residents';
 import { logEvent } from './events';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { GROUNDS, inBounds, setTile, tileIndex, type Point } from './grid';
@@ -93,7 +93,7 @@ function dawn(state: SimState): void {
     if (hungerOf(n) === 'starving') raidOrBeg(state, n, roll);
     if (n.people >= SPLIT_AT && state.settlements.length < MAX_SETTLEMENTS) split(state, n, roll);
   }
-  for (const n of state.settlements) n.residents = residentSpots(n);
+  for (const n of state.settlements) syncResidents(state, n);
 }
 
 /**
@@ -130,7 +130,7 @@ export function raidSettlement(state: SimState, id: string): string | null {
     logEvent(state, `Your raid on ${n.name} failed. ${hurt.name} came back badly hurt`);
   }
   if (isFallen(n)) logEvent(state, `${n.name} has fallen. Nobody is left.`);
-  n.residents = residentSpots(n);
+  syncResidents(state, n);
   return null;
 }
 
@@ -229,17 +229,7 @@ export function unfold(state: SimState, n: Settlement): void {
   }
   // Their food stays a number (not items your haulers would walk off with): raid for it, or trade.
   for (const p of rest.slice(0, 2)) addFurniture(state, 'table', p.x, p.y);
-  n.residents = residentSpots(n);
+  syncResidents(state, n);
   logEvent(state, `You can see ${n.name}: ${n.people} people behind ${n.defence >= 3 ? 'good' : 'thin'} walls`);
 }
 
-/** Where residents stand: along the middle row of the compound, as many as fit. */
-export function residentSpots(n: Settlement): Point[] {
-  if (isFallen(n) || !n.unfolded) return [];
-  const box = compound(n);
-  const spots: Point[] = [];
-  for (let y = box.y1 - 1; y > box.y0 + 1 && spots.length < n.people; y--) {
-    for (let x = box.x0 + 1; x < box.x1 && spots.length < n.people; x += 2) spots.push({ x, y });
-  }
-  return spots;
-}

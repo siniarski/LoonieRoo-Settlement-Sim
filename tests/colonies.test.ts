@@ -5,6 +5,7 @@ import { getTile } from '../src/sim/grid';
 import { checkInvariants } from '../src/sim/invariants';
 import { spawnItem } from '../src/sim/items';
 import { newSettlement } from '../src/sim/settlements';
+import { residentsOf } from '../src/sim/residents';
 import { createState, type SimState } from '../src/sim/state';
 import { addSurvivor } from '../src/sim/survivors';
 import { tick } from '../src/sim/tick';
@@ -64,7 +65,7 @@ describe('settlements on their own', () => {
     expect(getTile(state.grid, n.x, box.y1)).toBe('door');
     expect(state.furniture.filter((f) => f.kind === 'bed')).toHaveLength(6);
     expect(state.furniture.some((f) => f.kind === 'table')).toBe(true);
-    expect(n.residents).toHaveLength(6);
+    expect(residentsOf(state, n)).toHaveLength(6);
     for (let t = 0; t < 30; t++) {
       tick(state);
       expect(checkInvariants(state)).toEqual([]);
@@ -76,7 +77,7 @@ describe('settlements on their own', () => {
     const n = newSettlement(state, 'Gone', 60, 60, 0, 0, 0);
     unfold(state, n);
     expect(state.dormant.length).toBeGreaterThan(0);
-    expect(n.residents).toEqual([]);
+    expect(residentsOf(state, n)).toEqual([]);
   });
 });
 
