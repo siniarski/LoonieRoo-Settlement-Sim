@@ -23,11 +23,11 @@ import { addThought } from './mood';
 import { DAY_LENGTH } from './time';
 
 export const CORPSE_ROT = DAY_LENGTH / 2;
-export const CORPSE_GONE = 3 * DAY_LENGTH;
+export const CORPSE_GONE = DAY_LENGTH;
 export const STENCH_RADIUS = 4;
 export const CORPSE_CHECK_EVERY = 200;
 /** Chance per check that someone breathing in the stench falls sick. */
-export const SICK_CHANCE = 0.08;
+export const SICK_CHANCE = 0.03;
 export const SICK_TICKS = DAY_LENGTH;
 /** A sick survivor loses 1 health this often. */
 export const SICK_DAMAGE_EVERY = 40;

@@ -36,7 +36,7 @@ export interface Recipe {
 export const RECIPES: Record<CraftKind, Recipe> = {
   weapon: { station: 'workbench', input: 'wood', count: 2, label: 'Weapons' },
   bandage: { station: 'workbench', input: 'wood', count: 1, label: 'Bandages' },
-  medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine', workshopOnly: true },
+  medicine: { station: 'workbench', input: 'wood', count: 2, label: 'Medicine' },
   ammo: { station: 'workbench', input: 'wood', count: 2, label: 'Ammo (hand-loaded)', workshopOnly: true, needs: 'gunsmithing' },
   gun: { station: 'workbench', input: 'wood', count: 4, label: 'Guns', workshopOnly: true, needs: 'gunsmithing' },
   coat: { station: 'workbench', input: 'cloth', count: 2, label: 'Coats' },
@@ -95,7 +95,11 @@ export function wantedCraft(state: SimState, station: Station = 'workbench', inW
 export function stationCraft(state: SimState, f: Furniture): CraftKind | null {
   if (!isStation(f.kind)) return null;
   const wanted = wantedCrafts(state, f.kind, inWorkshop(state, f));
-  return wanted.find((k) => f.stored > 0 && RECIPES[k].input === f.storedKind) ?? wanted[0] ?? null;
+  // Something it can finish with what's in it (or can get more of); else something whose input exists
+  // (a bench waiting on cloth that never comes mustn't hold up medicine); else the first wanted.
+  const holds = (k: CraftKind) => f.stored > 0 && RECIPES[k].input === f.storedKind;
+  const has = (k: CraftKind) => craftStock(state, RECIPES[k].input) > 0;
+  return wanted.find((k) => holds(k) && (f.stored >= RECIPES[k].count || has(k))) ?? wanted.find(has) ?? wanted[0] ?? null;
 }
 
 /** Is this station in a complete workshop? */

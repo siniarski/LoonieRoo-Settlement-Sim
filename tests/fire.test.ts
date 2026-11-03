@@ -89,7 +89,9 @@ describe('corpses', () => {
     state.harsh = true;
     const s = state.survivors[0]!;
     state.items[0]!.wear = -CORPSE_ROT;
-    runUntil(state, () => s.sick !== null, 200 * CORPSE_CHECK_EVERY);
+    state.items[0]!.tag = 'Bea'; // a survivor's body (a zombie's goes after a day)
+    // (Kept fed: at SICK_CHANCE it can take longer than a satiety bar lasts.)
+    runUntil(state, () => ((s.satiety = 3000), s.sick !== null), 200 * CORPSE_CHECK_EVERY);
     expect(s.thoughts.some((t) => t.kind === 'stench')).toBe(true);
     expect(s.sick).toBeLessThanOrEqual(SICK_TICKS);
     state.items.push({ id: 'med', kind: 'medicine', pos: { x: 3, y: 1 }, carriedBy: null, reservedBy: null, wear: 0, tag: null });

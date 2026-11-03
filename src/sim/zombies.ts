@@ -35,9 +35,9 @@ import type { SimState } from './state';
 import type { Movement, Survivor } from './survivors';
 import { NIGHT_TICKS, isNight, nightNumber, ticksIntoNight } from './time';
 
-/** A night-1 zombie's health; later nights add ZOMBIE_HEALTH_PER_NIGHT each (balance pass 2). */
+/** A night-1 zombie's health; later nights add ZOMBIE_HEALTH_PER_NIGHT each (balance pass 2; 20 -> 10 in pass 3). */
 export const ZOMBIE_HEALTH = 200;
-export const ZOMBIE_HEALTH_PER_NIGHT = 20;
+export const ZOMBIE_HEALTH_PER_NIGHT = 10;
 /** One more zombie each night per this many survivors, counted at nightfall (balance pass 2). */
 export const SURVIVORS_PER_EXTRA_ZOMBIE = 4;
 /** Slower than survivors (4), so guards can catch them and runners can escape. */

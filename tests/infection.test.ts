@@ -34,8 +34,8 @@ describe('infection', () => {
       maybeInfect(state, s, 'z7');
       if (s.infection !== null) infected += 1;
     }
-    expect(infected).toBeGreaterThan(100);
-    expect(infected).toBeLessThan(200);
+    expect(infected).toBeGreaterThan(1000 * INFECTION_CHANCE * 0.6);
+    expect(infected).toBeLessThan(1000 * INFECTION_CHANCE * 1.4);
   });
 
   it('untreated, it kills in a day and the survivor gets up as a zombie', () => {
@@ -88,15 +88,21 @@ describe('infection', () => {
 
 describe('workshop and medicine', () => {
   const MAP = ['#####', '#.k.#', '#...#', '##D##', 's.www', '..ww.'];
-  it('only a workbench in a complete workshop makes medicine', () => {
+  it('any workbench makes medicine (balance pass 3); ammo needs a workshop as well as gunsmithing', () => {
     const plain = setup(MAP, { craft: 3 });
     applyCommand(plain, { type: 'setCraftTarget', kind: 'medicine', count: 1 });
-    for (let i = 0; i < 200; i++) tick(plain);
-    expect(plain.jobs.filter((j) => j.type === 'craft')).toEqual([]);
+    runUntil(plain, () => plain.items.some((i) => i.kind === 'medicine'), 1500);
+
+    const ammo = setup(MAP, { craft: 3 });
+    ammo.knowledge = ['gunsmithing'];
+    applyCommand(ammo, { type: 'setCraftTarget', kind: 'ammo', count: 1 });
+    for (let i = 0; i < 200; i++) tick(ammo);
+    expect(ammo.jobs.filter((j) => j.type === 'craft')).toEqual([]);
 
     const shop = setup(MAP, { craft: 3 }, [{ x: 1, y: 1, purpose: 'workshop' }]);
-    applyCommand(shop, { type: 'setCraftTarget', kind: 'medicine', count: 1 });
-    runUntil(shop, () => shop.items.some((i) => i.kind === 'medicine'), 1500);
+    shop.knowledge = ['gunsmithing'];
+    applyCommand(shop, { type: 'setCraftTarget', kind: 'ammo', count: 1 });
+    runUntil(shop, () => shop.items.some((i) => i.kind === 'ammo'), 1500);
   });
 
   it('a workshop bench works faster', () => {

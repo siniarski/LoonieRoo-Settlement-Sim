@@ -83,7 +83,7 @@ describe('zombie groups', () => {
 describe('zombie scaling (balance pass 2)', () => {
   it('one more zombie per 4 survivors, and tougher every night', () => {
     expect([0, 3, 4, 8, 13].map((n) => zombiesForNight(1, n))).toEqual([2, 2, 3, 4, 5]);
-    expect([1, 2, 10].map(zombieHealthForNight)).toEqual([200, 220, 380]);
+    expect([1, 2, 10].map(zombieHealthForNight)).toEqual([200, 210, 290]);
   });
 
   it("tonight's count is fixed at nightfall from the colony's size then, and the zombies arrive at full health", () => {

@@ -13,8 +13,8 @@ import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { DAY_LENGTH } from './time';
 
-export const INFECTION_CHANCE = 0.15;
-export const INFECTION_TURN = DAY_LENGTH;
+export const INFECTION_CHANCE = 0.03;
+export const INFECTION_TURN = 2 * DAY_LENGTH;
 /** What an infection does to mood while it lasts. */
 export const INFECTED_MOOD = -15;
 
