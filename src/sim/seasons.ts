@@ -7,6 +7,7 @@
 // cold. Winter nights are cold outdoors: a slow loss of health, and the mood
 // to match. Indoors (any enclosed room) is warm.
 
+import { coldEvery, eventChance } from './difficulty';
 import { addThought } from './mood';
 import { random } from './rng';
 import { isIndoors } from './rooms';
@@ -46,6 +47,8 @@ export function seasonOf(tick: number): Season {
 export function cropGrows(state: SimState): number {
   const season = seasonOf(state.tick);
   if (season === 'winter') return 0;
+  // A nuclear winter: the sun barely gets through, and crops grow at half speed.
+  if (state.settings.winter && state.tick % 2 === 1) return 0;
   let growth = season === 'autumn' ? (state.tick % 2 === 0 ? 1 : 0) : 1;
   if ((state.weather === 'rain' || state.weather === 'storm') && state.tick % 2 === 0) growth += 1;
   return growth;
@@ -60,10 +63,15 @@ function lightning(state: SimState): void {
   if (t && ignite(state, t.x, t.y)) logEvent(state, `Lightning struck a ${t.kind} at (${t.x}, ${t.y})!`);
 }
 
+/** A winter night (any night, in a nuclear winter), or a blizzard. */
+function coldOutside(state: SimState): boolean {
+  return ((seasonOf(state.tick) === 'winter' || state.settings.winter) && isNight(state.tick)) || state.weather === 'blizzard';
+}
+
 /** Out of doors on a winter night (or in a blizzard) without a coat or a heater. */
 export function isCold(state: SimState, s: Survivor): boolean {
   return (
-    ((seasonOf(state.tick) === 'winter' && isNight(state.tick)) || state.weather === 'blizzard') &&
+    coldOutside(state) &&
     !isIndoors(state, s.pos.x, s.pos.y) &&
     !wearing(state, s, 'coat') &&
     !isWarmed(state, s.pos)
@@ -78,13 +86,13 @@ export function updateWeather(state: SimState): void {
     const winter = season === 'winter';
     // One roll (so the sim RNG stream is as it was): low for rain or snow, the top for an event.
     const roll = random(state);
-    state.weather = roll < (winter ? SNOW_CHANCE : RAIN_CHANCE) ? (winter ? 'snow' : 'rain') : roll >= 1 - EVENT_CHANCE ? (winter ? 'blizzard' : season === 'summer' ? 'heatwave' : 'storm') : 'clear';
+    state.weather = roll < (winter ? SNOW_CHANCE : RAIN_CHANCE) ? (winter ? 'snow' : 'rain') : roll >= 1 - eventChance(state, EVENT_CHANCE) ? (winter ? 'blizzard' : season === 'summer' ? 'heatwave' : 'storm') : 'clear';
     if (state.weather === 'blizzard') logEvent(state, 'A blizzard: anyone outdoors without a coat or a heater will freeze, day or night');
     if (state.weather === 'heatwave') logEvent(state, 'A heatwave: thirst comes twice as fast, and food spoils quicker');
     if (state.weather === 'storm') logEvent(state, 'A storm: lightning may set things alight');
   }
   if (state.weather === 'storm' && state.tick % TICKS_PER_HOUR === 0 && hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE) lightning(state);
-  const coldNight = (seasonOf(state.tick) === 'winter' && isNight(state.tick)) || state.weather === 'blizzard';
+  const coldNight = coldOutside(state);
   const soaking = state.weather === 'rain' || state.weather === 'storm';
   if (!coldNight && !soaking) return;
   for (const s of [...state.survivors]) {
@@ -98,7 +106,7 @@ export function updateWeather(state: SimState): void {
     if (soaking && !coldNight) addThought(state, s, 'soaked');
     if (coldNight && !isWarmed(state, s.pos)) {
       addThought(state, s, 'cold');
-      if (state.tick % COLD_DAMAGE_EVERY === 0) {
+      if (state.tick % coldEvery(state) === 0) {
         s.health = Math.max(0, s.health - 1);
         s.lastHurtBy = 'the cold';
       }

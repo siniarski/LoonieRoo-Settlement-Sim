@@ -8,6 +8,7 @@
 // not at all. The ruin's sleepers are cleared either way. Abstract on
 // purpose: nothing walks the route, which is what keeps far trips cheap.
 
+import { spawnFind } from './difficulty';
 import { logEvent } from './events';
 import { HEALTH_MAX } from './health';
 import { scavengeFind } from './jobs';
@@ -109,7 +110,7 @@ function returnHome(state: SimState, x: Expedition): void {
       crate.loot -= 1;
       room -= 1;
       found += 1;
-      spawnItem(state, scavengeFind(random(state)), x.home.x, x.home.y);
+      spawnFind(state, scavengeFind(random(state)), x.home.x, x.home.y);
     }
     if (crate.loot === 0) crate.scavenge = false;
   }

@@ -11,6 +11,7 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
+import { zombieScale } from './difficulty';
 import { damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
 import { furnitureAt, removeFurniture } from './furniture';
@@ -199,7 +200,7 @@ export function updateZombies(state: SimState): void {
   const night = nightNumber(state.tick)!;
   if (ticksIntoNight(state.tick) === 0) {
     // The storyteller scales it by how the colony is doing (director.ts).
-    state.zombiesTonight = Math.max(1, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state) * siegeFactor(state, night)));
+    state.zombiesTonight = Math.max(1, zombieScale(state, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state) * siegeFactor(state, night))));
     const siege = siegeFactor(state, night) > 1;
     logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected${siege ? ' (a SIEGE night)' : ''}`);
   }

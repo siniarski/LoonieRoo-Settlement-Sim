@@ -13,6 +13,7 @@
 //    (Entity ids come from state.nextId, so they do depend on generation
 //    order; ids are labels, nothing else.)
 
+import { NORMAL, crateLoot, ruinDecay, zombieScale, type Settings } from './difficulty';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { itemAt, spawnItem } from './items';
@@ -197,7 +198,7 @@ function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
       if (!edge) continue;
       if (x === door.x && y === door.y) setTile(state.grid, x, y, 'door');
       // Ruined: about one wall tile in eight has fallen in.
-      else if (roll(l.seed, x, y, 19) > 0.12) setTile(state.grid, x, y, 'wall');
+      else if (roll(l.seed, x, y, 19) > 0.12 + ruinDecay(state)) setTile(state.grid, x, y, 'wall');
     }
   }
   // Wider buildings get an inner wall with a gap, making two rooms.
@@ -212,11 +213,11 @@ function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
     const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 21) % (w - 2));
     const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 22) % (h - 2));
     if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || furnitureAt(state, x, y)) continue;
-    addFurniture(state, 'crate', x, y).loot = lootFor(dist);
+    addFurniture(state, 'crate', x, y).loot = crateLoot(state, lootFor(dist));
   }
   // Asleep inside: none near the start, more the further out.
   if (dist < START_CLEAR_RADIUS + 24) return;
-  const sleepers = hash(l.seed, cx0, cy0, 23) % (2 + Math.floor(dist / 60));
+  const sleepers = zombieScale(state, hash(l.seed, cx0, cy0, 23) % (2 + Math.floor(dist / 60)));
   for (let n = 0; n < sleepers; n++) {
     const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 24) % (w - 2));
     const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 25) % (h - 2));
@@ -240,13 +241,16 @@ function startCamp(state: SimState, l: Layout): void {
       if (x === x0 || x === x0 + 7 || y === y0 || y === y0 + 5) setTile(state.grid, x, y, x === x0 + 3 && y === y0 + 5 ? 'door' : 'wall');
     }
   }
-  for (const dx of [1, 3, 5]) addFurniture(state, 'bed', x0 + dx, y0 + 1);
-  for (const dx of [-2, 0, 2]) {
+  // Alone: one bed, one person (under your control from the start), and less to go on.
+  const solo = state.settings.start === 'solo';
+  for (const dx of solo ? [3] : [1, 3, 5]) addFurniture(state, 'bed', x0 + dx, y0 + 1);
+  for (const dx of solo ? [0] : [-2, 0, 2]) {
     const s = addSurvivor(state, sx + dx, sy + 1);
     s.traits = rollTraits(s.id);
   }
-  for (let i = 0; i < 12; i++) spawnItem(state, 'wood', sx - 6 + (i % 4), sy + 3 + Math.floor(i / 4));
-  for (let i = 0; i < 10; i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
+  if (solo) state.control = { survivorId: state.survivors[0]!.id, dx: 0, dy: 0, facing: { x: 0, y: 1 }, nextSwing: 0, busy: null };
+  for (let i = 0; i < (solo ? 4 : 12); i++) spawnItem(state, 'wood', sx - 6 + (i % 4), sy + 3 + Math.floor(i / 4));
+  for (let i = 0; i < (solo ? 4 : 10); i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
   // A rain collector with some water in it, so nobody has to find the river on day one.
   const c = nearestTile(state.grid, { x: sx + 5, y: sy + 1 }, (x, y) => getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y) && !itemAt(state, x, y));
   if (c) addFurniture(state, 'collector', c.x, c.y).loot = START_WATER;
@@ -311,8 +315,9 @@ function nearestAcross(state: SimState, p: Point, accept: (x: number, y: number)
 }
 
 /** A fresh world: the start area's chunks, the start camp, and fog over everything not near it. */
-export function createWorld(seed: number, size = WORLD_SIZE): SimState {
+export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings = NORMAL): SimState {
   const state = createState({ seed, width: size, height: size });
+  state.settings = { ...settings };
   const l = layout(seed, size);
   const chunks = Math.ceil(size / CHUNK);
   state.world = { seed, size, chunks, generated: new Array<number>(chunks * chunks).fill(0) };

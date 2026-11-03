@@ -144,9 +144,12 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
         if (text !== null) replaceState(loadFile(text), 'the file');
       });
     },
-    newWorld: (size) => {
+    newWorld: (size, settings) => {
       if (!window.confirm(`Start a new ${size}×${size} world? Unsaved progress here is lost.`)) return;
-      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9), size), kind: 'save' }, `a new ${size}×${size} world`);
+      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9), size, settings), kind: 'save' }, `a new ${size}×${size} world`);
+      view.selectedId = handle.state.control?.survivorId ?? null;
+      view.showGame = false;
+      if (settings.start === 'solo') toast('Alone. WASD to walk, click to swing, right-click or E to use. Space to play.');
     },
     reportBug: () => {
       const note = window.prompt('What went wrong? (optional)') ?? '';

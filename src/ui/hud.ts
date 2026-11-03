@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type PresetId, type Settings } from '../sim/difficulty';
 import { controlled } from '../sim/control';
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
@@ -44,7 +45,7 @@ export interface GameFiles {
   exportSave(): void;
   importFile(): void;
   reportBug(): void;
-  newWorld(size: number): void;
+  newWorld(size: number, settings: Settings): void;
 }
 
 export interface Hud {
@@ -388,7 +389,41 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         option.selected = n === WORLD_SIZE;
         size.append(option);
       }
-      root.append(row('A fresh start somewhere else:', size, button('New world', () => files.newWorld(Number(size.value)))));
+      // Difficulty: a preset fills in the sandbox settings, which can then be changed one by one.
+      const choose = (options: readonly (readonly [string, string])[], selected: string) => {
+        const select = el('select', 'hud-select');
+        for (const [value, label] of options) {
+          const option = el('option', '');
+          option.value = value;
+          option.textContent = label;
+          option.selected = value === selected;
+          select.append(option);
+        }
+        return select;
+      };
+      const preset = choose(Object.entries(PRESETS).map(([id, p]) => [id, p.label] as const), 'survivor');
+      const start = choose([['group', 'With a group of three'], ['solo', 'Alone (you control them)']], NORMAL.start);
+      const zombies = choose([25, 50, 60, 75, 100, 125, 150, 200, 300].map((n) => [String(n), `${n}% zombies`] as const), String(NORMAL.zombies));
+      const weather = choose(WEATHER_LEVELS.map((w, i) => [String(i), `${w} weather`] as const), String(NORMAL.weather));
+      const progression = choose(PROGRESSION_LEVELS.map((p, i) => [String(i), `${p} since the outbreak`] as const), String(NORMAL.progression));
+      const winter = choose([['no', 'No nuclear winter'], ['yes', 'Nuclear winter']], NORMAL.winter ? 'yes' : 'no');
+      preset.addEventListener('change', () => {
+        const s = PRESETS[preset.value as PresetId].settings;
+        start.value = s.start;
+        zombies.value = String(s.zombies);
+        weather.value = String(s.weather);
+        progression.value = String(s.progression);
+        winter.value = s.winter ? 'yes' : 'no';
+      });
+      const settings = (): Settings => ({
+        start: start.value === 'solo' ? 'solo' : 'group',
+        zombies: Number(zombies.value),
+        weather: Number(weather.value),
+        progression: Number(progression.value),
+        winter: winter.value === 'yes',
+      });
+      root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
+      root.append(row('Sandbox:', start, zombies, weather, progression, winter));
     },
   };
 }

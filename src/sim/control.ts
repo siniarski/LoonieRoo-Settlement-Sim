@@ -14,7 +14,8 @@ import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
 import { getFurniture, type Furniture } from './furniture';
 import { inBounds, type Point } from './grid';
-import { dropItem, getItem, itemAt, removeItem, spawnItem, type Item } from './items';
+import { dropItem, getItem, itemAt, removeItem, type Item } from './items';
+import { spawnFind } from './difficulty';
 import { GUARD_ATTACK_EVERY, GUARD_DAMAGE, SCAVENGE_WORK, clearShot, scavengeFind } from './jobs';
 import { makeNoise } from './noise';
 import { isPassable } from './pathfinding';
@@ -100,7 +101,7 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
   const crate = getFurniture(state, busy.targetId);
   if (!crate || crate.loot <= 0 || !nextTo(s.pos, crate)) return;
   const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
-  spawnItem(state, kind, s.pos.x, s.pos.y);
+  spawnFind(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false;
   s.note = crate.kind === 'tree' ? 'chopped some wood' : `found ${kind}`;

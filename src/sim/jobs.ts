@@ -9,6 +9,7 @@
 // releaseSurvivor() frees the reservation, drops anything carried, and the
 // survivor goes back to looking for work. Nobody gets stuck.
 
+import { spawnFind } from './difficulty';
 import { cancelBlueprint, completeBlueprint, getBlueprint, materialFor, preconditionHolds, type Blueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
@@ -601,7 +602,7 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   if (job.progress < SCAVENGE_WORK) return;
   // Trees only ever give wood (no roll); crates roll their find.
   const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
-  spawnItem(state, kind, s.pos.x, s.pos.y);
+  spawnFind(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false; // trees stay marked: they grow back
   finishJob(state, s, job, crate.kind === 'tree' ? `chopped wood from (${crate.x}, ${crate.y}), ${crate.loot} left` : `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);

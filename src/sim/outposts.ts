@@ -11,6 +11,7 @@
 // hurt, or killed if they were hurt already. Recalling one sets it on its way
 // home like any expedition.
 
+import { spawnFind } from './difficulty';
 import { logEvent } from './events';
 import { isExplored } from './fog';
 import { hashRoll, idNumber } from './hash';
@@ -49,7 +50,7 @@ export function updateOutposts(state: SimState): void {
   for (const x of state.expeditions) {
     if (!x.outpost) continue;
     for (let k = 0; k < x.members.length * OUTPOST_FINDS; k++) {
-      spawnItem(state, scavengeFind(hashRoll(idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
+      spawnFind(state, scavengeFind(hashRoll(idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
     }
     if (hashRoll(idNumber(x.id), state.tick, 0xd4) >= OUTPOST_DANGER || x.members.length === 0) continue;
     const s = x.members[Math.floor(hashRoll(idNumber(x.id), state.tick, 1) * x.members.length)]!;

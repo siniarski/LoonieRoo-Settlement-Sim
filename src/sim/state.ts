@@ -31,12 +31,13 @@ import { newEndgame, type Endgame } from './endgame';
 import type { Policy } from './policies';
 import type { Zombie } from './zombies';
 import type { Control } from './control';
+import { NORMAL, type Settings } from './difficulty';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 49;
+export const SCHEMA_VERSION = 50;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -83,6 +84,8 @@ export interface SimState {
    * worlds; hand-made maps opt in (so tests of other things don't have to feed and water everyone).
    */
   harsh: boolean;
+  /** Difficulty: the preset or sandbox settings this world was made with (difficulty.ts). */
+  settings: Settings;
   /** What the colony has learned from books (books.ts). */
   knowledge: Knowledge[];
   dogs: Dog[];
@@ -151,6 +154,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     traders: [],
     fires: [],
     harsh: false,
+    settings: { ...NORMAL },
     knowledge: [],
     dogs: [],
     settlements: [],
