@@ -37,6 +37,7 @@ import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
 import { ignite } from './fire';
+import { controlled, isControlled, swing, use } from './control';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -108,7 +109,12 @@ export type Command =
   // Debug: batter the wall or door at a tile, as a zombie would (it may break).
   | { type: 'damageStructure'; x: number; y: number; amount: number }
   // Debug/sandbox: put a zombie on a floor tile (they only last until dawn).
-  | { type: 'spawnZombie'; x: number; y: number };
+  | { type: 'spawnZombie'; x: number; y: number }
+  // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
+  | { type: 'takeControl'; survivorId: string | null }
+  | { type: 'steer'; dx: number; dy: number }
+  | { type: 'swing'; x: number; y: number }
+  | { type: 'use'; x: number; y: number };
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -124,6 +130,24 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 }
 
 function execute(state: SimState, command: Command): CommandResult {
+  if (command.type === 'takeControl') return takeControl(state, command.survivorId);
+  if (command.type === 'steer' || command.type === 'swing' || command.type === 'use') {
+    const s = controlled(state);
+    if (!s) return reject('nobody is under control');
+    if (command.type === 'steer') {
+      const { dx, dy } = command;
+      if (![dx, dy].every((d) => d === -1 || d === 0 || d === 1)) return reject('steer takes -1, 0 or 1');
+      if (state.control!.dx === dx && state.control!.dy === dy) return unchanged();
+      state.control!.dx = dx;
+      state.control!.dy = dy;
+      return changed();
+    }
+    if (!Number.isInteger(command.x) || !Number.isInteger(command.y)) return reject('not a tile');
+    const done = command.type === 'swing' ? swing(state, s, command) : use(state, s, command);
+    if (!done) return reject('nothing to do there');
+    s.note = done;
+    return changed();
+  }
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
   if (command.type === 'designateExplore') {
     const x0 = Math.max(0, Math.min(command.x0, command.x1));
@@ -467,17 +491,44 @@ function moveSurvivor(state: SimState, id: string, x: number, y: number): Comman
   if (!survivor) return reject(`no survivor ${id}`);
   if (!isWalkable(state.grid, x, y)) return reject(`(${x}, ${y}) is not walkable`);
   if (survivor.goal?.x === x && survivor.goal.y === y && !survivor.jobId) return unchanged();
+  if (isControlled(state, survivor)) return reject(`${survivor.name} is under your control`);
   // A direct order overrides work and sleep. The survivor returns to jobs (or bed, if still tired) after arriving.
-  if (survivor.jobId) releaseSurvivor(state, survivor, 'ordered elsewhere');
-  wake(state, survivor, 'woken by an order');
-  cancelMeal(state, survivor, 'meal interrupted by an order');
-  cancelTreatment(state, survivor, 'treatment interrupted by an order');
-  cancelArming(state, survivor, 'interrupted by an order');
-  cancelDressing(state, survivor, 'interrupted by an order');
-  cancelDrink(survivor, 'interrupted by an order');
-  stopReading(state, survivor, 'interrupted by an order');
-  survivor.leisure = null;
+  dropEverything(state, survivor, 'an order');
   setGoal(survivor, { x, y });
+  return changed();
+}
+
+/** Stops whatever a survivor was doing: their job, sleep, meal, and so on. */
+function dropEverything(state: SimState, survivor: Survivor, why: string): void {
+  if (survivor.jobId) releaseSurvivor(state, survivor, `ordered elsewhere`);
+  wake(state, survivor, `woken by ${why}`);
+  cancelMeal(state, survivor, `meal interrupted by ${why}`);
+  cancelTreatment(state, survivor, `treatment interrupted by ${why}`);
+  cancelArming(state, survivor, `interrupted by ${why}`);
+  cancelDressing(state, survivor, `interrupted by ${why}`);
+  cancelDrink(survivor, `interrupted by ${why}`);
+  stopReading(state, survivor, `interrupted by ${why}`);
+  survivor.leisure = null;
+}
+
+function takeControl(state: SimState, id: string | null): CommandResult {
+  if (id === null) {
+    if (!state.control) return unchanged();
+    const was = controlled(state);
+    state.control = null;
+    if (was) was.note = 'back to their own devices';
+    return changed();
+  }
+  const survivor = getSurvivor(state, id);
+  if (!survivor) return reject(`no survivor ${id}`);
+  if (state.control?.survivorId === id) return unchanged();
+  if (survivor.childUntil !== null) return reject(`${survivor.name} is a child`);
+  dropEverything(state, survivor, 'you');
+  survivor.goal = null;
+  survivor.path = [];
+  survivor.pathVersion = -1;
+  survivor.note = 'under your control';
+  state.control = { survivorId: id, dx: 0, dy: 0, facing: { x: 0, y: 1 }, nextSwing: 0, busy: null };
   return changed();
 }
 

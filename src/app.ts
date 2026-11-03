@@ -14,6 +14,8 @@ import { createWorld } from './sim/worldgen';
 import { AUTO_SLOT, downloadText, fileStamp, loadFromSlot, pickTextFile, saveToSlot } from './ui/saves';
 import { survivorAt } from './sim/survivors';
 import { furnitureAt } from './sim/furniture';
+import { controlled } from './sim/control';
+import { worldPos } from './render/interp';
 import { step } from './sim/tick';
 import { createHud, type GameFiles } from './ui/hud';
 import { attachInput } from './ui/input';
@@ -108,7 +110,13 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       const f = furnitureAt(handle.state, tile.x, tile.y);
       return f?.kind === 'bed' ? f.id : null;
     },
-    command: (cmd) => applyCommand(handle.state, cmd),
+    command: (cmd) => {
+      const result = applyCommand(handle.state, cmd);
+      if (cmd.type === 'takeControl' && result.ok) view.selectedId = cmd.survivorId ?? view.selectedId;
+      return result.ok;
+    },
+    control: () => handle.state.control,
+    controlledPos: () => controlled(handle.state)?.pos ?? null,
     furnish: (tile) => {
       // The planner only proposes; its commands go through the normal command path.
       const plan = planFurnish(handle.state, tile.x, tile.y);
@@ -173,10 +181,14 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
 
       input.update(frameMs);
       ensureSelection();
+      const alpha = Math.min(1, accumulatorMs / MS_PER_TICK);
+      // The camera follows whoever you're steering.
+      const you = controlled(handle.state);
+      if (you) view.camera = { ...view.camera, ...worldPos(you, alpha) };
       draw(ctx2d, handle.state, view.camera, viewport, {
         hover: view.hover,
         tool: view.tool,
-        alpha: Math.min(1, accumulatorMs / MS_PER_TICK),
+        alpha,
         selectedId: view.selectedId,
         showDebug: view.showDebug,
         areaDrag: view.areaDrag,

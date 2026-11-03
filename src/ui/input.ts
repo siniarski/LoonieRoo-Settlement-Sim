@@ -10,12 +10,16 @@
 //   Shift + drag   wall/door/bed/remove happen instantly (sandbox/debug)
 //   Right click    put the tool down
 //   Esc            put the tool down, then close build mode, then deselect
+// Direct control (F takes over the selected survivor, F again hands them back):
+//   WASD/arrows  walk (8 ways) · Left click  swing at / shoot towards a tile
+//   Right click  use a tile next to you (pick up, wear, eat, search) · E  use what's in front
 // Always:
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
 //   P priorities · M minimap · Space pause · ` debug panel · Home recentre
 
 import { centredOn, panByScreen, screenToTile, zoomAt, type Viewport } from '../render/camera';
 import type { Command } from '../sim/commands';
+import type { Control } from '../sim/control';
 import type { Point } from '../sim/grid';
 import { disarm, handleBuildKey } from './buildMode';
 import { getTool, tilesInBox, tilesOnLine } from './tools';
@@ -46,7 +50,12 @@ export interface InputContext {
   survivorAt(tile: Point): string | null;
   /** Id of the bed on a tile, if any. */
   bedAt(tile: Point): string | null;
-  command(cmd: Command): void;
+  /** Applies a command; true if it was accepted. */
+  command(cmd: Command): boolean;
+  /** The direct-control state, if the player is steering someone. */
+  control(): Control | null;
+  /** Where the controlled survivor stands. */
+  controlledPos(): Point | null;
   /** Ask the auto-planner to furnish the room at this tile. */
   furnish(tile: Point): void;
 }
@@ -98,6 +107,10 @@ export function attachInput(ctx: InputContext): Input {
       if (getTool(view.tool).paints) painting = tile;
       return;
     }
+    if (ctx.control()) {
+      ctx.command({ type: 'swing', x: tile.x, y: tile.y });
+      return;
+    }
     // Select mode: pick a survivor; with someone picked, a click on a bed gives it to them;
     // anywhere else clears the selection.
     const who = ctx.survivorAt(tile);
@@ -109,6 +122,10 @@ export function attachInput(ctx: InputContext): Input {
   const onRightClick = (tile: Point) => {
     if (view.tool) {
       disarm(view);
+      return;
+    }
+    if (ctx.control()) {
+      ctx.command({ type: 'use', x: tile.x, y: tile.y });
       return;
     }
     if (view.selectedId && onMap(tile)) {
@@ -198,6 +215,15 @@ export function attachInput(ctx: InputContext): Input {
       view.showMinimap = !view.showMinimap;
     } else if (key === 'o') {
       view.showOverview = !view.showOverview;
+    } else if (key === 'f') {
+      if (ctx.control()) ctx.command({ type: 'takeControl', survivorId: null });
+      else if (view.selectedId) ctx.command({ type: 'takeControl', survivorId: view.selectedId });
+    } else if (key === 'e' && ctx.control()) {
+      const c = ctx.control()!;
+      const at = ctx.controlledPos()!;
+      // The tile in front, else the one underfoot.
+      const front = { type: 'use', x: at.x + c.facing.x, y: at.y + c.facing.y } as const;
+      if (!ctx.command(front)) ctx.command({ type: 'use', x: at.x, y: at.y });
     } else if (key === 'Home') {
       const { width, height } = ctx.mapSize();
       view.camera = centredOn(width, height, view.camera.zoom);
@@ -226,7 +252,6 @@ export function attachInput(ctx: InputContext): Input {
 
   return {
     update(frameMs) {
-      if (held.size === 0) return;
       let dx = 0;
       let dy = 0;
       for (const key of held) {
@@ -236,6 +261,15 @@ export function attachInput(ctx: InputContext): Input {
           dy += dir.y;
         }
       }
+      // Under direct control the keys walk, and the sim only hears about it when they change.
+      const c = ctx.control();
+      if (c) {
+        dx = Math.sign(dx);
+        dy = Math.sign(dy);
+        if (c.dx !== dx || c.dy !== dy) ctx.command({ type: 'steer', dx, dy });
+        return;
+      }
+      if (held.size === 0) return;
       const distance = (KEY_PAN_PX_PER_SEC * frameMs) / 1000;
       // panByScreen moves the world with the drag; keys move the camera, so negate.
       view.camera = panByScreen(view.camera, -dx * distance, -dy * distance);

@@ -117,6 +117,7 @@ const COLOURS = {
   bandage: '#f4f1ea',
   bandageCross: '#d9534f',
   selected: '#8cf0a4',
+  controlled: '#f0c850',
   path: 'rgba(140, 240, 164, 0.7)',
   goal: '#8cf0a4',
   label: '#f2e6c9',
@@ -987,6 +988,30 @@ function drawSurvivor(
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
     ctx.stroke();
+  }
+  const control = state.control?.survivorId === s.id ? state.control : null;
+  if (control) {
+    // You: a gold ring, a tick showing which way you face, and a bar while searching or eating.
+    ctx.strokeStyle = COLOURS.controlled;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    const len = Math.hypot(control.facing.x, control.facing.y);
+    const fx = control.facing.x / len;
+    const fy = control.facing.y / len;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(p.x + fx * (radius + 2), p.y + fy * (radius + 2));
+    ctx.lineTo(p.x + fx * (radius + size * 0.35), p.y + fy * (radius + size * 0.35));
+    ctx.stroke();
+    if (control.busy) {
+      const w = Math.max(12, size);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(p.x - w / 2, p.y - radius - 9, w, 4);
+      ctx.fillStyle = COLOURS.controlled;
+      ctx.fillRect(p.x - w / 2, p.y - radius - 9, (w * control.busy.progress) / control.busy.duration, 4);
+    }
   }
   const asleep = s.sleep?.asleep === true;
   // Clothing shows as the outline: brown for a coat, grey for armour; boots as a dark bar below.

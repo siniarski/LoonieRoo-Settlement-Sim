@@ -30,12 +30,13 @@ import type { SupplyRequest } from './radio';
 import { newEndgame, type Endgame } from './endgame';
 import type { Policy } from './policies';
 import type { Zombie } from './zombies';
+import type { Control } from './control';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 48;
+export const SCHEMA_VERSION = 49;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -101,6 +102,8 @@ export interface SimState {
   policies: Policy[];
   /** The colony's leader, settled each dawn (policies.ts). */
   leaderId: string | null;
+  /** The survivor the player is steering directly, if any (control.ts). */
+  control: Control | null;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -158,6 +161,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     endgame: newEndgame(),
     policies: [],
     leaderId: null,
+    control: null,
     items: [],
     furniture: [],
     farm: [],

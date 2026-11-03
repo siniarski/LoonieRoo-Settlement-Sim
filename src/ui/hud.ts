@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { controlled } from '../sim/control';
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 import { checkInvariants } from '../sim/invariants';
@@ -105,6 +106,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const status = el('div', 'hud-status');
   const roomPanel = el('pre', 'hud-room');
   const toast = el('div', 'hud-toast');
+  const controlLine = el('div', 'hud-control');
   const feed = el('div', 'hud-feed');
   const wanderers = createWandererPanel(command);
   const crafting = createCraftPanel(command);
@@ -114,7 +116,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const prisoners = createPrisonerPanel(command);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
-  info.append(status, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
+  info.append(status, controlLine, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -146,6 +148,15 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         .map((e) => `Day ${dayOf(e.tick)} ${clockText(e.tick)}  ${e.message}`)
         .join('\n');
       feed.hidden = feedText === '';
+      const you = controlled(state);
+      const busy = state.control?.busy;
+      const controlText = you
+        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · F let go`
+        : view.selectedId
+          ? 'F: take control of the selected survivor'
+          : '';
+      controlLine.hidden = controlText === '';
+      if (controlLine.textContent !== controlText) controlLine.textContent = controlText;
       const toastText = view.toast && performance.now() < view.toast.until ? view.toast.text : '';
       toast.hidden = toastText === '';
       if (toast.textContent !== toastText) toast.textContent = toastText;

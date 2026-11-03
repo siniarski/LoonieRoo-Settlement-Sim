@@ -50,6 +50,7 @@ import { stopReading, updateReading } from './books';
 import { updateDogs } from './dogs';
 import { updateSettlements } from './settlements';
 import { updateFamily } from './family';
+import { isControlled, reconcileControl, updateControlled } from './control';
 
 export const TICKS_PER_SECOND = 10;
 
@@ -91,19 +92,8 @@ export function tick(state: SimState): void {
   reconcileNeeds(state);
   const dying: { s: Survivor; cause: string }[] = [];
   for (const s of state.survivors) {
-    updateBreakdown(state, s);
-    interruptForNeeds(state, s);
-    interruptScouting(state, s);
-    updateMovement(state, s);
-    // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
-    // (not mid-breakdown). A need taking over ends any rec-room visit.
-    if (!s.move && !s.goal) {
-      const needs = updateMeal(state, s) || updateDrink(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
-      if (needs) {
-        s.leisure = null;
-        stopReading(state, s, s.note ?? '');
-      } else if (!s.breakdown && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
-    }
+    if (isControlled(state, s)) updateControlled(state, s);
+    else behave(state, s);
     updateRest(state, s);
     updateSatiety(state, s);
     updateWounds(state, s);
@@ -125,9 +115,26 @@ export function tick(state: SimState): void {
   reconcileRoomDesignations(state);
   reconcileNeeds(state);
   reconcileWanderers(state);
+  reconcileControl(state);
   // Everyone looks round where they now stand.
   updateFog(state);
   state.tick += 1;
+}
+
+/** What a survivor does on their own: needs first, then leisure, then work. */
+function behave(state: SimState, s: Survivor): void {
+  updateBreakdown(state, s);
+  interruptForNeeds(state, s);
+  interruptScouting(state, s);
+  updateMovement(state, s);
+  // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
+  // (not mid-breakdown). A need taking over ends any rec-room visit.
+  if (s.move || s.goal) return;
+  const needs = updateMeal(state, s) || updateDrink(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
+  if (needs) {
+    s.leisure = null;
+    stopReading(state, s, s.note ?? '');
+  } else if (!s.breakdown && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
 }
 
 export function step(state: SimState, ticks: number): void {

@@ -235,15 +235,8 @@ export function walk(s: Survivor, path: Point[], version: number): void {
 
 /** Advances movement by one tick. Afterwards the survivor is mid-step, walking, or standing still. */
 export function updateMovement(state: SimState, s: Survivor): void {
-  if (s.move) {
-    s.move.progress += 1;
-    if (s.move.progress < s.move.duration) return;
-    s.pos = s.move.to;
-    s.move = null;
-    trackDirt(state, s.pos);
-    trapStep(state, s);
-    // Fall through so the next step starts this same tick (no stutter per tile).
-  }
+  // Fall through after a step lands, so the next starts this same tick (no stutter per tile).
+  if (s.move && !advanceStep(state, s)) return;
 
   const goal = s.goal;
   if (!goal) return;
@@ -269,10 +262,25 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
-  // Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.
+  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: stepPace(state, s, next) };
+}
+
+/** Advances a step in progress by a tick. Returns true once it has landed (or there was none). */
+export function advanceStep(state: SimState, s: Survivor): boolean {
+  if (!s.move) return true;
+  s.move.progress += 1;
+  if (s.move.progress < s.move.duration) return false;
+  s.pos = s.move.to;
+  s.move = null;
+  trackDirt(state, s.pos);
+  trapStep(state, s);
+  return true;
+}
+
+/** Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2. */
+export function stepPace(state: SimState, s: Survivor, next: Point): number {
   const road = ROAD_GROUNDS.includes(state.grid.ground[next.y * state.grid.width + next.x]!);
-  const pace = Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0));
-  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: pace };
+  return Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0));
 }
 
 function trackDirt(state: SimState, p: Point): void {
