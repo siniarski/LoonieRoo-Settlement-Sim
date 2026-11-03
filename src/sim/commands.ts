@@ -3,10 +3,11 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
-import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
+import { getTile, inBounds, isWalkable, setTile, type Point, type Tile } from './grid';
 import { spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
@@ -114,7 +115,11 @@ export type Command =
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number }
   | { type: 'swing'; x: number; y: number }
-  | { type: 'use'; x: number; y: number };
+  | { type: 'use'; x: number; y: number }
+  /** Group orders (orders.ts): follow whoever you control, hold a spot (here, or where they stand), or settle into the colony's jobs. */
+  | { type: 'setOrder'; survivorId: string; order: 'follow' | 'hold' | 'settle'; x?: number; y?: number }
+  /** The same order to everyone within earshot of the survivor you control. */
+  | { type: 'shout'; order: 'follow' | 'hold' | 'settle' };
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -147,6 +152,21 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'setOrder') {
+    const s = getSurvivor(state, command.survivorId);
+    if (!s) return reject(`no survivor ${command.survivorId}`);
+    const at = command.x !== undefined && command.y !== undefined ? { x: command.x, y: command.y } : s.pos;
+    if (command.order === 'hold' && !isWalkable(state.grid, at.x, at.y)) return reject(`(${at.x}, ${at.y}) is not walkable`);
+    return giveOrder(state, s, command.order, at) ? changed() : unchanged();
+  }
+  if (command.type === 'shout') {
+    const you = controlled(state);
+    if (!you) return reject('nobody is under control');
+    const heard = state.survivors.filter((s) => s !== you && Math.abs(s.pos.x - you.pos.x) + Math.abs(s.pos.y - you.pos.y) <= SHOUT_RANGE);
+    let any = false;
+    for (const s of heard) any = giveOrder(state, s, command.order, s.pos) || any;
+    return any ? changed() : unchanged();
   }
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
   if (command.type === 'designateExplore') {
@@ -294,7 +314,10 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!w) return reject(`no wanderer ${command.wandererId}`);
     removeWanderer(state, w);
     if (command.type === 'acceptWanderer') {
-      addSurvivor(state, w.x, w.y, w.name).traits = [...w.traits];
+      const s = addSurvivor(state, w.x, w.y, w.name);
+      s.traits = [...w.traits];
+      // Met while you're out and about: they come with you.
+      if (state.control) s.order = { kind: 'follow' };
       logEvent(state, `${w.name} joined the colony`);
     } else {
       logEvent(state, `${w.name} was turned away`);
@@ -509,6 +532,24 @@ function dropEverything(state: SimState, survivor: Survivor, why: string): void 
   cancelDrink(survivor, `interrupted by ${why}`);
   stopReading(state, survivor, `interrupted by ${why}`);
   survivor.leisure = null;
+}
+
+/** Gives one survivor an order. Returns false if it changed nothing. */
+function giveOrder(state: SimState, s: Survivor, kind: 'follow' | 'hold' | 'settle', at: Point): boolean {
+  if (isControlled(state, s) || s.childUntil !== null) return false;
+  const order: Order | null = kind === 'settle' ? null : kind === 'follow' ? { kind } : { kind, x: at.x, y: at.y };
+  if (JSON.stringify(order) === JSON.stringify(s.order)) return false;
+  s.order = order;
+  // Drop what they were doing, unless it's a job they'd still take (a fight nearby).
+  const job = s.jobId ? state.jobs.find((j) => j.id === s.jobId) : undefined;
+  if (order && job && !(ORDER_JOBS.includes(job.type) && withinOrder(state, s, job))) releaseSurvivor(state, s, describeOrder(order));
+  if (order) {
+    stopReading(state, s, describeOrder(order));
+    s.leisure = null;
+  }
+  s.nextSeekTick = 0;
+  s.note = describeOrder(order);
+  return true;
 }
 
 function takeControl(state: SimState, id: string | null): CommandResult {

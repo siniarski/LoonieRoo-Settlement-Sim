@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { keepOrder } from './orders';
 import { updateFarm } from './farming';
 import { interruptScouting, reconcileJobs, updateWork } from './jobs';
 import {
@@ -134,7 +135,7 @@ function behave(state: SimState, s: Survivor): void {
   if (needs) {
     s.leisure = null;
     stopReading(state, s, s.note ?? '');
-  } else if (!s.breakdown && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
+  } else if (!s.breakdown && !keepOrder(state, s) && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
 }
 
 export function step(state: SimState, ticks: number): void {

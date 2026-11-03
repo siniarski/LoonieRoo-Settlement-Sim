@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import type { Order } from './orders';
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
 import { startingAge } from './family';
@@ -143,6 +144,8 @@ export interface Survivor {
   bleedUntil: number;
   /** The limb an infecting bite went into, while an amputation could still save them. */
   bitten: Limb | null;
+  /** Follow or hold (orders.ts); null is settled, working the colony's jobs. */
+  order: Order | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -201,6 +204,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     bleeding: false,
     bleedUntil: 0,
     bitten: null,
+    order: null,
   };
   state.survivors.push(survivor);
   return survivor;

@@ -9,6 +9,7 @@
 // releaseSurvivor() frees the reservation, drops anything carried, and the
 // survivor goes back to looking for work. Nobody gets stuck.
 
+import { ORDER_JOBS, withinOrder } from './orders';
 import { spawnFind } from './difficulty';
 import { cancelBlueprint, completeBlueprint, getBlueprint, materialFor, preconditionHolds, type Blueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
@@ -439,7 +440,8 @@ export function updateWork(state: SimState, s: Survivor): void {
     if (state.tick < s.nextSeekTick) return;
     if (seekJob(state, s)) return;
     s.nextSeekTick = state.tick + IDLE_RETRY_TICKS;
-    if (!keepWatch(state, s) && !startReading(state, s)) startLeisure(state, s);
+    // Under an order there's no wandering off to a tower, a book or the rec room.
+    if (!s.order && !keepWatch(state, s) && !startReading(state, s)) startLeisure(state, s);
     return;
   }
   const job = getJob(state, s.jobId);
@@ -978,7 +980,7 @@ export function chooseJob(state: SimState, s: Survivor): { job: Job; plan: Plan;
     const open = openJobsByDistance(state, type, s.pos);
     // Curfew: at night, only guards, firefighters and doctors work outdoors.
     const curfew = policyOn(state, 'curfew') && isNight(state.tick) && type !== 'guard' && type !== 'firefight' && type !== 'doctor';
-    for (const job of open.filter((j) => !curfew || isIndoors(state, j.x, j.y)).slice(0, MAX_CANDIDATES)) {
+    for (const job of open.filter((j) => (!curfew || isIndoors(state, j.x, j.y)) && withinOrder(state, s, j)).slice(0, MAX_CANDIDATES)) {
       const plan = planJob(state, s, job);
       if (plan) return { job, plan, why: `priority ${s.priorities[type]}, nearest of ${open.length} open` };
     }
@@ -988,7 +990,7 @@ export function chooseJob(state: SimState, s: Survivor): { job: Job; plan: Plan;
 
 export function typesByPriority(s: Survivor): JobType[] {
   if (s.childUntil !== null) return []; // children don't work
-  return JOB_TYPES.filter((t) => s.priorities[t] > 0).sort(
+  return JOB_TYPES.filter((t) => s.priorities[t] > 0 && (!s.order || ORDER_JOBS.includes(t))).sort(
     (a, b) => s.priorities[a] - s.priorities[b] || JOB_TYPES.indexOf(a) - JOB_TYPES.indexOf(b),
   );
 }

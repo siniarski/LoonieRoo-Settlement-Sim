@@ -37,7 +37,7 @@ import { NORMAL, type Settings } from './difficulty';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 50;
+export const SCHEMA_VERSION = 51;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */

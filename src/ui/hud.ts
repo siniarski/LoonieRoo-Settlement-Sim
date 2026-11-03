@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { describeOrder } from '../sim/orders';
 import { NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type PresetId, type Settings } from '../sim/difficulty';
 import { controlled } from '../sim/control';
 import type { Command } from '../sim/commands';
@@ -152,7 +153,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · F let go`
+        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · F let go`
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';
@@ -678,7 +679,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
     const head = el('tr', '');
-    for (const label of ['Survivor', 'Mood', 'Shift', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -706,6 +707,15 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       shift.addEventListener('click', () => command({ type: 'setShift', survivorId: s.id, shift: s.shift === 'night' ? 'day' : 'night' }));
       shiftCell.append(shift);
       row.append(shiftCell);
+
+      const orderCell = el('td', '');
+      const order = el('button', 'prio-cell');
+      order.textContent = !s.order ? '⌂' : s.order.kind === 'follow' ? '→' : '■';
+      order.title = `${s.name} is ${describeOrder(s.order)}. Click: settle (colony jobs) → follow you → hold where they stand.`;
+      const next = !s.order ? 'follow' : s.order.kind === 'follow' ? 'hold' : 'settle';
+      order.addEventListener('click', () => command({ type: 'setOrder', survivorId: s.id, order: next }));
+      orderCell.append(order);
+      row.append(orderCell);
 
       for (const type of JOB_TYPES) {
         const td = el('td', '');
@@ -738,7 +748,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !shown;
       if (!shown) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.shift, s.priorities, activity(state, s), moodTitle(state, s)])]);
+      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);
@@ -766,8 +776,9 @@ function activity(state: SimState, s: Survivor): string {
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   if (job) return `${job.type} (${job.x}, ${job.y})`;
-  if (s.goal) return 'walking (ordered)';
-  return 'idle';
+  if (s.goal) return s.order?.kind === 'follow' ? 'following' : s.order ? 'going back to their post' : 'walking (ordered)';
+  if (state.control?.survivorId === s.id) return 'you';
+  return s.order ? describeOrder(s.order) : 'idle';
 }
 
 // --- Debug panel ------------------------------------------------------------
