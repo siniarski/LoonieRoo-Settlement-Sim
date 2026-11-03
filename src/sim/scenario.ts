@@ -111,14 +111,16 @@ export const ENTITY_CHARS = {
   pit: '0',
   pitBlueprint: '*',
   reinforceBlueprint: '@',
+  fuel: '$',
+  truck: ')',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
 /** Furniture and blueprints placed straight from their map char. */
-const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge', 'heater', 'coop', 'radio', 'lab', 'beacon', 'turret', 'lure', 'pit'] as const;
+const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge', 'heater', 'coop', 'radio', 'lab', 'beacon', 'turret', 'lure', 'pit', 'truck'] as const;
 
-const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book', 'cart', 'axe', 'hammer', 'medkit', 'sample', 'scrap'] as const;
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book', 'cart', 'axe', 'hammer', 'medkit', 'sample', 'scrap', 'fuel'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),
@@ -136,7 +138,8 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
     addFurniture(state, furniture, x, y);
     return true;
   }
-  const planned = SIMPLE_FURNITURE.find((k) => ENTITY_CHARS[`${k}Blueprint`] === char);
+  // (Trucks are found, never built.)
+  const planned = SIMPLE_FURNITURE.filter((k) => k !== 'truck').find((k) => ENTITY_CHARS[`${k}Blueprint` as `${Exclude<typeof k, 'truck'>}Blueprint`] === char);
   if (planned) {
     addBlueprint(state, x, y, planned);
     return true;

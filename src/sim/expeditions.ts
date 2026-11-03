@@ -23,6 +23,7 @@ import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { TICKS_PER_TILE } from './survivors';
+import { NEVER, takeTruck } from './outposts';
 
 export const SEARCH_TICKS = 400;
 export const CARRY = 4;
@@ -38,23 +39,30 @@ export interface Expedition {
   /** Where they left from, and come back to. */
   home: { x: number; y: number };
   returnTick: number;
+  /** Went in the truck (outposts.ts): half the travel, twice the carrying. */
+  truck: boolean;
+  /** Staying as an outpost until recalled (outposts.ts). */
+  outpost: boolean;
 }
 
-export function sendExpedition(state: SimState, members: Survivor[], poiId: string): string | null {
+export function sendExpedition(state: SimState, members: Survivor[], poiId: string, outpost = false): string | null {
   const poi = state.pointsOfInterest.find((p) => p.id === poiId);
   if (!poi) return `no point of interest ${poiId}`;
   if (members.length === 0) return 'nobody to send';
   const home = { ...members[0]!.pos };
   const distance = manhattan(home, poi);
   for (const s of members) state.survivors.splice(state.survivors.indexOf(s), 1);
+  const inTruck = takeTruck(state);
   state.expeditions.push({
     id: `x${state.nextId++}`,
     members,
     target: { x: poi.x, y: poi.y, label: poi.label },
     home,
-    returnTick: state.tick + 2 * distance * TICKS_PER_TILE + SEARCH_TICKS,
+    returnTick: outpost ? NEVER : state.tick + (inTruck ? 1 : 2) * distance * TICKS_PER_TILE + SEARCH_TICKS,
+    truck: inTruck,
+    outpost,
   });
-  logEvent(state, `${members.map((s) => s.name).join(', ')} set out for the ${poi.label} at (${poi.x}, ${poi.y})`);
+  logEvent(state, `${members.map((s) => s.name).join(', ')} set out${inTruck ? ' in the truck' : ''} for the ${poi.label} at (${poi.x}, ${poi.y})${outpost ? ' to hold it as an outpost' : ''}`);
   return null;
 }
 
@@ -94,7 +102,7 @@ function returnHome(state: SimState, x: Expedition): void {
   }
   state.survivors.push(...back);
   // Loot: what the ruin's crates held, as far as the survivors could carry.
-  let room = CARRY * back.length;
+  let room = CARRY * back.length * (x.truck ? 2 : 1);
   let found = 0;
   for (const crate of state.furniture.filter((f) => f.kind === 'crate' && f.loot > 0 && near(f))) {
     while (crate.loot > 0 && room > 0) {

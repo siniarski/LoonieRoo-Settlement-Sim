@@ -689,6 +689,7 @@ export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string
   turret: ['#50585f', 'G'],
   lure: ['#a09030', '!'],
   pit: ['#2a221a', 'o'],
+  truck: ['#4a5a3a', 'T'],
 };
 
 /** Items without a drawing of their own: a coloured tile with a letter. */
@@ -707,6 +708,7 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   medkit: ['#c84040', '+'],
   sample: ['#7ab06a', 's'],
   scrap: ['#8a8f96', '#'],
+  fuel: ['#b06a2a', 'f'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {

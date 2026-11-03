@@ -86,8 +86,9 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
 export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
-  ['food', 0.31],
-  ['wood', 0.21],
+  ['food', 0.29],
+  ['wood', 0.2],
+  ['fuel', 0.03],
   ['scrap', 0.06],
   ['book', 0.02],
   ['bandage', 0.12],

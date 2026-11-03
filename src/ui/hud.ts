@@ -522,12 +522,27 @@ function createExpeditionPanel(view: ViewState, command: (cmd: Command) => void)
         send.addEventListener('click', () => {
           if (selected) command({ type: 'sendExpedition', survivorIds: [selected.id], poiId: p.id });
         });
-        row.append(label, send);
+        const hold = el('button', 'hud-button');
+        hold.textContent = 'Outpost';
+        hold.title = 'Send them to stay there: supplies every dawn, at some risk';
+        hold.disabled = !selected;
+        hold.addEventListener('click', () => {
+          if (selected) command({ type: 'sendExpedition', survivorIds: [selected.id], poiId: p.id, outpost: true });
+        });
+        row.append(label, send, hold);
         root.append(row);
       }
       for (const { x, hours } of away) {
-        const row = el('div', 'hud-wanderer-label');
-        row.textContent = `${x.members.map((s) => s.name).join(', ')} → ${x.target.label} (${x.target.x}, ${x.target.y}), back in about ${hours}h`;
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${x.members.map((s) => s.name).join(', ')} → ${x.target.label} (${x.target.x}, ${x.target.y})${x.outpost ? ', holding it as an outpost' : `, back in about ${hours}h`}`;
+        row.append(label);
+        if (x.outpost) {
+          const recall = el('button', 'hud-button');
+          recall.textContent = 'Recall';
+          recall.addEventListener('click', () => command({ type: 'recallOutpost', expeditionId: x.id }));
+          row.append(recall);
+        }
         root.append(row);
       }
     },

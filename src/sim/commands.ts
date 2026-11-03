@@ -28,6 +28,7 @@ import { decidePrisoner } from './prisoners';
 import { fulfilRequest } from './radio';
 import { isPolicy, type Policy } from './policies';
 import { amputate } from './wounds';
+import { recallOutpost } from './outposts';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -71,7 +72,9 @@ export type Command =
   | { type: 'acceptWanderer'; wandererId: string }
   | { type: 'dismissWanderer'; wandererId: string }
   /** Send survivors off the map to a point of interest (expeditions.ts). */
-  | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
+  | { type: 'sendExpedition'; survivorIds: string[]; poiId: string; outpost?: boolean }
+  /** Bring an outpost home (outposts.ts). */
+  | { type: 'recallOutpost'; expeditionId: string }
   /** Stockpile filter: let the storage room at (x, y) take a category of things, or not. */
   | { type: 'setStorageFilter'; x: number; y: number; category: StoreCategory; accept: boolean }
   /** A prisoner: talk them round to join, or let them go home (prisoners.ts). */
@@ -213,6 +216,10 @@ function execute(state: SimState, command: Command): CommandResult {
     const failed = amputate(state, s);
     return failed ? reject(failed) : changed();
   }
+  if (command.type === 'recallOutpost') {
+    const failed = recallOutpost(state, command.expeditionId);
+    return failed ? reject(failed) : changed();
+  }
   if (command.type === 'giftSettlement') {
     const failed = giveGift(state, command.settlementId);
     return failed ? reject(failed) : changed();
@@ -255,7 +262,7 @@ function execute(state: SimState, command: Command): CommandResult {
       s.move = null;
       s.path = [];
     }
-    const failed = sendExpedition(state, members as Survivor[], command.poiId);
+    const failed = sendExpedition(state, members as Survivor[], command.poiId, command.outpost === true);
     return failed ? reject(failed) : changed();
   }
   if (command.type === 'acceptWanderer' || command.type === 'dismissWanderer') {

@@ -18,6 +18,7 @@ import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground
 import { itemAt, spawnItem } from './items';
 import { nearestTile } from './space';
 import { placeSettlements } from './settlements';
+import { hashRoll } from './hash';
 import { createState, type SimState } from './state';
 import { addSurvivor } from './survivors';
 import { rollTraits } from './skills';
@@ -319,6 +320,12 @@ export function createWorld(seed: number, size = WORLD_SIZE): SimState {
   startCamp(state, l);
   state.harsh = true;
   placeSettlements(state, l.start, seed);
+  // A truck somewhere out past the camp (within the chunks generated already).
+  const angle = hashRoll(seed, 0x7a0c) * Math.PI * 2;
+  const near = { x: Math.round(l.start.x + Math.cos(angle) * 35), y: Math.round(l.start.y + Math.sin(angle) * 35) };
+  const clamped = { x: Math.max(1, Math.min(size - 2, near.x)), y: Math.max(1, Math.min(size - 2, near.y)) };
+  const spot = nearestTile(state.grid, clamped, (x, y) => getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y) && !itemAt(state, x, y));
+  if (spot) addFurniture(state, 'truck', spot.x, spot.y);
   state.grid.explored.fill(0);
   for (let y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++) {
     for (let x = l.start.x - START_REVEAL_RADIUS; x <= l.start.x + START_REVEAL_RADIUS; x++) {
