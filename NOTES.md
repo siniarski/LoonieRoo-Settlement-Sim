@@ -143,6 +143,40 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 | Toolchain | Node 24 LTS, TypeScript 7, Vite 8, Vitest 5 | Current versions as of 2026-10-24 |
 | Vitest `fsModuleCache` | Disabled | It doesn't refresh `import.meta.glob` when files are added, so the architecture scan missed new sim files. Suite runs in ~200ms, so the cache isn't needed |
 
+## Design direction (2026-11-03, the player's vision)
+
+Where the game is heading: **Project Zomboid-style survival, with world generation and an optional colony sim.**
+
+- **Start alone.** You control one survivor directly (Zomboid-like controls) in a harsh, generated world. How harsh is a difficulty setting.
+- **Meet others and form a group.** People you meet can join you. They follow you as you loot and survive, or you designate an area to settle, and the colony sim takes over there. You keep control of your own character inside the colony; everyone else runs on jobs and orders.
+- **Talk to survivors.** Each has a short generated backstory (home, people, job, a regret, a pride). Talking to them gives tasks that come from it: find their old home, pet, photo or car; bury their dead or put down a turned relative; burn the place of a bad memory; clear their old street; get medicine to a friend elsewhere; call a sister's town from a radio tower. Finishing one gives lasting opinion, mood and loyalty, maybe a trait or skill. Also: survivors recognising each other, confessions that shift others' opinions, a would-be leader splitting off to found their own colony. Tasks are templates filled from world data, not hand-written branches; dialogue is a short menu (the past, skills, orders, items).
+- **A living world.** Other groups and colonies exist and survive on their own: they grow, starve, trade and raid off screen, as a few numbers plus a small seed of buildings, leaders and needs (the same simulation-LOD idea as herds and dormant zombies), unfolding into real buildings and people when you get near. You can find them and help or fight them.
+
+What already maps onto it:
+- `state.harsh` is the start of difficulty presets.
+- Survivors' needs, skills, traits, opinions, leader and shifts are already there.
+- "Follow me" would be a job; "settle here" switches the colony sim on for an area.
+- `state.settlements` already has the right shape for self-running colonies.
+- The radio, points of interest, expeditions, graveyards, burning and corpses are task building blocks.
+
+Concerns, most serious first:
+1. **Movement and combat feel.** Tile-to-tile movement at 4 ticks a tile and "adjacent, hit every N ticks" won't feel like Zomboid under direct control. Probably needs smooth or sub-tile positions in the sim (or fine sub-steps), facing, vision cones, real attack timing. The control prototype decides whether the current model stretches or needs a rewrite.
+2. **Tech base.** Zomboid-like play wants isometric rendering, lighting and line of sight shading, many animated characters, a real inventory UI. Pick the visual target (top-down or isometric) before investing much in rendering. The sim/renderer split keeps an engine port possible (see CLAUDE.md).
+3. **Scope.** Three games in one (survival action, colony sim, living world). Grow by vertical slices: one town, an hour of fun solo survival, one recruit, one task, a small "settle here".
+4. **Inventory.** One carried item per survivor and no stacks today; Zomboid needs weight, containers, a backpack, item condition. A big but contained rework.
+5. **Companion behaviour.** Simple, readable orders (follow, hold here, loot this room, stay close) over clever AI.
+6. **Self-running colonies** must look believable when they unfold: keep a seed of their own, not just numbers.
+7. **Balance per difficulty.** Balance one "normal", derive the rest by multipliers.
+
+Planned order:
+1. A playtest of the current build (the player, first).
+2. A control prototype: take over any survivor, WASD, click to attack or pick up, the camera following, their jobs off. Decides the movement and combat question.
+3. A solo start, and difficulty presets.
+4. Follow, hold and settle-here orders for people met.
+5. Backstories, talking to survivors, the first task types (find the home, bury the dead, find the pet).
+6. Self-running settlements that grow, fail, trade and fight off screen.
+7. Inventory rework and the visual target, once the feel is proven.
+
 ## Big worlds (designed for, not built yet)
 
 The world is 256x256, but the code is shaped so it can grow towards 10,000x10,000 without rewrites:
