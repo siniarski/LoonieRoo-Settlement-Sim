@@ -7,7 +7,7 @@
 // saying why (never stuck).
 
 import { makeStory, type Story } from './story';
-import type { Order } from './orders';
+import { hurries, type Order } from './orders';
 import { hasTrait, type Trait } from './skills';
 import { trapStep } from './clothing';
 import { startingAge } from './family';
@@ -288,7 +288,7 @@ export function advanceStep(state: SimState, s: Survivor): boolean {
 /** Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2. */
 export function stepPace(state: SimState, s: Survivor, next: Point): number {
   const road = ROAD_GROUNDS.includes(state.grid.ground[next.y * state.grid.width + next.x]!);
-  return Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0));
+  return Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0) - (hurries(state, s) ? 1 : 0));
 }
 
 function trackDirt(state: SimState, p: Point): void {

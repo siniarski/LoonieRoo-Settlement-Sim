@@ -157,7 +157,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · T talk · F let go`
+        ? `Playing as ${you.name}${busy ? ` · ${busy.what === 'eat' ? 'eating' : 'searching'}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · L loot (mouse) · T talk · F let go`
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';
@@ -762,7 +762,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 
       const orderCell = el('td', '');
       const order = el('button', 'prio-cell');
-      order.textContent = !s.order ? '⌂' : s.order.kind === 'follow' ? '→' : '■';
+      order.textContent = !s.order ? '⌂' : s.order.kind === 'follow' ? '→' : s.order.kind === 'loot' ? '⚲' : '■';
       order.title = `${s.name} is ${describeOrder(s.order)}. Click: settle (colony jobs) → follow you → hold where they stand.`;
       const next = !s.order ? 'follow' : s.order.kind === 'follow' ? 'hold' : 'settle';
       order.addEventListener('click', () => command({ type: 'setOrder', survivorId: s.id, order: next }));
@@ -828,7 +828,7 @@ function activity(state: SimState, s: Survivor): string {
   if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
   const job = s.jobId ? getJob(state, s.jobId) : undefined;
   if (job) return `${job.type} (${job.x}, ${job.y})`;
-  if (s.goal) return s.order?.kind === 'follow' ? 'following' : s.order ? 'going back to their post' : 'walking (ordered)';
+  if (s.goal) return s.order?.kind === 'follow' ? 'following' : s.order?.kind === 'loot' ? 'going to loot' : s.order ? 'going back to their post' : 'walking (ordered)';
   if (state.control?.survivorId === s.id) return 'you';
   return s.order ? describeOrder(s.order) : 'idle';
 }

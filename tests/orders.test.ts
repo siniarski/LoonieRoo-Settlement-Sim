@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
 import { applyCommand, type Command } from '../src/sim/commands';
 import { checkInvariants } from '../src/sim/invariants';
-import { FOLLOW_GAP } from '../src/sim/orders';
+import { FOLLOW_GAP, hurries } from '../src/sim/orders';
+import { stepPace } from '../src/sim/survivors';
 import { loadScenario } from '../src/sim/scenario';
 import type { SimState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
@@ -53,6 +54,54 @@ describe('group orders', () => {
     state.zombies[0]!.kind = 'static';
     run(state, 150);
     expect(state.zombies).toEqual([]);
+  });
+
+  it('loot: they search every crate in the room, then come back to following', () => {
+    const state = loadScenario({ seed: 1, map: ['ss.......', '..#####..', '..#c.c#..', '..#...#..', '..##D##..', '.........'] });
+    const [you, them] = state.survivors as [NonNullable<SimState['survivors'][0]>, NonNullable<SimState['survivors'][0]>];
+    cmd(state, { type: 'takeControl', survivorId: you.id });
+    cmd(state, { type: 'shout', order: 'loot', x: 4, y: 3 });
+    expect(them.order?.kind).toBe('loot');
+    const loot = () => state.furniture.filter((f) => f.kind === 'crate').reduce((n, f) => n + f.loot, 0);
+    const before = loot();
+    const items = state.items.length;
+    run(state, 3000);
+    expect(loot()).toBe(0);
+    expect(state.items.length).toBeGreaterThan(items + before / 2); // some finds get eaten or worn
+    expect(them.order).toEqual({ kind: 'follow' });
+  });
+
+  it('a follower falling behind hurries', () => {
+    const state = loadScenario({ seed: 1, map: ['s.........s'] });
+    const [you, them] = state.survivors as [NonNullable<SimState['survivors'][0]>, NonNullable<SimState['survivors'][0]>];
+    cmd(state, { type: 'takeControl', survivorId: you.id });
+    expect(stepPace(state, them, { x: 9, y: 0 })).toBe(4);
+    cmd(state, { type: 'setOrder', survivorId: them.id, order: 'follow' });
+    expect(hurries(state, them)).toBe(true);
+    expect(stepPace(state, them, { x: 9, y: 0 })).toBe(3);
+  });
+
+  it('a follower standing in front of you steps aside, and you hold fire if they are in the way', () => {
+    const state = loadScenario({ seed: 1, map: ['.....', 's.s.z', '.....'] });
+    const [you, them] = state.survivors as [NonNullable<SimState['survivors'][0]>, NonNullable<SimState['survivors'][0]>];
+    state.zombies[0]!.kind = 'static';
+    cmd(state, { type: 'takeControl', survivorId: you.id });
+    const gun = applyCommand(state, { type: 'spawnWeapon', x: 0, y: 0 });
+    expect(gun.ok).toBe(true);
+    const item = state.items.find((i) => i.kind === 'weapon')!;
+    item.kind = 'gun';
+    item.wear = 6;
+    item.pos = null;
+    item.carriedBy = you.id;
+    you.weapon = item.id;
+    state.control!.facing = { x: 1, y: 0 };
+    const r = applyCommand(state, { type: 'swing', x: 4, y: 1 });
+    expect(r.ok).toBe(true);
+    expect(you.note).toMatch(/in the way/);
+    expect(state.zombies[0]!.health).toBe(state.zombies[0]!.maxHealth);
+    cmd(state, { type: 'setOrder', survivorId: them.id, order: 'follow' });
+    run(state, 10);
+    expect(them.pos.y).not.toBe(1);
   });
 
   it('people taken in while you are out come with you', () => {

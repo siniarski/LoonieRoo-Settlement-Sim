@@ -14,6 +14,7 @@
 //   WASD/arrows  walk (8 ways) · Left click  swing at / shoot towards a tile
 //   Right click  use a tile next to you (pick up, wear, eat, search) · E  use what's in front
 //   V  shout "follow me" to everyone near · H  shout "hold here" (each where they stand) · T  talk to whoever's nearest
+//   L  shout "loot that room" (the one under the mouse)
 // Always:
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
 //   P priorities · M minimap · Space pause · ` debug panel · Home recentre
@@ -219,6 +220,8 @@ export function attachInput(ctx: InputContext): Input {
     } else if (key === 'f') {
       if (ctx.control()) ctx.command({ type: 'takeControl', survivorId: null });
       else if (view.selectedId) ctx.command({ type: 'takeControl', survivorId: view.selectedId });
+    } else if (key === 'l' && ctx.control() && view.hover) {
+      ctx.command({ type: 'shout', order: 'loot', x: view.hover.x, y: view.hover.y });
     } else if (key === 't' && ctx.control()) {
       ctx.command({ type: 'talk' });
     } else if ((key === 'v' || key === 'h') && ctx.control()) {

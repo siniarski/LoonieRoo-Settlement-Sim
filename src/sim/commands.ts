@@ -121,11 +121,13 @@ export type Command =
   | { type: 'swing'; x: number; y: number }
   | { type: 'use'; x: number; y: number }
   /** Group orders (orders.ts): follow whoever you control, hold a spot (here, or where they stand), or settle into the colony's jobs. */
-  | { type: 'setOrder'; survivorId: string; order: 'follow' | 'hold' | 'settle'; x?: number; y?: number }
+  | { type: 'setOrder'; survivorId: string; order: OrderKind; x?: number; y?: number }
   /** The same order to everyone within earshot of the survivor you control. */
-  | { type: 'shout'; order: 'follow' | 'hold' | 'settle' }
+  | { type: 'shout'; order: OrderKind; x?: number; y?: number }
   /** Talk to a survivor (talk.ts); without an id, the nearest one to the survivor you control. */
   | { type: 'talk'; survivorId?: string };
+
+type OrderKind = 'follow' | 'hold' | 'loot' | 'settle';
 
 export type CommandResult = { ok: true; changed: boolean } | { ok: false; reason: string };
 
@@ -178,7 +180,7 @@ function execute(state: SimState, command: Command): CommandResult {
     const s = getSurvivor(state, command.survivorId);
     if (!s) return reject(`no survivor ${command.survivorId}`);
     const at = command.x !== undefined && command.y !== undefined ? { x: command.x, y: command.y } : s.pos;
-    if (command.order === 'hold' && !isWalkable(state.grid, at.x, at.y)) return reject(`(${at.x}, ${at.y}) is not walkable`);
+    if ((command.order === 'hold' || command.order === 'loot') && !isWalkable(state.grid, at.x, at.y)) return reject(`(${at.x}, ${at.y}) is not walkable`);
     return giveOrder(state, s, command.order, at) ? changed() : unchanged();
   }
   if (command.type === 'shout') {
@@ -186,7 +188,9 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!you) return reject('nobody is under control');
     const heard = state.survivors.filter((s) => s !== you && Math.abs(s.pos.x - you.pos.x) + Math.abs(s.pos.y - you.pos.y) <= SHOUT_RANGE);
     let any = false;
-    for (const s of heard) any = giveOrder(state, s, command.order, s.pos) || any;
+    if (command.order === 'loot' && (command.x === undefined || command.y === undefined || !inBounds(state.grid, command.x, command.y))) return reject('loot where?');
+    // Everyone holds where they stand; everyone loots the same spot.
+    for (const s of heard) any = giveOrder(state, s, command.order, command.order === 'loot' ? { x: command.x!, y: command.y! } : s.pos) || any;
     return any ? changed() : unchanged();
   }
   if (command.type === 'setPriority') return setPriority(state, command.survivorId, command.jobType, command.priority);
@@ -556,9 +560,10 @@ function dropEverything(state: SimState, survivor: Survivor, why: string): void 
 }
 
 /** Gives one survivor an order. Returns false if it changed nothing. */
-function giveOrder(state: SimState, s: Survivor, kind: 'follow' | 'hold' | 'settle', at: Point): boolean {
+function giveOrder(state: SimState, s: Survivor, kind: OrderKind, at: Point): boolean {
   if (isControlled(state, s) || s.childUntil !== null) return false;
-  const order: Order | null = kind === 'settle' ? null : kind === 'follow' ? { kind } : { kind, x: at.x, y: at.y };
+  const order: Order | null =
+    kind === 'settle' ? null : kind === 'follow' ? { kind } : kind === 'loot' ? { kind, x: at.x, y: at.y, crateId: null, progress: 0 } : { kind, x: at.x, y: at.y };
   if (JSON.stringify(order) === JSON.stringify(s.order)) return false;
   s.order = order;
   // Drop what they were doing, unless it's a job they'd still take (a fight nearby).

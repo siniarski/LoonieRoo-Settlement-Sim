@@ -138,6 +138,8 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   const gun = loadedGun(state, s);
   const shotAt = gun ? state.zombies.find((z) => z.pos.x === target.x && z.pos.y === target.y) : undefined;
   if (gun && shotAt && Math.abs(shotAt.pos.x - s.pos.x) + Math.abs(shotAt.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, shotAt.pos)) {
+    const blocking = inTheWay(state, s, shotAt.pos);
+    if (blocking) return `held fire: ${blocking.name} is in the way`;
     c.nextSwing = state.tick + GUN_EVERY;
     gun.wear -= 1;
     makeNoise(state, s.pos, 'gunfire');
@@ -147,6 +149,30 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   // A swing at nothing still takes the time.
   c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
   return 'swung at nothing';
+}
+
+/** Someone of yours standing between you and a tile (Bresenham, like clearShot). */
+function inTheWay(state: SimState, s: Survivor, to: Point): Survivor | undefined {
+  let { x, y } = s.pos;
+  const dx = Math.abs(to.x - x);
+  const dy = -Math.abs(to.y - y);
+  const sx = x < to.x ? 1 : -1;
+  const sy = y < to.y ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y += sy;
+    }
+    if (x === to.x && y === to.y) return undefined;
+    const o = state.survivors.find((v) => v !== s && v.pos.x === x && v.pos.y === y);
+    if (o) return o;
+  }
 }
 
 /** The zombie in front, else any zombie next to you (straight or diagonal), in a fixed order. */
