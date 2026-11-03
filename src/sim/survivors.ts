@@ -129,6 +129,8 @@ export interface Survivor {
   cart: string | null;
   /** What's in the cart besides `carrying`, on a store haul. */
   cartLoad: string[];
+  /** A tool (carried item) that speeds up one kind of work (skills.ts). */
+  tool: string | null;
   /** Day shift sleeps at night; night shift sleeps by day (needs.ts). */
   shift: 'day' | 'night';
   /** Kills made, and hours kept watch on a tower at night (for earned traits, skills.ts). */
@@ -184,6 +186,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     childUntil: null,
     cart: null,
     cartLoad: [],
+    tool: null,
     shift: 'day',
     kills: 0,
     watchHours: 0,

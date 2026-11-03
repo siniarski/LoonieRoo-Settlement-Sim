@@ -22,6 +22,7 @@ const BLUEPRINT_CHARS = {
   fridge: ENTITY_CHARS.fridgeBlueprint,
   heater: ENTITY_CHARS.heaterBlueprint,
   coop: ENTITY_CHARS.coopBlueprint,
+  radio: ENTITY_CHARS.radioBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 

@@ -82,7 +82,7 @@ export const CLEAN_WORK = 15;
 export const SCAVENGE_WORK = 40;
 /** What a crate search turns up (one sim RNG roll against these, in order; they sum to 1). */
 export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
-  ['food', 0.37],
+  ['food', 0.35],
   ['wood', 0.23],
   ['book', 0.02],
   ['bandage', 0.12],
@@ -93,6 +93,8 @@ export const SCAVENGE_TABLE: readonly [ItemKind, number][] = [
   ['boots', 0.02],
   ['armour', 0.01],
   ['gun', 0.01],
+  ['axe', 0.01],
+  ['hammer', 0.01],
 ];
 /** A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits). */
 export const GUARD_ATTACK_EVERY = 10;

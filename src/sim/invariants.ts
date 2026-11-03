@@ -69,6 +69,7 @@ export function checkInvariants(state: SimState): string[] {
       bearer?.body !== item.id &&
       bearer?.feet !== item.id &&
       bearer?.cart !== item.id &&
+      bearer?.tool !== item.id &&
       !bearer?.cartLoad.includes(item.id)
     ) {
       problems.push(`${item.id} says carriedBy ${item.carriedBy}, who isn't carrying it`);

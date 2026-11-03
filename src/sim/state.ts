@@ -26,13 +26,14 @@ import type { Dog } from './dogs';
 import type { Settlement } from './settlements';
 import type { Animal } from './animals';
 import type { Prisoner } from './prisoners';
+import type { SupplyRequest } from './radio';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 44;
+export const SCHEMA_VERSION = 45;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -90,6 +91,8 @@ export interface SimState {
   lastRelief: number;
   /** Raiders held in the cells (prisoners.ts). */
   prisoners: Prisoner[];
+  /** Neighbours' asks, heard on the radio (radio.ts). */
+  requests: SupplyRequest[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -125,7 +128,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     survivors: [],
     zombies: [],
     wanderers: [],
-    craftTargets: { weapon: 0, bandage: 0, medicine: 0, ammo: 0, gun: 0, coat: 0, armour: 0, boots: 0, cart: 0 },
+    craftTargets: { weapon: 0, bandage: 0, medicine: 0, ammo: 0, gun: 0, coat: 0, armour: 0, boots: 0, cart: 0, axe: 0, hammer: 0, medkit: 0 },
     zombiesTonight: null,
     exploreAreas: [],
     dormant: [],
@@ -143,6 +146,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     animals: [],
     lastRelief: -1e9,
     prisoners: [],
+    requests: [],
     items: [],
     furniture: [],
     farm: [],

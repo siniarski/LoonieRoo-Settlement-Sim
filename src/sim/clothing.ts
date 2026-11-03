@@ -21,6 +21,7 @@ import { findPathToAny } from './pathfinding';
 import { samePoint } from './space';
 import type { SimState } from './state';
 import { walk, type Survivor } from './survivors';
+import { TOOL_FOR } from './skills';
 
 export type Garment = 'coat' | 'armour' | 'boots';
 export type Slot = 'body' | 'feet';
@@ -96,6 +97,7 @@ function startDressing(state: SimState, s: Survivor): boolean {
     ...(s.body ? [] : body),
     ...(s.feet ? [] : (['boots'] as const)),
     ...(s.cart || s.priorities.haul === 0 ? [] : (['cart'] as const)),
+    ...(s.tool ? [] : (Object.keys(TOOL_FOR) as ('axe' | 'hammer' | 'medkit')[]).filter((k) => s.priorities[TOOL_FOR[k]] > 0).sort((a, b) => s.priorities[TOOL_FOR[a]] - s.priorities[TOOL_FOR[b]])),
     ...(needsMending(state, s) ? (['cloth'] as const) : []),
   ];
   const item = wants.map((k) => nearestFreeItem(state, s, k)).find((i) => i?.pos);
@@ -139,7 +141,7 @@ export function updateDressing(state: SimState, s: Survivor): boolean {
     s.note = `mended their ${worn.kind}`;
     return true;
   }
-  const slot = isGarment(item.kind) ? SLOT_OF[item.kind] : item.kind === 'cart' ? 'cart' : null;
+  const slot = isGarment(item.kind) ? SLOT_OF[item.kind] : item.kind === 'cart' ? 'cart' : item.kind in TOOL_FOR ? 'tool' : null;
   if (!slot || s[slot]) {
     item.reservedBy = null;
     return true;
@@ -148,7 +150,7 @@ export function updateDressing(state: SimState, s: Survivor): boolean {
   item.carriedBy = s.id;
   item.reservedBy = null;
   s[slot] = item.id;
-  s.note = item.kind === 'cart' ? 'took a cart for hauling' : `put on ${item.kind}`;
+  s.note = item.kind === 'cart' ? 'took a cart for hauling' : slot === 'tool' ? `took a ${item.kind}` : `put on ${item.kind}`;
   return true;
 }
 
@@ -173,7 +175,7 @@ export function reconcileDressing(state: SimState, s: Survivor): void {
 
 /** Takes everything off where the survivor stands (death). */
 export function undress(state: SimState, s: Survivor): void {
-  for (const slot of ['body', 'feet', 'cart'] as const) {
+  for (const slot of ['body', 'feet', 'cart', 'tool'] as const) {
     const item = s[slot] ? getItem(state, s[slot]!) : undefined;
     s[slot] = null;
     if (item) dropItem(state, item, s.pos);

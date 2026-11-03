@@ -39,6 +39,7 @@ import { updateHeaters, updatePower, updateSpoilage } from './power';
 import { updateAnimals } from './animals';
 import { updateDirector } from './director';
 import { updatePrisoners } from './prisoners';
+import { updateRadio } from './radio';
 import { countWatch } from './towers';
 import { stopReading, updateReading } from './books';
 import { updateDogs } from './dogs';
@@ -59,6 +60,7 @@ export function tick(state: SimState): void {
   updateAnimals(state);
   updateDirector(state);
   updatePrisoners(state);
+  updateRadio(state);
   updateSpoilage(state);
   updateDogs(state);
   updateSettlements(state);

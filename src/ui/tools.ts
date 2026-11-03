@@ -6,7 +6,7 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'cell' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'cell' | 'radio' | 'perimeter' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
 
 export type CategoryId = 'structure' | 'furniture' | 'utilities' | 'rooms' | 'land' | 'orders';
 
@@ -128,6 +128,7 @@ export const TOOLS: readonly Tool[] = [
       ['lamp', 'Lamp'],
       ['fridge', 'Fridge'],
       ['heater', 'Heater'],
+      ['radio', 'Radio'],
     ] as const
   ).map(
     ([id, label]): Tool => ({
@@ -321,6 +322,16 @@ export const TOOLS: readonly Tool[] = [
     hasInstant: false,
     command: () => null,
     boxCommand: (a, b) => ({ type: 'designateHunt', x0: a.x, y0: a.y, x1: b.x, y1: b.y }),
+  },
+  {
+    id: 'perimeter',
+    label: 'Wall in',
+    category: 'land',
+    paints: false,
+    area: true,
+    hasInstant: false,
+    command: () => null,
+    boxCommand: (a, b) => ({ type: 'planPerimeter', x0: a.x, y0: a.y, x1: b.x, y1: b.y }),
   },
 ];
 

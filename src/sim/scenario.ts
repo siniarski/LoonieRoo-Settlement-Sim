@@ -93,14 +93,19 @@ export const ENTITY_CHARS = {
   coop: 'M',
   coopBlueprint: 'V',
   deer: 'u',
+  radio: 'I',
+  radioBlueprint: 'y',
+  axe: 'J',
+  hammer: 'S',
+  medkit: 'p',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
 /** Furniture and blueprints placed straight from their map char. */
-const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge', 'heater', 'coop'] as const;
+const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge', 'heater', 'coop', 'radio'] as const;
 
-const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book', 'cart'] as const;
+const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book', 'cart', 'axe', 'hammer', 'medkit'] as const;
 
 const CHAR_TILES: Record<string, Tile> = Object.fromEntries(
   Object.entries(TILE_CHARS).map(([tile, char]) => [char, tile as Tile]),

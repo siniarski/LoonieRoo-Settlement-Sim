@@ -25,6 +25,7 @@ import { cancelDrink } from './water';
 import { stopReading } from './books';
 import { giveGift } from './settlements';
 import { decidePrisoner } from './prisoners';
+import { fulfilRequest } from './radio';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -76,6 +77,10 @@ export type Command =
   | { type: 'releasePrisoner'; prisonerId: string }
   /** Day shift (sleeps at night) or night shift (sleeps by day). */
   | { type: 'setShift'; survivorId: string; shift: 'day' | 'night' }
+  /** Plan a wall round a box, with a door in the middle of each side (the auto-wall planner). */
+  | { type: 'planPerimeter'; x0: number; y0: number; x1: number; y1: number }
+  /** Send a neighbour what they asked for on the radio (radio.ts). */
+  | { type: 'fulfilRequest'; requestId: string }
   /** Send food to a neighbouring settlement (settlements.ts). */
   | { type: 'giftSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
@@ -183,6 +188,11 @@ function execute(state: SimState, command: Command): CommandResult {
     if (s.shift === command.shift) return unchanged();
     s.shift = command.shift;
     return changed();
+  }
+  if (command.type === 'planPerimeter') return planPerimeter(state, command.x0, command.y0, command.x1, command.y1);
+  if (command.type === 'fulfilRequest') {
+    const failed = fulfilRequest(state, command.requestId);
+    return failed ? reject(failed) : changed();
   }
   if (command.type === 'giftSettlement') {
     const failed = giveGift(state, command.settlementId);
@@ -341,6 +351,28 @@ function designateBuild(state: SimState, x: number, y: number, structure: 'wall'
   if (existing) cancelBlueprint(state, existing);
   addBlueprint(state, x, y, structure);
   return changed();
+}
+
+/** Wall plans round the box's edge (explored, empty floor only), a door plan mid-way along each side. */
+function planPerimeter(state: SimState, ax: number, ay: number, bx: number, by: number): CommandResult {
+  const x0 = Math.max(0, Math.min(ax, bx));
+  const x1 = Math.min(state.grid.width - 1, Math.max(ax, bx));
+  const y0 = Math.max(0, Math.min(ay, by));
+  const y1 = Math.min(state.grid.height - 1, Math.max(ay, by));
+  if (x1 - x0 < 2 || y1 - y0 < 2) return reject('too small to wall in');
+  const mx = Math.floor((x0 + x1) / 2);
+  const my = Math.floor((y0 + y1) / 2);
+  let planned = 0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (x !== x0 && x !== x1 && y !== y0 && y !== y1) continue;
+      if (!isExplored(state, x, y) || getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y) || blueprintAt(state, x, y)) continue;
+      const door = (x === mx && (y === y0 || y === y1)) || (y === my && (x === x0 || x === x1));
+      addBlueprint(state, x, y, door ? 'door' : 'wall');
+      planned += 1;
+    }
+  }
+  return planned > 0 ? changed() : unchanged();
 }
 
 function designateRemove(state: SimState, x: number, y: number): CommandResult {

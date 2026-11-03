@@ -44,7 +44,7 @@ export const SPOIL_CHECK_EVERY = 100;
 export const FOOD_SHELF = 4 * DAY_LENGTH;
 export const MEAL_SHELF = DAY_LENGTH;
 
-const CONSUMERS = ['lamp', 'fridge'] as const;
+const CONSUMERS = ['lamp', 'fridge', 'radio'] as const;
 
 function generators(state: SimState): Furniture[] {
   return state.furniture.filter((f) => f.kind === 'generator');
@@ -70,7 +70,7 @@ export function updatePower(state: SimState): void {
   for (const g of generators(state)) {
     if (g.stored === 0) continue;
     const load = state.furniture.some(
-      (f) => (CONSUMERS as readonly string[]).includes(f.kind) && manhattan(g, f) <= POWER_RADIUS && (f.kind === 'fridge' || isNight(state.tick)),
+      (f) => (CONSUMERS as readonly string[]).includes(f.kind) && manhattan(g, f) <= POWER_RADIUS && (f.kind !== 'lamp' || isNight(state.tick)),
     );
     if (!load) continue;
     g.loot += 1;

@@ -63,11 +63,21 @@ export function skillLevel(s: Survivor, type: JobType): number {
  * One tick of work at a job type: 0 if the survivor loses this tick (hurt, miserable, or
  * lazy: 3/4 speed), else 1, or 2 on the ticks their skill earns. Practice counts either way it works.
  */
+/** Tools and the work they help with: a tool adds a step every TOOL_EVERY ticks of it. */
+export const TOOL_FOR: Record<'axe' | 'hammer' | 'medkit', JobType> = { axe: 'scavenge', hammer: 'build', medkit: 'doctor' };
+export const TOOL_EVERY = 3;
+
+function toolBonus(state: SimState, s: Survivor, type: JobType): number {
+  if (!s.tool || state.tick % TOOL_EVERY !== 0) return 0;
+  const kind = state.items.find((i) => i.id === s.tool)?.kind;
+  return kind && kind in TOOL_FOR && TOOL_FOR[kind as keyof typeof TOOL_FOR] === type ? 1 : 0;
+}
+
 export function workStep(state: SimState, s: Survivor, type: JobType): number {
   const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy') || s.sick !== null || s.age >= ELDER;
   if (!worksThisTick(state.tick, slowed)) return 0;
   s.xp[type] = (s.xp[type] ?? 0) + 1;
-  return 1 + (state.tick % 20 < skillLevel(s, type) ? 1 : 0);
+  return 1 + (state.tick % 20 < skillLevel(s, type) ? 1 : 0) + toolBonus(state, s, type);
 }
 
 /** A trait for a new arrival, from their id: three in four get one. */

@@ -423,7 +423,7 @@ function createSettlementPanel(command: (cmd: Command) => void) {
   return {
     root,
     update(state: SimState) {
-      const key = JSON.stringify([state.settlements, state.items.length]);
+      const key = JSON.stringify([state.settlements, state.requests, state.items.length]);
       if (key === last) return;
       last = key;
       root.hidden = state.settlements.length === 0;
@@ -442,6 +442,19 @@ function createSettlementPanel(command: (cmd: Command) => void) {
         gift.disabled = food < GIFT_FOOD;
         gift.addEventListener('click', () => command({ type: 'giftSettlement', settlementId: n.id }));
         row.append(label, gift);
+        root.append(row);
+      }
+      for (const r of state.requests) {
+        const n = state.settlements.find((s) => s.id === r.settlementId);
+        const have = state.items.filter((i) => i.kind === r.kind && i.pos !== null && i.reservedBy === null).length;
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${n?.name ?? '?'} asks for ${r.count} ${r.kind} (you have ${have})`;
+        const send = el('button', 'hud-button');
+        send.textContent = 'Send';
+        send.disabled = have < r.count;
+        send.addEventListener('click', () => command({ type: 'fulfilRequest', requestId: r.id }));
+        row.append(label, send);
         root.append(row);
       }
     },

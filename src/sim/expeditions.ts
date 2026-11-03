@@ -12,6 +12,9 @@ import { logEvent } from './events';
 import { HEALTH_MAX } from './health';
 import { scavengeFind } from './jobs';
 import { EXPEDITION_DOG_CHANCE, addDog } from './dogs';
+import { DISTRESS_LABEL } from './radio';
+import { addSurvivor } from './survivors';
+import { rollTraits } from './skills';
 import { hashRoll, idNumber } from './hash';
 import { spawnItem } from './items';
 import { mournDeath } from './mood';
@@ -74,7 +77,7 @@ function returnHome(state: SimState, x: Expedition): void {
     if (random(state) < deathChance) {
       lost.push(s);
       // What they carried is lost with them.
-      for (const id of [s.weapon, s.body, s.feet, s.cart, s.carrying]) {
+      for (const id of [s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]) {
         const item = id ? state.items.find((i) => i.id === id) : undefined;
         if (item) state.items.splice(state.items.indexOf(item), 1);
       }
@@ -107,6 +110,17 @@ function returnHome(state: SimState, x: Expedition): void {
   const parts = [`brought back ${found} find${found === 1 ? '' : 's'}`];
   if (hurt.length) parts.push(`${hurt.map((s) => s.name).join(', ')} hurt`);
   if (lost.length) parts.push(`${lost.map((s) => s.name).join(', ')} didn't come back`);
+  // A distress call (radio.ts): whoever called comes back with them.
+  if (x.target.label === DISTRESS_LABEL && back.length > 0) {
+    const n = 1 + Math.floor(hashRoll(idNumber(x.id), 0xd15) * 2);
+    const names: string[] = [];
+    for (let k = 0; k < n; k++) {
+      const s = addSurvivor(state, x.home.x, x.home.y);
+      s.traits = rollTraits(s.id);
+      names.push(s.name);
+    }
+    parts.push(`and brought in ${names.join(' and ')}`);
+  }
   if (back.length > 0 && hashRoll(idNumber(x.id), 0xd09) < EXPEDITION_DOG_CHANCE) {
     const dog = addDog(state, x.home.x, x.home.y);
     parts.push(`and a dog, ${dog.name}, followed them home`);

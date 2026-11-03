@@ -87,6 +87,8 @@ const COLOURS = {
     wheat: '#e8c860',
     hunt: '#ff8a7a',
     cell: '#e0a080',
+    radio: '#a0c8a0',
+    perimeter: '#6eb4ff',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -132,9 +134,10 @@ const COLOURS = {
     fridge: 'rgba(200, 220, 240, 0.30)',
     heater: 'rgba(230, 120, 60, 0.30)',
     coop: 'rgba(200, 170, 110, 0.30)',
+    radio: 'rgba(160, 200, 160, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', heater: '#e6783c', coop: '#c8aa6e', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', heater: '#e6783c', coop: '#c8aa6e', radio: '#a0c8a0', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -668,6 +671,7 @@ export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string
   fridge: ['#a0b4c8', 'F'],
   heater: ['#b4501e', 'h'],
   coop: ['#a08250', 'c'],
+  radio: ['#4a6a4a', 'r'],
 };
 
 /** Items without a drawing of their own: a coloured tile with a letter. */
@@ -681,6 +685,9 @@ export const GLYPHS: Partial<Record<ItemKind, [string, string]>> = {
   corpse: ['#5a4a4a', '+'],
   book: ['#6a3a7a', 'b'],
   cart: ['#7a6040', 'K'],
+  axe: ['#8a8070', 'X'],
+  hammer: ['#707880', 'H'],
+  medkit: ['#c84040', '+'],
 };
 
 function drawGlyph(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, wx: number, wy: number, size: number, [colour, letter]: [string, string]): void {
