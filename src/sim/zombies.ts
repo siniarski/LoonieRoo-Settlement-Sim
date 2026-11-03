@@ -138,6 +138,15 @@ export function zombiesForNight(night: number, colony = 0): number {
   return FIRST_NIGHT_ZOMBIES + night - 1 + Math.floor(colony / SURVIVORS_PER_EXTRA_ZOMBIE);
 }
 
+/**
+ * Nights are sized for a group: someone alone faces half, two people three quarters,
+ * three or more the full count, in generated (harsh) worlds (solo balance pass: night waves built for a colony
+ * killed a lone survivor by night 4).
+ */
+export function groupShare(people: number): number {
+  return Math.min(1, (people + 1) / 4);
+}
+
 export function zombieHealthForNight(night: number): number {
   return ZOMBIE_HEALTH + ZOMBIE_HEALTH_PER_NIGHT * (night - 1);
 }
@@ -200,7 +209,7 @@ export function updateZombies(state: SimState): void {
   const night = nightNumber(state.tick)!;
   if (ticksIntoNight(state.tick) === 0) {
     // The storyteller scales it by how the colony is doing (director.ts).
-    state.zombiesTonight = Math.max(1, zombieScale(state, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state) * siegeFactor(state, night))));
+    state.zombiesTonight = Math.max(1, zombieScale(state, Math.round(zombiesForNight(night, state.survivors.length) * threatScale(state) * siegeFactor(state, night) * (state.harsh ? groupShare(state.survivors.length) : 1))));
     const siege = siegeFactor(state, night) > 1;
     logEvent(state, `Night ${night} falls: ${state.zombiesTonight} zombies expected${siege ? ' (a SIEGE night)' : ''}`);
   }

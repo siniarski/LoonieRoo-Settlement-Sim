@@ -203,3 +203,13 @@ describe('zombies', () => {
     expect(checkInvariants(state)).toEqual([]);
   });
 });
+
+describe('nights sized for the group', () => {
+  it('in a generated world, someone alone faces half, a group of three or more the lot', async () => {
+    const { groupShare } = await import('../src/sim/zombies');
+    expect(groupShare(1)).toBe(0.5);
+    expect(groupShare(2)).toBe(0.75);
+    expect(groupShare(3)).toBe(1);
+    expect(groupShare(9)).toBe(1);
+  });
+});
