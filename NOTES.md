@@ -177,6 +177,20 @@ Planned order:
 6. Self-running settlements that grow, fail, trade and fight off screen.
 7. Inventory rework and the visual target, once the feel is proven.
 
+### Decisions (2026-11-04)
+
+1. **View.** Isometric is preferred for solo play; top-down may suit colony management. Plan for a renderer that can show both (the sim doesn't care). **Multi-storey buildings are wanted later**, so the sim needs a z-level (floor) in its coordinates before much more building code goes in. Decide this with the control prototype.
+2. **Movement.** Real-time (smooth) movement is the likely end goal. Settled by the control prototype.
+3. **Engine.** A desktop build is needed eventually; **Godot** is the likely target, chosen on performance and cost. Keep the TypeScript build for prototyping until the fun is proven; don't polish the Canvas renderer.
+4. **Death.** If your character dies you choose: take over someone in your group, or start a new character far away in the same world. Each colonist has a **commitment** that rises and falls with how happy they are with you and the colony (food, safety, mood, opinion of you). Low commitment: they won't follow orders, leave, or can't be taken over.
+5. **Win.** Endless, with optional goals. Some modes allow a cure or an escape; after either you can keep playing. Escape: arrange transport, choose to send others out ahead, then go looking for more people to bring. Escaping lands you on a new map with your gear (a new-game-plus).
+6. **Time.** Days get longer so you can explore a fair while before you must rest. Actions other than walking (looting, building, crafting) scale up with the day.
+7. **Control.** Both: light "group leader" orders (follow, hold, guard here, loot that) by default; the full colony tools once you settle somewhere.
+8. **Map.** The player picks: island, island chain, large mainland, or a bordered map. Continuous or region-based depending on the choice.
+9. **Multiplayer.** Co-op is a goal far down the line. Keep the sim deterministic (lockstep stays possible); no shortcuts that break it.
+10. **Tone.** Grim, no humour. Amputation, executing prisoners, putting down turned family (rare, extreme cases; it costs heavy mood, which has its own penalties for your character).
+11. **Difficulty.** Presets plus sandbox settings. Axes: weather intensity (regions of extreme heat or cold); **how far the apocalypse has progressed** (less to find, and worse condition); zombie count; nuclear winter / cloud cover (weaker crops and foliage, radioactive areas).
+
 ## Big worlds (designed for, not built yet)
 
 The world is 256x256, but the code is shaped so it can grow towards 10,000x10,000 without rewrites:
