@@ -14,7 +14,7 @@ import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './far
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
 import { getFurniture } from './furniture';
 import { TREAT_TICKS } from './health';
-import { GUARD_DAMAGE_PER_LEVEL, skillLevel, workStep } from './skills';
+import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, hasTrait, skillLevel, workStep } from './skills';
 import { applyRemedy, isPatient, remediesFor } from './medicine';
 import { getExploreArea, isExplored, scoutTarget, scoutingOver } from './fog';
 import { getTile, isDirty, isWalkable, neighbours4, setDirty, type Point } from './grid';
@@ -471,7 +471,7 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
     if (job.progress % GUN_EVERY !== 1) return;
     gun.wear -= 1;
     makeNoise(state, s.pos, 'gunfire');
-    if (!damageZombie(state, z, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'), s)) return;
+    if (!damageZombie(state, z, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0), s)) return;
     return finishJob(state, s, job, `shot a zombie at (${z.pos.x}, ${z.pos.y})`);
   }
   if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y), gun ? 1 : undefined);
@@ -480,7 +480,7 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
   makeNoise(state, s.pos, 'fighting');
-  const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
+  const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0);
   if (!damageZombie(state, z, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);

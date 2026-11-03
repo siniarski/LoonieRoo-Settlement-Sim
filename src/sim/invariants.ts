@@ -253,6 +253,7 @@ export function checkInvariants(state: SimState): string[] {
     if (s.cart && (items.get(s.cart)?.kind !== 'cart' || items.get(s.cart)?.carriedBy !== s.id)) problems.push(`${s.name} pushes ${s.cart}, which isn't their cart`);
   }
   for (const a of state.animals) if (getTile(grid, a.pos.x, a.pos.y) !== 'floor') problems.push(`animal ${a.id} off the floor`);
+  for (const p of state.prisoners) if (!isWalkable(grid, p.x, p.y)) problems.push(`prisoner ${p.id} in a wall`);
   for (const d of state.dogs) if (!isWalkable(grid, d.pos.x, d.pos.y) || d.health <= 0) problems.push(`dog ${d.id} is in a wall or dead`);
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);

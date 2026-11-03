@@ -10,6 +10,7 @@
 // randomness shifts). Hand-made maps' survivors have none.
 
 import { isHurt, worksThisTick } from './health';
+import { logEvent } from './events';
 import type { JobType } from './jobTypes';
 import { isMiserable } from './mood';
 import { ELDER } from './family';
@@ -21,8 +22,14 @@ export const MAX_LEVEL = 10;
 /** Extra guard damage per guard level. */
 export const GUARD_DAMAGE_PER_LEVEL = 5;
 
-export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick';
+export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick' | 'hardened' | 'vigilant' | 'haunted';
+/** The traits people are born with (rollTraits); the rest are earned (earnTrait). */
 export const TRAITS: readonly Trait[] = ['tough', 'lazy', 'greenThumb', 'cheerful', 'gloomy', 'quick'];
+
+export const HARDENED_KILLS = 15;
+export const HARDENED_DAMAGE = 10;
+export const VIGILANT_HOURS = 20;
+export const VIGILANT_SIGHT = 3;
 
 export const TRAIT_INFO: Record<Trait, { label: string; about: string; mood: number }> = {
   tough: { label: 'tough', about: 'takes a quarter less from zombies', mood: 0 },
@@ -31,7 +38,17 @@ export const TRAIT_INFO: Record<Trait, { label: string; about: string; mood: num
   cheerful: { label: 'cheerful', about: 'in a better mood', mood: 10 },
   gloomy: { label: 'gloomy', about: 'in a worse mood', mood: -10 },
   quick: { label: 'quick', about: 'walks faster', mood: 0 },
+  hardened: { label: 'hardened', about: `hits ${HARDENED_DAMAGE} harder (earned: many kills)`, mood: 0 },
+  vigilant: { label: 'vigilant', about: `sees ${VIGILANT_SIGHT} tiles further (earned: nights on watch)`, mood: 0 },
+  haunted: { label: 'haunted', about: 'never quite got over losing a friend', mood: -5 },
 };
+
+/** Experience leaves its mark (once). */
+export function earnTrait(state: SimState, s: Survivor, t: Trait, why: string): void {
+  if (hasTrait(s, t)) return;
+  s.traits.push(t);
+  logEvent(state, `${s.name} is ${TRAIT_INFO[t].label} now (${why})`);
+}
 
 export function hasTrait(s: Survivor, t: Trait): boolean {
   return s.traits.includes(t);

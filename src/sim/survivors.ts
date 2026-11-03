@@ -129,6 +129,11 @@ export interface Survivor {
   cart: string | null;
   /** What's in the cart besides `carrying`, on a store haul. */
   cartLoad: string[];
+  /** Day shift sleeps at night; night shift sleeps by day (needs.ts). */
+  shift: 'day' | 'night';
+  /** Kills made, and hours kept watch on a tower at night (for earned traits, skills.ts). */
+  kills: number;
+  watchHours: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -179,6 +184,9 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     childUntil: null,
     cart: null,
     cartLoad: [],
+    shift: 'day',
+    kills: 0,
+    watchHours: 0,
   };
   state.survivors.push(survivor);
   return survivor;

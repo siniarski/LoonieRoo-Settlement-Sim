@@ -86,6 +86,7 @@ const COLOURS = {
     herb: '#7ad7a0',
     wheat: '#e8c860',
     hunt: '#ff8a7a',
+    cell: '#e0a080',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -161,8 +162,9 @@ const COLOURS = {
     workshop: 'rgba(190, 150, 100, 0.12)',
     graveyard: 'rgba(120, 120, 140, 0.14)',
     greenhouse: 'rgba(120, 220, 120, 0.12)',
+    cell: 'rgba(200, 120, 80, 0.14)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a', graveyard: '#b4b4c8', greenhouse: '#9ee09e' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a', graveyard: '#b4b4c8', greenhouse: '#9ee09e', cell: '#e0a080' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -172,7 +174,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop', graveyard: 'Graveyard', greenhouse: 'Greenhouse' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop', graveyard: 'Graveyard', greenhouse: 'Greenhouse', cell: 'Cells' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -325,6 +327,17 @@ export function draw(
     ctx.beginPath();
     ctx.moveTo(p.x + r * 0.8, p.y - r * 0.5);
     ctx.lineTo(p.x + r * 1.1, p.y - r * 1.3);
+    ctx.stroke();
+  }
+  for (const q of state.prisoners) {
+    if (!shown(q.x, q.y)) continue;
+    const p = worldToScreen(camera, viewport, q.x + 0.5, q.y + 0.5);
+    ctx.fillStyle = '#e0a080';
+    ctx.strokeStyle = '#3a2a20';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(3, size * 0.3), 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
   }
   for (const d of state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(ctx, camera, viewport, d, options.alpha, size);

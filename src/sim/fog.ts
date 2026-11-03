@@ -19,6 +19,7 @@ import { hourOf, isNight } from './time';
 import { ensureGeneratedAround } from './worldgen';
 import { manhattan } from './space';
 import { TOWER_SIGHT, onTower } from './towers';
+import { VIGILANT_SIGHT, hasTrait } from './skills';
 import type { SimState } from './state';
 
 export const SIGHT_RADIUS = 8;
@@ -86,7 +87,7 @@ export function scoutingOver(tick: number): boolean {
 export function updateFog(state: SimState): void {
   for (const s of state.survivors) {
     ensureGeneratedAround(state, s.pos); // the world exists well ahead of what anyone sees
-    revealAround(state, s.pos, onTower(state, s) ? TOWER_SIGHT : SIGHT_RADIUS);
+    revealAround(state, s.pos, (onTower(state, s) ? TOWER_SIGHT : SIGHT_RADIUS) + (hasTrait(s, 'vigilant') ? VIGILANT_SIGHT : 0));
   }
 }
 

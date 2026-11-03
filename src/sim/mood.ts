@@ -7,7 +7,7 @@
 
 import { HUNGRY } from './food';
 import { isHurt } from './health';
-import { TRAIT_INFO } from './skills';
+import { TRAIT_INFO, earnTrait } from './skills';
 import { forget } from './relationships';
 import { INFECTED_MOOD } from './infection';
 import { SICK_MOOD } from './corpses';
@@ -104,5 +104,8 @@ export function isMiserable(state: SimState, s: Survivor): boolean {
 /** Everyone left in the colony remembers a death; friends of the dead take it hardest. */
 export function mournDeath(state: SimState, dead: Survivor): void {
   const friends = forget(state, dead);
-  for (const s of state.survivors) addThought(state, s, friends.has(s.id) ? 'lostFriend' : 'sawDeath');
+  for (const s of state.survivors) {
+    addThought(state, s, friends.has(s.id) ? 'lostFriend' : 'sawDeath');
+    if (friends.has(s.id)) earnTrait(state, s, 'haunted', `lost ${dead.name}`);
+  }
 }

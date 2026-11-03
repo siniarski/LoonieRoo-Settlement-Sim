@@ -50,7 +50,7 @@ describe('tools', () => {
   it('Furnish hands clicks to the planner instead of issuing a command itself', () => {
     const furnish = getTool('furnish');
     expect(furnish.furnish).toBe(true);
-    expect(furnish.category).toBe('rooms');
+    expect(furnish.category).toBe('orders') // (Rooms ran out of number keys);
     expect(furnish.command(3, 3, designate)).toBeNull();
   });
 
@@ -61,8 +61,9 @@ describe('tools', () => {
     expect(toolForKey('structure', '4')?.id).toBe('trap');
     expect(toolForKey('structure', '5')?.id).toBe('tower');
     expect(toolForKey('structure', '6')).toBeUndefined();
-    expect(toolForKey('orders', '1')?.id).toBe('scavenge');
-    expect(toolForKey('orders', '3')?.id).toBe('cancel');
+    expect(toolForKey('orders', '1')?.id).toBe('furnish');
+    expect(toolForKey('orders', '2')?.id).toBe('scavenge');
+    expect(toolForKey('orders', '4')?.id).toBe('cancel');
     expect(toolForKey('rooms', 'x')).toBeUndefined();
   });
 

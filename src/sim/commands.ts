@@ -24,6 +24,7 @@ import { cancelDressing } from './clothing';
 import { cancelDrink } from './water';
 import { stopReading } from './books';
 import { giveGift } from './settlements';
+import { decidePrisoner } from './prisoners';
 import { sendExpedition } from './expeditions';
 import { trade } from './visitors';
 import { MAX_EXPLORE_SIDE, isExplored } from './fog';
@@ -70,6 +71,11 @@ export type Command =
   | { type: 'sendExpedition'; survivorIds: string[]; poiId: string }
   /** Stockpile filter: let the storage room at (x, y) take a category of things, or not. */
   | { type: 'setStorageFilter'; x: number; y: number; category: StoreCategory; accept: boolean }
+  /** A prisoner: talk them round to join, or let them go home (prisoners.ts). */
+  | { type: 'recruitPrisoner'; prisonerId: string }
+  | { type: 'releasePrisoner'; prisonerId: string }
+  /** Day shift (sleeps at night) or night shift (sleeps by day). */
+  | { type: 'setShift'; survivorId: string; shift: 'day' | 'night' }
   /** Send food to a neighbouring settlement (settlements.ts). */
   | { type: 'giftSettlement'; settlementId: string }
   /** Take a trader's offer (visitors.ts). */
@@ -164,6 +170,18 @@ function execute(state: SimState, command: Command): CommandResult {
     if (command.accept) refuses.delete(command.category);
     else refuses.add(command.category);
     d.refuses = STORE_CATEGORIES.filter((c) => refuses.has(c));
+    return changed();
+  }
+  if (command.type === 'recruitPrisoner' || command.type === 'releasePrisoner') {
+    const failed = decidePrisoner(state, command.prisonerId, command.type === 'recruitPrisoner');
+    return failed ? reject(failed) : changed();
+  }
+  if (command.type === 'setShift') {
+    const s = getSurvivor(state, command.survivorId);
+    if (!s) return reject(`no survivor ${command.survivorId}`);
+    if (command.shift !== 'day' && command.shift !== 'night') return reject('shift is day or night');
+    if (s.shift === command.shift) return unchanged();
+    s.shift = command.shift;
     return changed();
   }
   if (command.type === 'giftSettlement') {

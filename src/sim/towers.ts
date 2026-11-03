@@ -10,7 +10,8 @@ import { findPathToAny } from './pathfinding';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
 import { walk, type Survivor } from './survivors';
-import { isNight } from './time';
+import { TICKS_PER_HOUR, isNight } from './time';
+import { VIGILANT_HOURS, earnTrait } from './skills';
 
 export const TOWER_SIGHT = 16;
 export const TOWER_RANGE_BONUS = 3;
@@ -23,6 +24,13 @@ export function onTower(state: SimState, s: Survivor): boolean {
 
 export function hasTower(state: SimState): boolean {
   return state.furniture.some((f) => f.kind === 'tower');
+}
+
+/** Hourly, for every survivor: a night up a tower counts towards being vigilant. */
+export function countWatch(state: SimState, s: Survivor): void {
+  if (state.tick % TICKS_PER_HOUR !== 0 || !isNight(state.tick) || !onTower(state, s)) return;
+  s.watchHours += 1;
+  if (s.watchHours === VIGILANT_HOURS) earnTrait(state, s, 'vigilant', `${VIGILANT_HOURS} hours on watch`);
 }
 
 /**

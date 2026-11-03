@@ -27,6 +27,8 @@ import { hitDog } from './dogs';
 import { VARIANTS, giveVariant, type Variant } from './zombieKinds';
 import { makeNoise } from './noise';
 import { threatScale } from './director';
+import { maybeCapture } from './prisoners';
+import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
 import { canReach, findPathToAny, isPassable } from './pathfinding';
@@ -390,8 +392,11 @@ export function damageZombie(state: SimState, z: Zombie, amount: number, by: Sur
   z.health = Math.max(0, z.health - amount);
   if (z.health > 0) return false;
   removeZombie(state, z);
+  by.kills += 1;
+  if (by.kills === HARDENED_KILLS) earnTrait(state, by, 'hardened', `${HARDENED_KILLS} kills`);
+  if (maybeCapture(state, z, by.name)) return true;
   leaveCorpse(state, z.pos, null);
-  logEvent(state, `${by.name} killed a zombie`);
+  logEvent(state, `${by.name} killed a ${z.kind === 'raider' ? 'raider' : 'zombie'}`);
   return true;
 }
 

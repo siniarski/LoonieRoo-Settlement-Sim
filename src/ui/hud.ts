@@ -27,6 +27,8 @@ import { describeRelations } from '../sim/relationships';
 import { describeClothing } from '../sim/clothing';
 import { FRIENDLY, GIFT_FOOD, HOSTILE } from '../sim/settlements';
 import { createAlertList, createOverview } from './overview';
+import { RECRUIT_DAYS } from '../sim/prisoners';
+import { DAY_LENGTH } from '../sim/time';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
@@ -109,9 +111,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const expeditions = createExpeditionPanel(view, command);
   const traders = createTraderPanel(command);
   const neighbours = createSettlementPanel(command);
+  const prisoners = createPrisonerPanel(command);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
-  info.append(status, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, feed);
+  info.append(status, alertList.root, toast, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -180,6 +183,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       expeditions.update(state);
       traders.update(state);
       neighbours.update(state);
+      prisoners.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -378,6 +382,40 @@ function createGamePanel(view: ViewState, files: GameFiles) {
   };
 }
 
+/** Prisoners in the cells: talk them round, or let them go. */
+function createPrisonerPanel(command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const rows = state.prisoners.map((p) => ({ p, ready: state.tick - p.since >= RECRUIT_DAYS * DAY_LENGTH }));
+      const key = JSON.stringify(rows.map((r) => [r.p.id, r.ready]));
+      if (key === last) return;
+      last = key;
+      root.hidden = rows.length === 0;
+      root.replaceChildren();
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = 'Prisoners (each eats a food a day)';
+      root.append(title);
+      for (const { p, ready } of rows) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', 'hud-wanderer-label');
+        label.textContent = `${p.name} at (${p.x}, ${p.y})`;
+        const recruit = el('button', 'hud-button');
+        recruit.textContent = ready ? 'Recruit' : 'Recruit (not yet)';
+        recruit.disabled = !ready;
+        recruit.addEventListener('click', () => command({ type: 'recruitPrisoner', prisonerId: p.id }));
+        const release = el('button', 'hud-button');
+        release.textContent = 'Let go';
+        release.addEventListener('click', () => command({ type: 'releasePrisoner', prisonerId: p.id }));
+        row.append(label, recruit, release);
+        root.append(row);
+      }
+    },
+  };
+}
+
 /** Neighbouring settlements: what they think of you, and a gift button. */
 function createSettlementPanel(command: (cmd: Command) => void) {
   const root = el('div', 'hud-wanderers');
@@ -566,7 +604,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
     const head = el('tr', '');
-    for (const label of ['Survivor', 'Mood', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', 'Shift', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -586,6 +624,14 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       moodCell.textContent = String(m);
       moodCell.title = moodTitle(state, s);
       row.append(moodCell);
+
+      const shiftCell = el('td', '');
+      const shift = el('button', 'prio-cell');
+      shift.textContent = s.shift === 'night' ? '☾' : '☀';
+      shift.title = `${s.name} works the ${s.shift} shift (sleeps ${s.shift === 'night' ? 'by day' : 'at night'}). Click to switch.`;
+      shift.addEventListener('click', () => command({ type: 'setShift', survivorId: s.id, shift: s.shift === 'night' ? 'day' : 'night' }));
+      shiftCell.append(shift);
+      row.append(shiftCell);
 
       for (const type of JOB_TYPES) {
         const td = el('td', '');
@@ -618,7 +664,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !shown;
       if (!shown) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.priorities, activity(state, s), moodTitle(state, s)])]);
+      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.shift, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);

@@ -25,13 +25,14 @@ import type { Knowledge } from './books';
 import type { Dog } from './dogs';
 import type { Settlement } from './settlements';
 import type { Animal } from './animals';
+import type { Prisoner } from './prisoners';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 43;
+export const SCHEMA_VERSION = 44;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -87,6 +88,8 @@ export interface SimState {
   animals: Animal[];
   /** When the storyteller last left a cache (director.ts). */
   lastRelief: number;
+  /** Raiders held in the cells (prisoners.ts). */
+  prisoners: Prisoner[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -139,6 +142,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     settlements: [],
     animals: [],
     lastRelief: -1e9,
+    prisoners: [],
     items: [],
     furniture: [],
     farm: [],

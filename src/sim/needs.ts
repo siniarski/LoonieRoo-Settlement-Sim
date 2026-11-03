@@ -51,7 +51,9 @@ import { DRINK_RETRY_TICKS, cancelDrink, findWater, thirstInterrupts } from './w
 import { INFIRMARY_HEAL_FACTOR, applyRemedy, inInfirmary, isBarracksBed, isGuard, isInfirmaryBed, remediesFor } from './medicine';
 
 export function isTired(state: SimState, s: Survivor): boolean {
-  return s.rest < (isNight(state.tick) ? NIGHT_TIRED : TIRED);
+  // Bedtime is night for the day shift and day for the night shift.
+  const bedtime = s.shift === 'night' ? !isNight(state.tick) : isNight(state.tick);
+  return s.rest < (bedtime ? NIGHT_TIRED : TIRED);
 }
 
 /**
