@@ -1,7 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import type { Blueprint, BuildTarget } from '../sim/designations';
-import { GROW_TICKS, isRipe, type FarmPlot } from '../sim/farming';
+import { growTicks, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
 import { GROUNDS, type Ground, type Point, type Tile } from '../sim/grid';
 import { getJob } from '../sim/jobs';
@@ -80,6 +80,12 @@ const COLOURS = {
     workshop: '#d6b47c',
     graveyard: '#b4b4c8',
     burn: '#ff7a2e',
+    coop: '#c8aa6e',
+    greenhouse: '#9ee09e',
+    heater: '#e6783c',
+    herb: '#7ad7a0',
+    wheat: '#e8c860',
+    hunt: '#ff8a7a',
   } satisfies Record<ToolId, string>,
   selectHover: '#e8ece6',
   survivor: '#f2e6c9',
@@ -123,9 +129,11 @@ const COLOURS = {
     generator: 'rgba(200, 180, 80, 0.30)',
     lamp: 'rgba(255, 230, 120, 0.30)',
     fridge: 'rgba(200, 220, 240, 0.30)',
+    heater: 'rgba(230, 120, 60, 0.30)',
+    coop: 'rgba(200, 170, 110, 0.30)',
     floor: 'rgba(255, 110, 110, 0.0)',
   } satisfies Record<BuildTarget, string>,
-  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
+  blueprintEdge: { wall: '#6eb4ff', door: '#ffbe6e', bed: '#c7a6ff', table: '#d6aa78', workbench: '#be9664', stove: '#8a8f96', barricade: '#aa7846', trap: '#b8bec6', tower: '#96704a', well: '#5a8cc8', collector: '#5a8cc8', generator: '#c8b450', lamp: '#ffe678', fridge: '#c8dcf0', heater: '#e6783c', coop: '#c8aa6e', floor: '#ff6e6e' } satisfies Record<BuildTarget, string>,
   progress: '#8cf0a4',
   jobLine: 'rgba(255, 214, 102, 0.8)',
   soil: '#4a3726',
@@ -152,8 +160,9 @@ const COLOURS = {
     barracks: 'rgba(170, 190, 120, 0.12)',
     workshop: 'rgba(190, 150, 100, 0.12)',
     graveyard: 'rgba(120, 120, 140, 0.14)',
+    greenhouse: 'rgba(120, 220, 120, 0.12)',
   } satisfies Record<RoomPurpose, string>,
-  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a', graveyard: '#b4b4c8' } satisfies Record<RoomPurpose, string>,
+  roomLabel: { housing: '#9cc4ff', storage: '#f0d39a', armory: '#f0b39a', messhall: '#b8f0d4', recroom: '#f3c4ea', infirmary: '#f4f1ea', barracks: '#d4e0a8', workshop: '#e0c89a', graveyard: '#b4b4c8', greenhouse: '#9ee09e' } satisfies Record<RoomPurpose, string>,
   tableTop: '#8a6440',
   tableEdge: '#5c4128',
   blade: '#cfd6dc',
@@ -163,7 +172,7 @@ const COLOURS = {
   labelBg: 'rgba(13, 15, 14, 0.75)',
 };
 
-export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop', graveyard: 'Graveyard' };
+export const PURPOSE_NAMES: Record<RoomPurpose, string> = { housing: 'Housing', storage: 'Storage', armory: 'Armory', messhall: 'Mess hall', recroom: 'Rec room', infirmary: 'Infirmary', barracks: 'Barracks', workshop: 'Workshop', graveyard: 'Graveyard', greenhouse: 'Greenhouse' };
 
 /** How dark full night gets (overlay opacity). */
 const NIGHT_MAX_ALPHA = 0.55;
@@ -297,6 +306,20 @@ export function draw(
   for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
   for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
+  for (const a of state.animals) {
+    if (!shown(a.pos.x, a.pos.y)) continue;
+    const t = a.move ? Math.min(1, (a.move.progress + options.alpha) / a.move.duration) : 0;
+    const p = worldToScreen(camera, viewport, (a.move ? a.move.from.x + (a.move.to.x - a.move.from.x) * t : a.pos.x) + 0.5, (a.move ? a.move.from.y + (a.move.to.y - a.move.from.y) * t : a.pos.y) + 0.5);
+    const r = Math.max(2, size * 0.24);
+    ctx.fillStyle = '#b07a46';
+    ctx.fillRect(p.x - r * 1.2, p.y - r * 0.5, r * 2.2, r);
+    ctx.strokeStyle = a.hunted ? '#ff5a4a' : '#e8d0a0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x + r * 0.8, p.y - r * 0.5);
+    ctx.lineTo(p.x + r * 1.1, p.y - r * 1.3);
+    ctx.stroke();
+  }
   for (const d of state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(ctx, camera, viewport, d, options.alpha, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
   drawRoomLabels(ctx, camera, viewport, state, size);
@@ -396,10 +419,10 @@ function drawPlot(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
   for (const t of [0.3, 0.55, 0.8]) ctx.fillRect(r.x + 2, Math.round(r.y + r.h * t), r.w - 4, Math.max(1, Math.round(r.h * 0.06)));
   if (!plot.planted) return;
   const ripe = isRipe(plot);
-  const grown = ripe ? 1 : plot.growth / GROW_TICKS;
+  const grown = ripe ? 1 : plot.growth / growTicks(plot);
   const h = Math.max(2, r.h * (0.15 + 0.55 * grown));
   const w = Math.max(2, r.w * (0.12 + 0.3 * grown));
-  ctx.fillStyle = ripe ? COLOURS.ripe : COLOURS.sprout;
+  ctx.fillStyle = ripe ? (plot.crop === 'wheat' ? '#e8c860' : plot.crop === 'herb' ? '#7ad7a0' : COLOURS.ripe) : COLOURS.sprout;
   ctx.fillRect(r.x + r.w / 2 - w / 2, r.y + r.h * 0.85 - h, w, h);
 }
 
@@ -623,6 +646,8 @@ export const FURNITURE_GLYPHS: Partial<Record<Furniture['kind'], [string, string
   generator: ['#8c7a2e', 'E'],
   lamp: ['#b4a046', 'l'],
   fridge: ['#a0b4c8', 'F'],
+  heater: ['#b4501e', 'h'],
+  coop: ['#a08250', 'c'],
 };
 
 /** Items without a drawing of their own: a coloured tile with a letter. */

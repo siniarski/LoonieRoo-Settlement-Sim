@@ -6,9 +6,9 @@
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
 
-export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
+export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
 
-export type CategoryId = 'structure' | 'furniture' | 'rooms' | 'orders';
+export type CategoryId = 'structure' | 'furniture' | 'utilities' | 'rooms' | 'land' | 'orders';
 
 export interface Category {
   id: CategoryId;
@@ -18,7 +18,9 @@ export interface Category {
 export const CATEGORIES: readonly Category[] = [
   { id: 'structure', label: 'Structure' },
   { id: 'furniture', label: 'Furniture' },
+  { id: 'utilities', label: 'Utilities' },
   { id: 'rooms', label: 'Rooms' },
+  { id: 'land', label: 'Land' },
   { id: 'orders', label: 'Orders' },
 ];
 
@@ -125,12 +127,13 @@ export const TOOLS: readonly Tool[] = [
       ['generator', 'Generator'],
       ['lamp', 'Lamp'],
       ['fridge', 'Fridge'],
+      ['heater', 'Heater'],
     ] as const
   ).map(
     ([id, label]): Tool => ({
       id,
       label,
-      category: 'furniture',
+      category: 'utilities',
       paints: false,
       hasInstant: false,
       command: (x, y) => ({ type: 'designateBuild', x, y, structure: id }),
@@ -270,12 +273,46 @@ export const TOOLS: readonly Tool[] = [
   },
   {
     id: 'farm',
-    label: 'Farm',
-    category: 'orders',
+    label: 'Potatoes',
+    category: 'land',
     paints: false,
     area: true,
     hasInstant: false,
     command: (x, y) => ({ type: 'designateFarm', x, y }),
+  },
+  ...(
+    [
+      ['wheat', 'Wheat'],
+      ['herb', 'Herbs'],
+    ] as const
+  ).map(
+    ([crop, label]): Tool => ({ id: crop, label, category: 'land', paints: false, area: true, hasInstant: false, command: (x, y) => ({ type: 'designateFarm', x, y, crop }) }),
+  ),
+  {
+    id: 'greenhouse',
+    label: 'Greenhouse',
+    category: 'land',
+    paints: false,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateRoom', x, y, purpose: 'greenhouse' }),
+  },
+  {
+    id: 'coop',
+    label: 'Chicken coop',
+    category: 'land',
+    paints: false,
+    hasInstant: false,
+    command: (x, y) => ({ type: 'designateBuild', x, y, structure: 'coop' }),
+  },
+  {
+    id: 'hunt',
+    label: 'Hunt',
+    category: 'land',
+    paints: false,
+    area: true,
+    hasInstant: false,
+    command: () => null,
+    boxCommand: (a, b) => ({ type: 'designateHunt', x0: a.x, y0: a.y, x1: b.x, y1: b.y }),
   },
 ];
 

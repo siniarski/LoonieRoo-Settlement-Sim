@@ -24,13 +24,14 @@ import type { Fire } from './fire';
 import type { Knowledge } from './books';
 import type { Dog } from './dogs';
 import type { Settlement } from './settlements';
+import type { Animal } from './animals';
 import type { Zombie } from './zombies';
 
 /**
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 41;
+export const SCHEMA_VERSION = 42;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -82,6 +83,8 @@ export interface SimState {
   dogs: Dog[];
   /** Neighbours in a generated world (settlements.ts). */
   settlements: Settlement[];
+  /** Wild animals (animals.ts). */
+  animals: Animal[];
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -132,6 +135,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     knowledge: [],
     dogs: [],
     settlements: [],
+    animals: [],
     items: [],
     furniture: [],
     farm: [],

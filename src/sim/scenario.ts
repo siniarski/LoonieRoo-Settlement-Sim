@@ -14,6 +14,7 @@ import { addSurvivor } from './survivors';
 import { addWanderer } from './wanderers';
 import { addZombie } from './zombies';
 import { addDog } from './dogs';
+import { addDeer } from './animals';
 
 export interface Scenario {
   name?: string;
@@ -87,12 +88,17 @@ export const ENTITY_CHARS = {
   lampBlueprint: 'i',
   fridge: 'F',
   fridgeBlueprint: 'r',
+  heater: 'X',
+  heaterBlueprint: 'Z',
+  coop: 'M',
+  coopBlueprint: 'V',
+  deer: 'u',
   removeBlueprint: 'x',
 } as const;
 
 /** Item kinds placed straight from their map char (the rest have cases below). */
 /** Furniture and blueprints placed straight from their map char. */
-const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge'] as const;
+const SIMPLE_FURNITURE = ['well', 'collector', 'generator', 'lamp', 'fridge', 'heater', 'coop'] as const;
 
 const SIMPLE_ITEMS = ['cloth', 'coat', 'armour', 'boots', 'gun', 'ammo', 'corpse', 'book', 'cart'] as const;
 
@@ -192,6 +198,9 @@ function placeEntity(state: SimState, char: string, x: number, y: number): boole
       return true;
     case ENTITY_CHARS.medicine:
       spawnItem(state, 'medicine', x, y);
+      return true;
+    case ENTITY_CHARS.deer:
+      addDeer(state, x, y);
       return true;
     case ENTITY_CHARS.dog:
       addDog(state, x, y);

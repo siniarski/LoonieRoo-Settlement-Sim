@@ -20,6 +20,8 @@ import { makeNoise } from './noise';
 import { completeRooms, labelAt } from './rooms';
 import { seasonOf } from './seasons';
 import { manhattan } from './space';
+import { hashRoll } from './hash';
+import { ignite } from './fire';
 import type { SimState } from './state';
 import { DAY_LENGTH, TICKS_PER_HOUR, isNight } from './time';
 
@@ -31,6 +33,12 @@ export const LAMP_DETER = 16;
 export const LAMP_LIGHT = 4;
 export const LIGHT_DAMAGE_PCT = 125;
 export const FRIDGE_RADIUS = 2;
+
+/** Heaters (braziers): keep anyone within HEAT_RADIUS from the cold, burning a wood every HEATER_FUEL_TICKS on cold nights. */
+export const HEAT_RADIUS = 4;
+export const HEATER_FUEL_TICKS = 3 * TICKS_PER_HOUR;
+/** Chance per hour of burning that a heater sets its own tile alight. */
+export const HEATER_FIRE_CHANCE = 0.01;
 
 export const SPOIL_CHECK_EVERY = 100;
 export const FOOD_SHELF = 4 * DAY_LENGTH;
@@ -74,6 +82,26 @@ export function updatePower(state: SimState): void {
       g.storedKind = null;
       logEvent(state, `The generator at (${g.x}, ${g.y}) ran out of fuel`);
     }
+  }
+}
+
+/** A lit heater within reach. */
+export function isWarmed(state: SimState, p: { x: number; y: number }): boolean {
+  return state.furniture.some((f) => f.kind === 'heater' && f.stored > 0 && manhattan(f, p) <= HEAT_RADIUS);
+}
+
+/** Heaters burn on cold nights (winter, or a blizzard). */
+export function updateHeaters(state: SimState): void {
+  const cold = isNight(state.tick) && (seasonOf(state.tick) === 'winter' || state.weather === 'blizzard');
+  if (!cold) return;
+  for (const h of state.furniture) {
+    if (h.kind !== 'heater' || h.stored === 0) continue;
+    h.loot += 1;
+    if (h.loot % TICKS_PER_HOUR === 0 && hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE && ignite(state, h.x, h.y)) logEvent(state, `The heater at (${h.x}, ${h.y}) set something alight!`);
+    if (h.loot < HEATER_FUEL_TICKS) continue;
+    h.loot = 0;
+    h.stored -= 1;
+    if (h.stored === 0) h.storedKind = null;
   }
 }
 

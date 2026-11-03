@@ -13,12 +13,13 @@ import { isIndoors } from './rooms';
 import type { SimState } from './state';
 import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight } from './time';
 import { wearOut, wearing } from './clothing';
+import { isWarmed } from './power';
 import type { Survivor } from './survivors';
 
 export const SEASON_DAYS = 5;
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
-export type Weather = 'clear' | 'rain' | 'snow';
+export type Weather = 'clear' | 'rain' | 'snow' | 'blizzard' | 'heatwave' | 'storm';
 
 export const RAIN_CHANCE = 0.3;
 export const SNOW_CHANCE = 0.4;
@@ -40,7 +41,12 @@ export function cropGrows(state: SimState): number {
 
 /** Out of doors on a winter night without a coat. */
 export function isCold(state: SimState, s: Survivor): boolean {
-  return seasonOf(state.tick) === 'winter' && isNight(state.tick) && !isIndoors(state, s.pos.x, s.pos.y) && !wearing(state, s, 'coat');
+  return (
+    ((seasonOf(state.tick) === 'winter' && isNight(state.tick)) || state.weather === 'blizzard') &&
+    !isIndoors(state, s.pos.x, s.pos.y) &&
+    !wearing(state, s, 'coat') &&
+    !isWarmed(state, s.pos)
+  );
 }
 
 /** Dawn's weather roll, and the weather's effect on people outdoors. Runs every tick. */

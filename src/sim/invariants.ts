@@ -6,7 +6,7 @@ import { isPassable } from './pathfinding';
 import { everyone } from './expeditions';
 import { STRUCTURE_HEALTH } from './breach';
 import { getTile, inBounds, isWalkable } from './grid';
-import { GROW_TICKS } from './farming';
+import { growTicks } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { REST_MAX } from './rest';
@@ -207,7 +207,7 @@ export function checkInvariants(state: SimState): string[] {
     if (plotTiles.has(key)) problems.push(`two farm plots on (${key})`);
     plotTiles.add(key);
     if (getTile(grid, plot.x, plot.y) !== 'floor') problems.push(`farm plot ${plot.id} on non-floor (${key})`);
-    if (plot.growth < 0 || plot.growth > GROW_TICKS || (!plot.planted && plot.growth !== 0)) problems.push(`farm plot ${plot.id} has growth ${plot.growth}`);
+    if (plot.growth < 0 || plot.growth > growTicks(plot) || (!plot.planted && plot.growth !== 0)) problems.push(`farm plot ${plot.id} has growth ${plot.growth}`);
     if ((tendedPlots.get(plot.id) ?? 0) > 1) problems.push(`farm plot ${plot.id} has ${tendedPlots.get(plot.id)} jobs`);
   }
 
@@ -251,6 +251,7 @@ export function checkInvariants(state: SimState): string[] {
     if (s.cartLoad.length > 0 && (!s.jobId || !s.cart || !s.carrying)) problems.push(`${s.name} has a loaded cart with no haul on`);
     if (s.cart && (items.get(s.cart)?.kind !== 'cart' || items.get(s.cart)?.carriedBy !== s.id)) problems.push(`${s.name} pushes ${s.cart}, which isn't their cart`);
   }
+  for (const a of state.animals) if (getTile(grid, a.pos.x, a.pos.y) !== 'floor') problems.push(`animal ${a.id} off the floor`);
   for (const d of state.dogs) if (!isWalkable(grid, d.pos.x, d.pos.y) || d.health <= 0) problems.push(`dog ${d.id} is in a wall or dead`);
   for (const s of state.survivors) if (s.sick !== null && (s.sick <= 0 || !Number.isInteger(s.sick))) problems.push(`${s.name} has sickness ${s.sick}`);
   for (const i of grid.locked) if (grid.tiles[i] !== 'door') problems.push(`lock on a ${grid.tiles[i]} at ${i}`);

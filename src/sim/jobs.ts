@@ -10,7 +10,8 @@
 // survivor goes back to looking for work. Nobody gets stuck.
 
 import { cancelBlueprint, completeBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
-import { FARM_WORK, getPlot, isRipe, needsWork, plotPoint } from './farming';
+import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
+import { HUNT_WORK, VENISON, getAnimal } from './animals';
 import { getFurniture } from './furniture';
 import { TREAT_TICKS } from './health';
 import { GUARD_DAMAGE_PER_LEVEL, skillLevel, workStep } from './skills';
@@ -62,6 +63,8 @@ export interface Job {
   patientId: string | null;
   /** Scout only: the explore area. The job's x, y are the current target tile. */
   areaId: string | null;
+  /** Hunt only: the animal. The job's x, y follow it. */
+  animalId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
   /** Clean and scavenge: ticks of work done. */
@@ -144,7 +147,7 @@ export function reconcileJobs(state: SimState): void {
   // Generators short of fuel get one fuel haul each.
   const fuelling = new Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
   for (const f of state.furniture) {
-    if (f.kind === 'generator' && f.stored < FUEL_MAX && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
+    if ((f.kind === 'generator' || f.kind === 'heater') && f.stored < FUEL_MAX && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
   }
 
   // Damaged walls and doors get one repair job each.
@@ -195,6 +198,10 @@ export function reconcileJobs(state: SimState): void {
     if (!fighting.has(f.y * width + f.x)) addJob(state, 'firefight', f.x, f.y, null, null);
   }
 
+  // Every animal marked for hunting gets one hunt job.
+  const hunting = new Set(state.jobs.filter((j) => j.type === 'hunt').map((j) => j.animalId));
+  for (const a of state.animals) if (a.hunted && !hunting.has(a.id)) addJob(state, 'hunt', a.pos.x, a.pos.y, null, null).animalId = a.id;
+
   // Every zombie gets one guard job.
   const hunted = new Set(state.jobs.filter((j) => j.type === 'guard').map((j) => j.zombieId));
   for (const z of state.zombies) {
@@ -211,7 +218,7 @@ export function isStoreJob(job: Job): boolean {
   return job.type === 'haul' && job.blueprintId === null && job.furnitureId === null;
 }
 
-/** Fuel hauls: wood to a generator (`furnitureId`). */
+/** Fuel hauls: wood to a generator or heater (`furnitureId`). */
 export function isFuelJob(job: Job): boolean {
   return job.type === 'haul' && job.furnitureId !== null;
 }
@@ -241,6 +248,13 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       return job.areaId && getExploreArea(state, job.areaId) ? null : 'area explored';
     case 'firefight':
       return fireAt(state, job.x, job.y) ? null : 'fire is out';
+    case 'hunt': {
+      const a = job.animalId ? getAnimal(state, job.animalId) : undefined;
+      if (!a) return 'the animal got away';
+      job.x = a.pos.x;
+      job.y = a.pos.y;
+      return null;
+    }
     case 'doctor': {
       const patient = job.patientId ? getSurvivor(state, job.patientId) : undefined;
       if (!patient || !isPatient(patient)) return 'patient is up and about';
@@ -276,7 +290,7 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
       if (isFuelJob(job)) {
         const g = getFurniture(state, job.furnitureId!);
-        if (!g || g.kind !== 'generator') return 'generator gone';
+        if (!g || (g.kind !== 'generator' && g.kind !== 'heater')) return 'generator gone';
         if (job.itemId) {
           const item = getItem(state, job.itemId);
           if (!item) return 'item gone';
@@ -335,6 +349,7 @@ function addJob(
     plotId,
     patientId: null,
     areaId: null,
+    animalId: null,
     dest: null,
     progress: 0,
     reservedBy: null,
@@ -416,6 +431,8 @@ export function updateWork(state: SimState, s: Survivor): void {
       return workGuard(state, s, job);
     case 'firefight':
       return workFirefight(state, s, job);
+    case 'hunt':
+      return workHunt(state, s, job);
     case 'farm':
       return workFarm(state, s, job);
   }
@@ -431,10 +448,8 @@ function workFarm(state: SimState, s: Survivor, job: Job): void {
   job.progress += step;
   if (job.progress < FARM_WORK) return;
   if (isRipe(plot)) {
-    plot.planted = false;
-    plot.growth = 0;
-    spawnItem(state, 'food', plot.x, plot.y);
-    finishJob(state, s, job, `harvested food at (${plot.x}, ${plot.y})`);
+    harvest(state, plot);
+    finishJob(state, s, job, `harvested ${plot.crop === 'herb' ? 'herbs' : plot.crop === 'wheat' ? 'wheat' : 'food'} at (${plot.x}, ${plot.y})`);
   } else {
     plot.planted = true;
     plot.growth = 0;
@@ -468,6 +483,21 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   if (!damageZombie(state, z, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s)) return;
   wearWeapon(state, s);
   finishJob(state, s, job, `killed a zombie at (${z.pos.x}, ${z.pos.y})`);
+}
+
+/** Close in on the animal a few tiles at a time (it moves), then take it down. */
+function workHunt(state: SimState, s: Survivor, job: Job): void {
+  const a = job.animalId ? getAnimal(state, job.animalId) : undefined;
+  if (!a) return releaseSurvivor(state, s, 'the animal got away');
+  if (manhattan(s.pos, a.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, a.pos.x, a.pos.y), 3);
+  const step = workStep(state, s, 'hunt');
+  if (step === 0) return;
+  job.progress += step;
+  if (job.progress < HUNT_WORK) return;
+  state.animals.splice(state.animals.indexOf(a), 1);
+  for (let n = 0; n < VENISON; n++) spawnItem(state, 'food', a.pos.x, a.pos.y);
+  makeNoise(state, a.pos, 'fighting');
+  finishJob(state, s, job, `hunted a deer at (${a.pos.x}, ${a.pos.y})`);
 }
 
 /** Beat a fire out from next to it. */
@@ -704,12 +734,12 @@ function workHaul(state: SimState, s: Survivor, job: Job): void {
 /** Carry a piece of wood to a generator and feed it in. */
 function workFuel(state: SimState, s: Survivor, job: Job): void {
   const g = job.furnitureId ? getFurniture(state, job.furnitureId) : undefined;
-  if (!g || g.kind !== 'generator') return releaseSurvivor(state, s, 'generator gone');
+  if (!g || (g.kind !== 'generator' && g.kind !== 'heater')) return releaseSurvivor(state, s, `${g?.kind ?? 'generator'} gone`);
   const site = neighbours4(state.grid, g.x, g.y);
   let item = job.itemId ? getItem(state, job.itemId) : undefined;
   if (!item) {
     item = freeItemFor(state, 'wood', s.pos, site);
-    if (!item) return releaseSurvivor(state, s, 'no wood for the generator');
+    if (!item) return releaseSurvivor(state, s, `no wood for the ${g.kind}`);
     job.itemId = item.id;
     item.reservedBy = s.id;
   }
@@ -725,7 +755,7 @@ function workFuel(state: SimState, s: Survivor, job: Job): void {
   s.carrying = null;
   g.stored += 1;
   g.storedKind = 'wood';
-  finishJob(state, s, job, `fuelled the generator at (${g.x}, ${g.y})`);
+  finishJob(state, s, job, `fuelled the ${g.kind} at (${g.x}, ${g.y})`);
 }
 
 function carryToStorage(state: SimState, s: Survivor, job: Job, item: Item): void {
@@ -902,6 +932,7 @@ function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
     case 'build':
     case 'scavenge':
     case 'firefight':
+    case 'hunt':
     case 'guard': {
       // All done from a tile next to the target (for guards, the zombie as of this tick).
       const goals = neighbours4(grid, job.x, job.y);

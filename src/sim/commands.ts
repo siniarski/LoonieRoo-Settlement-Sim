@@ -10,7 +10,7 @@ import { getTile, inBounds, isWalkable, setTile, type Tile } from './grid';
 import { spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
-import { addPlot, clearPlot, plotAt, removePlot } from './farming';
+import { addPlot, clearPlot, isCrop, plotAt, removePlot, type Crop } from './farming';
 import { SATIETY_MAX } from './food';
 import { HEALTH_MAX } from './health';
 import { cancelMeal, cancelTreatment, wake } from './needs';
@@ -50,8 +50,10 @@ export type Command =
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
-  /** Makes this floor tile a farm plot (no furniture on it). Drag it over an area. */
-  | { type: 'designateFarm'; x: number; y: number }
+  /** Makes this floor tile a farm plot (no furniture on it), potatoes unless a crop is given. Drag it over an area. */
+  | { type: 'designateFarm'; x: number; y: number; crop?: Crop }
+  /** Marks every animal in a box for hunting (animals.ts). */
+  | { type: 'designateHunt'; x0: number; y0: number; x1: number; y1: number }
   /** Marks the crate on this tile (if it has loot left) for scavenging. Paint it over an area. */
   | { type: 'designateScavenge'; x: number; y: number }
   | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
@@ -114,6 +116,13 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!dark) return reject('already explored');
     state.exploreAreas.push({ id: `e${state.nextId++}`, x0, y0, x1, y1 });
     return changed();
+  }
+  if (command.type === 'designateHunt') {
+    const [x0, x1] = [Math.min(command.x0, command.x1), Math.max(command.x0, command.x1)];
+    const [y0, y1] = [Math.min(command.y0, command.y1), Math.max(command.y0, command.y1)];
+    const marked = state.animals.filter((a) => !a.hunted && a.pos.x >= x0 && a.pos.x <= x1 && a.pos.y >= y0 && a.pos.y <= y1);
+    for (const a of marked) a.hunted = true;
+    return marked.length > 0 ? changed() : unchanged();
   }
   if (command.type === 'assignBed') {
     const bed = state.furniture.find((f) => f.id === command.bedId && f.kind === 'bed');
@@ -247,11 +256,16 @@ function execute(state: SimState, command: Command): CommandResult {
       return designateRemove(state, x, y);
     case 'cancelDesignation':
       return cancelDesignation(state, x, y);
-    case 'designateFarm':
+    case 'designateFarm': {
+      if (command.crop !== undefined && !isCrop(command.crop)) return reject(`unknown crop ${String(command.crop)}`);
       if (getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) return unchanged();
-      if (plotAt(state, x, y)) return unchanged();
-      addPlot(state, x, y);
+      const crop = command.crop ?? 'potato';
+      const existing = plotAt(state, x, y);
+      if (existing?.crop === crop) return unchanged();
+      if (existing) removePlot(state, existing);
+      addPlot(state, x, y, crop);
       return changed();
+    }
     case 'designateScavenge': {
       const crate = furnitureAt(state, x, y);
       if ((crate?.kind !== 'crate' && crate?.kind !== 'tree') || (crate.kind === 'crate' && crate.loot === 0) || crate.scavenge) return unchanged();

@@ -9,12 +9,14 @@
 //   tower  a watchtower: see further and shoot further from it (see towers.ts)
 //   well, collector  clean water (see water.ts); a collector's loot is the water in it
 //   generator, lamp, fridge  power (see power.ts); a generator's stored is its fuel, its loot the burn timer
+//   heater a brazier: warmth outdoors on cold nights, fuelled like a generator (power.ts)
+//   coop   chickens: lays food (farming.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 
 import { spawnItem, type ItemKind } from './items';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge';
+export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'heater' | 'coop';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;

@@ -14,8 +14,8 @@ import { getTile, type Point } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
-export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'graveyard';
-export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary', 'barracks', 'workshop', 'graveyard'];
+export type RoomPurpose = 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'graveyard' | 'greenhouse';
+export const ROOM_PURPOSES: readonly RoomPurpose[] = ['housing', 'storage', 'armory', 'messhall', 'recroom', 'infirmary', 'barracks', 'workshop', 'graveyard', 'greenhouse'];
 
 export interface RoomDesignation {
   id: string;

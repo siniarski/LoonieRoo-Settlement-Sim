@@ -20,6 +20,8 @@ const BLUEPRINT_CHARS = {
   generator: ENTITY_CHARS.generatorBlueprint,
   lamp: ENTITY_CHARS.lampBlueprint,
   fridge: ENTITY_CHARS.fridgeBlueprint,
+  heater: ENTITY_CHARS.heaterBlueprint,
+  coop: ENTITY_CHARS.coopBlueprint,
   floor: ENTITY_CHARS.removeBlueprint,
 } as const;
 
@@ -45,6 +47,7 @@ export function dumpText(state: SimState): string {
   for (const bp of state.blueprints) put(bp.x, bp.y, BLUEPRINT_CHARS[bp.target]);
   for (const item of state.items) if (item.pos) put(item.pos.x, item.pos.y, ENTITY_CHARS[item.kind]);
   for (const w of state.wanderers) put(w.x, w.y, ENTITY_CHARS.wanderer);
+  for (const a of state.animals) put(a.pos.x, a.pos.y, ENTITY_CHARS.deer);
   for (const d of state.dogs) put(d.pos.x, d.pos.y, ENTITY_CHARS.dog);
   for (const z of state.zombies) put(z.pos.x, z.pos.y, ENTITY_CHARS.zombie);
   for (const s of state.survivors) put(s.pos.x, s.pos.y, ENTITY_CHARS.survivor);

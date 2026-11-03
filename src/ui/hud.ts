@@ -8,7 +8,7 @@ import { checkInvariants } from '../sim/invariants';
 import { explainIdle, getJob, type Job } from '../sim/jobs';
 import { JOB_TYPES, type JobType, type Priority } from '../sim/jobTypes';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
-import { GROW_TICKS, isRipe } from '../sim/farming';
+import { growTicks, isRipe } from '../sim/farming';
 import { HEALTH_MAX, isCritical, isHurt } from '../sim/health';
 import { TICKS_PER_HOUR, clockText, dayOf, isNight } from '../sim/time';
 import { patienceLeft, spareBeds } from '../sim/wanderers';
@@ -49,7 +49,7 @@ export interface Hud {
   dispose(): void;
 }
 
-const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', firefight: 'Fire', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', clean: 'Clean' };
+const JOB_LABELS: Record<JobType, string> = { guard: 'Guard', firefight: 'Fire', doctor: 'Doc', farm: 'Farm', build: 'Build', haul: 'Haul', craft: 'Craft', cook: 'Cook', scout: 'Scout', scavenge: 'Scav', hunt: 'Hunt', clean: 'Clean' };
 const DEBUG_JOB_LINES = 12;
 /** Most recent events shown in the feed under the status line. */
 const FEED_LINES = 4;
@@ -218,7 +218,7 @@ function statusText(state: SimState, view: ViewState): string {
 function furnitureText(state: SimState, p: Point): string {
   const plot = state.farm.find((x) => x.x === p.x && x.y === p.y);
   if (plot) {
-    return ` · farm (${!plot.planted ? 'empty, needs sowing' : isRipe(plot) ? 'ripe' : `growing ${Math.floor((100 * plot.growth) / GROW_TICKS)}%`})`;
+    return ` · ${plot.crop} (${!plot.planted ? 'empty, needs sowing' : isRipe(plot) ? 'ripe' : `growing ${Math.floor((100 * plot.growth) / growTicks(plot))}%`})`;
   }
   const f = state.furniture.find((x) => x.x === p.x && x.y === p.y);
   if (!f) return '';

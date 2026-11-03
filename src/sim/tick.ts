@@ -35,7 +35,8 @@ import { updateInfection } from './infection';
 import { updateFires } from './fire';
 import { updateCorpses } from './corpses';
 import { updateCollectors, updateDrink, updateHydration } from './water';
-import { updatePower, updateSpoilage } from './power';
+import { updateHeaters, updatePower, updateSpoilage } from './power';
+import { updateAnimals } from './animals';
 import { stopReading, updateReading } from './books';
 import { updateDogs } from './dogs';
 import { updateSettlements } from './settlements';
@@ -51,6 +52,8 @@ export function tick(state: SimState): void {
   updateCorpses(state);
   updateCollectors(state);
   updatePower(state);
+  updateHeaters(state);
+  updateAnimals(state);
   updateSpoilage(state);
   updateDogs(state);
   updateSettlements(state);
