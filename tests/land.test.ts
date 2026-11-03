@@ -60,7 +60,9 @@ describe('crops and greenhouses', () => {
       tick(state);
     }
     state.survivors[0]!.priorities.farm = 3;
-    runUntil(state, () => state.farm.every((p) => !p.planted), 300);
+    // (Harvested and sown again straight away, so look at the yield.)
+    runUntil(state, () => state.items.length >= CROPS.wheat.yield + 1, 300);
+    state.survivors[0]!.priorities.farm = 0;
     expect(state.items.filter((i) => i.kind === 'food')).toHaveLength(CROPS.wheat.yield);
     expect(state.items.filter((i) => i.kind === 'medicine')).toHaveLength(1);
   });
