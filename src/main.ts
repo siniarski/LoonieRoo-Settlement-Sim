@@ -23,7 +23,8 @@ const hot = import.meta.hot?.data as HotData | undefined;
 // State saved by code with a different SimState shape is discarded, not migrated.
 const kept = hot?.state?.schemaVersion === SCHEMA_VERSION ? hot.state : undefined;
 if (hot?.state && !kept) console.info('[hmr] sim state shape changed; reloading the scenario');
-const app: App = createApp(canvas, hud, kept ?? createWorld(worldSeed(), worldSize()), hot?.view);
+// A fresh start opens on the menu, over a world to look at; a hot reload keeps you in your game.
+const app: App = createApp(canvas, hud, kept ?? createWorld(worldSeed(), worldSize()), kept ? hot?.view : { menu: 'main', inGame: false, paused: true });
 
 /** ?seed=123 in the URL picks the world; otherwise a random one (the UI may use Math.random; the sim never does). */
 function worldSeed(): number {

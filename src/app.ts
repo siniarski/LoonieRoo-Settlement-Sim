@@ -1,6 +1,7 @@
 // Wires sim, renderer, input, and HUD together and runs the frame loop.
 // createApp returns a dispose() so hot reload can tear it down cleanly.
 
+import { createMenu, type MenuActions } from './ui/menu';
 import { newGamePlus } from './sim/escape';
 import { installGameHooks, type GameHandle } from './debug/hooks';
 import { centredOn, worldToScreen, type Viewport } from './render/camera';
@@ -45,7 +46,7 @@ export interface App {
   dispose(): void;
 }
 
-export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state: SimState, saved?: ViewState): App {
+export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state: SimState, saved?: Partial<ViewState>): App {
   const ctx2d = canvas.getContext('2d');
   if (!ctx2d) throw new Error('2D canvas not supported');
 
@@ -64,7 +65,9 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     paused: false,
     showDebug: false,
     showPriorities: true,
-    showGame: false,
+    menu: null,
+    inGame: true,
+    menuCustomOpen: false,
     showMinimap: true,
     showOverview: false,
     // Spread over the defaults so view state saved by older code gains new fields.
@@ -119,6 +122,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     },
     control: () => handle.state.control,
     controlledPos: () => controlled(handle.state)?.pos ?? null,
+    toggleMenu: () => toggleMenu(),
     furnish: (tile) => {
       // The planner only proposes; its commands go through the normal command path.
       const plan = planFurnish(handle.state, tile.x, tile.y);
@@ -127,9 +131,12 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     },
   });
   const toast = (text: string) => (view.toast = { text, until: performance.now() + TOAST_MS });
-  /** Replace the running game (a save, an import, a bug report) and start the bug-report log afresh. */
-  const replaceState = (result: LoadResult, from: string) => {
-    if (!result.ok) return toast(`Couldn't load ${from}: ${result.error}`);
+  /** Replace the running game (a save, an import, a bug report) and start the bug-report log afresh. Returns whether it did. */
+  const replaceState = (result: LoadResult, from: string): boolean => {
+    if (!result.ok) {
+      toast(`Couldn't load ${from}: ${result.error}`);
+      return false;
+    }
     handle.state = result.state;
     handle.initial = cloneState(result.state);
     setDayScale(handle.state.settings.dayScale); // the clock reads right while paused
@@ -137,35 +144,59 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     view.paused = true; // look before you play
     lastAutosaveDawn = dawns(handle.state.tick);
     toast(`Loaded ${from}${result.kind === 'bug' ? ' (bug report, replayed)' : ''}. Paused: Space to play.`);
+    view.selectedId = handle.state.control?.survivorId ?? null;
+    return true;
   };
-  const files: GameFiles = {
-    save: (slot) => toast(saveToSlot(slot, handle.state) ?? `Saved to slot ${slot}.`),
-    load: (slot) => replaceState(loadFromSlot(slot), slot === AUTO_SLOT ? 'the autosave' : `slot ${slot}`),
-    exportSave: () => downloadText(`loonieroo-${fileStamp(handle.state)}.json`, toSaveFile(handle.state)),
-    importFile: () => {
-      void pickTextFile().then((text) => {
-        if (text !== null) replaceState(loadFile(text), 'the file');
-      });
-    },
-    newWorld: (size, settings) => {
-      if (!window.confirm(`Start a new ${size}×${size} world? Unsaved progress here is lost.`)) return;
-      replaceState({ ok: true, state: createWorld(Math.floor(Math.random() * 1e9), size, settings), kind: 'save' }, `a new ${size}×${size} world`);
-      view.selectedId = handle.state.control?.survivorId ?? null;
-      view.showGame = false;
+  /** Into the game, off the menu. */
+  const play = () => {
+    view.menu = null;
+    view.inGame = true;
+  };
+  let pausedUnderMenu = false;
+  const toggleMenu = () => {
+    if (view.menu === null) {
+      pausedUnderMenu = view.paused;
+      view.paused = true;
+      view.menu = 'main';
+    } else if (view.inGame) {
+      view.menu = null;
+      view.paused = pausedUnderMenu;
+    }
+  };
+  const menuActions: MenuActions = {
+    resume: toggleMenu,
+    newGame: (size, settings, seed) => {
+      const world = createWorld(seed ?? Math.floor(Math.random() * 1e9), size, settings);
+      if (!replaceState({ ok: true, state: world, kind: 'save' }, `a new ${size}×${size} world`)) return;
+      play();
       if (settings.start === 'solo') toast('Alone. WASD to walk, click to swing, right-click or E to use. Space to play.');
     },
-    newGamePlus: () => {
-      if (!window.confirm('Everyone flies out: start again in a new world, alone, with what you carry?')) return;
-      replaceState({ ok: true, state: newGamePlus(handle.state, Math.floor(Math.random() * 1e9)), kind: 'save' }, 'a new world (new game+)');
-      view.selectedId = handle.state.control?.survivorId ?? null;
+    load: (slot) => {
+      if (replaceState(loadFromSlot(slot), slot === AUTO_SLOT ? 'the autosave' : `slot ${slot}`)) play();
     },
+    importFile: () => {
+      void pickTextFile().then((text) => {
+        if (text !== null && replaceState(loadFile(text), 'the file')) play();
+      });
+    },
+    save: (slot) => toast(saveToSlot(slot, handle.state) ?? `Saved to slot ${slot}.`),
+    exportSave: () => downloadText(`loonieroo-${fileStamp(handle.state)}.json`, toSaveFile(handle.state)),
     reportBug: () => {
       const note = window.prompt('What went wrong? (optional)') ?? '';
       downloadText(`loonieroo-bug-${fileStamp(handle.state)}.json`, toBugReport(handle.initial, handle.state, note));
       toast('Bug report downloaded: it replays the game from where you started to now.');
     },
   };
+  const files: GameFiles = {
+    openMenu: toggleMenu,
+    newGamePlus: () => {
+      if (!window.confirm('Everyone flies out: start again in a new world, alone, with what you carry?')) return;
+      replaceState({ ok: true, state: newGamePlus(handle.state, Math.floor(Math.random() * 1e9)), kind: 'save' }, 'a new world (new game+)');
+      view.selectedId = handle.state.control?.survivorId ?? null;
+    },
+  };
   const hud = createHud(hudRoot, view, (cmd) => applyCommand(handle.state, cmd), files);
+  const menu = createMenu(hudRoot.parentElement ?? document.body, view, menuActions);
   // Autosave at every dawn (06:00), when the night's zombies have gone.
   const dawns = (tick: number) => Math.floor(tick / DAY_LENGTH); // tick 0 is 06:00
   let lastAutosaveDawn = dawns(handle.state.tick);
@@ -217,6 +248,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       });
       perf.drawMs = perf.drawMs * 0.9 + (performance.now() - drawStart) * 0.1;
       hud.update(handle.state, fps, perf);
+      menu.update();
     } catch (err) {
       const key = String(err);
       if (!reported.has(key)) {
@@ -234,6 +266,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       observer.disconnect();
       input.dispose();
       hud.dispose();
+      menu.dispose();
     },
   };
 }

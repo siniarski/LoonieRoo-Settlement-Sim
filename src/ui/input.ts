@@ -9,7 +9,7 @@
 //                  area tools (Scavenge) drag out a box instead, applied on release
 //   Shift + drag   wall/door/bed/remove happen instantly (sandbox/debug)
 //   Right click    put the tool down
-//   Esc            put the tool down, then close build mode, then deselect
+//   Esc            put the tool down, then close build mode, then deselect, then open the menu
 // Direct control (F takes over the selected survivor, F again hands them back):
 //   WASD/arrows  walk (8 ways), Shift to run · Left click  swing at / shoot towards a tile
 //   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep) · E  use what's in front,
@@ -60,6 +60,8 @@ export interface InputContext {
   control(): Control | null;
   /** Where the controlled survivor stands. */
   controlledPos(): Point | null;
+  /** Open or close the menu (menu.ts). */
+  toggleMenu(): void;
   /** Ask the auto-planner to furnish the room at this tile. */
   furnish(tile: Point): void;
 }
@@ -205,6 +207,15 @@ export function attachInput(ctx: InputContext): Input {
     if (e.target instanceof HTMLInputElement) return;
     shiftHeld = e.shiftKey;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    // The menu takes the keyboard while it's up; Escape opens it once there's nothing else to cancel.
+    if (view.menu !== null) {
+      if (key === 'Escape' && view.inGame) ctx.toggleMenu();
+      return;
+    }
+    if (key === 'Escape' && !view.tool && !view.buildOpen && !view.selectedId && !view.showOverview) {
+      ctx.toggleMenu();
+      return;
+    }
     if (handleBuildKey(view, key, e.shiftKey)) {
       if (key === 'Tab') e.preventDefault(); // don't move browser focus
       if (!view.tool) painting = null;

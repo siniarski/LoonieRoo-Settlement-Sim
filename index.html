@@ -20,6 +20,30 @@
       .hud-control { padding: 4px 9px; color: #f0c850; background: rgba(20, 23, 21, 0.9); border: 1px solid #f0c850; border-radius: 4px; max-width: 620px; font-size: 12px; }
       .hud-story-line { color: #ddd; font-style: italic; max-width: 420px; }
       .hud-story-ask { color: #f0c850; max-width: 420px; }
+      .menu { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(8, 10, 9, 0.72); backdrop-filter: blur(2px); }
+      .menu[hidden] { display: none; }
+      .menu-panel { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 22px 26px; background: rgba(20, 23, 21, 0.97); border: 1px solid #3f4a42; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+      .menu-title { font-size: 30px; letter-spacing: 6px; color: #e8d9a8; }
+      .menu-subtitle { color: #7f8a80; margin-bottom: 10px; font-style: italic; }
+      .menu-heading { color: #8cf0a4; font-size: 15px; margin-top: 4px; }
+      .menu-button { font: inherit; font-size: 15px; color: inherit; text-align: left; background: #222824; border: 1px solid #3a423c; border-radius: 5px; padding: 9px 12px; cursor: pointer; }
+      .menu-button:hover { background: #2c332e; }
+      .menu-button.primary { background: #2f4a37; border-color: #6c9a78; color: #eafbe9; }
+      .menu-button.primary:hover { background: #3a5c44; }
+      .menu-small { font: inherit; color: inherit; background: #222824; border: 1px solid #3a423c; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+      .menu-small:disabled { opacity: 0.4; cursor: default; }
+      .menu-note { color: #8f998f; font-size: 12px; }
+      .menu-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .menu-label { color: #b9c2b9; min-width: 72px; }
+      .menu-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+      .menu-preset { font: inherit; color: inherit; text-align: left; background: #1d221f; border: 1px solid #3a423c; border-radius: 6px; padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+      .menu-preset:hover { background: #262d28; }
+      .menu-preset.chosen { border-color: #f0c850; background: #2a281c; }
+      .menu-preset-title { color: #e8d9a8; font-size: 14px; }
+      .menu-preset-about { color: #9aa39b; font-size: 12px; }
+      .menu-custom summary { cursor: pointer; color: #b9c2b9; padding: 4px 0; }
+      .menu-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; padding: 6px 0; }
+      .menu-input { font: inherit; color: inherit; background: #222824; border: 1px solid #3a423c; border-radius: 4px; padding: 3px 6px; }
       .hud-toast { padding: 5px 9px; color: #12160f; background: rgba(140, 240, 164, 0.95); border-radius: 4px; max-width: 520px; }
       .hud-wanderers { padding: 5px 8px; background: rgba(20, 23, 21, 0.9); border: 1px solid #c9b88a; border-radius: 4px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: auto; }
       .hud-wanderers-title { color: #e8d9a8; }

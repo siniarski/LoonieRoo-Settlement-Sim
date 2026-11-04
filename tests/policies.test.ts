@@ -10,7 +10,7 @@ import { loadScenario } from '../src/sim/scenario';
 import { hasTrait } from '../src/sim/skills';
 import { tick } from '../src/sim/tick';
 import { DAY_LENGTH, TICKS_PER_HOUR } from '../src/sim/time';
-import { AMPUTATE_WINDOW, BLEED_EVERY, amputate, updateWounds } from '../src/sim/wounds';
+import { BLEED_EVERY, amputate, amputateWindow, updateWounds } from '../src/sim/wounds';
 
 describe('policies', () => {
   it('rationing makes food last longer, at a cost in mood', () => {
@@ -87,7 +87,7 @@ describe('wounds and amputation', () => {
     expect(amputate(state, s)).toBeNull();
     expect(s.infection).toBeNull();
     expect(hasTrait(s, 'lostArm')).toBe(true);
-    s.infection = AMPUTATE_WINDOW + 1;
+    s.infection = amputateWindow() + 1;
     s.bitten = 'leg';
     expect(amputate(state, s)).toMatch(/too late/);
   });

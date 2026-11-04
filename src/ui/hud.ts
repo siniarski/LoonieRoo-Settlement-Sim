@@ -13,7 +13,6 @@ import { hungerOf, isFallen } from '../sim/colonies';
 import { describeTasks } from '../sim/talk';
 import { storyLines } from '../sim/story';
 import { describeOrder } from '../sim/orders';
-import { MAP_TYPES, NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type MapType, type PresetId, type Settings } from '../sim/difficulty';
 import { controlled } from '../sim/control';
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
@@ -43,20 +42,15 @@ import { createAlertList, createOverview } from './overview';
 import { RECRUIT_DAYS } from '../sim/prisoners';
 import { DAY_LENGTH } from '../sim/time';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
-import { AUTO_SLOT, SLOTS, slotLabel } from './saves';
 import { createMinimap } from './minimap';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
 
-/** The Game menu's actions (app.ts does the work). */
+/** What the HUD asks of the app. */
 export interface GameFiles {
-  save(slot: string): void;
-  load(slot: string): void;
-  exportSave(): void;
-  importFile(): void;
-  reportBug(): void;
-  newWorld(size: number, settings: Settings): void;
+  /** Open the menu over the game (menu.ts). */
+  openMenu(): void;
   /** Everyone aboard the helicopter: a new game+ (escape.ts). */
   newGamePlus(): void;
 }
@@ -108,8 +102,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   prioritiesButton.addEventListener('click', () => (view.showPriorities = !view.showPriorities));
   bar.append(prioritiesButton);
   const gameButton = el('button', 'hud-button');
-  gameButton.textContent = '≡ Game';
-  gameButton.addEventListener('click', () => (view.showGame = !view.showGame));
+  gameButton.textContent = '☰ Menu';
+  gameButton.title = 'Saves, loading, a new game (Esc)';
+  gameButton.addEventListener('click', () => files.openMenu());
   bar.append(gameButton);
   const overviewButton = el('button', 'hud-button');
   overviewButton.textContent = 'O Overview';
@@ -138,13 +133,12 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
-  const game = createGamePanel(view, files);
   const minimap = createMinimap(view);
   // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, game.root, overview.root, minimap.root, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, priorities.root, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -191,11 +185,9 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         button.classList.toggle('active', !view.paused && speed === view.speed),
       );
       prioritiesButton.classList.toggle('active', view.showPriorities);
-      gameButton.classList.toggle('active', view.showGame);
       overviewButton.classList.toggle('active', view.showOverview);
       alertList.update(state);
       overview.update(state);
-      game.update();
       minimap.update(state);
 
       const text = statusText(state, view);
@@ -359,107 +351,6 @@ function roomText(state: SimState, hover: Point | null): string {
 
 // --- Priority panel ---------------------------------------------------------
 
-/** Save slots, the autosave, file export/import, and bug reports. Rebuilt each time it opens (or a slot changes). */
-function createGamePanel(view: ViewState, files: GameFiles) {
-  const root = el('div', 'hud-game');
-  let last = '';
-  const button = (label: string, action: () => void) => {
-    const b = el('button', 'hud-button');
-    b.textContent = label;
-    b.addEventListener('click', () => {
-      action();
-      last = ''; // slot labels may have changed
-    });
-    return b;
-  };
-  const row = (label: string, ...controls: HTMLElement[]) => {
-    const r = el('div', 'hud-game-row');
-    const text = el('span', 'hud-game-label');
-    text.textContent = label;
-    r.append(text, ...controls);
-    return r;
-  };
-  return {
-    root,
-    update() {
-      root.hidden = !view.showGame;
-      if (!view.showGame) {
-        last = '';
-        return;
-      }
-      const labels = [...SLOTS, AUTO_SLOT].map((s) => slotLabel(s) ?? '');
-      const key = labels.join('|');
-      if (key === last) return;
-      last = key;
-      root.replaceChildren();
-      const title = el('div', 'hud-game-title');
-      title.textContent = 'Game';
-      root.append(title);
-      for (const slot of SLOTS) {
-        const label = slotLabel(slot);
-        const load = button('Load', () => files.load(slot));
-        load.disabled = label === null;
-        root.append(row(`Slot ${slot}: ${label ?? 'empty'}`, button('Save', () => files.save(slot)), load));
-      }
-      const auto = slotLabel(AUTO_SLOT);
-      const loadAuto = button('Load', () => files.load(AUTO_SLOT));
-      loadAuto.disabled = auto === null;
-      root.append(row(`Autosave (each dawn): ${auto ?? 'none yet'}`, loadAuto));
-      root.append(
-        row('Files:', button('Export save', files.exportSave), button('Import…', files.importFile), button('Report bug', files.reportBug)),
-      );
-      const size = el('select', 'hud-select');
-      for (const n of WORLD_SIZES) {
-        const option = el('option', '');
-        option.value = String(n);
-        option.textContent = `${n}×${n}`;
-        option.selected = n === WORLD_SIZE;
-        size.append(option);
-      }
-      // Difficulty: a preset fills in the sandbox settings, which can then be changed one by one.
-      const choose = (options: readonly (readonly [string, string])[], selected: string) => {
-        const select = el('select', 'hud-select');
-        for (const [value, label] of options) {
-          const option = el('option', '');
-          option.value = value;
-          option.textContent = label;
-          option.selected = value === selected;
-          select.append(option);
-        }
-        return select;
-      };
-      const preset = choose(Object.entries(PRESETS).map(([id, p]) => [id, p.label] as const), 'survivor');
-      const start = choose([['group', 'With a group of three'], ['solo', 'Alone (you control them)']], NORMAL.start);
-      const zombies = choose([25, 50, 60, 75, 100, 125, 150, 200, 300].map((n) => [String(n), `${n}% zombies`] as const), String(NORMAL.zombies));
-      const weather = choose(WEATHER_LEVELS.map((w, i) => [String(i), `${w} weather`] as const), String(NORMAL.weather));
-      const progression = choose(PROGRESSION_LEVELS.map((p, i) => [String(i), `${p} since the outbreak`] as const), String(NORMAL.progression));
-      const winter = choose([['no', 'No nuclear winter'], ['yes', 'Nuclear winter']], NORMAL.winter ? 'yes' : 'no');
-      const map = choose(MAP_TYPES, NORMAL.map);
-      const dayScale = choose([['1', 'Normal days'], ['2', 'Days twice as long'], ['3', 'Days three times as long']], String(NORMAL.dayScale));
-      preset.addEventListener('change', () => {
-        const s = PRESETS[preset.value as PresetId].settings;
-        start.value = s.start;
-        zombies.value = String(s.zombies);
-        weather.value = String(s.weather);
-        progression.value = String(s.progression);
-        winter.value = s.winter ? 'yes' : 'no';
-        dayScale.value = String(s.dayScale);
-        map.value = s.map;
-      });
-      const settings = (): Settings => ({
-        start: start.value === 'solo' ? 'solo' : 'group',
-        zombies: Number(zombies.value),
-        weather: Number(weather.value),
-        progression: Number(progression.value),
-        winter: winter.value === 'yes',
-        dayScale: Number(dayScale.value),
-        map: map.value as MapType,
-      });
-      root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
-      root.append(row('Sandbox:', start, zombies, weather, progression, winter, dayScale, map));
-    },
-  };
-}
 
 /** The helicopter is down: who goes? */
 function createHelicopterPanel(command: (cmd: Command) => void, files: GameFiles) {

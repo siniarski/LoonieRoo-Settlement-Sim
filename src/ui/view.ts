@@ -23,8 +23,12 @@ export interface ViewState {
   paused: boolean;
   showDebug: boolean;
   showPriorities: boolean;
-  /** The Game menu (saves, files, bug report). */
-  showGame: boolean;
+  /** The menu screen over the game, or null when playing (menu.ts). */
+  menu: 'main' | 'new' | 'load' | null;
+  /** A game is going on under the menu (so it offers Resume and Save, not Continue). */
+  inGame: boolean;
+  /** The New game screen's Customise section is open. */
+  menuCustomOpen: boolean;
   /** The minimap (M). */
   showMinimap: boolean;
   /** The colony overview (O). */

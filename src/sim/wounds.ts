@@ -3,7 +3,7 @@
 // BLEED_EVERY ticks) for BLEED_TICKS or until a bandage stops it, and slows its owner for
 // WOUND_TICKS: an arm wound slows work, a leg wound slows walking.
 //
-// A bite that infects is remembered by limb. Within AMPUTATE_WINDOW of the
+// A bite that infects is remembered by limb. Within amputateWindow() of the
 // bite, the limb can come off (the amputate command): the infection goes with
 // it, at a heavy cost in health and for good (lostArm or lostLeg).
 
@@ -29,7 +29,10 @@ export const BLEED_EVERY = 15;
 /** Bleeding stops by itself after this (sooner with a bandage). Balance pass 5: it ran on until bandaged, and bandages ran out. */
 export const BLEED_TICKS = 300;
 /** Ticks of infection within which an amputation saves them. */
-export const AMPUTATE_WINDOW = INFECTION_TURN / 4;
+/** The first quarter of the infection; a function, as INFECTION_TURN follows the day length (time.ts). */
+export function amputateWindow(): number {
+  return INFECTION_TURN / 4;
+}
 export const AMPUTATION_COST = 300;
 
 /** A blow landed: maybe a wound (and the limb a bite would have gone into). */
@@ -63,7 +66,7 @@ export function legSlowed(s: Survivor): boolean {
 }
 
 export function canAmputate(s: Survivor): boolean {
-  return s.infection !== null && s.infection < AMPUTATE_WINDOW && s.bitten !== null;
+  return s.infection !== null && s.infection < amputateWindow() && s.bitten !== null;
 }
 
 /** Takes the bitten limb off. Returns an error, or null when done. */

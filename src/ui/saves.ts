@@ -11,6 +11,16 @@ export const AUTO_SLOT = 'auto';
 
 const dataKey = (slot: string) => `loonieroo.save.${slot}`;
 const metaKey = (slot: string) => `loonieroo.meta.${slot}`;
+const timeKey = (slot: string) => `loonieroo.time.${slot}`;
+
+/** When a slot was last saved to (ms since 1970), or 0 if never (or unknown). */
+export function slotTime(slot: string): number {
+  try {
+    return Number(localStorage.getItem(timeKey(slot))) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 /** One-line description of a slot's save, or null if empty. */
 export function slotLabel(slot: string): string | null {
@@ -27,6 +37,7 @@ export function saveToSlot(slot: string, state: SimState): string | null {
   try {
     localStorage.setItem(dataKey(slot), toSaveFile(state));
     localStorage.setItem(metaKey(slot), label);
+    localStorage.setItem(timeKey(slot), String(Date.now()));
     return null;
   } catch (err) {
     return `couldn't save: ${String(err)}`;

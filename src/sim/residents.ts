@@ -41,8 +41,8 @@ export const RESIDENT_TICKS_PER_TILE = 5;
 export const HOSTILE_SIGHT = 8;
 export const RESIDENT_DAMAGE = 25;
 export const RESIDENT_HIT_EVERY = 12;
-/** What their settlement thinks of you after you hit one of them. */
-export const ATTACKED_REP = HOSTILE - 20;
+/** How far under HOSTILE their settlement's opinion of you drops when you hit one of them. */
+export const ATTACKED_BELOW_HOSTILE = 20;
 export const TALK_REP = 2;
 /** Food from their stores for each kind of thing you hand over. */
 export const TRADE_FOOD: Partial<Record<ItemKind, number>> = { medicine: 3, ammo: 2, gun: 4, weapon: 2, bandage: 1, coat: 2, armour: 3, boots: 1, book: 1, scrap: 1, fuel: 1, wood: 1, cloth: 1 };
@@ -131,7 +131,8 @@ function attack(state: SimState, r: Resident, n: Settlement): boolean {
 export function hitResident(state: SimState, r: Resident, damage: number, by: Survivor): boolean {
   const n = getSettlement(state, r.settlementId);
   if (n && !isHostile(n)) {
-    adjustReputation(state, n, ATTACKED_REP - n.reputation);
+    // (Worked out here, not at load: settlements.ts may not have run yet in an import cycle.)
+    adjustReputation(state, n, HOSTILE - ATTACKED_BELOW_HOSTILE - n.reputation);
     logEvent(state, `${by.name} attacked ${r.name} of ${n.name}. They'll fight back now.`);
   }
   r.health -= damage;
