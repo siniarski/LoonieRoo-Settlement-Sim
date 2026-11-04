@@ -11,10 +11,11 @@ import { logEvent } from './events';
 import { inInfirmary } from './medicine';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, onClock } from './time';
 
 export const INFECTION_CHANCE = 0.03;
-export const INFECTION_TURN = 2 * DAY_LENGTH;
+export let INFECTION_TURN = 2 * DAY_LENGTH;
+onClock(() => (INFECTION_TURN = 2 * DAY_LENGTH));
 /** What an infection does to mood while it lasts. */
 export const INFECTED_MOOD = -15;
 

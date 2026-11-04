@@ -8,6 +8,7 @@
 //
 // Rain collectors fill while it rains or snows.
 
+import { slowTick } from './time';
 import { SICK_TICKS } from './corpses';
 import { isWet } from './seasons';
 import { furnitureAt } from './furniture';
@@ -55,7 +56,7 @@ export function isThirsty(s: Survivor): boolean {
 /** Drains hydration (harsh games only); dehydration hurts. Every tick, every survivor. */
 export function updateHydration(state: SimState, s: Survivor): void {
   if (!state.harsh) return;
-  s.hydration = Math.max(0, s.hydration - (state.weather === 'heatwave' ? 2 : 1));
+  if (slowTick(state.tick)) s.hydration = Math.max(0, s.hydration - (state.weather === 'heatwave' ? 2 : 1));
   if (s.hydration === 0 && state.tick % DEHYDRATION_DAMAGE_EVERY === 0) {
     s.health = Math.max(0, s.health - 1);
     s.lastHurtBy = 'thirst';

@@ -8,6 +8,7 @@
 //   progression  how long since the outbreak: weeks, months, a year, years. Later means
 //                less left in the crates, worn-out finds, and more fallen-in walls
 //   winter       nuclear winter: crops grow at half speed, and every night is cold outdoors
+//   dayScale     day length, 1-3 times the usual (time.ts)
 
 import { GARMENT_LIFE, isGarment } from './clothing';
 import { spawnItem, type Item, type ItemKind } from './items';
@@ -28,15 +29,17 @@ export interface Settings {
   progression: number;
   /** Nuclear winter. */
   winter: boolean;
+  /** Day length: 1 (8 minutes at 1x), 2 or 3 times as long (time.ts). */
+  dayScale: number;
 }
 
-export const NORMAL: Settings = { start: 'group', zombies: 100, weather: 1, progression: 1, winter: false };
+export const NORMAL: Settings = { start: 'group', zombies: 100, weather: 1, progression: 1, winter: false, dayScale: 1 };
 
 export const PRESETS = {
-  settler: { label: 'Settler: a group, a gentle start', settings: { start: 'group', zombies: 60, weather: 0, progression: 0, winter: false } },
+  settler: { label: 'Settler: a group, a gentle start', settings: { start: 'group', zombies: 60, weather: 0, progression: 0, winter: false, dayScale: 1 } },
   survivor: { label: 'Survivor: the usual game', settings: NORMAL },
-  apocalypse: { label: 'Apocalypse: alone, a year on', settings: { start: 'solo', zombies: 150, weather: 2, progression: 2, winter: false } },
-  winter: { label: 'Nuclear winter: alone, years on, no summer', settings: { start: 'solo', zombies: 125, weather: 3, progression: 3, winter: true } },
+  apocalypse: { label: 'Apocalypse: alone, a year on', settings: { start: 'solo', zombies: 150, weather: 2, progression: 2, winter: false, dayScale: 2 } },
+  winter: { label: 'Nuclear winter: alone, years on, no summer', settings: { start: 'solo', zombies: 125, weather: 3, progression: 3, winter: true, dayScale: 2 } },
 } as const satisfies Record<string, { label: string; settings: Settings }>;
 export type PresetId = keyof typeof PRESETS;
 
@@ -88,6 +91,7 @@ export function isSettings(v: unknown): v is Settings {
     Number.isInteger(s.zombies) && (s.zombies as number) >= 25 && (s.zombies as number) <= 300 &&
     level(s.weather, WEATHER_LEVELS.length) &&
     level(s.progression, PROGRESSION_LEVELS.length) &&
-    typeof s.winter === 'boolean'
+    typeof s.winter === 'boolean' &&
+    (s.dayScale === 1 || s.dayScale === 2 || s.dayScale === 3)
   );
 }

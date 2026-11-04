@@ -17,6 +17,7 @@
 //
 // Constants live in rest.ts and food.ts.
 
+import { slowTick } from './time';
 import { beginSuccession } from './succession';
 import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
@@ -311,7 +312,7 @@ export function cancelTreatment(state: SimState, s: Survivor, note: string): voi
 
 /** Satiety drains every tick, awake or asleep. */
 export function updateSatiety(state: SimState, s: Survivor): void {
-  if (satietyDrains(state)) s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
+  if (satietyDrains(state) && slowTick(state.tick)) s.satiety = Math.max(0, s.satiety - SATIETY_DRAIN);
 }
 
 // --- Health -----------------------------------------------------------------
@@ -440,6 +441,7 @@ function nearestFreeBed(state: SimState, s: Survivor): Furniture | undefined {
 
 /** Drains or restores rest; wakes the survivor when full. Runs every tick, after movement and work. */
 export function updateRest(state: SimState, s: Survivor): void {
+  if (!slowTick(state.tick)) return;
   if (!s.sleep?.asleep) {
     s.rest = Math.max(0, s.rest - REST_DRAIN);
     return;

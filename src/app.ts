@@ -9,7 +9,7 @@ import { planFurnish } from './sim/planner';
 import type { Point } from './sim/grid';
 import { loadFile, toBugReport, toSaveFile, type LoadResult } from './sim/savefile';
 import { cloneState, type SimState } from './sim/state';
-import { DAY_LENGTH, dayOf } from './sim/time';
+import { DAY_LENGTH, dayOf, setDayScale } from './sim/time';
 import { createWorld } from './sim/worldgen';
 import { AUTO_SLOT, downloadText, fileStamp, loadFromSlot, pickTextFile, saveToSlot } from './ui/saves';
 import { survivorAt } from './sim/survivors';
@@ -49,6 +49,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   if (!ctx2d) throw new Error('2D canvas not supported');
 
   const handle: GameHandle = { state, initial: cloneState(state) };
+  setDayScale(state.settings.dayScale);
   const view: ViewState = {
     camera: centredOn(state.grid.width, state.grid.height),
     buildOpen: false,
@@ -130,6 +131,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     if (!result.ok) return toast(`Couldn't load ${from}: ${result.error}`);
     handle.state = result.state;
     handle.initial = cloneState(result.state);
+    setDayScale(handle.state.settings.dayScale); // the clock reads right while paused
     view.camera = centredOn(handle.state.grid.width, handle.state.grid.height, view.camera.zoom);
     view.paused = true; // look before you play
     lastAutosaveDawn = dawns(handle.state.tick);

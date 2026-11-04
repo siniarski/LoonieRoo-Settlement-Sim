@@ -13,7 +13,7 @@ import { foodDays } from './alerts';
 import { logEvent } from './events';
 import { spawnItem } from './items';
 import type { SimState } from './state';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, onClock } from './time';
 import { frontierSpot } from './wanderers';
 
 export const WEALTH_STEP = 100;
@@ -21,8 +21,12 @@ export const THREAT_PER_WEALTH = 0.1;
 export const THREAT_PER_DEATH = 0.15;
 export const MIN_THREAT = 0.5;
 export const MAX_THREAT = 1.6;
-export const RECENT = (3 * DAY_LENGTH) / 2;
-export const RELIEF_GAP = 3 * DAY_LENGTH;
+export let RECENT = (3 * DAY_LENGTH) / 2;
+export let RELIEF_GAP = 3 * DAY_LENGTH;
+onClock(() => {
+  RECENT = (3 * DAY_LENGTH) / 2;
+  RELIEF_GAP = 3 * DAY_LENGTH;
+});
 
 export function recentDeaths(state: SimState): number {
   return state.events.filter((e) => e.tick >= state.tick - RECENT && e.message.includes(' died of ')).length;

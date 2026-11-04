@@ -13,7 +13,7 @@ import { INFECTION_TURN } from './infection';
 import { hasTrait } from './skills';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, onClock } from './time';
 
 export type Limb = 'arm' | 'leg';
 
@@ -23,7 +23,8 @@ export interface Wound {
 }
 
 export const WOUND_CHANCE = 0.15;
-export const WOUND_TICKS = 2 * DAY_LENGTH;
+export let WOUND_TICKS = 2 * DAY_LENGTH;
+onClock(() => (WOUND_TICKS = 2 * DAY_LENGTH));
 export const BLEED_EVERY = 15;
 /** Bleeding stops by itself after this (sooner with a bandage). Balance pass 5: it ran on until bandaged, and bandages ran out. */
 export const BLEED_TICKS = 300;

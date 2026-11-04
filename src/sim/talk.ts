@@ -35,7 +35,7 @@ import { hasRadio } from './radio';
 import { adjustReputation } from './settlements';
 import { addWanderer, frontierSpot } from './wanderers';
 import type { Survivor } from './survivors';
-import { TICKS_PER_HOUR, tickOfDay } from './time';
+import { TICKS_PER_HOUR, tickOfDay, onClock } from './time';
 import { ensureGeneratedAround } from './worldgen';
 import { controlled } from './control';
 
@@ -52,7 +52,8 @@ export interface Task {
   targetId: string | null;
 }
 
-export const TALK_EVERY = 2 * TICKS_PER_HOUR;
+export let TALK_EVERY = 2 * TICKS_PER_HOUR;
+onClock(() => (TALK_EVERY = 2 * TICKS_PER_HOUR));
 /** Talking needs you within this many tiles. */
 export const TALK_RANGE = 2;
 export const TALK_OPINION = 5;

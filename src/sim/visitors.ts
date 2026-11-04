@@ -16,7 +16,7 @@ import { getTile, type Point } from './grid';
 import { spawnItem, type ItemKind } from './items';
 import { pick, random } from './rng';
 import type { SimState } from './state';
-import { TICKS_PER_HOUR, dayOf, isNight, tickOfDay } from './time';
+import { TICKS_PER_HOUR, dayOf, isNight, tickOfDay, onClock } from './time';
 import { frontierSpot } from './wanderers';
 import { threatScale } from './director';
 import { SNUB_REP, TRADE_REP, adjustReputation, getSettlement, isHostile, traderFrom } from './settlements';
@@ -25,7 +25,8 @@ import { addZombie, nightFallsNow } from './zombies';
 export const TRADER_FIRST_DAY = 3;
 export const TRADER_EVERY = 3;
 export const TRADER_HOUR = 12;
-export const TRADER_PATIENCE = 4 * TICKS_PER_HOUR;
+export let TRADER_PATIENCE = 4 * TICKS_PER_HOUR;
+onClock(() => (TRADER_PATIENCE = 4 * TICKS_PER_HOUR));
 export const RAID_FIRST_DAY = 6;
 export const RAID_CHANCE = 0.3;
 /** With an enemy settlement out there. */

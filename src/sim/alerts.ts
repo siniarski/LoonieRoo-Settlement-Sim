@@ -9,7 +9,7 @@ import { completeRooms } from './rooms';
 import { SEASON_DAYS, seasonOf } from './seasons';
 import { isHostile } from './settlements';
 import type { SimState } from './state';
-import { DAY_LENGTH, NIGHT_START, TICKS_PER_HOUR, dayOf, hourOf, isNight } from './time';
+import { DAY_LENGTH, NIGHT_START, TICKS_PER_HOUR, dayOf, hourOf, isNight, onClock } from './time';
 import { THIRSTY } from './water';
 import { zombiesForNight } from './zombies';
 import { manhattan } from './space';
@@ -27,7 +27,8 @@ export interface Alert {
 }
 
 /** Satiety a survivor burns through in a day. */
-const DAILY_SATIETY = DAY_LENGTH;
+let DAILY_SATIETY = DAY_LENGTH;
+onClock(() => (DAILY_SATIETY = DAY_LENGTH));
 /** Within this of a survivor, zombies count as "at the colony". */
 const NEAR = 25;
 

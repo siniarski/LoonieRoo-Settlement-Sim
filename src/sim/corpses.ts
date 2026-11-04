@@ -20,18 +20,23 @@ import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { addThought } from './mood';
-import { DAY_LENGTH, dayOf } from './time';
+import { DAY_LENGTH, dayOf, onClock } from './time';
 import { getRoomMap } from './rooms';
 import { seasonOf } from './seasons';
 import { policyOn } from './policies';
 
-export const CORPSE_ROT = DAY_LENGTH / 2;
-export const CORPSE_GONE = DAY_LENGTH;
+export let CORPSE_ROT = DAY_LENGTH / 2;
+export let CORPSE_GONE = DAY_LENGTH;
 export const STENCH_RADIUS = 4;
 export const CORPSE_CHECK_EVERY = 200;
 /** Chance per check that someone breathing in the stench falls sick. */
 export const SICK_CHANCE = 0.03;
-export const SICK_TICKS = DAY_LENGTH;
+export let SICK_TICKS = DAY_LENGTH;
+onClock(() => {
+  CORPSE_ROT = DAY_LENGTH / 2;
+  CORPSE_GONE = DAY_LENGTH;
+  SICK_TICKS = DAY_LENGTH;
+});
 /** A sick survivor loses 1 health this often. */
 export const SICK_DAMAGE_EVERY = 40;
 export const SICK_MOOD = -10;

@@ -16,7 +16,7 @@
 
 import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
 import { TIRED } from './rest';
-import { isNight } from './time';
+import { isNight, slowTick } from './time';
 import { wakeComfort } from './wellbeing';
 import { boostDamage, swingWait } from './moodlets';
 import { freezes } from './resolve';
@@ -104,6 +104,7 @@ export function stepTarget(state: SimState, from: Point, dx: number, dy: number)
 function updateBusy(state: SimState, s: Survivor, c: Control): void {
   const busy = c.busy!;
   if (busy.what === 'sleep') return sleepTick(state, s, c, busy);
+  if (!slowTick(state.tick)) return;
   busy.progress += 1;
   if (busy.what === 'repair') {
     if (!repairTick(state, busy.targetId)) return;
@@ -164,6 +165,7 @@ function sleepTick(state: SimState, s: Survivor, c: Control, busy: NonNullable<C
     s.note = 'woken by an attack!';
     return;
   }
+  if (!slowTick(state.tick)) return;
   // updateRest still drains a tick's worth; this makes up for it.
   s.rest = Math.min(REST_MAX, s.rest + REST_DRAIN + (busy.targetId === 'floor' ? FLOOR_REGEN : BED_REGEN));
   busy.progress = s.rest;

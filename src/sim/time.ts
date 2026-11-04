@@ -1,11 +1,46 @@
 // World clock, derived purely from state.tick (nothing extra to store or
 // keep in sync). A day is DAY_LENGTH ticks; the game starts at START_HOUR.
+//
+// Day length is a world setting (settings.dayScale, 1-3): a longer day stretches the clock and
+// every duration measured in hours or days, and slows what runs at a rate per tick (needs,
+// crops, work) by the same factor, so a day holds about as many meals, sleeps and finished jobs.
+// Walking (and zombies) keep their pace: a longer day just covers more ground.
+// tick() sets the scale from state each tick (setDayScale); modules whose constants derive from
+// the day register with onClock to recompute them. These are live ES module bindings.
 
-/** Ticks per in-game hour. 200 ticks = 20 s at 1x. */
-export const TICKS_PER_HOUR = 200;
+/** Ticks per in-game hour at day scale 1. 200 ticks = 20 s at 1x. */
+export const BASE_TICKS_PER_HOUR = 200;
 export const HOURS_PER_DAY = 24;
-/** 4800 ticks: 8 minutes at 1x, 2 minutes at 4x. */
-export const DAY_LENGTH = TICKS_PER_HOUR * HOURS_PER_DAY;
+let scale = 1;
+const listeners: (() => void)[] = [];
+/** Ticks per in-game hour (scaled). */
+export let TICKS_PER_HOUR = BASE_TICKS_PER_HOUR;
+/** 4800 ticks at scale 1: 8 minutes at 1x, 2 minutes at 4x. */
+export let DAY_LENGTH = TICKS_PER_HOUR * HOURS_PER_DAY;
+
+/** Recompute something derived from the day now and whenever the scale changes. */
+export function onClock(recompute: () => void): void {
+  listeners.push(recompute);
+  recompute();
+}
+
+export function dayScale(): number {
+  return scale;
+}
+
+export function setDayScale(n: number): void {
+  if (n === scale) return;
+  scale = n;
+  TICKS_PER_HOUR = BASE_TICKS_PER_HOUR * n;
+  DAY_LENGTH = TICKS_PER_HOUR * HOURS_PER_DAY;
+  NIGHT_TICKS = (HOURS_PER_DAY - NIGHT_START + NIGHT_END) * TICKS_PER_HOUR;
+  for (const f of listeners) f();
+}
+
+/** Things that run at a rate per tick (needs, crops, work) run on one tick in every `scale`. */
+export function slowTick(tick: number): boolean {
+  return tick % scale === 0;
+}
 export const START_HOUR = 6;
 
 /** Night is from NIGHT_START (inclusive) to NIGHT_END (exclusive), wrapping midnight. */
@@ -40,7 +75,7 @@ export function isNight(tick: number): boolean {
 }
 
 /** Ticks in one night (21:00 to 05:00): 1600. */
-export const NIGHT_TICKS = (HOURS_PER_DAY - NIGHT_START + NIGHT_END) * TICKS_PER_HOUR;
+export let NIGHT_TICKS = (HOURS_PER_DAY - NIGHT_START + NIGHT_END) * TICKS_PER_HOUR;
 
 /** The night in progress (1 = the first night, starting 21:00 on day 1), or null by day. */
 export function nightNumber(tick: number): number | null {

@@ -15,7 +15,7 @@ import { XP_PER_LEVEL } from './skills';
 import { nearestTile } from './space';
 import type { SimState } from './state';
 import { addSurvivor, type Survivor } from './survivors';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, onClock } from './time';
 import { isWalkable } from './grid';
 
 export const YEAR_DAYS = 20;
@@ -23,7 +23,8 @@ export const ELDER = 65;
 export const LOVERS = 60;
 export const BIRTH_CHANCE = 0.25;
 export const MAX_PARENT_AGE = 50;
-export const CHILDHOOD = 10 * DAY_LENGTH;
+export let CHILDHOOD = 10 * DAY_LENGTH;
+onClock(() => (CHILDHOOD = 10 * DAY_LENGTH));
 /** Age a child is counted as once grown. */
 export const GROWN_AGE = 16;
 const HEAD_START: readonly JobType[] = ['build', 'farm', 'craft', 'cook', 'doctor', 'guard', 'scavenge'];

@@ -9,6 +9,7 @@
 // with one, picked by a hash of their id (not the sim RNG, so nothing else's
 // randomness shifts). Hand-made maps' survivors have none.
 
+import { dayScale, slowTick } from './time';
 import { boosted } from './moodlets';
 import { isHurt, worksThisTick } from './health';
 import { logEvent } from './events';
@@ -79,7 +80,7 @@ function toolBonus(state: SimState, s: Survivor, type: JobType): number {
 
 export function workStep(state: SimState, s: Survivor, type: JobType): number {
   const slowed = isHurt(s.health) || isMiserable(state, s) || hasTrait(s, 'lazy') || s.sick !== null || s.age >= ELDER || armSlowed(s);
-  if (!worksThisTick(state.tick, slowed)) return 0;
+  if (!slowTick(state.tick) || !worksThisTick(state.tick / dayScale(), slowed)) return 0;
   s.xp[type] = (s.xp[type] ?? 0) + 1;
   return 1 + (state.tick % 20 < skillLevel(s, type) ? 1 : 0) + toolBonus(state, s, type) + (boosted(s, 'faster') && state.tick % 4 === 0 ? 1 : 0);
 }

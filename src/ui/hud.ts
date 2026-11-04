@@ -429,6 +429,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       const weather = choose(WEATHER_LEVELS.map((w, i) => [String(i), `${w} weather`] as const), String(NORMAL.weather));
       const progression = choose(PROGRESSION_LEVELS.map((p, i) => [String(i), `${p} since the outbreak`] as const), String(NORMAL.progression));
       const winter = choose([['no', 'No nuclear winter'], ['yes', 'Nuclear winter']], NORMAL.winter ? 'yes' : 'no');
+      const dayScale = choose([['1', 'Normal days'], ['2', 'Days twice as long'], ['3', 'Days three times as long']], String(NORMAL.dayScale));
       preset.addEventListener('change', () => {
         const s = PRESETS[preset.value as PresetId].settings;
         start.value = s.start;
@@ -436,6 +437,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         weather.value = String(s.weather);
         progression.value = String(s.progression);
         winter.value = s.winter ? 'yes' : 'no';
+        dayScale.value = String(s.dayScale);
       });
       const settings = (): Settings => ({
         start: start.value === 'solo' ? 'solo' : 'group',
@@ -443,9 +445,10 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         weather: Number(weather.value),
         progression: Number(progression.value),
         winter: winter.value === 'yes',
+        dayScale: Number(dayScale.value),
       });
       root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
-      root.append(row('Sandbox:', start, zombies, weather, progression, winter));
+      root.append(row('Sandbox:', start, zombies, weather, progression, winter, dayScale));
     },
   };
 }

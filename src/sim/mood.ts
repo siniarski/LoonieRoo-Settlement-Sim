@@ -17,7 +17,7 @@ import { THIRSTY_MOOD, isThirsty } from './water';
 import { LEADER_MOOD, RATIONED_MOOD, policyOn } from './policies';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
-import { DAY_LENGTH } from './time';
+import { DAY_LENGTH, dayScale, onClock } from './time';
 
 export type ThoughtKind =
   | 'ateAtTable'
@@ -91,6 +91,12 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   promiseKept: { label: 'a promise kept', effect: 15, duration: 2 * DAY_LENGTH },
   promiseBroken: { label: 'a promise broken', effect: -10, duration: 2 * DAY_LENGTH },
 };
+
+/** Thought lengths at day scale 1; THOUGHTS follows the clock (time.ts). */
+const BASE_DURATION = Object.fromEntries(Object.entries(THOUGHTS).map(([k, v]) => [k, v.duration])) as Record<ThoughtKind, number>;
+onClock(() => {
+  for (const k of Object.keys(THOUGHTS) as ThoughtKind[]) THOUGHTS[k].duration = BASE_DURATION[k] * dayScale();
+});
 
 export const MOOD_BASE = 50;
 /** Resolve lost to a friend's death, and to anyone's. */

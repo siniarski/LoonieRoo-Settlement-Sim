@@ -11,6 +11,7 @@
 //
 // Chicken coops (furniture) lay a food every EGG_EVERY ticks, half as often in winter.
 
+import { slowTick } from './time';
 import { cropGrows, seasonOf } from './seasons';
 import { regrowTrees } from './furniture';
 import { getTile, type Point } from './grid';
@@ -94,6 +95,7 @@ export function harvest(state: SimState, plot: FarmPlot): void {
 
 /** Crops grow every tick (as the season allows, or always in a greenhouse); plots whose tile stopped being floor are lost. Coops lay. */
 export function updateFarm(state: SimState): void {
+  if (!slowTick(state.tick)) return;
   regrowTrees(state);
   const outdoors = cropGrows(state); // seasons and rain (seasons.ts)
   const greenhouses = state.farm.length > 0 ? completeRooms(state, 'greenhouse') : new Set<number>();

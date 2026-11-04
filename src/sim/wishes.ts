@@ -17,7 +17,7 @@ import { steel } from './resolve';
 import { seasonOf } from './seasons';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
-import { DAY_LENGTH, TICKS_PER_HOUR } from './time';
+import { DAY_LENGTH, TICKS_PER_HOUR, onClock } from './time';
 import { controlled } from './control';
 
 export type WishKind = 'hotMeal' | 'bed' | 'coat' | 'weapon' | 'see' | 'grave' | 'quiet' | 'kill' | 'company' | 'comfort';
@@ -32,7 +32,8 @@ export interface Wish {
   promised: boolean;
 }
 
-export const WISH_TICKS = DAY_LENGTH;
+export let WISH_TICKS = DAY_LENGTH;
+onClock(() => (WISH_TICKS = DAY_LENGTH));
 /** Each hour, the chance someone without a wish gets one. */
 export const WISH_CHANCE = 0.2;
 export const WISH_RESOLVE = 2;

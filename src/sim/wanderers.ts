@@ -16,7 +16,7 @@ import { nearestTile } from './space';
 import type { SimState } from './state';
 import { nextSurvivorName } from './survivors';
 import { rollTraits, type Trait } from './skills';
-import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight, tickOfDay } from './time';
+import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, isNight, tickOfDay, onClock } from './time';
 
 export const ARRIVAL_HOUR = 10;
 /** How far from a survivor to look for an arrival spot (roughly). */
@@ -24,7 +24,8 @@ const ARRIVAL_DISTANCE = 24;
 /** A second wanderer comes at this hour, but only if there is a spare bed. */
 export const SECOND_ARRIVAL_HOUR = 14;
 /** How long a wanderer waits for an answer: 3 in-game hours. */
-export const WANDERER_PATIENCE = 3 * TICKS_PER_HOUR;
+export let WANDERER_PATIENCE = 3 * TICKS_PER_HOUR;
+onClock(() => (WANDERER_PATIENCE = 3 * TICKS_PER_HOUR));
 
 export interface Wanderer {
   id: string;

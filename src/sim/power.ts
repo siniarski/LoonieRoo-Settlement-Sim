@@ -23,11 +23,12 @@ import { manhattan } from './space';
 import { hashRoll } from './hash';
 import { ignite } from './fire';
 import type { SimState } from './state';
-import { DAY_LENGTH, TICKS_PER_HOUR, isNight } from './time';
+import { DAY_LENGTH, TICKS_PER_HOUR, isNight, onClock } from './time';
 
 export const POWER_RADIUS = 12;
 export const FUEL_MAX = 4;
-export const FUEL_TICKS = 2 * TICKS_PER_HOUR;
+export let FUEL_TICKS = 2 * TICKS_PER_HOUR;
+onClock(() => (FUEL_TICKS = 2 * TICKS_PER_HOUR));
 export const LAMP_DETER = 16;
 /** Lamps light this far; guards in it hit harder. */
 export const LAMP_LIGHT = 4;
@@ -36,13 +37,18 @@ export const FRIDGE_RADIUS = 2;
 
 /** Heaters (braziers): keep anyone within HEAT_RADIUS from the cold, burning a wood every HEATER_FUEL_TICKS on cold nights. */
 export const HEAT_RADIUS = 4;
-export const HEATER_FUEL_TICKS = 3 * TICKS_PER_HOUR;
+export let HEATER_FUEL_TICKS = 3 * TICKS_PER_HOUR;
+onClock(() => (HEATER_FUEL_TICKS = 3 * TICKS_PER_HOUR));
 /** Chance per hour of burning that a heater sets its own tile alight. */
 export const HEATER_FIRE_CHANCE = 0.01;
 
 export const SPOIL_CHECK_EVERY = 100;
-export const FOOD_SHELF = 4 * DAY_LENGTH;
-export const MEAL_SHELF = DAY_LENGTH;
+export let FOOD_SHELF = 4 * DAY_LENGTH;
+export let MEAL_SHELF = DAY_LENGTH;
+onClock(() => {
+  FOOD_SHELF = 4 * DAY_LENGTH;
+  MEAL_SHELF = DAY_LENGTH;
+});
 
 const CONSUMERS = ['lamp', 'fridge', 'radio', 'lab', 'beacon'] as const;
 

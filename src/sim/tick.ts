@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { setDayScale } from './time';
 import { forgetForaging } from './handiwork';
 import { DAY_LENGTH } from './time';
 import { updateWishes } from './wishes';
@@ -64,6 +65,7 @@ import { isControlled, reconcileControl, updateControlled } from './control';
 export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
+  setDayScale(state.settings.dayScale);
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);

@@ -12,7 +12,7 @@ import { hashRoll, idNumber } from './hash';
 import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Movement } from './survivors';
-import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, tickOfDay } from './time';
+import { DAY_LENGTH, TICKS_PER_HOUR, dayOf, tickOfDay, onClock } from './time';
 import { frontierSpot } from './wanderers';
 
 export interface Animal {
@@ -26,7 +26,8 @@ export interface Animal {
 }
 
 export const DEER_CHANCE = 0.6;
-export const DEER_STAYS = 2 * DAY_LENGTH;
+export let DEER_STAYS = 2 * DAY_LENGTH;
+onClock(() => (DEER_STAYS = 2 * DAY_LENGTH));
 export const DEER_STEP_EVERY = 20;
 export const DEER_TICKS_PER_TILE = 5;
 /** Deer keep this far from survivors when they can (they're wary, not fast). */
