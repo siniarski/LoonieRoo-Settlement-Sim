@@ -16,11 +16,15 @@
 //   lab, beacon  the endgame: research a cure, or call for evacuation (endgame.ts)
 //   radio  powered: hears distress calls and neighbours' asks (radio.ts)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
+//   decor  generated fittings (a sofa, a toilet, a pew, a wrecked car): `look` says which. Only for show.
+// Generated containers are crates with a `look` (a kitchen counter, a wardrobe, a police locker)
+// and a loot `table` (loot.ts): what's in them depends on the room they're in.
 
 import { spawnItem, type ItemKind } from './items';
+import type { LootTable } from './loot';
 import type { SimState } from './state';
 
-export type FurnitureKind = 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'heater' | 'coop' | 'radio' | 'lab' | 'beacon' | 'turret' | 'lure' | 'pit' | 'truck';
+export type FurnitureKind = 'decor' | 'bed' | 'crate' | 'table' | 'workbench' | 'stove' | 'tree' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'heater' | 'coop' | 'radio' | 'lab' | 'beacon' | 'turret' | 'lure' | 'pit' | 'truck';
 
 /** Finds in a fresh crate. Each scavenge job yields one. */
 export const CRATE_LOOT = 5;
@@ -47,7 +51,16 @@ export interface Furniture {
   stored: number;
   /** What `stored` is (wood, cloth, food); null when empty. */
   storedKind: ItemKind | null;
+  /** Generated crates and decor: what it looks like (a wardrobe, a sofa); null for a plain one. */
+  look: Look | null;
+  /** Generated crates: what's found in it (loot.ts); null for the general table. */
+  table: LootTable | null;
 }
+
+/** Containers (crates) and decor in generated buildings (buildings.ts). */
+export const CONTAINER_LOOKS = ['counter', 'icebox', 'shelf', 'wardrobe', 'dresser', 'cabinet', 'toolbox', 'locker', 'desk', 'pallet', 'sack', 'crate'] as const;
+export const DECOR_LOOKS = ['sofa', 'bed', 'toilet', 'bath', 'table', 'oven', 'tv', 'car', 'pew', 'altar', 'hay', 'tractor', 'pump', 'bench', 'cot', 'register', 'machine', 'silo'] as const;
+export type Look = (typeof CONTAINER_LOOKS)[number] | (typeof DECOR_LOOKS)[number];
 
 /**
  * Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never
@@ -89,6 +102,8 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     scavenge: false,
     stored: 0,
     storedKind: null,
+    look: null,
+    table: null,
   };
   state.furniture.push(f);
   indexes.delete(state.furniture);

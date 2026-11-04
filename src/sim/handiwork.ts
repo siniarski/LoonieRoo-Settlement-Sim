@@ -89,7 +89,8 @@ export function finishBuild(state: SimState, s: Survivor, targetId: string): str
 /** Foraging needs open ground, daylight and a growing season; and each tile gives once a day. */
 export function canForage(state: SimState, s: Survivor): string | null {
   const { x, y } = s.pos;
-  if (isIndoors(state, x, y) || GROUNDS[state.grid.ground[tileIndex(state.grid, x, y)]!] !== 'grass') return 'nothing to forage here: find open grass';
+  const g = GROUNDS[state.grid.ground[tileIndex(state.grid, x, y)]!];
+  if (isIndoors(state, x, y) || (g !== 'grass' && g !== 'field')) return 'nothing to forage here: find open grass, or a field';
   if (isNight(state.tick)) return 'too dark to forage';
   if (seasonOf(state.tick) === 'winter') return 'nothing grows in winter';
   if (state.foraged[String(tileIndex(state.grid, x, y))] === dayOf(state.tick)) return 'already picked over today';
@@ -100,7 +101,9 @@ export function canForage(state: SimState, s: Survivor): string | null {
 export function finishForage(state: SimState, s: Survivor): string {
   const i = tileIndex(state.grid, s.pos.x, s.pos.y);
   state.foraged[String(i)] = dayOf(state.tick);
-  const chance = FORAGE_CHANCE * (state.settings.winter ? 0.5 : 1);
+  // Old fields still throw up what was sown there: twice the chance.
+  const field = GROUNDS[state.grid.ground[i]!] === 'field' ? 2 : 1;
+  const chance = FORAGE_CHANCE * field * (state.settings.winter ? 0.5 : 1);
   if (hashRoll(idNumber(s.id), i, state.tick) >= chance) return 'found nothing worth eating';
   spawnItem(state, 'food', s.pos.x, s.pos.y);
   return 'found something to eat';

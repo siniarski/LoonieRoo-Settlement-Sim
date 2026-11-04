@@ -29,18 +29,25 @@ describe('map types', () => {
     const l = layout(11, SIZE, 'quarantine');
     expect(fenceAt(l, 2, 100)).not.toBeNull();
     expect(fenceAt(l, 10, 100)).toBeNull();
-    const gate = l.roadRows[0]!;
-    expect(fenceAt(l, 2, gate)).toBe('door');
+    // A gate wherever a road reaches the fence, and at least one.
+    let gates = 0;
+    for (let i = 2; i < SIZE - 2; i++) for (const [x, y] of [[2, i], [i, 2], [SIZE - 3, i], [i, SIZE - 3]] as const) if (fenceAt(l, x, y) === 'door') gates++;
+    expect(gates).toBeGreaterThan(0);
     expect(isSea(layout(11, SIZE, 'mainland'), 0, 0)).toBe(false);
   });
 
-  it('an island chain has water between islands, bridged by the roads', () => {
+  it('an island chain has channels between islands, and roads cross water only on bridges', () => {
     const state = createWorld(11, SIZE, { ...NORMAL, map: 'islands' });
     generateAll(state);
-    const bridges = state.grid.ground.filter((g) => g === 4).length;
     const plain = createWorld(11, SIZE, { ...NORMAL, map: 'mainland' });
     generateAll(plain);
-    expect(bridges).toBeGreaterThan(plain.grid.ground.filter((g) => g === 4).length);
+    const water = (s: typeof state) => s.grid.tiles.filter((t) => t === 'water').length;
+    expect(water(state)).toBeGreaterThan(water(plain));
+    const l = layout(11, SIZE, 'islands');
+    for (let i = 0; i < SIZE * SIZE; i++) {
+      if (l.plan.roadMask[i] === 0) continue;
+      expect(state.grid.tiles[i]).not.toBe('water');
+    }
   });
 });
 

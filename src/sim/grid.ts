@@ -8,7 +8,8 @@ export type Tile = 'floor' | 'wall' | 'door' | 'water' | 'barricade';
  * What the ground looks like under a floor tile. Visual only: nothing in the
  * sim reads it (yet), so roads and forest paths cost the same to walk.
  */
-export const GROUNDS = ['grass', 'dirt', 'road', 'forest', 'bridge'] as const;
+/** Appended only: saves store the index. field: ploughed farmland; paving: yards and squares; boards, tiles, concrete: floors indoors. */
+export const GROUNDS = ['grass', 'dirt', 'road', 'forest', 'bridge', 'field', 'paving', 'boards', 'tiles', 'concrete'] as const;
 export type Ground = (typeof GROUNDS)[number];
 
 export interface Point {

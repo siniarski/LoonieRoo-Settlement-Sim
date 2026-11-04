@@ -161,7 +161,7 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
   }
   const crate = getFurniture(state, busy.targetId);
   if (!crate || crate.loot <= 0 || !nextTo(s.pos, crate)) return;
-  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
+  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state), crate.table);
   spawnFind(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false;

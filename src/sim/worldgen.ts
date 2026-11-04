@@ -1,20 +1,18 @@
-// World generation: a seeded world of roads, ruined towns, forests, rivers and lakes.
+// World generation: the natural world first (nature.ts: water, forest), then what was built on
+// it (worldplan.ts: towns sited on good land with streets they grew, country roads routed between
+// them, lots cut along the streets and roads, a building planned in each lot), drawn chunk by chunk.
 //
-// Built for a much bigger world later (see NOTES.md, "Big worlds"):
-//  - Everything is a pure function of (seed, world position). Noise and
-//    rolls come from a stateless hash, never from the sim RNG, so a chunk
-//    comes out the same whatever order chunks are generated in.
-//  - Generation runs chunk by chunk (CHUNK x CHUNK tiles). Buildings sit in
-//    cells that never cross a chunk border; roads, water and forest are
-//    per-tile functions, so they line up across borders by construction.
-//  - Chunks are generated lazily: the start area when the world is made,
-//    then any chunk within GENERATE_RADIUS chunks of a survivor, well ahead
-//    of what they can see (ensureGeneratedAround, called from fog.ts).
-//    (Entity ids come from state.nextId, so they do depend on generation
+//  - Everything is a pure function of the seed and world position (stateless hashes, never the
+//    sim RNG), and the plan is derived data, cached, never saved: so a chunk comes out the same
+//    whatever order chunks are generated in.
+//  - Generation runs chunk by chunk (CHUNK x CHUNK tiles): each chunk draws its tiles and its part
+//    of every lot touching it (a lot may span chunks).
+//  - Chunks are generated lazily: the start area when the world is made, then any chunk within
+//    GENERATE_RADIUS chunks of a survivor, well ahead of what they can see (ensureGeneratedAround,
+//    called from fog.ts). (Entity ids come from state.nextId, so they do depend on generation
 //    order; ids are labels, nothing else.)
 
-import { isRadioactive } from './climate';
-import { NORMAL, crateLoot, ruinDecay, zombieScale, type MapType, type Settings } from './difficulty';
+import { NORMAL, type MapType, type Settings } from './difficulty';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { itemAt, spawnItem } from './items';
@@ -22,6 +20,11 @@ import { nearestTile } from './space';
 import { placeSettlements } from './settlements';
 import { hashRoll } from './hash';
 import { createState, type SimState } from './state';
+import type { Town } from './towns';
+import { drawLot, type LotContext } from './lots';
+import { planWorld, type WorldPlan } from './worldplan';
+import { isForest, isSea, isWater, nearStart, noise, onFenceLine, roll, START_CLEAR_RADIUS, type Nature } from './nature';
+export { hash, noise, isSea, START_CLEAR_RADIUS } from './nature';
 import { addSurvivor } from './survivors';
 import { rollTraits } from './skills';
 
@@ -41,124 +44,33 @@ export interface WorldInfo {
 /** World sizes on offer (tiles a side, multiples of CHUNK). Development uses the small ones. */
 export const WORLD_SIZES = [64, 128, 256, 512] as const;
 export const WORLD_SIZE = 128;
-/** Building cells: CHUNK must be a multiple, so buildings never cross chunks. */
-const CELL = 16;
-/** Kept clear around the start, so the first day is calm. */
-export const START_CLEAR_RADIUS = 16;
 /** Tiles revealed around the start before anyone moves. */
 export const START_REVEAL_RADIUS = 14;
 
-// --- Stateless randomness ----------------------------------------------------
+// --- The plan, and per-tile features ------------------------------------------
 
-/** A well-mixed 32-bit hash of the seed and up to three integers. */
-export function hash(seed: number, a: number, b: number, salt: number): number {
-  let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(a, 0xc2b2ae35) ^ Math.imul(b, 0x27d4eb2f) ^ Math.imul(salt, 0x165667b1);
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
-  return (h ^ (h >>> 15)) >>> 0;
-}
-
-/** Uniform in [0, 1). */
-function roll(seed: number, a: number, b: number, salt: number): number {
-  return hash(seed, a, b, salt) / 4294967296;
-}
-
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-/** Smooth value noise in [0, 1): hashed lattice every `scale` tiles, blended between. */
-export function noise(seed: number, x: number, y: number, scale: number, salt: number): number {
-  const gx = Math.floor(x / scale);
-  const gy = Math.floor(y / scale);
-  const fx = smooth(x / scale - gx);
-  const fy = smooth(y / scale - gy);
-  const c = (i: number, j: number) => roll(seed, gx + i, gy + j, salt);
-  const top = c(0, 0) + (c(1, 0) - c(0, 0)) * fx;
-  const bottom = c(0, 1) + (c(1, 1) - c(0, 1)) * fx;
-  return top + (bottom - top) * fy;
-}
-
-// --- Per-tile features -------------------------------------------------------
-
-export interface Layout {
-  seed: number;
-  size: number;
-  start: Point;
-  /** Rows (horizontal roads) and columns (vertical roads), two tiles wide. */
-  roadRows: number[];
-  roadCols: number[];
-  /** The river runs along x (true) or y; its centre line wanders around `riverBase`. */
-  riverAlongX: boolean;
-  riverBase: number;
-  map: MapType;
-}
+/** A world's natural features and its plan (towns, roads, lots): what a chunk is drawn from. */
+export type Layout = Nature & { plan: WorldPlan; towns: Town[] };
 
 export function layout(seed: number, size: number, map: MapType = 'mainland'): Layout {
-  const start = { x: Math.floor(size / 2), y: Math.floor(size / 2) };
-  // A road every 64 tiles, nudged by up to 8, offset so none crosses the start clearing.
-  const lines = (salt: number) => {
-    const out: number[] = [];
-    for (let k = 0; 32 + 64 * k < size; k++) out.push(32 + 64 * k + (hash(seed, k, 0, salt) % 17) - 8);
-    return out;
-  };
-  // The river passes well to one side of the start.
-  const side = hash(seed, 0, 0, 3) % 2 === 0 ? -1 : 1;
-  const riverBase = start.y + side * (48 + (hash(seed, 0, 0, 4) % 24));
-  return { seed, size, start, roadRows: lines(1), roadCols: lines(2), riverAlongX: hash(seed, 0, 0, 5) % 2 === 0, riverBase, map };
+  const plan = planWorld(seed, size, map);
+  return { ...plan.nature, plan, towns: plan.towns };
 }
 
+/** A country road or town street on this tile. */
 function isRoad(l: Layout, x: number, y: number): boolean {
-  return l.roadRows.some((r) => y === r || y === r + 1) || l.roadCols.some((c) => x === c || x === c + 1);
+  return x >= 0 && y >= 0 && x < l.size && y < l.size && l.plan.roadMask[y * l.size + x] !== 0;
 }
 
-/**
- * Open sea round an island or a chain (no bridges reach out into it): beyond a coast that
- * wanders around 40% of the map's width from the middle.
- */
-export function isSea(l: Layout, x: number, y: number): boolean {
-  if (l.map !== 'island' && l.map !== 'islands') return false;
-  if (nearStart(l, x, y, START_CLEAR_RADIUS + 8)) return false;
-  const r = Math.hypot(x - l.size / 2, y - l.size / 2) / (l.size / 2);
-  return r > 0.78 + 0.18 * (noise(l.seed, x, y, 18, 30) - 0.5);
-}
-
-/** An island chain: channels between the islands, which roads cross on bridges. */
-function isChannel(l: Layout, x: number, y: number): boolean {
-  return l.map === 'islands' && Math.abs(noise(l.seed, x, y, 40, 31) - 0.5) < 0.045;
+/** On a lot (its yard and building are drawn by lots.ts). */
+function onLot(l: Layout, x: number, y: number): boolean {
+  return l.plan.lotMask[y * l.size + x] !== 0;
 }
 
 /** A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it. */
 export function fenceAt(l: Layout, x: number, y: number): 'wall' | 'door' | null {
-  if (l.map !== 'quarantine') return null;
-  const onFence = (x === 2 || y === 2 || x === l.size - 3 || y === l.size - 3) && x >= 2 && y >= 2 && x <= l.size - 3 && y <= l.size - 3;
-  if (!onFence) return null;
+  if (!onFenceLine(l, x, y)) return null;
   return isRoad(l, x, y) ? 'door' : 'wall';
-}
-
-function isWater(l: Layout, x: number, y: number): boolean {
-  if (nearStart(l, x, y, START_CLEAR_RADIUS + 8)) return false;
-  if (isSea(l, x, y) || isChannel(l, x, y)) return true;
-  // The river: a band 3-5 wide around a wandering centre line.
-  const along = l.riverAlongX ? x : y;
-  const across = l.riverAlongX ? y : x;
-  const centre = l.riverBase + 28 * (noise(l.seed, along, 0, 40, 6) - 0.5);
-  const width = 3 + 2 * noise(l.seed, along, 0, 23, 7);
-  if (Math.abs(across - centre) < width / 2) return true;
-  // Lakes: the high spots of a slow noise field.
-  return noise(l.seed, x, y, 24, 8) > 0.8;
-}
-
-function isForest(l: Layout, x: number, y: number): boolean {
-  return noise(l.seed, x, y, 20, 9) > 0.6;
-}
-
-function nearStart(l: Layout, x: number, y: number, r: number): boolean {
-  return (x - l.start.x) ** 2 + (y - l.start.y) ** 2 < r * r;
-}
-
-/** How town-like an area is: denser towns near roads and in the high spots of a slow noise field. */
-function urban(l: Layout, x: number, y: number): number {
-  const toRoad = Math.min(...l.roadRows.map((r) => Math.abs(y - r)), ...l.roadCols.map((c) => Math.abs(x - c)));
-  return noise(l.seed, x, y, 64, 10) * 0.7 + (toRoad < 12 ? 0.35 : 0);
 }
 
 // --- Generation --------------------------------------------------------------
@@ -169,7 +81,7 @@ const ground = (state: SimState, x: number, y: number, g: Ground) => {
   state.grid.ground[tileIndex(state.grid, x, y)] = GROUNDS.indexOf(g);
 };
 
-/** Terrain for every tile in the chunk, then the buildings in its cells, then trees. */
+/** Terrain for every tile in the chunk, then its part of every lot touching it, then trees. */
 export function generateChunk(state: SimState, l: Layout, cx: number, cy: number): void {
   const x0 = cx * CHUNK;
   const y0 = cy * CHUNK;
@@ -178,19 +90,22 @@ export function generateChunk(state: SimState, l: Layout, cx: number, cy: number
       if (!inBounds(state.grid, x, y)) continue;
       const fence = fenceAt(l, x, y);
       if (fence) setTile(state.grid, x, y, fence);
-      else if (isSea(l, x, y)) setTile(state.grid, x, y, 'water');
+      else if (isSea(l, x, y) && !isRoad(l, x, y)) setTile(state.grid, x, y, 'water');
       else if (isRoad(l, x, y)) ground(state, x, y, isWater(l, x, y) ? 'bridge' : 'road');
       else if (isWater(l, x, y)) setTile(state.grid, x, y, 'water');
+      else if (onLot(l, x, y)) continue;
       else if (isForest(l, x, y)) ground(state, x, y, 'forest');
       else if (noise(l.seed, x, y, 6, 11) > 0.72) ground(state, x, y, 'dirt');
     }
   }
-  for (let y = y0; y < y0 + CHUNK; y += CELL) for (let x = x0; x < x0 + CHUNK; x += CELL) building(state, l, x, y);
+  const chunks = Math.ceil(l.size / CHUNK);
+  const ctx = lotContext(l);
+  for (const id of l.plan.lotsByChunk[cy * chunks + cx] ?? []) drawLot(state, ctx, l.plan.lots[id]!, x0, y0, Math.min(l.size, x0 + CHUNK) - 1, Math.min(l.size, y0 + CHUNK) - 1);
   for (let y = y0; y < y0 + CHUNK; y++) {
     for (let x = x0; x < x0 + CHUNK; x++) {
-      if (!inBounds(state.grid, x, y) || !isForest(l, x, y) || isRoad(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) continue;
+      // Trees on forest ground (lots plant their own: hedges, orchards).
+      if (!inBounds(state.grid, x, y) || isRoad(l, x, y) || onLot(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) continue;
       const i = tileIndex(state.grid, x, y);
-      // Still forest ground: not inside a building (those are dirt).
       if (state.grid.tiles[i] === 'floor' && state.grid.ground[i] === FOREST && roll(l.seed, x, y, 12) < 0.3) {
         addFurniture(state, 'tree', x, y);
       }
@@ -198,62 +113,14 @@ export function generateChunk(state: SimState, l: Layout, cx: number, cy: number
   }
 }
 
-/** Maybe a ruined building in the cell at (cx0, cy0): walls with gaps, a door, crates inside. */
-function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
-  const centre = { x: cx0 + CELL / 2, y: cy0 + CELL / 2 };
-  if (urban(l, centre.x, centre.y) < 0.55 || roll(l.seed, cx0, cy0, 13) > 0.75) return;
-  const w = 6 + (hash(l.seed, cx0, cy0, 14) % 8);
-  const h = 6 + (hash(l.seed, cx0, cy0, 15) % 8);
-  const x0 = cx0 + 1 + (hash(l.seed, cx0, cy0, 16) % (CELL - w - 1));
-  const y0 = cy0 + 1 + (hash(l.seed, cx0, cy0, 17) % (CELL - h - 1));
-  // The whole footprint (plus a ring) must be clear land, off roads and the start.
-  for (let y = y0 - 1; y <= y0 + h; y++) {
-    for (let x = x0 - 1; x <= x0 + w; x++) {
-      if (!inBounds(state.grid, x, y) || isRoad(l, x, y) || isWater(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) return;
-    }
-  }
-  const x1 = x0 + w - 1;
-  const y1 = y0 + h - 1;
-  const doorSide = hash(l.seed, cx0, cy0, 18) % 4;
-  const door = [
-    { x: x0 + Math.floor(w / 2), y: y0 },
-    { x: x1, y: y0 + Math.floor(h / 2) },
-    { x: x0 + Math.floor(w / 2), y: y1 },
-    { x: x0, y: y0 + Math.floor(h / 2) },
-  ][doorSide]!;
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      ground(state, x, y, 'dirt');
-      const edge = x === x0 || x === x1 || y === y0 || y === y1;
-      if (!edge) continue;
-      if (x === door.x && y === door.y) setTile(state.grid, x, y, 'door');
-      // Ruined: about one wall tile in eight has fallen in.
-      else if (roll(l.seed, x, y, 19) > 0.12 + ruinDecay(state)) setTile(state.grid, x, y, 'wall');
-    }
-  }
-  // Wider buildings get an inner wall with a gap, making two rooms.
-  if (w >= 10) {
-    const mx = x0 + Math.floor(w / 2);
-    for (let y = y0 + 1; y < y1; y++) if (y !== y0 + 2) setTile(state.grid, mx, y, 'wall');
-  }
-  // Crates: better stocked the further from the start.
-  const dist = Math.hypot(centre.x - l.start.x, centre.y - l.start.y);
-  const crates = 1 + (hash(l.seed, cx0, cy0, 20) % 3);
-  for (let n = 0; n < crates; n++) {
-    const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 21) % (w - 2));
-    const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 22) % (h - 2));
-    if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || furnitureAt(state, x, y)) continue;
-    // In a radioactive hot zone (climate.ts) nobody has picked it over: twice the loot.
-    addFurniture(state, 'crate', x, y).loot = crateLoot(state, lootFor(dist)) * (isRadioactive(state, x, y) ? 2 : 1);
-  }
-  // Asleep inside: none near the start, more the further out.
-  if (dist < START_CLEAR_RADIUS + 24) return;
-  const sleepers = zombieScale(state, hash(l.seed, cx0, cy0, 23) % (2 + Math.floor(dist / 60)));
-  for (let n = 0; n < sleepers; n++) {
-    const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 24) % (w - 2));
-    const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 25) % (h - 2));
-    state.dormant.push({ id: `d${state.nextId++}`, x, y });
-  }
+/** What drawing a lot needs to know about the world. */
+function lotContext(l: Layout): LotContext {
+  return {
+    seed: l.seed,
+    lootAt: (x, y) => lootFor(Math.sqrt((x - l.start.x) ** 2 + (y - l.start.y) ** 2)),
+    distance: (x, y) => Math.sqrt((x - l.start.x) ** 2 + (y - l.start.y) ** 2),
+    calm: START_CLEAR_RADIUS + 24,
+  };
 }
 
 /** Finds in a crate this far from the start: CRATE_LOOT nearby, up to three times that at the far edge. */

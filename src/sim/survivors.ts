@@ -32,7 +32,7 @@ import type { SimState } from './state';
 /** Ticks to cross one tile (4 ticks = 0.4s at 1x). */
 export const TICKS_PER_TILE = 4;
 /** Ground indices (GROUNDS) that are quicker to walk on. */
-const ROAD_GROUNDS = [GROUNDS.indexOf('road'), GROUNDS.indexOf('bridge')];
+const ROAD_GROUNDS = [GROUNDS.indexOf('road'), GROUNDS.indexOf('bridge'), GROUNDS.indexOf('paving')];
 
 /** Chance that stepping onto an indoor floor tile leaves dirt on it. Uses the sim RNG. */
 export const DIRT_CHANCE = 1 / 30;
