@@ -106,7 +106,7 @@ export function generateChunk(state: SimState, l: Layout, cx: number, cy: number
       // Trees on forest ground (lots plant their own: hedges, orchards).
       if (!inBounds(state.grid, x, y) || isRoad(l, x, y) || onLot(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) continue;
       const i = tileIndex(state.grid, x, y);
-      if (state.grid.tiles[i] === 'floor' && state.grid.ground[i] === FOREST && roll(l.seed, x, y, 12) < 0.3 && !furnitureAt(state, x, y)) {
+      if (state.grid.tiles[i] === 'floor' && state.grid.ground[i] === FOREST && roll(l.seed, x, y, 12) < 0.3) {
         addFurniture(state, 'tree', x, y);
       }
     }
