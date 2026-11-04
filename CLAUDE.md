@@ -2,7 +2,9 @@
 
 ## Project
 
-A 2D grid-based settlement survival sim (Prison Architect / RimWorld / Project Zomboid flavour). The player claims buildings, designates rooms (housing, mess hall, barracks, armory), and manages survivors who pick up jobs by priority. Zombies are a late-stage threat layer.
+A 2D grid-based survival sim. It began as a RimWorld-style colony sim (claim buildings, designate rooms, survivors take jobs by priority) and is becoming the player's vision: **Project Zomboid-style survival where you control one survivor directly, with an optional colony sim** when you settle, other settlements living their own lives, and survivors with stories and requests.
+
+**Read NOTES.md "Start here" first**: current state, controls, a map of every module, the harness, what's next, and the player's working agreements (push only when asked, every time; commit only on a green check).
 
 This is a **learning and exploration project**. Favour fast iteration, readable code, and throwaway experiments over polish. If the game proves fun, it may later be ported to another engine, so the architecture below exists to keep that port cheap.
 
@@ -21,6 +23,7 @@ This is a **learning and exploration project**. Favour fast iteration, readable 
 - `npm run test:watch` runs Vitest in watch mode
 - `npm run typecheck` runs `tsc --noEmit`
 - `npm run check` runs typecheck and tests. **Run this before every commit.**
+- `npm run harness -- <name>` runs a tool from harness/ (colony, solo, bench, profile): scripted balance players, a benchmark, a profiler. Not part of `npm test`; output in harness/out/.
 
 ## Architecture rules (non-negotiable)
 
@@ -33,33 +36,30 @@ This is a **learning and exploration project**. Favour fast iteration, readable 
 7. **State must be serialisable** (plain JSON-compatible objects, no class instances with hidden state, no functions). This enables save/load, scenario files, and debugging dumps.
 8. **The RNG state lives in sim state as a plain number.** `rng.ts` exposes pure functions that take state and return a value plus the next state (or advance `state.rng` in place). Saving and loading restores the RNG exactly.
 9. **Iteration order must be deterministic.** Store collections as arrays or as records with string keys. Never let the result depend on `Set`/`Map` insertion order across save/load, or on unsorted object keys with mixed numeric/string names.
-10. **Movement is tile to tile.** An entity in motion stores `from`, `to`, and `progress`/`duration` in ticks. The renderer interpolates from these. Pixel or sub-tile positions never enter the sim.
+10. **Movement is tile to tile.** An entity in motion stores `from`, `to`, and `progress`/`duration` in ticks. The renderer interpolates from these. Pixel or sub-tile positions never enter the sim. (Under direct control, steps may be diagonal. Whether to move to sub-tile positions is an open question for after the playtest.)
+11. **Chances that mustn't shift the RNG stream use a stateless hash** (`hash.ts` hashRoll of ids and ticks), so adding a new chance doesn't change every other random outcome. The sim RNG is for the core rolls that were always there.
+12. **Never compute a module-level constant from another module's constant** (`export const X = OTHER * 2`). Import cycles can read it before it exists (it broke the page once), and day-length-derived values must follow the clock: derive them in a function, or register with `onClock` in time.ts.
+13. **Day length is a world setting** (`settings.dayScale`). Durations come from time.ts (`DAY_LENGTH`, `TICKS_PER_HOUR`: live bindings) and recompute through `onClock`; things that happen at a rate per tick (needs, crops, work, timed actions) run only on `slowTick` ticks. tick() sets the scale from state each tick.
+14. **Keep every per-tick system's cost bounded.** Budget expensive work per tick (zombies plan at most PLANS_PER_TICK paths), keep far-off things abstract (dormant zombies, herds, settlements), and never flood the whole map per entity per tick. Profile with `npm run harness -- profile` and the debug panel's tick ms.
 
 ## Replays and the command log
 
 Rule 1 gives us replays for free: **seed + initial state + `{tick, command}[]` = the full game.** Every command applied through `commands.ts` is appended to a command log. A bug report is then just a file: load the starting state, replay the log, and the bug reproduces. A scenario file is a starting state plus an optional command log.
 
-## Suggested layout
+## Layout
 
 ```
 src/
-  sim/          # pure game logic (no browser APIs)
-    state.ts        # state types and initial state
-    tick.ts         # the tick function
-    rng.ts          # seeded RNG
-    grid.ts         # tiles, walls, doors
-    rooms.ts        # flood fill, room purposes, requirements
-    pathfinding.ts  # A* on the grid
-    jobs.ts         # designations -> job queue, reservation, assignment
-    survivors.ts    # needs, priorities, behaviour
-    commands.ts     # the only way to change the sim from outside
-  render/       # canvas view, camera, overlays (reads state only)
-  ui/           # panels, tool palette, priority editor
-  debug/        # window.game hooks, overlay, text renderer
-  scenarios/    # JSON scenario files for tests and repro
-tests/
-NOTES.md
+  sim/          # pure game logic (no browser APIs): ~75 focused modules, one system each
+  render/       # canvas view, camera, palette, interpolation (reads state only)
+  ui/           # menu, HUD panels, input, build tools, saves
+  debug/        # window.game hooks, ASCII text renderer
+tests/          # Vitest: one file per system, plus architecture and invariant tests
+harness/        # balance players, benchmark, profiler (npm run harness)
+NOTES.md        # Start here, decisions, design direction, open questions, session log
 ```
+
+NOTES.md "Start here" maps every sim module to what it does. Each module opens with a comment stating its rules.
 
 ## Core design model
 
@@ -84,7 +84,7 @@ NOTES.md
 
 **Doors (milestone 1 decision, revised in milestone 7)**
 
-- Survivors can always walk through doors. Zombies can't walk through them: to a moving zombie a door is a wall. But a zombie that can't reach anyone batters doors (and walls) down; see breach.ts. Pathfinding takes a `mover` (`'survivor' | 'zombie'`) for this. Locking and other faction rules come later.
+- Survivors can always walk through doors (and barricades). Zombies can't walk through them: to a moving zombie a door is a wall. But a zombie that can't reach anyone batters doors (and walls) down; see breach.ts. Pathfinding takes a `mover` (`'survivor' | 'zombie' | 'breacher' | 'raider' | 'crawler'`) for this. Raiders open doors unless they're locked.
 - For flood fill, doors are room boundaries: they split rooms the way walls do, but survivors can path through them.
 
 ## Debugging and inspection conventions
@@ -99,7 +99,7 @@ Build these in from the start. They are how the agent (and you) can see what the
    - `dumpText()` returns the ASCII map
 2. **Text renderer** (`src/debug/text.ts`): `#` wall, `D` door, `.` floor, `s` survivor, `b` bed, etc. Use it in test failure output so the map is visible in the terminal.
 3. **Scenarios:** JSON files describing a map, seed, survivors, and designations. Tests load a scenario, run N ticks, and assert on the result (e.g. nobody is stuck, the room completed).
-4. **Debug overlay** (toggle with a key): job queue, each survivor's current job and why it was chosen, reserved tiles, room boundaries, path previews. "Why is she just standing there?" should be answerable in the overlay.
+4. **Debug overlay** (the backtick key): job queue, each survivor's current job and why it was chosen, reserved tiles, room boundaries, path previews, and frame costs (tick, sim and draw ms). "Why is she just standing there?" should be answerable in the overlay.
 5. **Console errors** from the browser are forwarded to the terminal when running Playwright.
 
 ## Testing
@@ -109,7 +109,9 @@ Build these in from the start. They are how the agent (and you) can see what the
   - no survivor stays on the same job for more than **600 ticks** (60s at 1x)
   - no survivor stays idle for more than **20 ticks** while a reachable, unreserved job exists of a type they have enabled
 - Run `npm run check` (typecheck + tests) before every commit. A red suite means stop and fix.
-- Prefer headless sim runs over screenshots to verify behaviour. Use screenshots only for rendering questions.
+- Prefer headless sim runs over screenshots to verify behaviour. Use screenshots only for rendering questions, but do check anything visible in the browser before calling it done.
+- Balance questions go to the harness (scripted players over several seeds, run in parallel), and the results go in the NOTES.md session log.
+- The sim's clock scale (time.ts) is module state: a test that changes `settings.dayScale` must reset it (`setDayScale(1)`) afterwards.
 
 ## Workflow
 
@@ -122,16 +124,7 @@ Build these in from the start. They are how the agent (and you) can see what the
 
 ## Milestones
 
-1. Grid, walls, doors, text renderer, tests
-2. Canvas view and placement tools, hot reload working
-3. One survivor with A* to a clicked tile
-4. Job system: build, haul, clean, with reservation and the priority panel
-5. Rooms: flood fill, designation, requirements, status indicators
-6. Needs: hunger and sleep, beds and food as items
-7. Threat: simple night zombie pressure, guards respond (keep crude)
-8. Auto-planner: "furnish this room for me"
-
-**Stop after milestone 3 and play with it before continuing.** Milestones 1-5 are the core proof of concept. Zombies come last, because the base-building loop has to be fun on its own.
+The original eight (grid and text renderer; canvas and tools; a survivor with A*; jobs with reservation and priorities; rooms; needs; night zombies and guards; the auto-planner) are all done, along with a long list of systems since (see NOTES.md). The plan now follows NOTES.md "Design direction" and "Start here": **next is the player's playtest**, then whatever it says about movement and combat feel, inventory, and the visual target.
 
 ## Known pitfalls
 

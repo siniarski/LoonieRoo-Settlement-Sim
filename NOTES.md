@@ -2,6 +2,38 @@
 
 Decisions log. Read this at the start of each session. After any non-trivial experiment, add: what was tried, what happened, what was decided.
 
+## Start here (state as of 2026-11-05)
+
+**What it is now.** A deterministic, top-down survival sim in TypeScript (browser, Canvas 2D). It began as a RimWorld-style colony sim (milestones 1-8, all done) and is turning into the player's vision (see "Design direction" below): **Project Zomboid-style survival where you control one survivor directly, with an optional colony sim** once you settle, other settlements living their own lives, and survivors with stories to hear and requests to see through. Schema version 63; 634 tests; everything pushed to origin/main.
+
+**Run it.** `npm run dev` (the game opens on a main menu), `npm run check` (typecheck + tests: run before every commit), `npm run harness -- <name>` (balance players, a benchmark, a profiler: see harness/ and "Harness" below).
+
+**Next, in order.**
+1. **The player's playtest.** Nobody human has played since the control prototype; everything since is tested headless only. The questions it should answer: does tile-to-tile movement feel right under WASD; does combat feel right; is solo Apocalypse survivable; do talks, tasks, wishes, moodlets, resolve and the body meters add up to fun or noise.
+2. Then, by what the playtest says: movement and combat feel (smooth sub-tile movement if tiles feel stiff; wind-ups, shoves, lunges); an inventory rework (weight, a backpack, containers); the visual target (isometric or top-down) and z-levels for multi-storey buildings; neighbours with more life of their own (caravans, alliances, feuds).
+3. Smaller, any time: a How to play screen (left out of the menu by request); teach the solo harness to barricade, forage and hunt and re-run it; the sim in a Web Worker; compress the grid in saves; a Godot port plan (the tests are the spec).
+
+**Working agreements (the player's).** Push only when the player says so, every time. Commit only on a green `npm run check`. Log every non-trivial change in the Session log below (what, numbers, what's left). Ask before adding dependencies. Tone: grim, no humour. The player likes to approve a batch ("do 1-5") and then have it built and checked end to end, with browser checks for anything visible.
+
+**Controls.** Colony: left click selects, right click moves, B build bar (1-0 tools, Tab/E/Q categories, Shift for instant), P priorities, O overview, M minimap, Space pause, 1x/2x/4x buttons, ` debug panel (with tick/draw ms), Esc cancels then opens the menu. Direct control (F on the selected survivor, F again to let go): WASD/arrows walk (8 ways), Shift run, click swing or shoot, right-click or E use (pick up, wear, eat, drink, sleep, treat yourself, search; E underfoot forages on grass by day or sleeps), R work the tile in front (repair; with wood: barricade a door, reinforce, build a wall), T talk, V "follow me", H "hold here", L "loot that room" (under the mouse).
+
+**Where things live (src/sim, pure and deterministic).**
+- Core: state.ts (all state; SCHEMA_VERSION), tick.ts (the order of everything each tick), commands.ts (the only way in), time.ts (clock; day length scale and onClock), rng.ts and hash.ts (sim RNG; stateless hash rolls for chances that mustn't shift the RNG stream), replay.ts, savefile.ts, scenario.ts (ASCII maps for tests), invariants.ts.
+- World: grid.ts, worldgen.ts (chunks generated lazily; map types), climate.ts (regions, radiation), seasons.ts (weather), fog.ts, herds.ts, rooms.ts, pathfinding.ts (A* with a `mover`), space.ts, breach.ts, fire.ts, noise.ts, defences.ts, towers.ts, power.ts, water.ts, farming.ts, animals.ts.
+- Colony: designations.ts -> jobs.ts (queue) -> jobChoice.ts (who takes what) -> work.ts (doing it); jobTypes.ts, items.ts, furniture.ts, crafting.ts, mess.ts, medicine.ts, planner.ts, policies.ts, director.ts (storyteller), endgame.ts (cure, evacuation, sieges), escape.ts (the helicopter, new game+).
+- Survivors: survivors.ts (movement), needs.ts (sleep, hunger, health, death), food.ts, rest.ts, health.ts, body.ts (endurance, panic, body heat, wetness), wellbeing.ts (social, comfort), mood.ts (thoughts), moodlets.ts (thoughts with effects), resolve.ts, wishes.ts, skills.ts (skills, traits), relationships.ts, leisure.ts (rec room, breakdowns), books.ts, clothing.ts, weapons.ts, wounds.ts, infection.ts, corpses.ts, family.ts, dogs.ts.
+- You: control.ts (direct control: steer, swing, use, work), handiwork.ts (build, repair, forage, hunt), orders.ts (follow, hold, loot), talk.ts and story.ts (backstories, talks, tasks), succession.ts (the death rule).
+- Others: wanderers.ts, visitors.ts (traders, raiders), prisoners.ts, radio.ts, expeditions.ts, outposts.ts, settlements.ts (reputation, gifts), colonies.ts (their off-screen life, unfolding), residents.ts (their people in person), zombies.ts, zombieKinds.ts.
+- Settings: difficulty.ts (presets; start, zombies, weather, progression, nuclear winter, day length, map type).
+- Outside the sim: render/ (draw.ts frame, drawThings.ts, drawPeople.ts, palette.ts, camera.ts, interp.ts), ui/ (menu.ts, hud.ts, input.ts, overview.ts, minimap.ts, tools.ts, buildMode.ts, saves.ts, loop.ts, view.ts), debug/ (window.game hooks, ASCII text), app.ts (wiring, frame loop), main.ts (entry, hot reload).
+
+**Harness** (harness/*.harness.ts, run with `npm run harness -- <name>`, output in harness/out/, not part of npm test or the typecheck):
+- colony: a scripted colony player on generated worlds (SEEDS, DAYS, BUDGET_MS). Balance passes 3-5 used it.
+- solo: a scripted solo player under direct control (PRESET, TRACE=1). It doesn't yet barricade, forage or hunt.
+- bench: tick cost as colonists and zombies are added; save size and memory over 10 days.
+- profile: finds the slowest tick, replays to it (determinism), and V8-profiles just that tick.
+Run several seeds in parallel as separate background processes (one SEEDS value each) to stay inside a few minutes.
+
 ## Project context (from initial planning)
 
 - **Goal:** a learning and exploration project, not a shipping product. If it proves fun, port to another engine later for better platform support. Optimise for iteration speed and a good developer feedback loop.
@@ -201,29 +233,17 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
 
 ## Open questions
 
-- **First winter (balance pass 3):** a defenceless scripted colony dies in it (days 15-18). Coats are the bottleneck (cloth is 12% of crate finds and traders don't always offer it). A playtest should say whether a human gets through; levers are cloth, coat warmth and night zombie growth.
-- **Infected rising in bed** among sleepers is brutal. Maybe the dying should be moved to the infirmary, or wake neighbours as they turn.
-- **The harness has no walls.** Teaching it to wall in the camp would make balance runs say more about a real game.
+(Pruned 2026-11-05: questions since answered by built systems were dropped; see the decisions table and the session log for those.)
 
-- **Food is still finite overall.** Scavenging adds 25 finds (5 crates) in the sandbox, ~15 of them food. A renewable source (farm plot) or more ruins further out (risk vs reward, ties into the perimeter tension) is the next question.
-- **Room labels overlap** when two designated rooms sit side by side at low zoom. Consider shortening labels or stacking them.
-- **Area tools for Remove/Cancel?** Box-dragging might suit them too.
-- **Zombie balance (2026-10-31, player call):** "one healthy survivor should be able to take a basic zombie". Zombie damage 60 → 40 and guards strike on arrival: a one-on-one fight now costs 12-15% health (was 23-29%), locked in by a balance test (healthy guard wins, keeps >= 80%). In the sandbox test night everyone ended at 98-100% (was 14% and 38%). Danger now comes from numbers, sleeping outside, or being caught tired/hungry; more zombies per night (or tougher variants) is the lever if nights feel too safe.
-- **Sleepers outdoors** wake only when hit: kept on purpose (player call).
-- **Planner scope.** Only beds so far. Next candidates: a door for a doorless room (needs remove+build of a wall tile), "plan a whole room" (walls + door + furniture from a dragged box), and auto-furnishing every designated room on a timer.
-- **Farm yield may be generous.** With a 12-plot field and nothing else, the sandbox colony survived 3 days and 9 zombies with 49 food lying around. Fewer plots, slower growth, or seasonal growth could add pressure back.
-- **Arming at night.** Guards only arm between jobs, and at night guard jobs come first, so a guard who never got a quiet moment by day fights unarmed. Fine for now; a "fetch weapon first" step in the guard job would fix it if it bites.
-- **Seat walk.** A survivor carrying food keeps walking their path to a seat that stopped being one, and only eats on arrival (without the bonus). Re-checking each step would fix it if it looks silly.
-- **Item lookups.** Still linear. Trees now give 2 wood and regrow one every 3 days (was 3 every 2), which tames the glut, but a big item pile still costs ticks; an item spatial index is the real fix.
-- **Workshop room.** Crafting works at any bench for now. A Workshop room (faster crafting, or required for some recipes) is the natural next step.
-- **Balance harness.** The headless balance runs use a scripted player (`zz-balance.test.ts`, kept out of the repo; it needs Node types). Worth committing properly (with `@types/node`) if balance passes become routine.
-- **New survivors.** Nobody joins yet, so deaths are permanent losses. Wanderers arriving by day (with a chance to recruit) would balance it.
-- **Mess hall.** Survivors eat where the food lies (often in storage). A mess hall room type (needs a table) could be the preferred place to eat, with a mood bonus later.
-- **Sleep tuning.** 2.5 min awake / ~40 s in bed at 1x is set for visibility while testing; a real day/night rhythm may want longer. Should survivors prefer beds in complete housing over stray beds? (Currently any bed.)
-- **Hover checklist placement.** The room checklist (top-left) can cover the label of a room in the top-left of the screen. Consider moving it next to the cursor.
-- **Haul distance.** Storage far from the wood pile makes hauling slow (1 item per trip). Fine for now; if it drags, consider carrying 2-3 or a "nearest storage" preference per item.
-
-- **Scale: "macro" vs colony.** The concept says macro-scale (SimCity), but the systems are colony-scale (individual survivors doing per-tile A*, like RimWorld). Plain A* is fine for 5-30 survivors. Hundreds of survivors on a town-sized map would need hierarchical pathfinding or flow fields. What is the target map size and survivor count?
+- **Is solo survivable for a human?** The scripted solo player died by day 2-5 (balance pass, 2026-11-04) before hand tools, foraging, hunting, longer days and group-sized nights; a human playtest is the real test. Watch food (2.4 a day to stay fed, 0.6x loot a year on), the crude starting weapon, and the hut door at night.
+- **Movement and combat feel.** Tile to tile at 4 ticks a tile, swings on a cooldown. Good enough under WASD, or does the sim need sub-tile positions? Decided by playtest.
+- **Colonies die in their first winter** (balance pass 5: days 17-19, just short of evacuation on day 20), with a scripted player that has no real defence plan. Levers: coats, siege size, food.
+- **Infection may be too easy** for a player who uses herbs and amputation (balance pass 5: no infection deaths).
+- **Scale: macro vs colony.** Per-survivor A* is fine for tens of people; hundreds on a big map would need hierarchical pathfinding or flow fields, an item spatial index, and an active region. See "Big worlds".
+- **Residents are still simple:** they potter, trade in person, join, or fight; no caravans, scavenging runs or alliances of their own.
+- **Infected rising in bed** among sleepers is brutal. Move the dying to the infirmary, or have them wake neighbours as they turn?
+- **Arming at night:** guards only arm between jobs, so one who never got a quiet moment by day fights unarmed.
+- **Small UI nits:** room labels overlap at low zoom; the hover checklist can cover a room's label; Remove/Cancel could use box drags.
 
 ## Dev gotchas
 
