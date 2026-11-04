@@ -71,6 +71,13 @@ export type ZombieKind = 'night' | 'static' | 'herd' | 'raider';
 export const SPAWN_MIN_DISTANCE = 8;
 /** Zombies re-pick their target and path this often. */
 export const REPATH_EVERY = 15;
+/**
+ * At most this many zombies plan a path in one tick; the rest keep to their old path (or wait
+ * a tick) and plan when there's room. Profiling: 144 zombies replanning together cost 14-20 ms
+ * in one tick; spread out, the same work never stalls a frame. Deterministic: first come in
+ * state order.
+ */
+export const PLANS_PER_TICK = 20;
 /** Survivors won't go to bed with a zombie this close (Manhattan); see needs.ts. */
 export const DANGER_RADIUS = 10;
 
@@ -219,7 +226,8 @@ export function updateZombies(state: SimState): void {
 }
 
 function updateAll(state: SimState): void {
-  for (const z of state.zombies) updateZombie(state, z);
+  const budget = { plans: PLANS_PER_TICK };
+  for (const z of state.zombies) updateZombie(state, z, budget);
   // Static zombies that came to look at a noise stop looking.
   for (const z of state.zombies) if (z.kind === 'static' && z.heading && manhattan(z.pos, z.heading) <= 1) z.heading = null;
   // Herd zombies that reached the herd's destination wander off the map.
@@ -269,7 +277,7 @@ function spawnGroup(state: SimState, n: number, health: number): void {
   logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }
 
-function updateZombie(state: SimState, z: Zombie): void {
+function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): void {
   z.cooldown = Math.max(0, z.cooldown - 1);
   if (state.tick < z.stuckUntil) return; // in a pit
 
@@ -301,7 +309,8 @@ function updateZombie(state: SimState, z: Zombie): void {
     fallInPit(state, z);
   }
 
-  if (state.tick >= z.nextThinkTick || z.path.length === 0) {
+  if ((state.tick >= z.nextThinkTick || z.path.length === 0) && budget.plans > 0) {
+    budget.plans -= 1;
     plan(state, z);
     z.nextThinkTick = state.tick + REPATH_EVERY;
   }

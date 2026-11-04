@@ -76,19 +76,42 @@ export function sourceAt(state: SimState, x: number, y: number): WaterSource | n
   return getTile(state.grid, x, y) === 'water' ? 'river' : null;
 }
 
-/** Nearest tile to stand on and drink from: clean water first, the river only if there's none. */
+/** How far (tiles searched) anyone looks for water: about a 100-tile walk. */
+export const WATER_SEARCH = 20000;
+
+/**
+ * Nearest tile to stand on and drink from: clean water first, the river only if there's none.
+ * The clean sources are looked up once, not tile by tile (profiling: on a 256 map, a thirsty
+ * crowd flooding the whole map with furniture lookups took 145 ms in one tick).
+ */
 export function findWater(state: SimState, from: Point): Drink | null {
-  for (const clean of [true, false]) {
+  const { grid } = state;
+  const clean = new Map<number, WaterSource>();
+  for (const f of state.furniture) {
+    if (f.kind === 'well') clean.set(f.y * grid.width + f.x, 'well');
+    else if (f.kind === 'collector' && f.loot > 0) clean.set(f.y * grid.width + f.x, 'collector');
+  }
+  const passes: ((x: number, y: number) => WaterSource | undefined)[] = [
+    (x, y) => clean.get(y * grid.width + x),
+    (x, y) => (getTile(grid, x, y) === 'water' && !clean.has(y * grid.width + x) ? 'river' : undefined),
+  ];
+  for (const [i, sourceOf] of passes.entries()) {
+    if (i === 0 && clean.size === 0) continue;
     let found: Drink | null = null;
-    nearestTile(state.grid, from, (x, y) => {
-      for (const n of neighbours4(state.grid, x, y)) {
-        const source = sourceAt(state, n.x, n.y);
-        if (!source || (source === 'river') === clean) continue;
-        found = { x, y, source, from: n, progress: 0 };
-        return true;
-      }
-      return false;
-    });
+    nearestTile(
+      grid,
+      from,
+      (x, y) => {
+        for (const n of neighbours4(grid, x, y)) {
+          const source = sourceOf(n.x, n.y);
+          if (!source) continue;
+          found = { x, y, source, from: n, progress: 0 };
+          return true;
+        }
+        return false;
+      },
+      WATER_SEARCH,
+    );
     if (found) return found;
   }
   return null;

@@ -165,6 +165,8 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   let accumulatorMs = 0;
   let last = performance.now();
   let fps = 0;
+  /** Smoothed costs for the debug panel (ms): one sim tick, the frame's ticks, and drawing. */
+  const perf = { tickMs: 0, simMs: 0, drawMs: 0, worstTickMs: 0 };
   const reported = new Set<string>();
   let frameId = requestAnimationFrame(function frame(now) {
     // Schedule first, so one bad frame (often a half-finished edit during
@@ -176,7 +178,15 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     try {
       const result = ticksForFrame(accumulatorMs, frameMs, view.speed, view.paused);
       accumulatorMs = result.accumulatorMs;
+      const simStart = performance.now();
       step(handle.state, result.ticks);
+      const simMs = performance.now() - simStart;
+      perf.simMs = perf.simMs * 0.9 + simMs * 0.1;
+      if (result.ticks > 0) {
+        const per = simMs / result.ticks;
+        perf.tickMs = perf.tickMs * 0.9 + per * 0.1;
+        perf.worstTickMs = Math.max(perf.worstTickMs * 0.999, per);
+      }
       if (dawns(handle.state.tick) !== lastAutosaveDawn) {
         lastAutosaveDawn = dawns(handle.state.tick);
         if (saveToSlot(AUTO_SLOT, handle.state) === null) toast(`Autosaved at dawn, day ${dayOf(handle.state.tick)}.`);
@@ -188,6 +198,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       // The camera follows whoever you're steering.
       const you = controlled(handle.state);
       if (you) view.camera = { ...view.camera, ...worldPos(you, alpha) };
+      const drawStart = performance.now();
       draw(ctx2d, handle.state, view.camera, viewport, {
         hover: view.hover,
         tool: view.tool,
@@ -196,7 +207,8 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
         showDebug: view.showDebug,
         areaDrag: view.areaDrag,
       });
-      hud.update(handle.state, fps);
+      perf.drawMs = perf.drawMs * 0.9 + (performance.now() - drawStart) * 0.1;
+      hud.update(handle.state, fps, perf);
     } catch (err) {
       const key = String(err);
       if (!reported.has(key)) {

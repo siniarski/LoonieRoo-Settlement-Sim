@@ -58,7 +58,7 @@ export interface GameFiles {
 }
 
 export interface Hud {
-  update(state: SimState, fps: number): void;
+  update(state: SimState, fps: number, perf?: Perf): void;
   dispose(): void;
 }
 
@@ -148,7 +148,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   let lastFeed = '';
 
   return {
-    update(state, fps) {
+    update(state, fps, perf) {
       const weather = state.weather === 'clear' ? '' : `, ${state.weather}`;
       const clockLine = `Day ${dayOf(state.tick)} · ${clockText(state.tick)} ${isNight(state.tick) ? '☾' : '☀'} · ${seasonOf(state.tick)}${weather}`;
       if (clockLine !== lastClock) clock.textContent = lastClock = clockLine;
@@ -210,7 +210,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
-        const lines = debugText(state, view, fps);
+        const lines = debugText(state, view, fps, perf);
         if (lines !== lastDebug) debug.textContent = lastDebug = lines;
       }
     },
@@ -879,11 +879,20 @@ function activity(state: SimState, s: Survivor): string {
 
 // --- Debug panel ------------------------------------------------------------
 
-function debugText(state: SimState, view: ViewState, fps: number): string {
+/** Frame costs from app.ts, smoothed (ms). */
+export interface Perf {
+  tickMs: number;
+  simMs: number;
+  drawMs: number;
+  worstTickMs: number;
+}
+
+function debugText(state: SimState, view: ViewState, fps: number, perf?: Perf): string {
   const problems = checkInvariants(state);
   const open = state.jobs.filter((j) => !j.reservedBy).length;
   return [
     `fps            ${fps.toFixed(0)}`,
+    ...(perf ? [`tick ms        ${perf.tickMs.toFixed(2)} (worst lately ${perf.worstTickMs.toFixed(1)})`, `sim ms/frame   ${perf.simMs.toFixed(2)}`, `draw ms/frame  ${perf.drawMs.toFixed(2)}`, `zombies/people ${state.zombies.length}/${state.survivors.length + state.residents.length}`] : []),
     `tick           ${state.tick}`,
     `speed          ${view.paused ? 'paused' : `${view.speed}x`}`,
     `map            ${state.grid.width}x${state.grid.height}`,

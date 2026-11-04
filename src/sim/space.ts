@@ -5,15 +5,16 @@ import { inBounds, isWalkable, type Grid, type Point } from './grid';
 /**
  * Nearest tile to `from` (by walking distance, BFS in N, E, S, W order) that
  * `accept` likes. Searches through walkable tiles; `from` itself may be
- * unwalkable (e.g. a tile that just became a wall). Returns null if none.
+ * unwalkable (e.g. a tile that just became a wall). Returns null if none, or if
+ * nothing turned up in the first `limit` tiles searched.
  */
-export function nearestTile(grid: Grid, from: Point, accept: (x: number, y: number) => boolean): Point | null {
+export function nearestTile(grid: Grid, from: Point, accept: (x: number, y: number) => boolean, limit = Infinity): Point | null {
   if (!inBounds(grid, from.x, from.y)) return null;
   const { width } = grid;
   const seen = new Uint8Array(width * grid.height);
   const queue: Point[] = [from];
   seen[from.y * width + from.x] = 1;
-  for (let head = 0; head < queue.length; head++) {
+  for (let head = 0; head < queue.length && head < limit; head++) {
     const p = queue[head]!;
     if (accept(p.x, p.y)) return p;
     for (const [dx, dy] of [
