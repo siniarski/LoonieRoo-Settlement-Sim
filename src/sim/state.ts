@@ -39,7 +39,7 @@ import { NORMAL, type Settings } from './difficulty';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 58;
+export const SCHEMA_VERSION = 59;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -113,6 +113,8 @@ export interface SimState {
   control: Control | null;
   /** What survivors have asked you to do (talk.ts). */
   tasks: Task[];
+  /** Tiles foraged today, by tile index -> day (handiwork.ts); cleared at dawn. */
+  foraged: Record<string, number>;
   items: Item[];
   furniture: Furniture[];
   /** Farm plots (see farming.ts). */
@@ -174,6 +176,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     leaderId: null,
     control: null,
     tasks: [],
+    foraged: {},
     items: [],
     furniture: [],
     farm: [],

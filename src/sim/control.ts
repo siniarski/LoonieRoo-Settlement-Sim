@@ -5,6 +5,7 @@
 // bleed and heal. Input arrives as commands like everything else (rule 5):
 //   steer   the held direction (sent when the keys change, not every frame)
 //   swing   attack towards a tile: the zombie in front, else a shot with a loaded gun
+//   work    repair, barricade, reinforce or build at the tile in front (handiwork.ts)
 //   use     pick up, put on, eat, search, treat yourself (medicine, a bandage), drink (a well,
 //           a rain collector, the river) or
 //           sleep (a bed; your own tile with nothing on it is the floor) at a tile next to you
@@ -13,6 +14,9 @@
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
+import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
+import { TIRED } from './rest';
+import { isNight } from './time';
 import { wakeComfort } from './wellbeing';
 import { boostDamage, swingWait } from './moodlets';
 import { freezes } from './resolve';
@@ -53,8 +57,8 @@ export interface Control {
   facing: Point;
   /** No swing or shot before this tick. */
   nextSwing: number;
-  /** A timed action in progress: searching a crate or tree, or eating. */
-  busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat'; targetId: string; progress: number; duration: number } | null;
+  /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
+  busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
 }
 
 export function controlled(state: SimState): Survivor | undefined {
@@ -101,8 +105,22 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
   const busy = c.busy!;
   if (busy.what === 'sleep') return sleepTick(state, s, c, busy);
   busy.progress += 1;
+  if (busy.what === 'repair') {
+    if (!repairTick(state, busy.targetId)) return;
+    c.busy = null;
+    s.note = 'repaired it';
+    return;
+  }
   if (busy.progress < busy.duration) return;
   c.busy = null;
+  if (busy.what === 'build') {
+    s.note = finishBuild(state, s, busy.targetId);
+    return;
+  }
+  if (busy.what === 'forage') {
+    s.note = finishForage(state, s);
+    return;
+  }
   if (busy.what === 'eat') {
     const item = getItem(state, busy.targetId);
     if (!item || (item.carriedBy !== s.id && !item.pos)) return;
@@ -195,6 +213,18 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     makeNoise(state, s.pos, 'fighting');
     const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
+  }
+  // A deer next to you, or one you're aiming at with a loaded gun (handiwork.ts).
+  const deer = state.animals.find((a) => (a.pos.x === s.pos.x + c.facing.x && a.pos.y === s.pos.y + c.facing.y) || Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) === 1)
+    ?? (loadedGun(state, s) ? state.animals.find((a) => a.pos.x === target.x && a.pos.y === target.y && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos)) : undefined);
+  if (deer) {
+    const shot = Math.abs(deer.pos.x - s.pos.x) + Math.abs(deer.pos.y - s.pos.y) > 1;
+    c.nextSwing = state.tick + (shot ? GUN_EVERY : swingWait(s, GUARD_ATTACK_EVERY));
+    if (shot) {
+      loadedGun(state, s)!.wear -= 1;
+      makeNoise(state, s.pos, 'gunfire');
+    }
+    return hitDeer(state, s, deer.id);
   }
   const gun = loadedGun(state, s);
   const shotAt = gun ? state.zombies.find((z) => z.pos.x === target.x && z.pos.y === target.y) : undefined;
@@ -293,9 +323,28 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
     dropItem(state, carried, target);
     return `put down the ${carried.kind}`;
   }
-  // Nothing at all underfoot: sleep rough.
-  if (samePoint(target, s.pos)) return lieDown(s, c, 'floor');
+  // Nothing at all underfoot: sleep rough if tired or it's night, else forage if you can.
+  if (samePoint(target, s.pos)) {
+    if (s.rest < TIRED || isNight(state.tick)) return lieDown(s, c, 'floor');
+    const why = canForage(state, s);
+    if (why) return why;
+    c.busy = { what: 'forage', targetId: 'here', progress: 0, duration: FORAGE_TICKS };
+    return 'foraging';
+  }
   return null;
+}
+
+/** Work the tile in front: repair, barricade, reinforce or build (handiwork.ts). Returns what happened, or why not (null: no). */
+export function work(state: SimState, s: Survivor, target: Point): string {
+  const c = state.control!;
+  if (s.move) return 'not while moving';
+  if (!nextTo(s.pos, target)) return 'too far to reach';
+  const face = towards(s.pos, target);
+  if (face) c.facing = face;
+  const job = startWork(state, s, target);
+  if (typeof job === 'string') return job;
+  c.busy = { ...job, progress: 0 };
+  return job.what === 'repair' ? 'repairing' : 'building';
 }
 
 function lieDown(s: Survivor, c: Control, where: string): string {

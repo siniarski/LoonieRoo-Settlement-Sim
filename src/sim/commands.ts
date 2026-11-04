@@ -42,7 +42,7 @@ import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
 import { ignite } from './fire';
-import { controlled, isControlled, swing, use } from './control';
+import { controlled, isControlled, swing, use, work } from './control';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -122,6 +122,8 @@ export type Command =
   | { type: 'steer'; dx: number; dy: number }
   | { type: 'swing'; x: number; y: number }
   | { type: 'use'; x: number; y: number }
+  /** Under control: repair, barricade, reinforce or build at a tile next to you (handiwork.ts). */
+  | { type: 'work'; x: number; y: number }
   /** Group orders (orders.ts): follow whoever you control, hold a spot (here, or where they stand), or settle into the colony's jobs. */
   | { type: 'setOrder'; survivorId: string; order: OrderKind; x?: number; y?: number }
   /** The same order to everyone within earshot of the survivor you control. */
@@ -148,6 +150,14 @@ export function applyCommand(state: SimState, command: Command): CommandResult {
 
 function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'takeControl') return takeControl(state, command.survivorId);
+  if (command.type === 'work') {
+    const s = controlled(state);
+    if (!s) return reject('nobody is under control');
+    if (!Number.isInteger(command.x) || !Number.isInteger(command.y)) return reject('not a tile');
+    const done = work(state, s, command);
+    s.note = done;
+    return state.control!.busy ? changed() : reject(done);
+  }
   if (command.type === 'steer' || command.type === 'swing' || command.type === 'use') {
     const s = controlled(state);
     if (!s) return reject('nobody is under control');

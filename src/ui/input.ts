@@ -15,7 +15,8 @@
 //   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep) · E  use what's in front,
 //                else underfoot (on a bed, or bare floor: sleep)
 //   V  shout "follow me" to everyone near · H  shout "hold here" (each where they stand) · T  talk to whoever's nearest
-//   L  shout "loot that room" (the one under the mouse)
+//   L  shout "loot that room" (the one under the mouse) · R  work the tile in front (repair; with wood:
+//      barricade a door, reinforce a wall, build a wall)
 // Always:
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
 //   P priorities · M minimap · Space pause · ` debug panel · Home recentre
@@ -221,6 +222,10 @@ export function attachInput(ctx: InputContext): Input {
     } else if (key === 'f') {
       if (ctx.control()) ctx.command({ type: 'takeControl', survivorId: null });
       else if (view.selectedId) ctx.command({ type: 'takeControl', survivorId: view.selectedId });
+    } else if (key === 'r' && ctx.control()) {
+      const c = ctx.control()!;
+      const at = ctx.controlledPos()!;
+      ctx.command({ type: 'work', x: at.x + c.facing.x, y: at.y + c.facing.y });
     } else if (key === 'l' && ctx.control() && view.hover) {
       ctx.command({ type: 'shout', order: 'loot', x: view.hover.x, y: view.hover.y });
     } else if (key === 't' && ctx.control()) {

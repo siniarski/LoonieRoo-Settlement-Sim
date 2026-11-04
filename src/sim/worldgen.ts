@@ -248,7 +248,16 @@ function startCamp(state: SimState, l: Layout): void {
     const s = addSurvivor(state, sx + dx, sy + 1);
     s.traits = rollTraits(s.id);
   }
-  if (solo) state.control = { survivorId: state.survivors[0]!.id, dx: 0, dy: 0, facing: { x: 0, y: 1 }, nextSwing: 0, busy: null };
+  if (solo) {
+    const you = state.survivors[0]!;
+    state.control = { survivorId: you.id, dx: 0, dy: 0, facing: { x: 0, y: 1 }, nextSwing: 0, busy: null };
+    // What you set out with: something to swing, and a bandage.
+    const weapon = spawnItem(state, 'weapon', you.pos.x, you.pos.y);
+    weapon.pos = null;
+    weapon.carriedBy = you.id;
+    you.weapon = weapon.id;
+    spawnItem(state, 'bandage', you.pos.x, you.pos.y);
+  }
   for (let i = 0; i < (solo ? 4 : 12); i++) spawnItem(state, 'wood', sx - 6 + (i % 4), sy + 3 + Math.floor(i / 4));
   for (let i = 0; i < (solo ? 4 : 10); i++) spawnItem(state, 'food', sx + 3 + (i % 4), sy + 3 + Math.floor(i / 4));
   // A rain collector with some water in it, so nobody has to find the river on day one.
