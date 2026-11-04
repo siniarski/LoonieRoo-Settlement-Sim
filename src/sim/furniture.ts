@@ -59,7 +59,7 @@ export interface Furniture {
 
 /** Containers (crates) and decor in generated buildings (buildings.ts). */
 export const CONTAINER_LOOKS = ['counter', 'icebox', 'shelf', 'wardrobe', 'dresser', 'cabinet', 'toolbox', 'locker', 'desk', 'pallet', 'sack', 'crate'] as const;
-export const DECOR_LOOKS = ['sofa', 'bed', 'toilet', 'bath', 'table', 'oven', 'tv', 'car', 'pew', 'altar', 'hay', 'tractor', 'pump', 'bench', 'cot', 'register', 'machine'] as const;
+export const DECOR_LOOKS = ['sofa', 'bed', 'toilet', 'bath', 'table', 'oven', 'tv', 'car', 'pew', 'altar', 'hay', 'tractor', 'pump', 'bench', 'cot', 'register', 'machine', 'silo'] as const;
 export type Look = (typeof CONTAINER_LOOKS)[number] | (typeof DECOR_LOOKS)[number];
 
 /**

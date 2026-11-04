@@ -390,7 +390,7 @@ export function barnPlan(r: Rolls, maxW: number, maxH: number): Plan {
   const W = Math.min(maxW, between(r(2), 9, 13));
   const H = Math.min(maxH, between(r(3), 8, 10));
   const p = newPlan(W, H, 'barn', 1);
-  box(p, 0, 0, W - 1, H - 1, 'dirt');
+  box(p, 0, 0, W - 1, H - 1, 'concrete');
   const mid = Math.floor(W / 2);
   door(p, mid - 1, H - 1);
   door(p, mid, H - 1);

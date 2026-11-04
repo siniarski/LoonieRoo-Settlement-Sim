@@ -5,8 +5,8 @@
 //   commercial   four lots of shops; a petrol station gets a paved forecourt with pumps
 //   centre       one civic building on a paved square
 //   industrial   one warehouse or factory on a paved yard
-//   farmland     four quadrants between dirt tracks: fields, woodlots, rough grass; about half
-//                have a farmstead (farmhouse, barn, shed) on one side
+//   farmland     four quadrants between dirt tracks: fields in crop rows, orchards, pasture and
+//                woodlots, hedged; most have a farmstead (farmhouse, barn, shed, silo) on one side
 //   wild         now and then a cabin or a shed
 //
 // Stamping: walls fall in with the settings' ruin decay (outer walls more than inner ones), some
@@ -108,26 +108,60 @@ function pickShop(r: number): 'grocery' | 'pharmacy' | 'hardware' | 'bar' | 'sta
   return 'office';
 }
 
-/** Four fields between dirt tracks; maybe a farmstead on one side of the cross track. */
+/**
+ * Farmland: four quadrants between dirt tracks. Most farm blocks have a farmstead on one side
+ * (a dirt yard with the farmhouse, a barn, maybe a shed, a silo, hay bales and a tractor); the
+ * other quadrants are fields in crop rows, orchards, pasture or woodlots, hedged with trees
+ * (a gap in each hedge on the track side).
+ */
 function farm(state: SimState, site: Site, x0: number, y0: number): void {
   const roll = (k: number) => hashRoll(site.seed, x0, y0, 0x8100 + k);
   const half = BLOCK / 2;
-  const top = roll(1) < 0.5; // the farmstead's side
-  const stead = roll(0) < 0.5;
-  for (let y = y0; y < y0 + BLOCK; y++) {
-    for (let x = x0; x < x0 + BLOCK; x++) {
-      if (site.blocked(x, y) || site.road(x, y) || getTile(state.grid, x, y) !== 'floor') continue;
-      const track = x === x0 + half || y === y0 + half;
-      const qx = x < x0 + half ? 0 : 1;
-      const qy = y < y0 + half ? 0 : 1;
-      if (track) groundAt(state, x, y, 'dirt');
-      else if (stead && (qy === 0) === top) continue; // the yard stays grass
-      else {
-        // Each quadrant: a field, a woodlot (trees come later, worldgen.ts), or rough grass.
-        const q = roll(10 + qx + 2 * qy);
-        if (q < 0.55) groundAt(state, x, y, 'field');
-        else if (q < 0.85) groundAt(state, x, y, 'forest');
+  // The farmstead's side: the dry one (a lake on a side would leave a yard with no house).
+  const dry = (upper: boolean) => {
+    for (let y = upper ? y0 : y0 + half; y < (upper ? y0 + half : y0 + BLOCK); y++) for (let x = x0; x < x0 + BLOCK; x++) if (site.blocked(x, y)) return false;
+    return true;
+  };
+  const first = roll(1) < 0.5;
+  const top = dry(first) ? first : !first;
+  const stead = roll(0) < 0.8 && dry(top);
+  const open = (x: number, y: number) => !site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor';
+  // The cross tracks.
+  for (let i = 0; i < BLOCK; i++) {
+    if (open(x0 + half, y0 + i)) groundAt(state, x0 + half, y0 + i, 'dirt');
+    if (open(x0 + i, y0 + half)) groundAt(state, x0 + i, y0 + half, 'dirt');
+  }
+  for (let q = 0; q < 4; q++) {
+    const qx = q % 2;
+    const qy = Math.floor(q / 2);
+    // The quadrant, in from the block's edge (a main road may run there) and off the tracks.
+    const ax = qx === 0 ? x0 + 2 : x0 + half + 1;
+    const ay = qy === 0 ? y0 + 2 : y0 + half + 1;
+    const bx = qx === 0 ? x0 + half - 1 : x0 + BLOCK - 1;
+    const by = qy === 0 ? y0 + half - 1 : y0 + BLOCK - 1;
+    if (stead && (qy === 0) === top) {
+      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y)) groundAt(state, x, y, 'dirt');
+      continue;
+    }
+    const use = roll(10 + q);
+    if (use < 0.25) {
+      // A woodlot: its trees come with the wild woods' (worldgen.ts).
+      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y)) groundAt(state, x, y, 'forest');
+      continue;
+    }
+    hedge(state, site, ax, ay, bx, by, qx, qy, roll(20 + q));
+    if (use < 0.7) {
+      // A field in crop rows, running one way or the other.
+      const across = roll(30 + q) < 0.5;
+      for (let y = ay + 1; y < by; y++) {
+        for (let x = ax + 1; x < bx; x++) if (open(x, y)) groundAt(state, x, y, (across ? y - ay : x - ax) % 2 === 1 ? 'field' : 'dirt');
       }
+    } else if (use < 0.85) {
+      // An orchard: trees in rows.
+      for (let y = ay + 2; y < by - 1; y += 3) for (let x = ax + 2; x < bx - 1; x += 3) if (open(x, y) && !furnitureAt(state, x, y)) addFurniture(state, 'tree', x, y);
+    } else {
+      // Pasture: grass, and a few bales left out.
+      for (let i = 0; i < 3; i++) decorAt(state, site, ax + 2 + Math.floor(roll(40 + q * 4 + i) * (bx - ax - 3)), ay + 2 + Math.floor(roll(60 + q * 4 + i) * (by - ay - 3)), 'hay');
     }
   }
   if (!stead) return;
@@ -135,11 +169,49 @@ function farm(state: SimState, site: Site, x0: number, y0: number): void {
   const ly = top ? y0 + 1 : y0 + half + 1;
   const facing: Facing = top ? 'south' : 'north';
   const r: Rolls = (k) => hashRoll(site.seed, x0, y0, 0x8200 + k);
-  place(state, site, housePlan(r, { maxW: half - 3, maxH: half - 4, garage: false }), { x: x0 + 1, y: ly, w: half - 2, h: half - 2 }, facing, 1, r);
+  place(state, site, housePlan(r, { maxW: half - 3, maxH: half - 4, garage: false }), { x: x0 + 2, y: ly, w: half - 3, h: half - 2 }, facing, 1, r); // x0 + 1 may be a main road
   const rb: Rolls = (k) => hashRoll(site.seed, x0, y0, 0x8300 + k);
   place(state, site, barnPlan(rb, half - 3, half - 6), { x: x0 + half + 1, y: ly, w: half - 2, h: half - 2 }, facing, 1, rb);
   const rs: Rolls = (k) => hashRoll(site.seed, x0, y0, 0x8400 + k);
   if (rs(0) < 0.6) place(state, site, shedPlan(rs), { x: x0 + half + 1, y: ly, w: half - 2, h: half - 2 }, facing === 'south' ? 'north' : 'south', 0, rs);
+  // The yard: a silo (2 x 2) in a far corner, bales and a tractor on whatever dirt is left.
+  const sy = top ? y0 + 2 : y0 + BLOCK - 2;
+  const sx = roll(2) < 0.5 ? x0 + 2 : x0 + BLOCK - 3;
+  const dys = top ? [0, 1] : [0, -1];
+  if (dys.every((dy) => [0, 1].every((dx) => yard(state, site, sx + dx, sy + dy)))) {
+    for (const dy of dys) for (const dx of [0, 1]) yardDecor(state, site, sx + dx, sy + dy, 'silo');
+  }
+  const yardY = top ? y0 + half - 2 : y0 + half + 2;
+  for (let i = 0; i < 6; i++) {
+    const x = x0 + 2 + Math.floor(roll(80 + i) * (BLOCK - 4));
+    const y = yardY + (top ? -1 : 1) * Math.floor(roll(90 + i) * 3);
+    yardDecor(state, site, x, y, i === 0 ? 'tractor' : 'hay');
+  }
+}
+
+/** A hedge of trees round a quadrant, with a gate in the side facing the cross track. */
+function hedge(state: SimState, site: Site, ax: number, ay: number, bx: number, by: number, qx: number, qy: number, r: number): void {
+  const gx = Math.floor((ax + bx) / 2);
+  const gy = Math.floor((ay + by) / 2);
+  const trackX = qx === 0 ? bx : ax;
+  const trackY = qy === 0 ? by : ay;
+  for (let y = ay; y <= by; y++) {
+    for (let x = ax; x <= bx; x++) {
+      if (x !== ax && x !== bx && y !== ay && y !== by) continue;
+      if ((x === trackX && Math.abs(y - gy) <= 1) || (y === trackY && Math.abs(x - gx) <= 1)) continue; // the gate
+      if (hashRoll(site.seed, x, y, 0x8500) > 0.7 + r * 0.2) continue; // grown thin
+      if (!site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y)) addFurniture(state, 'tree', x, y);
+    }
+  }
+}
+
+/** Open farmyard: dirt with nothing on it (buildings have floors of their own). */
+function yard(state: SimState, site: Site, x: number, y: number): boolean {
+  return !site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y) && GROUNDS[state.grid.ground[tileIndex(state.grid, x, y)]!] === 'dirt';
+}
+
+function yardDecor(state: SimState, site: Site, x: number, y: number, look: 'silo' | 'hay' | 'tractor'): void {
+  if (yard(state, site, x, y)) addFurniture(state, 'decor', x, y).look = look;
 }
 
 /** A petrol station's forecourt: paving between the shop and the street, two pumps on it. */
@@ -154,7 +226,7 @@ function pave(state: SimState, site: Site, r: { x: number; y: number; w: number;
   for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (!site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor') groundAt(state, x, y, g);
 }
 
-function decorAt(state: SimState, site: Site, x: number, y: number, look: 'bench' | 'pump'): void {
+function decorAt(state: SimState, site: Site, x: number, y: number, look: 'bench' | 'pump' | 'hay'): void {
   if (site.blocked(x, y) || site.road(x, y) || getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) return;
   addFurniture(state, 'decor', x, y).look = look;
 }

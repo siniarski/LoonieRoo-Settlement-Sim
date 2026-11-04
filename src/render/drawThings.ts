@@ -155,7 +155,7 @@ const LOOKS: Record<Look, [string, number, number]> = {
   table: ['#5e4632', 0.75, 0.75], oven: ['#3a3a3c', 0.7, 0.7], tv: ['#1e1e22', 0.7, 0.25], car: ['#5a2a24', 0.95, 0.95],
   pew: ['#5a4028', 0.95, 0.35], altar: ['#c8b070', 0.8, 0.5], hay: ['#b8a050', 0.85, 0.85], tractor: ['#8a3a20', 0.9, 0.9],
   pump: ['#a0302a', 0.4, 0.6], bench: ['#6a5a40', 0.8, 0.3], cot: ['#7a8a7a', 0.6, 0.9], register: ['#4a4a4a', 0.5, 0.4],
-  machine: ['#4a5058', 0.9, 0.9],
+  machine: ['#4a5058', 0.9, 0.9], silo: ['#8a9098', 1, 1],
 };
 
 /** A slatted crate: dull when searched out, yellow dashed outline when marked, pips for finds left. */
