@@ -236,17 +236,20 @@ function statusText(state: SimState, view: ViewState): string {
   const selected = state.survivors.find((s) => s.id === view.selectedId);
   const wood = state.items.filter((i) => i.kind === 'wood').length;
   const food = state.items.filter((i) => i.kind === 'food' || i.kind === 'meal').length;
-  const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : 'select';
+  const mode = view.tool ? `building: ${getTool(view.tool).label}` : view.buildOpen ? 'build: pick a tool' : '';
+  const you = state.control?.survivorId === selected?.id;
+  const place = hover && tile
+    ? state.grid.explored[hover.y * width + hover.x] === 1
+      ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}${state.world ? ` · ${climateAt(state, hover.x, hover.y)}${isRadioactive(state, hover.x, hover.y) ? ' · RADIOACTIVE' : ''}` : ''}`
+      : `(${hover.x}, ${hover.y}) unexplored`
+    : '';
+  // Short, one line: what you're doing, what's under the mouse, the stores. (The tick is in the debug panel.)
   return [
     mode,
-    selected ? `${selected.name} selected (right-click to move, click a bed to give it to them)` : 'nobody selected',
-    hover && tile ? (state.grid.explored[hover.y * width + hover.x] === 1 ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}${state.world ? ` · ${climateAt(state, hover.x, hover.y)} region${isRadioactive(state, hover.x, hover.y) ? ' · RADIOACTIVE' : ''}` : ''}` : `(${hover.x}, ${hover.y}) unexplored`) : '—',
-    `tick ${state.tick}`,
-    `jobs ${state.jobs.length}`,
-    `wood ${wood}`,
-    `food ${food}`,
-    ...(state.zombies.length > 0 ? [`ZOMBIES ${state.zombies.length}`] : []),
-  ].join('  ·  ');
+    selected && !you ? `${selected.name}: right-click to move` : '',
+    place,
+    `wood ${wood} · food ${food} · jobs ${state.jobs.length}`,
+  ].filter((x) => x !== '').join('  ·  ');
 }
 
 /** " · crate (3 left, marked)" etc. for the hovered tile's furniture, or ''. */
