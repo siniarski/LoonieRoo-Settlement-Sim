@@ -60,6 +60,11 @@ export const ZOMBIE_DAMAGE = 40;
 /** What a spike trap does to the zombie that steps on it. */
 export const TRAP_DAMAGE = 100;
 export const ZOMBIE_ATTACK_EVERY = 10;
+/** A bite is wound up this many ticks first (shown), and lands only if they're still in reach. Part of ZOMBIE_ATTACK_EVERY, so biting keeps its rhythm; only the first bite comes later. */
+export const WINDUP_TICKS = 4;
+/** A blow from the survivor you control staggers a zombie this long (no biting, no moving) and shoves it back SHOVE (brutes half as far). */
+export const STAGGER_TICKS = 6;
+export const SHOVE = 96;
 /** Zombies on night 1; every night after brings one more. (Was 4: too much for night one.) */
 export const FIRST_NIGHT_ZOMBIES = 2;
 /** Safety cap on zombies alive at once (not a balance lever). */
@@ -112,6 +117,12 @@ export interface Zombie {
   screamed: boolean;
   /** In a pit until this tick (defences.ts). */
   stuckUntil: number;
+  /** Ticks left winding up a bite, or 0. */
+  windup: number;
+  /** Staggered by a blow until this tick. */
+  staggerUntil: number;
+  /** Tick it was last hurt, -1 if never (the renderer flashes it). */
+  hurtTick: number;
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
@@ -135,6 +146,9 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
     variant: 'walker',
     screamed: false,
     stuckUntil: 0,
+    windup: 0,
+    staggerUntil: 0,
+    hurtTick: -1,
   };
   state.zombies.push(z);
   return z;
@@ -292,14 +306,23 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
   z.move = null;
   followTile(z, 1);
   if (state.tick < z.stuckUntil) return; // in a pit
+  if (state.tick < z.staggerUntil) return; // reeling from a blow
 
-  // Someone within reach: attack instead of moving.
+  // Someone within reach: wind up, then bite (if they're still there) instead of moving.
   {
     const reachable = state.survivors.filter((s) => inReach(s, z));
     const victim = reachable.find((s) => s.id === z.targetId) ?? reachable[0];
     if (victim) {
-      if (z.cooldown === 0) hit(state, z, victim);
+      if (z.windup > 0) {
+        z.windup -= 1;
+        if (z.windup === 0) hit(state, z, victim);
+      } else if (z.cooldown === 0) z.windup = WINDUP_TICKS;
       return;
+    }
+    // They stepped out of reach mid-windup: the bite closes on air.
+    if (z.windup > 0) {
+      z.windup = 0;
+      z.cooldown = WINDUP_TICKS;
     }
     // Nobody to hit but a dog: the dog, then.
     const dog = state.dogs.find((d) => inReach(d, z));
@@ -531,7 +554,22 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
     maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);
     if (was === null && s.infection !== null) s.bitten = limb;
   }
-  z.cooldown = ZOMBIE_ATTACK_EVERY;
+  z.cooldown = ZOMBIE_ATTACK_EVERY - WINDUP_TICKS;
+}
+
+/** A blow from you: the zombie reels (no biting or moving for STAGGER_TICKS, any windup lost) and is shoved away from `from`, sliding along walls. */
+export function knockBack(state: SimState, z: Zombie, from: Point): void {
+  z.staggerUntil = state.tick + STAGGER_TICKS;
+  z.windup = 0;
+  const v = toward(z.at.x - from.x, z.at.y - from.y, z.variant === 'brute' ? SHOVE / 2 : SHOVE);
+  z.at = slide(state.grid, z.at, v.x, v.y, moverOf(z));
+  const tile = tileOf(z.at);
+  if (tile.x !== z.pos.x || tile.y !== z.pos.y) {
+    // Shoved onto another tile: that's where it is now, and it thinks again from there.
+    z.pos = tile;
+    z.path = [];
+    z.nextThinkTick = state.tick;
+  }
 }
 
 /** Spikes: TRAP_DAMAGE to a zombie stepping on a trap. A spent trap goes, leaving a plan to rebuild it. Returns true if the zombie died. */
@@ -555,6 +593,7 @@ function springTrap(state: SimState, z: Zombie): boolean {
 /** A guard's blow. Returns true if the zombie died (and was removed). */
 export function damageZombie(state: SimState, z: Zombie, amount: number, by: Survivor): boolean {
   z.health = Math.max(0, z.health - amount);
+  z.hurtTick = state.tick;
   if (z.health > 0) return false;
   removeZombie(state, z);
   by.kills += 1;

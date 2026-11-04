@@ -6,7 +6,8 @@ import type { Point } from '../sim/grid';
 import { getJob } from '../sim/jobs';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_LOW, HEALTH_MAX } from '../sim/health';
-import type { Zombie } from '../sim/zombies';
+import { WINDUP_TICKS, type Zombie } from '../sim/zombies';
+import { SUB, SWING_REACH } from '../sim/motion';
 import { REST_MAX, TIRED } from '../sim/rest';
 import type { SimState } from '../sim/state';
 import type { Survivor } from '../sim/survivors';
@@ -88,6 +89,9 @@ export function drawWanderer(ctx: CanvasRenderingContext2D, camera: Camera, view
   }
 }
 
+/** How long a swing's arc stays on screen, in ticks. */
+const SWING_SHOWN = 3;
+
 export function drawZombie(
   ctx: CanvasRenderingContext2D,
   camera: Camera,
@@ -117,8 +121,18 @@ export function drawZombie(
       ctx.setLineDash([]);
     }
   }
-  ctx.fillStyle = z.kind === 'raider' ? '#9a5a4a' : { walker: COLOURS.zombie, runner: '#8fbf5a', brute: '#4f6b3a', screamer: '#9a7ab8', crawler: '#6a7a5a' }[z.variant];
-  ctx.strokeStyle = COLOURS.zombieOutline;
+  // Winding up a bite: a red ring closing in. Just hit: a pale flash. Reeling: a grey outline.
+  if (z.windup > 0) {
+    const t = Math.min(1, (WINDUP_TICKS - z.windup + options.alpha) / WINDUP_TICKS);
+    ctx.strokeStyle = COLOURS.windup;
+    ctx.lineWidth = 1.5 + 2 * t;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius + 2 + 6 * (1 - t), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const flash = state.tick - z.hurtTick < 2;
+  ctx.fillStyle = flash ? COLOURS.hitFlash : z.kind === 'raider' ? '#9a5a4a' : { walker: COLOURS.zombie, runner: '#8fbf5a', brute: '#4f6b3a', screamer: '#9a7ab8', crawler: '#6a7a5a' }[z.variant];
+  ctx.strokeStyle = state.tick < z.staggerUntil ? COLOURS.staggered : COLOURS.zombieOutline;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -196,6 +210,21 @@ export function drawSurvivor(
     ctx.moveTo(p.x + fx * (radius + 2), p.y + fy * (radius + 2));
     ctx.lineTo(p.x + fx * (radius + size * 0.35), p.y + fy * (radius + size * 0.35));
     ctx.stroke();
+    // A swing: the arc it covers (reach, 60 degrees each side of facing), fading over SWING_SHOWN ticks.
+    const age = state.tick + options.alpha - (control.swungTick ?? -99);
+    if (age >= 0 && age < SWING_SHOWN) {
+      const facing = Math.atan2(fy, fx);
+      const reach = (SWING_REACH / SUB) * size;
+      ctx.save();
+      ctx.globalAlpha = 0.55 * (1 - age / SWING_SHOWN);
+      ctx.fillStyle = COLOURS.swing;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.arc(p.x, p.y, reach, facing - Math.PI / 3, facing + Math.PI / 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
     if (control.busy) {
       const w = Math.max(12, size);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';

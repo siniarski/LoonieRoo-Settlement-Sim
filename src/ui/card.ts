@@ -7,6 +7,7 @@
 // conditionsOf and barsOf are plain functions of state, so tests can check them without a DOM.
 
 import { COLD, FREEZING, PANICKING, SOAKED, WINDED } from '../sim/body';
+import { CLUTCHED_MIN, CLUTCH_PCT, clutchedBy } from '../sim/control';
 import { HUNGRY, SATIETY_MAX } from '../sim/food';
 import { HEALTH_MAX, isCritical, isHurt } from '../sim/health';
 import { getJob } from '../sim/jobs';
@@ -46,6 +47,11 @@ export function conditionsOf(state: SimState, s: Survivor): Condition[] {
   else if (isHurt(s.health)) add('hurt', 'Hurt', '♥', 'mild', 'Walks and works slower until healed.');
   if (s.wound) add('wound', `Hurt ${s.wound.limb}`, '✚', 'mild', `A wounded ${s.wound.limb}, healing.`);
   if (s.sick !== null) add('sick', 'Sick', '☁', 'mild', 'Something they ate or drank. It will pass.');
+  const clutching = clutchedBy(state, s);
+  if (clutching > 0) {
+    const slowed = Math.min(100 - CLUTCHED_MIN, CLUTCH_PCT * clutching);
+    add('grabbed', clutching > 1 ? `Grabbed (${clutching})` : 'Grabbed', '✋', clutching > 1 ? 'bad' : 'mild', `The dead within reach drag at you: ${slowed}% slower. Hit them to break free.`);
+  }
   if (s.panic > PANICKING) add('panicking', 'Panicking', '!', 'bad', 'Some swings miss, and it weighs on mood. Ebbs when the dead are gone.');
   if (s.satiety === 0) add('starving', 'Starving', '◒', 'bad', 'Losing health for want of food.');
   else if (s.satiety < HUNGRY) add('hungry', 'Hungry', '◒', 'mild', 'Needs to eat soon.');

@@ -77,7 +77,7 @@ describe('clothing', () => {
     armour.wear = GARMENT_LIFE.armour - 1;
     s.health = HEALTH_MAX;
     const z = addZombie(state, s.pos.x, s.pos.y + 1, 200, 'static');
-    z.cooldown = 0;
+    z.windup = 1; // the bite lands this tick
     tick(state);
     expect(HEALTH_MAX - s.health).toBe(Math.round((ZOMBIE_DAMAGE * 70) / 100));
     expect(s.body).toBeNull();

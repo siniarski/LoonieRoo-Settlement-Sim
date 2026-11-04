@@ -78,7 +78,9 @@ describe('traits', () => {
     fight.survivors[0]!.priorities = { ...NO_JOBS };
     fight.survivors[0]!.traits = ['tough'];
     runUntil(fight, () => fight.survivors[0]!.health < 1000, 50);
-    expect(1000 - fight.survivors[0]!.health).toBe(Math.round((ZOMBIE_DAMAGE * 3) / 4));
+    // Awake healing (a point every few ticks) can land on the bite's tick.
+    expect(1000 - fight.survivors[0]!.health).toBeGreaterThanOrEqual(Math.round((ZOMBIE_DAMAGE * 3) / 4) - 1);
+    expect(1000 - fight.survivors[0]!.health).toBeLessThanOrEqual(Math.round((ZOMBIE_DAMAGE * 3) / 4));
   });
 
   it("a wanderer's traits show before you decide, and come with them when taken in", () => {

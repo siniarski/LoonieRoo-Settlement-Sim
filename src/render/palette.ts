@@ -95,6 +95,11 @@ export const COLOURS = {
   enemy: '#d0584a',
   radiation: 'rgba(140, 255, 60, 0.18)',
   zombieOutline: '#1f2a14',
+  /** Fights (drawPeople.ts): your swing's arc, a zombie winding up a bite, one just hit, one reeling. */
+  swing: '#f0e2b0',
+  windup: '#e0483a',
+  hitFlash: '#f2e6d8',
+  staggered: '#9a9a8a',
   zombieEye: '#ff5a4a',
   zombieChase: 'rgba(255, 90, 74, 0.6)',
   foodCan: '#b9c2c9',

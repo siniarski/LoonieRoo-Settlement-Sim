@@ -47,7 +47,7 @@ import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
 import { SUB, SWING_REACH, centre, fits, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
-import { damageZombie, type Zombie } from './zombies';
+import { damageZombie, knockBack, type Zombie } from './zombies';
 
 export interface Control {
   survivorId: string;
@@ -58,10 +58,23 @@ export interface Control {
   facing: Point;
   /** No swing or shot before this tick. */
   nextSwing: number;
+  /** Tick of the last swing, -1 if none (the renderer draws its arc). */
+  swungTick?: number;
   /** Holding Shift: a tick quicker a tile, for endurance (body.ts). */
   running?: boolean;
   /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
   busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
+}
+
+/** Each zombie within reach slows you this much (percent), to no less than CLUTCHED_MIN. */
+export const CLUTCH_PCT = 20;
+export const CLUTCHED_MIN = 40;
+
+/** How many of the dead are within reach of someone, clutching at them (not staggered ones). */
+export function clutchedBy(state: SimState, s: Survivor): number {
+  let n = 0;
+  for (const z of state.zombies) if (z.kind !== 'raider' && state.tick >= z.staggerUntil && inReach(s, z)) n++;
+  return n;
 }
 
 export function controlled(state: SimState): Survivor | undefined {
@@ -82,8 +95,10 @@ export function updateControlled(state: SimState, s: Survivor): void {
     c.facing = { x: c.dx, y: c.dy };
     const run = c.running === true && !isWinded(s);
     if (run) exert(s, RUN_TICK_COST);
+    // The dead within reach drag at you: each takes CLUTCH_PCT off, down to CLUTCHED_MIN.
+    const pct = Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT * clutchedBy(state, s)) * (run ? RUN_PCT : 100);
     const walk = Math.round(SUB / stepPace(state, s, s.pos));
-    const v = toward(c.dx, c.dy, run ? Math.round((walk * RUN_PCT) / 100) : walk);
+    const v = toward(c.dx, c.dy, Math.round((walk * pct) / 10000));
     // Caught in a closed doorway (taken over mid-step, say): walk out as a colonist would.
     s.at = slide(state.grid, s.at, v.x, v.y, fits(state.grid, s.at, 'free') ? 'free' : 'survivor');
     const tile = tileOf(s.at);
@@ -199,22 +214,26 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   }
   if (near && panicMiss(state, s)) {
     c.nextSwing = state.tick + wait;
+    c.swungTick = state.tick;
     exert(s, SWING_COST);
     return 'missed: your hands are shaking';
   }
   if (near) {
     c.nextSwing = state.tick + wait;
+    c.swungTick = state.tick;
     exert(s, SWING_COST);
     makeNoise(state, s.pos, 'fighting');
     const full = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
     const blow = isWinded(s) ? Math.round((full * WINDED_DAMAGE_PCT) / 100) : full;
     const killed = damageZombie(state, near, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s);
     if (killed) wearWeapon(state, s);
+    else knockBack(state, near, s.at);
     return killed ? 'killed it' : 'hit it';
   }
   const person = residentToHit(state, s.at, c.facing);
   if (person) {
     c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
+    c.swungTick = state.tick;
     makeNoise(state, s.pos, 'fighting');
     const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
@@ -244,6 +263,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   }
   // A swing at nothing still takes the time, and the breath.
   c.nextSwing = state.tick + wait;
+  c.swungTick = state.tick;
   exert(s, SWING_COST);
   return 'swung at nothing';
 }
