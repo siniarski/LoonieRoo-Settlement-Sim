@@ -1,5 +1,6 @@
 // Drawing rooms, furniture, items and blueprints. Reads sim state only.
 
+import { worldPos } from './interp';
 import type { Blueprint } from '../sim/designations';
 import { growTicks, isRipe, type FarmPlot } from '../sim/farming';
 import type { Furniture } from '../sim/furniture';
@@ -305,9 +306,9 @@ export function drawFire(ctx: CanvasRenderingContext2D, camera: Camera, viewport
 
 /** A dog: a small brown body with a darker head, and its name when zoomed in. */
 export function drawDog(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, d: Dog, alpha: number, size: number): void {
-  const t = d.move ? Math.min(1, (d.move.progress + alpha) / d.move.duration) : 0;
-  const wx = d.move ? d.move.from.x + (d.move.to.x - d.move.from.x) * t : d.pos.x;
-  const wy = d.move ? d.move.from.y + (d.move.to.y - d.move.from.y) * t : d.pos.y;
+  const w = worldPos(d, alpha);
+  const wx = w.x - 0.5;
+  const wy = w.y - 0.5;
   const p = worldToScreen(camera, viewport, wx + 0.5, wy + 0.5);
   const r = Math.max(2, size * 0.2);
   ctx.fillStyle = '#8a5a2e';

@@ -173,8 +173,8 @@ export function draw(
   for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const a of state.animals) {
     if (!shown(a.pos.x, a.pos.y)) continue;
-    const t = a.move ? Math.min(1, (a.move.progress + options.alpha) / a.move.duration) : 0;
-    const p = worldToScreen(camera, viewport, (a.move ? a.move.from.x + (a.move.to.x - a.move.from.x) * t : a.pos.x) + 0.5, (a.move ? a.move.from.y + (a.move.to.y - a.move.from.y) * t : a.pos.y) + 0.5);
+    const w = worldPos(a, options.alpha);
+    const p = worldToScreen(camera, viewport, w.x, w.y);
     const r = Math.max(2, size * 0.24);
     ctx.fillStyle = '#b07a46';
     ctx.fillRect(p.x - r * 1.2, p.y - r * 0.5, r * 2.2, r);

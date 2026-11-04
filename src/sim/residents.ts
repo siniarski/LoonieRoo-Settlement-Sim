@@ -9,6 +9,7 @@
 // (hand over what you carry for food from their stores), and, when their settlement
 // thinks well of you, ask one to come with you.
 
+import { placedAt } from './motion';
 import { compound, isFallen } from './colonies';
 import { leaveCorpse } from './corpses';
 import { armourDamage } from './clothing';
@@ -28,6 +29,9 @@ export interface Resident {
   settlementId: string;
   name: string;
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   path: Point[];
   health: number;
@@ -65,7 +69,8 @@ export function syncResidents(state: SimState, n: Settlement): void {
   for (let i = here.length; i < want; i++) {
     const id = `r${state.nextId++}`;
     const spot = { x: box.x0 + 1 + (i % Math.max(1, box.x1 - box.x0 - 1)), y: box.y1 - 1 - (Math.floor(i / Math.max(1, box.x1 - box.x0 - 1)) % 3) };
-    state.residents.push({ id, settlementId: n.id, name: NAMES[idNumber(id) % NAMES.length]!, pos: inBounds(state.grid, spot.x, spot.y) ? spot : { x: n.x, y: n.y }, move: null, path: [], health: RESIDENT_HEALTH, cooldown: 0, nextThinkTick: 0 });
+    const where = inBounds(state.grid, spot.x, spot.y) ? spot : { x: n.x, y: n.y };
+    state.residents.push({ id, settlementId: n.id, name: NAMES[idNumber(id) % NAMES.length]!, pos: where, ...placedAt(where), move: null, path: [], health: RESIDENT_HEALTH, cooldown: 0, nextThinkTick: 0 });
   }
 }
 

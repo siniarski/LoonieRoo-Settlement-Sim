@@ -11,6 +11,7 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
+import { placedAt } from './motion';
 import { HIT_PANIC, frighten } from './body';
 import { zombieScale } from './difficulty';
 import { damageStructure, isStructure } from './breach';
@@ -85,6 +86,9 @@ export const DANGER_RADIUS = 10;
 export interface Zombie {
   id: string;
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   path: Point[];
   /** Survivor being chased, or null when wandering. */
@@ -115,6 +119,7 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
   const z: Zombie = {
     id: `z${state.nextId++}`,
     pos: { x, y },
+    ...placedAt({ x, y }),
     move: null,
     path: [],
     targetId: null,

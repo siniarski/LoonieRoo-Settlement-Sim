@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { syncStep, type Body } from './motion';
 import { updateHelicopter } from './escape';
 import { updateRadiation } from './climate';
 import { updateBody } from './body';
@@ -69,6 +70,7 @@ export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
   setDayScale(state.settings.dayScale);
+  for (const e of movers(state)) e.was = { x: e.at.x, y: e.at.y };
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
@@ -140,6 +142,8 @@ export function tick(state: SimState): void {
   reconcileNeeds(state);
   reconcileWanderers(state);
   reconcileControl(state);
+  // Precise positions follow tile steps (free movers keep their own: motion.ts).
+  for (const e of movers(state)) if (!isFree(state, e)) syncStep(e);
   // Everyone looks round where they now stand.
   updateFog(state);
   state.tick += 1;
@@ -159,6 +163,16 @@ function behave(state: SimState, s: Survivor): void {
     s.leisure = null;
     stopReading(state, s, s.note ?? '');
   } else if (!s.breakdown && !keepOrder(state, s) && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
+}
+
+/** Everything with a precise position (motion.ts). */
+function movers(state: SimState): Body[] {
+  return [...state.survivors, ...state.zombies, ...state.dogs, ...state.animals, ...state.residents];
+}
+
+/** Moving under its own steering, not tile steps (motion.ts). */
+function isFree(_state: SimState, _e: Body): boolean {
+  return false;
 }
 
 export function step(state: SimState, ticks: number): void {

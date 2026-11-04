@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { placedAt } from './motion';
 import type { Wish } from './wishes';
 import { startingResolve } from './resolve';
 import { boosted } from './moodlets';
@@ -58,6 +59,9 @@ export interface Survivor {
   name: string;
   /** The tile the survivor is on, or is leaving while `move` is set. */
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   goal: Point | null;
   /** Remaining tiles to walk, excluding the current one. */
@@ -172,6 +176,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     id: `s${n}`,
     name: name ?? nextSurvivorName(state),
     pos: { x, y },
+    ...placedAt({ x, y }),
     move: null,
     goal: null,
     path: [],
