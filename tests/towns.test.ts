@@ -8,8 +8,10 @@ import { GROUNDS, getTile, tileIndex } from '../src/sim/grid';
 import { LOOT_TABLES } from '../src/sim/loot';
 import { transform } from '../src/sim/lots';
 import { scavengeFind } from '../src/sim/jobs';
-import { BLOCK, districtOf, planTowns } from '../src/sim/towns';
-import { CHUNK, createWorld, ensureGeneratedAround, layout } from '../src/sim/worldgen';
+import { isWater } from '../src/sim/nature';
+import { PLAN_CHUNK, planWorld, type WorldPlan } from '../src/sim/worldplan';
+import { layoutLot } from '../src/sim/lots';
+import { CHUNK, START_CLEAR_RADIUS, createWorld, ensureGeneratedAround } from '../src/sim/worldgen';
 
 const rolls = (n: number) => (k: number) => hashRoll(n, k, 0x5eed);
 
@@ -127,26 +129,82 @@ describe('loot by room', () => {
 });
 
 describe('towns', () => {
-  it('a block is a chunk', () => {
-    expect(BLOCK).toBe(CHUNK);
+  it('the plan draws in chunks the size worldgen uses', () => {
+    expect(PLAN_CHUNK).toBe(CHUNK);
   });
 
-  it('there is always a town, with a centre, shops, houses and farmland round it', () => {
-    for (const seed of [1, 2, 3, 7, 11]) {
-      const l = layout(seed, 128);
-      expect(l.towns.length).toBeGreaterThan(0);
-      const t = l.towns[0]!;
-      expect(districtOf(seed, l.towns, t.bx, t.by)).toBe('centre');
-      const around = [[-1, -1], [0, -1], [-1, 0]].map(([dx, dy]) => districtOf(seed, l.towns, t.bx + dx!, t.by + dy!));
-      expect(around).toContain('commercial');
-      expect(around).toContain('residential');
+  const plans: [string, WorldPlan][] = [[1, 256], [7, 256], [5, 512], [3, 128]].map(([seed, size]) => [`seed ${seed} size ${size}`, planWorld(seed!, size!, 'mainland')]);
+
+  it('towns stand on dry land, apart from each other and clear of the start', () => {
+    for (const [name, p] of plans) {
+      expect(p.towns.length, name).toBeGreaterThan(0);
+      const n = p.nature;
+      for (const t of p.towns) {
+        expect(isWater(n, t.x, t.y), name).toBe(false);
+        expect(Math.sqrt((t.x - n.start.x) ** 2 + (t.y - n.start.y) ** 2), name).toBeGreaterThan(t.radius + START_CLEAR_RADIUS);
+        for (const o of p.towns) if (o !== t) expect(Math.sqrt((t.x - o.x) ** 2 + (t.y - o.y) ** 2), name).toBeGreaterThan(t.radius + o.radius);
+      }
     }
-    // Farmland round towns, wild country further out (on a map big enough for both).
-    const l = layout(3, 512);
-    const all = new Set<string>();
-    for (let by = 0; by < 16; by++) for (let bx = 0; bx < 16; bx++) all.add(districtOf(3, l.towns, bx, by));
-    for (const d of ['centre', 'commercial', 'residential', 'farmland', 'wild']) expect(all).toContain(d);
-    expect(planTowns(5, 512, [32, 96, 160], [32, 96, 160], { x: 256, y: 256 }).length).toBeGreaterThan(0);
+  });
+
+  /** Tiles reachable along roads and streets from a point. */
+  const alongRoads = (p: WorldPlan, from: { x: number; y: number }) => {
+    const size = p.nature.size;
+    const seen = new Uint8Array(size * size);
+    const queue = [from.y * size + from.x];
+    seen[queue[0]!] = 1;
+    while (queue.length) {
+      const i = queue.pop()!;
+      const x = i % size;
+      const y = Math.floor(i / size);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+        const j = ny * size + nx;
+        if (!seen[j] && p.roadMask[j] !== 0) {
+          seen[j] = 1;
+          queue.push(j);
+        }
+      }
+    }
+    return seen;
+  };
+
+  it("a town's streets all join up, and country roads link every town", () => {
+    for (const [name, p] of plans) {
+      const size = p.nature.size;
+      const t0 = p.towns[0]!;
+      const seen = alongRoads(p, t0);
+      for (const s of p.streets) expect(seen[s.y0 * size + s.x0], `${name}: street ${JSON.stringify(s)}`).toBe(1);
+      for (const t of p.towns) expect(seen[t.y * size + t.x], `${name}: town at ${t.x},${t.y}`).toBe(1);
+    }
+  });
+
+  it('lots sit on dry land off the roads and each other, and every building fits inside its lot', () => {
+    for (const [name, p] of plans) {
+      const size = p.nature.size;
+      const zones = new Set(p.lots.map((l) => l.zone));
+      for (const z of ['residential', 'commercial', 'field', 'cabin'] as const) expect(zones.has(z), `${name}: ${z}`).toBe(true);
+      for (const lot of p.lots) {
+        for (let y = lot.y; y < lot.y + lot.h; y++) {
+          for (let x = lot.x; x < lot.x + lot.w; x++) {
+            expect(p.lotMask[y * size + x], name).toBe(lot.id + 1);
+            expect(p.roadMask[y * size + x], name).toBe(0);
+            expect(isWater(p.nature, x, y), name).toBe(false);
+          }
+        }
+        for (const b of layoutLot(p.nature.seed, lot).buildings) {
+          const across = b.facing === 'north' || b.facing === 'south';
+          const [w, h] = across ? [b.plan.w, b.plan.h] : [b.plan.h, b.plan.w];
+          const msg = `${name}: ${b.plan.kind} ${w}x${h} at ${b.ox},${b.oy} in ${lot.zone} lot ${JSON.stringify(lot)}`;
+          expect(b.ox, msg).toBeGreaterThanOrEqual(lot.x);
+          expect(b.oy, msg).toBeGreaterThanOrEqual(lot.y);
+          expect(b.ox + w, msg).toBeLessThanOrEqual(lot.x + lot.w);
+          expect(b.oy + h, msg).toBeLessThanOrEqual(lot.y + lot.h);
+        }
+      }
+    }
   });
 
   it('every container in a generated world can be walked to from a road', () => {
@@ -188,42 +246,4 @@ describe('towns', () => {
     }
   });
 
-  it('no paved square or yard without its building; towns keep apart; country roads come and go', () => {
-    const size = 256;
-    let gapSeen = false;
-    for (const seed of [1, 7, 11]) {
-      const state = createWorld(seed, size);
-      for (let y = 0; y < size; y += CHUNK) for (let x = 0; x < size; x += CHUNK) ensureGeneratedAround(state, { x, y });
-      const paving = GROUNDS.indexOf('paving');
-      const concrete = GROUNDS.indexOf('concrete');
-      for (let by = 0; by < size / BLOCK; by++) {
-        for (let bx = 0; bx < size / BLOCK; bx++) {
-          let paved = 0;
-          let walls = 0;
-          for (let y = by * BLOCK; y < (by + 1) * BLOCK; y++) {
-            for (let x = bx * BLOCK; x < (bx + 1) * BLOCK; x++) {
-              const i = tileIndex(state.grid, x, y);
-              if (state.grid.tiles[i] === 'wall') walls++;
-              else if (state.grid.ground[i] === paving || state.grid.ground[i] === concrete) paved++;
-            }
-          }
-          if (paved > 200) expect(walls, `seed ${seed} block ${bx},${by}: ${paved} paved tiles and no building`).toBeGreaterThan(20);
-        }
-      }
-      const l = layout(seed, size);
-      for (const a of l.towns) for (const b of l.towns) if (a !== b) expect(Math.max(Math.abs(a.bx - b.bx), Math.abs(a.by - b.by))).toBeGreaterThanOrEqual(4);
-      // Somewhere along a main road's line there's no road within its bends: a stretch left out.
-      const road = GROUNDS.indexOf('road');
-      const bridge = GROUNDS.indexOf('bridge');
-      const roadNear = (x: number, r: number) => {
-        for (let y = Math.max(0, r - 8); y <= Math.min(size - 1, r + 9); y++) {
-          const g = state.grid.ground[tileIndex(state.grid, x, y)];
-          if (g === road || g === bridge) return true;
-        }
-        return false;
-      };
-      if (l.roadRows.some((r) => [...Array(size).keys()].some((x) => !roadNear(x, r)))) gapSeen = true;
-    }
-    expect(gapSeen).toBe(true);
-  }, 20000);
 });
