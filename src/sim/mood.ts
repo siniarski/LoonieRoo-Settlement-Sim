@@ -5,6 +5,7 @@
 // counts as a thought while it lasts. Below MISERABLE, a survivor works at
 // 3/4 speed, like a hurt one; breakdowns and the rec room are in leisure.ts.
 
+import { bodyFactors } from './body';
 import { wellbeingFactors } from './wellbeing';
 import { steel } from './resolve';
 import { HUNGRY } from './food';
@@ -135,7 +136,7 @@ export function moodFactors(state: SimState, s: Survivor): [string, number][] {
   if (policyOn(state, 'rationing')) factors.push(['on rations', RATIONED_MOOD]);
   if (state.leaderId && state.leaderId !== s.id && state.survivors.some((o) => o.id === state.leaderId)) factors.push(['a good leader', LEADER_MOOD]);
   for (const t of s.traits) if (TRAIT_INFO[t].mood !== 0) factors.push([TRAIT_INFO[t].label, TRAIT_INFO[t].mood]);
-  factors.push(...wellbeingFactors(s));
+  factors.push(...wellbeingFactors(s), ...bodyFactors(s));
   return factors;
 }
 

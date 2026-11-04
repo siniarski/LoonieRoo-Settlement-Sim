@@ -1,6 +1,7 @@
 // Doing jobs: what a survivor does each tick while holding one (jobs.ts has the
 // queue). Each work function ends with finishJob or releaseSurvivor; nobody gets stuck.
 
+import { GUARD_BLOW_COST, exert } from './body';
 import { boostDamage } from './moodlets';
 import { spawnFind } from './difficulty';
 import { completeBlueprint, getBlueprint } from './designations';
@@ -123,6 +124,7 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
   if (job.progress % GUARD_ATTACK_EVERY !== 1) return;
   makeNoise(state, s.pos, 'fighting');
+  exert(s, GUARD_BLOW_COST);
   const blow = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
   if (!damageZombie(state, z, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s)) return;
   wearWeapon(state, s);

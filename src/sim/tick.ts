@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { updateBody } from './body';
 import { setDayScale } from './time';
 import { forgetForaging } from './handiwork';
 import { DAY_LENGTH } from './time';
@@ -116,6 +117,7 @@ export function tick(state: SimState): void {
     updateSatiety(state, s);
     updateWounds(state, s);
     updateHydration(state, s);
+    updateBody(state, s);
     countWatch(state, s);
     forgetThoughts(state, s);
     const cause = updateHealth(state, s) ?? updateInfection(state, s);

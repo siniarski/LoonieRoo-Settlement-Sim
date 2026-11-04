@@ -120,7 +120,7 @@ export type Command =
   | { type: 'spawnZombie'; x: number; y: number }
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
-  | { type: 'steer'; dx: number; dy: number }
+  | { type: 'steer'; dx: number; dy: number; run?: boolean }
   | { type: 'swing'; x: number; y: number }
   | { type: 'use'; x: number; y: number }
   /** Under control: repair, barricade, reinforce or build at a tile next to you (handiwork.ts). */
@@ -167,9 +167,11 @@ function execute(state: SimState, command: Command): CommandResult {
     if (command.type === 'steer') {
       const { dx, dy } = command;
       if (![dx, dy].every((d) => d === -1 || d === 0 || d === 1)) return reject('steer takes -1, 0 or 1');
-      if (state.control!.dx === dx && state.control!.dy === dy) return unchanged();
+      const run = command.run === true;
+      if (state.control!.dx === dx && state.control!.dy === dy && (state.control!.running === true) === run) return unchanged();
       state.control!.dx = dx;
       state.control!.dy = dy;
+      state.control!.running = run;
       return changed();
     }
     if (!Number.isInteger(command.x) || !Number.isInteger(command.y)) return reject('not a tile');

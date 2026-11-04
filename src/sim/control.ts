@@ -14,6 +14,7 @@
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
+import { RUN_STEP_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
 import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
 import { TIRED } from './rest';
 import { isNight, slowTick } from './time';
@@ -57,6 +58,8 @@ export interface Control {
   facing: Point;
   /** No swing or shot before this tick. */
   nextSwing: number;
+  /** Holding Shift: a tick quicker a tile, for endurance (body.ts). */
+  running?: boolean;
   /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
   busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
 }
@@ -80,7 +83,9 @@ export function updateControlled(state: SimState, s: Survivor): void {
     const dx = to.x - s.pos.x;
     const dy = to.y - s.pos.y;
     c.facing = { x: dx, y: dy };
-    const pace = stepPace(state, s, to);
+    const run = c.running === true && !isWinded(s);
+    if (run) exert(s, RUN_STEP_COST);
+    const pace = Math.max(2, stepPace(state, s, to) - (run ? 1 : 0));
     s.move = { from: { ...s.pos }, to, progress: 0, duration: dx !== 0 && dy !== 0 ? Math.round((pace * DIAGONAL_PCT) / 100) : pace };
     return;
   }
@@ -197,14 +202,22 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   if (face) c.facing = face;
   c.busy = null;
   const near = zombieToHit(state, s.pos, c.facing);
+  const wait = swingWait(s, GUARD_ATTACK_EVERY) + (isWinded(s) ? WINDED_WAIT : 0);
   if (near && freezes(state, s)) {
-    c.nextSwing = state.tick + swingWait(s, GUARD_ATTACK_EVERY);
+    c.nextSwing = state.tick + wait;
     return 'froze';
   }
+  if (near && panicMiss(state, s)) {
+    c.nextSwing = state.tick + wait;
+    exert(s, SWING_COST);
+    return 'missed: your hands are shaking';
+  }
   if (near) {
-    c.nextSwing = state.tick + swingWait(s, GUARD_ATTACK_EVERY);
+    c.nextSwing = state.tick + wait;
+    exert(s, SWING_COST);
     makeNoise(state, s.pos, 'fighting');
-    const blow = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
+    const full = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
+    const blow = isWinded(s) ? Math.round((full * WINDED_DAMAGE_PCT) / 100) : full;
     const killed = damageZombie(state, near, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s);
     if (killed) wearWeapon(state, s);
     return killed ? 'killed it' : 'hit it';
@@ -239,8 +252,9 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     const dmg = boostDamage(s, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
     return damageZombie(state, shotAt, dmg, s) ? 'shot it dead' : 'shot it';
   }
-  // A swing at nothing still takes the time.
-  c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
+  // A swing at nothing still takes the time, and the breath.
+  c.nextSwing = state.tick + wait;
+  exert(s, SWING_COST);
   return 'swung at nothing';
 }
 

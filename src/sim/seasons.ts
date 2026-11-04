@@ -3,12 +3,12 @@
 // Seasons run SEASON_DAYS each, from spring. Crops grow at full speed in
 // spring and summer, half speed in autumn, not at all in winter. Each dawn
 // rolls the day's weather (sim RNG): rain (not in winter) makes crops grow
-// half as fast again and soaks anyone outdoors; snow (in winter) just looks
+// half as fast again; anyone outdoors gets wet (body.ts); snow (in winter) just looks
 // cold. Winter nights are cold outdoors: a slow loss of health, and the mood
 // to match. Indoors (any enclosed room) is warm.
 
+import { FREEZING } from './body';
 import { coldEvery, eventChance } from './difficulty';
-import { addThought } from './mood';
 import { random } from './rng';
 import { isIndoors } from './rooms';
 import type { SimState } from './state';
@@ -93,23 +93,16 @@ export function updateWeather(state: SimState): void {
   }
   if (state.weather === 'storm' && state.tick % TICKS_PER_HOUR === 0 && hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE) lightning(state);
   const coldNight = coldOutside(state);
-  const soaking = state.weather === 'rain' || state.weather === 'storm';
-  if (!coldNight && !soaking) return;
+  const soaking = isWet(state.weather);
   for (const s of [...state.survivors]) {
-    if (isIndoors(state, s.pos.x, s.pos.y)) continue;
+    // Body heat (body.ts) does the rest: under FREEZING, health goes.
+    if (s.bodyHeat < FREEZING && state.tick % coldEvery(state) === 0) {
+      s.health = Math.max(0, s.health - 1);
+      s.lastHurtBy = 'the cold';
+    }
+    if ((!coldNight && !soaking) || isIndoors(state, s.pos.x, s.pos.y)) continue;
     // A coat keeps the weather off, and wears a little for each hour it does.
     const coat = wearing(state, s, 'coat');
-    if (coat) {
-      if (state.tick % TICKS_PER_HOUR === 0) wearOut(state, s, coat);
-      continue;
-    }
-    if (soaking && !coldNight) addThought(state, s, 'soaked');
-    if (coldNight && !isWarmed(state, s.pos)) {
-      addThought(state, s, 'cold');
-      if (state.tick % coldEvery(state) === 0) {
-        s.health = Math.max(0, s.health - 1);
-        s.lastHurtBy = 'the cold';
-      }
-    }
+    if (coat && state.tick % TICKS_PER_HOUR === 0) wearOut(state, s, coat);
   }
 }

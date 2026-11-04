@@ -11,7 +11,7 @@
 //   Right click    put the tool down
 //   Esc            put the tool down, then close build mode, then deselect
 // Direct control (F takes over the selected survivor, F again hands them back):
-//   WASD/arrows  walk (8 ways) · Left click  swing at / shoot towards a tile
+//   WASD/arrows  walk (8 ways), Shift to run · Left click  swing at / shoot towards a tile
 //   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep) · E  use what's in front,
 //                else underfoot (on a bed, or bare floor: sleep)
 //   V  shout "follow me" to everyone near · H  shout "hold here" (each where they stand) · T  talk to whoever's nearest
@@ -73,6 +73,7 @@ export interface Input {
 export function attachInput(ctx: InputContext): Input {
   const { canvas, view } = ctx;
   const held = new Set<string>();
+  let shiftHeld = false;
   let painting: Point | null = null;
   /** Shift state captured when the drag started, so a drag doesn't change mode halfway. */
   let paintInstant = false;
@@ -202,6 +203,7 @@ export function attachInput(ctx: InputContext): Input {
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement) return;
+    shiftHeld = e.shiftKey;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (handleBuildKey(view, key, e.shiftKey)) {
       if (key === 'Tab') e.preventDefault(); // don't move browser focus
@@ -248,10 +250,14 @@ export function attachInput(ctx: InputContext): Input {
   };
 
   const onKeyUp = (e: KeyboardEvent) => {
+    shiftHeld = e.shiftKey;
     held.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key);
   };
 
-  const onBlur = () => held.clear();
+  const onBlur = () => {
+    held.clear();
+    shiftHeld = false;
+  };
 
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
@@ -280,7 +286,8 @@ export function attachInput(ctx: InputContext): Input {
       if (c) {
         dx = Math.sign(dx);
         dy = Math.sign(dy);
-        if (c.dx !== dx || c.dy !== dy) ctx.command({ type: 'steer', dx, dy });
+        const run = shiftHeld && (dx !== 0 || dy !== 0);
+        if (c.dx !== dx || c.dy !== dy || (c.running === true) !== run) ctx.command({ type: 'steer', dx, dy, run });
         return;
       }
       if (held.size === 0) return;

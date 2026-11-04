@@ -164,7 +164,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name} (resolve ${you.resolve}, ${describeResolve(you)}${boostsOf(you)})${busy ? ` · ${{ eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating', build: 'building', repair: 'repairing', forage: 'foraging' }[busy.what]}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · F let go`
+        ? `Playing as ${you.name} (resolve ${you.resolve}, ${describeResolve(you)}${boostsOf(you)}; endurance ${you.endurance} · panic ${you.panic} · heat ${you.bodyHeat} · wet ${you.wetness})${busy ? ` · ${{ eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating', build: 'building', repair: 'repairing', forage: 'foraging' }[busy.what]}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk (Shift run) · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · F let go`
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';

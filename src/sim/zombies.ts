@@ -11,6 +11,7 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
+import { HIT_PANIC, frighten } from './body';
 import { zombieScale } from './difficulty';
 import { damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
@@ -395,6 +396,7 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
   addThought(state, s, 'shaken');
+  frighten(s, HIT_PANIC);
   if (z.kind !== 'raider') {
     const was = s.infection;
     maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);

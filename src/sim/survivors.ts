@@ -159,6 +159,11 @@ export interface Survivor {
   comfort: number;
   /** A small want just now, or null (wishes.ts). */
   wish: Wish | null;
+  /** The body, 0..100 each (body.ts). */
+  endurance: number;
+  panic: number;
+  bodyHeat: number;
+  wetness: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -223,6 +228,10 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     social: 60,
     comfort: 50,
     wish: null,
+    endurance: 100,
+    panic: 0,
+    bodyHeat: 70,
+    wetness: 0,
   };
   state.survivors.push(survivor);
   return survivor;
