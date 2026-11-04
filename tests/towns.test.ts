@@ -187,4 +187,43 @@ describe('towns', () => {
       }
     }
   });
+
+  it('no paved square or yard without its building; towns keep apart; country roads come and go', () => {
+    const size = 256;
+    let gapSeen = false;
+    for (const seed of [1, 7, 11]) {
+      const state = createWorld(seed, size);
+      for (let y = 0; y < size; y += CHUNK) for (let x = 0; x < size; x += CHUNK) ensureGeneratedAround(state, { x, y });
+      const paving = GROUNDS.indexOf('paving');
+      const concrete = GROUNDS.indexOf('concrete');
+      for (let by = 0; by < size / BLOCK; by++) {
+        for (let bx = 0; bx < size / BLOCK; bx++) {
+          let paved = 0;
+          let walls = 0;
+          for (let y = by * BLOCK; y < (by + 1) * BLOCK; y++) {
+            for (let x = bx * BLOCK; x < (bx + 1) * BLOCK; x++) {
+              const i = tileIndex(state.grid, x, y);
+              if (state.grid.tiles[i] === 'wall') walls++;
+              else if (state.grid.ground[i] === paving || state.grid.ground[i] === concrete) paved++;
+            }
+          }
+          if (paved > 200) expect(walls, `seed ${seed} block ${bx},${by}: ${paved} paved tiles and no building`).toBeGreaterThan(20);
+        }
+      }
+      const l = layout(seed, size);
+      for (const a of l.towns) for (const b of l.towns) if (a !== b) expect(Math.max(Math.abs(a.bx - b.bx), Math.abs(a.by - b.by))).toBeGreaterThanOrEqual(4);
+      // Somewhere along a main road's line there's no road within its bends: a stretch left out.
+      const road = GROUNDS.indexOf('road');
+      const bridge = GROUNDS.indexOf('bridge');
+      const roadNear = (x: number, r: number) => {
+        for (let y = Math.max(0, r - 8); y <= Math.min(size - 1, r + 9); y++) {
+          const g = state.grid.ground[tileIndex(state.grid, x, y)];
+          if (g === road || g === bridge) return true;
+        }
+        return false;
+      };
+      if (l.roadRows.some((r) => [...Array(size).keys()].some((x) => !roadNear(x, r)))) gapSeen = true;
+    }
+    expect(gapSeen).toBe(true);
+  }, 20000);
 });

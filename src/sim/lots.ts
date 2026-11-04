@@ -33,6 +33,8 @@ export interface Site {
   blocked(x: number, y: number): boolean;
   /** A road or street: not to be built on (next to is fine: that's the front). */
   road(x: number, y: number): boolean;
+  /** Where the woods run (the wild forest's noise): copses in farmland. */
+  wood(x: number, y: number): boolean;
   /** Finds per container this far from the start (worldgen.ts lootFor). */
   lootAt(x: number, y: number): number;
   /** Distance from the start. */
@@ -49,36 +51,31 @@ export function fillBlock(state: SimState, site: Site, district: District, x0: n
   const ix = x0 + STREET;
   const iy = y0 + STREET;
   if (district === 'residential' || district === 'commercial') {
-    for (let q = 0; q < 4; q++) {
-      const lx = ix + (q % 2) * LOT;
-      const ly = iy + Math.floor(q / 2) * LOT;
-      const facing: Facing = q < 2 ? 'north' : 'south';
-      const r: Rolls = (k) => hashRoll(site.seed, lx, ly, k);
-      if (district === 'residential') {
-        if (r(0) > 0.9) continue; // an empty lot
-        place(state, site, housePlan(r, { maxW: LOT - 2, maxH: LOT - 3, garage: true }), { x: lx, y: ly, w: LOT, h: LOT }, facing, 1 + Math.floor(r(90) * 2), r);
-      } else {
-        const kind = pickShop(r(0));
-        const setback = kind === 'station' ? 4 : 1;
-        if (place(state, site, shopPlan(r, kind, LOT - 2, LOT - 1 - setback), { x: lx, y: ly, w: LOT, h: LOT }, facing, setback, r) && kind === 'station') {
-          forecourt(state, site, lx, ly, facing);
-        }
-      }
-    }
+    lots(state, site, district, ix, iy);
     return;
   }
   const whole = { x: ix, y: iy, w: BLOCK - STREET, h: BLOCK - STREET };
-  const facing: Facing = roll(1) < 0.5 ? 'north' : 'south';
+  const first: Facing = roll(1) < 0.5 ? 'north' : 'south';
+  const facings: Facing[] = [first, first === 'north' ? 'south' : 'north'];
+  // One big building on the block: the plan rolled, else turned the other way, else a smaller one.
+  // The square or yard is paved round it only once it stands; if nothing fits (water, the start
+  // clearing), the block is lots instead, so no block is left an empty slab.
+  const big = (make: (shrink: number) => Plan, setback: number): Facing | null => {
+    for (const shrink of [0, 8]) for (const facing of facings) if (place(state, site, make(shrink), whole, facing, setback, roll)) return facing;
+    return null;
+  };
   if (district === 'centre') {
-    pave(state, site, whole, 'paving');
     const kind = (['police', 'clinic', 'school', 'church', 'office'] as const)[Math.floor(roll(2) * 5)]!;
-    const plan = kind === 'church' ? churchPlan(roll, whole.w - 4, whole.h - 4) : civicPlan(roll, kind, whole.w - 4, whole.h - 4);
-    if (place(state, site, plan, whole, facing, 2, roll)) for (let i = 0; i < 4; i++) decorAt(state, site, ix + 1 + Math.floor(roll(70 + i) * (whole.w - 2)), facing === 'north' ? iy : iy + whole.h - 1, 'bench');
+    const facing = big((s) => (kind === 'church' ? churchPlan(roll, whole.w - 4 - s, whole.h - 4 - s) : civicPlan(roll, kind, whole.w - 4 - s, whole.h - 4 - s)), 2);
+    if (!facing) return lots(state, site, 'commercial', ix, iy);
+    pave(state, site, whole, 'paving');
+    for (let i = 0; i < 4; i++) decorAt(state, site, ix + 1 + Math.floor(roll(70 + i) * (whole.w - 2)), facing === 'north' ? iy : iy + whole.h - 1, 'bench');
     return;
   }
   if (district === 'industrial') {
+    const kind = roll(2) < 0.6 ? 'warehouse' : 'factory';
+    if (!big((s) => warehousePlan(roll, kind, whole.w - 2 - s, whole.h - 4 - s), 3)) return lots(state, site, 'residential', ix, iy);
     pave(state, site, whole, 'concrete');
-    place(state, site, warehousePlan(roll, roll(2) < 0.6 ? 'warehouse' : 'factory', whole.w - 2, whole.h - 4), whole, facing, 3, roll);
     return;
   }
   if (district === 'farmland') {
@@ -97,6 +94,26 @@ export function fillBlock(state: SimState, site: Site, district: District, x0: n
   }
 }
 
+/** Four 15 x 15 lots in a block: two facing the street above, two the street below. */
+function lots(state: SimState, site: Site, district: 'residential' | 'commercial', ix: number, iy: number): void {
+  for (let q = 0; q < 4; q++) {
+    const lx = ix + (q % 2) * LOT;
+    const ly = iy + Math.floor(q / 2) * LOT;
+    const facing: Facing = q < 2 ? 'north' : 'south';
+    const r: Rolls = (k) => hashRoll(site.seed, lx, ly, k);
+    if (district === 'residential') {
+      if (r(0) > 0.9) continue; // an empty lot
+      place(state, site, housePlan(r, { maxW: LOT - 2, maxH: LOT - 3, garage: true }), { x: lx, y: ly, w: LOT, h: LOT }, facing, 1 + Math.floor(r(90) * 2), r);
+    } else {
+      const kind = pickShop(r(0));
+      const setback = kind === 'station' ? 4 : 1;
+      if (place(state, site, shopPlan(r, kind, LOT - 2, LOT - 1 - setback), { x: lx, y: ly, w: LOT, h: LOT }, facing, setback, r) && kind === 'station') {
+        forecourt(state, site, lx, ly, facing);
+      }
+    }
+  }
+}
+
 const FACINGS: readonly Facing[] = ['north', 'south', 'east', 'west'];
 
 function pickShop(r: number): 'grocery' | 'pharmacy' | 'hardware' | 'bar' | 'station' | 'office' {
@@ -109,10 +126,11 @@ function pickShop(r: number): 'grocery' | 'pharmacy' | 'hardware' | 'bar' | 'sta
 }
 
 /**
- * Farmland: four quadrants between dirt tracks. Most farm blocks have a farmstead on one side
- * (a dirt yard with the farmhouse, a barn, maybe a shed, a silo, hay bales and a tractor); the
- * other quadrants are fields in crop rows, orchards, pasture or woodlots, hedged with trees
- * (a gap in each hedge on the track side).
+ * Farmland: plots between dirt tracks that sit somewhere different in each block (sometimes one
+ * track, so two plots run together). Some blocks have a farmstead on one side (a dirt yard with
+ * the farmhouse, a barn, maybe a shed, a silo, hay bales and a tractor); the other plots are
+ * fields in crop rows, orchards, pasture or woodlots, hedged with trees (a gate on the track
+ * side). Copses spill in wherever the wild forest's noise runs, across tracks and block edges.
  */
 function farm(state: SimState, site: Site, x0: number, y0: number): void {
   const roll = (k: number) => hashRoll(site.seed, x0, y0, 0x8100 + k);
@@ -124,44 +142,52 @@ function farm(state: SimState, site: Site, x0: number, y0: number): void {
   };
   const first = roll(1) < 0.5;
   const top = dry(first) ? first : !first;
-  const stead = roll(0) < 0.8 && dry(top);
+  const stead = roll(0) < 0.4 && dry(top);
   const open = (x: number, y: number) => !site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor';
-  // The cross tracks.
+  // Tracks: a dirt track each way, set at a different place in each block (and sometimes only
+  // one), so fields come in different sizes; a farmstead keeps its track across the middle.
+  const tx = stead ? x0 + half : x0 + 9 + Math.floor(roll(3) * 14);
+  const ty = stead ? y0 + half : y0 + 9 + Math.floor(roll(4) * 14);
+  const vertical = stead || roll(5) < 0.7;
+  const horizontal = stead || roll(6) < 0.7;
   for (let i = 0; i < BLOCK; i++) {
-    if (open(x0 + half, y0 + i)) groundAt(state, x0 + half, y0 + i, 'dirt');
-    if (open(x0 + i, y0 + half)) groundAt(state, x0 + i, y0 + half, 'dirt');
+    if (vertical && open(tx, y0 + i)) groundAt(state, tx, y0 + i, 'dirt');
+    if (horizontal && open(x0 + i, ty)) groundAt(state, x0 + i, ty, 'dirt');
   }
-  for (let q = 0; q < 4; q++) {
-    const qx = q % 2;
-    const qy = Math.floor(q / 2);
-    // The quadrant, in from the block's edge (a main road may run there) and off the tracks.
-    const ax = qx === 0 ? x0 + 2 : x0 + half + 1;
-    const ay = qy === 0 ? y0 + 2 : y0 + half + 1;
-    const bx = qx === 0 ? x0 + half - 1 : x0 + BLOCK - 1;
-    const by = qy === 0 ? y0 + half - 1 : y0 + BLOCK - 1;
-    if (stead && (qy === 0) === top) {
-      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y)) groundAt(state, x, y, 'dirt');
-      continue;
-    }
-    const use = roll(10 + q);
-    if (use < 0.25) {
-      // A woodlot: its trees come with the wild woods' (worldgen.ts).
-      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y)) groundAt(state, x, y, 'forest');
-      continue;
-    }
-    hedge(state, site, ax, ay, bx, by, qx, qy, roll(20 + q));
-    if (use < 0.7) {
-      // A field in crop rows, running one way or the other.
-      const across = roll(30 + q) < 0.5;
-      for (let y = ay + 1; y < by; y++) {
-        for (let x = ax + 1; x < bx; x++) if (open(x, y)) groundAt(state, x, y, (across ? y - ay : x - ax) % 2 === 1 ? 'field' : 'dirt');
+  // The plots between them, in from the block's edge (a main road may run there).
+  const cols: [number, number][] = vertical ? [[x0 + 2, tx - 1], [tx + 1, x0 + BLOCK - 1]] : [[x0 + 2, x0 + BLOCK - 1]];
+  const rows: [number, number][] = horizontal ? [[y0 + 2, ty - 1], [ty + 1, y0 + BLOCK - 1]] : [[y0 + 2, y0 + BLOCK - 1]];
+  // Woods spill in from the wild where the forest runs (the same noise), whatever the plot.
+  const land = (x: number, y: number) => open(x, y) && !site.wood(x, y);
+  let q = 0;
+  for (const [ay, by] of rows) {
+    for (const [ax, bx] of cols) {
+      q++;
+      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y) && site.wood(x, y)) groundAt(state, x, y, 'forest');
+      if (stead && (top ? ay === y0 + 2 : ay !== y0 + 2)) {
+        for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (land(x, y)) groundAt(state, x, y, 'dirt');
+        continue;
       }
-    } else if (use < 0.85) {
-      // An orchard: trees in rows.
-      for (let y = ay + 2; y < by - 1; y += 3) for (let x = ax + 2; x < bx - 1; x += 3) if (open(x, y) && !furnitureAt(state, x, y)) addFurniture(state, 'tree', x, y);
-    } else {
-      // Pasture: grass, and a few bales left out.
-      for (let i = 0; i < 3; i++) decorAt(state, site, ax + 2 + Math.floor(roll(40 + q * 4 + i) * (bx - ax - 3)), ay + 2 + Math.floor(roll(60 + q * 4 + i) * (by - ay - 3)), 'hay');
+      const use = roll(10 + q);
+      if (use < 0.1) {
+        // A woodlot: its trees come with the wild woods' (worldgen.ts).
+        for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) if (open(x, y)) groundAt(state, x, y, 'forest');
+        continue;
+      }
+      hedge(state, site, ax, ay, bx, by, ax === x0 + 2 ? 0 : 1, ay === y0 + 2 ? 0 : 1, roll(20 + q));
+      if (use < 0.65) {
+        // A field in crop rows, running one way or the other.
+        const across = roll(30 + q) < 0.5;
+        for (let y = ay + 1; y < by; y++) {
+          for (let x = ax + 1; x < bx; x++) if (land(x, y)) groundAt(state, x, y, (across ? y - ay : x - ax) % 2 === 1 ? 'field' : 'dirt');
+        }
+      } else if (use < 0.78) {
+        // An orchard: trees in rows.
+        for (let y = ay + 2; y < by - 1; y += 3) for (let x = ax + 2; x < bx - 1; x += 3) if (land(x, y) && !furnitureAt(state, x, y)) addFurniture(state, 'tree', x, y);
+      } else {
+        // Pasture: grass, and a few bales left out.
+        for (let i = 0; i < 3; i++) decorAt(state, site, ax + 2 + Math.floor(roll(40 + q * 4 + i) * (bx - ax - 3)), ay + 2 + Math.floor(roll(60 + q * 4 + i) * (by - ay - 3)), 'hay');
+      }
     }
   }
   if (!stead) return;
@@ -195,9 +221,14 @@ function hedge(state: SimState, site: Site, ax: number, ay: number, bx: number, 
   const gy = Math.floor((ay + by) / 2);
   const trackX = qx === 0 ? bx : ax;
   const trackY = qy === 0 ? by : ay;
+  // Each side has a hedge only some of the time (else it's an open field edge), so plots don't
+  // all come out boxed in along the block lines.
+  const side = (k: number) => hashRoll(site.seed, ax, ay, 0x8600 + k) < 0.5;
+  const sides = { top: side(0), bottom: side(1), left: side(2), right: side(3) };
   for (let y = ay; y <= by; y++) {
     for (let x = ax; x <= bx; x++) {
-      if (x !== ax && x !== bx && y !== ay && y !== by) continue;
+      const edge = (y === ay && sides.top) || (y === by && sides.bottom) || (x === ax && sides.left) || (x === bx && sides.right);
+      if (!edge) continue;
       if ((x === trackX && Math.abs(y - gy) <= 1) || (y === trackY && Math.abs(x - gx) <= 1)) continue; // the gate
       if (hashRoll(site.seed, x, y, 0x8500) > 0.7 + r * 0.2) continue; // grown thin
       if (!site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y)) addFurniture(state, 'tree', x, y);
@@ -222,9 +253,17 @@ function forecourt(state: SimState, site: Site, lx: number, ly: number, facing: 
   decorAt(state, site, lx + 9, y0 + 1, 'pump');
 }
 
+/** Paves open ground (grass, dirt, forest, field) in a rectangle: never a building's floor, which is laid first. */
 function pave(state: SimState, site: Site, r: { x: number; y: number; w: number; h: number }, g: Ground): void {
-  for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (!site.blocked(x, y) && !site.road(x, y) && getTile(state.grid, x, y) === 'floor') groundAt(state, x, y, g);
+  for (let y = r.y; y < r.y + r.h; y++) {
+    for (let x = r.x; x < r.x + r.w; x++) {
+      if (site.blocked(x, y) || site.road(x, y) || getTile(state.grid, x, y) !== 'floor') continue;
+      if (OPEN_GROUND.includes(GROUNDS[state.grid.ground[tileIndex(state.grid, x, y)]!]!)) groundAt(state, x, y, g);
+    }
+  }
 }
+
+const OPEN_GROUND: readonly Ground[] = ['grass', 'dirt', 'forest', 'field'];
 
 function decorAt(state: SimState, site: Site, x: number, y: number, look: 'bench' | 'pump' | 'hay'): void {
   if (site.blocked(x, y) || site.road(x, y) || getTile(state.grid, x, y) !== 'floor' || furnitureAt(state, x, y)) return;

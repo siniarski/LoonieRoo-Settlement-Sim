@@ -24,7 +24,7 @@ import { nearestTile } from './space';
 import { placeSettlements } from './settlements';
 import { hashRoll } from './hash';
 import { createState, type SimState } from './state';
-import { districtOf, isStreet, planTowns, type Town } from './towns';
+import { BLOCK, districtOf, isStreet, planTowns, type Town } from './towns';
 import { fillBlock, type Site } from './lots';
 import { addSurvivor } from './survivors';
 import { rollTraits } from './skills';
@@ -113,7 +113,67 @@ export function layout(seed: number, size: number, map: MapType = 'mainland'): L
 }
 
 function isRoad(l: Layout, x: number, y: number): boolean {
-  return l.roadRows.some((r) => y === r || y === r + 1) || l.roadCols.some((c) => x === c || x === c + 1) || isStreet(l.seed, l.towns, x, y);
+  return onMainRoad(l, l.roadRows, l.roadCols, y, x, true) || onMainRoad(l, l.roadCols, l.roadRows, x, y, false) || isStreet(l.seed, l.towns, x, y);
+}
+
+/**
+ * Main roads run on lines every 64 tiles, but not the whole way: each stretch between two
+ * crossings (or a crossing and the map's edge) is there if it reaches a town, else for
+ * ROAD_KEEP of them, by the seed. So the country between towns isn't a grid of roads.
+ * `lines` are the road's own lines (rows for an east-west road), `across` the lines crossing it;
+ * `at` is the coordinate across the road, `along` the one along it.
+ */
+function onMainRoad(l: Layout, lines: number[], across: number[], at: number, along: number, eastWest: boolean): boolean {
+  // At a crossing the road is straight (it meets the other there): kept if either side is.
+  const k = across.findIndex((v) => along === v || along === v + 1);
+  for (let li = 0; li < lines.length; li++) {
+    const v = lines[li]!;
+    if (Math.abs(at - v) > ROAD_BEND + 1) continue;
+    if (k >= 0) {
+      if ((at === v || at === v + 1) && (stretchKept(l, lines, across, li, k, eastWest) || stretchKept(l, lines, across, li, k + 1, eastWest))) return true;
+      continue;
+    }
+    // The stretch: 0 before the first crossing line, s between across[s - 1] and across[s].
+    const s = across.filter((c) => c + 1 < along).length;
+    const off = bend(l, lines, across, li, s, along, eastWest);
+    if ((at === v + off || at === v + 1 + off) && stretchKept(l, lines, across, li, s, eastWest)) return true;
+  }
+  return false;
+}
+
+/** The furthest a country road strays from its line, in tiles. */
+export const ROAD_BEND = 7;
+
+/**
+ * How far a road has strayed from its line here: a smooth wander out in the country, nothing at
+ * the crossings (so roads meet) or alongside a town's blocks (so streets stay straight).
+ */
+function bend(l: Layout, lines: number[], across: number[], li: number, s: number, along: number, eastWest: boolean): number {
+  const line = lines[li]!;
+  const townAt = (a: number | undefined) =>
+    a === undefined ? undefined : l.towns.find((t) => (eastWest ? t.bx * BLOCK === a && t.by * BLOCK === line : t.bx * BLOCK === line && t.by * BLOCK === a));
+  // From the map's edge to the first crossing (and from the last to the far edge) it's straight
+  // at the edge too, so a quarantine fence's gate meets it.
+  let a = across[s - 1] ?? 0;
+  let b = across[s] ?? l.size;
+  const ta = townAt(across[s - 1]);
+  const tb = townAt(across[s]);
+  if (ta) a += BLOCK * (1 + ta.rings);
+  if (tb) b -= BLOCK * (1 + tb.rings);
+  if (along <= a || along >= b) return 0;
+  const taper = Math.sin((Math.PI * (along - a)) / (b - a));
+  const wander = noise(l.seed, along, li * 97 + (eastWest ? 0 : 5000), 24, 41) * 2 - 1;
+  return Math.round(ROAD_BEND * taper * wander);
+}
+
+export const ROAD_KEEP = 0.55;
+
+function stretchKept(l: Layout, lines: number[], across: number[], li: number, k: number, eastWest: boolean): boolean {
+  const line = lines[li]!;
+  const town = (a: number | undefined) => a !== undefined && l.towns.some((t) => (eastWest ? t.bx * BLOCK === a && t.by * BLOCK === line : t.bx * BLOCK === line && t.by * BLOCK === a));
+  if (town(across[k - 1]) || town(across[k])) return true;
+  if (l.map === 'quarantine' && (k === 0 || k === across.length)) return true; // to a gate in the fence
+  return hashRoll(l.seed, li, k, eastWest ? 0x7201 : 0x7202) < ROAD_KEEP;
 }
 
 /**
@@ -137,7 +197,9 @@ export function fenceAt(l: Layout, x: number, y: number): 'wall' | 'door' | null
   if (l.map !== 'quarantine') return null;
   const onFence = (x === 2 || y === 2 || x === l.size - 3 || y === l.size - 3) && x >= 2 && y >= 2 && x <= l.size - 3 && y <= l.size - 3;
   if (!onFence) return null;
-  return isRoad(l, x, y) ? 'door' : 'wall';
+  // A gate where a main road's line meets the fence (the stretch to it is always kept: stretchKept).
+  const onLine = l.roadRows.some((r) => y === r || y === r + 1) || l.roadCols.some((c) => x === c || x === c + 1);
+  return onLine ? 'door' : 'wall';
 }
 
 function isWater(l: Layout, x: number, y: number): boolean {
@@ -208,6 +270,7 @@ function siteFor(l: Layout): Site {
     seed: l.seed,
     blocked: (x, y) => x < 0 || y < 0 || x >= l.size || y >= l.size || isWater(l, x, y) || fenceAt(l, x, y) !== null || nearStart(l, x, y, START_CLEAR_RADIUS),
     road: (x, y) => isRoad(l, x, y),
+    wood: (x, y) => noise(l.seed, x, y, 20, 9) > 0.64,
     lootAt: (x, y) => lootFor(Math.hypot(x - l.start.x, y - l.start.y)),
     distance: (x, y) => Math.hypot(x - l.start.x, y - l.start.y),
     calm: START_CLEAR_RADIUS + 24,
