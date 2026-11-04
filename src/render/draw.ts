@@ -1,5 +1,6 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
+import { isRadioactive } from '../sim/climate';
 import { isHostile } from '../sim/settlements';
 import { worldPos } from './interp';
 import { GROUNDS, type Point, type Tile } from '../sim/grid';
@@ -66,6 +67,11 @@ export function draw(
         ctx.fillStyle = COLOURS.fog;
         ctx.fillRect(r.x, r.y, r.w, r.h);
       } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size, tile === 'door' && grid.locked.includes(i));
+      if (state.settings.winter && isRadioactive(state, x, y)) {
+        const r = tileRect(camera, viewport, x, y);
+        ctx.fillStyle = COLOURS.radiation;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+      }
     }
   }
 

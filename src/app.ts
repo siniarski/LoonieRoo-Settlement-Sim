@@ -1,6 +1,7 @@
 // Wires sim, renderer, input, and HUD together and runs the frame loop.
 // createApp returns a dispose() so hot reload can tear it down cleanly.
 
+import { newGamePlus } from './sim/escape';
 import { installGameHooks, type GameHandle } from './debug/hooks';
 import { centredOn, worldToScreen, type Viewport } from './render/camera';
 import { draw } from './render/draw';
@@ -152,6 +153,11 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       view.selectedId = handle.state.control?.survivorId ?? null;
       view.showGame = false;
       if (settings.start === 'solo') toast('Alone. WASD to walk, click to swing, right-click or E to use. Space to play.');
+    },
+    newGamePlus: () => {
+      if (!window.confirm('Everyone flies out: start again in a new world, alone, with what you carry?')) return;
+      replaceState({ ok: true, state: newGamePlus(handle.state, Math.floor(Math.random() * 1e9)), kind: 'save' }, 'a new world (new game+)');
+      view.selectedId = handle.state.control?.survivorId ?? null;
     },
     reportBug: () => {
       const note = window.prompt('What went wrong? (optional)') ?? '';

@@ -50,7 +50,8 @@ export type ThoughtKind =
   | 'shaken'
   | 'wishMet'
   | 'promiseKept'
-  | 'promiseBroken';
+  | 'promiseBroken'
+  | 'irradiated';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -91,6 +92,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   wishMet: { label: 'got what they wanted', effect: 5, duration: DAY_LENGTH },
   promiseKept: { label: 'a promise kept', effect: 15, duration: 2 * DAY_LENGTH },
   promiseBroken: { label: 'a promise broken', effect: -10, duration: 2 * DAY_LENGTH },
+  irradiated: { label: 'in the hot zone', effect: -10, duration: DAY_LENGTH },
 };
 
 /** Thought lengths at day scale 1; THOUGHTS follows the clock (time.ts). */

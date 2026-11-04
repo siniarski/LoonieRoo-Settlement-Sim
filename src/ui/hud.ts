@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { climateAt, isRadioactive } from '../sim/climate';
 import { STEP_UP, heirs } from '../sim/succession';
 import { describeWish } from '../sim/wishes';
 import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
@@ -12,7 +13,7 @@ import { hungerOf, isFallen } from '../sim/colonies';
 import { describeTasks } from '../sim/talk';
 import { storyLines } from '../sim/story';
 import { describeOrder } from '../sim/orders';
-import { NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type PresetId, type Settings } from '../sim/difficulty';
+import { MAP_TYPES, NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type MapType, type PresetId, type Settings } from '../sim/difficulty';
 import { controlled } from '../sim/control';
 import type { Command } from '../sim/commands';
 import type { Point } from '../sim/grid';
@@ -56,6 +57,8 @@ export interface GameFiles {
   importFile(): void;
   reportBug(): void;
   newWorld(size: number, settings: Settings): void;
+  /** Everyone aboard the helicopter: a new game+ (escape.ts). */
+  newGamePlus(): void;
 }
 
 export interface Hud {
@@ -127,9 +130,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const prisoners = createPrisonerPanel(command);
   const story = createStoryPanel(view, command);
   const succession = createSuccessionPanel(view, command);
+  const helicopter = createHelicopterPanel(command, files);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
-  info.append(status, succession.root, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
+  info.append(status, succession.root, helicopter.root, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -210,6 +214,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       prisoners.update(state);
       story.update(state);
       succession.update(state);
+      helicopter.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -243,7 +248,7 @@ function statusText(state: SimState, view: ViewState): string {
   return [
     mode,
     selected ? `${selected.name} selected (right-click to move, click a bed to give it to them)` : 'nobody selected',
-    hover && tile ? (state.grid.explored[hover.y * width + hover.x] === 1 ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}` : `(${hover.x}, ${hover.y}) unexplored`) : '—',
+    hover && tile ? (state.grid.explored[hover.y * width + hover.x] === 1 ? `(${hover.x}, ${hover.y}) ${tile}${furnitureText(state, hover)}${state.world ? ` · ${climateAt(state, hover.x, hover.y)} region${isRadioactive(state, hover.x, hover.y) ? ' · RADIOACTIVE' : ''}` : ''}` : `(${hover.x}, ${hover.y}) unexplored`) : '—',
     `tick ${state.tick}`,
     `jobs ${state.jobs.length}`,
     `wood ${wood}`,
@@ -429,6 +434,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       const weather = choose(WEATHER_LEVELS.map((w, i) => [String(i), `${w} weather`] as const), String(NORMAL.weather));
       const progression = choose(PROGRESSION_LEVELS.map((p, i) => [String(i), `${p} since the outbreak`] as const), String(NORMAL.progression));
       const winter = choose([['no', 'No nuclear winter'], ['yes', 'Nuclear winter']], NORMAL.winter ? 'yes' : 'no');
+      const map = choose(MAP_TYPES, NORMAL.map);
       const dayScale = choose([['1', 'Normal days'], ['2', 'Days twice as long'], ['3', 'Days three times as long']], String(NORMAL.dayScale));
       preset.addEventListener('change', () => {
         const s = PRESETS[preset.value as PresetId].settings;
@@ -438,6 +444,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         progression.value = String(s.progression);
         winter.value = s.winter ? 'yes' : 'no';
         dayScale.value = String(s.dayScale);
+        map.value = s.map;
       });
       const settings = (): Settings => ({
         start: start.value === 'solo' ? 'solo' : 'group',
@@ -446,9 +453,41 @@ function createGamePanel(view: ViewState, files: GameFiles) {
         progression: Number(progression.value),
         winter: winter.value === 'yes',
         dayScale: Number(dayScale.value),
+        map: map.value as MapType,
       });
       root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
-      root.append(row('Sandbox:', start, zombies, weather, progression, winter, dayScale));
+      root.append(row('Sandbox:', start, zombies, weather, progression, winter, dayScale, map));
+    },
+  };
+}
+
+/** The helicopter is down: who goes? */
+function createHelicopterPanel(command: (cmd: Command) => void, files: GameFiles) {
+  const root = el('div', 'hud-wanderers');
+  root.hidden = true;
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const key = state.endgame.helicopter ? `${state.survivors.length}|${state.control?.survivorId ?? ''}` : '';
+      if (key === last) return;
+      last = key;
+      root.hidden = !state.endgame.helicopter;
+      root.replaceChildren();
+      if (!state.endgame.helicopter) return;
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = `The helicopter is down until dusk. ${state.endgame.escaped > 0 ? `(${state.endgame.escaped} flown out so far.) ` : ''}Who goes?`;
+      root.append(title);
+      const button = (label: string, about: string, act: () => void) => {
+        const b = el('button', 'hud-button');
+        b.textContent = label;
+        b.title = about;
+        b.addEventListener('click', act);
+        root.append(b);
+      };
+      button('Everyone (a new start elsewhere)', 'A new game+: a fresh world with the same settings, and you in it alone, with what you carry, your skills and your story.', () => files.newGamePlus());
+      if (state.control && state.survivors.length > 1) button('The others; I stay', 'Everyone but you flies out. You stay, and can call again for anyone else you find.', () => command({ type: 'escape', who: 'others' }));
+      button('Wave it off', 'Nobody goes. You can call again.', () => command({ type: 'escape', who: 'none' }));
     },
   };
 }
@@ -456,6 +495,7 @@ function createGamePanel(view: ViewState, files: GameFiles) {
 /** When the one you controlled dies: who carries on? Pauses the game the first time it shows. */
 function createSuccessionPanel(view: ViewState, command: (cmd: Command) => void) {
   const root = el('div', 'hud-wanderers');
+  root.hidden = true;
   let last = '';
   return {
     root,

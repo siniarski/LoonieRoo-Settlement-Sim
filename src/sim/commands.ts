@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { escape } from './escape';
 import { succeed } from './succession';
 import { promise } from './wishes';
 import { meetResident } from './residents';
@@ -134,7 +135,9 @@ export type Command =
   /** Promise to see a survivor's wish done (wishes.ts). */
   | { type: 'promiseWish'; survivorId: string }
   /** After the one you controlled dies: an heir's id, 'anew' (someone new, far off) or 'none' (succession.ts). */
-  | { type: 'succeed'; choice: string };
+  | { type: 'succeed'; choice: string }
+  /** The helicopter is down: send everyone but you, or nobody (escape.ts; everyone at once is a new game+, from the UI). */
+  | { type: 'escape'; who: 'others' | 'none' };
 
 type OrderKind = 'follow' | 'hold' | 'loot' | 'settle';
 
@@ -179,6 +182,11 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'escape') {
+    if (command.who !== 'others' && command.who !== 'none') return reject('others or none');
+    const why = escape(state, command.who);
+    return why ? reject(why) : changed();
   }
   if (command.type === 'succeed') {
     const why = succeed(state, command.choice);

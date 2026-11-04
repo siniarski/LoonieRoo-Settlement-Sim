@@ -28,6 +28,10 @@ export interface Endgame {
   /** The tick the helicopter comes, once the beacon got through. */
   evacuation: number | null;
   won: 'cure' | 'evacuation' | null;
+  /** The helicopter is down, waiting for you to choose who goes (escape.ts). */
+  helicopter: boolean;
+  /** People flown out so far, over every helicopter (and every world, after a new game+). */
+  escaped: number;
 }
 
 export const SAMPLE_CHANCE = 0.15;
@@ -43,7 +47,7 @@ export const FIRST_SIEGE = 14;
 export const SIEGE_FACTOR = 1.25;
 
 export function newEndgame(): Endgame {
-  return { cure: 0, evacuation: null, won: null };
+  return { cure: 0, evacuation: null, won: null, helicopter: false, escaped: 0 };
 }
 
 /** A zombie went down: maybe it leaves a sample. */
@@ -84,7 +88,8 @@ export function updateEndgame(state: SimState): void {
     const ahead = daysToSiege(state.tick);
     if (ahead === 2) logEvent(state, `A siege is coming in two nights (night ${dayOf(state.tick) + 2}): a quarter more zombies. Get ready`);
   }
-  if (eg.won !== null) return;
+  // After a first escape, the radio can call again for whoever else you find.
+  if (eg.helicopter) return;
   if (eg.evacuation === null) {
     if (dayOf(state.tick) < EVAC_FROM_DAY || !hasRadio(state) || !state.furniture.some((f) => f.kind === 'beacon' && isPowered(state, f))) return;
     // The dawn EVAC_DAYS days on.
@@ -97,6 +102,7 @@ export function updateEndgame(state: SimState): void {
     eg.evacuation = null;
     return;
   }
-  eg.won = 'evacuation';
-  logEvent(state, `THE HELICOPTER came at dawn: ${state.survivors.map((s) => s.name).join(', ')} flew out. You have won (play on if you like)`);
+  eg.helicopter = true;
+  if (eg.won === null) eg.won = 'evacuation';
+  logEvent(state, 'THE HELICOPTER is down at dawn. It waits until dusk: choose who goes (everyone, for a new start elsewhere; or just the others)');
 }

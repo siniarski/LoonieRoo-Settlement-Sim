@@ -144,7 +144,7 @@ export function createOverview(view: ViewState, command: (cmd: Command) => void)
       const eg = state.endgame;
       root.append(
         el('div', 'hud-overview-head', 'Endgame'),
-        el('div', 'hud-overview-text', eg.won ? `Won: ${eg.won === 'cure' ? 'the cure' : 'evacuated'}` : `Cure: ${eg.cure}/${CURE_SAMPLES} samples studied (lab bench, powered) · Evacuation: ${eg.evacuation === null ? `build a beacon and a radio, both powered (they answer from day ${EVAC_FROM_DAY})` : `helicopter at dawn on day ${dayOf(eg.evacuation)}`}`),
+        el('div', 'hud-overview-text', eg.won ? `Won: ${eg.won === 'cure' ? 'the cure' : 'evacuated'}${eg.escaped > 0 ? ` (${eg.escaped} flown out)` : ''}` : `Cure: ${eg.cure}/${CURE_SAMPLES} samples studied (lab bench, powered) · Evacuation: ${eg.evacuation === null ? `build a beacon and a radio, both powered (they answer from day ${EVAC_FROM_DAY})` : `helicopter at dawn on day ${dayOf(eg.evacuation)}`}`),
       );
       const known = state.knowledge.map((k) => `${k} (${KNOWLEDGE[k]})`);
       root.append(el('div', 'hud-overview-head', 'Known'), el('div', 'hud-overview-text', known.join('; ') || 'nothing from books yet'));

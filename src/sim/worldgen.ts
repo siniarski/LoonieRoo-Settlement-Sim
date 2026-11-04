@@ -13,7 +13,8 @@
 //    (Entity ids come from state.nextId, so they do depend on generation
 //    order; ids are labels, nothing else.)
 
-import { NORMAL, crateLoot, ruinDecay, zombieScale, type Settings } from './difficulty';
+import { isRadioactive } from './climate';
+import { NORMAL, crateLoot, ruinDecay, zombieScale, type MapType, type Settings } from './difficulty';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { itemAt, spawnItem } from './items';
@@ -88,9 +89,10 @@ export interface Layout {
   /** The river runs along x (true) or y; its centre line wanders around `riverBase`. */
   riverAlongX: boolean;
   riverBase: number;
+  map: MapType;
 }
 
-export function layout(seed: number, size: number): Layout {
+export function layout(seed: number, size: number, map: MapType = 'mainland'): Layout {
   const start = { x: Math.floor(size / 2), y: Math.floor(size / 2) };
   // A road every 64 tiles, nudged by up to 8, offset so none crosses the start clearing.
   const lines = (salt: number) => {
@@ -101,15 +103,40 @@ export function layout(seed: number, size: number): Layout {
   // The river passes well to one side of the start.
   const side = hash(seed, 0, 0, 3) % 2 === 0 ? -1 : 1;
   const riverBase = start.y + side * (48 + (hash(seed, 0, 0, 4) % 24));
-  return { seed, size, start, roadRows: lines(1), roadCols: lines(2), riverAlongX: hash(seed, 0, 0, 5) % 2 === 0, riverBase };
+  return { seed, size, start, roadRows: lines(1), roadCols: lines(2), riverAlongX: hash(seed, 0, 0, 5) % 2 === 0, riverBase, map };
 }
 
 function isRoad(l: Layout, x: number, y: number): boolean {
   return l.roadRows.some((r) => y === r || y === r + 1) || l.roadCols.some((c) => x === c || x === c + 1);
 }
 
+/**
+ * Open sea round an island or a chain (no bridges reach out into it): beyond a coast that
+ * wanders around 40% of the map's width from the middle.
+ */
+export function isSea(l: Layout, x: number, y: number): boolean {
+  if (l.map !== 'island' && l.map !== 'islands') return false;
+  if (nearStart(l, x, y, START_CLEAR_RADIUS + 8)) return false;
+  const r = Math.hypot(x - l.size / 2, y - l.size / 2) / (l.size / 2);
+  return r > 0.78 + 0.18 * (noise(l.seed, x, y, 18, 30) - 0.5);
+}
+
+/** An island chain: channels between the islands, which roads cross on bridges. */
+function isChannel(l: Layout, x: number, y: number): boolean {
+  return l.map === 'islands' && Math.abs(noise(l.seed, x, y, 40, 31) - 0.5) < 0.045;
+}
+
+/** A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it. */
+export function fenceAt(l: Layout, x: number, y: number): 'wall' | 'door' | null {
+  if (l.map !== 'quarantine') return null;
+  const onFence = (x === 2 || y === 2 || x === l.size - 3 || y === l.size - 3) && x >= 2 && y >= 2 && x <= l.size - 3 && y <= l.size - 3;
+  if (!onFence) return null;
+  return isRoad(l, x, y) ? 'door' : 'wall';
+}
+
 function isWater(l: Layout, x: number, y: number): boolean {
   if (nearStart(l, x, y, START_CLEAR_RADIUS + 8)) return false;
+  if (isSea(l, x, y) || isChannel(l, x, y)) return true;
   // The river: a band 3-5 wide around a wandering centre line.
   const along = l.riverAlongX ? x : y;
   const across = l.riverAlongX ? y : x;
@@ -149,7 +176,10 @@ export function generateChunk(state: SimState, l: Layout, cx: number, cy: number
   for (let y = y0; y < y0 + CHUNK; y++) {
     for (let x = x0; x < x0 + CHUNK; x++) {
       if (!inBounds(state.grid, x, y)) continue;
-      if (isRoad(l, x, y)) ground(state, x, y, isWater(l, x, y) ? 'bridge' : 'road');
+      const fence = fenceAt(l, x, y);
+      if (fence) setTile(state.grid, x, y, fence);
+      else if (isSea(l, x, y)) setTile(state.grid, x, y, 'water');
+      else if (isRoad(l, x, y)) ground(state, x, y, isWater(l, x, y) ? 'bridge' : 'road');
       else if (isWater(l, x, y)) setTile(state.grid, x, y, 'water');
       else if (isForest(l, x, y)) ground(state, x, y, 'forest');
       else if (noise(l.seed, x, y, 6, 11) > 0.72) ground(state, x, y, 'dirt');
@@ -213,7 +243,8 @@ function building(state: SimState, l: Layout, cx0: number, cy0: number): void {
     const x = x0 + 1 + (hash(l.seed, cx0 + n, cy0, 21) % (w - 2));
     const y = y0 + 1 + (hash(l.seed, cx0, cy0 + n, 22) % (h - 2));
     if (state.grid.tiles[tileIndex(state.grid, x, y)] !== 'floor' || furnitureAt(state, x, y)) continue;
-    addFurniture(state, 'crate', x, y).loot = crateLoot(state, lootFor(dist));
+    // In a radioactive hot zone (climate.ts) nobody has picked it over: twice the loot.
+    addFurniture(state, 'crate', x, y).loot = crateLoot(state, lootFor(dist)) * (isRadioactive(state, x, y) ? 2 : 1);
   }
   // Asleep inside: none near the start, more the further out.
   if (dist < START_CLEAR_RADIUS + 24) return;
@@ -283,7 +314,7 @@ export function ensureGeneratedAround(state: SimState, p: Point): void {
       const i = cy * world.chunks + cx;
       if (world.generated[i] === 1) continue;
       world.generated[i] = 1;
-      l ??= layout(world.seed, world.size);
+      l ??= layout(world.seed, world.size, state.settings.map);
       generateChunk(state, l, cx, cy);
       settle(state, cx, cy);
       state.walkabilityVersion += 1;
@@ -327,7 +358,7 @@ function nearestAcross(state: SimState, p: Point, accept: (x: number, y: number)
 export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings = NORMAL): SimState {
   const state = createState({ seed, width: size, height: size });
   state.settings = { ...settings };
-  const l = layout(seed, size);
+  const l = layout(seed, size, settings.map);
   const chunks = Math.ceil(size / CHUNK);
   state.world = { seed, size, chunks, generated: new Array<number>(chunks * chunks).fill(0) };
   ensureGeneratedAround(state, l.start);

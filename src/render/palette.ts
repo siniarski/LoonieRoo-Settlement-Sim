@@ -93,6 +93,7 @@ export const COLOURS = {
   night: '#0a1030',
   zombie: '#7da35a',
   enemy: '#d0584a',
+  radiation: 'rgba(140, 255, 60, 0.18)',
   zombieOutline: '#1f2a14',
   zombieEye: '#ff5a4a',
   zombieChase: 'rgba(255, 90, 74, 0.6)',

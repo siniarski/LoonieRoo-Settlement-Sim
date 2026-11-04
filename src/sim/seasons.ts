@@ -7,6 +7,7 @@
 // cold. Winter nights are cold outdoors: a slow loss of health, and the mood
 // to match. Indoors (any enclosed room) is warm.
 
+import { regionCold } from './climate';
 import { FREEZING } from './body';
 import { coldEvery, eventChance } from './difficulty';
 import { random } from './rng';
@@ -68,10 +69,14 @@ function coldOutside(state: SimState): boolean {
   return ((seasonOf(state.tick) === 'winter' || state.settings.winter) && isNight(state.tick)) || state.weather === 'blizzard';
 }
 
-/** Out of doors on a winter night (or in a blizzard) without a coat or a heater. */
+/**
+ * Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a
+ * blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.
+ */
 export function isCold(state: SimState, s: Survivor): boolean {
+  const cold = state.world ? regionCold(state, s.pos.x, s.pos.y) || state.weather === 'blizzard' : coldOutside(state);
   return (
-    coldOutside(state) &&
+    cold &&
     !isIndoors(state, s.pos.x, s.pos.y) &&
     !wearing(state, s, 'coat') &&
     !isWarmed(state, s.pos)
