@@ -15,7 +15,9 @@
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
-import { RUN_STEP_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
+import { getTile, isOpen } from './grid';
+import { toggleDoor } from './commands';
+import { RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
 import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
 import { TIRED } from './rest';
 import { isNight, slowTick } from './time';
@@ -43,7 +45,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { SUB, SWING_REACH, centre, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
+import { SUB, SWING_REACH, centre, fits, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, type Zombie } from './zombies';
 
@@ -79,11 +81,11 @@ export function updateControlled(state: SimState, s: Survivor): void {
     c.busy = null;
     c.facing = { x: c.dx, y: c.dy };
     const run = c.running === true && !isWinded(s);
-    const pace = Math.max(2, stepPace(state, s, s.pos) - (run ? 1 : 0));
-    // Running costs RUN_STEP_COST a tile's worth of ground.
-    if (run && state.tick % pace === 0) exert(s, RUN_STEP_COST);
-    const v = toward(c.dx, c.dy, Math.round(SUB / pace));
-    s.at = slide(state.grid, s.at, v.x, v.y, 'survivor');
+    if (run) exert(s, RUN_TICK_COST);
+    const walk = Math.round(SUB / stepPace(state, s, s.pos));
+    const v = toward(c.dx, c.dy, run ? Math.round((walk * RUN_PCT) / 100) : walk);
+    // Caught in a closed doorway (taken over mid-step, say): walk out as a colonist would.
+    s.at = slide(state.grid, s.at, v.x, v.y, fits(state.grid, s.at, 'free') ? 'free' : 'survivor');
     const tile = tileOf(s.at);
     if (tile.x !== s.pos.x || tile.y !== s.pos.y) {
       s.pos = tile;
@@ -289,6 +291,10 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   if (face) c.facing = face;
   const person = residentAt(state, target);
   if (person) return meetResident(state, s, person) ?? `talked with ${person.name}`;
+  if (getTile(state.grid, target.x, target.y) === 'door') {
+    const was = isOpen(state.grid, target.x, target.y);
+    return toggleDoor(state, target.x, target.y) ?? (was ? 'closed the door' : 'opened the door');
+  }
   const item = itemAt(state, target.x, target.y);
   // A remedy you need is used, not picked up: on the ground next to you, or the one you carry (use your own tile).
   const carriedRemedy = s.carrying && samePoint(target, s.pos) ? getItem(state, s.carrying) : undefined;

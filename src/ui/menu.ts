@@ -4,6 +4,7 @@
 //   load  the save slots, the autosave, and a file
 // Plain DOM over the canvas; it only calls the actions app.ts hands it.
 
+import type { Arena } from '../sim/arena';
 import { MAP_TYPES, NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type MapType, type PresetId, type Settings } from '../sim/difficulty';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { AUTO_SLOT, SLOTS, slotLabel, slotTime } from './saves';
@@ -13,6 +14,8 @@ export interface MenuActions {
   /** Back to the game under the menu. */
   resume(): void;
   newGame(size: number, settings: Settings, seed: number | null): void;
+  /** A debug arena: a small solo world with zombies near you from the start (arena.ts). */
+  arena(kind: Arena): void;
   load(slot: string): void;
   importFile(): void;
   save(slot: string): void;
@@ -133,7 +136,10 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
       const n = Number(pick.seed);
       actions.newGame(pick.size, { ...pick.settings }, pick.seed.trim() !== '' && Number.isInteger(n) && n > 0 ? n : null);
     }, 'menu-button primary');
-    panel.append(start, button('Back', () => go('main')));
+    panel.append(start);
+    const debug = el('div', 'menu-row');
+    debug.append(el('span', 'menu-label', 'Debug'), button('Arena: one zombie', () => actions.arena('one'), 'menu-small'), button('Arena: a crowd', () => actions.arena('crowd'), 'menu-small'));
+    panel.append(debug, button('Back', () => go('main')));
   };
 
   const load = (panel: HTMLElement) => {

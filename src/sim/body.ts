@@ -1,8 +1,8 @@
 // The body, 0..100 each: endurance, panic, body heat, wetness. Updated every tick
 // (rates per tick, so they slow with longer days: time.ts slowTick).
 //
-//   endurance  swings and running spend it; it comes back at rest. Under WINDED: swings come
-//              later and land softer, and no running.
+//   endurance  swings and running (RUN_PCT of walking speed, RUN_TICK_COST a tick) spend it; it
+//              comes back at rest. Under WINDED: swings come later and land softer, and no running.
 //   panic      rises with the dead close by (faster alone, or with little resolve; slower
 //              when steeled), and with every hit taken; ebbs when none are near. Over
 //              PANICKING: some swings miss, and it weighs on mood.
@@ -33,7 +33,9 @@ export const SOAKED = 50;
 export const DRENCHED = 60;
 export const SWING_COST = 10;
 export const GUARD_BLOW_COST = 5;
-export const RUN_STEP_COST = 3;
+/** Running: this many percent of walking speed, for this much endurance a tick (about 10 s from full to winded). */
+export const RUN_PCT = 175;
+export const RUN_TICK_COST = 1;
 export const HIT_PANIC = 10;
 /** Panic per zombie close by, per check. */
 const PANIC_PER_ZOMBIE = 3;

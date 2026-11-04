@@ -66,7 +66,7 @@ export function draw(
         const r = tileRect(camera, viewport, x, y);
         ctx.fillStyle = COLOURS.fog;
         ctx.fillRect(r.x, r.y, r.w, r.h);
-      } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size, tile === 'door' && grid.locked.includes(i));
+      } else drawTile(ctx, camera, viewport, x, y, tile, grid.ground[i]!, size, tile === 'door' && grid.locked.includes(i), tile === 'door' && grid.open.includes(i));
       if (state.settings.winter && isRadioactive(state, x, y)) {
         const r = tileRect(camera, viewport, x, y);
         ctx.fillStyle = COLOURS.radiation;
@@ -219,6 +219,7 @@ function drawTile(
   ground: number,
   size: number,
   locked = false,
+  open = false,
 ): void {
   const r = tileRect(camera, viewport, x, y);
   ctx.fillStyle = tile === 'floor' || tile === 'door' ? COLOURS.ground[GROUNDS[ground] ?? 'grass'] : COLOURS.tiles[tile];
@@ -254,6 +255,14 @@ function drawTile(
     ctx.strokeStyle = '#c9a227';
     ctx.lineWidth = Math.max(1, r.w * 0.06);
     ctx.strokeRect(r.x + r.w * 0.4, r.y + r.h * 0.22, r.w * 0.2, r.h * 0.2);
+  } else if (tile === 'door' && open) {
+    // Open: the frame's edges, and the leaf swung back along one side.
+    const edge = Math.max(1, Math.round(size * 0.12));
+    ctx.fillStyle = COLOURS.doorFrame;
+    ctx.fillRect(r.x, r.y, edge, r.h);
+    ctx.fillRect(r.x + r.w - edge, r.y, edge, r.h);
+    ctx.fillStyle = COLOURS.tiles.door;
+    ctx.fillRect(r.x + edge, r.y, Math.max(1, Math.round(size * 0.18)), r.h);
   } else if (tile === 'door') {
     const inset = Math.round(size * 0.12);
     ctx.fillStyle = COLOURS.doorFrame;

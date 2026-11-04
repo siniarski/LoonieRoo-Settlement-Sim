@@ -40,6 +40,8 @@ export interface Grid {
   locked: number[];
   /** Structures reinforced with scrap (tile indices; defences.ts). */
   reinforced: number[];
+  /** Doors standing open (tile indices). Closed by default; zombies walk through open ones. */
+  open: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -58,6 +60,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     damageList: [],
     locked: [],
     reinforced: [],
+    open: [],
   };
 }
 
@@ -90,6 +93,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   setDamage(grid, i, 0); // a new (or removed) structure starts undamaged
   drop(grid.locked, i); // and unlocked
   drop(grid.reinforced, i); // and plain
+  drop(grid.open, i); // and shut
   return true;
 }
 
@@ -129,6 +133,11 @@ export function isWalkableTile(tile: Tile): boolean {
 
 export function isLocked(grid: Grid, x: number, y: number): boolean {
   return inBounds(grid, x, y) && grid.locked.includes(tileIndex(grid, x, y));
+}
+
+/** A door standing open. */
+export function isOpen(grid: Grid, x: number, y: number): boolean {
+  return inBounds(grid, x, y) && grid.open.includes(tileIndex(grid, x, y));
 }
 
 export function isWalkable(grid: Grid, x: number, y: number): boolean {

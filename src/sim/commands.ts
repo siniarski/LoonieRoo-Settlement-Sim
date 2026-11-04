@@ -108,6 +108,8 @@ export type Command =
   | { type: 'ignite'; x: number; y: number }
   /** Lock or unlock a door: raiders can't open locked ones. */
   | { type: 'toggleLock'; x: number; y: number }
+  /** Open a closed door, or close an open one (not with anyone in the doorway; not if locked). */
+  | { type: 'toggleDoor'; x: number; y: number }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
   | { type: 'setRest'; survivorId: string; rest: number }
   | { type: 'setSatiety'; survivorId: string; satiety: number }
@@ -342,10 +344,16 @@ function execute(state: SimState, command: Command): CommandResult {
     const failed = trade(state, command.traderId, command.offer);
     return failed ? reject(failed) : changed();
   }
+  if (command.type === 'toggleDoor') {
+    const why = toggleDoor(state, command.x, command.y);
+    return why ? reject(why) : changed();
+  }
   if (command.type === 'toggleLock') {
     const { x, y } = command;
     if (getTile(state.grid, x, y) !== 'door') return reject(`(${x}, ${y}) is not a door`);
     const i = y * state.grid.width + x;
+    const open = state.grid.open.indexOf(i);
+    if (open >= 0) state.grid.open.splice(open, 1); // a locked door is a shut one
     const at = state.grid.locked.indexOf(i);
     if (at >= 0) state.grid.locked.splice(at, 1);
     else {
@@ -621,6 +629,23 @@ function giveOrder(state: SimState, s: Survivor, kind: OrderKind, at: Point): bo
   s.nextSeekTick = 0;
   s.note = describeOrder(order);
   return true;
+}
+
+/** Open or close a door. Returns why not, or null. */
+export function toggleDoor(state: SimState, x: number, y: number): string | null {
+  if (getTile(state.grid, x, y) !== 'door') return `(${x}, ${y}) is not a door`;
+  const i = y * state.grid.width + x;
+  const at = state.grid.open.indexOf(i);
+  if (at < 0) {
+    if (state.grid.locked.includes(i)) return 'it\'s locked';
+    state.grid.open.push(i);
+  } else {
+    const inTheWay = [...state.survivors, ...state.zombies, ...state.residents].some((e) => e.pos.x === x && e.pos.y === y);
+    if (inTheWay) return 'someone is in the doorway';
+    state.grid.open.splice(at, 1);
+  }
+  state.walkabilityVersion += 1; // zombies' ways in change
+  return null;
 }
 
 function takeControl(state: SimState, id: string | null): CommandResult {
