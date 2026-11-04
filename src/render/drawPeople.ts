@@ -250,6 +250,10 @@ export function drawSurvivor(
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(asleep ? `${s.name} z` : s.breakdown ? `${s.name} !` : s.name, p.x, p.y - radius - 3);
+    if (s.wish) {
+      ctx.fillStyle = s.wish.promised ? COLOURS.controlled : COLOURS.label;
+      ctx.fillText(s.wish.promised ? '◆' : '◇', p.x, p.y - radius - 3 - Math.round(Math.min(14, size * 0.45)));
+    }
   }
 }
 

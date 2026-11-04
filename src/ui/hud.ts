@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { describeWish } from '../sim/wishes';
 import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
 import { BREAKING, STEELED, describeResolve, isBreaking, isSteeled } from '../sim/resolve';
 import { BOOSTS } from '../sim/moodlets';
@@ -456,7 +457,8 @@ function createStoryPanel(view: ViewState, command: (cmd: Command) => void) {
       const s = state.survivors.find((x) => x.id === view.selectedId && x.id !== state.control?.survivorId);
       const told = s ? storyLines(s.story).slice(0, s.story.told) : [];
       const asks = s ? describeTasks(state, s) : [];
-      const key = JSON.stringify([s?.id ?? null, told.length, asks]);
+      const wish = s?.wish ? `${describeWish(state, s.wish)}|${s.wish.promised}|${Math.ceil((s.wish.until - state.tick) / TICKS_PER_HOUR)}` : '';
+      const key = JSON.stringify([s?.id ?? null, told.length, asks, wish]);
       if (key === last) return;
       last = key;
       root.hidden = !s;
@@ -474,6 +476,21 @@ function createStoryPanel(view: ViewState, command: (cmd: Command) => void) {
         const p = el('div', 'hud-story-ask');
         p.textContent = `${s.name} ${ask}`;
         root.append(p);
+      }
+      if (s.wish) {
+        const row = el('div', 'hud-wanderer');
+        const label = el('span', s.wish.promised ? 'hud-story-ask' : 'hud-wanderer-label');
+        const hours = Math.ceil((s.wish.until - state.tick) / TICKS_PER_HOUR);
+        label.textContent = `Wants ${describeWish(state, s.wish)} (${hours}h left${s.wish.promised ? ', promised' : ''})`;
+        row.append(label);
+        if (!s.wish.promised) {
+          const promiseButton = el('button', 'hud-button');
+          promiseButton.textContent = 'Promise';
+          promiseButton.title = 'See it done for a bigger lift, and they think better of you. Let it run out and they are let down.';
+          promiseButton.addEventListener('click', () => command({ type: 'promiseWish', survivorId: s.id }));
+          row.append(promiseButton);
+        }
+        root.append(row);
       }
       const talkButton = el('button', 'hud-button');
       talkButton.textContent = `Talk to ${s.name}`;
@@ -766,7 +783,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
 
       const resolveCell = el('td', `prio-mood${isBreaking(s) ? ' low' : isSteeled(s) ? ' high' : ''}`);
       resolveCell.textContent = String(s.resolve);
-      resolveCell.title = `${s.name} is ${describeResolve(s)}. Resolve drifts with mood each dawn and sinks for anyone alone; requests seen through lift it, deaths cut it. Under ${BREAKING} they may walk away; at ${STEELED} or more they don't break down.`;
+      resolveCell.title = `${s.name} is ${describeResolve(s)}. Resolve drifts with mood each dawn (loneliness and poor sleep get in that way); requests seen through and promises kept lift it, deaths and broken promises cut it. Under ${BREAKING} they may walk away; at ${STEELED} or more they don't break down.`;
       row.append(resolveCell);
 
       for (const [value, about] of [

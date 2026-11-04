@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { promise } from './wishes';
 import { meetResident } from './residents';
 import { raidSettlement } from './colonies';
 import { TALK_RANGE, talk } from './talk';
@@ -126,7 +127,9 @@ export type Command =
   /** The same order to everyone within earshot of the survivor you control. */
   | { type: 'shout'; order: OrderKind; x?: number; y?: number }
   /** Talk to a survivor (talk.ts); without an id, the nearest one to the survivor you control. */
-  | { type: 'talk'; survivorId?: string };
+  | { type: 'talk'; survivorId?: string }
+  /** Promise to see a survivor's wish done (wishes.ts). */
+  | { type: 'promiseWish'; survivorId: string };
 
 type OrderKind = 'follow' | 'hold' | 'loot' | 'settle';
 
@@ -161,6 +164,12 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'promiseWish') {
+    const s = getSurvivor(state, command.survivorId);
+    if (!s) return reject(`no survivor ${command.survivorId}`);
+    const why = promise(state, s);
+    return why ? reject(why) : changed();
   }
   if (command.type === 'raidSettlement') {
     const why = raidSettlement(state, command.settlementId);

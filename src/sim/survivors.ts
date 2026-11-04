@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import type { Wish } from './wishes';
 import { startingResolve } from './resolve';
 import { boosted } from './moodlets';
 import { makeStory, type Story } from './story';
@@ -156,6 +157,8 @@ export interface Survivor {
   /** Higher needs, 0..100 each (wellbeing.ts). */
   social: number;
   comfort: number;
+  /** A small want just now, or null (wishes.ts). */
+  wish: Wish | null;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -219,6 +222,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     resolve: startingResolve(`s${n}`),
     social: 60,
     comfort: 50,
+    wish: null,
   };
   state.survivors.push(survivor);
   return survivor;
