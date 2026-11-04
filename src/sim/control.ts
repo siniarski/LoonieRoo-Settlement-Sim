@@ -43,7 +43,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { SUB, SWING_REACH, centre, followTile, slide, tileOf, toward } from './motion';
+import { SUB, SWING_REACH, centre, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, type Zombie } from './zombies';
 
@@ -210,7 +210,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     if (killed) wearWeapon(state, s);
     return killed ? 'killed it' : 'hit it';
   }
-  const person = residentToHit(state, s.pos, c.facing);
+  const person = residentToHit(state, s.at, c.facing);
   if (person) {
     c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
     makeNoise(state, s.pos, 'fighting');
@@ -218,10 +218,10 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
   }
   // A deer next to you, or one you're aiming at with a loaded gun (handiwork.ts).
-  const deer = state.animals.find((a) => (a.pos.x === s.pos.x + c.facing.x && a.pos.y === s.pos.y + c.facing.y) || Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) === 1)
+  const deer = nearestInArc(state.animals, s.at, c.facing)
     ?? (loadedGun(state, s) ? state.animals.find((a) => a.pos.x === target.x && a.pos.y === target.y && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos)) : undefined);
   if (deer) {
-    const shot = Math.abs(deer.pos.x - s.pos.x) + Math.abs(deer.pos.y - s.pos.y) > 1;
+    const shot = !inReach(deer, s, SWING_REACH);
     c.nextSwing = state.tick + (shot ? GUN_EVERY : swingWait(s, GUARD_ATTACK_EVERY));
     if (shot) {
       loadedGun(state, s)!.wear -= 1;
@@ -246,11 +246,9 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   return 'swung at nothing';
 }
 
-/** A resident (residents.ts) in front of you, or right next to you. */
-function residentToHit(state: SimState, pos: Point, facing: Point): Resident | undefined {
-  const ahead = residentAt(state, { x: pos.x + facing.x, y: pos.y + facing.y });
-  if (ahead) return ahead;
-  return state.residents.find((r) => Math.abs(r.pos.x - pos.x) + Math.abs(r.pos.y - pos.y) === 1);
+/** A resident (residents.ts) in the arc in front of you, within reach. */
+function residentToHit(state: SimState, from: Point, facing: Point): Resident | undefined {
+  return nearestInArc(state.residents, from, facing);
 }
 
 /** Someone of yours standing between you and a tile (Bresenham, like clearShot). */
@@ -278,26 +276,9 @@ function inTheWay(state: SimState, s: Survivor, to: Point): Survivor | undefined
 }
 
 /** The zombie in front, else any zombie next to you (straight or diagonal), in a fixed order. */
-/**
- * The zombie a swing lands on: the nearest within SWING_REACH and inside the arc in front of
- * you (within 60 degrees of where you face either way). Integer maths: dot > 0 and
- * 4 * dot^2 >= |facing|^2 * |d|^2 (cos 60 = 1/2).
- */
+/** The zombie a swing lands on: the nearest in the arc in front of you, within reach (motion.ts). */
 function zombieToHit(state: SimState, from: Point, facing: Point): Zombie | undefined {
-  const f2 = facing.x * facing.x + facing.y * facing.y;
-  let best: Zombie | undefined;
-  let bestD2 = Infinity;
-  for (const z of state.zombies) {
-    const dx = z.at.x - from.x;
-    const dy = z.at.y - from.y;
-    const d2 = dx * dx + dy * dy;
-    if (d2 > SWING_REACH * SWING_REACH || d2 >= bestD2) continue;
-    const dot = dx * facing.x + dy * facing.y;
-    if (d2 > 0 && (dot <= 0 || 4 * dot * dot < f2 * d2)) continue;
-    best = z;
-    bestD2 = d2;
-  }
-  return best;
+  return nearestInArc(state.zombies, from, facing);
 }
 
 /** Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do. */

@@ -19,6 +19,33 @@ export const HALF = SUB / 2;
 export const BODY_RADIUS = 77; // 0.3 of a tile
 /** A melee swing (yours, or a guard's) reaches this far, centre to centre: 1.25 tiles. */
 export const SWING_REACH = 320;
+/** A blow or a bite reaches this far, centre to centre: orthogonal neighbours' centres are 1 tile apart, diagonal ones 1.41. */
+export const REACH = 282;
+
+export function inReach(a: { at: Point }, b: { at: Point }, reach = REACH): boolean {
+  return distance2(a.at, b.at) <= reach * reach;
+}
+
+/**
+ * The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees
+ * of `facing` either way). Integer maths: dot > 0 and 4 * dot^2 >= |facing|^2 * |d|^2 (cos 60 = 1/2).
+ */
+export function nearestInArc<T extends { at: Point }>(things: readonly T[], from: Point, facing: Point, reach = SWING_REACH): T | undefined {
+  const f2 = facing.x * facing.x + facing.y * facing.y;
+  let best: T | undefined;
+  let bestD2 = Infinity;
+  for (const t of things) {
+    const dx = t.at.x - from.x;
+    const dy = t.at.y - from.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > reach * reach || d2 >= bestD2) continue;
+    const dot = dx * facing.x + dy * facing.y;
+    if (d2 > 0 && (dot <= 0 || 4 * dot * dot < f2 * d2)) continue;
+    best = t;
+    bestD2 = d2;
+  }
+  return best;
+}
 
 export interface Body {
   pos: Point;

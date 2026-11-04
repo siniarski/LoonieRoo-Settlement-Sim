@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { centre } from '../src/sim/motion';
 import { compound, unfold, updateColonies } from '../src/sim/colonies';
 import { applyCommand } from '../src/sim/commands';
 import { checkInvariants } from '../src/sim/invariants';
@@ -58,6 +59,7 @@ describe('residents', () => {
     const { state, you, n } = town();
     const r = residentsOf(state, n)[0]!;
     you.pos = beside(state, r.pos);
+    you.at = centre(you.pos);
     r.nextThinkTick = 1e9; // stand still
     const med = spawnItem(state, 'medicine', you.pos.x, you.pos.y);
     med.pos = null;
@@ -74,6 +76,7 @@ describe('residents', () => {
     n.reputation = FRIENDLY;
     const r = residentsOf(state, n)[0]!;
     you.pos = beside(state, r.pos);
+    you.at = centre(you.pos);
     expect(applyCommand(state, { type: 'talk' })).toMatchObject({ ok: true });
     expect(state.survivors.find((s) => s.name === r.name)?.order).toEqual({ kind: 'follow' });
     expect(n.people).toBe(5);
@@ -83,6 +86,7 @@ describe('residents', () => {
     const { state, you, n } = town();
     const r = residentsOf(state, n)[0]!;
     you.pos = beside(state, r.pos);
+    you.at = centre(you.pos);
     r.nextThinkTick = 1e9;
     expect(applyCommand(state, { type: 'swing', x: r.pos.x, y: r.pos.y })).toMatchObject({ ok: true });
     expect(n.reputation).toBeLessThanOrEqual(HOSTILE);

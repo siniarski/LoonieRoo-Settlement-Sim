@@ -9,6 +9,7 @@
 // (hand over what you carry for food from their stores), and, when their settlement
 // thinks well of you, ask one to come with you.
 
+import { inReach } from './motion';
 import { placedAt } from './motion';
 import { compound, isFallen } from './colonies';
 import { leaveCorpse } from './corpses';
@@ -116,7 +117,7 @@ function attack(state: SimState, r: Resident, n: Settlement): boolean {
   const near = (s: Survivor) => Math.max(Math.abs(s.pos.x - r.pos.x), Math.abs(s.pos.y - r.pos.y));
   const target = state.survivors.filter((s) => near(s) <= HOSTILE_SIGHT).sort((a, b) => near(a) - near(b))[0];
   if (!target) return false;
-  if (Math.abs(target.pos.x - r.pos.x) + Math.abs(target.pos.y - r.pos.y) === 1) {
+  if (inReach(target, r)) {
     if (r.cooldown > 0) return true;
     r.cooldown = RESIDENT_HIT_EVERY;
     target.health = Math.max(0, target.health - armourDamage(state, target, RESIDENT_DAMAGE));

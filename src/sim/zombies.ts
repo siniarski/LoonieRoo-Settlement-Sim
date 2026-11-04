@@ -11,7 +11,8 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
-import { BODY_RADIUS, SUB, centre, distance2, followTile, slide, tileOf, toward } from './motion';
+import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
+export { REACH } from './motion';
 import { placedAt } from './motion';
 import { HIT_PANIC, frighten } from './body';
 import { zombieScale } from './difficulty';
@@ -293,14 +294,14 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
 
   // Someone within reach: attack instead of moving.
   {
-    const inReach = state.survivors.filter((s) => distance2(s.at, z.at) <= REACH * REACH);
-    const victim = inReach.find((s) => s.id === z.targetId) ?? inReach[0];
+    const reachable = state.survivors.filter((s) => inReach(s, z));
+    const victim = reachable.find((s) => s.id === z.targetId) ?? reachable[0];
     if (victim) {
       if (z.cooldown === 0) hit(state, z, victim);
       return;
     }
     // Nobody to hit but a dog: the dog, then.
-    const dog = state.dogs.find((d) => manhattan(d.pos, z.pos) <= 1);
+    const dog = state.dogs.find((d) => inReach(d, z));
     if (dog) {
       if (z.cooldown === 0) {
         hitDog(state, dog, z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE);
@@ -356,8 +357,6 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
   glide(z, centre(next), speed);
 }
 
-/** Within reach (centre to centre): orthogonal neighbours' centres are 1 tile apart, diagonal ones 1.41. */
-export const REACH = 282;
 /** Closing in: within this of its target, in the open, a zombie leaves the tile path and comes straight on. */
 export const CLOSE_IN = 640;
 /** Zombies push apart to this far, centre to centre. */
@@ -452,8 +451,8 @@ function pushApart(state: SimState): void {
         }
       }
     }
-    // Out of anyone it's standing in.
-    for (const s of state.survivors) {
+    // Out of anyone (or anything) it's standing in.
+    for (const s of [...state.survivors, ...state.residents, ...state.dogs, ...state.animals]) {
       if (Math.abs(s.pos.x - z.pos.x) > 1 || Math.abs(s.pos.y - z.pos.y) > 1) continue;
       const d2 = distance2(z.at, s.at);
       if (d2 >= CROWD * CROWD) continue;
