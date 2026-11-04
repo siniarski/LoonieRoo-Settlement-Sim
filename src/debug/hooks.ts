@@ -5,6 +5,7 @@ import { loadScenario, type Scenario } from '../sim/scenario';
 import { cloneState, type SimState } from '../sim/state';
 import { step } from '../sim/tick';
 import { dumpText } from './text';
+import { CHUNK, ensureGeneratedAround } from '../sim/worldgen';
 
 export interface GameHooks {
   getState(): SimState;
@@ -12,6 +13,8 @@ export interface GameHooks {
   load(scenario: Scenario): void;
   command(cmd: Command): CommandResult;
   dumpText(): string;
+  /** Generates every chunk of a generated world and lifts the fog (for looking at worldgen). */
+  reveal(): void;
 }
 
 declare global {
@@ -42,5 +45,11 @@ export function installGameHooks(handle: GameHandle, options: GameHookOptions = 
     },
     command: (cmd) => applyCommand(handle.state, cmd),
     dumpText: () => dumpText(handle.state),
+    reveal: () => {
+      const s = handle.state;
+      if (!s.world) return;
+      for (let y = 0; y < s.world.size; y += CHUNK) for (let x = 0; x < s.world.size; x += CHUNK) ensureGeneratedAround(s, { x, y });
+      s.grid.explored.fill(1);
+    },
   };
 }

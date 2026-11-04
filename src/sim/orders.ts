@@ -150,7 +150,7 @@ function loot(state: SimState, s: Survivor, o: Extract<Order, { kind: 'loot' }>)
   s.note = 'searching';
   if (o.progress < SCAVENGE_WORK) return true;
   o.progress = 0;
-  const kind = spawnFind(state, scavengeFind(random(state)), s.pos.x, s.pos.y).kind;
+  const kind = spawnFind(state, scavengeFind(random(state), crate.table), s.pos.x, s.pos.y).kind;
   crate.loot -= 1;
   if (crate.loot === 0) crate.scavenge = false;
   s.note = `found ${kind}`;

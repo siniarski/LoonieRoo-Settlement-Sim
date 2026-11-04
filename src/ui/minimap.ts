@@ -24,6 +24,11 @@ const RGB: Record<string, [number, number, number]> = {
   road: [80, 82, 86],
   forest: [34, 64, 36],
   bridge: [96, 76, 52],
+  field: [74, 68, 40],
+  paving: [74, 75, 72],
+  boards: [74, 60, 46],
+  tiles: [66, 72, 74],
+  concrete: [64, 66, 64],
 };
 
 export function createMinimap(view: ViewState) {

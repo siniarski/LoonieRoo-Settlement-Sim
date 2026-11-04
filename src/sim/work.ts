@@ -5,6 +5,7 @@ import { SWING_REACH, distance2 } from './motion';
 import { GUARD_BLOW_COST, exert } from './body';
 import { boostDamage } from './moodlets';
 import { spawnFind } from './difficulty';
+import { LOOT_TABLES, pickFrom, type LootTable } from './loot';
 import { completeBlueprint, getBlueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
@@ -212,21 +213,16 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   job.progress += step;
   if (job.progress < SCAVENGE_WORK) return;
   // Trees only ever give wood (no roll); crates roll their find.
-  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state));
+  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state), crate.table);
   spawnFind(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
   if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false; // trees stay marked: they grow back
   finishJob(state, s, job, crate.kind === 'tree' ? `chopped wood from (${crate.x}, ${crate.y}), ${crate.loot} left` : `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
 }
 
-/** Maps a [0, 1) roll to a find (SCAVENGE_TABLE). */
-export function scavengeFind(roll: number): ItemKind {
-  let at = 0;
-  for (const [kind, chance] of SCAVENGE_TABLE) {
-    at += chance;
-    if (roll < at) return kind;
-  }
-  return SCAVENGE_TABLE.at(-1)![0];
+/** Maps a [0, 1) roll to a find: from the container's loot table (loot.ts), else SCAVENGE_TABLE. */
+export function scavengeFind(roll: number, table: LootTable | null = null): ItemKind {
+  return pickFrom(table ? LOOT_TABLES[table] : SCAVENGE_TABLE, roll);
 }
 
 /** Bring the input to the station one piece at a time, then make the most-wanted thing it makes. */

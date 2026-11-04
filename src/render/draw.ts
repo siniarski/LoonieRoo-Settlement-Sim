@@ -13,7 +13,7 @@ import type { Wanderer } from '../sim/wanderers';
 import { LAMP_LIGHT, litLamps } from '../sim/power';
 import { tileSize, visibleTiles, worldToScreen, type Camera, type Viewport } from './camera';
 import { COLOURS, FURNITURE_GLYPHS } from './palette';
-import { drawRoomTints, drawRoomOutlines, drawRoomLabels, drawPlot, drawCrate, drawBed, drawWorkbench, drawTree, drawTrap, drawStove, drawTable, drawDamage, drawDirt, drawItem, drawFire, drawDog, drawGlyph, drawBlueprint } from './drawThings';
+import { drawRoomTints, drawRoomOutlines, drawRoomLabels, drawPlot, drawCrate, drawFixture, drawBed, drawWorkbench, drawTree, drawTrap, drawStove, drawTable, drawDamage, drawDirt, drawItem, drawFire, drawDog, drawGlyph, drawBlueprint } from './drawThings';
 import { drawJobLink, drawHerd, drawWanderer, drawZombie, drawTask, drawSurvivor, drawPath, drawGoal } from './drawPeople';
 export { FURNITURE_GLYPHS, GLYPHS } from './palette';
 
@@ -104,6 +104,7 @@ export function draw(
     else if (f.kind === 'stove') drawStove(ctx, camera, viewport, f);
     else if (f.kind === 'tree') drawTree(ctx, camera, viewport, f, size);
     else if (f.kind === 'trap') drawTrap(ctx, camera, viewport, f);
+    else if (f.kind === 'decor' || (f.kind === 'crate' && f.look && f.look !== 'crate')) drawFixture(ctx, camera, viewport, f, size);
     else if (FURNITURE_GLYPHS[f.kind]) drawGlyph(ctx, camera, viewport, f.x + 0.5, f.y + 0.5, size * 1.7, FURNITURE_GLYPHS[f.kind]!);
     else drawCrate(ctx, camera, viewport, f, size);
   }

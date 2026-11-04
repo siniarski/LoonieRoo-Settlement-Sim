@@ -113,6 +113,7 @@ export const ENTITY_CHARS = {
   reinforceBlueprint: '@',
   fuel: '$',
   truck: ')',
+  decor: '"',
   removeBlueprint: 'x',
 } as const;
 

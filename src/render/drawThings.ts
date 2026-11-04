@@ -3,7 +3,7 @@
 import { worldPos } from './interp';
 import type { Blueprint } from '../sim/designations';
 import { growTicks, isRipe, type FarmPlot } from '../sim/farming';
-import type { Furniture } from '../sim/furniture';
+import type { Furniture, Look } from '../sim/furniture';
 import type { ItemKind } from '../sim/items';
 import { evaluateRoom, getRoomMap, labelAt, roomAt, type Room, type RoomPurpose } from '../sim/rooms';
 import type { SimState } from '../sim/state';
@@ -111,6 +111,52 @@ export function drawPlot(ctx: CanvasRenderingContext2D, camera: Camera, viewport
   ctx.fillStyle = ripe ? (plot.crop === 'wheat' ? '#e8c860' : plot.crop === 'herb' ? '#7ad7a0' : COLOURS.ripe) : COLOURS.sprout;
   ctx.fillRect(r.x + r.w / 2 - w / 2, r.y + r.h * 0.85 - h, w, h);
 }
+
+/**
+ * Generated fittings and containers (buildings.ts): a shape and colour per look. Containers
+ * also show their finds as pips, dim when searched out, and the marked outline.
+ */
+export function drawFixture(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {
+  const style = LOOKS[f.look ?? 'crate'];
+  const r = tileRect(camera, viewport, f.x, f.y);
+  const w = r.w * style[1];
+  const h = r.h * style[2];
+  const x = r.x + (r.w - w) / 2;
+  const y = r.y + (r.h - h) / 2;
+  const container = f.kind === 'crate';
+  ctx.globalAlpha = container && f.loot === 0 ? 0.55 : 1;
+  ctx.fillStyle = style[0];
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.globalAlpha = 1;
+  if (!container) return;
+  if (f.scavenge) {
+    ctx.strokeStyle = COLOURS.crateMarked;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.strokeRect(r.x + 1.5, r.y + 1.5, r.w - 3, r.h - 3);
+    ctx.setLineDash([]);
+  }
+  if (f.loot > 0 && size >= MIN_GRID_LINE_PX) {
+    const pip = Math.max(1.5, size * 0.06);
+    ctx.fillStyle = COLOURS.lootPip;
+    for (let i = 0; i < Math.min(f.loot, 5); i++) ctx.fillRect(x + 2 + i * (pip + 1.5), y + h - pip - 2, pip, pip);
+  }
+}
+
+/** Colour, width and height (shares of a tile) per look. */
+const LOOKS: Record<Look, [string, number, number]> = {
+  counter: ['#6b5a48', 0.9, 0.55], icebox: ['#9aa8b0', 0.7, 0.8], shelf: ['#5e4a36', 0.9, 0.4], wardrobe: ['#5a4030', 0.9, 0.55],
+  dresser: ['#6a4c34', 0.7, 0.5], cabinet: ['#7a8a8c', 0.6, 0.5], toolbox: ['#9a3a2a', 0.6, 0.4], locker: ['#5a6a7a', 0.55, 0.85],
+  desk: ['#6a5038', 0.85, 0.55], pallet: ['#8a7050', 0.85, 0.85], sack: ['#a89060', 0.6, 0.6], crate: [COLOURS.crate, 0.72, 0.72],
+  sofa: ['#5a4a6a', 0.9, 0.5], bed: ['#7a7a90', 0.7, 0.9], toilet: ['#c8cccc', 0.45, 0.55], bath: ['#b8bcc0', 0.85, 0.55],
+  table: ['#5e4632', 0.75, 0.75], oven: ['#3a3a3c', 0.7, 0.7], tv: ['#1e1e22', 0.7, 0.25], car: ['#5a2a24', 0.95, 0.95],
+  pew: ['#5a4028', 0.95, 0.35], altar: ['#c8b070', 0.8, 0.5], hay: ['#b8a050', 0.85, 0.85], tractor: ['#8a3a20', 0.9, 0.9],
+  pump: ['#a0302a', 0.4, 0.6], bench: ['#6a5a40', 0.8, 0.3], cot: ['#7a8a7a', 0.6, 0.9], register: ['#4a4a4a', 0.5, 0.4],
+  machine: ['#4a5058', 0.9, 0.9],
+};
 
 /** A slatted crate: dull when searched out, yellow dashed outline when marked, pips for finds left. */
 export function drawCrate(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {
