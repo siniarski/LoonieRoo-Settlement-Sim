@@ -1,6 +1,8 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { closeBehind } from './doors';
+import { syncStep, type Body } from './motion';
 import { updateHelicopter } from './escape';
 import { updateRadiation } from './climate';
 import { updateBody } from './body';
@@ -15,7 +17,7 @@ import { updateColonies } from './colonies';
 import { updateTasks } from './talk';
 import { keepOrder } from './orders';
 import { updateFarm } from './farming';
-import { interruptScouting, reconcileJobs, updateWork } from './jobs';
+import { interruptForFight, interruptScouting, reconcileJobs, updateWork } from './jobs';
 import {
   interruptForNeeds,
   killSurvivor,
@@ -69,6 +71,7 @@ export const TICKS_PER_SECOND = 10;
 
 export function tick(state: SimState): void {
   setDayScale(state.settings.dayScale);
+  for (const e of movers(state)) e.was = { x: e.at.x, y: e.at.y };
   // Zombies first (spawn, dawn retreat, move, attack), so jobs see this tick's
   // zombies and survivors react to this tick's hits.
   updateZombies(state);
@@ -140,6 +143,10 @@ export function tick(state: SimState): void {
   reconcileNeeds(state);
   reconcileWanderers(state);
   reconcileControl(state);
+  // Doors held open for someone passing swing shut once they're through (doors.ts).
+  closeBehind(state);
+  // Precise positions follow tile steps (free movers keep their own: motion.ts).
+  for (const e of movers(state)) if (!isFree(state, e)) syncStep(e);
   // Everyone looks round where they now stand.
   updateFog(state);
   state.tick += 1;
@@ -150,6 +157,7 @@ function behave(state: SimState, s: Survivor): void {
   updateBreakdown(state, s);
   interruptForNeeds(state, s);
   interruptScouting(state, s);
+  interruptForFight(state, s);
   updateMovement(state, s);
   // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
   // (not mid-breakdown). A need taking over ends any rec-room visit.
@@ -159,6 +167,17 @@ function behave(state: SimState, s: Survivor): void {
     s.leisure = null;
     stopReading(state, s, s.note ?? '');
   } else if (!s.breakdown && !keepOrder(state, s) && !updateLeisure(state, s) && !updateReading(state, s)) updateWork(state, s);
+}
+
+/** Everything with a precise position (motion.ts). */
+function movers(state: SimState): Body[] {
+  return [...state.survivors, ...state.zombies, ...state.dogs, ...state.animals, ...state.residents];
+}
+
+/** Moving under its own steering, not tile steps (motion.ts). */
+function isFree(state: SimState, e: Body): boolean {
+  const id = (e as { id?: string }).id ?? '';
+  return id.startsWith('z') || (state.control !== null && id === state.control.survivorId);
 }
 
 export function step(state: SimState, ticks: number): void {

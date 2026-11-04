@@ -6,6 +6,7 @@
 // box; each marked deer gets one hunt job (jobs.ts): get next to it, take it
 // down (HUNT_WORK, noisy), and it leaves VENISON food where it fell.
 
+import { placedAt } from './motion';
 import { logEvent } from './events';
 import { getTile, neighbours4, type Point } from './grid';
 import { hashRoll, idNumber } from './hash';
@@ -19,6 +20,9 @@ export interface Animal {
   id: string;
   kind: 'deer';
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   /** Marked by the Hunt order. */
   hunted: boolean;
@@ -40,7 +44,7 @@ export function getAnimal(state: SimState, id: string): Animal | undefined {
 }
 
 export function addDeer(state: SimState, x: number, y: number): Animal {
-  const a: Animal = { id: `d${state.nextId++}`, kind: 'deer', pos: { x, y }, move: null, hunted: false, leavesTick: state.tick + DEER_STAYS };
+  const a: Animal = { id: `d${state.nextId++}`, kind: 'deer', pos: { x, y }, ...placedAt({ x, y }), move: null, hunted: false, leavesTick: state.tick + DEER_STAYS };
   state.animals.push(a);
   return a;
 }

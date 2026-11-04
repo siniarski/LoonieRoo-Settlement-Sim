@@ -6,6 +6,8 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { passThrough } from './doors';
+import { placedAt } from './motion';
 import type { Wish } from './wishes';
 import { startingResolve } from './resolve';
 import { boosted } from './moodlets';
@@ -58,6 +60,9 @@ export interface Survivor {
   name: string;
   /** The tile the survivor is on, or is leaving while `move` is set. */
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   goal: Point | null;
   /** Remaining tiles to walk, excluding the current one. */
@@ -172,6 +177,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     id: `s${n}`,
     name: name ?? nextSurvivorName(state),
     pos: { x, y },
+    ...placedAt({ x, y }),
     move: null,
     goal: null,
     path: [],
@@ -293,6 +299,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
+  passThrough(state, next.x, next.y, true);
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: stepPace(state, s, next) };
 }
 
@@ -303,9 +310,14 @@ export function advanceStep(state: SimState, s: Survivor): boolean {
   if (s.move.progress < s.move.duration) return false;
   s.pos = s.move.to;
   s.move = null;
+  enterTile(state, s);
+  return true;
+}
+
+/** Stepping onto a tile: maybe dirt underfoot, maybe a trap. */
+export function enterTile(state: SimState, s: Survivor): void {
   trackDirt(state, s.pos);
   trapStep(state, s);
-  return true;
 }
 
 /** Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2. */

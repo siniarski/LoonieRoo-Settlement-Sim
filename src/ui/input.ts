@@ -232,6 +232,8 @@ export function attachInput(ctx: InputContext): Input {
       view.showMinimap = !view.showMinimap;
     } else if (key === 'o') {
       view.showOverview = !view.showOverview;
+    } else if (key === 'k') {
+      view.showKeys = !view.showKeys;
     } else if (key === 'f') {
       if (ctx.control()) ctx.command({ type: 'takeControl', survivorId: null });
       else if (view.selectedId) ctx.command({ type: 'takeControl', survivorId: view.selectedId });

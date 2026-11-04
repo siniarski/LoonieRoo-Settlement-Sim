@@ -94,7 +94,7 @@ describe('handiwork', () => {
       const s = state.survivors[0]!;
       cmd(state, { type: 'takeControl', survivorId: s.id });
       state.tick = t;
-      state.animals.push({ id: `a${t + 50}`, kind: 'deer', pos: { x: 1, y: 0 }, move: null, hunted: false, leavesTick: DAY_LENGTH });
+      state.animals.push({ id: `a${t + 50}`, kind: 'deer', pos: { x: 1, y: 0 }, at: { x: 384, y: 128 }, was: { x: 384, y: 128 }, move: null, hunted: false, leavesTick: DAY_LENGTH });
       cmd(state, { type: 'swing', x: 1, y: 0 });
       dropped = state.animals.length === 0 && state.items.filter((i) => i.kind === 'food').length > 0;
     }

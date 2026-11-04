@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { applyCommand } from '../src/sim/commands';
-import { COLD, PANICKING, SWING_COST, WINDED, updateBody } from '../src/sim/body';
+import { COLD, PANICKING, RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED, updateBody } from '../src/sim/body';
 import { loadScenario } from '../src/sim/scenario';
 import { stepPace } from '../src/sim/survivors';
+import { SUB } from '../src/sim/motion';
 import { tick } from '../src/sim/tick';
 import { TICKS_PER_HOUR } from '../src/sim/time';
 
@@ -17,17 +18,21 @@ describe('the body', () => {
     expect(s.endurance).toBe(100);
   });
 
-  it('running is a tick quicker a tile, costs endurance, and stops when winded', () => {
+  it('running is RUN_PCT of walking speed, costs endurance by the tick, and stops when winded', () => {
     const state = loadScenario({ seed: 1, map: ['s.........'] });
     const s = state.survivors[0]!;
     applyCommand(state, { type: 'takeControl', survivorId: s.id });
     applyCommand(state, { type: 'steer', dx: 1, dy: 0, run: true });
-    tick(state);
-    expect(s.move!.duration).toBe(stepPace(state, s, { x: 1, y: 0 }) - 1);
+    const pace = stepPace(state, s, s.pos);
+    let x = s.at.x;
+    for (let t = 0; t < 6; t++) tick(state);
+    expect(s.at.x - x).toBe(6 * Math.round((Math.round(SUB / pace) * RUN_PCT) / 100)); // a run's speed
+    expect(s.endurance).toBeLessThanOrEqual(100 - 6 * RUN_TICK_COST + 2); // (it comes back a point every 4 ticks)
     expect(s.endurance).toBeLessThan(100);
     s.endurance = WINDED - 1;
-    for (let t = 0; t < 4; t++) tick(state);
-    expect(s.move!.duration).toBe(stepPace(state, s, s.move!.to));
+    x = s.at.x;
+    tick(state);
+    expect(s.at.x - x).toBe(Math.round(SUB / pace)); // winded: walking pace
   });
 
   it('zombies close by bring panic, faster alone; it ebbs when they go', () => {

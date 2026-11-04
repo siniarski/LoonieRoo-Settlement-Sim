@@ -5,6 +5,8 @@
 // biting for DOG_BITE. Zombies with nobody else to hit go for the dog.
 // Being near a dog cheers people up.
 
+import { inReach } from './motion';
+import { placedAt } from './motion';
 import { logEvent } from './events';
 import { neighbours4, type Point } from './grid';
 import { hashRoll } from './hash';
@@ -24,6 +26,9 @@ export interface Dog {
   id: string;
   name: string;
   pos: Point;
+  /** Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start. */
+  at: Point;
+  was: Point;
   move: Movement | null;
   path: Point[];
   health: number;
@@ -51,7 +56,7 @@ const DOG_NAMES = ['Rex', 'Bess', 'Scout', 'Moss', 'Patch', 'Juno', 'Biscuit', '
 
 export function addDog(state: SimState, x: number, y: number): Dog {
   const n = state.nextId++;
-  const dog: Dog = { id: `g${n}`, name: DOG_NAMES[n % DOG_NAMES.length]!, pos: { x, y }, move: null, path: [], health: DOG_HEALTH, cooldown: 0, nextThinkTick: 0, barkedTick: -BARK_EVERY, waiting: false };
+  const dog: Dog = { id: `g${n}`, name: DOG_NAMES[n % DOG_NAMES.length]!, pos: { x, y }, ...placedAt({ x, y }), move: null, path: [], health: DOG_HEALTH, cooldown: 0, nextThinkTick: 0, barkedTick: -BARK_EVERY, waiting: false };
   state.dogs.push(dog);
   return dog;
 }
@@ -91,7 +96,7 @@ function updateDog(state: SimState, dog: Dog): void {
     .filter((z) => manhattan(z.pos, dog.pos) <= DOG_SENSE)
     .sort((a, b) => manhattan(a.pos, dog.pos) - manhattan(b.pos, dog.pos))[0];
   if (zombie && state.tick - dog.barkedTick >= BARK_EVERY) bark(state, dog, zombie);
-  if (zombie && manhattan(zombie.pos, dog.pos) <= 1) {
+  if (zombie && inReach(zombie, dog)) {
     if (dog.cooldown === 0) bite(state, dog, zombie);
     return;
   }

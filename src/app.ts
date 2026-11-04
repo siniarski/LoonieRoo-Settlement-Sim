@@ -1,6 +1,7 @@
 // Wires sim, renderer, input, and HUD together and runs the frame loop.
 // createApp returns a dispose() so hot reload can tear it down cleanly.
 
+import { createArena } from './sim/arena';
 import { createMenu, type MenuActions } from './ui/menu';
 import { newGamePlus } from './sim/escape';
 import { installGameHooks, type GameHandle } from './debug/hooks';
@@ -70,6 +71,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     menuCustomOpen: false,
     showMinimap: true,
     showOverview: false,
+    showKeys: false,
     // Spread over the defaults so view state saved by older code gains new fields.
     ...saved,
   };
@@ -170,6 +172,11 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       if (!replaceState({ ok: true, state: world, kind: 'save' }, `a new ${size}×${size} world`)) return;
       play();
       if (settings.start === 'solo') toast('Alone. WASD to walk, click to swing, right-click or E to use. Space to play.');
+    },
+    arena: (kind) => {
+      const world = createArena(Math.floor(Math.random() * 1e9), kind);
+      if (!replaceState({ ok: true, state: world, kind: 'save' }, kind === 'one' ? 'a debug arena (one zombie)' : 'a debug arena (a crowd)')) return;
+      play();
     },
     load: (slot) => {
       if (replaceState(loadFromSlot(slot), slot === AUTO_SLOT ? 'the autosave' : `slot ${slot}`)) play();

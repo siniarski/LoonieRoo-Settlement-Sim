@@ -4,20 +4,26 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { getTile, inBounds, isLocked, isWalkable, type Grid, type Point } from './grid';
+import { getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
 
 /**
- * Who is moving: survivors open doors; zombies can't, so doors are walls to them.
- * 'breacher' is a zombie planning to batter its way through: every tile is passable.
+ * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open a door as
+ * they step in and it shuts behind them (doors.ts), so any door is a way through. The survivor you control ('free') needs a
+ * door open (you open it yourself). Zombies only get through open ones; raiders open unlocked
+ * ones. 'breacher' is a zombie planning to batter its way through: every tile is passable.
  */
-export type Mover = 'survivor' | 'zombie' | 'breacher' | 'raider' | 'crawler';
+export type Mover = 'survivor' | 'free' | 'zombie' | 'breacher' | 'raider' | 'crawler';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
   if (mover === 'breacher') return inBounds(grid, x, y) && getTile(grid, x, y) !== 'water';
   // Raiders open doors, unless they're locked.
-  if (mover === 'crawler') return getTile(grid, x, y) === 'floor' || getTile(grid, x, y) === 'barricade';
-  if (mover === 'raider') return getTile(grid, x, y) === 'floor' || (getTile(grid, x, y) === 'door' && !isLocked(grid, x, y));
-  return mover === 'survivor' ? isWalkable(grid, x, y) : getTile(grid, x, y) === 'floor';
+  const tile = getTile(grid, x, y);
+  const openDoor = tile === 'door' && isOpen(grid, x, y);
+  if (mover === 'crawler') return tile === 'floor' || tile === 'barricade' || openDoor;
+  if (mover === 'raider') return tile === 'floor' || (tile === 'door' && !isLocked(grid, x, y));
+  if (mover === 'survivor') return isWalkable(grid, x, y);
+  if (mover === 'free') return tile === 'floor' || tile === 'barricade' || openDoor;
+  return tile === 'floor' || openDoor;
 }
 
 export const DIRS: readonly Point[] = [

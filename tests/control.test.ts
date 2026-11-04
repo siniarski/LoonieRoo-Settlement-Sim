@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
-import { DIAGONAL_PCT, stepTarget } from '../src/sim/control';
+import { BODY_RADIUS, SUB, centre } from '../src/sim/motion';
 import { SATIETY_MAX } from '../src/sim/food';
 import { HYDRATION_MAX } from '../src/sim/water';
 import { spawnItem } from '../src/sim/items';
@@ -44,29 +44,42 @@ describe('direct control', () => {
     expect(s.jobId).not.toBeNull();
   });
 
-  it('a held direction walks tile to tile until let go', () => {
+  it('a held direction moves you smoothly, a tile every TICKS_PER_TILE ticks, and stops when let go', () => {
     const state = loadScenario({ seed: 1, map: ['s.......'] });
     const s = state.survivors[0]!;
     cmd(state, { type: 'takeControl', survivorId: s.id });
     cmd(state, { type: 'steer', dx: 1, dy: 0 });
-    run(state, TICKS_PER_TILE * 3 + 1); // the first step starts on the first tick
+    run(state, 1);
+    expect(s.at.x).toBe(centre({ x: 0, y: 0 }).x + SUB / TICKS_PER_TILE); // a quarter of a tile, not a hop
+    run(state, TICKS_PER_TILE * 3 - 1);
+    expect(s.at.x).toBe(centre({ x: 3, y: 0 }).x);
     expect(s.pos).toEqual({ x: 3, y: 0 });
     cmd(state, { type: 'steer', dx: 0, dy: 0 });
-    run(state, TICKS_PER_TILE * 3);
-    expect(s.pos.x).toBe(4); // finishes the step it was on, then stops
+    const stopped = s.at.x;
+    run(state, 5);
+    expect(s.at.x).toBe(stopped); // no finishing a step: you stop where you are
     expect(s.move).toBeNull();
   });
 
-  it('diagonals cost more and never cut a corner; a blocked one slides along the wall', () => {
-    const state = loadScenario({ seed: 1, map: ['s#..', '....', '....'] });
-    expect(stepTarget(state, { x: 0, y: 0 }, 1, 1)).toEqual({ x: 0, y: 1 }); // the wall to the east: slide south
-    expect(stepTarget(state, { x: 1, y: 1 }, 1, 1)).toEqual({ x: 2, y: 2 });
+  it('any direction is the same speed; walls stop you, and you slide along them', () => {
+    const state = loadScenario({ seed: 1, map: ['.#....', '.#....', 's#....', '......'] });
     const s = state.survivors[0]!;
-    s.pos = { x: 1, y: 1 };
     cmd(state, { type: 'takeControl', survivorId: s.id });
+    s.pos = { x: 3, y: 1 };
+    s.at = centre(s.pos); // open ground for the speed check
+    const start = { ...s.at };
     cmd(state, { type: 'steer', dx: 1, dy: 1 });
-    tick(state);
-    expect(s.move!.duration).toBe(Math.round((TICKS_PER_TILE * DIAGONAL_PCT) / 100));
+    run(state, 2);
+    const moved = Math.sqrt((s.at.x - start.x) ** 2 + (s.at.y - start.y) ** 2);
+    expect(Math.abs(moved - (2 * SUB) / TICKS_PER_TILE)).toBeLessThan(2); // diagonal: same distance a tick
+    // Up into the wall at x=1: you slide up the open column, never into the wall.
+    s.at = centre({ x: 0, y: 2 });
+    s.pos = { x: 0, y: 2 };
+    cmd(state, { type: 'steer', dx: 1, dy: -1 });
+    run(state, 12);
+    expect(s.pos.x).toBe(0);
+    expect(s.at.x).toBeLessThanOrEqual(SUB - BODY_RADIUS);
+    expect(s.pos.y).toBe(0);
   });
 
   it('swinging at a zombie next to you hits it, and not faster than a guard could', () => {
