@@ -2,14 +2,11 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
-import { WINDED } from '../sim/body';
 import { climateAt, isRadioactive } from '../sim/climate';
 import { STEP_UP, heirs } from '../sim/succession';
 import { describeWish } from '../sim/wishes';
 import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
 import { BREAKING, STEELED, describeResolve, isBreaking, isSteeled } from '../sim/resolve';
-import { BOOSTS } from '../sim/moodlets';
-import { THOUGHTS } from '../sim/mood';
 import { hungerOf, isFallen } from '../sim/colonies';
 import { describeTasks } from '../sim/talk';
 import { storyLines } from '../sim/story';
@@ -44,6 +41,7 @@ import { RECRUIT_DAYS } from '../sim/prisoners';
 import { DAY_LENGTH } from '../sim/time';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { createMinimap } from './minimap';
+import { activity, createCharacterPanel, createStatusStrip, moodTitle } from './card';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
@@ -139,7 +137,12 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
-  root.append(pausedFrame, bar, info, priorities.root, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
+  const conditions = createStatusStrip(view);
+  const card = createCharacterPanel(view);
+  // Bottom left: the priority table (P) stacked over the character panel.
+  const bottomLeft = el('div', 'hud-bottom-left');
+  bottomLeft.append(priorities.root, card.root);
+  root.append(pausedFrame, bar, info, bottomLeft, conditions.root, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -161,13 +164,15 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         .join('\n');
       feed.hidden = feedText === '';
       const you = controlled(state);
-      const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name} (resolve ${you.resolve}, ${describeResolve(you)}${boostsOf(you)}${state.control!.running && (state.control!.dx || state.control!.dy) ? (you.endurance < WINDED ? '; WINDED: no running' : '; running') : ''}; endurance ${you.endurance} · panic ${you.panic} · heat ${you.bodyHeat} · wet ${you.wetness})${busy ? ` · ${{ eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating', build: 'building', repair: 'repairing', forage: 'foraging' }[busy.what]}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk (Shift run) · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · F let go`
+        ? view.showKeys
+          ? 'WASD walk · Shift run · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · F let go · K hide'
+          : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';
       controlLine.hidden = controlText === '';
+      controlLine.classList.toggle('keys', you !== undefined && you !== null);
       if (controlLine.textContent !== controlText) controlLine.textContent = controlText;
       const toastText = view.toast && performance.now() < view.toast.until ? view.toast.text : '';
       toast.hidden = toastText === '';
@@ -199,6 +204,8 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       if (room !== lastRoom) roomPanel.textContent = lastRoom = room;
 
       priorities.update(state);
+      conditions.update(state);
+      card.update(state);
       wanderers.update(state);
       crafting.update(state);
       expeditions.update(state);
@@ -219,14 +226,6 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       root.innerHTML = '';
     },
   };
-}
-
-/** ", well rested, blood up" for the moodlets doing something right now. */
-function boostsOf(s: Survivor): string {
-  return s.thoughts
-    .filter((t) => BOOSTS[t.kind])
-    .map((t) => `, ${THOUGHTS[t.kind].label.replace(/ (.*)$/, '')}`)
-    .join('');
 }
 
 function statusText(state: SimState, view: ViewState): string {
@@ -829,31 +828,6 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       rebuild(state);
     },
   };
-}
-
-/** "Mood 55: ate at a table +10, hurt -10" (the tooltip, and what the debug panel shows). */
-function moodTitle(state: SimState, s: Survivor): string {
-  const factors = moodFactors(state, s).map(([label, effect]) => `${label} ${effect > 0 ? '+' : ''}${effect}`);
-  return `Mood ${mood(state, s)}${isMiserable(state, s) ? ' (miserable: works slower)' : ''}${factors.length ? `: ${factors.join(', ')}` : ''}`;
-}
-
-function activity(state: SimState, s: Survivor): string {
-  if (s.meal) return s.meal.progress > 0 ? (s.meal.seat ? 'eating at a table' : 'eating') : s.carrying ? 'taking food to a table' : 'going to eat';
-  if (s.treatment) return s.treatment.progress > 0 ? 'treating themselves' : 'going for a remedy';
-  if (s.arming) return 'going for a weapon';
-  if (s.dressing) return 'going for clothing';
-  if (s.drink) return s.drink.progress > 0 ? 'drinking' : 'going for a drink';
-  if (s.reading) return s.reading.progress > 0 ? 'reading' : 'going to read';
-  if (s.childUntil !== null && !s.sleep && !s.meal) return 'playing (a child)';
-  if (s.breakdown) return 'having a breakdown';
-  if (s.leisure) return s.leisure.progress > 0 ? 'relaxing' : 'going to relax';
-  if (s.sleep && isHurt(s.health)) return s.sleep.asleep ? 'resting (hurt)' : 'going to rest (hurt)';
-  if (s.sleep) return s.sleep.asleep ? `asleep (${s.sleep.bedId ? 'bed' : 'floor'})` : 'going to bed';
-  const job = s.jobId ? getJob(state, s.jobId) : undefined;
-  if (job) return `${job.type} (${job.x}, ${job.y})`;
-  if (s.goal) return s.order?.kind === 'follow' ? 'following' : s.order?.kind === 'loot' ? 'going to loot' : s.order ? 'going back to their post' : 'walking (ordered)';
-  if (state.control?.survivorId === s.id) return 'you';
-  return s.order ? describeOrder(s.order) : 'idle';
 }
 
 // --- Debug panel ------------------------------------------------------------

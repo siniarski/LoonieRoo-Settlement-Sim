@@ -33,4 +33,6 @@ export interface ViewState {
   showMinimap: boolean;
   /** The colony overview (O). */
   showOverview: boolean;
+  /** The full key list under direct control (K); otherwise just a reminder. */
+  showKeys: boolean;
 }
