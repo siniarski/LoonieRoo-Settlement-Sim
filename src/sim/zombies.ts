@@ -11,6 +11,7 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
+import { passThrough } from './doors';
 import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
 export { REACH } from './motion';
 import { placedAt } from './motion';
@@ -354,6 +355,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     return;
   }
   // Set off for the next tile (it arrives in ticksPerTile ticks: the speed is rounded up).
+  if (z.kind === 'raider') passThrough(state, next.x, next.y, false);
   glide(z, centre(next), speed);
 }
 

@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { closeBehind } from './doors';
 import { syncStep, type Body } from './motion';
 import { updateHelicopter } from './escape';
 import { updateRadiation } from './climate';
@@ -142,6 +143,8 @@ export function tick(state: SimState): void {
   reconcileNeeds(state);
   reconcileWanderers(state);
   reconcileControl(state);
+  // Doors held open for someone passing swing shut once they're through (doors.ts).
+  closeBehind(state);
   // Precise positions follow tile steps (free movers keep their own: motion.ts).
   for (const e of movers(state)) if (!isFree(state, e)) syncStep(e);
   // Everyone looks round where they now stand.

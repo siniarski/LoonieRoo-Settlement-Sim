@@ -7,8 +7,8 @@
 import { getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
 
 /**
- * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open and close
- * them as they pass, so any door is a way through. The survivor you control ('free') needs a
+ * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open a door as
+ * they step in and it shuts behind them (doors.ts), so any door is a way through. The survivor you control ('free') needs a
  * door open (you open it yourself). Zombies only get through open ones; raiders open unlocked
  * ones. 'breacher' is a zombie planning to batter its way through: every tile is passable.
  */

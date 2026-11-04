@@ -6,6 +6,7 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { passThrough } from './doors';
 import { placedAt } from './motion';
 import type { Wish } from './wishes';
 import { startingResolve } from './resolve';
@@ -298,6 +299,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
   }
 
   const next = s.path.shift()!;
+  passThrough(state, next.x, next.y, true);
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: stepPace(state, s, next) };
 }
 

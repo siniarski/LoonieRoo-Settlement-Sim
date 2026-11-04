@@ -636,6 +636,12 @@ export function toggleDoor(state: SimState, x: number, y: number): string | null
   if (getTile(state.grid, x, y) !== 'door') return `(${x}, ${y}) is not a door`;
   const i = y * state.grid.width + x;
   const at = state.grid.open.indexOf(i);
+  const passing = state.grid.passing.indexOf(i);
+  if (passing >= 0) {
+    // Held open for someone passing: now it's yours, and stays open.
+    state.grid.passing.splice(passing, 1);
+    return null;
+  }
   if (at < 0) {
     if (state.grid.locked.includes(i)) return 'it\'s locked';
     state.grid.open.push(i);

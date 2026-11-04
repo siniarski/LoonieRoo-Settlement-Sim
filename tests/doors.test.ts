@@ -62,6 +62,33 @@ describe('doors that open and close', () => {
   });
 });
 
+describe('colonists and doors', () => {
+  it('a colonist opens a closed door as they step in, and it shuts behind them', () => {
+    const state = loadScenario({ seed: 1, map: ['s.D...'] });
+    const s = state.survivors[0]!;
+    s.priorities = { ...NO_JOBS };
+    applyCommand(state, { type: 'moveSurvivor', survivorId: s.id, x: 5, y: 0 });
+    let sawOpen = false;
+    for (let t = 0; t < 40; t++) {
+      tick(state);
+      if (s.pos.x === 2 || s.move?.to.x === 2) sawOpen ||= isOpen(state.grid, 2, 0);
+    }
+    expect(s.pos.x).toBe(5);
+    expect(sawOpen).toBe(true);
+    expect(isOpen(state.grid, 2, 0)).toBe(false);
+  });
+
+  it('a door you opened yourself stays open when a colonist goes through', () => {
+    const state = loadScenario({ seed: 1, map: ['s.D...'] });
+    const s = state.survivors[0]!;
+    s.priorities = { ...NO_JOBS };
+    applyCommand(state, { type: 'toggleDoor', x: 2, y: 0 });
+    applyCommand(state, { type: 'moveSurvivor', survivorId: s.id, x: 5, y: 0 });
+    for (let t = 0; t < 40; t++) tick(state);
+    expect(isOpen(state.grid, 2, 0)).toBe(true);
+  });
+});
+
 describe('debug arenas', () => {
   it('one zombie, or a crowd, near you from the start, staying past dawn', () => {
     const one = createArena(5, 'one');

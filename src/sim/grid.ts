@@ -42,6 +42,8 @@ export interface Grid {
   reinforced: number[];
   /** Doors standing open (tile indices). Closed by default; zombies walk through open ones. */
   open: number[];
+  /** Of those, the ones held open only for someone passing through: they shut behind (doors.ts). */
+  passing: number[];
 }
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -61,6 +63,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     locked: [],
     reinforced: [],
     open: [],
+    passing: [],
   };
 }
 
@@ -94,6 +97,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   drop(grid.locked, i); // and unlocked
   drop(grid.reinforced, i); // and plain
   drop(grid.open, i); // and shut
+  drop(grid.passing, i);
   return true;
 }
 
