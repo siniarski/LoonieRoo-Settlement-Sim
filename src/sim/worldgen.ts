@@ -191,7 +191,8 @@ export function generateChunk(state: SimState, l: Layout, cx: number, cy: number
   fillBlock(state, siteFor(l), district, x0, y0);
   for (let y = y0; y < y0 + CHUNK; y++) {
     for (let x = x0; x < x0 + CHUNK; x++) {
-      if (!wild || !inBounds(state.grid, x, y) || !isForest(l, x, y) || isRoad(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) continue;
+      // Trees on forest ground: the wild woods, and farmland's woodlots (lots.ts).
+      if (!inBounds(state.grid, x, y) || isRoad(l, x, y) || nearStart(l, x, y, START_CLEAR_RADIUS)) continue;
       const i = tileIndex(state.grid, x, y);
       // Still forest ground: not inside a building (those are dirt).
       if (state.grid.tiles[i] === 'floor' && state.grid.ground[i] === FOREST && roll(l.seed, x, y, 12) < 0.3) {

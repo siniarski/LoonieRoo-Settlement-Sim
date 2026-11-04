@@ -5,7 +5,8 @@
 //   commercial   four lots of shops; a petrol station gets a paved forecourt with pumps
 //   centre       one civic building on a paved square
 //   industrial   one warehouse or factory on a paved yard
-//   farmland     four fields between dirt tracks; about half have a farmstead (farmhouse, barn, shed)
+//   farmland     four quadrants between dirt tracks: fields, woodlots, rough grass; about half
+//                have a farmstead (farmhouse, barn, shed) on one side
 //   wild         now and then a cabin or a shed
 //
 // Stamping: walls fall in with the settings' ruin decay (outer walls more than inner ones), some
@@ -121,7 +122,12 @@ function farm(state: SimState, site: Site, x0: number, y0: number): void {
       const qy = y < y0 + half ? 0 : 1;
       if (track) groundAt(state, x, y, 'dirt');
       else if (stead && (qy === 0) === top) continue; // the yard stays grass
-      else if (roll(10 + qx + 2 * qy) < 0.65) groundAt(state, x, y, 'field');
+      else {
+        // Each quadrant: a field, a woodlot (trees come later, worldgen.ts), or rough grass.
+        const q = roll(10 + qx + 2 * qy);
+        if (q < 0.55) groundAt(state, x, y, 'field');
+        else if (q < 0.85) groundAt(state, x, y, 'forest');
+      }
     }
   }
   if (!stead) return;
