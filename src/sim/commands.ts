@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import { succeed } from './succession';
 import { promise } from './wishes';
 import { meetResident } from './residents';
 import { raidSettlement } from './colonies';
@@ -131,7 +132,9 @@ export type Command =
   /** Talk to a survivor (talk.ts); without an id, the nearest one to the survivor you control. */
   | { type: 'talk'; survivorId?: string }
   /** Promise to see a survivor's wish done (wishes.ts). */
-  | { type: 'promiseWish'; survivorId: string };
+  | { type: 'promiseWish'; survivorId: string }
+  /** After the one you controlled dies: an heir's id, 'anew' (someone new, far off) or 'none' (succession.ts). */
+  | { type: 'succeed'; choice: string };
 
 type OrderKind = 'follow' | 'hold' | 'loot' | 'settle';
 
@@ -174,6 +177,10 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!done) return reject('nothing to do there');
     s.note = done;
     return changed();
+  }
+  if (command.type === 'succeed') {
+    const why = succeed(state, command.choice);
+    return why ? reject(why) : changed();
   }
   if (command.type === 'promiseWish') {
     const s = getSurvivor(state, command.survivorId);

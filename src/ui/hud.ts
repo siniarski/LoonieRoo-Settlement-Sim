@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { STEP_UP, heirs } from '../sim/succession';
 import { describeWish } from '../sim/wishes';
 import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
 import { BREAKING, STEELED, describeResolve, isBreaking, isSteeled } from '../sim/resolve';
@@ -125,9 +126,10 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const neighbours = createSettlementPanel(command);
   const prisoners = createPrisonerPanel(command);
   const story = createStoryPanel(view, command);
+  const succession = createSuccessionPanel(view, command);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
-  info.append(status, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
+  info.append(status, succession.root, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
   const priorities = createPriorityPanel(view, command);
@@ -207,6 +209,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       neighbours.update(state);
       prisoners.update(state);
       story.update(state);
+      succession.update(state);
 
       debug.hidden = !view.showDebug;
       if (view.showDebug) {
@@ -443,6 +446,47 @@ function createGamePanel(view: ViewState, files: GameFiles) {
       });
       root.append(row('A fresh start somewhere else:', size, preset, button('New world', () => files.newWorld(Number(size.value), settings()))));
       root.append(row('Sandbox:', start, zombies, weather, progression, winter));
+    },
+  };
+}
+
+/** When the one you controlled dies: who carries on? Pauses the game the first time it shows. */
+function createSuccessionPanel(view: ViewState, command: (cmd: Command) => void) {
+  const root = el('div', 'hud-wanderers');
+  let last = '';
+  return {
+    root,
+    update(state: SimState) {
+      const s = state.succession;
+      const key = s ? JSON.stringify([s, heirs(state).map((h) => [h.id, h.resolve])]) : '';
+      if (key === last) return;
+      if (s && !last) view.paused = true;
+      last = key;
+      root.hidden = !s;
+      root.replaceChildren();
+      if (!s) return;
+      const title = el('div', 'hud-wanderers-title');
+      title.textContent = `${s.name} died of ${s.cause}. Who carries on?`;
+      root.append(title);
+      const choose = (label: string, choice: string, about: string) => {
+        const b = el('button', 'hud-button');
+        b.textContent = label;
+        b.title = about;
+        b.addEventListener('click', () => {
+          command({ type: 'succeed', choice });
+          view.selectedId = state.control?.survivorId ?? view.selectedId;
+        });
+        root.append(b);
+      };
+      const ready = heirs(state);
+      for (const h of ready) choose(`${h.name} (resolve ${h.resolve})`, h.id, `${h.name} takes over: you play as them from here.`);
+      if (ready.length === 0 && state.survivors.length > 0) {
+        const none = el('div', 'hud-story-line');
+        none.textContent = `Nobody left has the resolve to step up (${STEP_UP}+).`;
+        root.append(none);
+      }
+      choose('Start anew, far from here', 'anew', 'A new survivor, alone, somewhere else in this world, with a weapon and a bandage.');
+      if (state.survivors.length > 0) choose('Just watch the colony', 'none', 'Nobody under your control; the colony runs itself.');
     },
   };
 }

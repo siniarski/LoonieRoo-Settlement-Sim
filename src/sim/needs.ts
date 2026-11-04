@@ -17,6 +17,7 @@
 //
 // Constants live in rest.ts and food.ts.
 
+import { beginSuccession } from './succession';
 import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
 import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
@@ -338,6 +339,7 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
 /** Removes a survivor, releasing everything they hold (job, carried item, bed, food, weapon). */
 /** Death (or, with walkedAway, leaving for good: no body, no mourning). */
 export function killSurvivor(state: SimState, s: Survivor, cause: string, walkedAway = false): void {
+  if (state.control?.survivorId === s.id && !walkedAway) beginSuccession(state, s, cause);
   cancelMeal(state, s, cause);
   if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
   wake(state, s, cause);

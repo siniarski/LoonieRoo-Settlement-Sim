@@ -379,7 +379,7 @@ function search(s: Survivor, c: Control, crate: Furniture): string | null {
 /** The controlled survivor died or left: control ends. */
 export function reconcileControl(state: SimState): void {
   if (state.control && !controlled(state)) {
-    logEvent(state, 'You are no longer in control of anyone');
+    if (!state.succession) logEvent(state, 'You are no longer in control of anyone');
     state.control = null;
   }
 }

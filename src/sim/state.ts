@@ -32,6 +32,7 @@ import { newEndgame, type Endgame } from './endgame';
 import type { Policy } from './policies';
 import type { Zombie } from './zombies';
 import type { Control } from './control';
+import type { Succession } from './succession';
 import type { Task } from './talk';
 import { NORMAL, type Settings } from './difficulty';
 
@@ -39,7 +40,7 @@ import { NORMAL, type Settings } from './difficulty';
  * Bump when the shape of SimState changes. Hot reload and (later) save
  * loading discard state with a different version instead of crashing on it.
  */
-export const SCHEMA_VERSION = 59;
+export const SCHEMA_VERSION = 60;
 
 export interface LoggedCommand {
   /** The tick the command was applied at (before that tick advanced). */
@@ -111,6 +112,8 @@ export interface SimState {
   leaderId: string | null;
   /** The survivor the player is steering directly, if any (control.ts). */
   control: Control | null;
+  /** The one you controlled has died: who carries on? (succession.ts) */
+  succession: Succession | null;
   /** What survivors have asked you to do (talk.ts). */
   tasks: Task[];
   /** Tiles foraged today, by tile index -> day (handiwork.ts); cleared at dawn. */
@@ -175,6 +178,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     policies: [],
     leaderId: null,
     control: null,
+    succession: null,
     tasks: [],
     foraged: {},
     items: [],
