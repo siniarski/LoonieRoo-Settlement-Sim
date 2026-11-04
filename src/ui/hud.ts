@@ -2,6 +2,9 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { BREAKING, STEELED, describeResolve, isBreaking, isSteeled } from '../sim/resolve';
+import { BOOSTS } from '../sim/moodlets';
+import { THOUGHTS } from '../sim/mood';
 import { hungerOf, isFallen } from '../sim/colonies';
 import { describeTasks } from '../sim/talk';
 import { storyLines } from '../sim/story';
@@ -157,7 +160,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const busy = state.control?.busy;
       const controlText = you
-        ? `Playing as ${you.name}${busy ? ` · ${{ eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating' }[busy.what]}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · L loot (mouse) · T talk · F let go`
+        ? `Playing as ${you.name} (resolve ${you.resolve}, ${describeResolve(you)}${boostsOf(you)})${busy ? ` · ${{ eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating' }[busy.what]}…` : you.note ? ` · ${you.note}` : ''}  —  WASD walk · click swing · right-click/E use · V follow me · H hold · L loot (mouse) · T talk · F let go`
         : view.selectedId
           ? 'F: take control of the selected survivor'
           : '';
@@ -213,6 +216,14 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       root.innerHTML = '';
     },
   };
+}
+
+/** ", well rested, blood up" for the moodlets doing something right now. */
+function boostsOf(s: Survivor): string {
+  return s.thoughts
+    .filter((t) => BOOSTS[t.kind])
+    .map((t) => `, ${THOUGHTS[t.kind].label.replace(/ (.*)$/, '')}`)
+    .join('');
 }
 
 function statusText(state: SimState, view: ViewState): string {
@@ -731,7 +742,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
     const head = el('tr', '');
-    for (const label of ['Survivor', 'Mood', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', 'Resolve', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -751,6 +762,11 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       moodCell.textContent = String(m);
       moodCell.title = moodTitle(state, s);
       row.append(moodCell);
+
+      const resolveCell = el('td', `prio-mood${isBreaking(s) ? ' low' : isSteeled(s) ? ' high' : ''}`);
+      resolveCell.textContent = String(s.resolve);
+      resolveCell.title = `${s.name} is ${describeResolve(s)}. Resolve drifts with mood each dawn and sinks for anyone alone; requests seen through lift it, deaths cut it. Under ${BREAKING} they may walk away; at ${STEELED} or more they don't break down.`;
+      row.append(resolveCell);
 
       const shiftCell = el('td', '');
       const shift = el('button', 'prio-cell');
@@ -800,7 +816,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !shown;
       if (!shown) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
+      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.resolve, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);

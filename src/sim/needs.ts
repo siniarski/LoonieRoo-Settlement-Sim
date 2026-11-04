@@ -335,7 +335,8 @@ export function updateHealth(state: SimState, s: Survivor): string | null {
 }
 
 /** Removes a survivor, releasing everything they hold (job, carried item, bed, food, weapon). */
-export function killSurvivor(state: SimState, s: Survivor, cause: string): void {
+/** Death (or, with walkedAway, leaving for good: no body, no mourning). */
+export function killSurvivor(state: SimState, s: Survivor, cause: string, walkedAway = false): void {
   cancelMeal(state, s, cause);
   if (s.jobId || s.carrying) releaseSurvivor(state, s, cause);
   wake(state, s, cause);
@@ -346,10 +347,11 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string): void 
   dropWeapon(state, s);
   undress(state, s);
   // The infection's victims get up again (tick.ts); everyone else stays where they fell.
-  if (cause !== 'the infection') leaveCorpse(state, s.pos, s.name);
+  if (cause !== 'the infection' && !walkedAway) leaveCorpse(state, s.pos, s.name);
   for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
+  if (walkedAway) return;
   logEvent(state, `${s.name} died of ${cause}`);
   mournDeath(state, s);
 }
@@ -445,6 +447,7 @@ export function updateRest(state: SimState, s: Survivor): void {
   // (a starving sleeper would lose health instead of healing).
   if (s.rest >= REST_MAX && (!isHurt(s.health) || isHungry(s))) {
     addThought(state, s, s.sleep.bedId ? 'sleptInBed' : 'sleptOnFloor');
+    if (s.sleep.bedId) addThought(state, s, 'wellRested');
     wake(state, s, 'woke up rested');
   }
 }

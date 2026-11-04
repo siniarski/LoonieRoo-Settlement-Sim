@@ -5,6 +5,7 @@
 // counts as a thought while it lasts. Below MISERABLE, a survivor works at
 // 3/4 speed, like a hurt one; breakdowns and the rec room are in leisure.ts.
 
+import { steel } from './resolve';
 import { HUNGRY } from './food';
 import { isHurt } from './health';
 import { TRAIT_INFO, earnTrait } from './skills';
@@ -41,7 +42,10 @@ export type ThoughtKind =
   | 'confessed'
   | 'reunited'
   | 'lostHope'
-  | 'oldFriend';
+  | 'oldFriend'
+  | 'wellRested'
+  | 'bloodUp'
+  | 'shaken';
 
 export interface Thought {
   kind: ThoughtKind;
@@ -60,7 +64,7 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   vented: { label: 'got it out of their system', effect: 15, duration: DAY_LENGTH },
   hotMeal: { label: 'had a hot meal', effect: 5, duration: DAY_LENGTH / 2 },
   soaked: { label: 'got soaked', effect: -3, duration: DAY_LENGTH / 4 },
-  cold: { label: 'out in the cold', effect: -10, duration: DAY_LENGTH / 4 },
+  cold: { label: 'out in the cold (walks slower)', effect: -10, duration: DAY_LENGTH / 4 },
   lostFriend: { label: 'lost a friend', effect: -25, duration: 3 * DAY_LENGTH },
   stench: { label: 'the stench of the dead', effect: -8, duration: DAY_LENGTH / 4 },
   paidRespects: { label: 'paid their respects', effect: 15, duration: 2 * DAY_LENGTH },
@@ -74,9 +78,16 @@ export const THOUGHTS: Record<ThoughtKind, { label: string; effect: number; dura
   reunited: { label: 'found someone they lost', effect: 30, duration: 5 * DAY_LENGTH },
   lostHope: { label: 'nobody answered the radio', effect: -10, duration: 3 * DAY_LENGTH },
   oldFriend: { label: 'met someone from home', effect: 10, duration: 2 * DAY_LENGTH },
+  // These also do something while they last (moodlets.ts).
+  wellRested: { label: 'well rested (works and swings faster)', effect: 5, duration: DAY_LENGTH / 4 },
+  bloodUp: { label: 'blood up (hits harder)', effect: 5, duration: DAY_LENGTH / 24 },
+  shaken: { label: 'shaken (swings slower)', effect: -5, duration: DAY_LENGTH / 24 },
 };
 
 export const MOOD_BASE = 50;
+/** Resolve lost to a friend's death, and to anyone's. */
+export const FRIEND_DEATH_RESOLVE = 10;
+export const DEATH_RESOLVE = 3;
 export const MOOD_MAX = 100;
 /** Below this a survivor is miserable and works at 3/4 speed. */
 export const MISERABLE = 30;
@@ -129,6 +140,7 @@ export function mournDeath(state: SimState, dead: Survivor): void {
   if (wasLeader) state.leaderId = null;
   for (const s of state.survivors) {
     addThought(state, s, friends.has(s.id) ? 'lostFriend' : 'sawDeath');
+    steel(s, friends.has(s.id) ? -FRIEND_DEATH_RESOLVE : -DEATH_RESOLVE);
     if (friends.has(s.id)) earnTrait(state, s, 'haunted', `lost ${dead.name}`);
     if (wasLeader) addThought(state, s, 'lostLeader');
   }

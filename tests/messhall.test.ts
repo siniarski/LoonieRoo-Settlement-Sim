@@ -157,7 +157,7 @@ describe('mood', () => {
       expect(s.rest).toBe(REST_MAX);
       return thoughtsOf(s);
     };
-    expect(sleep(['s.b'])).toEqual(['sleptInBed']);
+    expect(sleep(['s.b'])).toEqual(['sleptInBed', 'wellRested']);
     expect(sleep(['s..'])).toEqual(['sleptOnFloor']);
   });
 

@@ -1,6 +1,7 @@
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
 
+import { dawnResolve } from './resolve';
 import { updateResidents } from './residents';
 import { updateColonies } from './colonies';
 import { updateTasks } from './talk';
@@ -95,6 +96,7 @@ export function tick(state: SimState): void {
     if (s.sleep && s.hurtTick === state.tick) wake(state, s, 'woken by a zombie!');
   }
   wakeLightSleepers(state);
+  for (const s of dawnResolve(state)) killSurvivor(state, s, 'walked away', true);
   reconcileJobs(state);
   reconcileNeeds(state);
   const dying: { s: Survivor; cause: string }[] = [];

@@ -6,6 +6,8 @@
 // If no path exists the survivor drops the goal and goes idle with a note
 // saying why (never stuck).
 
+import { startingResolve } from './resolve';
+import { boosted } from './moodlets';
 import { makeStory, type Story } from './story';
 import { hurries, type Order } from './orders';
 import { hasTrait, type Trait } from './skills';
@@ -149,6 +151,8 @@ export interface Survivor {
   order: Order | null;
   /** Who they were before (story.ts). */
   story: Story;
+  /** The will to keep going, 0..100 (resolve.ts). */
+  resolve: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -209,6 +213,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     bitten: null,
     order: null,
     story: makeStory(`s${n}`),
+    resolve: startingResolve(`s${n}`),
   };
   state.survivors.push(survivor);
   return survivor;
@@ -288,7 +293,7 @@ export function advanceStep(state: SimState, s: Survivor): boolean {
 /** Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2. */
 export function stepPace(state: SimState, s: Survivor, next: Point): number {
   const road = ROAD_GROUNDS.includes(state.grid.ground[next.y * state.grid.width + next.x]!);
-  return Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0) - (hurries(state, s) ? 1 : 0));
+  return Math.max(2, (isHurt(s.health) ? HURT_STEP_TICKS : TICKS_PER_TILE) - (hasTrait(s, 'quick') ? 1 : 0) - (road ? 1 : 0) + (legSlowed(s) ? 1 : 0) - (hurries(state, s) ? 1 : 0) + (boosted(s, 'slowWalk') ? 1 : 0));
 }
 
 function trackDirt(state: SimState, p: Point): void {

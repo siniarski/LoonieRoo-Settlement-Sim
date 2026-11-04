@@ -11,6 +11,7 @@
 // their work and won't take any; needs still run. Afterwards they've
 // "vented", a good thought, so it doesn't happen again straight away.
 
+import { isSteeled } from './resolve';
 import { logEvent } from './events';
 import { lashOut } from './relationships';
 import { stopReading } from './books';
@@ -126,7 +127,7 @@ export function updateBreakdown(state: SimState, s: Survivor): void {
     s.note = 'pulled themselves together';
     return;
   }
-  if (state.tick % BREAKDOWN_CHECK_EVERY !== 0 || !isMiserable(state, s) || s.sleep) return;
+  if (state.tick % BREAKDOWN_CHECK_EVERY !== 0 || !isMiserable(state, s) || isSteeled(s) || s.sleep) return;
   if (random(state) >= BREAKDOWN_CHANCE) return;
   if (s.jobId) releaseSurvivor(state, s, 'having a breakdown');
   s.leisure = null;

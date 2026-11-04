@@ -385,6 +385,7 @@ function hit(state: SimState, z: Zombie, s: Survivor): void {
   s.hurtTick = state.tick;
   s.note = `attacked by a zombie at (${z.pos.x}, ${z.pos.y})`;
   addThought(state, s, 'attacked');
+  addThought(state, s, 'shaken');
   if (z.kind !== 'raider') {
     const was = s.infection;
     maybeInfect(state, s, z.id, armoured ? INFECTION_CHANCE / 2 : INFECTION_CHANCE);
@@ -417,6 +418,7 @@ export function damageZombie(state: SimState, z: Zombie, amount: number, by: Sur
   if (z.health > 0) return false;
   removeZombie(state, z);
   by.kills += 1;
+  addThought(state, by, 'bloodUp');
   maybeSample(state, z.id, z.pos);
   if (by.kills === HARDENED_KILLS) earnTrait(state, by, 'hardened', `${HARDENED_KILLS} kills`);
   if (maybeCapture(state, z, by.name)) return true;

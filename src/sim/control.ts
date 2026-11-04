@@ -13,6 +13,9 @@
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
+import { boostDamage, swingWait } from './moodlets';
+import { freezes } from './resolve';
+import { addThought } from './mood';
 import { hitResident, meetResident, residentAt, type Resident } from './residents';
 import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
@@ -147,6 +150,8 @@ function sleepTick(state: SimState, s: Survivor, c: Control, busy: NonNullable<C
   busy.progress = s.rest;
   if (s.rest < REST_MAX) return;
   c.busy = null;
+  addThought(state, s, busy.targetId === 'floor' ? 'sleptOnFloor' : 'sleptInBed');
+  if (busy.targetId !== 'floor') addThought(state, s, 'wellRested');
   s.note = 'woke up rested';
 }
 
@@ -170,10 +175,14 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   if (face) c.facing = face;
   c.busy = null;
   const near = zombieToHit(state, s.pos, c.facing);
+  if (near && freezes(state, s)) {
+    c.nextSwing = state.tick + swingWait(s, GUARD_ATTACK_EVERY);
+    return 'froze';
+  }
   if (near) {
-    c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
+    c.nextSwing = state.tick + swingWait(s, GUARD_ATTACK_EVERY);
     makeNoise(state, s.pos, 'fighting');
-    const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0);
+    const blow = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
     const killed = damageZombie(state, near, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s);
     if (killed) wearWeapon(state, s);
     return killed ? 'killed it' : 'hit it';
@@ -193,7 +202,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     c.nextSwing = state.tick + GUN_EVERY;
     gun.wear -= 1;
     makeNoise(state, s.pos, 'gunfire');
-    const dmg = GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0);
+    const dmg = boostDamage(s, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
     return damageZombie(state, shotAt, dmg, s) ? 'shot it dead' : 'shot it';
   }
   // A swing at nothing still takes the time.

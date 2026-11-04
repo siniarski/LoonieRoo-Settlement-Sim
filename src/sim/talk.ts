@@ -17,6 +17,7 @@
 // The spot is generated out in the world, 20-45 tiles away. Doing it lifts
 // their mood for days and their opinion of whoever is under your control.
 
+import { steel } from './resolve';
 import { addDog, getDogById } from './dogs';
 import { logEvent } from './events';
 import { addFurniture, furnitureAt } from './furniture';
@@ -66,6 +67,11 @@ export const ANSWER_CHANCE = 0.5;
 export const MEDICINE_REACH = 6;
 export const KNEW_OPINION = 20;
 export const CONFESS_OPINION = -10;
+/** Resolve from a request seen through, a relative found, a confession; lost to a silent radio. */
+export const TASK_RESOLVE = 10;
+export const REUNITED_RESOLVE = 15;
+export const CONFESS_RESOLVE = 5;
+export const SILENCE_RESOLVE = 10;
 
 /** Talk to a survivor. Returns null if it went ahead, or why not. */
 export function talk(state: SimState, s: Survivor): string | null {
@@ -127,6 +133,7 @@ function recognise(state: SimState, s: Survivor): void {
 function confess(state: SimState, s: Survivor): void {
   s.story.confessed = true;
   addThought(state, s, 'confessed');
+  steel(s, CONFESS_RESOLVE);
   for (const o of state.survivors) if (o !== s) warm(o, s, hasTrait(o, 'cheerful') ? -CONFESS_OPINION / 2 : CONFESS_OPINION);
   logEvent(state, `${s.name} told everyone: "${REGRETS[s.story.regret]}." Some look at them differently now.`);
 }
@@ -252,6 +259,7 @@ function callOut(state: SimState, task: Task, giver: Survivor): boolean | null {
   const { lost } = giver.story;
   if (hashRoll(idNumber(task.id), 0xca11) >= ANSWER_CHANCE) {
     addThought(state, giver, 'lostHope');
+    steel(giver, -SILENCE_RESOLVE);
     logEvent(state, `${giver.name} called for ${lost.name} on the radio until dark. Nobody answered.`);
     return false;
   }
@@ -274,6 +282,7 @@ function drop(state: SimState, task: Task): void {
 
 function reward(state: SimState, task: Task, giver: Survivor): void {
   addThought(state, giver, REWARD[task.kind]);
+  steel(giver, task.kind === 'radio' ? REUNITED_RESOLVE : TASK_RESOLVE);
   const you = controlled(state);
   if (you && you !== giver) warm(giver, you, TASK_OPINION);
   const done = {
