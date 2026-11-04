@@ -1,7 +1,8 @@
 // Resolve: the will to keep going, 0..100. Slower than mood: mood is how today feels,
 // resolve is what the days add up to.
 //
-// Every dawn it drifts with mood (a good day +, a bad day -) and sinks for anyone alone.
+// Every dawn it drifts with mood (a good day +, a bad day -); loneliness and a poor bed
+// get in through mood (wellbeing.ts).
 // Events move it directly (steel()): a request seen through, someone found, a confession
 // made lift it; a friend's death, a silent radio cut it.
 //   breaking (under BREAKING)  might walk away in the night; under your control, freezes
@@ -23,8 +24,6 @@ export const STEELED = 80;
 const MOOD_PER_POINT = 8;
 /** The most a single dawn can move it. */
 const DAWN_LIMIT = 4;
-/** Each dawn alone (nobody else in the group) costs this. */
-export const LONELY = 2;
 /** Chance of freezing on a swing, while breaking. */
 export const FREEZE_CHANCE = 0.25;
 
@@ -48,14 +47,13 @@ export function describeResolve(s: Survivor): string {
   return isBreaking(s) ? 'breaking' : isSteeled(s) ? 'steeled' : s.resolve < 40 ? 'wavering' : 'steady';
 }
 
-/** Dawn: drift with mood, sink if alone. Returns those who walk away (the caller removes them). */
+/** Dawn: drift with mood. Returns those who walk away (the caller removes them). */
 export function dawnResolve(state: SimState): Survivor[] {
   if (state.tick === 0 || state.tick % DAY_LENGTH !== 0) return [];
   const leaving: Survivor[] = [];
-  const alone = state.survivors.length === 1;
   for (const s of state.survivors) {
     const drift = Math.round((mood(state, s) - MOOD_BASE) / MOOD_PER_POINT);
-    steel(s, Math.max(-DAWN_LIMIT, Math.min(DAWN_LIMIT, drift)) - (alone ? LONELY : 0));
+    steel(s, Math.max(-DAWN_LIMIT, Math.min(DAWN_LIMIT, drift)));
     // Breaking: maybe gone by morning. Never the one you control, nor a child.
     if (!isBreaking(s) || state.control?.survivorId === s.id || s.childUntil !== null) continue;
     if (hashRoll(idNumber(s.id), state.tick, 0x1ea7) < (BREAKING - s.resolve) / (2 * BREAKING)) leaving.push(s);

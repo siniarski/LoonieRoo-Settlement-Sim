@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyCommand } from '../src/sim/commands';
 import { addThought } from '../src/sim/mood';
 import { HARDER_PCT, boostDamage, boosted, swingWait } from '../src/sim/moodlets';
-import { BREAKING, LONELY, STEELED, dawnResolve, freezes, startingResolve, steel } from '../src/sim/resolve';
+import { BREAKING, STEELED, dawnResolve, freezes, startingResolve, steel } from '../src/sim/resolve';
 import { loadScenario } from '../src/sim/scenario';
 import { stepPace } from '../src/sim/survivors';
 import { tick } from '../src/sim/tick';
@@ -48,7 +48,7 @@ describe('resolve', () => {
     }
   });
 
-  it('drifts with mood at dawn, and sinks for someone alone', () => {
+  it('drifts with mood at dawn', () => {
     const state = loadScenario({ seed: 1, map: ['s.s'] });
     const [a, b] = state.survivors as [NonNullable<typeof state.survivors[0]>, NonNullable<typeof state.survivors[0]>];
     a.resolve = b.resolve = 50;
@@ -58,12 +58,6 @@ describe('resolve', () => {
     dawnResolve(state);
     expect(a.resolve).toBeGreaterThan(50);
     expect(b.resolve).toBeLessThan(50);
-    const solo = loadScenario({ seed: 1, map: ['s..'] });
-    const s = solo.survivors[0]!;
-    s.resolve = 50;
-    solo.tick = DAY_LENGTH;
-    dawnResolve(solo);
-    expect(s.resolve).toBe(50 - LONELY);
   });
 
   it('the breaking may walk away in the night (never the one you control); the steeled do not break down', () => {

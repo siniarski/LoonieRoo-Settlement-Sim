@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
 import { BREAKING, STEELED, describeResolve, isBreaking, isSteeled } from '../sim/resolve';
 import { BOOSTS } from '../sim/moodlets';
 import { THOUGHTS } from '../sim/mood';
@@ -742,7 +743,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
     const head = el('tr', '');
-    for (const label of ['Survivor', 'Mood', 'Resolve', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', 'Resolve', 'Social', 'Comfort', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -767,6 +768,16 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       resolveCell.textContent = String(s.resolve);
       resolveCell.title = `${s.name} is ${describeResolve(s)}. Resolve drifts with mood each dawn and sinks for anyone alone; requests seen through lift it, deaths cut it. Under ${BREAKING} they may walk away; at ${STEELED} or more they don't break down.`;
       row.append(resolveCell);
+
+      for (const [value, about] of [
+        [s.social, `Social: rises while near someone awake, and with every talk; sinks alone. Under ${LOW}: lonely (${LONELY_MOOD} mood).`],
+        [s.comfort, `Comfort: set on waking by where they slept (a bed, indoors, a finished bedroom, warm, clean). Under ${LOW}: uncomfortable; over ${HIGH}: comfortable.`],
+      ] as const) {
+        const cell = el('td', `prio-mood${value < LOW ? ' low' : value > HIGH ? ' high' : ''}`);
+        cell.textContent = String(value);
+        cell.title = about;
+        row.append(cell);
+      }
 
       const shiftCell = el('td', '');
       const shift = el('button', 'prio-cell');
@@ -816,7 +827,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !shown;
       if (!shown) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.resolve, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
+      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.resolve, s.social, s.comfort, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);

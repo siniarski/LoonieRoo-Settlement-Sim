@@ -17,6 +17,7 @@
 //
 // Constants live in rest.ts and food.ts.
 
+import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
 import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
@@ -448,6 +449,7 @@ export function updateRest(state: SimState, s: Survivor): void {
   if (s.rest >= REST_MAX && (!isHurt(s.health) || isHungry(s))) {
     addThought(state, s, s.sleep.bedId ? 'sleptInBed' : 'sleptOnFloor');
     if (s.sleep.bedId) addThought(state, s, 'wellRested');
+    wakeComfort(state, s, s.sleep.bedId);
     wake(state, s, 'woke up rested');
   }
 }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { STEELED } from '../src/sim/resolve';
+import { LONELY_MOOD, LOW } from '../src/sim/wellbeing';
 import { dumpText } from '../src/debug/text';
 import { applyCommand } from '../src/sim/commands';
 import { HUNGRY } from '../src/sim/food';
@@ -107,9 +109,14 @@ describe('breakdowns', () => {
   it('a miserable survivor eventually breaks down: drops work, then pulls together', () => {
     // A dry run finds when it happens (sim RNG), so the real run can be mid-job at that moment.
     const dry = breakdownState(2);
+    // Not about to walk away (resolve.ts): this is about breakdowns.
+    dry.survivors[0]!.social = 60;
+    dry.survivors[0]!.resolve = STEELED - 1;
     runUntil(dry, () => dry.survivors[0]!.breakdown !== null, 20 * BREAKDOWN_CHECK_EVERY);
     const state = breakdownState(2);
     const s = state.survivors[0]!;
+    s.social = 60;
+    s.resolve = STEELED - 1;
     runUntil(state, () => state.tick === dry.tick - 15, 20 * BREAKDOWN_CHECK_EVERY);
     applyCommand(state, { type: 'designateRemove', x: 0, y: 1 });
     runUntil(state, () => s.breakdown !== null, 20);
@@ -122,7 +129,8 @@ describe('breakdowns', () => {
     // ...then it passes, with a lift that keeps it from coming straight back.
     runUntil(state, () => s.breakdown === null, 20);
     expect(thoughtsOf(s)).toContain('vented');
-    expect(mood(state, s)).toBeGreaterThanOrEqual(30);
+    // (Alone all this while, they are lonely too by now: wellbeing.ts.)
+    expect(mood(state, s)).toBeGreaterThanOrEqual(30 + (s.social < LOW ? LONELY_MOOD : 0));
     runUntil(state, () => s.jobId !== null, 3000); // back to work (after a night's sleep, if it's late)
   });
 

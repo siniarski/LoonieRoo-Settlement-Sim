@@ -13,6 +13,7 @@
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
+import { wakeComfort } from './wellbeing';
 import { boostDamage, swingWait } from './moodlets';
 import { freezes } from './resolve';
 import { addThought } from './mood';
@@ -152,6 +153,7 @@ function sleepTick(state: SimState, s: Survivor, c: Control, busy: NonNullable<C
   c.busy = null;
   addThought(state, s, busy.targetId === 'floor' ? 'sleptOnFloor' : 'sleptInBed');
   if (busy.targetId !== 'floor') addThought(state, s, 'wellRested');
+  wakeComfort(state, s, busy.targetId === 'floor' ? null : busy.targetId);
   s.note = 'woke up rested';
 }
 

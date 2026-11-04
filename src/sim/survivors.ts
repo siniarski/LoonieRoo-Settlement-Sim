@@ -153,6 +153,9 @@ export interface Survivor {
   story: Story;
   /** The will to keep going, 0..100 (resolve.ts). */
   resolve: number;
+  /** Higher needs, 0..100 each (wellbeing.ts). */
+  social: number;
+  comfort: number;
 }
 
 export function addSurvivor(state: SimState, x: number, y: number, name?: string): Survivor {
@@ -214,6 +217,8 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
     order: null,
     story: makeStory(`s${n}`),
     resolve: startingResolve(`s${n}`),
+    social: 60,
+    comfort: 50,
   };
   state.survivors.push(survivor);
   return survivor;

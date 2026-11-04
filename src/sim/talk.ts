@@ -17,6 +17,7 @@
 // The spot is generated out in the world, 20-45 tiles away. Doing it lifts
 // their mood for days and their opinion of whoever is under your control.
 
+import { TALK_SOCIAL, socialise } from './wellbeing';
 import { steel } from './resolve';
 import { addDog, getDogById } from './dogs';
 import { logEvent } from './events';
@@ -84,7 +85,9 @@ export function talk(state: SimState, s: Survivor): string | null {
   if (you) {
     warm(s, you, TALK_OPINION);
     warm(you, s, TALK_OPINION);
+    socialise(you, TALK_SOCIAL);
   }
+  socialise(s, TALK_SOCIAL);
   const lines = storyLines(s.story);
   if (s.story.told < lines.length) {
     logEvent(state, `${s.name}: "${lines[s.story.told]}"`);
