@@ -9,8 +9,9 @@
 //   use     pick up, put on, eat, search, treat yourself (medicine, a bandage), drink (a well,
 //           a rain collector, the river) or
 //           sleep (a bed; your own tile with nothing on it is the floor) at a tile next to you
-// Movement stays tile to tile (rule 10), in eight directions; a diagonal costs
-// 1.5 steps and can't cut a corner. A blocked diagonal slides along the wall.
+// Movement is free (motion.ts): the held direction moves your centre a little each tick, at
+// your tile pace (roads, a bad leg...), the same speed any way you go, sliding along walls.
+// Your tile (pos) is whatever tile you're over.
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
 // and so does being hurt while asleep.
 
@@ -31,23 +32,20 @@ import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX } from './rest';
 import { samePoint } from './space';
 import { applyRemedy, remediesFor } from './medicine';
 import { TREAT_TICKS } from './health';
-import { inBounds, type Point } from './grid';
+import type { Point } from './grid';
 import { dropItem, getItem, itemAt, removeItem, type Item } from './items';
 import { spawnFind } from './difficulty';
 import { GUARD_ATTACK_EVERY, GUARD_DAMAGE, SCAVENGE_WORK, clearShot, scavengeFind } from './jobs';
 import { makeNoise } from './noise';
-import { isPassable } from './pathfinding';
 import { LIGHT_DAMAGE_PCT, inLight } from './power';
 import { random } from './rng';
 import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel } from './skills';
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
-import { advanceStep, getSurvivor, stepPace, type Survivor } from './survivors';
+import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
+import { SUB, centre, followTile, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, type Zombie } from './zombies';
-
-/** A diagonal step takes this many percent of a straight one. */
-export const DIAGONAL_PCT = 150;
 
 export interface Control {
   survivorId: string;
@@ -75,35 +73,25 @@ export function isControlled(state: SimState, s: Survivor): boolean {
 /** Called once a tick for the controlled survivor, in place of their own behaviour. */
 export function updateControlled(state: SimState, s: Survivor): void {
   const c = state.control!;
-  if (!advanceStep(state, s)) return;
+  s.move = null;
+  followTile(s);
   if (c.dx !== 0 || c.dy !== 0) {
     c.busy = null;
-    const to = stepTarget(state, s.pos, c.dx, c.dy);
-    if (!to) return;
-    const dx = to.x - s.pos.x;
-    const dy = to.y - s.pos.y;
-    c.facing = { x: dx, y: dy };
+    c.facing = { x: c.dx, y: c.dy };
     const run = c.running === true && !isWinded(s);
-    if (run) exert(s, RUN_STEP_COST);
-    const pace = Math.max(2, stepPace(state, s, to) - (run ? 1 : 0));
-    s.move = { from: { ...s.pos }, to, progress: 0, duration: dx !== 0 && dy !== 0 ? Math.round((pace * DIAGONAL_PCT) / 100) : pace };
+    const pace = Math.max(2, stepPace(state, s, s.pos) - (run ? 1 : 0));
+    // Running costs RUN_STEP_COST a tile's worth of ground.
+    if (run && state.tick % pace === 0) exert(s, RUN_STEP_COST);
+    const v = toward(c.dx, c.dy, Math.round(SUB / pace));
+    s.at = slide(state.grid, s.at, v.x, v.y, 'survivor');
+    const tile = tileOf(s.at);
+    if (tile.x !== s.pos.x || tile.y !== s.pos.y) {
+      s.pos = tile;
+      enterTile(state, s);
+    }
     return;
   }
   if (c.busy) updateBusy(state, s, c);
-}
-
-/** Where a step in (dx, dy) lands: straight on, or sliding along a wall for a blocked diagonal. */
-export function stepTarget(state: SimState, from: Point, dx: number, dy: number): Point | null {
-  const open = (x: number, y: number) => inBounds(state.grid, x, y) && isPassable(state.grid, x, y, 'survivor');
-  const straight = { x: from.x + dx, y: from.y + dy };
-  if (dx === 0 || dy === 0) return open(straight.x, straight.y) ? straight : null;
-  const sideX = open(from.x + dx, from.y);
-  const sideY = open(from.x, from.y + dy);
-  // No corner cutting: both sides must be open to go diagonally.
-  if (sideX && sideY && open(straight.x, straight.y)) return straight;
-  if (sideX) return { x: from.x + dx, y: from.y };
-  if (sideY) return { x: from.x, y: from.y + dy };
-  return null;
 }
 
 function updateBusy(state: SimState, s: Survivor, c: Control): void {
@@ -329,7 +317,8 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   if (bed?.kind === 'bed' && samePoint(bed, s.pos)) return lieDown(s, c, bed.id);
   if (bed?.kind === 'bed') {
     // Climb in first: one step onto it, then use it again (or E) to sleep.
-    s.move = { from: { ...s.pos }, to: { x: bed.x, y: bed.y }, progress: 0, duration: stepPace(state, s, bed) };
+    s.pos = { x: bed.x, y: bed.y };
+    s.at = centre(s.pos);
     return 'getting into bed';
   }
   // Nothing there: put down what you're carrying.

@@ -171,8 +171,8 @@ function movers(state: SimState): Body[] {
 }
 
 /** Moving under its own steering, not tile steps (motion.ts). */
-function isFree(_state: SimState, _e: Body): boolean {
-  return false;
+function isFree(state: SimState, e: Body): boolean {
+  return state.control !== null && (e as { id?: string }).id === state.control.survivorId;
 }
 
 export function step(state: SimState, ticks: number): void {

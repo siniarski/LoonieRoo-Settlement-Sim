@@ -308,9 +308,14 @@ export function advanceStep(state: SimState, s: Survivor): boolean {
   if (s.move.progress < s.move.duration) return false;
   s.pos = s.move.to;
   s.move = null;
+  enterTile(state, s);
+  return true;
+}
+
+/** Stepping onto a tile: maybe dirt underfoot, maybe a trap. */
+export function enterTile(state: SimState, s: Survivor): void {
   trackDirt(state, s.pos);
   trapStep(state, s);
-  return true;
 }
 
 /** Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2. */
