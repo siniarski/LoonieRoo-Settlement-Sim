@@ -11,6 +11,7 @@
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
 
+import { BODY_RADIUS, SUB, centre, distance2, followTile, slide, tileOf, toward } from './motion';
 import { placedAt } from './motion';
 import { HIT_PANIC, frighten } from './body';
 import { zombieScale } from './difficulty';
@@ -234,6 +235,7 @@ export function updateZombies(state: SimState): void {
 function updateAll(state: SimState): void {
   const budget = { plans: PLANS_PER_TICK };
   for (const z of state.zombies) updateZombie(state, z, budget);
+  pushApart(state);
   // Static zombies that came to look at a noise stop looking.
   for (const z of state.zombies) if (z.kind === 'static' && z.heading && manhattan(z.pos, z.heading) <= 1) z.heading = null;
   // Herd zombies that reached the herd's destination wander off the map.
@@ -285,12 +287,14 @@ function spawnGroup(state: SimState, n: number, health: number): void {
 
 function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): void {
   z.cooldown = Math.max(0, z.cooldown - 1);
+  z.move = null;
+  followTile(z, 1);
   if (state.tick < z.stuckUntil) return; // in a pit
 
-  // Standing next to someone: attack instead of moving.
-  if (!z.move) {
-    const adjacent = state.survivors.filter((s) => manhattan(s.pos, z.pos) <= 1);
-    const victim = adjacent.find((s) => s.id === z.targetId) ?? adjacent[0];
+  // Someone within reach: attack instead of moving.
+  {
+    const inReach = state.survivors.filter((s) => distance2(s.at, z.at) <= REACH * REACH);
+    const victim = inReach.find((s) => s.id === z.targetId) ?? inReach[0];
     if (victim) {
       if (z.cooldown === 0) hit(state, z, victim);
       return;
@@ -306,11 +310,21 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     }
   }
 
-  if (z.move) {
-    z.move.progress += 1;
-    if (z.move.progress < z.move.duration) return;
-    z.pos = z.move.to;
-    z.move = null;
+  const speed = Math.ceil(SUB / VARIANTS[z.variant].ticksPerTile);
+  if (closeIn(state, z, speed)) return;
+  // Mid-step to the next tile on the path: glide on; on arriving, it's the new tile.
+  const home = centre(z.pos);
+  if (z.at.x !== home.x || z.at.y !== home.y) {
+    const goal = z.path[0] ?? z.pos;
+    // Walled off mid-step (something built there): back to its own tile, and think again.
+    if (!isPassable(state.grid, goal.x, goal.y, moverOf(z))) {
+      z.path = [];
+      glide(z, home, speed);
+      return;
+    }
+    if (!glide(z, centre(goal), speed)) return;
+    if (z.path[0]) z.path.shift();
+    z.pos = { x: goal.x, y: goal.y };
     if (springTrap(state, z)) return;
     fallInPit(state, z);
   }
@@ -338,8 +352,117 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     z.path = [];
     return;
   }
-  z.path.shift();
-  z.move = { from: { ...z.pos }, to: next, progress: 0, duration: VARIANTS[z.variant].ticksPerTile };
+  // Set off for the next tile (it arrives in ticksPerTile ticks: the speed is rounded up).
+  glide(z, centre(next), speed);
+}
+
+/** Within reach (centre to centre): orthogonal neighbours' centres are 1 tile apart, diagonal ones 1.41. */
+export const REACH = 282;
+/** Closing in: within this of its target, in the open, a zombie leaves the tile path and comes straight on. */
+export const CLOSE_IN = 640;
+/** Zombies push apart to this far, centre to centre. */
+export const CROWD = 2 * BODY_RADIUS;
+
+/** Move a zombie's centre towards a point; true once it's there. */
+function glide(z: Zombie, to: Point, speed: number): boolean {
+  const dx = to.x - z.at.x;
+  const dy = to.y - z.at.y;
+  if (dx * dx + dy * dy <= speed * speed) {
+    z.at = { x: to.x, y: to.y };
+    return true;
+  }
+  const v = toward(dx, dy, speed);
+  z.at = { x: z.at.x + v.x, y: z.at.y + v.y };
+  return false;
+}
+
+/**
+ * Close in on the target: near enough, with a clear line, come straight at where they are
+ * (not their tile), stopping just inside reach. Returns true if it took the tick.
+ */
+function closeIn(state: SimState, z: Zombie, speed: number): boolean {
+  const target = z.targetId ? state.survivors.find((s) => s.id === z.targetId) : undefined;
+  if (!target) return false;
+  const d2 = distance2(target.at, z.at);
+  if (d2 > CLOSE_IN * CLOSE_IN || !clearLine(state, z.pos, target.pos)) return false;
+  const d = Math.sqrt(d2);
+  const step = Math.min(speed, Math.max(0, Math.floor(d - (REACH - 16))));
+  if (step === 0) return true;
+  const v = toward(target.at.x - z.at.x, target.at.y - z.at.y, step);
+  z.at = slide(state.grid, z.at, v.x, v.y, moverOf(z));
+  const tile = tileOf(z.at);
+  if (tile.x !== z.pos.x || tile.y !== z.pos.y) {
+    z.pos = tile;
+    z.path = [];
+    if (springTrap(state, z)) return true;
+    fallInPit(state, z);
+  }
+  return true;
+}
+
+/** Every tile on the line between two tiles is open to a zombie (Bresenham). */
+function clearLine(state: SimState, a: Point, b: Point): boolean {
+  let { x, y } = a;
+  const dx = Math.abs(b.x - x);
+  const dy = -Math.abs(b.y - y);
+  const sx = x < b.x ? 1 : -1;
+  const sy = y < b.y ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    if (!isPassable(state.grid, x, y, 'zombie') && !(x === b.x && y === b.y)) return false;
+    if (x === b.x && y === b.y) return true;
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y += sy;
+    }
+  }
+}
+
+/**
+ * Crowds: zombies closer than CROWD push apart (half each, along the line between them), in a
+ * fixed order, sliding along walls. Only neighbours in nearby tiles are compared.
+ */
+function pushApart(state: SimState): void {
+  const buckets = new Map<string, Zombie[]>();
+  for (const z of state.zombies) {
+    const k = `${z.pos.x},${z.pos.y}`;
+    const list = buckets.get(k);
+    if (list) list.push(z);
+    else buckets.set(k, [z]);
+  }
+  for (const z of state.zombies) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (const o of buckets.get(`${z.pos.x + dx},${z.pos.y + dy}`) ?? []) {
+          if (o === z || o.id < z.id) continue; // each pair once, in id order
+          const d2 = distance2(z.at, o.at);
+          if (d2 >= CROWD * CROWD) continue;
+          const d = Math.sqrt(d2);
+          // Exactly on top of each other: part along x, by id.
+          const ux = d === 0 ? 1 : (o.at.x - z.at.x) / d;
+          const uy = d === 0 ? 0 : (o.at.y - z.at.y) / d;
+          const half = Math.ceil((CROWD - d) / 2);
+          o.at = slide(state.grid, o.at, Math.round(ux * half), Math.round(uy * half), moverOf(o));
+          z.at = slide(state.grid, z.at, -Math.round(ux * half), -Math.round(uy * half), moverOf(z));
+        }
+      }
+    }
+    // Out of anyone it's standing in.
+    for (const s of state.survivors) {
+      if (Math.abs(s.pos.x - z.pos.x) > 1 || Math.abs(s.pos.y - z.pos.y) > 1) continue;
+      const d2 = distance2(z.at, s.at);
+      if (d2 >= CROWD * CROWD) continue;
+      const d = Math.sqrt(d2);
+      const ux = d === 0 ? 1 : (z.at.x - s.at.x) / d;
+      const uy = d === 0 ? 0 : (z.at.y - s.at.y) / d;
+      z.at = slide(state.grid, z.at, Math.round(ux * (CROWD - d)), Math.round(uy * (CROWD - d)), moverOf(z));
+    }
+  }
 }
 
 /**

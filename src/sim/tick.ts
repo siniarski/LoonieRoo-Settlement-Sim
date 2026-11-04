@@ -16,7 +16,7 @@ import { updateColonies } from './colonies';
 import { updateTasks } from './talk';
 import { keepOrder } from './orders';
 import { updateFarm } from './farming';
-import { interruptScouting, reconcileJobs, updateWork } from './jobs';
+import { interruptForFight, interruptScouting, reconcileJobs, updateWork } from './jobs';
 import {
   interruptForNeeds,
   killSurvivor,
@@ -154,6 +154,7 @@ function behave(state: SimState, s: Survivor): void {
   updateBreakdown(state, s);
   interruptForNeeds(state, s);
   interruptScouting(state, s);
+  interruptForFight(state, s);
   updateMovement(state, s);
   // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
   // (not mid-breakdown). A need taking over ends any rec-room visit.
@@ -172,7 +173,8 @@ function movers(state: SimState): Body[] {
 
 /** Moving under its own steering, not tile steps (motion.ts). */
 function isFree(state: SimState, e: Body): boolean {
-  return state.control !== null && (e as { id?: string }).id === state.control.survivorId;
+  const id = (e as { id?: string }).id ?? '';
+  return id.startsWith('z') || (state.control !== null && id === state.control.survivorId);
 }
 
 export function step(state: SimState, ticks: number): void {

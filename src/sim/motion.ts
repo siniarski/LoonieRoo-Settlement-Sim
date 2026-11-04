@@ -17,6 +17,8 @@ export const SUB = 256;
 export const HALF = SUB / 2;
 /** A mover's body: a circle this wide (radius), for walls and for pushing apart. */
 export const BODY_RADIUS = 77; // 0.3 of a tile
+/** A melee swing (yours, or a guard's) reaches this far, centre to centre: 1.25 tiles. */
+export const SWING_REACH = 320;
 
 export interface Body {
   pos: Point;
@@ -61,10 +63,13 @@ export function syncStep(e: Body): void {
   };
 }
 
-/** For a free mover: if someone moved it by tile (pos no longer under at), follow. */
-export function followTile(e: Body): void {
+/**
+ * For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are
+ * allowed (a zombie keeps its old tile as pos until a step lands, so it can be a tile off).
+ */
+export function followTile(e: Body, slack = 0): void {
   const t = tileOf(e.at);
-  if (t.x !== e.pos.x || t.y !== e.pos.y) e.at = centre(e.pos);
+  if (Math.max(Math.abs(t.x - e.pos.x), Math.abs(t.y - e.pos.y)) > slack) e.at = centre(e.pos);
 }
 
 export function distance2(a: Point, b: Point): number {

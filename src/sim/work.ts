@@ -1,6 +1,7 @@
 // Doing jobs: what a survivor does each tick while holding one (jobs.ts has the
 // queue). Each work function ends with finishJob or releaseSurvivor; nobody gets stuck.
 
+import { SWING_REACH, distance2 } from './motion';
 import { GUARD_BLOW_COST, exert } from './body';
 import { boostDamage } from './moodlets';
 import { spawnFind } from './difficulty';
@@ -109,7 +110,9 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
   // With a loaded gun: shoot from where you stand if you can, else close in a tile at a time.
   const gun = loadedGun(state, s);
   const range = GUN_RANGE + (onTower(state, s) ? TOWER_RANGE_BONUS : 0);
-  if (gun && manhattan(s.pos, z.pos) > 1 && manhattan(s.pos, z.pos) <= range && clearShot(state.grid, s.pos, z.pos)) {
+  // Close enough to swing (centre to centre: zombies close in off the grid, motion.ts).
+  const inReach = distance2(s.at, z.at) <= SWING_REACH * SWING_REACH;
+  if (gun && !inReach && manhattan(s.pos, z.pos) <= range && clearShot(state.grid, s.pos, z.pos)) {
     if (workStep(state, s, 'guard') === 0) return;
     job.progress += 1;
     if (job.progress % GUN_EVERY !== 1) return;
@@ -118,7 +121,7 @@ function workGuard(state: SimState, s: Survivor, job: Job): void {
     if (!damageZombie(state, z, boostDamage(s, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0)), s)) return;
     return finishJob(state, s, job, `shot a zombie at (${z.pos.x}, ${z.pos.y})`);
   }
-  if (manhattan(s.pos, z.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y), gun ? 1 : undefined);
+  if (!inReach) return goTo(state, s, job, neighbours4(state.grid, z.pos.x, z.pos.y), gun ? 1 : undefined);
   if (workStep(state, s, 'guard') === 0) return;
   job.progress += 1;
   // First blow lands on arrival (progress 1), then every GUARD_ATTACK_EVERY ticks.
@@ -288,6 +291,22 @@ function workCraft(state: SimState, s: Survivor, job: Job): void {
 
 /** Walk to the nearest unexplored tile in the area (seeing round you as you go), and on to the next, until it's all seen. */
 /** Runs every tick before movement: a scout still out (even mid-walk) at SCOUT_HOME_HOUR turns for home. */
+/**
+ * A guard on the way to their zombie stops walking once it's within swing reach (zombies close
+ * in off the grid: motion.ts), so the fight starts there rather than at the tile they were
+ * heading for. A step already under way lands first.
+ */
+export function interruptForFight(state: SimState, s: Survivor): void {
+  if (!s.goal || !s.jobId) return;
+  const job = getJob(state, s.jobId);
+  if (job?.type !== 'guard' || !job.zombieId) return;
+  const z = getZombie(state, job.zombieId);
+  if (!z || distance2(s.at, z.at) > SWING_REACH * SWING_REACH) return;
+  s.goal = null;
+  s.path = [];
+  s.pathVersion = -1;
+}
+
 export function interruptScouting(state: SimState, s: Survivor): void {
   if (s.jobId && scoutingOver(state.tick) && getJob(state, s.jobId)?.type === 'scout') headHome(state, s);
 }

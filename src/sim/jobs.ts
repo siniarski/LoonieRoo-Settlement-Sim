@@ -29,7 +29,7 @@ import { inWorkshop, isStation, wantedCraft } from './crafting';
 import type { SimState } from './state';
 import { getSurvivor, type Survivor } from './survivors';
 import { claim } from './jobChoice';
-export { updateWork, scavengeFind, interruptScouting, clearShot } from './work';
+export { interruptForFight, updateWork, scavengeFind, interruptScouting, clearShot } from './work';
 export { seekJob, chooseJob, typesByPriority, explainIdle } from './jobChoice';
 
 /**

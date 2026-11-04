@@ -43,7 +43,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { SUB, centre, followTile, slide, tileOf, toward } from './motion';
+import { SUB, SWING_REACH, centre, followTile, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, type Zombie } from './zombies';
 
@@ -189,7 +189,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   const face = towards(s.pos, target);
   if (face) c.facing = face;
   c.busy = null;
-  const near = zombieToHit(state, s.pos, c.facing);
+  const near = zombieToHit(state, s.at, c.facing);
   const wait = swingWait(s, GUARD_ATTACK_EVERY) + (isWinded(s) ? WINDED_WAIT : 0);
   if (near && freezes(state, s)) {
     c.nextSwing = state.tick + wait;
@@ -278,15 +278,26 @@ function inTheWay(state: SimState, s: Survivor, to: Point): Survivor | undefined
 }
 
 /** The zombie in front, else any zombie next to you (straight or diagonal), in a fixed order. */
-function zombieToHit(state: SimState, pos: Point, facing: Point): Zombie | undefined {
-  const at = (x: number, y: number) => state.zombies.find((z) => z.pos.x === x && z.pos.y === y);
-  const ahead = at(pos.x + facing.x, pos.y + facing.y);
-  if (ahead) return ahead;
-  for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]] as const) {
-    const z = at(pos.x + dx, pos.y + dy);
-    if (z) return z;
+/**
+ * The zombie a swing lands on: the nearest within SWING_REACH and inside the arc in front of
+ * you (within 60 degrees of where you face either way). Integer maths: dot > 0 and
+ * 4 * dot^2 >= |facing|^2 * |d|^2 (cos 60 = 1/2).
+ */
+function zombieToHit(state: SimState, from: Point, facing: Point): Zombie | undefined {
+  const f2 = facing.x * facing.x + facing.y * facing.y;
+  let best: Zombie | undefined;
+  let bestD2 = Infinity;
+  for (const z of state.zombies) {
+    const dx = z.at.x - from.x;
+    const dy = z.at.y - from.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > SWING_REACH * SWING_REACH || d2 >= bestD2) continue;
+    const dot = dx * facing.x + dy * facing.y;
+    if (d2 > 0 && (dot <= 0 || 4 * dot * dot < f2 * d2)) continue;
+    best = z;
+    bestD2 = d2;
   }
-  return undefined;
+  return best;
 }
 
 /** Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do. */
