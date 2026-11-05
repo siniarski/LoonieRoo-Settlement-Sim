@@ -2,6 +2,7 @@
 // frame, never what a tick means.
 
 import { closeBehind } from './doors';
+import { updateVehicles } from './vehicles';
 import { updateTimeline } from './timeline';
 import { syncStep, type Body } from './motion';
 import { updateHelicopter } from './escape';
@@ -100,6 +101,7 @@ export function tick(state: SimState): void {
   updateHerds(state);
   updateWeather(state);
   updateTimeline(state);
+  updateVehicles(state);
   updateRelationships(state);
   updateSocial(state);
   if (state.tick % DAY_LENGTH === 0) forgetForaging(state);

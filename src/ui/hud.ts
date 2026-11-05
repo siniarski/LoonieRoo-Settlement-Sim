@@ -3,6 +3,8 @@
 // out as sim commands or view-state changes.
 
 import { climateAt, isRadioactive } from '../sim/climate';
+import { FUEL_MAX, VEHICLE_HEALTH, vehicleOf } from '../sim/vehicles';
+import { SUB } from '../sim/motion';
 import { powerOn, waterOn } from '../sim/timeline';
 import { STEP_UP, heirs } from '../sim/succession';
 import { describeWish } from '../sim/wishes';
@@ -169,7 +171,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const controlText = you
         ? view.showKeys
-          ? 'WASD walk · Shift run · C sneak · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
+          ? 'WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
           : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'
@@ -232,6 +234,15 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   };
 }
 
+/** Behind the wheel: speed, fuel, and how the car is holding up. */
+function drivingText(state: SimState): string {
+  const you = controlled(state);
+  const car = you ? vehicleOf(state, you) : undefined;
+  if (!car) return '';
+  const tiles = Math.round((Math.abs(car.speed) * 10) / SUB); // tiles a second at 10 ticks a second
+  return `driving ${car.speed < 0 ? 'backwards ' : ''}${tiles} tiles/s · fuel ${Math.round((car.fuel * 100) / FUEL_MAX)}% · car ${Math.round((car.health * 100) / VEHICLE_HEALTH)}%`;
+}
+
 function statusText(state: SimState, view: ViewState): string {
   const hover = view.hover;
   const { width, height, tiles } = state.grid;
@@ -252,6 +263,7 @@ function statusText(state: SimState, view: ViewState): string {
     mode,
     selected && !you ? `${selected.name}: right-click to move` : '',
     place,
+    drivingText(state),
     `wood ${wood} · food ${food} · jobs ${state.jobs.length}${state.timeline ? ` · water ${waterOn(state) ? 'on' : 'off'} · power ${powerOn(state) ? 'on' : 'off'}` : ''}`,
   ].filter((x) => x !== '').join('  ·  ');
 }

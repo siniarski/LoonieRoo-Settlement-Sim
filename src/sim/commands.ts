@@ -4,6 +4,7 @@
 // logged, since replaying them would change nothing.
 
 import { escape } from './escape';
+import { addVehicle, parkable } from './vehicles';
 import { remediesFor } from './medicine';
 import { contents, dropFromPack, equipFromPack, stow } from './inventory';
 import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, setEdge, type Side } from './grid';
@@ -125,6 +126,8 @@ export type Command =
   | { type: 'damageStructure'; x: number; y: number; amount: number }
   // Debug/sandbox: put a zombie on a floor tile (they only last until dawn).
   | { type: 'spawnZombie'; x: number; y: number }
+  // Debug/sandbox: park a car (vehicles.ts) on a floor tile, full and facing east.
+  | { type: 'spawnVehicle'; x: number; y: number }
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number; run?: boolean }
@@ -503,6 +506,10 @@ function execute(state: SimState, command: Command): CommandResult {
     case 'spawnZombie':
       if (getTile(state.grid, x, y) !== 'floor') return reject(`(${x}, ${y}) is not floor`);
       addZombie(state, x, y);
+      return changed();
+    case 'spawnVehicle':
+      if (!parkable(state, { x, y })) return reject(`a car won't fit at (${x}, ${y})`);
+      addVehicle(state, x, y);
       return changed();
     case 'spawnFood':
     case 'spawnWeapon':
