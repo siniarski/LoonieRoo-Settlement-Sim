@@ -74,4 +74,34 @@ describe('fights you can read', () => {
     expect(moved(free)).toBe(walk);
     expect(moved(held)).toBe(Math.round((walk * Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT)) / 100));
   });
+
+  it('you look where you aim: walking does not turn you, and a swing lands in the arc round your aim', () => {
+    const state = fight(['.....', '.s...', '..z..']);
+    const c = state.control!;
+    expect(applyCommand(state, { type: 'aim', x: 45, y: 45 }).ok).toBe(true); // down-right, at the zombie
+    expect(c.facing).toEqual({ x: 1, y: 1 });
+    expect(applyCommand(state, { type: 'aim', x: 99, y: 0 }).ok).toBe(false);
+    expect(applyCommand(state, { type: 'aim', x: 0, y: 0 }).ok).toBe(false);
+    applyCommand(state, { type: 'steer', dx: -1, dy: 0 });
+    tick(state);
+    expect(c.facing).toEqual({ x: 1, y: 1 }); // backing away, still facing it
+    applyCommand(state, { type: 'steer', dx: 0, dy: 0 });
+    const z = state.zombies[0]!;
+    z.health = z.maxHealth = 1000;
+    const s = state.survivors[0]!;
+    s.at = centre({ x: 1, y: 1 });
+    s.pos = { x: 1, y: 1 };
+    z.at = centre({ x: 2, y: 1 }); // beside you (a diagonal is just out of reach)
+    z.pos = { x: 2, y: 1 };
+    // Aimed away from it: the swing finds nothing; aimed at it: a hit.
+    applyCommand(state, { type: 'aim', x: -64, y: 0 });
+    state.control!.nextSwing = 0;
+    const away = z.health;
+    applyCommand(state, { type: 'swing', x: 0, y: 1 });
+    expect(z.health).toBe(away);
+    applyCommand(state, { type: 'aim', x: 64, y: 0 });
+    state.control!.nextSwing = 0;
+    applyCommand(state, { type: 'swing', x: 2, y: 1 });
+    expect(z.health).toBeLessThan(away);
+  });
 });

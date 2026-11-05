@@ -21,7 +21,9 @@
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
 //   P priorities · M minimap · Space pause · ` debug panel · Home recentre
 
-import { centredOn, panByScreen, screenToTile, zoomAt, type Viewport } from '../render/camera';
+import { centredOn, panByScreen, screenToTile, screenToWorld, zoomAt, type Viewport } from '../render/camera';
+import { AIM_MAX } from '../sim/control';
+import { SUB } from '../sim/motion';
 import type { Command } from '../sim/commands';
 import type { Control } from '../sim/control';
 import type { Point } from '../sim/grid';
@@ -60,6 +62,8 @@ export interface InputContext {
   control(): Control | null;
   /** Where the controlled survivor stands. */
   controlledPos(): Point | null;
+  /** Where exactly (motion.ts SUB units), for aiming at the mouse. */
+  controlledAt(): Point | null;
   /** Open or close the menu (menu.ts). */
   toggleMenu(): void;
   /** Ask the auto-planner to furnish the room at this tile. */
@@ -72,7 +76,12 @@ export interface Input {
   dispose(): void;
 }
 
+/** Directions the mouse aim snaps to (keeps the command log small). */
+const AIM_STEPS = 32;
+
 export function attachInput(ctx: InputContext): Input {
+  /** The mouse, in screen pixels, for aiming. */
+  let mouse: Point | null = null;
   const { canvas, view } = ctx;
   const held = new Set<string>();
   let shiftHeld = false;
@@ -159,6 +168,7 @@ export function attachInput(ctx: InputContext): Input {
 
   const onPointerMove = (e: PointerEvent) => {
     const p = screenPoint(e);
+    mouse = p;
     const tile = tileAt(p);
     view.hover = tile;
     if (view.areaDrag) view.areaDrag.to = tile;
@@ -301,6 +311,20 @@ export function attachInput(ctx: InputContext): Input {
         dy = Math.sign(dy);
         const run = shiftHeld && (dx !== 0 || dy !== 0);
         if (c.dx !== dx || c.dy !== dy || (c.running === true) !== run) ctx.command({ type: 'steer', dx, dy, run });
+        // Look at the mouse: the direction from you to it, in AIM_STEPS steps round, sent only when it changes.
+        const at = ctx.controlledAt();
+        if (mouse && at) {
+          const w = screenToWorld(view.camera, ctx.viewport(), mouse.x, mouse.y);
+          const ax = w.x * SUB - at.x;
+          const ay = w.y * SUB - at.y;
+          if (ax * ax + ay * ay > (SUB / 4) ** 2) {
+            const step = Math.round((Math.atan2(ay, ax) / (2 * Math.PI)) * AIM_STEPS);
+            const a = (step * 2 * Math.PI) / AIM_STEPS;
+            const x = Math.round(Math.cos(a) * AIM_MAX);
+            const y = Math.round(Math.sin(a) * AIM_MAX);
+            if (!c.aim || c.aim.x !== x || c.aim.y !== y) ctx.command({ type: 'aim', x, y });
+          }
+        }
         return;
       }
       if (held.size === 0) return;

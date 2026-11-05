@@ -19,9 +19,9 @@ import { startingAge } from './family';
 import { legSlowed, type Limb, type Wound } from './wounds';
 import { HYDRATION_MAX, type Drink } from './water';
 import type { Thought } from './mood';
-import { GROUNDS, getTile, setDirty, type Point } from './grid';
+import { GROUNDS, getTile, isWalkable, setDirty, type Point } from './grid';
 import { DEFAULT_PRIORITIES, type JobType, type Priorities } from './jobTypes';
-import { findPath } from './pathfinding';
+import { findPath, straightenAhead } from './pathfinding';
 import { initialSatiety, type Meal } from './food';
 import { HEALTH_MAX, HURT_STEP_TICKS, isHurt } from './health';
 import { initialRest, type Sleep } from './rest';
@@ -298,10 +298,17 @@ export function updateMovement(state: SimState, s: Survivor): void {
       : `walking to (${goal.x}, ${goal.y}), ${path.length} tiles`;
   }
 
+  // Walk the path straightened (pathfinding.ts): across open ground on the diagonal, not along
+  // the grid. Paths stay four-way; this straightens the stretch ahead, step by step. A diagonal
+  // step takes ~1.41 times as long.
+  if (s.path.length >= 2) s.path = straightenAhead(state.grid, s.pos, s.path);
   const next = s.path.shift()!;
+  const diagonal = next.x !== s.pos.x && next.y !== s.pos.y;
   passThrough(state, next.x, next.y, true);
-  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: stepPace(state, s, next) };
+  const pace = stepPace(state, s, next);
+  s.move = { from: { ...s.pos }, to: next, progress: 0, duration: diagonal ? Math.round((pace * 1414) / 1000) : pace };
 }
+
 
 /** Advances a step in progress by a tick. Returns true once it has landed (or there was none). */
 export function advanceStep(state: SimState, s: Survivor): boolean {

@@ -54,8 +54,10 @@ export interface Control {
   /** Held direction, each -1, 0 or 1. */
   dx: number;
   dy: number;
-  /** Last direction moved or swung (never 0, 0). */
+  /** Last direction moved or swung (never 0, 0), one of eight: the tile in front is the one you use or work. */
   facing: Point;
+  /** Where you're looking (the mouse), each part within AIM_MAX; swings land in an arc round it. Unset: facing. */
+  aim?: Point;
   /** No swing or shot before this tick. */
   nextSwing: number;
   /** Tick of the last swing, -1 if none (the renderer draws its arc). */
@@ -77,6 +79,25 @@ export function clutchedBy(state: SimState, s: Survivor): number {
   return n;
 }
 
+/** The largest part of an aim direction (a circle of radius AIM_MAX, in 32 steps from the UI). */
+export const AIM_MAX = 64;
+
+/** Look this way: sets the aim, and the eight-way facing nearest it. Returns null if changed, 'same', or why not. */
+export function aim(c: Control, x: number, y: number): string | null {
+  if (!Number.isInteger(x) || !Number.isInteger(y) || Math.abs(x) > AIM_MAX || Math.abs(y) > AIM_MAX || (x === 0 && y === 0)) return 'aim takes a direction';
+  if (c.aim && c.aim.x === x && c.aim.y === y) return 'same';
+  c.aim = { x, y };
+  // Eight ways: a part counts if it's at least tan(22.5 deg) of the larger (5 / 12 is close, in integers).
+  const big = Math.max(Math.abs(x), Math.abs(y));
+  c.facing = { x: 12 * Math.abs(x) >= 5 * big ? Math.sign(x) : 0, y: 12 * Math.abs(y) >= 5 * big ? Math.sign(y) : 0 };
+  return null;
+}
+
+/** Which way a swing goes: the aim, else the facing. */
+function swingDir(c: Control): Point {
+  return c.aim ?? c.facing;
+}
+
 export function controlled(state: SimState): Survivor | undefined {
   return state.control ? getSurvivor(state, state.control.survivorId) : undefined;
 }
@@ -92,7 +113,8 @@ export function updateControlled(state: SimState, s: Survivor): void {
   followTile(s);
   if (c.dx !== 0 || c.dy !== 0) {
     c.busy = null;
-    c.facing = { x: c.dx, y: c.dy };
+    // Aiming with the mouse, you walk one way and look another; else you face where you walk.
+    if (!c.aim) c.facing = { x: c.dx, y: c.dy };
     const run = c.running === true && !isWinded(s);
     if (run) exert(s, RUN_TICK_COST);
     // The dead within reach drag at you: each takes CLUTCH_PCT off, down to CLUTCHED_MIN.
@@ -206,7 +228,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
   const face = towards(s.pos, target);
   if (face) c.facing = face;
   c.busy = null;
-  const near = zombieToHit(state, s.at, c.facing);
+  const near = zombieToHit(state, s.at, swingDir(c));
   const wait = swingWait(s, GUARD_ATTACK_EVERY) + (isWinded(s) ? WINDED_WAIT : 0);
   if (near && freezes(state, s)) {
     c.nextSwing = state.tick + wait;
@@ -230,7 +252,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     else knockBack(state, near, s.at);
     return killed ? 'killed it' : 'hit it';
   }
-  const person = residentToHit(state, s.at, c.facing);
+  const person = residentToHit(state, s.at, swingDir(c));
   if (person) {
     c.nextSwing = state.tick + GUARD_ATTACK_EVERY;
     c.swungTick = state.tick;
@@ -239,7 +261,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
   }
   // A deer next to you, or one you're aiming at with a loaded gun (handiwork.ts).
-  const deer = nearestInArc(state.animals, s.at, c.facing)
+  const deer = nearestInArc(state.animals, s.at, swingDir(c))
     ?? (loadedGun(state, s) ? state.animals.find((a) => a.pos.x === target.x && a.pos.y === target.y && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos)) : undefined);
   if (deer) {
     const shot = !inReach(deer, s, SWING_REACH);

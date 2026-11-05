@@ -167,7 +167,8 @@ describe('stuck-state invariant', () => {
           expect(still, `stuck with goal ${JSON.stringify(s.goal)}: ${where}`).toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
 
           // Mid-breakdown is deliberately idle. Relaxing is not excused: a job turning up must end it.
-          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal && !s.arming && !s.breakdown;
+          // Treating yourself is a need, like eating: not idle.
+          const idle = !s.jobId && !s.goal && !s.move && !s.sleep && !s.meal && !s.arming && !s.treatment && !s.breakdown;
           const idleTicks = idle && chooseJob(state, s) ? (idleWithWork.get(s.id) ?? 0) + 1 : 0;
           idleWithWork.set(s.id, idleTicks);
           expect(idleTicks, `idle with doable work: ${where}`).toBeLessThanOrEqual(MAX_IDLE_WITH_DOABLE_JOB);

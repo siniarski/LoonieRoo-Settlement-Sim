@@ -202,9 +202,11 @@ export function drawSurvivor(
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
     ctx.stroke();
-    const len = Math.hypot(control.facing.x, control.facing.y);
-    const fx = control.facing.x / len;
-    const fy = control.facing.y / len;
+    // Where you look: the mouse aim if there is one, else the way you face.
+    const look = control.aim ?? control.facing;
+    const len = Math.hypot(look.x, look.y);
+    const fx = look.x / len;
+    const fy = look.y / len;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(p.x + fx * (radius + 2), p.y + fy * (radius + 2));

@@ -44,7 +44,7 @@ import { MAX_CRAFT_TARGET, isCraftKind, type CraftKind } from './crafting';
 import { addZombie, evictZombies } from './zombies';
 import { logEvent } from './events';
 import { ignite } from './fire';
-import { controlled, isControlled, swing, use, work } from './control';
+import { controlled, isControlled, swing, use, work, aim } from './control';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
@@ -124,6 +124,8 @@ export type Command =
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number; run?: boolean }
+  /** Where you're looking (the mouse): a direction, each part an integer within AIM_MAX (control.ts). */
+  | { type: 'aim'; x: number; y: number }
   | { type: 'swing'; x: number; y: number }
   | { type: 'use'; x: number; y: number }
   /** Under control: repair, barricade, reinforce or build at a tile next to you (handiwork.ts). */
@@ -166,9 +168,13 @@ function execute(state: SimState, command: Command): CommandResult {
     s.note = done;
     return state.control!.busy ? changed() : reject(done);
   }
-  if (command.type === 'steer' || command.type === 'swing' || command.type === 'use') {
+  if (command.type === 'steer' || command.type === 'swing' || command.type === 'use' || command.type === 'aim') {
     const s = controlled(state);
     if (!s) return reject('nobody is under control');
+    if (command.type === 'aim') {
+      const why = aim(state.control!, command.x, command.y);
+      return why === null ? changed() : why === 'same' ? unchanged() : reject(why);
+    }
     if (command.type === 'steer') {
       const { dx, dy } = command;
       if (![dx, dy].every((d) => d === -1 || d === 0 || d === 1)) return reject('steer takes -1, 0 or 1');

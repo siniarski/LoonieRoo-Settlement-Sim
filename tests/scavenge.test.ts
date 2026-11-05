@@ -111,16 +111,18 @@ describe('scavenging', () => {
   it('finds get hauled back to storage', () => {
     const map = [
       '................',
-      '.####...........',
-      '.#..#........c..',
-      '.#..#...........',
-      '.##D#...........',
+      '.#####..........',
+      '.#...#.......c..',
+      '.#...#..........',
+      '.##D##..........',
       's...............',
     ];
     const state = setup(map, [{ x: 2, y: 2, purpose: 'storage' }], 3);
+    state.survivors[0]!.resolve = 100; // steeled: no breakdown halfway (this is about hauling, not mood)
     markAll(state);
     const storageRoom = roomAt(state, 2, 2)!;
-    runUntil(state, (st) => crates(st)[0]!.loot === 0 && st.items.every((i) => i.pos && roomAt(st, i.pos.x, i.pos.y) === storageRoom));
+    // (A coat found may be put on instead: worn things have no place on the floor.)
+    runUntil(state, (st) => crates(st)[0]!.loot === 0 && st.items.every((i) => (i.pos ? roomAt(st, i.pos.x, i.pos.y) === storageRoom : i.carriedBy !== null)));
     // Everything found is in storage, minus anything the survivor got hungry enough to eat on the way.
     expect(state.items.length).toBeGreaterThanOrEqual(CRATE_LOOT - 1);
   });

@@ -52,7 +52,7 @@ describe('world generation', () => {
   });
 
   it('has roads, ruins with crates, forest, and water', () => {
-    expect(world.grid.ground.filter((g) => g === 2).length).toBeGreaterThan(SIZE * 2); // road
+    expect(world.grid.ground.filter((g) => g === 2).length).toBeGreaterThan(SIZE); // road (a 128 map is one town and its roads)
     expect(count((t) => t === 'water')).toBeGreaterThan(SIZE);
     expect(count((t) => t === 'wall')).toBeGreaterThan(100);
     expect(world.furniture.filter((f) => f.kind === 'crate').length).toBeGreaterThan(5);

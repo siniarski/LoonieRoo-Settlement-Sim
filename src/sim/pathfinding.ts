@@ -233,3 +233,88 @@ class MinHeap {
     this.items[b] = tmp;
   }
 }
+
+// --- Straightening ----------------------------------------------------------
+
+/** How far ahead along a path straighten looks for a straight line. */
+const STRAIGHTEN_LOOKAHEAD = 24;
+
+/**
+ * A four-way path straightened for walking: from each point, the furthest point further along it
+ * that a straight eight-way line reaches over open floor (no wall's corner cut, no doorway
+ * entered or left at an angle), then the line's tiles. Colonists walk these (survivors.ts), so
+ * they cross open ground on the diagonal instead of along the grid. Same ends as the path.
+ */
+export function straighten(grid: Grid, start: Point, path: readonly Point[]): Point[] {
+  if (path.length < 2) return path.slice();
+  const pts = [start, ...path];
+  const out: Point[] = [];
+  let i = 0;
+  while (i < pts.length - 1) {
+    let best = i + 1;
+    let bestLine: Point[] = [pts[i + 1]!];
+    for (let j = Math.min(pts.length - 1, i + STRAIGHTEN_LOOKAHEAD); j > i + 1; j--) {
+      const line = straightLine(grid, pts[i]!, pts[j]!);
+      if (line) {
+        best = j;
+        bestLine = line;
+        break;
+      }
+    }
+    out.push(...bestLine);
+    i = best;
+  }
+  return out;
+}
+
+/** The tiles of an eight-way line from a to b (excluding a), or null if it can't be walked straight. */
+function straightLine(grid: Grid, a: Point, b: Point): Point[] | null {
+  const tiles: Point[] = [];
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+  const sx = Math.sign(b.x - a.x);
+  const sy = Math.sign(b.y - a.y);
+  let x = a.x;
+  let y = a.y;
+  let err = dx - dy;
+  const open = (px: number, py: number) => inBounds(grid, px, py) && grid.tiles[py * grid.width + px] === 'floor' && isPassable(grid, px, py, 'survivor');
+  while (x !== b.x || y !== b.y) {
+    const e2 = 2 * err;
+    let nx = x;
+    let ny = y;
+    if (e2 > -dy) {
+      err -= dy;
+      nx += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      ny += sy;
+    }
+    const diagonal = nx !== x && ny !== y;
+    const door = (px: number, py: number) => grid.tiles[py * grid.width + px] === 'door';
+    if (diagonal) {
+      // Both corners open floor; neither end a doorway.
+      if (!open(nx, y) || !open(x, ny) || !open(nx, ny) || door(x, y)) return null;
+    } else if (!isPassable(grid, nx, ny, 'survivor')) return null;
+    // Only open floor in between: a door is fine as the line's end, walked into straight.
+    if (!diagonal && door(nx, ny) && (nx !== b.x || ny !== b.y)) return null;
+    tiles.push({ x: nx, y: ny });
+    x = nx;
+    y = ny;
+  }
+  return tiles;
+}
+
+/**
+ * Just the first straight line of `straighten`: from `start`, the furthest point of the next
+ * STRAIGHTEN_LOOKAHEAD that a straight line reaches, its tiles, then the rest of the path as it was.
+ * What a walker needs each step, at a fraction of the cost.
+ */
+export function straightenAhead(grid: Grid, start: Point, path: readonly Point[]): Point[] {
+  if (path.length < 2) return path.slice();
+  for (let j = Math.min(path.length - 1, STRAIGHTEN_LOOKAHEAD - 1); j >= 1; j--) {
+    const line = straightLine(grid, start, path[j]!);
+    if (line) return [...line, ...path.slice(j + 1)];
+  }
+  return path.slice();
+}

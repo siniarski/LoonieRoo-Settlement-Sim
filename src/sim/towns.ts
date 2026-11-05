@@ -43,7 +43,8 @@ const RADII: Record<TownKind, [number, number]> = { village: [20, 28], town: [34
 
 /** How many towns, and how big, for a map this size. */
 function townKinds(seed: number, size: number): TownKind[] {
-  const count = Math.max(1, Math.round((size * size) / (170 * 170))) + (roll(seed, size, 0, 0x7100) < 0.5 ? 1 : 0);
+  // A small map is one town and its country round it.
+  const count = size <= 128 ? 1 : Math.max(1, Math.round((size * size) / (170 * 170))) + (roll(seed, size, 0, 0x7100) < 0.5 ? 1 : 0);
   const kinds: TownKind[] = [];
   for (let i = 0; i < count; i++) {
     const r = roll(seed, i, 1, 0x7101);
