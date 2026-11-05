@@ -7,7 +7,7 @@
 
 import { addBlueprint, blueprintAt, cancelBlueprint } from './designations';
 import { logEvent } from './events';
-import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, getTile, setDamage, setTile, tileIndex, type Tile } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, getTile, noteEdgeChange, setDamage, setTile, tileIndex, type Tile } from './grid';
 import type { SimState } from './state';
 
 /** Damage a structure takes before it breaks. Zombies hit for 40, every 10 ticks. */
@@ -59,7 +59,7 @@ export function repairStructure(state: SimState, x: number, y: number, amount: n
 /** What it takes to break an edge wall or door: the same as the tile kinds. */
 export function edgeHealth(grid: SimState['grid'], e: number): number {
   const kind = grid.edges[e];
-  return kind === EDGE_WALL ? STRUCTURE_HEALTH.wall : kind === EDGE_DOOR ? STRUCTURE_HEALTH.door : 0;
+  return kind === EDGE_WALL ? STRUCTURE_HEALTH.wall : kind === EDGE_DOOR ? STRUCTURE_HEALTH.door : kind === EDGE_BARRICADE ? STRUCTURE_HEALTH.barricade : 0;
 }
 
 export function edgeDamage(grid: SimState['grid'], e: number): number {
@@ -70,13 +70,14 @@ export function edgeDamage(grid: SimState['grid'], e: number): number {
 export function damageEdge(state: SimState, e: number, amount: number): boolean {
   const { grid } = state;
   const kind = grid.edges[e];
-  if (kind !== EDGE_WALL && kind !== EDGE_DOOR) return false;
+  if (kind !== EDGE_WALL && kind !== EDGE_DOOR && kind !== EDGE_BARRICADE) return false;
   const damage = edgeDamage(grid, e) + amount;
   if (damage < edgeHealth(grid, e)) {
     grid.edgeDamage[String(e)] = damage;
     return false;
   }
   grid.edges[e] = EDGE_NONE;
+  noteEdgeChange(grid, e);
   delete grid.edgeDamage[String(e)];
   const open = grid.edgeOpen.indexOf(e);
   if (open >= 0) grid.edgeOpen.splice(open, 1);
@@ -84,7 +85,7 @@ export function damageEdge(state: SimState, e: number, amount: number): boolean 
   if (passing >= 0) grid.edgePassing.splice(passing, 1);
   state.walkabilityVersion += 1;
   const tile = Math.floor(e / 2);
-  logEvent(state, 'Zombies broke through the ' + (kind === EDGE_WALL ? 'wall' : 'door') + ' at (' + (tile % grid.width) + ', ' + Math.floor(tile / grid.width) + ')');
+  logEvent(state, 'Zombies broke through the ' + (kind === EDGE_WALL ? 'wall' : kind === EDGE_DOOR ? 'door' : 'barricade') + ' at (' + (tile % grid.width) + ', ' + Math.floor(tile / grid.width) + ')');
   return true;
 }
 

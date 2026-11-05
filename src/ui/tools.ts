@@ -77,7 +77,8 @@ export const TOOLS: readonly Tool[] = [
     category: 'structure',
     paints: true,
     hasInstant: false,
-    command: (x, y) => ({ type: 'designateBuild', x, y, structure: 'barricade' }),
+    edge: true,
+    command: (x, y, { side }) => ({ type: 'designateBuild', x, y, structure: 'barricade', ...(side ? { side } : {}) }),
   },
   {
     id: 'trap',
@@ -296,7 +297,8 @@ export const TOOLS: readonly Tool[] = [
     category: 'orders',
     paints: false,
     hasInstant: false,
-    command: (x, y) => ({ type: 'toggleLock', x, y }),
+    edge: true,
+    command: (x, y, { side }) => ({ type: 'toggleLock', x, y, ...(side ? { side } : {}) }),
   },
   {
     id: 'burn',

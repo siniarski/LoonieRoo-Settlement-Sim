@@ -109,7 +109,7 @@ export type Command =
   /** Set a tile alight on purpose (fire.ts). */
   | { type: 'ignite'; x: number; y: number }
   /** Lock or unlock a door: raiders can't open locked ones. */
-  | { type: 'toggleLock'; x: number; y: number }
+  | { type: 'toggleLock'; x: number; y: number; side?: Side }
   /** Open a closed door, or close an open one (not with anyone in the doorway; not if locked). */
   | { type: 'toggleDoor'; x: number; y: number }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
@@ -358,6 +358,17 @@ function execute(state: SimState, command: Command): CommandResult {
   }
   if (command.type === 'toggleLock') {
     const { x, y } = command;
+    // An edge door on that side of the tile, if given and there; else the door tile.
+    if (command.side !== undefined && inBounds(state.grid, x, y) && state.grid.edges[edgeIndex(state.grid, x, y, command.side)] === EDGE_DOOR) {
+      const e = edgeIndex(state.grid, x, y, command.side);
+      const open = state.grid.edgeOpen.indexOf(e);
+      if (open >= 0) state.grid.edgeOpen.splice(open, 1); // a locked door is a shut one
+      const at = state.grid.edgeLocked.indexOf(e);
+      if (at >= 0) state.grid.edgeLocked.splice(at, 1);
+      else state.grid.edgeLocked.push(e);
+      state.walkabilityVersion += 1; // raiders' paths change
+      return changed();
+    }
     if (getTile(state.grid, x, y) !== 'door') return reject(`(${x}, ${y}) is not a door`);
     const i = y * state.grid.width + x;
     const open = state.grid.open.indexOf(i);
@@ -513,7 +524,7 @@ function edgeProblem(state: SimState, x: number, y: number, side: Side): string 
 
 /** A blueprint for an edge wall or door. */
 function designateEdge(state: SimState, x: number, y: number, side: Side, structure: string): CommandResult {
-  if (structure !== 'wall' && structure !== 'door') return reject('only walls and doors go on edges');
+  if (structure !== 'wall' && structure !== 'door' && structure !== 'barricade') return reject('only walls, doors and barricades go on edges');
   const why = edgeProblem(state, x, y, side);
   if (why) return reject(why);
   if (state.grid.edges[edgeIndex(state.grid, x, y, side)] !== EDGE_NONE) return unchanged();
@@ -548,8 +559,37 @@ function designateBuild(state: SimState, x: number, y: number, structure: 'wall'
   return changed();
 }
 
-/** Wall plans round the box's edge (explored, empty floor only), a door plan mid-way along each side. */
+/**
+ * Walls in a box: edge-wall plans on its outer borders (grid.ts edges), a door plan mid-way along
+ * each side. Borders on the map's edge, or already built on, are skipped.
+ */
 function planPerimeter(state: SimState, ax: number, ay: number, bx: number, by: number): CommandResult {
+  const ex0 = Math.max(0, Math.min(ax, bx));
+  const ex1 = Math.min(state.grid.width - 1, Math.max(ax, bx));
+  const ey0 = Math.max(0, Math.min(ay, by));
+  const ey1 = Math.min(state.grid.height - 1, Math.max(ay, by));
+  if (ex1 - ex0 < 1 || ey1 - ey0 < 1) return reject('too small to wall in');
+  const emx = Math.floor((ex0 + ex1) / 2);
+  const emy = Math.floor((ey0 + ey1) / 2);
+  let edgesPlanned = 0;
+  const plan = (x: number, y: number, side: Side, door: boolean) => {
+    if (!inBounds(state.grid, x, y) || !isExplored(state, x, y)) return;
+    const r = designateEdge(state, x, y, side, door ? 'door' : 'wall');
+    if (r.ok && r.changed) edgesPlanned += 1;
+  };
+  for (let x = ex0; x <= ex1; x++) {
+    plan(x, ey0, 'n', x === emx);
+    plan(x, ey1 + 1, 'n', x === emx);
+  }
+  for (let y = ey0; y <= ey1; y++) {
+    plan(ex0, y, 'w', y === emy);
+    plan(ex1 + 1, y, 'w', y === emy);
+  }
+  return edgesPlanned > 0 ? changed() : unchanged();
+}
+
+/** The old tile perimeter (kept for reference by replays of older logs: unused). */
+export function planPerimeterTiles(state: SimState, ax: number, ay: number, bx: number, by: number): CommandResult {
   const x0 = Math.max(0, Math.min(ax, bx));
   const x1 = Math.min(state.grid.width - 1, Math.max(ax, bx));
   const y0 = Math.max(0, Math.min(ay, by));

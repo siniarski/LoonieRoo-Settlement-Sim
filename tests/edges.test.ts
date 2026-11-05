@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { applyCommand } from '../src/sim/commands';
 import { EDGE_DOOR, edgeBetween, edgeIsOpen, type Side } from '../src/sim/grid';
 import { centre, fits, slide, SUB } from '../src/sim/motion';
-import { canReach, findPath } from '../src/sim/pathfinding';
+import { canReach, crossable, findPath } from '../src/sim/pathfinding';
+import { completeBlueprint } from '../src/sim/designations';
 import { getRoomMap } from '../src/sim/rooms';
 import { loadFile, toSaveFile } from '../src/sim/savefile';
 import { loadScenario, type Scenario } from '../src/sim/scenario';
@@ -134,7 +135,7 @@ describe('walls on tile edges', () => {
     s.priorities.build = 1;
     s.priorities.haul = 2;
     expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 1, structure: 'wall', side: 'n' }).ok).toBe(true);
-    expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 1, structure: 'barricade', side: 'n' }).ok).toBe(false);
+    expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 1, structure: 'trap', side: 'n' }).ok).toBe(false);
     expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 0, structure: 'wall', side: 'n' }).ok).toBe(false); // the map's border
     const wall = edgeBetween(state.grid, 3, 1, 3, 0);
     for (let t = 0; t < 600 && state.grid.edges[wall] !== 1; t++) tick(state);
@@ -162,5 +163,27 @@ describe('walls on tile edges', () => {
     applyCommand(state, { type: 'aim', x: 64, y: 0 });
     applyCommand(state, { type: 'swing', x: 4, y: 2 });
     expect(z.health).toBe(before);
+  });
+
+  it('an edge barricade keeps the dead out but not you or the colonists', () => {
+    const state = loadScenario({ seed: 1, map: MAP, edges: [{ x: 2, y: 2, side: 'w', kind: 'wall' }] });
+    applyCommand(state, { type: 'designateBuild', x: 3, y: 3, structure: 'barricade', side: 'w' });
+    const bp = state.blueprints[0]!;
+    // Finish it straight away.
+    bp.delivered = true;
+    bp.workDone = bp.workRequired;
+    completeBlueprint(state, bp);
+    expect(crossable(state.grid, 2, 3, 3, 3, 'zombie')).toBe(false);
+    expect(crossable(state.grid, 2, 3, 3, 3, 'survivor')).toBe(true);
+    expect(crossable(state.grid, 2, 3, 3, 3, 'free')).toBe(true);
+  });
+
+  it('a locked edge door: raiders cannot open it, colonists have keys', () => {
+    const state = loadScenario({ seed: 1, map: MAP, edges: box(1, 1, 3, 3) });
+    expect(applyCommand(state, { type: 'toggleLock', x: 2, y: 4, side: 'n' }).ok).toBe(true);
+    expect(crossable(state.grid, 2, 4, 2, 3, 'raider')).toBe(false);
+    expect(crossable(state.grid, 2, 4, 2, 3, 'survivor')).toBe(true);
+    applyCommand(state, { type: 'toggleLock', x: 2, y: 4, side: 'n' });
+    expect(crossable(state.grid, 2, 4, 2, 3, 'raider')).toBe(true);
   });
 });

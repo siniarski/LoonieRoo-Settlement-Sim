@@ -18,7 +18,7 @@ import type { SimState } from './state';
 export function passThrough(state: SimState, x: number, y: number, hasKey: boolean, from?: Point): void {
   if (from) {
     const e = edgeBetween(state.grid, from.x, from.y, x, y);
-    if (e >= 0 && state.grid.edges[e] === EDGE_DOOR && !edgeIsOpen(state.grid, e)) {
+    if (e >= 0 && state.grid.edges[e] === EDGE_DOOR && !edgeIsOpen(state.grid, e) && (hasKey || !state.grid.edgeLocked.includes(e))) {
       state.grid.edgeOpen.push(e);
       state.grid.edgePassing.push(e);
     }

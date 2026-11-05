@@ -39,15 +39,17 @@ describe('tools', () => {
 });
 
 describe('the auto-wall planner', () => {
-  it('plans walls round the box with a door in each side', () => {
+  it('plans edge walls round the box with a door in each side', () => {
     const state = loadScenario({ seed: 3, map: ['.......', '.......', '.......', '.......', '.......'] });
-    expect(applyCommand(state, { type: 'planPerimeter', x0: 0, y0: 0, x1: 6, y1: 4 }).ok).toBe(true);
-    expect(state.blueprints.filter((b) => b.target === 'wall')).toHaveLength(20 - 4); // a 7x5 box's edge, less the doors
-    expect(state.blueprints.filter((b) => b.target === 'door').map((b) => [b.x, b.y])).toEqual([
-      [3, 0],
-      [0, 2],
-      [6, 2],
-      [3, 4],
+    expect(applyCommand(state, { type: 'planPerimeter', x0: 1, y0: 1, x1: 5, y1: 3 }).ok).toBe(true);
+    // A 5x3 box's borders (grid.ts edges): 5 + 5 + 3 + 3, four of them doors, mid-way along each side.
+    expect(state.blueprints.every((b) => b.side !== undefined)).toBe(true);
+    expect(state.blueprints.filter((b) => b.target === 'wall')).toHaveLength(16 - 4);
+    expect(state.blueprints.filter((b) => b.target === 'door').map((b) => [b.x, b.y, b.side])).toEqual([
+      [3, 1, 'n'],
+      [3, 4, 'n'],
+      [1, 2, 'w'],
+      [6, 2, 'w'],
     ]);
   });
 });

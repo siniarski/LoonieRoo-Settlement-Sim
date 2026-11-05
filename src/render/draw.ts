@@ -384,6 +384,17 @@ function drawEdges(ctx: CanvasRenderingContext2D, camera: Camera, viewport: View
         const r = tileRect(camera, viewport, x, y);
         // North edge: along the top of the tile; west edge: down its left side.
         const [bx, by, bw, bh] = side === 0 ? [r.x - t / 2, r.y - t / 2, r.w + t, t] : [r.x - t / 2, r.y - t / 2, t, r.h + t];
+        if (kind === 3) {
+          // A barricade: planks across the border, gaps between.
+          ctx.fillStyle = COLOURS.tiles.door;
+          const n = 4;
+          for (let k = 0; k < n; k++) {
+            const f = (k + 0.15) / n;
+            if (side === 0) ctx.fillRect(bx + bw * f, by, bw * 0.7 / n, bh);
+            else ctx.fillRect(bx, by + bh * f, bw, bh * 0.7 / n);
+          }
+          continue;
+        }
         if (kind === EDGE_WALL) {
           ctx.fillStyle = COLOURS.tiles.wall;
           ctx.fillRect(bx, by, bw, bh);
