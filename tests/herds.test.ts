@@ -9,7 +9,8 @@ import type { SimState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
 import { DAY_LENGTH, TICKS_PER_HOUR } from '../src/sim/time';
 import { createWorld, START_CLEAR_RADIUS } from '../src/sim/worldgen';
-import { AGGRO_RADIUS, FRONTIER_MIN, addZombie } from '../src/sim/zombies';
+import { FRONTIER_MIN, addZombie } from '../src/sim/zombies';
+import { ZOMBIE_SIGHT } from '../src/sim/sight';
 
 function runUntil(state: SimState, done: (s: SimState) => boolean, max = 2000): number {
   for (let t = 0; t < max; t++) {
@@ -41,12 +42,15 @@ describe('dormant zombies', () => {
     expect(state.zombies).toMatchObject([{ kind: 'static' }]);
   });
 
-  it(`once awake, only go for survivors within ${AGGRO_RADIUS}, and stay out in the day`, () => {
+  it('once awake, only go for survivors they see or hear, and stay out in the day', () => {
     const state = field();
     const z = addZombie(state, 60, 4, 200, 'static');
     for (let i = 0; i < 60; i++) tick(state);
     expect(z.targetId).toBeNull();
-    state.survivors[0]!.pos = { x: z.pos.x - AGGRO_RADIUS + 4, y: z.pos.y }; // it may have wandered a little
+    state.survivors[0]!.pos = { x: z.pos.x - ZOMBIE_SIGHT - 4, y: z.pos.y }; // too far to see, standing still
+    for (let i = 0; i < 20; i++) tick(state);
+    expect(z.targetId).toBeNull();
+    state.survivors[0]!.pos = { x: z.pos.x - ZOMBIE_SIGHT + 2, y: z.pos.y }; // it may have wandered a little
     for (let i = 0; i < 20; i++) tick(state);
     expect(z.targetId).toBe(state.survivors[0]!.id);
   });

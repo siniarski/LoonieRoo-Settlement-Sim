@@ -9,6 +9,8 @@ import type { ToolId } from '../ui/tools';
 
 export const COLOURS = {
   fog: '#07080a',
+  /** Over explored ground out of view now (sight.ts). */
+  unseen: 'rgba(7, 8, 10, 0.45)',
   background: '#0d0f0e',
   mapEdge: '#3a3f3b',
   gridLine: 'rgba(255, 255, 255, 0.05)',

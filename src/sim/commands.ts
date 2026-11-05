@@ -128,6 +128,8 @@ export type Command =
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number; run?: boolean }
+  /** Sneak or stop sneaking (control.ts: slower, quieter, harder to see). */
+  | { type: 'sneak'; on: boolean }
   /** Your bag (inventory.ts): take an item into it (from the ground beside you, a container beside you, or your hands), take all from a container, drop one, use one. */
   | { type: 'take'; itemId: string }
   | { type: 'takeAll'; containerId: string }
@@ -182,6 +184,12 @@ function execute(state: SimState, command: Command): CommandResult {
     if (!s) return reject('nobody is under control');
     const why = bagCommand(state, s, command);
     return why === null ? changed() : reject(why);
+  }
+  if (command.type === 'sneak') {
+    if (!controlled(state)) return reject('nobody is under control');
+    if ((state.control!.sneaking === true) === command.on) return unchanged();
+    state.control!.sneaking = command.on;
+    return changed();
   }
   if (command.type === 'steer' || command.type === 'swing' || command.type === 'use' || command.type === 'aim') {
     const s = controlled(state);

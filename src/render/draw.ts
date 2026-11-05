@@ -1,6 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import { isRadioactive } from '../sim/climate';
+import { visibleNow } from '../sim/sight';
 import { isHostile } from '../sim/settlements';
 import { worldPos } from './interp';
 import { GROUNDS, type Point, type Tile , EDGE_WALL } from '../sim/grid';
@@ -169,22 +170,35 @@ export function draw(
   }
   for (const t of state.tasks) drawTask(ctx, camera, viewport, t, size);
   for (const a of state.exploreAreas) drawAreaBox(ctx, camera, viewport, { from: { x: a.x0, y: a.y0 }, to: { x: a.x1, y: a.y1 } }, COLOURS.tools.explore);
+  // Line of sight (sight.ts): what's explored but out of view now is dimmed, and the people,
+  // the dead and animals in it aren't drawn (the debug overlay shows them all).
+  const seen = visibleNow(state);
+  const inView = (x: number, y: number) => shown(x, y) && (options.showDebug || seen[y * grid.width + x] === 1);
+  ctx.fillStyle = COLOURS.unseen;
+  for (let y = range.y0; y <= range.y1; y++) {
+    for (let x = range.x0; x <= range.x1; x++) {
+      const i = y * grid.width + x;
+      if (grid.explored[i] !== 1 || seen[i] === 1) continue;
+      const r = tileRect(camera, viewport, x, y);
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+  }
   for (const h of state.herds) {
     const onScreen = h.x >= range.x0 && h.x <= range.x1 && h.y >= range.y0 && h.y <= range.y1;
     if (onScreen && (h.heard || shown(h.x, h.y))) drawHerd(ctx, camera, viewport, h, size);
   }
-  for (const w of state.wanderers) if (shown(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
+  for (const w of state.wanderers) if (inView(w.x, w.y)) drawWanderer(ctx, camera, viewport, w, size);
   // Neighbours' people in their compounds: a wanderer's look, marked with their settlement's first letter.
   for (const r of state.residents) {
-    if (!shown(r.pos.x, r.pos.y)) continue;
+    if (!inView(r.pos.x, r.pos.y)) continue;
     const n = state.settlements.find((x) => x.id === r.settlementId);
     const at = worldPos(r, options.alpha);
     drawWanderer(ctx, camera, viewport, { id: r.id, name: r.name, x: at.x - 0.5, y: at.y - 0.5 } as Wanderer, size, n?.name[0] ?? '?', n !== undefined && isHostile(n));
   }
-  for (const t of state.traders) if (shown(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
-  for (const z of state.zombies) if (shown(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
+  for (const t of state.traders) if (inView(t.x, t.y)) drawWanderer(ctx, camera, viewport, { id: t.id, name: 'Trader', x: t.x, y: t.y, leavesTick: t.leavesTick, traits: [] }, size, '$');
+  for (const z of state.zombies) if (inView(z.pos.x, z.pos.y)) drawZombie(ctx, camera, viewport, state, z, options, size);
   for (const a of state.animals) {
-    if (!shown(a.pos.x, a.pos.y)) continue;
+    if (!inView(a.pos.x, a.pos.y)) continue;
     const w = worldPos(a, options.alpha);
     const p = worldToScreen(camera, viewport, w.x, w.y);
     const r = Math.max(2, size * 0.24);

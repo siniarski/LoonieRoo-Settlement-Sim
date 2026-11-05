@@ -106,6 +106,7 @@ describe('walls on tile edges', () => {
     const s = state.survivors[0]!;
     for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
     state.zombies[0]!.kind = 'static';
+    state.zombies[0]!.targetId = s.id; // it saw them go in
     const door = edgeBetween(state.grid, 2, 3, 2, 4);
     let broke = false;
     for (let t = 0; t < 400 && !broke; t++) {

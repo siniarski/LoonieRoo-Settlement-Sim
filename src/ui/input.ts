@@ -310,6 +310,8 @@ export function attachInput(ctx: InputContext): Input {
       ctx.command({ type: 'work', x: at.x + c.facing.x, y: at.y + c.facing.y });
     } else if (key === 'l' && ctx.control() && view.hover) {
       ctx.command({ type: 'shout', order: 'loot', x: view.hover.x, y: view.hover.y });
+    } else if (key === 'c' && ctx.control()) {
+      ctx.command({ type: 'sneak', on: ctx.control()!.sneaking !== true });
     } else if (key === 't' && ctx.control()) {
       ctx.command({ type: 'talk' });
     } else if ((key === 'v' || key === 'h') && ctx.control()) {
