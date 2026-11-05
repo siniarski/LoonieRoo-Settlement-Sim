@@ -58,7 +58,36 @@ export function dumpText(state: SimState): string {
   for (const d of state.dogs) put(d.pos.x, d.pos.y, ENTITY_CHARS.dog);
   for (const z of state.zombies) put(z.pos.x, z.pos.y, ENTITY_CHARS.zombie);
   for (const s of state.survivors) put(s.pos.x, s.pos.y, ENTITY_CHARS.survivor);
-  return rows.map((r) => r.join('')).join('\n');
+  const map = rows.map((r) => r.join('')).join('\n');
+  // With edge walls (grid.ts), the same map again at double resolution, borders between the tiles.
+  return state.grid.edges.some((e) => e !== 0) ? `${map}\n\nedges:\n${dumpEdges(state, rows)}` : map;
+}
+
+/**
+ * The map with its edges: tiles at odd positions, borders between them: '-' and '|' an edge wall,
+ * '=' an edge door ('o' when open), ':' a barricade, '+' where borders meet.
+ */
+export function dumpEdges(state: SimState, rows: string[][]): string {
+  const { width, height, edges, edgeOpen } = state.grid;
+  const out: string[][] = Array.from({ length: height * 2 + 1 }, () => new Array<string>(width * 2 + 1).fill(' '));
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) out[y * 2 + 1]![x * 2 + 1] = rows[y]![x]!;
+  const mark = (kind: number, e: number, across: boolean) => (kind === 1 ? (across ? '-' : '|') : kind === 2 ? (edgeOpen.includes(e) ? 'o' : '=') : ':');
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const n = (y * width + x) * 2;
+      if (edges[n]) {
+        out[y * 2]![x * 2 + 1] = mark(edges[n]!, n, true);
+        out[y * 2]![x * 2] = '+';
+        out[y * 2]![x * 2 + 2] = '+';
+      }
+      if (edges[n + 1]) {
+        out[y * 2 + 1]![x * 2] = mark(edges[n + 1]!, n + 1, false);
+        out[y * 2]![x * 2] = '+';
+        out[y * 2 + 2]![x * 2] = '+';
+      }
+    }
+  }
+  return out.map((r) => r.join('').trimEnd()).join('\n');
 }
 
 /** Rooms: each room's floor gets a letter (a, b, c, ...), outdoors '.', walls '#', doors 'D'. */

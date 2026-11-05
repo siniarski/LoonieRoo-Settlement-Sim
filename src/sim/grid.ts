@@ -58,11 +58,15 @@ export interface Grid {
   edgePassing: number[];
   /** Damage on edge walls and doors, by edge index (breach.ts); only damaged ones are listed. */
   edgeDamage: Record<string, number>;
+  /** Locked edge doors (edge indices): colonists have keys; raiders must break them. */
+  edgeLocked: number[];
 }
 
 export const EDGE_NONE = 0;
 export const EDGE_WALL = 1;
 export const EDGE_DOOR = 2;
+/** Planks across a border: you and colonists climb over; the dead and raiders can't (like a barricade tile). */
+export const EDGE_BARRICADE = 3;
 export type Side = 'n' | 'w';
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -87,6 +91,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     edgeOpen: [],
     edgePassing: [],
     edgeDamage: {},
+    edgeLocked: [],
   };
 }
 
@@ -116,10 +121,41 @@ export function setEdge(grid: Grid, x: number, y: number, side: Side, kind: numb
   const e = edgeIndex(grid, x, y, side);
   if (grid.edges[e] === kind) return false;
   grid.edges[e] = kind;
+  noteEdgeChange(grid, e);
   drop(grid.edgeOpen, e); // a new door starts shut
   drop(grid.edgePassing, e);
   delete grid.edgeDamage[String(e)]; // and undamaged
+  drop(grid.edgeLocked, e); // and unlocked
   return true;
+}
+
+// --- Changes, for rooms.ts ------------------------------------------------------
+//
+// Tiles whose wall, door or edge changed since rooms were last worked out, so rooms can be
+// updated round them instead of flooding the whole map. Derived data outside sim state (a
+// WeakMap per grid): a cloned or loaded grid has none, and rooms are worked out in full.
+
+const changes = new WeakMap<Grid, number[]>();
+/** More changed tiles than this (a new chunk, say), and rooms are worked out in full. */
+const MAX_TRACKED = 2048;
+
+function noteChange(grid: Grid, i: number): void {
+  const list = changes.get(grid);
+  if (list && list.length <= MAX_TRACKED) list.push(i);
+}
+
+/** An edge changed: both its tiles. */
+export function noteEdgeChange(grid: Grid, e: number): void {
+  const tile = Math.floor(e / 2);
+  noteChange(grid, tile);
+  noteChange(grid, e % 2 === 0 ? tile - grid.width : tile - 1);
+}
+
+/** The tiles changed since the last call (and starts recording); null if unknown or too many. */
+export function takeChanges(grid: Grid): number[] | null {
+  const list = changes.get(grid);
+  changes.set(grid, []);
+  return list && list.length <= MAX_TRACKED ? list : null;
 }
 
 export function edgeIsOpen(grid: Grid, e: number): boolean {
@@ -148,6 +184,7 @@ export function setTile(grid: Grid, x: number, y: number, tile: Tile): boolean {
   const i = tileIndex(grid, x, y);
   if (grid.tiles[i] === tile) return false;
   grid.tiles[i] = tile;
+  noteChange(grid, i);
   if (tile !== 'floor' && grid.dirt[i] === 1) {
     grid.dirt[i] = 0;
     drop(grid.dirtList, i);

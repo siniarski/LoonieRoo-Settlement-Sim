@@ -53,8 +53,9 @@ export function checkInvariants(state: SimState): string[] {
 
   const occupied = new Set<string>();
   for (const item of state.items) {
-    if ((item.pos === null) === (item.carriedBy === null)) {
-      problems.push(`${item.id} must be either on the ground or carried`);
+    // On the ground, carried, or inside a container (inventory.ts): exactly one.
+    if ((item.pos ? 1 : 0) + (item.carriedBy ? 1 : 0) + (item.inside ? 1 : 0) !== 1) {
+      problems.push(`${item.id} must be either on the ground, carried, or in a container`);
     }
     if (item.pos) {
       const key = `${item.pos.x},${item.pos.y}`;
@@ -71,7 +72,8 @@ export function checkInvariants(state: SimState): string[] {
       bearer?.feet !== item.id &&
       bearer?.cart !== item.id &&
       bearer?.tool !== item.id &&
-      !bearer?.cartLoad.includes(item.id)
+      !bearer?.cartLoad.includes(item.id) &&
+      !bearer?.pack.includes(item.id)
     ) {
       problems.push(`${item.id} says carriedBy ${item.carriedBy}, who isn't carrying it`);
     }

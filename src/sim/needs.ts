@@ -18,6 +18,7 @@
 // Constants live in rest.ts and food.ts.
 
 import { slowTick } from './time';
+import { dropPack } from './inventory';
 import { beginSuccession } from './succession';
 import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
@@ -349,6 +350,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string, walked
   cancelDressing(state, s, cause);
   stopReading(state, s, cause);
   dropWeapon(state, s);
+  dropPack(state, s);
   undress(state, s);
   // The infection's victims get up again (tick.ts); everyone else stays where they fell.
   if (cause !== 'the infection' && !walkedAway) leaveCorpse(state, s.pos, s.name);

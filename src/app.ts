@@ -126,6 +126,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     control: () => handle.state.control,
     controlledPos: () => controlled(handle.state)?.pos ?? null,
     controlledAt: () => controlled(handle.state)?.at ?? null,
+    packItem: (slot) => controlled(handle.state)?.pack[slot] ?? null,
     toggleMenu: () => toggleMenu(),
     furnish: (tile) => {
       // The planner only proposes; its commands go through the normal command path.

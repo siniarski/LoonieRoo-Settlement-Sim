@@ -126,6 +126,16 @@
       .hud-condition.mild { background: rgba(58, 42, 18, 0.94); border-color: #854f0b; color: #fac775; }
       .hud-condition.good { background: rgba(20, 48, 31, 0.94); border-color: #0f6e56; color: #9fe1cb; }
       .hud-control.keys { color: #9aa39b; border-color: #3a423c; }
+      .hud-bag, .hud-loot { position: absolute; right: 12px; width: 220px; box-sizing: border-box; padding: 8px 10px; background: rgba(20, 23, 21, 0.94); border: 1px solid #3a423c; border-radius: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: auto; }
+      .hud-bag { bottom: 140px; max-height: 40vh; overflow: auto; }
+      .hud-loot { bottom: 140px; right: 244px; border-color: #be9664; }
+      .hud-bag-head { color: #e8d9a8; }
+      .hud-bag-row { display: flex; align-items: center; gap: 6px; }
+      .hud-bag-slot { width: 12px; color: #f0c850; }
+      .hud-bag-name { flex: 1; color: #d8dcd6; }
+      .hud-bag-kg { color: #8f998f; min-width: 26px; text-align: right; }
+      .hud-bag-empty { color: #7f8a80; font-style: italic; }
+      .hud-small { padding: 1px 6px; font-size: 11px; }
       [hidden] { display: none !important; }
       .hud-debug { position: absolute; right: 12px; top: 58px; max-height: calc(100vh - 80px); overflow: auto; margin: 0; padding: 8px 10px; background: rgba(20, 23, 21, 0.9); border: 1px solid #333a35; border-radius: 6px; }
     </style>

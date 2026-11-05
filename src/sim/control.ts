@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { fitsInPack, stow, unpack } from './inventory';
 import { toggleEdgeDoor } from './doors';
 import { toggleDoor } from './commands';
 import { RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
@@ -160,6 +161,7 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
     if (!item || (item.carriedBy !== s.id && !item.pos)) return;
     s.satiety = Math.min(SATIETY_MAX, s.satiety + (item.kind === 'meal' ? HOT_MEAL_VALUE : MEAL_VALUE));
     if (s.carrying === item.id) s.carrying = null;
+    unpack(s, item.id);
     removeItem(state, item);
     s.note = `ate ${item.kind === 'meal' ? 'a hot meal' : 'some food'}`;
     return;
@@ -169,6 +171,7 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
     if (!item || (item.carriedBy !== s.id && !item.pos)) return;
     applyRemedy(s, item.kind);
     if (s.carrying === item.id) s.carrying = null;
+    unpack(s, item.id);
     removeItem(state, item);
     s.note = item.kind === 'medicine' ? 'took the medicine' : 'bandaged up';
     return;
@@ -184,11 +187,23 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
   }
   const crate = getFurniture(state, busy.targetId);
   if (!crate || crate.loot <= 0 || !nextTo(s.pos, crate)) return;
-  const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state), crate.table);
-  spawnFind(state, kind, s.pos.x, s.pos.y);
-  crate.loot -= 1;
-  if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false;
-  s.note = crate.kind === 'tree' ? 'chopped some wood' : `found ${kind}`;
+  if (crate.kind === 'tree') {
+    spawnFind(state, 'wood', s.pos.x, s.pos.y);
+    crate.loot -= 1;
+    s.note = 'chopped some wood';
+    return;
+  }
+  // A container: everything left in it turns up at once, and stays in it to take (inventory.ts).
+  const found: string[] = [];
+  while (crate.loot > 0) {
+    const item = spawnFind(state, scavengeFind(random(state), crate.table), s.pos.x, s.pos.y);
+    item.pos = null;
+    item.inside = crate.id;
+    crate.loot -= 1;
+    found.push(item.kind);
+  }
+  crate.scavenge = false;
+  s.note = found.length ? `found ${found.join(', ')}` : 'nothing in it';
 }
 
 /** Asleep: rest comes back (faster in a bed) until full, or until something hurts you. */
@@ -408,6 +423,11 @@ function take(state: SimState, s: Survivor, c: Control, item: Item): string {
     return 'eating';
   }
   const slot = item.kind === 'weapon' || item.kind === 'gun' ? 'weapon' : isGarment(item.kind) ? SLOT_OF[item.kind] : item.kind === 'cart' ? 'cart' : item.kind in TOOL_FOR ? 'tool' : 'carrying';
+  // Anything you'd otherwise carry in your hands goes in the bag if it fits (inventory.ts).
+  if (slot === 'carrying' && fitsInPack(state, s, item)) {
+    stow(state, s, item);
+    return `put the ${item.kind} in your bag`;
+  }
   // Swap: whatever was in that slot goes down where the new thing was.
   const old = s[slot] ? getItem(state, s[slot]!) : undefined;
   const where = item.pos!;
@@ -419,7 +439,7 @@ function take(state: SimState, s: Survivor, c: Control, item: Item): string {
 }
 
 function search(s: Survivor, c: Control, crate: Furniture): string | null {
-  if (crate.loot <= 0) return crate.kind === 'tree' ? null : 'nothing left in it';
+  if (crate.loot <= 0) return crate.kind === 'tree' ? null : 'searched: what\'s left is in the loot list';
   c.busy = { what: 'search', targetId: crate.id, progress: 0, duration: SCAVENGE_WORK };
   s.note = crate.kind === 'tree' ? 'chopping' : 'searching';
   return s.note;

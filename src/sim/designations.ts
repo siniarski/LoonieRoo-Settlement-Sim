@@ -3,7 +3,7 @@
 // still needs material, then a build job.
 
 import { clearPlot } from './farming';
-import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, isWalkable, setTile, type Point } from './grid';
 import { dropItem, itemAt, spawnItem } from './items';
@@ -97,8 +97,8 @@ export function cancelBlueprint(state: SimState, bp: Blueprint): void {
 export function completeBlueprint(state: SimState, bp: Blueprint): void {
   const i = state.blueprints.indexOf(bp);
   if (i >= 0) state.blueprints.splice(i, 1);
-  if (bp.side && (bp.target === 'wall' || bp.target === 'door')) {
-    if (setEdge(state.grid, bp.x, bp.y, bp.side, bp.target === 'wall' ? EDGE_WALL : EDGE_DOOR)) state.walkabilityVersion += 1;
+  if (bp.side && (bp.target === 'wall' || bp.target === 'door' || bp.target === 'barricade')) {
+    if (setEdge(state.grid, bp.x, bp.y, bp.side, bp.target === 'wall' ? EDGE_WALL : bp.target === 'door' ? EDGE_DOOR : EDGE_BARRICADE)) state.walkabilityVersion += 1;
     return;
   }
   switch (bp.target) {

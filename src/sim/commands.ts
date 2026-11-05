@@ -4,6 +4,8 @@
 // logged, since replaying them would change nothing.
 
 import { escape } from './escape';
+import { remediesFor } from './medicine';
+import { contents, dropFromPack, equipFromPack, stow } from './inventory';
 import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
 import { succeed } from './succession';
 import { promise } from './wishes';
@@ -13,14 +15,14 @@ import { TALK_RANGE, talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
-import { addFurniture, furnitureAt, removeFurniture } from './furniture';
+import { addFurniture, furnitureAt, getFurniture, removeFurniture } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Point, type Tile } from './grid';
-import { dropItem, spawnItem } from './items';
+import { dropItem, getItem, spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
 import { isJobType, isPriority, type JobType, type Priority } from './jobTypes';
 import { addPlot, clearPlot, isCrop, plotAt, removePlot, type Crop } from './farming';
-import { SATIETY_MAX } from './food';
-import { HEALTH_MAX } from './health';
+import { EAT_TICKS, SATIETY_MAX } from './food';
+import { HEALTH_MAX, TREAT_TICKS } from './health';
 import { cancelMeal, cancelTreatment, wake } from './needs';
 import { REST_MAX } from './rest';
 import { ROOM_PURPOSES, STORE_CATEGORIES, designationOf, roomAt, type RoomPurpose, type StoreCategory } from './rooms';
@@ -28,7 +30,7 @@ import type { SimState } from './state';
 import { addSurvivor, getSurvivor, setGoal, survivorAt } from './survivors';
 import { getWanderer, removeWanderer } from './wanderers';
 import { cancelArming } from './weapons';
-import { cancelDressing } from './clothing';
+import { cancelDressing, isGarment } from './clothing';
 import { cancelDrink } from './water';
 import { stopReading } from './books';
 import { giveGift } from './settlements';
@@ -109,7 +111,7 @@ export type Command =
   /** Set a tile alight on purpose (fire.ts). */
   | { type: 'ignite'; x: number; y: number }
   /** Lock or unlock a door: raiders can't open locked ones. */
-  | { type: 'toggleLock'; x: number; y: number }
+  | { type: 'toggleLock'; x: number; y: number; side?: Side }
   /** Open a closed door, or close an open one (not with anyone in the doorway; not if locked). */
   | { type: 'toggleDoor'; x: number; y: number }
   // Debug: set a survivor's rest (0..REST_MAX) or satiety (0..SATIETY_MAX), e.g. to make them tired/hungry now.
@@ -126,6 +128,11 @@ export type Command =
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number; run?: boolean }
+  /** Your bag (inventory.ts): take an item into it (from the ground beside you, a container beside you, or your hands), take all from a container, drop one, use one. */
+  | { type: 'take'; itemId: string }
+  | { type: 'takeAll'; containerId: string }
+  | { type: 'drop'; itemId: string }
+  | { type: 'useItem'; itemId: string }
   /** Where you're looking (the mouse): a direction, each part an integer within AIM_MAX (control.ts). */
   | { type: 'aim'; x: number; y: number }
   | { type: 'swing'; x: number; y: number }
@@ -169,6 +176,12 @@ function execute(state: SimState, command: Command): CommandResult {
     const done = work(state, s, command);
     s.note = done;
     return state.control!.busy ? changed() : reject(done);
+  }
+  if (command.type === 'take' || command.type === 'takeAll' || command.type === 'drop' || command.type === 'useItem') {
+    const s = controlled(state);
+    if (!s) return reject('nobody is under control');
+    const why = bagCommand(state, s, command);
+    return why === null ? changed() : reject(why);
   }
   if (command.type === 'steer' || command.type === 'swing' || command.type === 'use' || command.type === 'aim') {
     const s = controlled(state);
@@ -358,6 +371,17 @@ function execute(state: SimState, command: Command): CommandResult {
   }
   if (command.type === 'toggleLock') {
     const { x, y } = command;
+    // An edge door on that side of the tile, if given and there; else the door tile.
+    if (command.side !== undefined && inBounds(state.grid, x, y) && state.grid.edges[edgeIndex(state.grid, x, y, command.side)] === EDGE_DOOR) {
+      const e = edgeIndex(state.grid, x, y, command.side);
+      const open = state.grid.edgeOpen.indexOf(e);
+      if (open >= 0) state.grid.edgeOpen.splice(open, 1); // a locked door is a shut one
+      const at = state.grid.edgeLocked.indexOf(e);
+      if (at >= 0) state.grid.edgeLocked.splice(at, 1);
+      else state.grid.edgeLocked.push(e);
+      state.walkabilityVersion += 1; // raiders' paths change
+      return changed();
+    }
     if (getTile(state.grid, x, y) !== 'door') return reject(`(${x}, ${y}) is not a door`);
     const i = y * state.grid.width + x;
     const open = state.grid.open.indexOf(i);
@@ -513,7 +537,7 @@ function edgeProblem(state: SimState, x: number, y: number, side: Side): string 
 
 /** A blueprint for an edge wall or door. */
 function designateEdge(state: SimState, x: number, y: number, side: Side, structure: string): CommandResult {
-  if (structure !== 'wall' && structure !== 'door') return reject('only walls and doors go on edges');
+  if (structure !== 'wall' && structure !== 'door' && structure !== 'barricade') return reject('only walls, doors and barricades go on edges');
   const why = edgeProblem(state, x, y, side);
   if (why) return reject(why);
   if (state.grid.edges[edgeIndex(state.grid, x, y, side)] !== EDGE_NONE) return unchanged();
@@ -548,8 +572,37 @@ function designateBuild(state: SimState, x: number, y: number, structure: 'wall'
   return changed();
 }
 
-/** Wall plans round the box's edge (explored, empty floor only), a door plan mid-way along each side. */
+/**
+ * Walls in a box: edge-wall plans on its outer borders (grid.ts edges), a door plan mid-way along
+ * each side. Borders on the map's edge, or already built on, are skipped.
+ */
 function planPerimeter(state: SimState, ax: number, ay: number, bx: number, by: number): CommandResult {
+  const ex0 = Math.max(0, Math.min(ax, bx));
+  const ex1 = Math.min(state.grid.width - 1, Math.max(ax, bx));
+  const ey0 = Math.max(0, Math.min(ay, by));
+  const ey1 = Math.min(state.grid.height - 1, Math.max(ay, by));
+  if (ex1 - ex0 < 1 || ey1 - ey0 < 1) return reject('too small to wall in');
+  const emx = Math.floor((ex0 + ex1) / 2);
+  const emy = Math.floor((ey0 + ey1) / 2);
+  let edgesPlanned = 0;
+  const plan = (x: number, y: number, side: Side, door: boolean) => {
+    if (!inBounds(state.grid, x, y) || !isExplored(state, x, y)) return;
+    const r = designateEdge(state, x, y, side, door ? 'door' : 'wall');
+    if (r.ok && r.changed) edgesPlanned += 1;
+  };
+  for (let x = ex0; x <= ex1; x++) {
+    plan(x, ey0, 'n', x === emx);
+    plan(x, ey1 + 1, 'n', x === emx);
+  }
+  for (let y = ey0; y <= ey1; y++) {
+    plan(ex0, y, 'w', y === emy);
+    plan(ex1 + 1, y, 'w', y === emy);
+  }
+  return edgesPlanned > 0 ? changed() : unchanged();
+}
+
+/** The old tile perimeter (kept for reference by replays of older logs: unused). */
+export function planPerimeterTiles(state: SimState, ax: number, ay: number, bx: number, by: number): CommandResult {
   const x0 = Math.max(0, Math.min(ax, bx));
   const x1 = Math.min(state.grid.width - 1, Math.max(ax, bx));
   const y0 = Math.max(0, Math.min(ay, by));
@@ -742,4 +795,50 @@ function setPriority(state: SimState, id: string, jobType: unknown, priority: un
   // Re-evaluate soon rather than waiting out an idle back-off.
   survivor.nextSeekTick = 0;
   return changed();
+}
+
+/** Within reach of your hands: under you or a tile beside you (straight or diagonal). */
+function besideYou(s: Survivor, p: Point): boolean {
+  return Math.abs(p.x - s.pos.x) <= 1 && Math.abs(p.y - s.pos.y) <= 1;
+}
+
+/** The bag's commands (inventory.ts). Returns why not, or null when done. */
+function bagCommand(state: SimState, s: Survivor, command: Extract<Command, { type: 'take' | 'takeAll' | 'drop' | 'useItem' }>): string | null {
+  if (command.type === 'takeAll') {
+    const f = getFurniture(state, command.containerId);
+    if (!f || !besideYou(s, f)) return 'not beside you';
+    const inside = contents(state, f);
+    if (inside.length === 0) return 'nothing in it';
+    let took = 0;
+    for (const item of inside) if (stow(state, s, item) === null) took++;
+    return took > 0 ? null : 'your bag is too full';
+  }
+  const item = getItem(state, command.itemId);
+  if (!item) return 'no such thing';
+  if (command.type === 'take') {
+    const where = item.pos ?? (item.inside ? getFurniture(state, item.inside) : undefined);
+    if (item.carriedBy !== s.id && (!where || !besideYou(s, where))) return 'not beside you';
+    if (item.carriedBy === s.id && s.carrying !== item.id) return 'already yours';
+    return stow(state, s, item);
+  }
+  if (!s.pack.includes(item.id)) return 'not in your bag';
+  if (command.type === 'drop') return dropFromPack(state, s, item.id);
+  // Use it: eat it, treat yourself with it, wield it or wear it.
+  const c = state.control!;
+  if (item.kind === 'food' || item.kind === 'meal') {
+    c.busy = { what: 'eat', targetId: item.id, progress: 0, duration: EAT_TICKS };
+    s.note = 'eating';
+    return null;
+  }
+  if (item.kind === 'bandage' || item.kind === 'medicine' || item.kind === 'medkit') {
+    if (!remediesFor(s).includes(item.kind)) return "you don't need it";
+    c.busy = { what: 'treat', targetId: item.id, progress: 0, duration: TREAT_TICKS };
+    s.note = item.kind === 'medicine' ? 'taking medicine' : 'bandaging';
+    return null;
+  }
+  if (item.kind === 'weapon' || item.kind === 'gun' || isGarment(item.kind)) {
+    s.note = equipFromPack(state, s, item, s.pos);
+    return null;
+  }
+  return 'nothing to do with it here';
 }

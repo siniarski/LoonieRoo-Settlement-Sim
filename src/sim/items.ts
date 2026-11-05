@@ -21,6 +21,8 @@ export interface Item {
   wear: number;
   /** Corpses: the survivor's name (null for a zombie). Books: the subject (books.ts). Null for everything else. */
   tag: string | null;
+  /** Found by searching a container and still in it (inventory.ts): the container's furniture id. Then pos and carriedBy are null. */
+  inside?: string;
 }
 
 export function getItem(state: SimState, id: string): Item | undefined {

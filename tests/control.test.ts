@@ -110,9 +110,14 @@ describe('direct control', () => {
     expect(s.satiety).toBeGreaterThan(1000);
     expect(s.satiety).toBeLessThanOrEqual(SATIETY_MAX);
     const items = state.items.length;
+    const crate = state.furniture.find((f) => f.kind === 'crate')!;
+    const loot = crate.loot;
     cmd(state, { type: 'use', x: 1, y: 1 });
     run(state, 60);
-    expect(state.items.length).toBe(items + 1);
+    // Everything in it turns up at once, and stays in it to take (inventory.ts).
+    expect(state.items.length).toBe(items + loot);
+    expect(state.items.filter((i) => i.inside === crate.id)).toHaveLength(loot);
+    expect(crate.loot).toBe(0);
   });
 
   it('use: drink at a well, sleep in a bed until rested, wake when hurt', () => {

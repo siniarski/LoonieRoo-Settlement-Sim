@@ -4,7 +4,7 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
 
 /**
  * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open a door as
@@ -37,7 +37,8 @@ export function crossable(grid: Grid, ax: number, ay: number, bx: number, by: nu
   const kind = grid.edges[e]!;
   if (kind === EDGE_NONE || mover === 'breacher') return true; // a breacher batters its way through (zombies.ts)
   if (kind === EDGE_WALL) return false;
-  if (kind === EDGE_DOOR) return mover === 'survivor' || mover === 'raider' || edgeIsOpen(grid, e);
+  if (kind === EDGE_DOOR) return mover === 'survivor' || (mover === 'raider' && !grid.edgeLocked.includes(e)) || edgeIsOpen(grid, e);
+  if (kind === EDGE_BARRICADE) return mover === 'survivor' || mover === 'free' || mover === 'crawler';
   return true;
 }
 
@@ -325,7 +326,7 @@ function straightLine(grid: Grid, a: Point, b: Point): Point[] | null {
       if (!bare(x, y, nx, y) || !bare(x, y, x, ny) || !bare(nx, y, nx, ny) || !bare(x, ny, nx, ny)) return null;
     } else if (!isPassable(grid, nx, ny, 'survivor') || !crossable(grid, x, y, nx, ny, 'survivor')) return null;
     // An edge door is crossed straight, and ends the line (like a door tile).
-    if (!diagonal && edgeKindOf(grid, x, y, nx, ny) === EDGE_DOOR && (nx !== b.x || ny !== b.y)) return null;
+    if (!diagonal && (edgeKindOf(grid, x, y, nx, ny) === EDGE_DOOR || edgeKindOf(grid, x, y, nx, ny) === EDGE_BARRICADE) && (nx !== b.x || ny !== b.y)) return null;
     // Only open floor in between: a door is fine as the line's end, walked into straight.
     if (!diagonal && door(nx, ny) && (nx !== b.x || ny !== b.y)) return null;
     tiles.push({ x: nx, y: ny });
@@ -367,7 +368,7 @@ export function openBetween(grid: Grid, a: Point, b: Point): boolean {
     const e = edgeBetween(grid, px, py, qx, qy);
     if (e < 0) return true;
     const kind = grid.edges[e]!;
-    return kind === EDGE_NONE || (kind === EDGE_DOOR && edgeIsOpen(grid, e));
+    return kind === EDGE_NONE || kind === EDGE_BARRICADE || (kind === EDGE_DOOR && edgeIsOpen(grid, e));
   };
   if (dx === 0 || dy === 0) return open(a.x, a.y, b.x, b.y);
   return (open(a.x, a.y, b.x, a.y) && open(b.x, a.y, b.x, b.y)) || (open(a.x, a.y, a.x, b.y) && open(a.x, b.y, b.x, b.y));

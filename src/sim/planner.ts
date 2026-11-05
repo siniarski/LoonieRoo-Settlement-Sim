@@ -6,7 +6,7 @@
 // state, so the command log stays the single source of truth for replays.
 
 import type { Command } from './commands';
-import { getTile, neighbours4, type Point } from './grid';
+import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, getTile, neighbours4, type Point } from './grid';
 import { designationOf, evaluateRoom, labelAt, roomAt, TILES_PER_BED, type Room } from './rooms';
 import type { SimState } from './state';
 
@@ -168,8 +168,10 @@ function freeSpots(state: SimState, room: Room): { p: Point; walls: number }[] {
     const p = { x: i % grid.width, y: Math.floor(i / grid.width) };
     if (taken.has(`${p.x},${p.y}`)) continue;
     const around = neighbours4(grid, p.x, p.y).map((n) => getTile(grid, n.x, n.y));
-    if (around.includes('door')) continue;
-    candidates.push({ p, walls: around.filter((t) => t === 'wall').length });
+    // Walls round the spot: wall tiles beside it, or edge walls on its borders (grid.ts).
+    const edges = neighbours4(grid, p.x, p.y).map((n) => grid.edges[edgeBetween(grid, p.x, p.y, n.x, n.y)] ?? EDGE_NONE);
+    if (around.includes('door') || edges.includes(EDGE_DOOR)) continue;
+    candidates.push({ p, walls: around.filter((t) => t === 'wall').length + edges.filter((e) => e === EDGE_WALL).length });
   }
   return candidates;
 }
