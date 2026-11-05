@@ -25,8 +25,8 @@ export const MAX_LEVEL = 10;
 /** Extra guard damage per guard level. */
 export const GUARD_DAMAGE_PER_LEVEL = 5;
 
-export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick' | 'hardened' | 'vigilant' | 'haunted' | 'lostArm' | 'lostLeg';
-/** The traits people are born with (rollTraits); the rest are earned (earnTrait). */
+export type Trait = 'tough' | 'lazy' | 'greenThumb' | 'cheerful' | 'gloomy' | 'quick' | 'hardened' | 'vigilant' | 'haunted' | 'lostArm' | 'lostLeg' | 'graceful' | 'clumsy';
+/** The traits people are born with (rollTraits); the rest are earned (earnTrait), or only chosen (character.ts: graceful, clumsy). */
 export const TRAITS: readonly Trait[] = ['tough', 'lazy', 'greenThumb', 'cheerful', 'gloomy', 'quick'];
 
 export const HARDENED_KILLS = 15;
@@ -46,6 +46,8 @@ export const TRAIT_INFO: Record<Trait, { label: string; about: string; mood: num
   haunted: { label: 'haunted', about: 'never quite got over losing a friend', mood: -5 },
   lostArm: { label: 'one-armed', about: 'works slower (an amputation)', mood: -5 },
   lostLeg: { label: 'one-legged', about: 'walks slower (an amputation)', mood: -5 },
+  graceful: { label: 'graceful', about: 'moves quietly: heard half as far', mood: 0 },
+  clumsy: { label: 'clumsy', about: 'moves noisily: heard half as far again', mood: 0 },
 };
 
 /** Experience leaves its mark (once). */

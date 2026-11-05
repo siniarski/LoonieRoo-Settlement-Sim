@@ -1,19 +1,23 @@
 // The main menu: what you see on starting, and (Escape, or the Menu button) over a paused game.
 //   main  Continue (the newest save) or Resume, New game, Load, and in a game: Save, Report a bug
-//   new   the four presets, a Customise section (the sandbox settings, map size, a seed), Start
+//   new   the four presets, a Customise section (the sandbox settings, map size, a seed), Next
+//   character  who you are (sim/character.ts): a name, a profession, traits for points; Start
 //   load  the save slots, the autosave, and a file
 // Plain DOM over the canvas; it only calls the actions app.ts hands it.
 
 import type { Arena } from '../sim/arena';
 import { MAP_TYPES, NORMAL, PRESETS, PROGRESSION_LEVELS, WEATHER_LEVELS, type MapType, type PresetId, type Settings } from '../sim/difficulty';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
+import { CHOOSABLE, OPPOSED, PROFESSIONS, TRAIT_COST, characterProblem, pointsLeft, type Character } from '../sim/character';
+import { TRAIT_INFO } from '../sim/skills';
+import { STORY_JOBS } from '../sim/story';
 import { AUTO_SLOT, SLOTS, slotLabel, slotTime } from './saves';
 import type { ViewState } from './view';
 
 export interface MenuActions {
   /** Back to the game under the menu. */
   resume(): void;
-  newGame(size: number, settings: Settings, seed: number | null): void;
+  newGame(size: number, settings: Settings, seed: number | null, you: Character): void;
   /** A debug arena: a small solo world with zombies near you from the start (arena.ts). */
   arena(kind: Arena): void;
   load(slot: string): void;
@@ -47,7 +51,9 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
   parent.append(root);
   let shown = '';
   /** The New game screen's choices, kept while you move between screens. */
-  const pick: { preset: PresetId; settings: Settings; size: number; seed: string } = { preset: 'survivor', settings: { ...NORMAL }, size: WORLD_SIZE, seed: '' };
+  const pick: { preset: PresetId; settings: Settings; size: number; seed: string; you: Character } = {
+    preset: 'survivor', settings: { ...NORMAL }, size: WORLD_SIZE, seed: '', you: { name: 'Ash', job: STORY_JOBS.indexOf('a student'), traits: [] },
+  };
 
   const button = (label: string, onClick: () => void, className = 'menu-button') => {
     const b = el('button', className, label);
@@ -132,14 +138,63 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
     custom.append(grid);
     panel.append(custom);
 
-    const start = button('Start', () => {
-      const n = Number(pick.seed);
-      actions.newGame(pick.size, { ...pick.settings }, pick.seed.trim() !== '' && Number.isInteger(n) && n > 0 ? n : null);
-    }, 'menu-button primary');
-    panel.append(start);
+    panel.append(button('Next: who you are', () => go('character'), 'menu-button primary'));
     const debug = el('div', 'menu-row');
     debug.append(el('span', 'menu-label', 'Debug'), button('Arena: one zombie', () => actions.arena('one'), 'menu-small'), button('Arena: a crowd', () => actions.arena('crowd'), 'menu-small'));
     panel.append(debug, button('Back', () => go('main')));
+  };
+
+  const character = (panel: HTMLElement) => {
+    const you = pick.you;
+    const redraw = () => (shown = '');
+    panel.append(el('div', 'menu-heading', 'Who you are'));
+    const grid = el('div', 'menu-grid');
+    const name = el('input', 'menu-input');
+    name.maxLength = 16;
+    name.value = you.name;
+    name.addEventListener('input', () => {
+      you.name = name.value;
+      start.disabled = characterProblem(you) !== null;
+    });
+    const job = el('select', 'hud-select');
+    STORY_JOBS.forEach((j, i) => {
+      const p = PROFESSIONS[j]!;
+      const o = el('option', '', `${j[0]!.toUpperCase()}${j.slice(1)} (${p.points > 0 ? '+' : ''}${p.points})`);
+      o.value = String(i);
+      o.selected = i === you.job;
+      job.append(o);
+    });
+    job.addEventListener('change', () => {
+      you.job = Number(job.value);
+      redraw();
+    });
+    const prof = PROFESSIONS[STORY_JOBS[you.job]!]!;
+    const skills = Object.entries(prof.skills).map(([t, n]) => `${t} ${n}`).join(', ') || 'no skills';
+    const kit = prof.kit.length ? prof.kit.join(', ') : 'nothing';
+    grid.append(el('label', 'menu-label', 'Name'), name, el('label', 'menu-label', 'Before'), job, el('span', ''), el('span', 'menu-note', `${prof.about}: ${skills}; brings ${kit}`));
+    panel.append(grid);
+    const traits = el('div', 'menu-presets');
+    for (const t of CHOOSABLE) {
+      const cost = TRAIT_COST[t]!;
+      const on = you.traits.includes(t);
+      const card = el('button', `menu-preset${on ? ' chosen' : ''}`);
+      card.append(el('div', 'menu-preset-title', `${TRAIT_INFO[t].label} (${cost > 0 ? '-' : '+'}${Math.abs(cost)})`), el('div', 'menu-preset-about', TRAIT_INFO[t].about));
+      const clash = OPPOSED.some(([a, b]) => (a === t && you.traits.includes(b)) || (b === t && you.traits.includes(a)));
+      card.disabled = !on && clash;
+      card.addEventListener('click', () => {
+        you.traits = on ? you.traits.filter((x) => x !== t) : [...you.traits, t];
+        redraw();
+      });
+      traits.append(card);
+    }
+    const left = pointsLeft(you);
+    panel.append(el('div', left < 0 ? 'menu-note menu-warn' : 'menu-note', `Traits: ${left} point${left === 1 ? '' : 's'} left${left < 0 ? ' (too many: drop one, or pick a different past)' : ''}`), traits);
+    const start = button('Start', () => {
+      const n = Number(pick.seed);
+      actions.newGame(pick.size, { ...pick.settings }, pick.seed.trim() !== '' && Number.isInteger(n) && n > 0 ? n : null, { ...you, traits: [...you.traits] });
+    }, 'menu-button primary');
+    start.disabled = characterProblem(you) !== null;
+    panel.append(start, button('Back', () => go('new')));
   };
 
   const load = (panel: HTMLElement) => {
@@ -167,6 +222,7 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
       panel.append(el('div', 'menu-title', 'LOONIEROO'), el('div', 'menu-subtitle', 'a settlement in the dead country'));
       if (view.menu === 'main') main(panel);
       else if (view.menu === 'new') newGame(panel);
+      else if (view.menu === 'character') character(panel);
       else load(panel);
       root.append(panel);
     },
