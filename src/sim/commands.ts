@@ -6,7 +6,7 @@
 import { escape } from './escape';
 import { remediesFor } from './medicine';
 import { contents, dropFromPack, equipFromPack, stow } from './inventory';
-import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
+import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, setEdge, type Side } from './grid';
 import { succeed } from './succession';
 import { promise } from './wishes';
 import { meetResident } from './residents';
@@ -540,7 +540,10 @@ function designateEdge(state: SimState, x: number, y: number, side: Side, struct
   if (structure !== 'wall' && structure !== 'door' && structure !== 'barricade') return reject('only walls, doors and barricades go on edges');
   const why = edgeProblem(state, x, y, side);
   if (why) return reject(why);
-  if (state.grid.edges[edgeIndex(state.grid, x, y, side)] !== EDGE_NONE) return unchanged();
+  const here = state.grid.edges[edgeIndex(state.grid, x, y, side)];
+  // A barricade on a window boards it up; anything else needs a bare border.
+  const boarding = structure === 'barricade' && isWindow(here) && !state.grid.edgeBoarded.includes(edgeIndex(state.grid, x, y, side));
+  if (here !== EDGE_NONE && !boarding) return unchanged();
   if (state.blueprints.some((b) => b.x === x && b.y === y && b.side === side)) return unchanged();
   addBlueprint(state, x, y, structure, side);
   return changed();

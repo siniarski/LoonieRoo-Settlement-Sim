@@ -58,7 +58,12 @@ export interface PlanEdge {
   bx: number;
   by: number;
   door: boolean;
+  /** Glass in an outer wall (grid.ts EDGE_WINDOW). */
+  window?: boolean;
 }
+
+/** The kinds of building that get windows (toEdges). */
+const WINDOWED: readonly string[] = ['house', 'grocery', 'pharmacy', 'hardware', 'bar', 'station', 'office', 'police', 'clinic', 'school', 'church'];
 
 export type BuildingKind = 'house' | 'grocery' | 'pharmacy' | 'hardware' | 'bar' | 'station' | 'office' | 'police' | 'clinic' | 'school' | 'church' | 'warehouse' | 'factory' | 'barn' | 'shed';
 
@@ -548,6 +553,22 @@ export function toEdges(p: Plan): Plan {
         if (!differs) continue;
         edges.push({ ax: x, ay: y, bx: nx, by: ny, door: doorPairs.has(pairKey(x, y, nx, ny)) });
       }
+    }
+  }
+  // Windows: every third edge along an outer wall, with wall either side of it along the same
+  // line (never at a corner or beside a door). Lived-in and public buildings only: no barns,
+  // sheds, warehouses or factories.
+  if (WINDOWED.includes(p.kind)) {
+    const key = (e: PlanEdge) => `${e.ax},${e.ay},${e.bx},${e.by}`;
+    const outerWall = new Map(edges.filter((e) => !e.door && cellOf(e.bx, e.by) !== FLOOR).map((e) => [key(e), e]));
+    for (const e of outerWall.values()) {
+      const [dx, dy] = [e.bx - e.ax, e.by - e.ay];
+      const [sx, sy] = dy !== 0 ? [1, 0] : [0, 1]; // along the wall
+      const along = dy !== 0 ? e.ax : e.ay;
+      if (along % 3 !== 1) continue;
+      const beside = (k: number) => outerWall.has(`${e.ax + sx * k},${e.ay + sy * k},${e.bx + sx * k},${e.by + sy * k}`);
+      if (beside(1) && beside(-1)) e.window = true;
+      void dx;
     }
   }
   return { ...p, cells, ground, edges };

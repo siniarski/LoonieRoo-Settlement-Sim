@@ -12,7 +12,7 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
-import { edgeBetween } from './grid';
+import { EDGE_WINDOW_BROKEN, edgeBetween } from './grid';
 import { seesAcross } from './work';
 import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
 export { REACH } from './motion';
@@ -42,7 +42,7 @@ import { fallInPit } from './defences';
 import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
-import { canReach, crossable, findPathToAny, isPassable } from './pathfinding';
+import { canReach, crossable, findPathToAny, isPassable, walksAcross } from './pathfinding';
 import { pick, randomInt } from './rng';
 import { isExplored } from './fog';
 import { OUTDOORS, labelAt } from './rooms';
@@ -349,7 +349,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
       glide(z, home, speed);
       return;
     }
-    if (!glide(z, centre(goal), speed)) return;
+    if (!glide(z, centre(goal), climbing(state, z.pos, goal) ? Math.ceil(speed / 2) : speed)) return;
     if (z.path[0]) z.path.shift();
     z.pos = { x: goal.x, y: goal.y };
     if (springTrap(state, z)) return;
@@ -390,7 +390,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
   }
   // Set off for the next tile (it arrives in ticksPerTile ticks: the speed is rounded up).
   if (z.kind === 'raider') passThrough(state, next.x, next.y, false, z.pos);
-  glide(z, centre(next), speed);
+  glide(z, centre(next), climbing(state, z.pos, next) ? Math.ceil(speed / 2) : speed);
 }
 
 /** Closing in: within this of its target, in the open, a zombie leaves the tile path and comes straight on. */
@@ -457,8 +457,8 @@ function clearLine(state: SimState, a: Point, b: Point): boolean {
       err += dx;
       y += sy;
     }
-    // No straight line through an edge wall or door (a diagonal can go either way round).
-    if (!seesAcross(state.grid, px, py, x, y)) return false;
+    // No straight line through anything it couldn't walk across (an edge wall, a shut door, glass).
+    if (!walksAcross(state.grid, { x: px, y: py }, { x, y }, 'zombie')) return false;
   }
 }
 
@@ -633,4 +633,9 @@ export function evictZombies(state: SimState, tile: Point): void {
     z.move = null;
     z.path = [];
   }
+}
+
+/** Through a broken window between two tiles: a climb, at half speed. */
+function climbing(state: SimState, a: Point, b: Point): boolean {
+  return state.grid.edges[edgeBetween(state.grid, a.x, a.y, b.x, b.y)] === EDGE_WINDOW_BROKEN;
 }

@@ -4,7 +4,7 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
 
 /**
  * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open a door as
@@ -39,6 +39,10 @@ export function crossable(grid: Grid, ax: number, ay: number, bx: number, by: nu
   if (kind === EDGE_WALL) return false;
   if (kind === EDGE_DOOR) return mover === 'survivor' || (mover === 'raider' && !grid.edgeLocked.includes(e)) || edgeIsOpen(grid, e);
   if (kind === EDGE_BARRICADE) return mover === 'survivor' || mover === 'free' || mover === 'crawler';
+  // Windows: glass stops everyone (a breacher batters it); broken and unboarded, you, the dead and
+  // raiders climb through (colonists use doors).
+  if (kind === EDGE_WINDOW || grid.edgeBoarded.includes(e)) return false;
+  if (kind === EDGE_WINDOW_BROKEN) return mover !== 'survivor';
   return true;
 }
 
@@ -368,8 +372,27 @@ export function openBetween(grid: Grid, a: Point, b: Point): boolean {
     const e = edgeBetween(grid, px, py, qx, qy);
     if (e < 0) return true;
     const kind = grid.edges[e]!;
-    return kind === EDGE_NONE || kind === EDGE_BARRICADE || (kind === EDGE_DOOR && edgeIsOpen(grid, e));
+    return kind === EDGE_NONE || kind === EDGE_BARRICADE || (kind === EDGE_DOOR && edgeIsOpen(grid, e)) || (kind === EDGE_WINDOW_BROKEN && !grid.edgeBoarded.includes(e));
   };
   if (dx === 0 || dy === 0) return open(a.x, a.y, b.x, b.y);
   return (open(a.x, a.y, b.x, a.y) && open(b.x, a.y, b.x, b.y)) || (open(a.x, a.y, a.x, b.y) && open(a.x, b.y, b.x, b.y));
+}
+
+/**
+ * Does sight pass this edge? Not a wall, a shut door or boards; glass, broken windows, barricades
+ * and open doors let it through. The one place that decides (lines of fire now; line of sight later).
+ */
+export function seesThrough(grid: Grid, e: number): boolean {
+  if (e < 0) return true;
+  const kind = grid.edges[e] ?? EDGE_NONE;
+  if (kind === EDGE_WALL) return false;
+  if (kind === EDGE_DOOR) return edgeIsOpen(grid, e);
+  if (kind === EDGE_WINDOW || kind === EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.includes(e);
+  return true;
+}
+
+/** A step from a tile to one beside it, straight or diagonal, that this mover could walk (a diagonal either way round). */
+export function walksAcross(grid: Grid, a: Point, b: Point, mover: Mover): boolean {
+  if (a.x === b.x || a.y === b.y) return crossable(grid, a.x, a.y, b.x, b.y, mover);
+  return (crossable(grid, a.x, a.y, b.x, a.y, mover) && crossable(grid, b.x, a.y, b.x, b.y, mover)) || (crossable(grid, a.x, a.y, a.x, b.y, mover) && crossable(grid, a.x, b.y, b.x, b.y, mover));
 }

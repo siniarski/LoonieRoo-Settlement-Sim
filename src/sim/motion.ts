@@ -9,7 +9,7 @@
 // Free movers (moving under their own steering: control.ts, zombies.ts) own `at`, and their
 // `pos` follows it; if other code moves them by tile (an eviction), `at` snaps to follow.
 
-import { inBounds, type Grid, type Point } from './grid';
+import { inBounds, type Grid, type Point , EDGE_WINDOW_BROKEN } from './grid';
 import { crossable, isPassable, openBetween, type Mover } from './pathfinding';
 import type { Movement } from './survivors';
 
@@ -163,4 +163,21 @@ export function toward(dx: number, dy: number, len: number): Point {
   const d = Math.sqrt(dx * dx + dy * dy); // sqrt is exact everywhere; hypot need not be
   if (d === 0) return { x: 0, y: 0 };
   return { x: Math.round((dx * len) / d), y: Math.round((dy * len) / d) };
+}
+
+/** Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (control.ts). */
+export function inWindowFrame(grid: Grid, at: Point, r = BODY_RADIUS): boolean {
+  const x0 = Math.floor((at.x - r) / SUB);
+  const x1 = Math.floor((at.x + r) / SUB);
+  const y0 = Math.floor((at.y - r) / SUB);
+  const y1 = Math.floor((at.y + r) / SUB);
+  for (let y = y0; y <= y1 + 1; y++) {
+    for (let x = x0; x <= x1 + 1; x++) {
+      if (!inBounds(grid, x, y)) continue;
+      const i = (y * grid.width + x) * 2;
+      if (grid.edges[i] === EDGE_WINDOW_BROKEN && touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)) return true;
+      if (grid.edges[i + 1] === EDGE_WINDOW_BROKEN && touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)) return true;
+    }
+  }
+  return false;
 }

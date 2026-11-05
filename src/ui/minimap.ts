@@ -19,6 +19,7 @@ const RGB: Record<string, [number, number, number]> = {
   water: [36, 70, 94],
   wall: [139, 145, 156],
   door: [168, 113, 58],
+  glass: [150, 190, 215],
   grass: [44, 52, 44],
   dirt: [58, 52, 44],
   road: [80, 82, 86],
@@ -68,7 +69,7 @@ export function createMinimap(view: ViewState) {
           // tile, the walls round a room still outline it.
           const edge = grid.edges[i * 2] || grid.edges[i * 2 + 1];
           const colour =
-            grid.explored[i] !== 1 ? RGB.fog! : edge ? (edge === 1 ? RGB.wall! : RGB.door!) : tile === 'floor' ? RGB[GROUNDS[grid.ground[i]!] ?? 'grass']! : RGB[tile]!;
+            grid.explored[i] !== 1 ? RGB.fog! : edge ? (edge === 1 ? RGB.wall! : edge === 4 || edge === 5 ? RGB.glass! : RGB.door!) : tile === 'floor' ? RGB[GROUNDS[grid.ground[i]!] ?? 'grass']! : RGB[tile]!;
           const o = (py * w + px) * 4;
           image.data[o] = colour[0];
           image.data[o + 1] = colour[1];

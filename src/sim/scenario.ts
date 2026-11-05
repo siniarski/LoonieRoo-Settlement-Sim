@@ -24,7 +24,7 @@ export interface Scenario {
   /** Room purposes, anchored at a tile inside each room. */
   rooms?: { x: number; y: number; purpose: RoomPurpose }[];
   /** Edge walls and doors (grid.ts): on a tile's north or west side. */
-  edges?: { x: number; y: number; side: Side; kind: 'wall' | 'door' }[];
+  edges?: { x: number; y: number; side: Side; kind: 'wall' | 'door' | 'barricade' | 'window' | 'brokenWindow' }[];
   commands?: LoggedCommand[];
 }
 
@@ -261,7 +261,8 @@ export function loadScenario(scenario: Scenario): SimState {
       setTile(state.grid, x, y, tile);
     });
   });
-  for (const e of scenario.edges ?? []) setEdge(state.grid, e.x, e.y, e.side, e.kind === 'wall' ? EDGE_WALL : EDGE_DOOR);
+  const EDGE_KINDS = { wall: EDGE_WALL, door: EDGE_DOOR, barricade: 3, window: 4, brokenWindow: 5 } as const;
+  for (const e of scenario.edges ?? []) setEdge(state.grid, e.x, e.y, e.side, EDGE_KINDS[e.kind]);
   for (const room of scenario.rooms ?? []) {
     state.roomDesignations.push({ id: `r${state.nextId++}`, x: room.x, y: room.y, purpose: room.purpose });
   }

@@ -16,6 +16,8 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { EDGE_WINDOW, edgeBetween } from './grid';
+import { smashGlass } from './breach';
 import { fitsInPack, stow, unpack } from './inventory';
 import { toggleEdgeDoor } from './doors';
 import { toggleDoor } from './commands';
@@ -47,7 +49,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { REACH, SUB, SWING_REACH, centre, fits, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
+import { REACH, SUB, SWING_REACH, centre, fits, followTile, inReach, inWindowFrame, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, knockBack, type Zombie } from './zombies';
 
@@ -120,7 +122,9 @@ export function updateControlled(state: SimState, s: Survivor): void {
     const run = c.running === true && !isWinded(s);
     if (run) exert(s, RUN_TICK_COST);
     // The dead within reach drag at you: each takes CLUTCH_PCT off, down to CLUTCHED_MIN.
-    const pct = Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT * clutchedBy(state, s)) * (run ? RUN_PCT : 100);
+    // Climbing through a window frame: two fifths of your pace (and no running).
+    const climb = inWindowFrame(state.grid, s.at);
+    const pct = Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT * clutchedBy(state, s)) * (run && !climb ? RUN_PCT : 100) * (climb ? 2 : 5) / 5;
     const walk = Math.round(SUB / stepPace(state, s, s.pos));
     const v = toward(c.dx, c.dy, Math.round((walk * pct) / 10000));
     // Caught in a closed doorway (taken over mid-step, say): walk out as a colonist would.
@@ -352,6 +356,12 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   // An edge door between you and the tile in front.
   const edgeDoor = toggleEdgeDoor(state, s.pos, target);
   if (edgeDoor) return edgeDoor;
+  // Glass between you and it: smash it (loud: breach.ts smashGlass).
+  const pane = edgeBetween(state.grid, s.pos.x, s.pos.y, target.x, target.y);
+  if (pane >= 0 && state.grid.edges[pane] === EDGE_WINDOW && !state.grid.edgeBoarded.includes(pane)) {
+    smashGlass(state, pane);
+    return 'smashed the window';
+  }
   if (getTile(state.grid, target.x, target.y) === 'door') {
     const was = isOpen(state.grid, target.x, target.y);
     return toggleDoor(state, target.x, target.y) ?? (was ? 'closed the door' : 'opened the door');

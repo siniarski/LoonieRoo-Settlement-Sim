@@ -384,6 +384,38 @@ function drawEdges(ctx: CanvasRenderingContext2D, camera: Camera, viewport: View
         const r = tileRect(camera, viewport, x, y);
         // North edge: along the top of the tile; west edge: down its left side.
         const [bx, by, bw, bh] = side === 0 ? [r.x - t / 2, r.y - t / 2, r.w + t, t] : [r.x - t / 2, r.y - t / 2, t, r.h + t];
+        if (kind === 4 || kind === 5) {
+          // A window: the frame's ends as wall; glass a pale pane between, broken a gap with shards;
+          // boarded, planks across it.
+          const end = r.w * 0.15;
+          ctx.fillStyle = COLOURS.tiles.wall;
+          if (side === 0) {
+            ctx.fillRect(bx, by, end + t / 2, t);
+            ctx.fillRect(bx + bw - end - t / 2, by, end + t / 2, t);
+          } else {
+            ctx.fillRect(bx, by, t, end + t / 2);
+            ctx.fillRect(bx, by + bh - end - t / 2, t, end + t / 2);
+          }
+          const [gx, gy, gw, gh] = side === 0 ? [bx + end + t / 2, by + t * 0.25, bw - 2 * end - t, t * 0.5] : [bx + t * 0.25, by + end + t / 2, t * 0.5, bh - 2 * end - t];
+          if (kind === 4) {
+            ctx.fillStyle = 'rgba(170, 210, 235, 0.85)';
+            ctx.fillRect(gx, gy, gw, gh);
+          } else {
+            ctx.fillStyle = 'rgba(170, 210, 235, 0.7)';
+            for (const f of [0.1, 0.45, 0.8]) {
+              if (side === 0) ctx.fillRect(gx + gw * f, gy, Math.max(1, gw * 0.08), gh);
+              else ctx.fillRect(gx, gy + gh * f, gw, Math.max(1, gh * 0.08));
+            }
+          }
+          if (grid.edgeBoarded.includes(e)) {
+            ctx.fillStyle = COLOURS.tiles.door;
+            for (const f of [0.15, 0.55]) {
+              if (side === 0) ctx.fillRect(gx + gw * f, by - t * 0.2, gw * 0.3, t * 1.4);
+              else ctx.fillRect(bx - t * 0.2, gy + gh * f, t * 1.4, gh * 0.3);
+            }
+          }
+          continue;
+        }
         if (kind === 3) {
           // A barricade: planks across the border, gaps between.
           ctx.fillStyle = COLOURS.tiles.door;

@@ -20,7 +20,7 @@
 
 import { addFurniture, type Look } from './furniture';
 import { crateLoot, ruinDecay, zombieScale } from './difficulty';
-import { EDGE_DOOR, EDGE_WALL, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
+import { EDGE_DOOR, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
 import { hashRoll } from './hash';
 import { isRadioactive } from './climate';
 import type { SimState } from './state';
@@ -279,6 +279,12 @@ function drawBuilding(state: SimState, ctx: LotContext, lot: Lot, b: Placement, 
     if (!inside(ox, oy)) continue;
     const fall = hashRoll(ctx.seed, ox, oy, side === 'n' ? 23 : 29);
     const outer = cellAt(plan, e.bx, e.by) === 0;
+    if (e.window) {
+      // Glass: some already broken, a few boarded up.
+      setEdge(state.grid, ox, oy, side as Side, fall < 0.3 ? EDGE_WINDOW_BROKEN : EDGE_WINDOW);
+      if (fall > 0.92) state.grid.edgeBoarded.push(edgeIndex(state.grid, ox, oy, side as Side));
+      continue;
+    }
     if (e.door) {
       if (fall < 0.08) continue; // broken off its hinges
       setEdge(state.grid, ox, oy, side as Side, EDGE_DOOR);
