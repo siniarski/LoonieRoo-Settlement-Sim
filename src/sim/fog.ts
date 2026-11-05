@@ -1,6 +1,7 @@
 // Fog of war and exploring.
 //
-// grid.explored marks tiles some survivor has seen (within SIGHT_RADIUS).
+// grid.explored marks tiles some survivor has seen: what is in their field of view (sight.ts:
+// walls and shut doors hide what is behind them, glass doesn't, and night shortens it).
 // Scenario maps start fully explored; generated worlds start dark except
 // round the camp. Nothing can be designated on unexplored ground, but
 // survivors may walk into it, and that is how it gets explored.
@@ -18,11 +19,11 @@ import { canReach } from './pathfinding';
 import { hourOf, isNight } from './time';
 import { ensureGeneratedAround } from './worldgen';
 import { manhattan } from './space';
-import { TOWER_SIGHT, onTower } from './towers';
-import { VIGILANT_SIGHT, hasTrait } from './skills';
+import { onTower } from './towers';
+import { SIGHT_RADIUS, sightOf, sightRadius } from './sight';
 import type { SimState } from './state';
 
-export const SIGHT_RADIUS = 8;
+export { SIGHT_RADIUS } from './sight';
 /** Explore boxes are capped at this many tiles a side. */
 export const MAX_EXPLORE_SIDE = 64;
 /** Scouts stop and head home at this hour (night falls at NIGHT_START), and set out again at dawn. */
@@ -50,6 +51,7 @@ export function isExplored(state: SimState, x: number, y: number): boolean {
   return inBounds(state.grid, x, y) && state.grid.explored[tileIndex(state.grid, x, y)] === 1;
 }
 
+/** Reveals a whole circle, walls or not (the camp at the start). */
 export function revealAround(state: SimState, p: Point, r = SIGHT_RADIUS): void {
   const { grid } = state;
   for (let y = Math.max(0, p.y - r); y <= Math.min(grid.height - 1, p.y + r); y++) {
@@ -83,11 +85,30 @@ export function scoutingOver(tick: number): boolean {
   return isNight(tick) || hourOf(tick) >= SCOUT_HOME_HOUR;
 }
 
-/** Everyone sees around them, every tick. */
+/** What each survivor last looked at: skip the look when nothing it depends on has changed. */
+const looked = new WeakMap<SimState, Record<string, string>>();
+
+/**
+ * Everyone sees what is in their field of view, every tick. A look is skipped when the
+ * survivor, how far they see, the walls and the open doors are all as they were last time
+ * (the same field, all of it already explored), so the outcome never depends on the cache.
+ */
 export function updateFog(state: SimState): void {
+  const { grid } = state;
+  const last = looked.get(state) ?? {};
+  looked.set(state, last);
+  let doors: string | undefined;
   for (const s of state.survivors) {
     ensureGeneratedAround(state, s.pos); // the world exists well ahead of what anyone sees
-    revealAround(state, s.pos, (onTower(state, s) ? TOWER_SIGHT : SIGHT_RADIUS) + (hasTrait(s, 'vigilant') ? VIGILANT_SIGHT : 0));
+    const r = sightRadius(state, s);
+    doors ??= grid.open.join(',') + '|' + grid.edgeOpen.join(',');
+    const key = `${s.pos.x},${s.pos.y},${r},${onTower(state, s)},${state.walkabilityVersion},${doors}`;
+    if (last[s.id] === key) continue;
+    last[s.id] = key;
+    for (const i of sightOf(state, s, (j) => grid.explored[j] === 1)) {
+      grid.explored[i] = 1;
+      noteFind(state, i % grid.width, Math.floor(i / grid.width));
+    }
   }
 }
 

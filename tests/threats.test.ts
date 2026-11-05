@@ -40,7 +40,7 @@ describe('zombie kinds', () => {
   it('a screamer screams when it spots someone, waking the sleepers round it', () => {
     const state = loadScenario({ seed: 1, map: ['s' + '.'.repeat(29)] });
     state.survivors[0]!.priorities.guard = 0;
-    const z = addZombie(state, 15, 0, 200, 'static');
+    const z = addZombie(state, 10, 0, 200, 'static');
     z.variant = 'screamer';
     state.dormant = [{ id: 'd1', x: 29, y: 0 }];
     tick(state);

@@ -68,9 +68,16 @@ export interface Control {
   swungTick?: number;
   /** Holding Shift: a tick quicker a tile, for endurance (body.ts). */
   running?: boolean;
+  /** Sneaking (C toggles): half pace, no running, hard to see and hear (sight.ts). */
+  sneaking?: boolean;
   /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
   busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
 }
+
+/** Sneaking: this much of your pace (percent). */
+export const SNEAK_PCT = 50;
+/** A blow to one of the dead that isn't after you (sneaking up, or it's busy with someone else) does this much (percent). */
+export const SNEAK_ATTACK_PCT = 300;
 
 /** Each zombie within reach slows you this much (percent), to no less than CLUTCHED_MIN. */
 export const CLUTCH_PCT = 20;
@@ -119,12 +126,12 @@ export function updateControlled(state: SimState, s: Survivor): void {
     c.busy = null;
     // Aiming with the mouse, you walk one way and look another; else you face where you walk.
     if (!c.aim) c.facing = { x: c.dx, y: c.dy };
-    const run = c.running === true && !isWinded(s);
+    const run = c.running === true && !c.sneaking && !isWinded(s);
     if (run) exert(s, RUN_TICK_COST);
     // The dead within reach drag at you: each takes CLUTCH_PCT off, down to CLUTCHED_MIN.
     // Climbing through a window frame: two fifths of your pace (and no running).
     const climb = inWindowFrame(state.grid, s.at);
-    const pct = Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT * clutchedBy(state, s)) * (run && !climb ? RUN_PCT : 100) * (climb ? 2 : 5) / 5;
+    const pct = Math.max(CLUTCHED_MIN, 100 - CLUTCH_PCT * clutchedBy(state, s)) * (run && !climb ? RUN_PCT : 100) * (climb ? 2 : 5) / 5 * (c.sneaking ? SNEAK_PCT : 100) / 100;
     const walk = Math.round(SUB / stepPace(state, s, s.pos));
     const v = toward(c.dx, c.dy, Math.round((walk * pct) / 10000));
     // Caught in a closed doorway (taken over mid-step, say): walk out as a colonist would.
@@ -266,11 +273,14 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     exert(s, SWING_COST);
     makeNoise(state, s.pos, 'fighting');
     const full = boostDamage(s, blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
-    const blow = isWinded(s) ? Math.round((full * WINDED_DAMAGE_PCT) / 100) : full;
+    const winded = isWinded(s) ? Math.round((full * WINDED_DAMAGE_PCT) / 100) : full;
+    // It never saw you coming: a sneak attack.
+    const unaware = near.kind !== 'raider' && near.targetId !== s.id;
+    const blow = unaware ? Math.round((winded * SNEAK_ATTACK_PCT) / 100) : winded;
     const killed = damageZombie(state, near, inLight(state, s.pos) ? Math.round((blow * LIGHT_DAMAGE_PCT) / 100) : blow, s);
     if (killed) wearWeapon(state, s);
     else knockBack(state, near, s.at);
-    return killed ? 'killed it' : 'hit it';
+    return killed ? (unaware ? 'killed it before it knew you were there' : 'killed it') : unaware ? 'hit it from behind' : 'hit it';
   }
   const person = residentToHit(state, s.at, swingDir(c));
   if (person) {

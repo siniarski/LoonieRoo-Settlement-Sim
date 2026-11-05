@@ -168,7 +168,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const controlText = you
         ? view.showKeys
-          ? 'WASD walk · Shift run · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
+          ? 'WASD walk · Shift run · C sneak · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
           : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'

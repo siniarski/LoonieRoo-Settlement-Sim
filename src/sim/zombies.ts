@@ -34,6 +34,7 @@ import { LAMP_DETER, litLamps } from './power';
 import { hitDog } from './dogs';
 import { VARIANTS, giveVariant, type Variant } from './zombieKinds';
 import { makeNoise } from './noise';
+import { heardFrom, isSneaking, zombieSees } from './sight';
 import { threatScale } from './director';
 import { maybeCapture } from './prisoners';
 import { maybeSample, siegeFactor } from './endgame';
@@ -71,7 +72,7 @@ export const SHOVE = 96;
 export const FIRST_NIGHT_ZOMBIES = 2;
 /** Safety cap on zombies alive at once (not a balance lever). */
 export const MAX_ZOMBIES = 60;
-/** Static and herd zombies only go for survivors this close (Manhattan); night zombies go for anyone. */
+/** Static and herd zombies only go for survivors this close (Manhattan), and only ones they see or hear (sight.ts); night zombies go for anyone. */
 export const AGGRO_RADIUS = 20;
 /** Night zombies arrive in the dark this far (Manhattan, roughly) from a survivor, past explored ground. */
 export const FRONTIER_MIN = 20;
@@ -507,12 +508,13 @@ function pushApart(state: SimState): void {
 /**
  * Chase the nearest reachable survivor; failing that, break in to the nearest one; failing
  * that, a herd zombie walks on towards where the herd was going, and others wander. Static and
- * herd zombies only notice survivors within AGGRO_RADIUS.
+ * herd zombies only notice survivors within AGGRO_RADIUS that they see or hear (sight.ts), or the
+ * one they were already after; raiders anyone within AGGRO_RADIUS.
  */
 function plan(state: SimState, z: Zombie): void {
   const { grid, walkabilityVersion: v } = state;
   const goalsFor = (s: Survivor) => [s.pos, ...neighbours4(grid, s.pos.x, s.pos.y)];
-  const noticed = z.kind === 'night' ? state.survivors : state.survivors.filter((s) => manhattan(z.pos, s.pos) <= AGGRO_RADIUS);
+  const noticed = z.kind === 'night' ? state.survivors : state.survivors.filter((s) => notices(state, z, s));
   const target = noticed
     .slice()
     .sort((a, b) => manhattan(z.pos, a.pos) - manhattan(z.pos, b.pos))
@@ -552,6 +554,14 @@ function plan(state: SimState, z: Zombie): void {
     return;
   }
   z.path = options.length > 0 ? [pick(state, options)] : [];
+}
+
+/** Does a (static, herd or raider) zombie notice this survivor? */
+function notices(state: SimState, z: Zombie, s: Survivor): boolean {
+  const d = manhattan(z.pos, s.pos);
+  if (d > AGGRO_RADIUS) return false;
+  if (z.kind === 'raider' || z.targetId === s.id) return true;
+  return d <= heardFrom(state, s) || zombieSees(state, z.pos, s.pos, isSneaking(state, s));
 }
 
 function hit(state: SimState, z: Zombie, s: Survivor): void {
