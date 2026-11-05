@@ -10,7 +10,7 @@
 // survive walls being moved around. If two designations end up in one room,
 // the older one wins (reconcileRoomDesignations drops the newer).
 
-import { getTile, type Point , EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, takeChanges } from './grid';
+import { getTile, type Point , EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, isWindow, takeChanges } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
@@ -118,7 +118,7 @@ export function computeRooms(grid: SimState['grid']): RoomMap {
         const n = ny * width + nx;
         // An edge wall bounds the room; an edge door does too, and counts as its door.
         const edge = grid.edges[edgeBetween(grid, x, y, nx, ny)] ?? EDGE_NONE;
-        if (edge === EDGE_WALL || edge === EDGE_BARRICADE) continue;
+        if (edge === EDGE_WALL || edge === EDGE_BARRICADE || isWindow(edge)) continue;
         if (edge === EDGE_DOOR) {
           doorSet.add(n);
           continue;
@@ -345,7 +345,7 @@ export function updateRooms(grid: SimState['grid'], old: RoomMap, changed: reado
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         const n = ny * width + nx;
         const edge = grid.edges[edgeBetween(grid, x, y, nx, ny)] ?? EDGE_NONE;
-        if (edge === EDGE_WALL || edge === EDGE_BARRICADE) continue;
+        if (edge === EDGE_WALL || edge === EDGE_BARRICADE || isWindow(edge)) continue;
         if (edge === EDGE_DOOR) {
           doorSet.add(n);
           continue;

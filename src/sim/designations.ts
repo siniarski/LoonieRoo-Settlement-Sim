@@ -3,7 +3,7 @@
 // still needs material, then a build job.
 
 import { clearPlot } from './farming';
-import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, noteEdgeChange, setEdge, type Side } from './grid';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, isWalkable, setTile, type Point } from './grid';
 import { dropItem, itemAt, spawnItem } from './items';
@@ -64,7 +64,11 @@ export function hasRemovable(state: SimState, x: number, y: number): boolean {
 
 /** Building needs empty floor (no furniture); removing needs something to remove. */
 export function preconditionHolds(state: SimState, bp: Blueprint): boolean {
-  if (bp.side) return state.grid.edges[edgeIndex(state.grid, bp.x, bp.y, bp.side)] === EDGE_NONE;
+  if (bp.side) {
+    const e = edgeIndex(state.grid, bp.x, bp.y, bp.side);
+    if (bp.target === 'barricade' && isWindow(state.grid.edges[e])) return !state.grid.edgeBoarded.includes(e);
+    return state.grid.edges[e] === EDGE_NONE;
+  }
   if (bp.target === 'floor') return hasRemovable(state, bp.x, bp.y);
   if (bp.target === 'reinforce') return isStructure(getTile(state.grid, bp.x, bp.y)) && !state.grid.reinforced.includes(bp.y * state.grid.width + bp.x);
   return getTile(state.grid, bp.x, bp.y) === 'floor' && !furnitureAt(state, bp.x, bp.y);
@@ -97,6 +101,14 @@ export function cancelBlueprint(state: SimState, bp: Blueprint): void {
 export function completeBlueprint(state: SimState, bp: Blueprint): void {
   const i = state.blueprints.indexOf(bp);
   if (i >= 0) state.blueprints.splice(i, 1);
+  if (bp.side && bp.target === 'barricade' && isWindow(state.grid.edges[edgeIndex(state.grid, bp.x, bp.y, bp.side)])) {
+    // Boards over a window, nailed up.
+    const e = edgeIndex(state.grid, bp.x, bp.y, bp.side);
+    if (!state.grid.edgeBoarded.includes(e)) state.grid.edgeBoarded.push(e);
+    noteEdgeChange(state.grid, e);
+    state.walkabilityVersion += 1;
+    return;
+  }
   if (bp.side && (bp.target === 'wall' || bp.target === 'door' || bp.target === 'barricade')) {
     if (setEdge(state.grid, bp.x, bp.y, bp.side, bp.target === 'wall' ? EDGE_WALL : bp.target === 'door' ? EDGE_DOOR : EDGE_BARRICADE)) state.walkabilityVersion += 1;
     return;

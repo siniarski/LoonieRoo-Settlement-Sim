@@ -18,7 +18,7 @@ import { getExploreArea, isExplored, scoutTarget, scoutingOver } from './fog';
 import { getTile, isWalkable, neighbours4, setDirty, type Point } from './grid';
 import { REPAIR_PER_TICK, repairEdge, repairStructure } from './breach';
 import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item, type ItemKind } from './items';
-import { canReach, findPathToAny } from './pathfinding';
+import { canReach, findPathToAny, seesThrough } from './pathfinding';
 import { random } from './rng';
 import { damageZombie, getZombie } from './zombies';
 import { completeStoreRooms, getRoomMap, homeFor, labelAt } from './rooms';
@@ -600,7 +600,7 @@ function finishJob(state: SimState, s: Survivor, job: Job, note: string): void {
  * wall or door: for a diagonal, either way round the corner will do.
  */
 export function seesAcross(grid: SimState['grid'], ax: number, ay: number, bx: number, by: number): boolean {
-  const clear = (px: number, py: number, qx: number, qy: number) => (grid.edges[edgeBetween(grid, px, py, qx, qy)] ?? EDGE_NONE) === EDGE_NONE;
+  const clear = (px: number, py: number, qx: number, qy: number) => seesThrough(grid, edgeBetween(grid, px, py, qx, qy));
   if (ax === bx || ay === by) return clear(ax, ay, bx, by);
   return (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) || (clear(ax, ay, ax, by) && clear(ax, by, bx, by));
 }

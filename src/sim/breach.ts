@@ -6,8 +6,9 @@
 // structures get repair jobs (build type, see jobs.ts), done from next door.
 
 import { addBlueprint, blueprintAt, cancelBlueprint } from './designations';
+import { makeNoise } from './noise';
 import { logEvent } from './events';
-import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, getTile, noteEdgeChange, setDamage, setTile, tileIndex, type Tile } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, getTile, noteEdgeChange, setDamage, setTile, tileIndex, type Tile } from './grid';
 import type { SimState } from './state';
 
 /** Damage a structure takes before it breaks. Zombies hit for 40, every 10 ticks. */
@@ -59,6 +60,8 @@ export function repairStructure(state: SimState, x: number, y: number, amount: n
 /** What it takes to break an edge wall or door: the same as the tile kinds. */
 export function edgeHealth(grid: SimState['grid'], e: number): number {
   const kind = grid.edges[e];
+  if (grid.edgeBoarded.includes(e)) return BOARDS_HEALTH;
+  if (kind === EDGE_WINDOW) return GLASS_HEALTH;
   return kind === EDGE_WALL ? STRUCTURE_HEALTH.wall : kind === EDGE_DOOR ? STRUCTURE_HEALTH.door : kind === EDGE_BARRICADE ? STRUCTURE_HEALTH.barricade : 0;
 }
 
@@ -70,11 +73,25 @@ export function edgeDamage(grid: SimState['grid'], e: number): number {
 export function damageEdge(state: SimState, e: number, amount: number): boolean {
   const { grid } = state;
   const kind = grid.edges[e];
-  if (kind !== EDGE_WALL && kind !== EDGE_DOOR && kind !== EDGE_BARRICADE) return false;
+  const boarded = grid.edgeBoarded.includes(e);
+  if (kind !== EDGE_WALL && kind !== EDGE_DOOR && kind !== EDGE_BARRICADE && kind !== EDGE_WINDOW && !boarded) return false;
   const damage = edgeDamage(grid, e) + amount;
   if (damage < edgeHealth(grid, e)) {
     grid.edgeDamage[String(e)] = damage;
     return false;
+  }
+  // A window: the boards come off first, then the glass goes (the frame stays, to climb through).
+  if (boarded || kind === EDGE_WINDOW) {
+    delete grid.edgeDamage[String(e)];
+    const tile = Math.floor(e / 2);
+    const x = tile % grid.width;
+    const y = Math.floor(tile / grid.width);
+    if (boarded) grid.edgeBoarded.splice(grid.edgeBoarded.indexOf(e), 1);
+    else smashGlass(state, e);
+    noteEdgeChange(grid, e);
+    state.walkabilityVersion += 1;
+    logEvent(state, 'Zombies ' + (boarded ? 'tore the boards off' : 'smashed') + ' the window at (' + x + ', ' + y + ')');
+    return true;
   }
   grid.edges[e] = EDGE_NONE;
   noteEdgeChange(grid, e);
@@ -95,4 +112,19 @@ export function repairEdge(state: SimState, e: number, amount: number): number {
   if (left === 0) delete state.grid.edgeDamage[String(e)];
   else state.grid.edgeDamage[String(e)] = left;
   return left;
+}
+
+/** Glass breaks at this much damage; boards over a window at this. */
+export const GLASS_HEALTH = 100;
+export const BOARDS_HEALTH = 400;
+
+/** The glass in a window goes: loud, and the frame can be climbed through. */
+export function smashGlass(state: SimState, e: number): void {
+  const { grid } = state;
+  if (grid.edges[e] !== EDGE_WINDOW) return;
+  grid.edges[e] = EDGE_WINDOW_BROKEN;
+  noteEdgeChange(grid, e);
+  state.walkabilityVersion += 1;
+  const tile = Math.floor(e / 2);
+  makeNoise(state, { x: tile % grid.width, y: Math.floor(tile / grid.width) }, 'glass');
 }

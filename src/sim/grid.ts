@@ -60,6 +60,8 @@ export interface Grid {
   edgeDamage: Record<string, number>;
   /** Locked edge doors (edge indices): colonists have keys; raiders must break them. */
   edgeLocked: number[];
+  /** Boarded-up windows (edge indices): no sight or climbing through until the boards are battered off. */
+  edgeBoarded: number[];
 }
 
 export const EDGE_NONE = 0;
@@ -67,6 +69,13 @@ export const EDGE_WALL = 1;
 export const EDGE_DOOR = 2;
 /** Planks across a border: you and colonists climb over; the dead and raiders can't (like a barricade tile). */
 export const EDGE_BARRICADE = 3;
+/** Glass: blocks walking and bites, not sight; zombies batter it (breach.ts). Broken, it can be climbed through (slowly). */
+export const EDGE_WINDOW = 4;
+export const EDGE_WINDOW_BROKEN = 5;
+
+export function isWindow(kind: number | undefined): boolean {
+  return kind === EDGE_WINDOW || kind === EDGE_WINDOW_BROKEN;
+}
 export type Side = 'n' | 'w';
 
 export function createGrid(width: number, height: number, fill: Tile = 'floor'): Grid {
@@ -92,6 +101,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     edgePassing: [],
     edgeDamage: {},
     edgeLocked: [],
+    edgeBoarded: [],
   };
 }
 
@@ -126,6 +136,7 @@ export function setEdge(grid: Grid, x: number, y: number, side: Side, kind: numb
   drop(grid.edgePassing, e);
   delete grid.edgeDamage[String(e)]; // and undamaged
   drop(grid.edgeLocked, e); // and unlocked
+  drop(grid.edgeBoarded, e); // and unboarded
   return true;
 }
 

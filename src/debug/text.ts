@@ -65,13 +65,14 @@ export function dumpText(state: SimState): string {
 
 /**
  * The map with its edges: tiles at odd positions, borders between them: '-' and '|' an edge wall,
- * '=' an edge door ('o' when open), ':' a barricade, '+' where borders meet.
+ * '=' an edge door ('o' when open), ':' a barricade, '%' a window ('/' broken, '#' boarded), '+' where borders meet.
  */
 export function dumpEdges(state: SimState, rows: string[][]): string {
   const { width, height, edges, edgeOpen } = state.grid;
   const out: string[][] = Array.from({ length: height * 2 + 1 }, () => new Array<string>(width * 2 + 1).fill(' '));
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) out[y * 2 + 1]![x * 2 + 1] = rows[y]![x]!;
-  const mark = (kind: number, e: number, across: boolean) => (kind === 1 ? (across ? '-' : '|') : kind === 2 ? (edgeOpen.includes(e) ? 'o' : '=') : ':');
+  const mark = (kind: number, e: number, across: boolean) =>
+    state.grid.edgeBoarded.includes(e) ? '#' : kind === 1 ? (across ? '-' : '|') : kind === 2 ? (edgeOpen.includes(e) ? 'o' : '=') : kind === 4 ? '%' : kind === 5 ? '/' : ':';
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const n = (y * width + x) * 2;

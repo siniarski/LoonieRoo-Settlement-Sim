@@ -14,7 +14,8 @@ const FORBIDDEN: [RegExp, string][] = [
   [/Math\.random\s*\(/, 'Math.random() (use rng.ts)'],
   [/Date\.now\s*\(|new Date\s*\(/, 'wall-clock time (use ticks)'],
   [/performance\.now\s*\(/, 'wall-clock time (use ticks)'],
-  [/\b(window|document|localStorage|requestAnimationFrame)\b/, 'browser globals'],
+  // The globals in use (window.x, document[...]), not the words: the sim has windows of its own now (grid.ts EDGE_WINDOW).
+  [/\b(window|document|localStorage)\s*[.[]|\brequestAnimationFrame\b/, 'browser globals'],
   [/from\s+['"]\.\.\/(render|ui|debug)\//, 'imports from render/ui/debug'],
 ];
 
