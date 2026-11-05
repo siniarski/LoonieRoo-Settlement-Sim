@@ -10,7 +10,7 @@
 // `pos` follows it; if other code moves them by tile (an eviction), `at` snaps to follow.
 
 import { inBounds, type Grid, type Point } from './grid';
-import { isPassable, type Mover } from './pathfinding';
+import { crossable, isPassable, type Mover } from './pathfinding';
 import type { Movement } from './survivors';
 
 export const SUB = 256;
@@ -116,7 +116,23 @@ export function fits(grid: Grid, at: Point, mover: Mover, r = BODY_RADIUS): bool
       if (!inBounds(grid, x, y) || !isPassable(grid, x, y, mover)) return false;
     }
   }
+  // Edge walls (and edge doors this mover can't get through): the circle mustn't reach the line.
+  for (let y = y0; y <= y1 + 1; y++) {
+    for (let x = x0; x <= x1 + 1; x++) {
+      if (!inBounds(grid, x, y)) continue;
+      // North edge: from (x, y) to (x + 1, y) in tiles; west edge: from (x, y) to (x, y + 1).
+      if (y > 0 && !crossable(grid, x, y, x, y - 1, mover) && touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)) return false;
+      if (x > 0 && !crossable(grid, x, y, x - 1, y, mover) && touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)) return false;
+    }
+  }
   return true;
+}
+
+/** Does a circle at `c` of radius r reach an axis-aligned segment (x0, y0)-(x1, y1)? Integers. */
+function touches(c: Point, r: number, x0: number, y0: number, x1: number, y1: number): boolean {
+  const px = Math.max(x0, Math.min(x1, c.x));
+  const py = Math.max(y0, Math.min(y1, c.y));
+  return (c.x - px) ** 2 + (c.y - py) ** 2 < r * r;
 }
 
 /**

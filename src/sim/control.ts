@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { toggleEdgeDoor } from './doors';
 import { toggleDoor } from './commands';
 import { RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
 import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
@@ -333,6 +334,9 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   if (face) c.facing = face;
   const person = residentAt(state, target);
   if (person) return meetResident(state, s, person) ?? `talked with ${person.name}`;
+  // An edge door between you and the tile in front.
+  const edgeDoor = toggleEdgeDoor(state, s.pos, target);
+  if (edgeDoor) return edgeDoor;
   if (getTile(state.grid, target.x, target.y) === 'door') {
     const was = isOpen(state.grid, target.x, target.y);
     return toggleDoor(state, target.x, target.y) ?? (was ? 'closed the door' : 'opened the door');

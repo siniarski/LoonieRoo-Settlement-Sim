@@ -2,6 +2,7 @@
 // queue). Each work function ends with finishJob or releaseSurvivor; nobody gets stuck.
 
 import { SWING_REACH, distance2 } from './motion';
+import { EDGE_NONE, edgeBetween } from './grid';
 import { GUARD_BLOW_COST, exert } from './body';
 import { boostDamage } from './moodlets';
 import { spawnFind } from './difficulty';
@@ -554,6 +555,8 @@ export function clearShot(grid: SimState['grid'], a: Point, b: Point): boolean {
   let err = dx + dy;
   for (;;) {
     const e2 = 2 * err;
+    const px = x;
+    const py = y;
     if (e2 >= dy) {
       err += dy;
       x += sx;
@@ -562,6 +565,7 @@ export function clearShot(grid: SimState['grid'], a: Point, b: Point): boolean {
       err += dx;
       y += sy;
     }
+    if (!seesAcross(grid, px, py, x, y)) return false;
     if (x === b.x && y === b.y) return true;
     const t = getTile(grid, x, y);
     if (t === 'wall' || t === 'door' || t === 'barricade') return false;
@@ -573,4 +577,14 @@ function finishJob(state: SimState, s: Survivor, job: Job, note: string): void {
   if (i >= 0) state.jobs.splice(i, 1);
   s.jobId = null;
   s.note = note;
+}
+
+/**
+ * A step of a line from one tile to the next (side by side or diagonal) isn't blocked by an edge
+ * wall or door: for a diagonal, either way round the corner will do.
+ */
+export function seesAcross(grid: SimState['grid'], ax: number, ay: number, bx: number, by: number): boolean {
+  const clear = (px: number, py: number, qx: number, qy: number) => (grid.edges[edgeBetween(grid, px, py, qx, qy)] ?? EDGE_NONE) === EDGE_NONE;
+  if (ax === bx || ay === by) return clear(ax, ay, bx, by);
+  return (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) || (clear(ax, ay, ax, by) && clear(ax, by, bx, by));
 }

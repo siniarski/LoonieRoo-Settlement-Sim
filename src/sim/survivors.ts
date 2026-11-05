@@ -304,7 +304,7 @@ export function updateMovement(state: SimState, s: Survivor): void {
   if (s.path.length >= 2) s.path = straightenAhead(state.grid, s.pos, s.path);
   const next = s.path.shift()!;
   const diagonal = next.x !== s.pos.x && next.y !== s.pos.y;
-  passThrough(state, next.x, next.y, true);
+  passThrough(state, next.x, next.y, true, s.pos);
   const pace = stepPace(state, s, next);
   s.move = { from: { ...s.pos }, to: next, progress: 0, duration: diagonal ? Math.round((pace * 1414) / 1000) : pace };
 }

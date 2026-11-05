@@ -12,6 +12,7 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
+import { seesAcross } from './work';
 import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
 export { REACH } from './motion';
 import { placedAt } from './motion';
@@ -378,7 +379,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     return;
   }
   // Set off for the next tile (it arrives in ticksPerTile ticks: the speed is rounded up).
-  if (z.kind === 'raider') passThrough(state, next.x, next.y, false);
+  if (z.kind === 'raider') passThrough(state, next.x, next.y, false, z.pos);
   glide(z, centre(next), speed);
 }
 
@@ -436,6 +437,8 @@ function clearLine(state: SimState, a: Point, b: Point): boolean {
     if (!isPassable(state.grid, x, y, 'zombie') && !(x === b.x && y === b.y)) return false;
     if (x === b.x && y === b.y) return true;
     const e2 = 2 * err;
+    const px = x;
+    const py = y;
     if (e2 >= dy) {
       err += dy;
       x += sx;
@@ -444,6 +447,8 @@ function clearLine(state: SimState, a: Point, b: Point): boolean {
       err += dx;
       y += sy;
     }
+    // No straight line through an edge wall or door (a diagonal can go either way round).
+    if (!seesAcross(state.grid, px, py, x, y)) return false;
   }
 }
 

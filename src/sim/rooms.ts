@@ -10,7 +10,7 @@
 // survive walls being moved around. If two designations end up in one room,
 // the older one wins (reconcileRoomDesignations drops the newer).
 
-import { getTile, type Point } from './grid';
+import { getTile, type Point , EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween } from './grid';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
@@ -111,6 +111,13 @@ export function computeRooms(grid: SimState['grid']): RoomMap {
         const ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         const n = ny * width + nx;
+        // An edge wall bounds the room; an edge door does too, and counts as its door.
+        const edge = grid.edges[edgeBetween(grid, x, y, nx, ny)] ?? EDGE_NONE;
+        if (edge === EDGE_WALL) continue;
+        if (edge === EDGE_DOOR) {
+          doorSet.add(n);
+          continue;
+        }
         if (tiles[n] === 'door') doorSet.add(n);
         if (tiles[n] === 'water') touchesEdge = true;
         if (labels[n] !== UNSEEN) continue;
