@@ -9,6 +9,7 @@
 // purpose: nothing walks the route, which is what keeps far trips cheap.
 
 import { spawnFind } from './difficulty';
+import { ofKind } from './furniture';
 import { logEvent } from './events';
 import { HEALTH_MAX } from './health';
 import { scavengeFind } from './jobs';
@@ -105,7 +106,7 @@ function returnHome(state: SimState, x: Expedition): void {
   // Loot: what the ruin's crates held, as far as the survivors could carry.
   let room = CARRY * back.length * (x.truck ? 2 : 1);
   let found = 0;
-  for (const crate of state.furniture.filter((f) => f.kind === 'crate' && f.loot > 0 && near(f))) {
+  for (const crate of ofKind(state, 'crate').filter((f) => f.loot > 0 && near(f))) {
     while (crate.loot > 0 && room > 0) {
       crate.loot -= 1;
       room -= 1;

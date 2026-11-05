@@ -16,7 +16,7 @@
 
 import { logEvent } from './events';
 import { isMainsFridge, mainsLit } from './timeline';
-import type { Furniture } from './furniture';
+import { ofKind, type Furniture } from './furniture';
 import { removeItem } from './items';
 import { makeNoise } from './noise';
 import { completeRooms, labelAt } from './rooms';
@@ -54,8 +54,8 @@ onClock(() => {
 
 const CONSUMERS = ['lamp', 'fridge', 'radio', 'lab', 'beacon'] as const;
 
-function generators(state: SimState): Furniture[] {
-  return state.furniture.filter((f) => f.kind === 'generator');
+function generators(state: SimState): readonly Furniture[] {
+  return ofKind(state, 'generator');
 }
 
 /** Is a generator with fuel within reach of this point? */
@@ -66,7 +66,7 @@ export function isPowered(state: SimState, p: { x: number; y: number }): boolean
 /** Lamps that are lit right now. */
 export function litLamps(state: SimState): Furniture[] {
   if (!isNight(state.tick)) return [];
-  return state.furniture.filter((f) => f.kind === 'lamp' && isPowered(state, f));
+  return ofKind(state, 'lamp').filter((f) => isPowered(state, f));
 }
 
 export function inLight(state: SimState, p: { x: number; y: number }): boolean {
@@ -77,9 +77,7 @@ export function inLight(state: SimState, p: { x: number; y: number }): boolean {
 export function updatePower(state: SimState): void {
   for (const g of generators(state)) {
     if (g.stored === 0) continue;
-    const load = state.furniture.some(
-      (f) => (CONSUMERS as readonly string[]).includes(f.kind) && manhattan(g, f) <= POWER_RADIUS && (f.kind !== 'lamp' || isNight(state.tick)),
-    );
+    const load = CONSUMERS.some((kind) => (kind !== 'lamp' || isNight(state.tick)) && ofKind(state, kind).some((f) => manhattan(g, f) <= POWER_RADIUS));
     if (!load) continue;
     g.loot += 1;
     if (state.tick % TICKS_PER_HOUR === 0) makeNoise(state, g, 'generator');
@@ -95,7 +93,7 @@ export function updatePower(state: SimState): void {
 
 /** A lit heater within reach. */
 export function isWarmed(state: SimState, p: { x: number; y: number }): boolean {
-  return state.furniture.some((f) => f.kind === 'heater' && f.stored > 0 && manhattan(f, p) <= HEAT_RADIUS);
+  return ofKind(state, 'heater').some((f) => f.stored > 0 && manhattan(f, p) <= HEAT_RADIUS);
 }
 
 /** Heaters burn on cold nights (winter, or a blizzard). */

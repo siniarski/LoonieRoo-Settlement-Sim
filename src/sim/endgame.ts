@@ -15,6 +15,7 @@
 // Winning doesn't stop the game: it's marked (state.endgame.won) and told.
 
 import { logEvent } from './events';
+import { ofKind } from './furniture';
 import { hashRoll, idNumber } from './hash';
 import { spawnItem } from './items';
 import { isPowered } from './power';
@@ -91,7 +92,7 @@ export function updateEndgame(state: SimState): void {
   // After a first escape, the radio can call again for whoever else you find.
   if (eg.helicopter) return;
   if (eg.evacuation === null) {
-    if (dayOf(state.tick) < EVAC_FROM_DAY || !hasRadio(state) || !state.furniture.some((f) => f.kind === 'beacon' && isPowered(state, f))) return;
+    if (dayOf(state.tick) < EVAC_FROM_DAY || !hasRadio(state) || !ofKind(state, 'beacon').some((f) => isPowered(state, f))) return;
     // The dawn EVAC_DAYS days on.
     eg.evacuation = (Math.floor(state.tick / DAY_LENGTH) + EVAC_DAYS) * DAY_LENGTH;
     logEvent(state, `The beacon got through: a helicopter will come at dawn on day ${dayOf(eg.evacuation)}. The night before will be the worst yet. Hold out`);

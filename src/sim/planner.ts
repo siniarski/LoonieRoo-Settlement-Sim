@@ -6,6 +6,7 @@
 // state, so the command log stays the single source of truth for replays.
 
 import type { Command } from './commands';
+import { ofKind } from './furniture';
 import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, getTile, neighbours4, type Point } from './grid';
 import { designationOf, evaluateRoom, labelAt, roomAt, TILES_PER_BED, type Room } from './rooms';
 import type { SimState } from './state';
@@ -52,7 +53,7 @@ function planHousing(state: SimState, room: Room, notes: string[]): Plan {
   const capacity = Math.floor(room.tiles.length / TILES_PER_BED);
   const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
   const bedsHere =
-    state.furniture.filter((f) => f.kind === 'bed' && inRoom(f)).length +
+    ofKind(state, 'bed').filter((f) => inRoom(f)).length +
     state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
   const bedsElsewhere = bedsInOtherHousing(state, room);
   const wanted = Math.min(capacity, Math.max(1, state.survivors.length - bedsElsewhere));
@@ -81,7 +82,7 @@ function bedsInOtherHousing(state: SimState, room: Room): number {
       .map((d) => labelAt(state, d.x, d.y))
       .filter((label) => label >= 0 && label !== room.index),
   );
-  return state.furniture.filter((f) => f.kind === 'bed' && housing.has(labelAt(state, f.x, f.y))).length;
+  return ofKind(state, 'bed').filter((f) => housing.has(labelAt(state, f.x, f.y))).length;
 }
 
 /**
@@ -93,7 +94,7 @@ function bedsInOtherHousing(state: SimState, room: Room): number {
 function planMessHall(state: SimState, room: Room, notes: string[]): Plan {
   const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
   const tablesHere =
-    state.furniture.filter((f) => f.kind === 'table' && inRoom(f)).length +
+    ofKind(state, 'table').filter((f) => inRoom(f)).length +
     state.blueprints.filter((b) => b.target === 'table' && inRoom(b)).length;
   const toAdd = Math.max(1, Math.ceil(state.survivors.length / SEATS_PER_TABLE)) - tablesHere;
   if (toAdd <= 0) {
@@ -117,7 +118,7 @@ function planMessHall(state: SimState, room: Room, notes: string[]): Plan {
 function planInfirmary(state: SimState, room: Room, notes: string[]): Plan {
   const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
   const bedsHere =
-    state.furniture.filter((f) => f.kind === 'bed' && inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
+    ofKind(state, 'bed').filter((f) => inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
   const toAdd = Math.max(1, Math.ceil(state.survivors.length / INFIRMARY_PATIENTS_PER_BED)) - bedsHere;
   if (toAdd <= 0) {
     notes.push(`Already has ${bedsHere} bed${bedsHere === 1 ? '' : 's'}: enough for the colony.`);
@@ -134,7 +135,7 @@ function planBarracks(state: SimState, room: Room, notes: string[]): Plan {
   const capacity = Math.floor(room.tiles.length / TILES_PER_BED);
   const inRoom = (p: Point) => labelAt(state, p.x, p.y) === room.index;
   const bedsHere =
-    state.furniture.filter((f) => f.kind === 'bed' && inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
+    ofKind(state, 'bed').filter((f) => inRoom(f)).length + state.blueprints.filter((b) => b.target === 'bed' && inRoom(b)).length;
   const guards = state.survivors.filter((s) => s.priorities.guard > 0).length;
   const toAdd = Math.min(capacity, Math.max(1, guards)) - bedsHere;
   if (toAdd <= 0) {

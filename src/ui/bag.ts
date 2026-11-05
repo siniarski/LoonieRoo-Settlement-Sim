@@ -7,6 +7,7 @@ import type { Command } from '../sim/commands';
 import { controlled } from '../sim/control';
 import { ITEM_WEIGHT, PACK_MAX, contents, packWeight } from '../sim/inventory';
 import { getItem } from '../sim/items';
+import { furnitureAt, type Furniture } from '../sim/furniture';
 import type { SimState } from '../sim/state';
 
 const kg = (tenths: number) => (tenths / 10).toFixed(1);
@@ -54,7 +55,14 @@ export function createBag(command: (cmd: Command) => void) {
         root.replaceChildren(head, bar, ...(rows.length ? rows : [el('div', 'hud-bag-empty', 'empty: pick things up, or search a container')]));
       }
       // A searched container beside you with things left in it.
-      const box = state.furniture.find((f) => f.kind === 'crate' && Math.abs(f.x - s.pos.x) <= 1 && Math.abs(f.y - s.pos.y) <= 1 && contents(state, f).length > 0);
+      // (The nine tiles round you by index, not a scan of every piece of furniture in the world, every frame.)
+      let box: Furniture | undefined;
+      for (let dy = -1; dy <= 1 && !box; dy++) {
+        for (let dx = -1; dx <= 1 && !box; dx++) {
+          const f = furnitureAt(state, s.pos.x + dx, s.pos.y + dy);
+          if (f?.kind === 'crate' && contents(state, f).length > 0) box = f;
+        }
+      }
       if (!box) return;
       loot.hidden = false;
       const inside = contents(state, box);

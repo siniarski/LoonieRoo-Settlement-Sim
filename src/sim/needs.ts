@@ -24,7 +24,7 @@ import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
 import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
-import { furnitureAt, type Furniture } from './furniture';
+import { furnitureAt, type Furniture, getFurniture } from './furniture';
 import {
   AWAKE_HEAL_EVERY,
   BANDAGE_HEAL,
@@ -84,7 +84,8 @@ export function isHungry(s: Survivor): boolean {
 }
 
 function getBed(state: SimState, id: string): Furniture | undefined {
-  return state.furniture.find((f) => f.id === id && f.kind === 'bed');
+  const f = getFurniture(state, id);
+  return f?.kind === 'bed' ? f : undefined;
 }
 
 /** Drops sleep and meal plans whose bed or food has gone. Runs at the start of each tick. */

@@ -12,7 +12,7 @@
 import { cancelBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
 import { getPlot, harvest, needsWork } from './farming';
 import { getAnimal } from './animals';
-import { getFurniture } from './furniture';
+import { getFurniture, ofKind, ofKinds } from './furniture';
 import { isPatient } from './medicine';
 import { getExploreArea } from './fog';
 import { isDirty, type Point } from './grid';
@@ -145,8 +145,9 @@ export function reconcileJobs(state: SimState): void {
 
   // Generators short of fuel get one fuel haul each.
   const fuelling = new Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
-  for (const f of state.furniture) {
-    if (f.kind in FUEL && f.stored < fuelMax(f.kind) && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
+  // (By kind, in list order, as the scan of every piece of furniture found them.)
+  for (const f of ofKinds(state, Object.keys(FUEL) as (keyof typeof FUEL)[])) {
+    if (f.stored < fuelMax(f.kind) && !fuelling.has(f.id)) addJob(state, 'haul', f.x, f.y, null, null, f.id);
   }
 
   // Damaged walls and doors get one repair job each.
@@ -178,7 +179,7 @@ export function reconcileJobs(state: SimState): void {
   const wanted = { workbench: wantedCraft(state, 'workbench', true), stove: wantedCraft(state, 'stove') };
   if (wanted.workbench || wanted.stove) {
     const stationed = new Set(state.jobs.filter((j) => j.type === 'craft' || j.type === 'cook').map((j) => j.furnitureId));
-    for (const f of state.furniture) {
+    for (const f of ofKinds(state, ['workbench', 'stove'])) {
       if (!isStation(f.kind) || !wanted[f.kind] || stationed.has(f.id) || !wantedCraft(state, f.kind, inWorkshop(state, f))) continue;
       addJob(state, f.kind === 'stove' ? 'cook' : 'craft', f.x, f.y, null, null, f.id);
     }
@@ -187,7 +188,7 @@ export function reconcileJobs(state: SimState): void {
   // Marked crates with loot left get one scavenge job each.
   const searching = new Set(state.jobs.filter((j) => j.type === 'scavenge').map((j) => j.furnitureId));
   for (const f of state.furniture) {
-    if ((f.kind === 'crate' || f.kind === 'tree') && f.scavenge && f.loot > 0 && !searching.has(f.id)) {
+    if (f.scavenge && (f.kind === 'crate' || f.kind === 'tree') && f.loot > 0 && !searching.has(f.id)) {
       addJob(state, 'scavenge', f.x, f.y, null, null, f.id);
     }
   }
@@ -208,8 +209,8 @@ export function reconcileJobs(state: SimState): void {
   if (researchWanted(state)) {
     const researching = new Set(state.jobs.filter((j) => j.type === 'research').map((j) => j.furnitureId));
     const samples = state.items.some((i) => i.kind === 'sample' && i.pos !== null);
-    for (const f of state.furniture) {
-      if (f.kind === 'lab' && !researching.has(f.id) && (f.stored > 0 || samples) && isPowered(state, f)) addJob(state, 'research', f.x, f.y, null, null, f.id);
+    for (const f of ofKind(state, 'lab')) {
+      if (!researching.has(f.id) && (f.stored > 0 || samples) && isPowered(state, f)) addJob(state, 'research', f.x, f.y, null, null, f.id);
     }
   }
 

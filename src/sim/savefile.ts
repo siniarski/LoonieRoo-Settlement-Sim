@@ -1,6 +1,7 @@
 // Save files and bug reports: plain JSON text in, plain JSON text out.
 //
-// A save is the whole state (it is already serialisable). A bug report is a
+// A save is the whole state (it is already serialisable) but its command log: a save is a
+// snapshot, and the log (every key change and turn of the mouse) only grows. A bug report is a
 // starting state plus the commands applied since, so loading it replays the
 // game up to the moment it was filed (rule 1: seed + initial state + commands
 // = the full game). Files from a different schema version are refused, not
@@ -63,6 +64,11 @@ function pack(state: SimState): unknown {
   return { ...state, grid };
 }
 
+/** A save: the state as it is, without the history of how it got there. */
+function snapshot(state: SimState): unknown {
+  return { ...(pack(state) as object), commandLog: [] };
+}
+
 /** Undoes pack (and passes unpacked states through). */
 function unpack(state: SimState): SimState {
   const grid = state.grid as unknown as Record<string, unknown>;
@@ -74,7 +80,7 @@ function unpack(state: SimState): SimState {
 }
 
 export function toSaveFile(state: SimState): string {
-  return JSON.stringify({ format: 'loonieroo-save', schemaVersion: SCHEMA_VERSION, state: pack(state) });
+  return JSON.stringify({ format: 'loonieroo-save', schemaVersion: SCHEMA_VERSION, state: snapshot(state) });
 }
 
 /**

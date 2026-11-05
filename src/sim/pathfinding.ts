@@ -134,52 +134,174 @@ export function findPathToAny(
 // state: it never affects results, only speed, and a cloned state just
 // recomputes it.
 
-const componentCache = new WeakMap<Grid, Partial<Record<Mover, { version: number; doors: string; labels: Int32Array }>>>();
-
 /**
- * Which doors stand open, for movers that need a door open to get through (you, the dead): doors
- * held open for someone passing swing shut without bumping walkabilityVersion (doors.ts), so the
- * labels are also keyed on this. Colonists and raiders open doors themselves: for them it's ''.
+ * Reachability labels, per grid and mover. For movers that need a door open to get through it
+ * (you, the dead, crawlers: DOOR_MOVERS), the map is flooded once per walkabilityVersion with
+ * every door shut (the base), and the doors open now join the pieces either side of them (a
+ * union-find over the base's labels). Doors swing open and shut all the time without bumping the
+ * version (held open for someone passing: doors.ts), and re-flooding a big map for every swing
+ * was the slowest thing in a tick. The answer is the same as flooding with the doors as they are
+ * (tests/reach.test.ts checks).
  */
+interface Reach {
+  version: number;
+  /** Base labels (-1: not passable with every door shut), and how many there are. */
+  labels: Int32Array;
+  count: number;
+  /** Which doors were open when the joins were made; each label's root; open door tiles' own labels (count and up). */
+  doors: string;
+  root: Int32Array;
+  doorIds: Map<number, number>;
+}
+const componentCache = new WeakMap<Grid, Partial<Record<Mover, Reach>>>();
+const DOOR_MOVERS: readonly Mover[] = ['zombie', 'free', 'crawler'];
+
+/** Which doors stand open (the joins are keyed on it). Colonists and raiders open doors themselves: for them it's ''. */
 function openDoors(grid: Grid, mover: Mover): string {
-  if (mover !== 'zombie' && mover !== 'free' && mover !== 'crawler') return '';
+  if (!DOOR_MOVERS.includes(mover)) return '';
   return grid.open.join(',') + '|' + grid.edgeOpen.join(',');
 }
 
-function components(grid: Grid, version: number, mover: Mover): Int32Array {
-  const perMover = componentCache.get(grid) ?? {};
-  const cached = perMover[mover];
-  const doors = openDoors(grid, mover);
-  if (cached && cached.version === version && cached.doors === doors) return cached.labels;
+/** Joins the base's pieces through the doors open now. */
+function join(grid: Grid, r: Reach, mover: Mover): void {
+  const { width } = grid;
+  const doorTiles = grid.open.filter((i) => grid.tiles[i] === 'door' && isPassable(grid, i % width, Math.floor(i / width), mover));
+  r.doorIds = new Map(doorTiles.map((i, k) => [i, r.count + k]));
+  const root = new Int32Array(r.count + doorTiles.length);
+  for (let k = 0; k < root.length; k++) root[k] = k;
+  const find = (k: number): number => {
+    while (root[k] !== k) {
+      root[k] = root[root[k]!]!;
+      k = root[k]!;
+    }
+    return k;
+  };
+  const labelAt = (i: number) => (r.labels[i]! >= 0 ? r.labels[i]! : r.doorIds.get(i) ?? -1);
+  const unite = (a: number, b: number) => {
+    if (a < 0 || b < 0) return;
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) root[Math.max(ra, rb)] = Math.min(ra, rb);
+  };
+  // An open door tile joins whatever it opens onto.
+  for (const i of doorTiles) {
+    const x = i % width;
+    const y = Math.floor(i / width);
+    for (const d of DIRS) {
+      const nx = x + d.x;
+      const ny = y + d.y;
+      if (!inBounds(grid, nx, ny) || !isPassable(grid, nx, ny, mover) || !crossable(grid, x, y, nx, ny, mover)) continue;
+      unite(r.doorIds.get(i)!, labelAt(ny * width + nx));
+    }
+  }
+  // An open edge door joins the tiles either side (a tile's north edge is even, its west edge odd).
+  for (const e of grid.edgeOpen) {
+    if (grid.edges[e] !== EDGE_DOOR) continue;
+    const i = Math.floor(e / 2);
+    const x = i % width;
+    const y = Math.floor(i / width);
+    const ox = e % 2 === 0 ? x : x - 1;
+    const oy = e % 2 === 0 ? y - 1 : y;
+    if (!inBounds(grid, ox, oy) || !isPassable(grid, x, y, mover) || !isPassable(grid, ox, oy, mover)) continue;
+    unite(labelAt(i), labelAt(oy * width + ox));
+  }
+  for (let k = 0; k < root.length; k++) root[k] = find(k);
+  r.root = root;
+}
 
-  const passable = (x: number, y: number) => isPassable(grid, x, y, mover);
-  const { width, height } = grid;
-  const labels = new Int32Array(width * height).fill(-1);
+/** A label for each tile (by index) for this mover: two tiles share one when each can reach the other. */
+function components(grid: Grid, version: number, mover: Mover): (i: number) => number {
+  const perMover = componentCache.get(grid) ?? {};
+  componentCache.set(grid, perMover);
+  const doorMover = DOOR_MOVERS.includes(mover);
+  let r = perMover[mover];
+  if (!r || r.version !== version) {
+    const base = flood(grid, mover);
+    r = { version, labels: base.labels, count: base.count, doors: '', root: new Int32Array(0), doorIds: new Map() };
+    perMover[mover] = r;
+    if (doorMover) join(grid, r, mover);
+    r.doors = openDoors(grid, mover);
+  } else if (doorMover) {
+    const doors = openDoors(grid, mover);
+    if (r.doors !== doors) {
+      join(grid, r, mover);
+      r.doors = doors;
+    }
+  }
+  const reach = r;
+  if (!doorMover) return (i) => reach.labels[i]!;
+  return (i) => {
+    const l = reach.labels[i]! >= 0 ? reach.labels[i]! : reach.doorIds.get(i) ?? -1;
+    return l < 0 ? -1 : reach.root[l]!;
+  };
+}
+
+/**
+ * Floods the map into labels; for door movers, as if every door were shut. Hot (a whole map on
+ * every walkability change), so: passability worked out once per tile into an array, neighbours
+ * by index, and the edge rules only consulted where there's an edge.
+ */
+function flood(grid: Grid, mover: Mover): { labels: Int32Array; count: number } {
+  const shut = DOOR_MOVERS.includes(mover);
+  const { width, height, edges } = grid;
+  const size = width * height;
+  const pass = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    const x = i % width;
+    const y = (i - x) / width;
+    pass[i] = isPassable(grid, x, y, mover) && !(shut && grid.tiles[i] === 'door') ? 1 : 0;
+  }
+  /** Across the edge `e` between tile a and its neighbour b (b passable). */
+  const across = (e: number, ax: number, ay: number, bx: number, by: number) => {
+    const kind = edges[e];
+    if (!kind) return true;
+    return !(shut && kind === EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
+  };
+  const labels = new Int32Array(size).fill(-1);
   let next = 0;
-  const queue: number[] = [];
-  for (let i = 0; i < labels.length; i++) {
-    if (labels[i] !== -1 || !passable(i % width, Math.floor(i / width))) continue;
+  const queue = new Int32Array(size);
+  for (let i = 0; i < size; i++) {
+    if (labels[i] !== -1 || pass[i] === 0) continue;
     labels[i] = next;
-    queue.push(i);
-    while (queue.length > 0) {
-      const cur = queue.pop()!;
+    let top = 0;
+    queue[top++] = i;
+    while (top > 0) {
+      const cur = queue[--top]!;
       const cx = cur % width;
-      const cy = Math.floor(cur / width);
-      for (const dir of DIRS) {
-        const nx = cx + dir.x;
-        const ny = cy + dir.y;
-        const n = ny * width + nx;
-        if (passable(nx, ny) && labels[n] === -1 && crossable(grid, cx, cy, nx, ny, mover)) {
+      const cy = (cur - cx) / width;
+      // North (this tile's north edge), south (the next row's north edge), west (this tile's west edge), east (the next tile's west edge).
+      if (cy > 0) {
+        const n = cur - width;
+        if (pass[n] === 1 && labels[n] === -1 && across(cur * 2, cx, cy, cx, cy - 1)) {
           labels[n] = next;
-          queue.push(n);
+          queue[top++] = n;
+        }
+      }
+      if (cy < height - 1) {
+        const n = cur + width;
+        if (pass[n] === 1 && labels[n] === -1 && across(n * 2, cx, cy, cx, cy + 1)) {
+          labels[n] = next;
+          queue[top++] = n;
+        }
+      }
+      if (cx > 0) {
+        const n = cur - 1;
+        if (pass[n] === 1 && labels[n] === -1 && across(cur * 2 + 1, cx, cy, cx - 1, cy)) {
+          labels[n] = next;
+          queue[top++] = n;
+        }
+      }
+      if (cx < width - 1) {
+        const n = cur + 1;
+        if (pass[n] === 1 && labels[n] === -1 && across(n * 2 + 1, cx, cy, cx + 1, cy)) {
+          labels[n] = next;
+          queue[top++] = n;
         }
       }
     }
     next++;
   }
-  perMover[mover] = { version, doors, labels };
-  componentCache.set(grid, perMover);
-  return labels;
+  return { labels, count: next };
 }
 
 /**
@@ -196,14 +318,14 @@ export function canReach(
   mover: Mover = 'survivor',
 ): boolean {
   if (!inBounds(grid, from.x, from.y)) return false;
-  const labels = components(grid, version, mover);
+  const label = components(grid, version, mover);
   const passable = (p: Point) => isPassable(grid, p.x, p.y, mover);
   const { width } = grid;
   const starts = passable(from)
     ? [from]
     : DIRS.map((d) => ({ x: from.x + d.x, y: from.y + d.y })).filter((p) => passable(p) && crossable(grid, from.x, from.y, p.x, p.y, mover));
-  const startLabels = new Set(starts.map((p) => labels[p.y * width + p.x]));
-  return goals.some((g) => passable(g) && startLabels.has(labels[g.y * width + g.x]!));
+  const startLabels = new Set(starts.map((p) => label(p.y * width + p.x)));
+  return goals.some((g) => passable(g) && startLabels.has(label(g.y * width + g.x)));
 }
 
 function reconstruct(cameFrom: Int32Array, end: number, width: number): Point[] {

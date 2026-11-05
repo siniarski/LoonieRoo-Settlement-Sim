@@ -12,6 +12,7 @@
 // home like any expedition.
 
 import { spawnFind } from './difficulty';
+import { ofKind } from './furniture';
 import { logEvent } from './events';
 import { isExplored } from './fog';
 import { hashRoll, idNumber } from './hash';
@@ -33,7 +34,7 @@ export const NEVER = Number.MAX_SAFE_INTEGER;
 
 /** The colony's truck, if anyone's seen it. */
 export function truck(state: SimState) {
-  return state.furniture.find((f) => f.kind === 'truck' && isExplored(state, f.x, f.y));
+  return ofKind(state, 'truck').find((f) => isExplored(state, f.x, f.y));
 }
 
 /** Takes the truck (and its fuel) for a trip, if it can go. */

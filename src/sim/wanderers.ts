@@ -7,6 +7,7 @@
 // waiting at nightfall, they leave on their own.
 
 import { logEvent } from './events';
+import { ofKind } from './furniture';
 import { getTile, inBounds, isWalkable, type Point } from './grid';
 import { DIRS } from './pathfinding';
 import { pick, randomInt } from './rng';
@@ -63,7 +64,7 @@ export function removeWanderer(state: SimState, w: Wanderer): void {
 
 /** Beds nobody would be left without: beds minus survivors minus wanderers already waiting. */
 export function spareBeds(state: SimState): number {
-  const beds = state.furniture.filter((f) => f.kind === 'bed').length;
+  const beds = ofKind(state, 'bed').length;
   return beds - state.survivors.length - state.wanderers.length;
 }
 

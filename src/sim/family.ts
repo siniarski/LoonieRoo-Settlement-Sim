@@ -8,6 +8,7 @@
 // up after CHILDHOOD ticks, with a head start in a couple of skills.
 
 import { logEvent } from './events';
+import { ofKind } from './furniture';
 import { hashRoll, idNumber } from './hash';
 import { DEFAULT_PRIORITIES, NO_JOBS, type JobType } from './jobTypes';
 import { opinion } from './relationships';
@@ -49,7 +50,7 @@ export function updateFamily(state: SimState): void {
 }
 
 function births(state: SimState): void {
-  const spareBed = state.furniture.some((f) => f.kind === 'bed' && f.owner === null);
+  const spareBed = ofKind(state, 'bed').some((f) => f.owner === null);
   if (!spareBed) return;
   const adults = state.survivors.filter((s) => !isChild(s) && s.age <= MAX_PARENT_AGE);
   for (let i = 0; i < adults.length; i++) {

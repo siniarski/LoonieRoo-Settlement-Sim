@@ -11,6 +11,7 @@
 // Nobody under your control has wishes of their own.
 
 import { logEvent } from './events';
+import { ofKind } from './furniture';
 import { hashRoll, idNumber } from './hash';
 import { THOUGHTS, addThought, type ThoughtKind } from './mood';
 import { steel } from './resolve';
@@ -54,7 +55,7 @@ const near = (a: Survivor, b: Survivor) => Math.max(Math.abs(a.pos.x - b.pos.x),
 function candidates(state: SimState, s: Survivor): { kind: WishKind; targetId: string | null }[] {
   const out: { kind: WishKind; targetId: string | null }[] = [];
   const has = (kind: ThoughtKind) => s.thoughts.some((t) => t.kind === kind);
-  if (state.furniture.some((f) => f.kind === 'stove')) out.push({ kind: 'hotMeal', targetId: null });
+  if ((ofKind(state, 'stove').length > 0)) out.push({ kind: 'hotMeal', targetId: null });
   if (has('sleptOnFloor') || s.comfort < 50) out.push({ kind: 'bed', targetId: null });
   if (!s.body && (seasonOf(state.tick) === 'autumn' || seasonOf(state.tick) === 'winter' || state.settings.winter)) out.push({ kind: 'coat', targetId: null });
   if (!s.weapon && s.priorities.guard > 0) out.push({ kind: 'weapon', targetId: null });

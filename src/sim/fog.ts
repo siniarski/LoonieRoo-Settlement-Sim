@@ -14,7 +14,7 @@
 
 import { inBounds, isWalkable, tileIndex, type Point } from './grid';
 import { logEvent } from './events';
-import { furnitureAt } from './furniture';
+import { furnitureAt, ofKind } from './furniture';
 import { canReach } from './pathfinding';
 import { hourOf, isNight } from './time';
 import { ensureGeneratedAround } from './worldgen';
@@ -76,7 +76,7 @@ function noteFind(state: SimState, x: number, y: number): void {
 /** Drops markers whose crates have all been searched. */
 export function reconcilePointsOfInterest(state: SimState): void {
   if (state.tick % 50 !== 0 || state.pointsOfInterest.length === 0) return;
-  const crates = state.furniture.filter((f) => f.kind === 'crate' && f.loot > 0);
+  const crates = ofKind(state, 'crate').filter((f) => f.loot > 0);
   state.pointsOfInterest = state.pointsOfInterest.filter((p) => crates.some((c) => manhattan(c, p) <= POI_SPACING));
 }
 
