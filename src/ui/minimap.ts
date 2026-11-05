@@ -1,4 +1,4 @@
-// The minimap (M): the whole world at a glance, fogged where nobody has been.
+// The minimap (N): the whole world at a glance, fogged where nobody has been.
 // Survivors are white, zombies and herds you can see are red, points of
 // interest yellow; the frame shows what the main view is looking at. Click
 // to jump there. Reads state only; redrawn every few frames.

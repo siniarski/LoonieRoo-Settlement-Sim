@@ -69,6 +69,13 @@
       .hud-craft { padding: 5px 8px; background: rgba(20, 23, 21, 0.9); border: 1px solid #be9664; border-radius: 4px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: auto; }
       .hud-craft-value { min-width: 18px; text-align: center; color: #e8d9a8; }
       .hud-select { font: inherit; color: inherit; background: #222824; border: 1px solid #3a423c; border-radius: 4px; padding: 3px 4px; }
+      .worldmap { position: absolute; inset: 0; z-index: 20; background: rgba(8, 9, 10, 0.97); display: flex; flex-direction: column; pointer-events: auto; }
+      .worldmap[hidden] { display: none; }
+      .worldmap-head { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #333a35; flex-wrap: wrap; }
+      .worldmap-title { color: #e8d9a8; font-size: 15px; letter-spacing: 2px; }
+      .worldmap-hint { color: #8f998f; font-size: 12px; flex: 1; }
+      .worldmap-canvas { flex: 1; width: 100%; min-height: 0; cursor: crosshair; }
+      .worldmap-note { position: absolute; width: 200px; }
       .hud-minimap { position: absolute; right: 12px; bottom: 12px; image-rendering: pixelated; border: 1px solid #333a35; border-radius: 4px; background: #0a0b0d; pointer-events: auto; cursor: crosshair; }
       .hud-feed { padding: 4px 8px; color: #ffb3a8; white-space: pre; background: rgba(20, 23, 21, 0.85); border-radius: 4px; font-size: 12px; }
       .hud-room { margin: 0; padding: 6px 10px; background: rgba(20, 23, 21, 0.92); border: 1px solid #333a35; border-radius: 6px; line-height: 1.4; }

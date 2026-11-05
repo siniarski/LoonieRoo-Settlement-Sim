@@ -71,6 +71,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     inGame: true,
     menuCustomOpen: false,
     showMinimap: true,
+    showMap: false,
     showOverview: false,
     showKeys: false,
     // Spread over the defaults so view state saved by older code gains new fields.
