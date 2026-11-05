@@ -42,6 +42,7 @@ import { DAY_LENGTH } from '../sim/time';
 import { MAX_CRAFT_TARGET, ORDERABLE, RECIPES, craftStock, type CraftKind } from '../sim/crafting';
 import { createMinimap } from './minimap';
 import { activity, createCharacterPanel, createStatusStrip, moodTitle } from './card';
+import { createBag } from './bag';
 import { WORLD_SIZE, WORLD_SIZES } from '../sim/worldgen';
 import { isMiserable, mood, moodFactors } from '../sim/mood';
 import { PURPOSE_NAMES } from '../render/draw';
@@ -139,10 +140,11 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   pausedBanner.textContent = 'PAUSED · plan freely · Space to resume';
   const conditions = createStatusStrip(view);
   const card = createCharacterPanel(view);
+  const bag = createBag(command);
   // Bottom left: the priority table (P) stacked over the character panel.
   const bottomLeft = el('div', 'hud-bottom-left');
   bottomLeft.append(priorities.root, card.root);
-  root.append(pausedFrame, bar, info, bottomLeft, conditions.root, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, bottomLeft, conditions.root, ...bag.roots, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -166,7 +168,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const controlText = you
         ? view.showKeys
-          ? 'WASD walk · Shift run · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · F let go · K hide'
+          ? 'WASD walk · Shift run · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
           : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'
@@ -206,6 +208,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       priorities.update(state);
       conditions.update(state);
       card.update(state);
+      bag.update(state);
       wanderers.update(state);
       crafting.update(state);
       expeditions.update(state);

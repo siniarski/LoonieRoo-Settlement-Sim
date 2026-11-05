@@ -126,7 +126,18 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
   }
   const items = (kind: string) => state.items.filter((i) => i.pos && i.kind === kind && !i.reservedBy).sort((a, b) => dist(a.pos!, s.pos) - dist(b.pos!, s.pos));
   // Treat yourself: the remedy you carry, else the nearest one about; an infection with none: cut it off.
+  // A searched container beside you: take everything in it (inventory.ts).
+  const full = state.furniture.find((f) => f.kind === 'crate' && dist(f, s.pos) <= 1 && state.items.some((i) => i.inside === f.id));
+  if (full) cmd(state, { type: 'takeAll', containerId: full.id });
+  const inBag = (kinds: string[]) => s.pack.map((id) => state.items.find((i) => i.id === id)).find((i) => i && kinds.includes(i.kind));
   const needs = remediesFor(s);
+  // A remedy in the bag: use it.
+  const bagged = needs.length > 0 ? inBag(needs) : undefined;
+  if (bagged && (c.dx || c.dy ? cmd(state, { type: 'steer', dx: 0, dy: 0 }) : true) && cmd(state, { type: 'useItem', itemId: bagged.id }).ok) {
+    bot.treated++;
+    bot.goal = 'treat';
+    return;
+  }
   if (needs.length > 0) {
     const carried = s.carrying ? state.items.find((i) => i.id === s.carrying) : undefined;
     if (carried && needs.includes(carried.kind)) {
@@ -165,6 +176,13 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
     }
   }
   if (s.satiety < HUNGRY) {
+    // Food in the bag first.
+    const packed = inBag(['food', 'meal']);
+    if (packed && (c.dx || c.dy ? cmd(state, { type: 'steer', dx: 0, dy: 0 }) : true) && cmd(state, { type: 'useItem', itemId: packed.id }).ok) {
+      bot.ate++;
+      bot.goal = 'eat';
+      return;
+    }
     const food = items('food')[0] ?? items('meal')[0];
     if (food) {
       bot.goal = 'eat';

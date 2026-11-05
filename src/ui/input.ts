@@ -64,6 +64,8 @@ export interface InputContext {
   controlledPos(): Point | null;
   /** Where exactly (motion.ts SUB units), for aiming at the mouse. */
   controlledAt(): Point | null;
+  /** The item in the controlled survivor's bag at a quick slot (0-based), if any. */
+  packItem(slot: number): string | null;
   /** Open or close the menu (menu.ts). */
   toggleMenu(): void;
   /** Ask the auto-planner to furnish the room at this tile. */
@@ -295,6 +297,10 @@ export function attachInput(ctx: InputContext): Input {
       view.showOverview = !view.showOverview;
     } else if (key === 'k') {
       view.showKeys = !view.showKeys;
+    } else if (/^[1-9]$/.test(key) && ctx.control()) {
+      // Quick slots: the bag's first nine items (inventory.ts).
+      const id = ctx.packItem(Number(key) - 1);
+      if (id) ctx.command({ type: 'useItem', itemId: id });
     } else if (key === 'f') {
       if (ctx.control()) ctx.command({ type: 'takeControl', survivorId: null });
       else if (view.selectedId) ctx.command({ type: 'takeControl', survivorId: view.selectedId });
