@@ -224,6 +224,34 @@ export function draw(
   }
   for (const d of state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(ctx, camera, viewport, d, options.alpha, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
+  // The world winding down (timeline.ts): alarms ringing (seen or not: you hear them), the helicopter overhead.
+  for (const a of state.timeline?.alarms ?? []) {
+    const p = worldToScreen(camera, viewport, a.x + 0.5, a.y + 0.5);
+    const pulse = (state.tick % 10) / 10;
+    ctx.strokeStyle = `rgba(255, 70, 50, ${0.9 - pulse * 0.7})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size * (0.4 + pulse * 1.2), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const heli = state.timeline?.heli;
+  if (heli) {
+    const p = worldToScreen(camera, viewport, heli.x + 0.5, heli.y + 0.5);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(p.x + size * 0.6, p.y + size * 0.8, size * 1.1, size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3c4a3a';
+    ctx.fillRect(p.x - size * 0.9, p.y - size * 0.35, size * 1.8, size * 0.7);
+    ctx.fillRect(p.x + size * 0.8, p.y - size * 0.1, size * 1.2, size * 0.2);
+    ctx.strokeStyle = 'rgba(220, 220, 220, 0.6)';
+    ctx.lineWidth = 2;
+    const a = state.tick * 0.9;
+    ctx.beginPath();
+    ctx.moveTo(p.x - Math.cos(a) * size * 1.6, p.y - Math.sin(a) * size * 1.6);
+    ctx.lineTo(p.x + Math.cos(a) * size * 1.6, p.y + Math.sin(a) * size * 1.6);
+    ctx.stroke();
+  }
   drawRoomLabels(ctx, camera, viewport, state, size);
 }
 

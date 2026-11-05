@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { maybeAlarm } from './timeline';
 import { EDGE_WINDOW, edgeBetween } from './grid';
 import { smashGlass } from './breach';
 import { fitsInPack, stow, unpack } from './inventory';
@@ -73,6 +74,9 @@ export interface Control {
   /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
   busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
 }
+
+/** You drink from a tap you use only if you're this far from full (else you search the counter). */
+export const TAP_THIRST = 200;
 
 /** Sneaking: this much of your pace (percent). */
 export const SNEAK_PCT = 50;
@@ -370,6 +374,7 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   const pane = edgeBetween(state.grid, s.pos.x, s.pos.y, target.x, target.y);
   if (pane >= 0 && state.grid.edges[pane] === EDGE_WINDOW && !state.grid.edgeBoarded.includes(pane)) {
     smashGlass(state, pane);
+    maybeAlarm(state, target, pane);
     return 'smashed the window';
   }
   if (getTile(state.grid, target.x, target.y) === 'door') {
@@ -385,6 +390,11 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
     return remedy.kind === 'medicine' ? 'taking medicine' : 'bandaging';
   }
   if (item && !item.reservedBy) return take(state, s, c, item);
+  // A tap (timeline.ts) with the water on: a drink, if you could do with one; else it's a counter to search.
+  if (sourceAt(state, target.x, target.y) === 'tap' && s.hydration < HYDRATION_MAX - TAP_THIRST) {
+    c.busy = { what: 'drink', targetId: `${target.x},${target.y}`, progress: 0, duration: DRINK_TICKS };
+    return 'drinking from the tap';
+  }
   const crate = state.furniture.find((f) => f.x === target.x && f.y === target.y && (f.kind === 'crate' || f.kind === 'tree'));
   if (crate) return search(s, c, crate);
   const source = sourceAt(state, target.x, target.y);

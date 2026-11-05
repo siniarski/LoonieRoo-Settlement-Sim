@@ -13,6 +13,7 @@
 //    order; ids are labels, nothing else.)
 
 import { NORMAL, type MapType, type Settings } from './difficulty';
+import { rollTimeline } from './timeline';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
 import { itemAt, spawnItem } from './items';
@@ -231,6 +232,7 @@ export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings 
   ensureGeneratedAround(state, l.start);
   startCamp(state, l);
   state.harsh = true;
+  rollTimeline(state, seed);
   placeSettlements(state, l.start, seed);
   // A truck somewhere out past the camp (within the chunks generated already).
   const angle = hashRoll(seed, 0x7a0c) * Math.PI * 2;
