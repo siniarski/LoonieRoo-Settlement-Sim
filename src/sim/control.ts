@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { toggleEdgeDoor } from './doors';
 import { toggleDoor } from './commands';
 import { RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
 import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
@@ -45,7 +46,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { SUB, SWING_REACH, centre, fits, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
+import { REACH, SUB, SWING_REACH, centre, fits, followTile, inReach, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, knockBack, type Zombie } from './zombies';
 
@@ -75,7 +76,7 @@ export const CLUTCHED_MIN = 40;
 /** How many of the dead are within reach of someone, clutching at them (not staggered ones). */
 export function clutchedBy(state: SimState, s: Survivor): number {
   let n = 0;
-  for (const z of state.zombies) if (z.kind !== 'raider' && state.tick >= z.staggerUntil && inReach(s, z)) n++;
+  for (const z of state.zombies) if (z.kind !== 'raider' && state.tick >= z.staggerUntil && inReach(s, z, REACH, state.grid)) n++;
   return n;
 }
 
@@ -261,7 +262,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
   }
   // A deer next to you, or one you're aiming at with a loaded gun (handiwork.ts).
-  const deer = nearestInArc(state.animals, s.at, swingDir(c))
+  const deer = nearestInArc(state.animals, s.at, swingDir(c), SWING_REACH, state.grid)
     ?? (loadedGun(state, s) ? state.animals.find((a) => a.pos.x === target.x && a.pos.y === target.y && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos)) : undefined);
   if (deer) {
     const shot = !inReach(deer, s, SWING_REACH);
@@ -292,7 +293,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
 
 /** A resident (residents.ts) in the arc in front of you, within reach. */
 function residentToHit(state: SimState, from: Point, facing: Point): Resident | undefined {
-  return nearestInArc(state.residents, from, facing);
+  return nearestInArc(state.residents, from, facing, SWING_REACH, state.grid);
 }
 
 /** Someone of yours standing between you and a tile (Bresenham, like clearShot). */
@@ -322,7 +323,7 @@ function inTheWay(state: SimState, s: Survivor, to: Point): Survivor | undefined
 /** The zombie in front, else any zombie next to you (straight or diagonal), in a fixed order. */
 /** The zombie a swing lands on: the nearest in the arc in front of you, within reach (motion.ts). */
 function zombieToHit(state: SimState, from: Point, facing: Point): Zombie | undefined {
-  return nearestInArc(state.zombies, from, facing);
+  return nearestInArc(state.zombies, from, facing, SWING_REACH, state.grid);
 }
 
 /** Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do. */
@@ -333,6 +334,9 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
   if (face) c.facing = face;
   const person = residentAt(state, target);
   if (person) return meetResident(state, s, person) ?? `talked with ${person.name}`;
+  // An edge door between you and the tile in front.
+  const edgeDoor = toggleEdgeDoor(state, s.pos, target);
+  if (edgeDoor) return edgeDoor;
   if (getTile(state.grid, target.x, target.y) === 'door') {
     const was = isOpen(state.grid, target.x, target.y);
     return toggleDoor(state, target.x, target.y) ?? (was ? 'closed the door' : 'opened the door');

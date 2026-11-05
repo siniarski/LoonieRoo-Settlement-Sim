@@ -20,7 +20,7 @@
 
 import { addFurniture, type Look } from './furniture';
 import { crateLoot, ruinDecay, zombieScale } from './difficulty';
-import { GROUNDS, setTile, tileIndex, type Ground, type Point } from './grid';
+import { EDGE_DOOR, EDGE_WALL, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
 import { hashRoll } from './hash';
 import { isRadioactive } from './climate';
 import type { SimState } from './state';
@@ -269,6 +269,21 @@ function drawBuilding(state: SimState, ctx: LotContext, lot: Lot, b: Placement, 
         }
       } else setTile(state.grid, w.x, w.y, 'floor');
     }
+  }
+  // Edge walls and doors (buildings.ts toEdges), on the borders between tiles. Each edge is drawn by
+  // the chunk that owns it (the tile it's the north or west side of), decayed by a roll of its own.
+  for (const e of plan.edges) {
+    const a = at(e.ax, e.ay);
+    const b = at(e.bx, e.by);
+    const [ox, oy, side] = b.y === a.y - 1 ? [a.x, a.y, 'n'] : b.y === a.y + 1 ? [b.x, b.y, 'n'] : b.x === a.x - 1 ? [a.x, a.y, 'w'] : [b.x, b.y, 'w'];
+    if (!inside(ox, oy)) continue;
+    const fall = hashRoll(ctx.seed, ox, oy, side === 'n' ? 23 : 29);
+    const outer = cellAt(plan, e.bx, e.by) === 0;
+    if (e.door) {
+      if (fall < 0.08) continue; // broken off its hinges
+      setEdge(state.grid, ox, oy, side as Side, EDGE_DOOR);
+      if (fall > 0.8) state.grid.edgeOpen.push(edgeIndex(state.grid, ox, oy, side as Side)); // left open
+    } else if (fall > (outer ? 0.08 : 0.04) + decay) setEdge(state.grid, ox, oy, side as Side, EDGE_WALL);
   }
   // Furniture: containers hold loot (some already searched), the rest is for show.
   plan.furniture.forEach((f, i) => {

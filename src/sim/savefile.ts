@@ -33,7 +33,7 @@ interface BugReport {
 export type LoadResult = { ok: true; state: SimState; kind: 'save' | 'bug' } | { ok: false; error: string };
 
 /** The grid layers worth compressing. */
-const LAYERS = ['tiles', 'ground', 'explored', 'dirt', 'damage'] as const;
+const LAYERS = ['tiles', 'ground', 'explored', 'dirt', 'damage', 'edges'] as const;
 
 /** [value, count, value, count, ...]. */
 export function runLengthEncode<T>(values: readonly T[]): (T | number)[] {

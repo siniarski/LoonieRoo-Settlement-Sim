@@ -10,8 +10,8 @@ import { controlled } from '../src/sim/control';
 import { PRESETS } from '../src/sim/difficulty';
 import { HUNGRY } from '../src/sim/food';
 import { HEALTH_MAX } from '../src/sim/health';
-import { findPathToAny } from '../src/sim/pathfinding';
-import { getTile, isOpen, neighbours4, type Point } from '../src/sim/grid';
+import { findPathToAny, openBetween } from '../src/sim/pathfinding';
+import { EDGE_DOOR, edgeBetween, edgeIsOpen, getTile, isOpen, neighbours4, type Point } from '../src/sim/grid';
 import { SUB, centre } from '../src/sim/motion';
 import { TIRED } from '../src/sim/rest';
 import type { SimState } from '../src/sim/state';
@@ -71,7 +71,9 @@ function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Poin
   if (i >= 0) bot.path.splice(0, i + 1);
   const next = bot.path[0];
   if (!next) return stop();
-  if (getTile(state.grid, next.x, next.y) === 'door' && !isOpen(state.grid, next.x, next.y)) {
+  const edge = edgeBetween(state.grid, at.x, at.y, next.x, next.y);
+  const shutEdgeDoor = edge >= 0 && state.grid.edges[edge] === EDGE_DOOR && !edgeIsOpen(state.grid, edge);
+  if (shutEdgeDoor || (getTile(state.grid, next.x, next.y) === 'door' && !isOpen(state.grid, next.x, next.y))) {
     stop();
     cmd(state, { type: 'use', x: next.x, y: next.y });
     return;
@@ -103,7 +105,7 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
   const zs = state.zombies.filter((z) => dist(z.pos, s.pos) <= 6).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos));
   const z = zs[0];
   // Fight what's next to you; flee when hurt.
-  if (z && dist(z.pos, s.pos) <= 1 && s.health > HEALTH_MAX * 0.3) {
+  if (z && dist(z.pos, s.pos) <= 1 && openBetween(state.grid, s.pos, z.pos) && s.health > HEALTH_MAX * 0.3) {
     if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
     cmd(state, { type: 'swing', x: z.pos.x, y: z.pos.y });
     bot.goal = 'fight';

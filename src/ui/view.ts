@@ -2,7 +2,7 @@
 // build mode, selection, hover, speed). Kept separate so it never leaks into saves.
 
 import type { Camera } from '../render/camera';
-import type { Point } from '../sim/grid';
+import type { Point, Side } from '../sim/grid';
 import type { Speed } from './loop';
 import type { CategoryId, ToolId } from './tools';
 
@@ -19,6 +19,8 @@ export interface ViewState {
   /** A short message for the player (e.g. the planner's notes), shown until `until` (performance.now ms). */
   toast: { text: string; until: number } | null;
   hover: Point | null;
+  /** Edge tools (Wall, Door): the tile border nearest the cursor, previewed (grid.ts edges). */
+  hoverEdge: { x: number; y: number; side: Side } | null;
   speed: Speed;
   paused: boolean;
   showDebug: boolean;

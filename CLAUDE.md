@@ -87,6 +87,12 @@ NOTES.md "Start here" maps every sim module to what it does. Each module opens w
 - Survivors can always walk through doors (and barricades). Zombies can't walk through them: to a moving zombie a door is a wall. But a zombie that can't reach anyone batters doors (and walls) down; see breach.ts. Pathfinding takes a `mover` (`'survivor' | 'zombie' | 'breacher' | 'raider' | 'crawler'`) for this. Raiders open doors unless they're locked.
 - For flood fill, doors are room boundaries: they split rooms the way walls do, but survivors can path through them.
 
+**Walls and doors on tile edges (edge-walls, 2026-11)**
+
+- Walls and doors also stand on the border between two tiles (grid.ts `edges`: each tile owns its north and west side). Generated buildings and the Wall and Door tools use edges; tile walls remain (barricades, the planner, old maps).
+- Crossing between neighbours goes through `crossable` (pathfinding.ts) with the same door rules; reach attacks go through `openBetween` (nobody bites or hits through an edge wall); movers' circles collide with edge lines (motion.ts fits).
+- Reachability labels are keyed on walkabilityVersion and, for movers that need doors open, on which doors are open (doors held open for someone passing don't bump the version).
+
 ## Debugging and inspection conventions
 
 Build these in from the start. They are how the agent (and you) can see what the game is doing.

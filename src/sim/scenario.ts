@@ -5,7 +5,7 @@
 import { addBlueprint } from './designations';
 import { addPlot } from './farming';
 import { addFurniture } from './furniture';
-import { setDirty, setTile, type Tile } from './grid';
+import { setDirty, setTile, type Tile , EDGE_DOOR, EDGE_WALL, setEdge, type Side } from './grid';
 import { spawnItem } from './items';
 import { replay } from './replay';
 import type { RoomPurpose } from './rooms';
@@ -23,6 +23,8 @@ export interface Scenario {
   map: string[];
   /** Room purposes, anchored at a tile inside each room. */
   rooms?: { x: number; y: number; purpose: RoomPurpose }[];
+  /** Edge walls and doors (grid.ts): on a tile's north or west side. */
+  edges?: { x: number; y: number; side: Side; kind: 'wall' | 'door' }[];
   commands?: LoggedCommand[];
 }
 
@@ -259,6 +261,7 @@ export function loadScenario(scenario: Scenario): SimState {
       setTile(state.grid, x, y, tile);
     });
   });
+  for (const e of scenario.edges ?? []) setEdge(state.grid, e.x, e.y, e.side, e.kind === 'wall' ? EDGE_WALL : EDGE_DOOR);
   for (const room of scenario.rooms ?? []) {
     state.roomDesignations.push({ id: `r${state.nextId++}`, x: room.x, y: room.y, purpose: room.purpose });
   }

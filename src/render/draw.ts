@@ -3,7 +3,7 @@
 import { isRadioactive } from '../sim/climate';
 import { isHostile } from '../sim/settlements';
 import { worldPos } from './interp';
-import { GROUNDS, type Point, type Tile } from '../sim/grid';
+import { GROUNDS, type Point, type Tile , EDGE_WALL } from '../sim/grid';
 import { structureHealth } from '../sim/breach';
 import { darkness } from '../sim/time';
 import type { RoomPurpose } from '../sim/rooms';
@@ -29,6 +29,8 @@ export const MIN_LABEL_PX = 18;
 
 export interface DrawOptions {
   hover: Point | null;
+  /** An edge tool's border under the cursor, previewed. */
+  hoverEdge?: { x: number; y: number; side: 'n' | 'w' } | null;
   /** Armed build tool, or null in select mode. */
   tool: ToolId | null;
   /** Fraction of the next tick elapsed, for interpolating movement. */
@@ -93,6 +95,15 @@ export function draw(
 
   if (size >= MIN_GRID_LINE_PX) drawGridLines(ctx, camera, viewport, range);
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
+  drawEdges(ctx, camera, viewport, grid, range, size);
+  if (options.hoverEdge) {
+    // The edge tool's target: a pale bar on the border.
+    const r = tileRect(camera, viewport, options.hoverEdge.x, options.hoverEdge.y);
+    const t = Math.max(2, size * 0.2);
+    ctx.fillStyle = 'rgba(240, 220, 160, 0.6)';
+    if (options.hoverEdge.side === 'n') ctx.fillRect(r.x - t / 2, r.y - t / 2, r.w + t, t);
+    else ctx.fillRect(r.x - t / 2, r.y - t / 2, t, r.h + t);
+  }
   if (options.showDebug) drawRoomOutlines(ctx, camera, viewport, state, range);
 
   for (const plot of state.farm) drawPlot(ctx, camera, viewport, plot);
@@ -353,4 +364,51 @@ function drawHover(
   ctx.lineWidth = tool ? 2 : 1;
   ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Edge walls and doors (grid.ts): a bar along the border between two tiles, a fifth of a tile
+ * thick, centred on it. A door is a wooden leaf in a gap; open, it's swung back along the frame.
+ */
+function drawEdges(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, grid: SimState['grid'], range: { x0: number; y0: number; x1: number; y1: number }, size: number): void {
+  const t = Math.max(2, size * 0.2);
+  for (let y = range.y0; y <= range.y1 + 1; y++) {
+    for (let x = range.x0; x <= range.x1 + 1; x++) {
+      if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) continue;
+      const seen = grid.explored[y * grid.width + x] === 1 || (y > 0 && grid.explored[(y - 1) * grid.width + x] === 1) || (x > 0 && grid.explored[y * grid.width + x - 1] === 1);
+      if (!seen) continue;
+      for (const side of [0, 1] as const) {
+        const e = (y * grid.width + x) * 2 + side;
+        const kind = grid.edges[e];
+        if (!kind) continue;
+        const r = tileRect(camera, viewport, x, y);
+        // North edge: along the top of the tile; west edge: down its left side.
+        const [bx, by, bw, bh] = side === 0 ? [r.x - t / 2, r.y - t / 2, r.w + t, t] : [r.x - t / 2, r.y - t / 2, t, r.h + t];
+        if (kind === EDGE_WALL) {
+          ctx.fillStyle = COLOURS.tiles.wall;
+          ctx.fillRect(bx, by, bw, bh);
+          ctx.fillStyle = COLOURS.wallTop;
+          ctx.fillRect(bx + 1, by + 1, Math.max(1, bw - 2), Math.max(1, bh - 2));
+          continue;
+        }
+        // A door: the frame's ends as wall, the leaf in between (shut across the gap, or swung open).
+        const open = grid.edgeOpen.includes(e);
+        const end = r.w * 0.15;
+        ctx.fillStyle = COLOURS.tiles.wall;
+        if (side === 0) {
+          ctx.fillRect(bx, by, end + t / 2, t);
+          ctx.fillRect(bx + bw - end - t / 2, by, end + t / 2, t);
+        } else {
+          ctx.fillRect(bx, by, t, end + t / 2);
+          ctx.fillRect(bx, by + bh - end - t / 2, t, end + t / 2);
+        }
+        ctx.fillStyle = COLOURS.tiles.door;
+        if (!open) {
+          if (side === 0) ctx.fillRect(bx + end + t / 2, by + t * 0.2, bw - 2 * end - t, t * 0.6);
+          else ctx.fillRect(bx + t * 0.2, by + end + t / 2, t * 0.6, bh - 2 * end - t);
+        } else if (side === 0) ctx.fillRect(r.x + end, r.y, t * 0.5, r.h * 0.6); // swung in, along the jamb
+        else ctx.fillRect(r.x, r.y + end, r.w * 0.6, t * 0.5);
+      }
+    }
+  }
 }

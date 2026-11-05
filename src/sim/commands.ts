@@ -4,6 +4,7 @@
 // logged, since replaying them would change nothing.
 
 import { escape } from './escape';
+import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
 import { succeed } from './succession';
 import { promise } from './wishes';
 import { meetResident } from './residents';
@@ -48,8 +49,8 @@ import { controlled, isControlled, swing, use, work, aim } from './control';
 
 export type Command =
   // Instant edits (debug, scenarios, Shift+paint).
-  | { type: 'placeWall'; x: number; y: number }
-  | { type: 'placeDoor'; x: number; y: number }
+  | { type: 'placeWall'; x: number; y: number; side?: Side }
+  | { type: 'placeDoor'; x: number; y: number; side?: Side }
   | { type: 'clearTile'; x: number; y: number }
   | { type: 'placeBed'; x: number; y: number }
   | { type: 'placeTable'; x: number; y: number }
@@ -59,7 +60,8 @@ export type Command =
   /** Give a bed to a survivor (their only one), or take it back with null. */
   | { type: 'assignBed'; bedId: string; survivorId: string | null }
   // Designations: become jobs for survivors.
-  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | 'reinforce' | FurnitureTarget }
+  /** With a side: an edge wall or door on that tile's north or west side (grid.ts). */
+  | { type: 'designateBuild'; x: number; y: number; structure: 'wall' | 'door' | 'barricade' | 'reinforce' | FurnitureTarget; side?: Side }
   | { type: 'designateRemove'; x: number; y: number }
   /** Cancels a blueprint on the tile, else removes a farm plot, else unmarks a crate there, else clears the purpose of the room the tile is in. */
   | { type: 'cancelDesignation'; x: number; y: number }
@@ -416,9 +418,11 @@ function execute(state: SimState, command: Command): CommandResult {
   if (DESIGNATIONS.has(command.type) && !isExplored(state, x, y)) return reject(`(${x}, ${y}) is unexplored`);
   switch (command.type) {
     case 'placeWall':
+      if (command.side !== undefined) return placeEdge(state, x, y, command.side, EDGE_WALL);
       if (survivorAt(state, x, y)) return reject(`(${x}, ${y}) is occupied`);
       return setStructure(state, x, y, 'wall');
     case 'placeDoor':
+      if (command.side !== undefined) return placeEdge(state, x, y, command.side, EDGE_DOOR);
       return setStructure(state, x, y, 'door');
     case 'clearTile': {
       const f = furnitureAt(state, x, y);
@@ -436,6 +440,7 @@ function execute(state: SimState, command: Command): CommandResult {
       addFurniture(state, command.type === 'placeBed' ? 'bed' : command.type === 'placeTable' ? 'table' : 'workbench', x, y);
       return changed();
     case 'designateBuild':
+      if (command.side !== undefined) return designateEdge(state, x, y, command.side, command.structure);
       return designateBuild(state, x, y, command.structure);
     case 'designateRemove':
       return designateRemove(state, x, y);
@@ -496,6 +501,33 @@ function setStructure(state: SimState, x: number, y: number, tile: Tile): Comman
     evictZombies(state, { x, y });
     clearPlot(state, { x, y });
   }
+  return changed();
+}
+
+/** An edge on the map's own border, or not a side: nothing to build there. */
+function edgeProblem(state: SimState, x: number, y: number, side: Side): string | null {
+  if (side !== 'n' && side !== 'w') return 'a side is n or w';
+  if ((side === 'n' && y === 0) || (side === 'w' && x === 0)) return 'that edge is the map\'s border';
+  return null;
+}
+
+/** A blueprint for an edge wall or door. */
+function designateEdge(state: SimState, x: number, y: number, side: Side, structure: string): CommandResult {
+  if (structure !== 'wall' && structure !== 'door') return reject('only walls and doors go on edges');
+  const why = edgeProblem(state, x, y, side);
+  if (why) return reject(why);
+  if (state.grid.edges[edgeIndex(state.grid, x, y, side)] !== EDGE_NONE) return unchanged();
+  if (state.blueprints.some((b) => b.x === x && b.y === y && b.side === side)) return unchanged();
+  addBlueprint(state, x, y, structure, side);
+  return changed();
+}
+
+/** An edge wall or door, at once (the instant tools). */
+function placeEdge(state: SimState, x: number, y: number, side: Side, kind: number): CommandResult {
+  const why = edgeProblem(state, x, y, side);
+  if (why) return reject(why);
+  if (!setEdge(state.grid, x, y, side, kind)) return unchanged();
+  state.walkabilityVersion += 1;
   return changed();
 }
 
