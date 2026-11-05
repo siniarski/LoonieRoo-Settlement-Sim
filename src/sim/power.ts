@@ -6,7 +6,8 @@
 // counts the ticks), and it's noisy (once an hour). Lamps light up at night
 // when powered: night zombies don't arrive within LAMP_DETER of a lit lamp
 // (zombies.ts), and guards fight better in the light. A powered fridge keeps
-// the food round it from spoiling.
+// the food round it from spoiling. While the mains are on (timeline.ts), iceboxes are fridges
+// and indoors is lit at night.
 //
 // Spoilage (harsh games only): food and hot meals age (item.wear) and rot
 // at FOOD_SHELF and MEAL_SHELF. They age twice as fast in summer, not at all
@@ -14,6 +15,7 @@
 // fridge.
 
 import { logEvent } from './events';
+import { isMainsFridge, mainsLit } from './timeline';
 import type { Furniture } from './furniture';
 import { removeItem } from './items';
 import { makeNoise } from './noise';
@@ -68,7 +70,7 @@ export function litLamps(state: SimState): Furniture[] {
 }
 
 export function inLight(state: SimState, p: { x: number; y: number }): boolean {
-  return litLamps(state).some((l) => manhattan(l, p) <= LAMP_LIGHT);
+  return mainsLit(state, p) || litLamps(state).some((l) => manhattan(l, p) <= LAMP_LIGHT);
 }
 
 /** Generators burn fuel while they have something to power. Every tick. */
@@ -118,7 +120,7 @@ export function updateSpoilage(state: SimState): void {
   if (season === 'winter') return;
   const rate = (season === 'summer' ? 2 : 1) + (state.weather === 'heatwave' ? 1 : 0);
   const stores = completeRooms(state, 'storage');
-  const fridges = state.furniture.filter((f) => f.kind === 'fridge' && isPowered(state, f));
+  const fridges = state.furniture.filter((f) => (f.kind === 'fridge' && isPowered(state, f)) || isMainsFridge(state, f));
   let rotted = 0;
   for (const item of [...state.items]) {
     if ((item.kind !== 'food' && item.kind !== 'meal') || !item.pos || item.reservedBy) continue;

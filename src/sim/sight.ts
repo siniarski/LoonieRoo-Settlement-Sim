@@ -20,6 +20,7 @@
 //                The renderer dims explored tiles outside it and hides the dead you can't see.
 
 import { inBounds, isOpen, tileIndex, type Point } from './grid';
+import { mainsLit } from './timeline';
 import { edgeBetween } from './grid';
 import { seesThrough } from './pathfinding';
 import { controlled } from './control';
@@ -95,9 +96,9 @@ export function fieldOfView(grid: SimState['grid'], p: Point, r: number, overWal
   return out;
 }
 
-/** How far a survivor sees: less at night; more from a tower, or with the vigilant trait. */
+/** How far a survivor sees: less at night (unless the lights are on indoors: timeline.ts); more from a tower, or with the vigilant trait. */
 export function sightRadius(state: SimState, s: Survivor): number {
-  const base = onTower(state, s) ? TOWER_SIGHT : isNight(state.tick) ? NIGHT_SIGHT : SIGHT_RADIUS;
+  const base = onTower(state, s) ? TOWER_SIGHT : isNight(state.tick) && !mainsLit(state, s.pos) ? NIGHT_SIGHT : SIGHT_RADIUS;
   return base + (hasTrait(s, 'vigilant') ? VIGILANT_SIGHT : 0);
 }
 

@@ -3,6 +3,7 @@
 // out as sim commands or view-state changes.
 
 import { climateAt, isRadioactive } from '../sim/climate';
+import { powerOn, waterOn } from '../sim/timeline';
 import { STEP_UP, heirs } from '../sim/succession';
 import { describeWish } from '../sim/wishes';
 import { HIGH, LONELY_MOOD, LOW } from '../sim/wellbeing';
@@ -251,7 +252,7 @@ function statusText(state: SimState, view: ViewState): string {
     mode,
     selected && !you ? `${selected.name}: right-click to move` : '',
     place,
-    `wood ${wood} · food ${food} · jobs ${state.jobs.length}`,
+    `wood ${wood} · food ${food} · jobs ${state.jobs.length}${state.timeline ? ` · water ${waterOn(state) ? 'on' : 'off'} · power ${powerOn(state) ? 'on' : 'off'}` : ''}`,
   ].filter((x) => x !== '').join('  ·  ');
 }
 

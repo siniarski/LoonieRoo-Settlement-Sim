@@ -6,9 +6,11 @@
 // water (a river or lake), which now and then makes them sick. Drinking
 // takes DRINK_TICKS and fills them up. At 0 they lose health.
 //
-// Rain collectors fill while it rains or snows.
+// Rain collectors fill while it rains or snows. While the mains are on, kitchen counters,
+// toilets and baths are taps (timeline.ts).
 
 import { scorching } from './climate';
+import { isTap, waterOn } from './timeline';
 import { slowTick } from './time';
 import { SICK_TICKS } from './corpses';
 import { isWet } from './seasons';
@@ -38,7 +40,7 @@ export const THIRSTY_MOOD = -10;
 export const COLLECTOR_MAX = 20;
 export const COLLECTOR_FILL_EVERY = 50;
 
-export type WaterSource = 'well' | 'collector' | 'river';
+export type WaterSource = 'well' | 'collector' | 'tap' | 'river';
 
 export interface Drink {
   /** Where they'll stand to drink. */
@@ -75,6 +77,7 @@ export function sourceAt(state: SimState, x: number, y: number): WaterSource | n
   const f = furnitureAt(state, x, y);
   if (f?.kind === 'well') return 'well';
   if (f?.kind === 'collector' && f.loot > 0) return 'collector';
+  if (f && isTap(state, f)) return 'tap';
   return getTile(state.grid, x, y) === 'water' ? 'river' : null;
 }
 
@@ -89,9 +92,11 @@ export const WATER_SEARCH = 20000;
 export function findWater(state: SimState, from: Point): Drink | null {
   const { grid } = state;
   const clean = new Map<number, WaterSource>();
+  const tapsOn = waterOn(state);
   for (const f of state.furniture) {
     if (f.kind === 'well') clean.set(f.y * grid.width + f.x, 'well');
     else if (f.kind === 'collector' && f.loot > 0) clean.set(f.y * grid.width + f.x, 'collector');
+    else if (tapsOn && isTap(state, f)) clean.set(f.y * grid.width + f.x, 'tap');
   }
   const passes: ((x: number, y: number) => WaterSource | undefined)[] = [
     (x, y) => clean.get(y * grid.width + x),
