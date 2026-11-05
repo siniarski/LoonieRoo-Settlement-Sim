@@ -11,7 +11,8 @@ import { PRESETS } from '../src/sim/difficulty';
 import { HUNGRY } from '../src/sim/food';
 import { HEALTH_MAX } from '../src/sim/health';
 import { findPathToAny } from '../src/sim/pathfinding';
-import { neighbours4, type Point } from '../src/sim/grid';
+import { getTile, isOpen, neighbours4, type Point } from '../src/sim/grid';
+import { SUB, centre } from '../src/sim/motion';
 import { TIRED } from '../src/sim/rest';
 import type { SimState } from '../src/sim/state';
 import type { Survivor } from '../src/sim/survivors';
@@ -44,14 +45,22 @@ interface Bot {
   amputated: number;
 }
 
-/** Steer one step along a path to a tile next to (or onto) a target; use it on arrival. */
+/**
+ * Walk a path to a tile next to (or onto) a target, and use it on arrival. You move freely
+ * (motion.ts): steer toward the centre of the next tile on the path, opening a closed door
+ * that's next in the way (a colonist's path goes through doors; you have to open them).
+ */
 function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Point, onto = false): void {
   const c = state.control!;
-  // Steer from where this step lands: a held direction carries on as soon as a step lands.
-  const at = s.move ? s.move.to : s.pos;
-  if (onto ? at.x === target.x && at.y === target.y : Math.abs(at.x - target.x) + Math.abs(at.y - target.y) <= 1) {
+  const stop = () => {
     if (c.dx !== 0 || c.dy !== 0) cmd(state, { type: 'steer', dx: 0, dy: 0 });
-    if (!c.busy && !s.move) cmd(state, { type: 'use', x: target.x, y: target.y });
+  };
+  const at = s.pos;
+  const here = centre(at);
+  const settled = Math.abs(s.at.x - here.x) <= SUB / 4 && Math.abs(s.at.y - here.y) <= SUB / 4;
+  if (onto ? at.x === target.x && at.y === target.y && settled : Math.abs(at.x - target.x) + Math.abs(at.y - target.y) <= 1) {
+    stop();
+    if (!c.busy) cmd(state, { type: 'use', x: target.x, y: target.y });
     return;
   }
   if (bot.pathFor !== key || bot.path.length === 0 || state.tick % 40 === 0) {
@@ -61,12 +70,15 @@ function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Poin
   const i = bot.path.findIndex((p) => p.x === at.x && p.y === at.y);
   if (i >= 0) bot.path.splice(0, i + 1);
   const next = bot.path[0];
-  if (!next) {
-    cmd(state, { type: 'steer', dx: 0, dy: 0 });
+  if (!next) return stop();
+  if (getTile(state.grid, next.x, next.y) === 'door' && !isOpen(state.grid, next.x, next.y)) {
+    stop();
+    cmd(state, { type: 'use', x: next.x, y: next.y });
     return;
   }
-  const dx = Math.sign(next.x - at.x);
-  const dy = Math.sign(next.y - at.y);
+  const goal = centre(next);
+  const dx = Math.abs(goal.x - s.at.x) > SUB / 10 ? Math.sign(goal.x - s.at.x) : 0;
+  const dy = Math.abs(goal.y - s.at.y) > SUB / 10 ? Math.sign(goal.y - s.at.y) : 0;
   if (c.dx !== dx || c.dy !== dy) cmd(state, { type: 'steer', dx, dy });
 }
 
