@@ -12,13 +12,14 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
+import { edgeBetween } from './grid';
 import { seesAcross } from './work';
 import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
 export { REACH } from './motion';
 import { placedAt } from './motion';
 import { HIT_PANIC, frighten } from './body';
 import { zombieScale } from './difficulty';
-import { damageStructure, isStructure } from './breach';
+import { damageEdge, damageStructure, isStructure } from './breach';
 import { logEvent } from './events';
 import { furnitureAt, removeFurniture } from './furniture';
 import { addBlueprint } from './designations';
@@ -41,7 +42,7 @@ import { fallInPit } from './defences';
 import { HARDENED_KILLS, earnTrait } from './skills';
 import { RAIDER_DAMAGE } from './visitors';
 import { getTile, neighbours4, type Point } from './grid';
-import { canReach, findPathToAny, isPassable } from './pathfinding';
+import { canReach, crossable, findPathToAny, isPassable } from './pathfinding';
 import { pick, randomInt } from './rng';
 import { isExplored } from './fog';
 import { OUTDOORS, labelAt } from './rooms';
@@ -311,7 +312,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
 
   // Someone within reach: wind up, then bite (if they're still there) instead of moving.
   {
-    const reachable = state.survivors.filter((s) => inReach(s, z));
+    const reachable = state.survivors.filter((s) => inReach(s, z, REACH, state.grid));
     const victim = reachable.find((s) => s.id === z.targetId) ?? reachable[0];
     if (victim) {
       if (z.windup > 0) {
@@ -326,7 +327,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
       z.cooldown = WINDUP_TICKS;
     }
     // Nobody to hit but a dog: the dog, then.
-    const dog = state.dogs.find((d) => inReach(d, z));
+    const dog = state.dogs.find((d) => inReach(d, z, REACH, state.grid));
     if (dog) {
       if (z.cooldown === 0) {
         hitDog(state, dog, z.kind === 'raider' ? RAIDER_DAMAGE : ZOMBIE_DAMAGE);
@@ -343,7 +344,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
   if (z.at.x !== home.x || z.at.y !== home.y) {
     const goal = z.path[0] ?? z.pos;
     // Walled off mid-step (something built there): back to its own tile, and think again.
-    if (!isPassable(state.grid, goal.x, goal.y, moverOf(z))) {
+    if (!isPassable(state.grid, goal.x, goal.y, moverOf(z)) || !crossable(state.grid, z.pos.x, z.pos.y, goal.x, goal.y, moverOf(z))) {
       z.path = [];
       glide(z, home, speed);
       return;
@@ -362,6 +363,15 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
   }
   const next = z.path[0];
   if (!next) return;
+  // An edge wall or shut door between here and there: batter it.
+  if (!crossable(state.grid, z.pos.x, z.pos.y, next.x, next.y, moverOf(z))) {
+    const e = edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
+    if (e >= 0 && z.cooldown === 0) {
+      damageEdge(state, e, ZOMBIE_DAMAGE * VARIANTS[z.variant].battering);
+      z.cooldown = ZOMBIE_ATTACK_EVERY;
+    }
+    return;
+  }
   if (!isPassable(state.grid, next.x, next.y, moverOf(z))) {
     // A door or wall on the way in: batter it. Anything else, re-plan next tick.
     if (isStructure(getTile(state.grid, next.x, next.y)) && manhattan(z.pos, next) === 1) {
@@ -531,7 +541,8 @@ function plan(state: SimState, z: Zombie): void {
   const options = neighbours4(grid, z.pos.x, z.pos.y).filter((p) => isPassable(grid, p.x, p.y, moverOf(z)));
   if (z.heading) {
     // On with the herd: a path if there is one, else the step that gets closest.
-    const path = findPathToAny(grid, z.pos, [z.heading], 'zombie');
+    // Only search if it can be reached (cached): a heading shut inside a building would flood the map.
+    const path = canReach(grid, v, z.pos, [z.heading], 'zombie') ? findPathToAny(grid, z.pos, [z.heading], 'zombie') : null;
     if (path && path.length > 0) {
       z.path = path.slice(0, REPATH_EVERY);
       return;

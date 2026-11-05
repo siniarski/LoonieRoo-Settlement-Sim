@@ -64,8 +64,11 @@ export function createMinimap(view: ViewState) {
         for (let px = 0; px < w; px++) {
           const i = py * scale * grid.width + px * scale;
           const tile = grid.tiles[i]!;
+          // A tile with an edge wall (or door) on its north or west side shows as that: at a pixel a
+          // tile, the walls round a room still outline it.
+          const edge = grid.edges[i * 2] || grid.edges[i * 2 + 1];
           const colour =
-            grid.explored[i] !== 1 ? RGB.fog! : tile === 'floor' ? RGB[GROUNDS[grid.ground[i]!] ?? 'grass']! : RGB[tile]!;
+            grid.explored[i] !== 1 ? RGB.fog! : edge ? (edge === 1 ? RGB.wall! : RGB.door!) : tile === 'floor' ? RGB[GROUNDS[grid.ground[i]!] ?? 'grass']! : RGB[tile]!;
           const o = (py * w + px) * 4;
           image.data[o] = colour[0];
           image.data[o + 1] = colour[1];

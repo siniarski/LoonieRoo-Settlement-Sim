@@ -29,6 +29,8 @@ export const MIN_LABEL_PX = 18;
 
 export interface DrawOptions {
   hover: Point | null;
+  /** An edge tool's border under the cursor, previewed. */
+  hoverEdge?: { x: number; y: number; side: 'n' | 'w' } | null;
   /** Armed build tool, or null in select mode. */
   tool: ToolId | null;
   /** Fraction of the next tick elapsed, for interpolating movement. */
@@ -94,6 +96,14 @@ export function draw(
   if (size >= MIN_GRID_LINE_PX) drawGridLines(ctx, camera, viewport, range);
   drawMapEdge(ctx, camera, viewport, grid.width, grid.height);
   drawEdges(ctx, camera, viewport, grid, range, size);
+  if (options.hoverEdge) {
+    // The edge tool's target: a pale bar on the border.
+    const r = tileRect(camera, viewport, options.hoverEdge.x, options.hoverEdge.y);
+    const t = Math.max(2, size * 0.2);
+    ctx.fillStyle = 'rgba(240, 220, 160, 0.6)';
+    if (options.hoverEdge.side === 'n') ctx.fillRect(r.x - t / 2, r.y - t / 2, r.w + t, t);
+    else ctx.fillRect(r.x - t / 2, r.y - t / 2, t, r.h + t);
+  }
   if (options.showDebug) drawRoomOutlines(ctx, camera, viewport, state, range);
 
   for (const plot of state.farm) drawPlot(ctx, camera, viewport, plot);

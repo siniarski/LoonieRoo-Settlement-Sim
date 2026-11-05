@@ -28,17 +28,21 @@ function allPlans(): Plan[] {
   return out;
 }
 
-/** Floor and doors reachable from outside the plan, through its doors. */
+/** The plan's edge between two cells side by side, if any. */
+function edgeOf(p: Plan, ax: number, ay: number, bx: number, by: number) {
+  return p.edges.find((e) => (e.ax === ax && e.ay === ay && e.bx === bx && e.by === by) || (e.ax === bx && e.ay === by && e.bx === ax && e.by === ay));
+}
+
+/** Floor reachable from outside the plan, in through its outer door edges, crossing no edge wall. */
 function reachable(p: Plan): Set<number> {
   const seen = new Set<number>();
   const queue: [number, number][] = [];
-  for (let y = 0; y < p.h; y++) {
-    for (let x = 0; x < p.w; x++) {
-      const outerDoor = cellAt(p, x, y) === DOOR && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => cellAt(p, x + dx!, y + dy!) === OUTSIDE);
-      if (outerDoor) {
-        seen.add(y * p.w + x);
-        queue.push([x, y]);
-      }
+  for (const e of p.edges) {
+    if (!e.door || cellAt(p, e.bx, e.by) !== OUTSIDE) continue;
+    const i = e.ay * p.w + e.ax;
+    if (!seen.has(i)) {
+      seen.add(i);
+      queue.push([e.ax, e.ay]);
     }
   }
   while (queue.length) {
@@ -46,7 +50,8 @@ function reachable(p: Plan): Set<number> {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
       const c = cellAt(p, x + dx, y + dy);
       const i = (y + dy) * p.w + x + dx;
-      if ((c === FLOOR || c === DOOR) && !seen.has(i)) {
+      const edge = edgeOf(p, x, y, x + dx, y + dy);
+      if (c === FLOOR && !seen.has(i) && (!edge || edge.door)) {
         seen.add(i);
         queue.push([x + dx, y + dy]);
       }
@@ -58,12 +63,15 @@ function reachable(p: Plan): Set<number> {
 describe('building plans', () => {
   const plans = allPlans();
 
-  it('are walled all round: no floor touches the outside', () => {
+  it('are walled all round: an edge wall or door wherever floor meets the outside; no wall or door cells left', () => {
     for (const p of plans) {
+      expect(p.cells.filter((c) => c === WALL || c === DOOR), p.kind).toHaveLength(0);
       for (let y = 0; y < p.h; y++) {
         for (let x = 0; x < p.w; x++) {
           if (cellAt(p, x, y) !== FLOOR) continue;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) expect(cellAt(p, x + dx, y + dy), `${p.kind} (${x}, ${y})`).not.toBe(OUTSIDE);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            if (cellAt(p, x + dx, y + dy) === OUTSIDE) expect(edgeOf(p, x, y, x + dx, y + dy), `${p.kind} (${x}, ${y})`).toBeDefined();
+          }
         }
       }
     }
@@ -95,7 +103,7 @@ describe('building plans', () => {
       expect(p.h).toBeLessThanOrEqual(12);
       const looks = p.furniture.map((f) => f.look);
       for (const look of ['icebox', 'toilet', 'bed', 'sofa'] as const) expect(looks, `house ${n}`).toContain(look);
-      expect(p.cells.filter((c) => c === WALL).length).toBeGreaterThan(0);
+      expect(p.edges.filter((e) => !e.door).length).toBeGreaterThan(0);
     }
   });
 

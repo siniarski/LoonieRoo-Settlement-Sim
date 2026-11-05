@@ -16,7 +16,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, hasTrait, skillLevel, workStep
 import { applyRemedy, isPatient, remediesFor } from './medicine';
 import { getExploreArea, isExplored, scoutTarget, scoutingOver } from './fog';
 import { getTile, isWalkable, neighbours4, setDirty, type Point } from './grid';
-import { REPAIR_PER_TICK, repairStructure } from './breach';
+import { REPAIR_PER_TICK, repairEdge, repairStructure } from './breach';
 import { canHoldItem, dropItem, getItem, removeItem, spawnItem, type Item, type ItemKind } from './items';
 import { canReach, findPathToAny } from './pathfinding';
 import { random } from './rng';
@@ -386,7 +386,11 @@ function workBuild(state: SimState, s: Survivor, job: Job): void {
   if (isRepairJob(job)) return workRepair(state, s, job);
   const bp = job.blueprintId ? getBlueprint(state, job.blueprintId) : undefined;
   if (!bp) return releaseSurvivor(state, s, 'designation cancelled');
-  if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
+  if (bp.side) {
+    // An edge: built standing on either side of it.
+    const sides = [{ x: bp.x, y: bp.y }, bp.side === 'n' ? { x: bp.x, y: bp.y - 1 } : { x: bp.x - 1, y: bp.y }];
+    if (!sides.some((p) => samePoint(p, s.pos))) return goTo(state, s, job, sides);
+  } else if (manhattan(s.pos, bp) !== 1) return goTo(state, s, job, neighbours4(state.grid, bp.x, bp.y));
   const step = workStep(state, s, 'build');
   if (step === 0) return;
   bp.workDone += step;
@@ -398,12 +402,24 @@ function workBuild(state: SimState, s: Survivor, job: Job): void {
 
 /** Patch up a damaged wall or door from a tile next to it. */
 function workRepair(state: SimState, s: Survivor, job: Job): void {
+  if (job.edge !== undefined) return workRepairEdge(state, s, job, job.edge);
   if (manhattan(s.pos, job) !== 1) return goTo(state, s, job, neighbours4(state.grid, job.x, job.y));
   const step = workStep(state, s, 'build');
   if (step === 0) return;
   if (repairStructure(state, job.x, job.y, REPAIR_PER_TICK * step) > 0) return;
   makeNoise(state, job, 'building');
   finishJob(state, s, job, `repaired ${getTile(state.grid, job.x, job.y)} at (${job.x}, ${job.y})`);
+}
+
+/** Mends an edge wall or door, standing on either side of it. */
+function workRepairEdge(state: SimState, s: Survivor, job: Job, e: number): void {
+  const sides = [{ x: job.x, y: job.y }, e % 2 === 0 ? { x: job.x, y: job.y - 1 } : { x: job.x - 1, y: job.y }];
+  if (!sides.some((p) => samePoint(p, s.pos))) return goTo(state, s, job, sides);
+  const step = workStep(state, s, 'build');
+  if (step === 0) return;
+  if (repairEdge(state, e, REPAIR_PER_TICK * step) > 0) return;
+  makeNoise(state, job, 'building');
+  finishJob(state, s, job, 'repaired the ' + (state.grid.edges[e] === 1 ? 'wall' : 'door') + ' at (' + job.x + ', ' + job.y + ')');
 }
 
 function workHaul(state: SimState, s: Survivor, job: Job): void {

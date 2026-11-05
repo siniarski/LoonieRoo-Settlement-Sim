@@ -62,6 +62,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     areaDrag: null,
     toast: null,
     hover: null,
+    hoverEdge: null,
     speed: 1,
     paused: false,
     showDebug: false,
@@ -248,6 +249,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       const drawStart = performance.now();
       draw(ctx2d, handle.state, view.camera, viewport, {
         hover: view.hover,
+        hoverEdge: view.tool && view.hoverEdge ? view.hoverEdge : null,
         tool: view.tool,
         alpha,
         selectedId: view.selectedId,

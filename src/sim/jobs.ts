@@ -16,7 +16,7 @@ import { getFurniture } from './furniture';
 import { isPatient } from './medicine';
 import { getExploreArea } from './fog';
 import { isDirty, type Point } from './grid';
-import { structureDamage } from './breach';
+import { edgeDamage, structureDamage } from './breach';
 import { dropItem, getItem, type ItemKind } from './items';
 import type { JobType } from './jobTypes';
 import { getZombie } from './zombies';
@@ -60,6 +60,8 @@ export interface Job {
   animalId: string | null;
   /** Store hauls only: the reserved storage tile. */
   dest: Point | null;
+  /** Edge repairs only: the damaged edge (grid.ts); x, y are the tile it's the north or west side of. */
+  edge?: number;
   /** Clean and scavenge: ticks of work done. */
   progress: number;
   reservedBy: string | null;
@@ -148,9 +150,16 @@ export function reconcileJobs(state: SimState): void {
   }
 
   // Damaged walls and doors get one repair job each.
-  const repairing = new Set(state.jobs.filter(isRepairJob).map((j) => j.y * width + j.x));
+  const repairing = new Set(state.jobs.filter((j) => isRepairJob(j) && j.edge === undefined).map((j) => j.y * width + j.x));
   for (const i of [...state.grid.damageList].sort((a, b) => a - b)) {
     if (!repairing.has(i)) addJob(state, 'build', i % width, Math.floor(i / width), null, null);
+  }
+  // And damaged edge walls and doors.
+  const mending = new Set(state.jobs.filter((j) => isRepairJob(j) && j.edge !== undefined).map((j) => j.edge!));
+  for (const e of Object.keys(state.grid.edgeDamage).map(Number).sort((a, b) => a - b)) {
+    if (mending.has(e)) continue;
+    const tile = Math.floor(e / 2);
+    addJob(state, 'build', tile % width, Math.floor(tile / width), null, null).edge = e;
   }
 
   // Every explore area gets one scout job.
@@ -309,7 +318,7 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
     }
     case 'build':
     case 'haul': {
-      if (isRepairJob(job)) return structureDamage(state, job.x, job.y) > 0 ? null : 'nothing to repair';
+      if (isRepairJob(job)) return (job.edge !== undefined ? edgeDamage(state.grid, job.edge) : structureDamage(state, job.x, job.y)) > 0 ? null : 'nothing to repair';
       if (isStoreJob(job)) return storeInvalidReason(state, job, stores);
       if (isFuelJob(job)) {
         const g = getFurniture(state, job.furnitureId!);

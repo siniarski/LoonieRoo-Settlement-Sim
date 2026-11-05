@@ -5,7 +5,7 @@
 // biting for DOG_BITE. Zombies with nobody else to hit go for the dog.
 // Being near a dog cheers people up.
 
-import { inReach } from './motion';
+import { REACH, inReach } from './motion';
 import { placedAt } from './motion';
 import { logEvent } from './events';
 import { neighbours4, type Point } from './grid';
@@ -96,7 +96,7 @@ function updateDog(state: SimState, dog: Dog): void {
     .filter((z) => manhattan(z.pos, dog.pos) <= DOG_SENSE)
     .sort((a, b) => manhattan(a.pos, dog.pos) - manhattan(b.pos, dog.pos))[0];
   if (zombie && state.tick - dog.barkedTick >= BARK_EVERY) bark(state, dog, zombie);
-  if (zombie && inReach(zombie, dog)) {
+  if (zombie && inReach(zombie, dog, REACH, state.grid)) {
     if (dog.cooldown === 0) bite(state, dog, zombie);
     return;
   }

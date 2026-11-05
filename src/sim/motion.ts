@@ -10,7 +10,7 @@
 // `pos` follows it; if other code moves them by tile (an eviction), `at` snaps to follow.
 
 import { inBounds, type Grid, type Point } from './grid';
-import { crossable, isPassable, type Mover } from './pathfinding';
+import { crossable, isPassable, openBetween, type Mover } from './pathfinding';
 import type { Movement } from './survivors';
 
 export const SUB = 256;
@@ -22,15 +22,19 @@ export const SWING_REACH = 320;
 /** A blow or a bite reaches this far, centre to centre: orthogonal neighbours' centres are 1 tile apart, diagonal ones 1.41. */
 export const REACH = 282;
 
-export function inReach(a: { at: Point }, b: { at: Point }, reach = REACH): boolean {
-  return distance2(a.at, b.at) <= reach * reach;
+/**
+ * Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door
+ * between their tiles (grid.ts) stops a blow or a bite (pathfinding.ts openBetween).
+ */
+export function inReach(a: { at: Point }, b: { at: Point }, reach = REACH, grid?: Grid): boolean {
+  return distance2(a.at, b.at) <= reach * reach && (!grid || openBetween(grid, tileOf(a.at), tileOf(b.at)));
 }
 
 /**
  * The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees
  * of `facing` either way). Integer maths: dot > 0 and 4 * dot^2 >= |facing|^2 * |d|^2 (cos 60 = 1/2).
  */
-export function nearestInArc<T extends { at: Point }>(things: readonly T[], from: Point, facing: Point, reach = SWING_REACH): T | undefined {
+export function nearestInArc<T extends { at: Point }>(things: readonly T[], from: Point, facing: Point, reach = SWING_REACH, grid?: Grid): T | undefined {
   const f2 = facing.x * facing.x + facing.y * facing.y;
   let best: T | undefined;
   let bestD2 = Infinity;
@@ -41,6 +45,7 @@ export function nearestInArc<T extends { at: Point }>(things: readonly T[], from
     if (d2 > reach * reach || d2 >= bestD2) continue;
     const dot = dx * facing.x + dy * facing.y;
     if (d2 > 0 && (dot <= 0 || 4 * dot * dot < f2 * d2)) continue;
+    if (grid && !openBetween(grid, tileOf(from), tileOf(t.at))) continue; // not through a wall
     best = t;
     bestD2 = d2;
   }

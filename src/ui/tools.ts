@@ -4,6 +4,7 @@
 // selects, right-click moves the selected survivor.
 
 import type { Command } from '../sim/commands';
+import type { Side } from '../sim/grid';
 import type { Point } from '../sim/grid';
 
 export type ToolId = 'wall' | 'door' | 'barricade' | 'trap' | 'tower' | 'well' | 'collector' | 'generator' | 'lamp' | 'fridge' | 'bed' | 'table' | 'workbench' | 'stove' | 'housing' | 'storage' | 'armory' | 'messhall' | 'recroom' | 'infirmary' | 'barracks' | 'workshop' | 'farm' | 'wheat' | 'herb' | 'greenhouse' | 'coop' | 'hunt' | 'heater' | 'cell' | 'radio' | 'lab' | 'beacon' | 'turret' | 'lure' | 'pit' | 'reinforce' | 'perimeter' | 'furnish' | 'scavenge' | 'explore' | 'lock' | 'burn' | 'graveyard' | 'remove' | 'cancel';
@@ -27,6 +28,8 @@ export const CATEGORIES: readonly Category[] = [
 export interface ToolContext {
   /** Shift held: build or remove instantly instead of designating a job. */
   instant: boolean;
+  /** Edge tools: the tile border nearest the cursor (the tile, and its north or west side). */
+  side?: Side;
 }
 
 export interface Tool {
@@ -41,6 +44,8 @@ export interface Tool {
   furnish?: true;
   /** Whether Shift (instant) does anything for this tool. */
   hasInstant: boolean;
+  /** Builds on the tile border nearest the cursor, not on a tile (edge walls and doors, grid.ts). */
+  edge?: true;
   /** Null for tools that don't map to a single command (Furnish: see `furnish`). */
   command(x: number, y: number, ctx: ToolContext): Command | null;
   /** Area tools only: one command for the whole box instead of one per tile. */
@@ -54,7 +59,8 @@ export const TOOLS: readonly Tool[] = [
     category: 'structure',
     paints: true,
     hasInstant: true,
-    command: (x, y, { instant }) => (instant ? { type: 'placeWall', x, y } : { type: 'designateBuild', x, y, structure: 'wall' }),
+    edge: true,
+    command: (x, y, { instant, side }) => (instant ? { type: 'placeWall', x, y, ...(side ? { side } : {}) } : { type: 'designateBuild', x, y, structure: 'wall', ...(side ? { side } : {}) }),
   },
   {
     id: 'door',
@@ -62,7 +68,8 @@ export const TOOLS: readonly Tool[] = [
     category: 'structure',
     paints: true,
     hasInstant: true,
-    command: (x, y, { instant }) => (instant ? { type: 'placeDoor', x, y } : { type: 'designateBuild', x, y, structure: 'door' }),
+    edge: true,
+    command: (x, y, { instant, side }) => (instant ? { type: 'placeDoor', x, y, ...(side ? { side } : {}) } : { type: 'designateBuild', x, y, structure: 'door', ...(side ? { side } : {}) }),
   },
   {
     id: 'barricade',

@@ -26,7 +26,7 @@ import { AIM_MAX } from '../sim/control';
 import { SUB } from '../sim/motion';
 import type { Command } from '../sim/commands';
 import type { Control } from '../sim/control';
-import type { Point } from '../sim/grid';
+import type { Point, Side } from '../sim/grid';
 import { disarm, handleBuildKey } from './buildMode';
 import { getTool, tilesInBox, tilesOnLine } from './tools';
 import type { ViewState } from './view';
@@ -76,6 +76,19 @@ export interface Input {
   dispose(): void;
 }
 
+/** The tile border nearest a world point (in tiles): the tile, and its north or west side. */
+export function edgeNear(wx: number, wy: number): { x: number; y: number; side: Side } {
+  const tx = Math.floor(wx);
+  const ty = Math.floor(wy);
+  const fx = wx - tx;
+  const fy = wy - ty;
+  const near = Math.min(fy, 1 - fy, fx, 1 - fx);
+  if (near === fy) return { x: tx, y: ty, side: 'n' };
+  if (near === 1 - fy) return { x: tx, y: ty + 1, side: 'n' };
+  if (near === fx) return { x: tx, y: ty, side: 'w' };
+  return { x: tx + 1, y: ty, side: 'w' };
+}
+
 /** Directions the mouse aim snaps to (keeps the command log small). */
 const AIM_STEPS = 32;
 
@@ -102,6 +115,22 @@ export function attachInput(ctx: InputContext): Input {
     return tile.x >= 0 && tile.y >= 0 && tile.x < width && tile.y < height;
   };
 
+  /** The tile border nearest a screen point: the tile, and its north or west side. */
+  const edgeAt = (p: Point): { x: number; y: number; side: Side } => {
+    const w = screenToWorld(view.camera, ctx.viewport(), p.x, p.y);
+    return edgeNear(w.x, w.y);
+  };
+  /** Edge tools paint along borders: the last edge painted, and where the drag was in the world. */
+  let edgePainting: { wx: number; wy: number; last: string } | null = null;
+  const applyEdge = (e: { x: number; y: number; side: Side }) => {
+    if (!view.tool) return;
+    const key = `${e.x},${e.y},${e.side}`;
+    if (edgePainting && edgePainting.last === key) return;
+    if (edgePainting) edgePainting.last = key;
+    const cmd = getTool(view.tool).command(e.x, e.y, { instant: paintInstant, side: e.side });
+    if (cmd) ctx.command(cmd);
+  };
+
   const apply = (tile: Point) => {
     if (!view.tool || !onMap(tile)) return;
     const tool = getTool(view.tool);
@@ -119,6 +148,12 @@ export function attachInput(ctx: InputContext): Input {
     }
     if (view.tool) {
       paintInstant = shift;
+      if (getTool(view.tool).edge && mouse) {
+        const w = screenToWorld(view.camera, ctx.viewport(), mouse.x, mouse.y);
+        edgePainting = { wx: w.x, wy: w.y, last: '' };
+        applyEdge(edgeAt(mouse));
+        return;
+      }
       apply(tile);
       if (getTool(view.tool).paints) painting = tile;
       return;
@@ -158,6 +193,7 @@ export function attachInput(ctx: InputContext): Input {
       /* no capture */
     }
     const p = screenPoint(e);
+    mouse = p;
     if (e.button === 0) {
       onLeftDown(tileAt(p), e.shiftKey);
     } else if (e.button === 1 || e.button === 2) {
@@ -171,6 +207,20 @@ export function attachInput(ctx: InputContext): Input {
     mouse = p;
     const tile = tileAt(p);
     view.hover = tile;
+    const edgeTool = view.tool ? getTool(view.tool).edge === true : false;
+    view.hoverEdge = edgeTool ? edgeAt(p) : null;
+    if (edgePainting && edgeTool) {
+      // Along the drag in quarter-tile steps, so a quick stroke doesn't skip a border.
+      const w = screenToWorld(view.camera, ctx.viewport(), p.x, p.y);
+      const steps = Math.max(1, Math.ceil(Math.max(Math.abs(w.x - edgePainting.wx), Math.abs(w.y - edgePainting.wy)) * 4));
+      for (let i = 1; i <= steps; i++) {
+        const sx = edgePainting.wx + ((w.x - edgePainting.wx) * i) / steps;
+        const sy = edgePainting.wy + ((w.y - edgePainting.wy) * i) / steps;
+        applyEdge(edgeNear(sx, sy));
+      }
+      edgePainting.wx = w.x;
+      edgePainting.wy = w.y;
+    }
     if (view.areaDrag) view.areaDrag.to = tile;
     if (painting && (tile.x !== painting.x || tile.y !== painting.y)) {
       // Skip the first point: it was painted on the previous event.
@@ -196,6 +246,7 @@ export function attachInput(ctx: InputContext): Input {
       else tilesInBox(from, to).forEach(apply);
     }
     painting = null;
+    edgePainting = null;
     panning = null;
     rightPress = null;
   };

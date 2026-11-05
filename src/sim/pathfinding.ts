@@ -29,13 +29,13 @@ export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'sur
 /**
  * Can this mover cross from a tile to the one beside it: no edge wall between, or an edge door
  * it can get through (the same rules as door tiles: colonists and raiders open them, you and the
- * dead need them open). Edge walls stop everyone, breachers too (they can't batter edges yet).
+ * dead need them open). Edge walls stop everyone but a breacher, which batters them down.
  */
 export function crossable(grid: Grid, ax: number, ay: number, bx: number, by: number, mover: Mover = 'survivor'): boolean {
   const e = edgeBetween(grid, ax, ay, bx, by);
   if (e < 0) return true;
   const kind = grid.edges[e]!;
-  if (kind === EDGE_NONE) return true;
+  if (kind === EDGE_NONE || mover === 'breacher') return true; // a breacher batters its way through (zombies.ts)
   if (kind === EDGE_WALL) return false;
   if (kind === EDGE_DOOR) return mover === 'survivor' || mover === 'raider' || edgeIsOpen(grid, e);
   return true;
@@ -127,12 +127,23 @@ export function findPathToAny(
 // state: it never affects results, only speed, and a cloned state just
 // recomputes it.
 
-const componentCache = new WeakMap<Grid, Partial<Record<Mover, { version: number; labels: Int32Array }>>>();
+const componentCache = new WeakMap<Grid, Partial<Record<Mover, { version: number; doors: string; labels: Int32Array }>>>();
+
+/**
+ * Which doors stand open, for movers that need a door open to get through (you, the dead): doors
+ * held open for someone passing swing shut without bumping walkabilityVersion (doors.ts), so the
+ * labels are also keyed on this. Colonists and raiders open doors themselves: for them it's ''.
+ */
+function openDoors(grid: Grid, mover: Mover): string {
+  if (mover !== 'zombie' && mover !== 'free' && mover !== 'crawler') return '';
+  return grid.open.join(',') + '|' + grid.edgeOpen.join(',');
+}
 
 function components(grid: Grid, version: number, mover: Mover): Int32Array {
   const perMover = componentCache.get(grid) ?? {};
   const cached = perMover[mover];
-  if (cached && cached.version === version) return cached.labels;
+  const doors = openDoors(grid, mover);
+  if (cached && cached.version === version && cached.doors === doors) return cached.labels;
 
   const passable = (x: number, y: number) => isPassable(grid, x, y, mover);
   const { width, height } = grid;
@@ -159,7 +170,7 @@ function components(grid: Grid, version: number, mover: Mover): Int32Array {
     }
     next++;
   }
-  perMover[mover] = { version, labels };
+  perMover[mover] = { version, doors, labels };
   componentCache.set(grid, perMover);
   return labels;
 }
@@ -341,4 +352,23 @@ export function straightenAhead(grid: Grid, start: Point, path: readonly Point[]
 function edgeKindOf(grid: Grid, ax: number, ay: number, bx: number, by: number): number {
   const e = edgeBetween(grid, ax, ay, bx, by);
   return e < 0 ? EDGE_NONE : grid.edges[e]!;
+}
+
+/**
+ * Nothing solid between two tiles at most a step apart (side by side or diagonal): no edge wall
+ * or shut edge door on the border (a diagonal can go either way round the corner). The same tile,
+ * or tiles further apart, are open (reach decides those). For blows and bites (motion.ts inReach).
+ */
+export function openBetween(grid: Grid, a: Point, b: Point): boolean {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if ((dx === 0 && dy === 0) || Math.abs(dx) > 1 || Math.abs(dy) > 1) return true;
+  const open = (px: number, py: number, qx: number, qy: number) => {
+    const e = edgeBetween(grid, px, py, qx, qy);
+    if (e < 0) return true;
+    const kind = grid.edges[e]!;
+    return kind === EDGE_NONE || (kind === EDGE_DOOR && edgeIsOpen(grid, e));
+  };
+  if (dx === 0 || dy === 0) return open(a.x, a.y, b.x, b.y);
+  return (open(a.x, a.y, b.x, a.y) && open(b.x, a.y, b.x, b.y)) || (open(a.x, a.y, a.x, b.y) && open(a.x, b.y, b.x, b.y));
 }

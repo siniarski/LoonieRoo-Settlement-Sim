@@ -479,6 +479,19 @@ function drawWood(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewp
 export function drawBlueprint(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, bp: Blueprint, size: number): void {
   const r = tileRect(camera, viewport, bp.x, bp.y);
   const edge = COLOURS.blueprintEdge[bp.target];
+  if (bp.side) {
+    // An edge wall or door to build: a ghost bar on the border (dashed until its material is in).
+    const t = Math.max(2, size * 0.2);
+    const [bx, by, bw, bh] = bp.side === 'n' ? [r.x - t / 2, r.y - t / 2, r.w + t, t] : [r.x - t / 2, r.y - t / 2, t, r.h + t];
+    ctx.fillStyle = COLOURS.blueprint[bp.target];
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1;
+    ctx.setLineDash(bp.needsMaterial && !bp.delivered ? [3, 3] : []);
+    ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    ctx.setLineDash([]);
+    return;
+  }
   ctx.fillStyle = COLOURS.blueprint[bp.target];
   ctx.fillRect(r.x, r.y, r.w, r.h);
   ctx.strokeStyle = edge;

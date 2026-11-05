@@ -8,6 +8,7 @@ import { loadFile, toSaveFile } from '../src/sim/savefile';
 import { loadScenario, type Scenario } from '../src/sim/scenario';
 import { tick } from '../src/sim/tick';
 import { clearShot } from '../src/sim/work';
+import { edgeNear } from '../src/ui/input';
 
 /** A room inside (x0, y0)..(x1, y1) walled on its edges, with an edge door in the middle of its south side. */
 function box(x0: number, y0: number, x1: number, y1: number): NonNullable<Scenario['edges']> {
@@ -97,5 +98,69 @@ describe('walls on tile edges', () => {
     const state = loadScenario({ seed: 1, map: MAP, edges: box(1, 1, 3, 3) });
     const back = loadFile(toSaveFile(state));
     expect(back.ok && back.state.grid.edges).toEqual(state.grid.edges);
+  });
+
+  it('the dead batter an edge door down to get at someone inside', () => {
+    const state = loadScenario({ seed: 1, map: MAP.map((r, y) => (y === 2 ? '..s....' : y === 6 ? '..z....' : r)), edges: box(1, 1, 3, 3) });
+    const s = state.survivors[0]!;
+    for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
+    state.zombies[0]!.kind = 'static';
+    const door = edgeBetween(state.grid, 2, 3, 2, 4);
+    let broke = false;
+    for (let t = 0; t < 400 && !broke; t++) {
+      tick(state);
+      broke = state.grid.edges[door] !== EDGE_DOOR;
+    }
+    expect(broke).toBe(true);
+    expect(state.events.some((e) => e.message.includes('broke through the door'))).toBe(true);
+  });
+
+  it('a colonist mends a damaged edge wall from either side', () => {
+    const state = loadScenario({ seed: 1, map: MAP.map((r, y) => (y === 5 ? '.....s.' : r)), edges: box(1, 1, 3, 3) });
+    const s = state.survivors[0]!;
+    for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
+    s.priorities.build = 1;
+    const wall = edgeBetween(state.grid, 3, 2, 4, 2); // the east wall
+    state.grid.edgeDamage[String(wall)] = 300;
+    for (let t = 0; t < 600 && state.grid.edgeDamage[String(wall)] !== undefined; t++) tick(state);
+    expect(state.grid.edgeDamage[String(wall)]).toBeUndefined();
+    expect(state.grid.edges[wall]).toBe(1);
+  });
+
+  it('a colonist builds an edge wall you designate: wood brought, built from either side', () => {
+    const state = loadScenario({ seed: 1, map: ['s.w....', '.......', '.......'] });
+    const s = state.survivors[0]!;
+    for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
+    s.priorities.build = 1;
+    s.priorities.haul = 2;
+    expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 1, structure: 'wall', side: 'n' }).ok).toBe(true);
+    expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 1, structure: 'barricade', side: 'n' }).ok).toBe(false);
+    expect(applyCommand(state, { type: 'designateBuild', x: 3, y: 0, structure: 'wall', side: 'n' }).ok).toBe(false); // the map's border
+    const wall = edgeBetween(state.grid, 3, 1, 3, 0);
+    for (let t = 0; t < 600 && state.grid.edges[wall] !== 1; t++) tick(state);
+    expect(state.grid.edges[wall]).toBe(1);
+    expect(state.blueprints).toHaveLength(0);
+  });
+
+  it('the wall and door tools pick the tile border nearest the cursor', () => {
+    expect(edgeNear(3.5, 2.1)).toEqual({ x: 3, y: 2, side: 'n' });
+    expect(edgeNear(3.5, 2.9)).toEqual({ x: 3, y: 3, side: 'n' });
+    expect(edgeNear(3.1, 2.5)).toEqual({ x: 3, y: 2, side: 'w' });
+    expect(edgeNear(3.9, 2.5)).toEqual({ x: 4, y: 2, side: 'w' });
+  });
+
+  it('nobody bites or hits through an edge wall', () => {
+    const state = loadScenario({ seed: 1, map: MAP.map((r, y) => (y === 2 ? '...sz..' : r)), edges: box(1, 1, 3, 3) });
+    const s = state.survivors[0]!;
+    for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
+    state.zombies[0]!.kind = 'static';
+    applyCommand(state, { type: 'takeControl', survivorId: s.id });
+    for (let t = 0; t < 60; t++) tick(state);
+    expect(s.health).toBe(1000); // the zombie at (4, 2) is outside the east wall
+    const z = state.zombies[0]!;
+    const before = z.health;
+    applyCommand(state, { type: 'aim', x: 64, y: 0 });
+    applyCommand(state, { type: 'swing', x: 4, y: 2 });
+    expect(z.health).toBe(before);
   });
 });

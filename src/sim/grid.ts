@@ -56,6 +56,8 @@ export interface Grid {
   /** Edge doors standing open (edge indices), and those held open only for someone passing. */
   edgeOpen: number[];
   edgePassing: number[];
+  /** Damage on edge walls and doors, by edge index (breach.ts); only damaged ones are listed. */
+  edgeDamage: Record<string, number>;
 }
 
 export const EDGE_NONE = 0;
@@ -84,6 +86,7 @@ export function createGrid(width: number, height: number, fill: Tile = 'floor'):
     edges: new Array<number>(width * height * 2).fill(EDGE_NONE),
     edgeOpen: [],
     edgePassing: [],
+    edgeDamage: {},
   };
 }
 
@@ -115,6 +118,7 @@ export function setEdge(grid: Grid, x: number, y: number, side: Side, kind: numb
   grid.edges[e] = kind;
   drop(grid.edgeOpen, e); // a new door starts shut
   drop(grid.edgePassing, e);
+  delete grid.edgeDamage[String(e)]; // and undamaged
   return true;
 }
 

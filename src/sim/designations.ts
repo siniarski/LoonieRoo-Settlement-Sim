@@ -3,6 +3,7 @@
 // still needs material, then a build job.
 
 import { clearPlot } from './farming';
+import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, setEdge, type Side } from './grid';
 import { addFurniture, furnitureAt, removeFurniture } from './furniture';
 import { getTile, isWalkable, setTile, type Point } from './grid';
 import { dropItem, itemAt, spawnItem } from './items';
@@ -35,6 +36,8 @@ export interface Blueprint {
   delivered: boolean;
   workDone: number;
   workRequired: number;
+  /** An edge wall or door (grid.ts): on this tile's north or west side, not on the tile. */
+  side?: Side;
 }
 
 /** Ticks of work (10 ticks = 1s at 1x). */
@@ -61,12 +64,13 @@ export function hasRemovable(state: SimState, x: number, y: number): boolean {
 
 /** Building needs empty floor (no furniture); removing needs something to remove. */
 export function preconditionHolds(state: SimState, bp: Blueprint): boolean {
+  if (bp.side) return state.grid.edges[edgeIndex(state.grid, bp.x, bp.y, bp.side)] === EDGE_NONE;
   if (bp.target === 'floor') return hasRemovable(state, bp.x, bp.y);
   if (bp.target === 'reinforce') return isStructure(getTile(state.grid, bp.x, bp.y)) && !state.grid.reinforced.includes(bp.y * state.grid.width + bp.x);
   return getTile(state.grid, bp.x, bp.y) === 'floor' && !furnitureAt(state, bp.x, bp.y);
 }
 
-export function addBlueprint(state: SimState, x: number, y: number, target: BuildTarget): Blueprint {
+export function addBlueprint(state: SimState, x: number, y: number, target: BuildTarget, side?: Side): Blueprint {
   const bp: Blueprint = {
     id: `b${state.nextId++}`,
     x,
@@ -77,6 +81,7 @@ export function addBlueprint(state: SimState, x: number, y: number, target: Buil
     workDone: 0,
     workRequired: BUILD_WORK[target],
   };
+  if (side) bp.side = side;
   state.blueprints.push(bp);
   return bp;
 }
@@ -92,6 +97,10 @@ export function cancelBlueprint(state: SimState, bp: Blueprint): void {
 export function completeBlueprint(state: SimState, bp: Blueprint): void {
   const i = state.blueprints.indexOf(bp);
   if (i >= 0) state.blueprints.splice(i, 1);
+  if (bp.side && (bp.target === 'wall' || bp.target === 'door')) {
+    if (setEdge(state.grid, bp.x, bp.y, bp.side, bp.target === 'wall' ? EDGE_WALL : EDGE_DOOR)) state.walkabilityVersion += 1;
+    return;
+  }
   switch (bp.target) {
     case 'wall':
     case 'door':
