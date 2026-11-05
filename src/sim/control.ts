@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { ENTER_REACH, VEHICLE_RADIUS, drive, leaveVehicle, useVehicle, vehicleOf, vehiclesOf } from './vehicles';
 import { maybeAlarm } from './timeline';
 import { EDGE_WINDOW, edgeBetween } from './grid';
 import { smashGlass } from './breach';
@@ -50,7 +51,7 @@ import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, TOOL_FOR, hasTrait, skillLevel
 import { SLOT_OF, isGarment } from './clothing';
 import type { SimState } from './state';
 import { enterTile, getSurvivor, stepPace, type Survivor } from './survivors';
-import { REACH, SUB, SWING_REACH, centre, fits, followTile, inReach, inWindowFrame, nearestInArc, slide, tileOf, toward } from './motion';
+import { REACH, SUB, SWING_REACH, centre, distance2, fits, followTile, inReach, inWindowFrame, nearestInArc, slide, tileOf, toward } from './motion';
 import { GUN_DAMAGE, GUN_EVERY, GUN_RANGE, blowDamage, loadedGun, wearWeapon } from './weapons';
 import { damageZombie, knockBack, type Zombie } from './zombies';
 
@@ -124,6 +125,12 @@ export function isControlled(state: SimState, s: Survivor): boolean {
 /** Called once a tick for the controlled survivor, in place of their own behaviour. */
 export function updateControlled(state: SimState, s: Survivor): void {
   const c = state.control!;
+  // Behind the wheel, the keys are the pedals and the wheel (vehicles.ts).
+  if (vehicleOf(state, s)) {
+    c.busy = null;
+    drive(state, s, c.dx, c.dy);
+    return;
+  }
   s.move = null;
   followTile(s);
   if (c.dx !== 0 || c.dy !== 0) {
@@ -255,7 +262,7 @@ function towards(from: Point, to: Point): Point | null {
 /** Swing (or shoot) towards a tile. Returns what happened, or null if nothing could be done. */
 export function swing(state: SimState, s: Survivor, target: Point): string | null {
   const c = state.control!;
-  if (state.tick < c.nextSwing || s.move) return null;
+  if (state.tick < c.nextSwing || s.move || vehicleOf(state, s)) return null;
   const face = towards(s.pos, target);
   if (face) c.facing = face;
   c.busy = null;
@@ -362,7 +369,15 @@ function zombieToHit(state: SimState, from: Point, facing: Point): Zombie | unde
 /** Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do. */
 export function use(state: SimState, s: Survivor, target: Point): string | null {
   const c = state.control!;
+  // In a car, using anything gets you out.
+  if (vehicleOf(state, s)) return leaveVehicle(state, s);
   if (s.move || !nextTo(s.pos, target)) return null;
+  // A car there: fill it up, or get in.
+  const car = vehiclesOf(state).find((v) => distance2(v.at, centre(target)) <= (VEHICLE_RADIUS + SUB / 2) ** 2 && distance2(v.at, s.at) <= ENTER_REACH ** 2);
+  if (car) {
+    c.busy = null;
+    return useVehicle(state, s, car);
+  }
   const face = towards(s.pos, target);
   if (face) c.facing = face;
   const person = residentAt(state, target);

@@ -145,15 +145,15 @@ function touches(c: Point, r: number, x0: number, y0: number, x1: number, y1: nu
  * along a wall rather than sticking to it. Big moves go in steps no longer than a radius,
  * so nothing tunnels through a wall. Returns the new centre.
  */
-export function slide(grid: Grid, at: Point, dx: number, dy: number, mover: Mover): Point {
+export function slide(grid: Grid, at: Point, dx: number, dy: number, mover: Mover, r = BODY_RADIUS): Point {
   let x = at.x;
   let y = at.y;
-  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / BODY_RADIUS));
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / r));
   for (let i = 1; i <= steps; i++) {
     const sx = Math.trunc((dx * i) / steps) - Math.trunc((dx * (i - 1)) / steps);
     const sy = Math.trunc((dy * i) / steps) - Math.trunc((dy * (i - 1)) / steps);
-    if (sx !== 0 && fits(grid, { x: x + sx, y }, mover)) x += sx;
-    if (sy !== 0 && fits(grid, { x, y: y + sy }, mover)) y += sy;
+    if (sx !== 0 && fits(grid, { x: x + sx, y }, mover, r)) x += sx;
+    if (sy !== 0 && fits(grid, { x, y: y + sy }, mover, r)) y += sy;
   }
   return { x, y };
 }

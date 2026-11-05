@@ -1,6 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import { isRadioactive } from '../sim/climate';
+import { HEADINGS, vehiclesOf } from '../sim/vehicles';
 import { visibleNow } from '../sim/sight';
 import { isHostile } from '../sim/settlements';
 import { worldPos } from './interp';
@@ -42,6 +43,9 @@ export interface DrawOptions {
   /** Box being dragged out by an area tool, if any. */
   areaDrag: { from: Point; to: Point } | null;
 }
+
+/** Paint, by car. */
+const CAR_COLOURS = ['#8a2f2a', '#2f4f7a', '#c9c2b0', '#3d5a3a', '#6b6b70', '#b08a2a'];
 
 export function draw(
   ctx: CanvasRenderingContext2D,
@@ -224,6 +228,27 @@ export function draw(
   }
   for (const d of state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(ctx, camera, viewport, d, options.alpha, size);
   for (const s of state.survivors) drawSurvivor(ctx, camera, viewport, state, s, options, size);
+  // Cars (vehicles.ts), over whoever is in them: a body turned to its heading, a windscreen at the front.
+  for (const v of vehiclesOf(state)) {
+    if (!shown(v.pos.x, v.pos.y)) continue;
+    const w = worldPos(v, options.alpha);
+    const p = worldToScreen(camera, viewport, w.x, w.y);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((v.heading / HEADINGS) * Math.PI * 2);
+    const len = size * 1.05;
+    const wid = size * 0.6;
+    ctx.fillStyle = v.health <= 0 ? '#4a4440' : CAR_COLOURS[Number(v.id.slice(1)) % CAR_COLOURS.length]!;
+    ctx.fillRect(-len / 2, -wid / 2, len, wid);
+    ctx.fillStyle = 'rgba(170, 210, 235, 0.8)';
+    ctx.fillRect(len * 0.12, -wid * 0.38, len * 0.16, wid * 0.76);
+    ctx.fillStyle = 'rgba(170, 210, 235, 0.5)';
+    ctx.fillRect(-len * 0.38, -wid * 0.34, len * 0.12, wid * 0.68);
+    ctx.strokeStyle = '#141614';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-len / 2, -wid / 2, len, wid);
+    ctx.restore();
+  }
   // The world winding down (timeline.ts): alarms ringing (seen or not: you hear them), the helicopter overhead.
   for (const a of state.timeline?.alarms ?? []) {
     const p = worldToScreen(camera, viewport, a.x + 0.5, a.y + 0.5);

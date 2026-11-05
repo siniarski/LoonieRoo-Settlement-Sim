@@ -18,7 +18,8 @@
 // or left open, containers hold loot (more further out, some already searched), and the dead
 // sleep inside bigger and further-out buildings.
 
-import { addFurniture, type Look } from './furniture';
+import { addFurniture, furnitureAt, type Look } from './furniture';
+import { FUEL_MAX, VEHICLE_HEALTH, addVehicle, headingOf, parkable } from './vehicles';
 import { crateLoot, ruinDecay, zombieScale } from './difficulty';
 import { EDGE_DOOR, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
 import { hashRoll } from './hash';
@@ -236,6 +237,27 @@ export function drawLot(state: SimState, ctx: LotContext, lot: Lot, x0: number, 
   layout.buildings.forEach((b, bi) => drawBuilding(state, ctx, lot, b, bi, inside, covered));
   for (const t of layout.trees) if (inside(t.x, t.y) && !covered.has(`${t.x},${t.y}`)) addFurniture(state, 'tree', t.x, t.y);
   for (const d of layout.decor) if (inside(d.x, d.y) && !covered.has(`${d.x},${d.y}`)) addFurniture(state, 'decor', d.x, d.y).look = d.look;
+  parkCar(state, ctx, lot, inside);
+}
+
+/** Of the lots in town (houses, shops, civic, industry), this many have a car parked in the street in front. */
+export const CAR_CHANCE = 0.6;
+
+/**
+ * A car in the street in front of a lot in town, some of the time (by hash): along the street,
+ * a little fuel, some wear. Only the chunk holding its tile parks it, so it's parked once.
+ */
+function parkCar(state: SimState, ctx: LotContext, lot: Lot, inside: (x: number, y: number) => boolean): void {
+  if (lot.zone !== 'residential' && lot.zone !== 'commercial' && lot.zone !== 'civic' && lot.zone !== 'industrial') return;
+  const r = (k: number) => hashRoll(ctx.seed, lot.x, lot.y, 0xca5 + k);
+  if (r(0) >= CAR_CHANCE) return;
+  const { F: w } = frame(lot);
+  const u = 1 + Math.floor(r(1) * Math.max(1, w - 2));
+  const p = lotToMap(lot, u, -2); // past the verge: the near lane
+  if (!inside(p.x, p.y) || !parkable(state, p) || furnitureAt(state, p.x, p.y)) return;
+  const next = lotToMap(lot, u + 1, -2);
+  const heading = headingOf(next.x - p.x, next.y - p.y) + (r(2) < 0.5 ? 0 : 16);
+  addVehicle(state, p.x, p.y, heading, Math.floor(r(3) * 0.6 * FUEL_MAX), Math.floor((0.4 + r(4) * 0.6) * VEHICLE_HEALTH));
 }
 
 function drawBuilding(state: SimState, ctx: LotContext, lot: Lot, b: Placement, bi: number, inside: (x: number, y: number) => boolean, covered: Set<string>): void {

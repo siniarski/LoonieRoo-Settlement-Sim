@@ -12,7 +12,8 @@ import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, EDGE_WINDOW, EDGE_WIND
  * door open (you open it yourself). Zombies only get through open ones; raiders open unlocked
  * ones. 'breacher' is a zombie planning to batter its way through: every tile is passable.
  */
-export type Mover = 'survivor' | 'free' | 'zombie' | 'breacher' | 'raider' | 'crawler';
+/** 'vehicle': a car (vehicles.ts): floor only, and no border but a bare one. Never pathfinds. */
+export type Mover = 'survivor' | 'free' | 'zombie' | 'breacher' | 'raider' | 'crawler' | 'vehicle';
 
 export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'survivor'): boolean {
   if (mover === 'breacher') return inBounds(grid, x, y) && getTile(grid, x, y) !== 'water';
@@ -20,6 +21,7 @@ export function isPassable(grid: Grid, x: number, y: number, mover: Mover = 'sur
   const tile = getTile(grid, x, y);
   const openDoor = tile === 'door' && isOpen(grid, x, y);
   if (mover === 'crawler') return tile === 'floor' || tile === 'barricade' || openDoor;
+  if (mover === 'vehicle') return tile === 'floor';
   if (mover === 'raider') return tile === 'floor' || (tile === 'door' && !isLocked(grid, x, y));
   if (mover === 'survivor') return isWalkable(grid, x, y);
   if (mover === 'free') return tile === 'floor' || tile === 'barricade' || openDoor;
@@ -36,7 +38,7 @@ export function crossable(grid: Grid, ax: number, ay: number, bx: number, by: nu
   if (e < 0) return true;
   const kind = grid.edges[e]!;
   if (kind === EDGE_NONE || mover === 'breacher') return true; // a breacher batters its way through (zombies.ts)
-  if (kind === EDGE_WALL) return false;
+  if (kind === EDGE_WALL || mover === 'vehicle') return false;
   if (kind === EDGE_DOOR) return mover === 'survivor' || (mover === 'raider' && !grid.edgeLocked.includes(e)) || edgeIsOpen(grid, e);
   if (kind === EDGE_BARRICADE) return mover === 'survivor' || mover === 'free' || mover === 'crawler';
   // Windows: glass stops everyone (a breacher batters it); broken and unboarded, you, the dead and

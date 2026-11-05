@@ -12,6 +12,7 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
+import { batterVehicle } from './vehicles';
 import { EDGE_WINDOW_BROKEN, edgeBetween } from './grid';
 import { seesAcross } from './work';
 import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
@@ -318,7 +319,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     if (victim) {
       if (z.windup > 0) {
         z.windup -= 1;
-        if (z.windup === 0) hit(state, z, victim);
+        if (z.windup === 0 && !batterVehicle(state, victim)) hit(state, z, victim); // in a car, the car takes it
       } else if (z.cooldown === 0) z.windup = WINDUP_TICKS;
       return;
     }
