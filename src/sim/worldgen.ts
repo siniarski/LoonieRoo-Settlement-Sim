@@ -13,6 +13,7 @@
 //    order; ids are labels, nothing else.)
 
 import { NORMAL, type MapType, type Settings } from './difficulty';
+import { applyCharacter, characterProblem, type Character } from './character';
 import { rollTimeline } from './timeline';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
 import { GROUNDS, getTile, inBounds, isWalkable, setTile, tileIndex, type Ground, type Point } from './grid';
@@ -223,7 +224,8 @@ function nearestAcross(state: SimState, p: Point, accept: (x: number, y: number)
 }
 
 /** A fresh world: the start area's chunks, the start camp, and fog over everything not near it. */
-export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings = NORMAL): SimState {
+/** A new generated world; `you`, if given, becomes the first survivor (character.ts). */
+export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings = NORMAL, you?: Character): SimState {
   const state = createState({ seed, width: size, height: size });
   state.settings = { ...settings };
   const l = layout(seed, size, settings.map);
@@ -231,6 +233,7 @@ export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings 
   state.world = { seed, size, chunks, generated: new Array<number>(chunks * chunks).fill(0) };
   ensureGeneratedAround(state, l.start);
   startCamp(state, l);
+  if (you && characterProblem(you) === null) applyCharacter(state, state.survivors[0]!, you);
   state.harsh = true;
   rollTimeline(state, seed);
   placeSettlements(state, l.start, seed);

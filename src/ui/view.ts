@@ -26,7 +26,7 @@ export interface ViewState {
   showDebug: boolean;
   showPriorities: boolean;
   /** The menu screen over the game, or null when playing (menu.ts). */
-  menu: 'main' | 'new' | 'load' | null;
+  menu: 'main' | 'new' | 'character' | 'load' | null;
   /** A game is going on under the menu (so it offers Resume and Save, not Continue). */
   inGame: boolean;
   /** The New game screen's Customise section is open. */

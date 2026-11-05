@@ -112,12 +112,12 @@ export function isSneaking(state: SimState, s: Survivor): boolean {
   return state.control?.survivorId === s.id && state.control.sneaking === true;
 }
 
-/** How far off (Manhattan) a survivor's movement can be heard, 0 standing still. */
+/** How far off (Manhattan) a survivor's movement can be heard, 0 standing still (traits: graceful, clumsy). */
 export function heardFrom(state: SimState, s: Survivor): number {
   const c = state.control?.survivorId === s.id ? state.control : null;
-  if (!c) return s.move ? WALK_HEARD : 0;
-  if (c.dx === 0 && c.dy === 0) return 0;
-  return c.sneaking ? SNEAK_HEARD : c.running ? RUN_HEARD : WALK_HEARD;
+  const base = !c ? (s.move ? WALK_HEARD : 0) : c.dx === 0 && c.dy === 0 ? 0 : c.sneaking ? SNEAK_HEARD : c.running ? RUN_HEARD : WALK_HEARD;
+  // Graceful: half as far; clumsy: half as far again.
+  return hasTrait(s, 'graceful') ? Math.floor(base / 2) : hasTrait(s, 'clumsy') ? Math.round((base * 3) / 2) : base;
 }
 
 /** Can a zombie at `z` see a survivor at `s` (`sneaking`: half as far)? */

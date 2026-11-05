@@ -170,8 +170,8 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   };
   const menuActions: MenuActions = {
     resume: toggleMenu,
-    newGame: (size, settings, seed) => {
-      const world = createWorld(seed ?? Math.floor(Math.random() * 1e9), size, settings);
+    newGame: (size, settings, seed, you) => {
+      const world = createWorld(seed ?? Math.floor(Math.random() * 1e9), size, settings, you);
       if (!replaceState({ ok: true, state: world, kind: 'save' }, `a new ${size}×${size} world`)) return;
       play();
       if (settings.start === 'solo') toast('Alone. WASD to walk, click to swing, right-click or E to use. Space to play.');
