@@ -97,5 +97,16 @@ Time.SetDayScale(1);
     }
 }
 
+// Whole states: read into the C# types and written back, the same JSON.
+foreach (var file in Directory.GetFiles(Path.Combine(dir, "states"), "*.json"))
+{
+    string json = File.ReadAllText(file);
+    SimState state;
+    try { state = StateJson.Read(json); }
+    catch (Exception e) { Check("state read", false, $"{Path.GetFileName(file)}: {e.Message}"); continue; }
+    var diffs = StateJson.Diff(System.Text.Json.Nodes.JsonNode.Parse(json), System.Text.Json.Nodes.JsonNode.Parse(StateJson.Write(state)));
+    Check("state round trip", diffs.Count == 0, $"{Path.GetFileName(file)}:\n  " + string.Join("\n  ", diffs));
+}
+
 Console.WriteLine(failures == 0 ? $"parity: all {checks} checks match" : $"parity: {failures} of {checks} checks differ");
 return failures == 0 ? 0 : 1;

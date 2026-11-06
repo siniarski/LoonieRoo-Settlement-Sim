@@ -4,6 +4,8 @@
 //                 fractions), so the C# number handling is checked bit for bit.
 //   paths.json    a generated world's grid (some doors left open) and answers to path, reach and straightening
 //                 queries for every kind of mover.
+//   states/*.json whole sim states (JSON.stringify, as cloneState): a generated world two days in, a colony
+//                 under the stress scenario's crowd, so the C# state types are checked field for field.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { hashRoll, idNumber } from '../src/sim/hash';
@@ -12,6 +14,8 @@ import { CHUNK, createWorld, ensureGeneratedAround } from '../src/sim/worldgen';
 import { canReach, findPathToAny, openBetween, straighten, walksAcross, type Mover } from '../src/sim/pathfinding';
 import { nearestTile } from '../src/sim/space';
 import { isWalkable } from '../src/sim/grid';
+import { tick } from '../src/sim/tick';
+import { SCENARIOS } from './stressScenarios';
 import { clockText, darkness, dayOf, hourOf, isNight, nightNumber, setDayScale, tickOfDay, ticksIntoNight } from '../src/sim/time';
 
 it('writes reference vectors for the C# port', () => {
@@ -68,4 +72,14 @@ it('writes pathfinding references for the C# port', () => {
     queries.push({ mover, from, goals, path: path ? path.flatMap((p) => [p.x, p.y]) : null, reach, straight: straight ? straight.flatMap((p) => [p.x, p.y]) : null, b, open: openBetween(g, from, b), walks: walksAcross(g, from, b, mover), near });
   }
   writeFileSync('cs/Parity/data/paths.json', JSON.stringify({ grid: g, version: state.walkabilityVersion, queries }));
+}, 600000);
+
+it('writes whole states for the C# port', () => {
+  mkdirSync('cs/Parity/data/states', { recursive: true });
+  const world = createWorld(5, 128);
+  for (let k = 0; k < 2 * 4800; k++) tick(world);
+  writeFileSync('cs/Parity/data/states/world-128-day3.json', JSON.stringify(world));
+  const colony = SCENARIOS.find((s) => s.name === 'colony-512')!.build();
+  for (let k = 0; k < 600; k++) tick(colony);
+  writeFileSync('cs/Parity/data/states/colony-512.json', JSON.stringify(colony));
 }, 600000);
