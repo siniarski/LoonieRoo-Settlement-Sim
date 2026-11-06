@@ -1,8 +1,9 @@
 // Harness (not part of npm test): a scripted solo player (direct control) on a preset, for balance passes.
 // Run: npm run harness -- solo   (env: see the top of the file; output goes to harness/out/solo.txt)
 // Up to DAYS days (25) or BUDGET_MS (300000) per world, for each of SEEDS (1,2,3); PRESET (apocalypse); TRACE=1 logs every 150 ticks.
-// The player searches crates by day, eats, drinks, sleeps in the hut, fights what's next to it, flees when
-// hurt, treats itself and amputates. It does not yet barricade, forage or hunt (handiwork.ts).
+// The player searches crates by day, eats, drinks (taps while the water's on), sleeps in the hut, fights
+// what's next to it, flees when hurt, treats itself and amputates; sneaks when the dead are about but not on
+// it, and forages when hungry with no food about. It does not yet barricade, hunt or drive.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { applyCommand, type Command } from '../src/sim/commands';
@@ -12,7 +13,7 @@ import { HUNGRY } from '../src/sim/food';
 import { HEALTH_MAX } from '../src/sim/health';
 import { findPathToAny, openBetween } from '../src/sim/pathfinding';
 import { EDGE_DOOR, edgeBetween, edgeIsOpen, getTile, isOpen, neighbours4, type Point } from '../src/sim/grid';
-import { SUB, centre } from '../src/sim/motion';
+import { SUB, SWING_REACH, centre, distance2, inReach, tileOf } from '../src/sim/motion';
 import { TIRED } from '../src/sim/rest';
 import type { SimState } from '../src/sim/state';
 import type { Survivor } from '../src/sim/survivors';
@@ -22,6 +23,12 @@ import { THIRSTY } from '../src/sim/water';
 import { createWorld } from '../src/sim/worldgen';
 import { remediesFor } from '../src/sim/medicine';
 import { canAmputate } from '../src/sim/wounds';
+import { forageTime } from '../src/sim/forage';
+import { canForage } from '../src/sim/handiwork';
+import { GROUNDS, isWalkable } from '../src/sim/grid';
+import { isIndoors } from '../src/sim/rooms';
+import { nearestTile } from '../src/sim/space';
+import { isTap } from '../src/sim/timeline';
 
 const cmd = (s: SimState, c: Command) => applyCommand(s, c);
 const out: string[] = [];
@@ -41,6 +48,8 @@ interface Bot {
   drank: number;
   slept: number;
   fled: number;
+  foraged: number;
+  sneaked: number;
   treated: number;
   amputated: number;
 }
@@ -102,12 +111,23 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
     return;
   }
   if (s.move) return;
-  const zs = state.zombies.filter((z) => dist(z.pos, s.pos) <= 6).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos));
+  // Where the dead really are: the tile under each one's centre (its pos can lag a tile behind: motion.ts).
+  const zs = state.zombies.map((q) => ({ id: q.id, pos: tileOf(q.at), body: q })).filter((q) => dist(q.pos, s.pos) <= 6).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos));
   const z = zs[0];
+  // The dead about but not on you: sneak (sight.ts), so they don't notice; otherwise walk.
+  const sneak = state.zombies.some((q) => dist(q.pos, s.pos) <= 10) && !(z && dist(z.pos, s.pos) <= 1);
+  if ((c.sneaking === true) !== sneak) {
+    cmd(state, { type: 'sneak', on: sneak });
+    if (sneak) bot.sneaked++;
+  }
   // Fight what's next to you; flee when hurt.
-  if (z && dist(z.pos, s.pos) <= 1 && openBetween(state.grid, s.pos, z.pos) && s.health > HEALTH_MAX * 0.3) {
+  // In swing reach as the game measures it (centre to centre, not through a wall): a bite reaches across a tile edge.
+  const close = state.zombies.filter((q) => inReach(s, q, SWING_REACH, state.grid)).sort((a, b) => distance2(a.at, s.at) - distance2(b.at, s.at))[0];
+  if (close && s.health > HEALTH_MAX * 0.3) {
+    const zt = tileOf(close.at);
     if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
-    cmd(state, { type: 'swing', x: z.pos.x, y: z.pos.y });
+    cmd(state, { type: 'aim', x: Math.max(-64, Math.min(64, Math.round((close.at.x - s.at.x) / 4))) || 1, y: Math.max(-64, Math.min(64, Math.round((close.at.y - s.at.y) / 4))) });
+    cmd(state, { type: 'swing', x: zt.x, y: zt.y });
     bot.goal = 'fight';
     return;
   }
@@ -167,7 +187,7 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
   }
   if (state.harsh && s.hydration < THIRSTY) {
     const water = state.furniture
-      .filter((f) => (f.kind === 'well' || (f.kind === 'collector' && f.loot > 0)))
+      .filter((f) => (f.kind === 'well' || (f.kind === 'collector' && f.loot > 0) || (isTap(state, f) && dist(f, s.pos) < 40)))
       .sort((a, b) => dist(a, s.pos) - dist(b, s.pos))[0];
     if (water) {
       bot.goal = 'drink';
@@ -188,6 +208,23 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
       bot.goal = 'eat';
       if (dist(food.pos!, s.pos) <= 1) bot.ate++;
       return goUse(state, s, bot, `food${food.id}`, food.pos!);
+    }
+    // None about: forage (handiwork.ts), by day on open grass or a field not picked over today.
+    if (forageTime(state)) {
+      if (canForage(state, s) === null) {
+        if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
+        if (cmd(state, { type: 'use', x: s.pos.x, y: s.pos.y }).ok) bot.foraged++;
+        bot.goal = 'forage';
+        return;
+      }
+      const spot = nearestTile(state.grid, s.pos, (x, y) => {
+        const g = GROUNDS[state.grid.ground[y * state.grid.width + x]!];
+        return (g === 'grass' || g === 'field') && isWalkable(state.grid, x, y) && !isIndoors(state, x, y) && state.foraged[String(y * state.grid.width + x)] !== dayOf(state.tick);
+      }, 2000);
+      if (spot) {
+        bot.goal = 'forage';
+        return goUse(state, s, bot, `forage${spot.x},${spot.y}`, spot, true);
+      }
     }
   }
   if (!s.weapon) {
@@ -224,10 +261,10 @@ function run(seed: number, days: number): void {
   const bedF = state.furniture.find((f) => f.kind === 'bed')!;
   const bed = { x: bedF.x, y: bedF.y };
   const home = { ...s0.pos };
-  const bot: Bot = { goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, treated: 0, amputated: 0 };
+  const bot: Bot = { goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, foraged: 0, sneaked: 0, treated: 0, amputated: 0 };
   const log = (why: string) => {
     const s = controlled(state);
-    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} treated ${bot.treated} amputated ${bot.amputated} infected ${s?.infection ?? '-'}`);
+    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} foraged ${bot.foraged} sneaked ${bot.sneaked} treated ${bot.treated} amputated ${bot.amputated} infected ${s?.infection ?? '-'}`);
   };
   out.push(`seed ${seed} (${process.env.PRESET ?? 'apocalypse'})`);
   for (let t = 0; t < days * DAY_LENGTH; t++) {
@@ -240,7 +277,7 @@ function run(seed: number, days: number): void {
       return;
     }
     decide(state, s, bot, home, bed);
-    if (process.env.TRACE && state.tick % 150 === 0) out.push(`   t${state.tick} pos ${s.pos.x},${s.pos.y} goal ${bot.goal} sat ${s.satiety} hp ${s.health} busy ${state.control!.busy?.what ?? '-'} steer ${state.control!.dx},${state.control!.dy} path ${bot.path.length} note ${s.note}`);
+    if (process.env.TRACE && state.tick % Number(process.env.TRACE_EVERY ?? 150) === 0) out.push(`   t${state.tick} z ${state.zombies.filter((q) => dist(tileOf(q.at), s.pos) <= 3).map((q) => `${tileOf(q.at).x},${tileOf(q.at).y}${q.windup ? "w" : ""}`).join(" ")} pos ${s.pos.x},${s.pos.y} goal ${bot.goal} sat ${s.satiety} hp ${s.health} busy ${state.control!.busy?.what ?? '-'} steer ${state.control!.dx},${state.control!.dy} path ${bot.path.length} note ${s.note}`);
     tick(state);
     if (state.tick % DAY_LENGTH === 0) log('dawn');
     if (performance.now() - began > BUDGET_MS) {

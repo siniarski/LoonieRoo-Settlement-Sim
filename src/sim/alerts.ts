@@ -91,7 +91,7 @@ export function alerts(state: SimState): Alert[] {
   const toWinter = daysToWinter(state.tick);
   if (people.length > 0 && days < 1) add('danger', `Food for less than a day (${people.length} to feed)`);
   else if (people.length > 0 && toWinter > 0 && toWinter <= 5 && days < SEASON_DAYS) {
-    add('warn', `Winter in ${toWinter} day${toWinter === 1 ? '' : 's'}: food for about ${days.toFixed(1)} days, and nothing grows in winter`);
+    add('warn', `Winter in ${toWinter} day${toWinter === 1 ? '' : 's'}: food for about ${days.toFixed(1)} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)`);
   } else if (people.length > 0 && days < 2) add('warn', `Food for about ${days.toFixed(1)} days`);
   if (toWinter > 0 && toWinter <= 2 && people.some((s) => !s.body)) add('info', 'Winter is coming: coats keep the cold off outdoors at night');
   const beds = ofKind(state, 'bed').length;

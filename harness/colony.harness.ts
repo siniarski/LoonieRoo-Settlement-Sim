@@ -90,6 +90,11 @@ function run(seed: number, days: number): void {
     const cy = start.y + dy! * (20 + day * 6);
     cmd(state, { type: 'designateExplore', x0: cx - 10, y0: cy - 10, x1: cx + 10, y1: cy + 10 });
     for (const f of state.furniture) if ((f.kind === 'crate' || f.kind === 'tree') && !f.scavenge) cmd(state, { type: 'designateScavenge', x: f.x, y: f.y });
+    // Chicken coops for the winter (farming.ts: they lay all year), one for every three people, from day 6.
+    if (day >= 6) {
+      const coops = state.furniture.filter((f) => f.kind === 'coop').length + state.blueprints.filter((b) => b.target === 'coop').length;
+      for (let k = coops; k < Math.min(10, Math.ceil(state.survivors.length / 3)); k++) cmd(state, { type: 'designateBuild', x: start.x + 6 + (k % 5) * 2, y: start.y - 8 + Math.floor(k / 5) * 2, structure: 'coop' });
+    }
     const beds = state.furniture.filter((f) => f.kind === 'bed').length;
     for (let b = beds; b < state.survivors.length; b++) cmd(state, { type: 'designateBuild', x: start.x - 10 + b, y: start.y - 10, structure: 'bed' });
     const t0 = performance.now();
