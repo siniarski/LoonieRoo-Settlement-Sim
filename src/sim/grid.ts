@@ -150,9 +150,49 @@ const changes = new WeakMap<Grid, number[]>();
 /** More changed tiles than this (a new chunk, say), and rooms are worked out in full. */
 const MAX_TRACKED = 2048;
 
-function noteChange(grid: Grid, i: number): void {
+/** A tile's wall, door, lock or edge changed (setTile and setEdge note their own; anything that changes those another way must call this). */
+export function noteChange(grid: Grid, i: number): void {
   const list = changes.get(grid);
   if (list && list.length <= MAX_TRACKED) list.push(i);
+  const log = reachLogs.get(grid);
+  if (log) {
+    const x = i % grid.width;
+    log.chunks.push(Math.floor((i - x) / grid.width / REACH_CHUNK) * Math.ceil(grid.width / REACH_CHUNK) + Math.floor(x / REACH_CHUNK));
+    // Too many to keep: forget them, and anyone behind works it all out again.
+    if (log.chunks.length > MAX_REACH_LOG) {
+      log.start += log.chunks.length;
+      log.chunks = [];
+    }
+  }
+}
+
+// --- Changes, for pathfinding.ts's reachability ---------------------------------------
+//
+// The chunks (REACH_CHUNK tiles a side) where a wall, door, lock or edge changed, as a log with
+// positions: each kind of mover's labels remember how far they've read, and re-flood only the
+// chunks changed since. Derived data outside sim state, like the room changes: a cloned or loaded
+// grid has no log, and its labels are worked out in full.
+
+/** Side of a reachability chunk, in tiles. */
+export const REACH_CHUNK = 32;
+const MAX_REACH_LOG = 100000;
+const reachLogs = new WeakMap<Grid, { start: number; chunks: number[] }>();
+
+/** Where the log is now (starting it, if it wasn't), to read from later with reachChangesSince. */
+export function reachCursor(grid: Grid): number {
+  let log = reachLogs.get(grid);
+  if (!log) {
+    log = { start: 0, chunks: [] };
+    reachLogs.set(grid, log);
+  }
+  return log.start + log.chunks.length;
+}
+
+/** The chunks changed since `cursor` (repeats possible), or null if the log doesn't go back that far. */
+export function reachChangesSince(grid: Grid, cursor: number): number[] | null {
+  const log = reachLogs.get(grid);
+  if (!log || cursor < log.start) return null;
+  return log.chunks.slice(cursor - log.start);
 }
 
 /** An edge changed: both its tiles. */

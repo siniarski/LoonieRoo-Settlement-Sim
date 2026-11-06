@@ -4,7 +4,7 @@
 // insertion order, and neighbours are expanded in a fixed N, E, S, W order.
 // Scratch arrays are local to the call; nothing here lives in sim state.
 
-import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point } from './grid';
+import { EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, edgeBetween, edgeIsOpen, getTile, inBounds, isLocked, isOpen, isWalkable, type Grid, type Point, REACH_CHUNK, reachChangesSince, reachCursor } from './grid';
 
 /**
  * Who is moving. Doors are open or closed (grid.open). Colonists ('survivor') open a door as
@@ -141,20 +141,43 @@ export function findPathToAny(
 // recomputes it.
 
 /**
- * Reachability labels, per grid and mover. For movers that need a door open to get through it
- * (you, the dead, crawlers: DOOR_MOVERS), the map is flooded once per walkabilityVersion with
- * every door shut (the base), and the doors open now join the pieces either side of them (a
- * union-find over the base's labels). Doors swing open and shut all the time without bumping the
- * version (held open for someone passing: doors.ts), and re-flooding a big map for every swing
- * was the slowest thing in a tick. The answer is the same as flooding with the doors as they are
- * (tests/reach.test.ts checks).
+ * Reachability labels, per grid and mover.
+ *
+ * Chunked: each REACH_CHUNK square is flooded on its own into local pieces, and pieces that touch
+ * across a chunk border are joined (a union-find over every piece on the map). When walls, doors,
+ * locks or edges change, only the chunks they're in are flooded again (grid.ts reachChangesSince:
+ * a log of changed chunks), then the borders are joined afresh. A new map chunk generated, or a wall
+ * built, re-floods a chunk or two, not the whole map (the stress test, 2026-11-06: on a 1024 map
+ * each kind of mover re-flooded a million tiles per change, the 30-60 ms spikes). With no log to go
+ * on (the first time, a loaded grid, or more changes than the log keeps) it floods every chunk.
+ *
+ * Doors: for movers that need a door open to get through it (you, the dead, crawlers: DOOR_MOVERS)
+ * the flood is done with every door shut, and the doors open now join the pieces either side
+ * (another union-find over the pieces' roots). Doors swing open and shut all the time without
+ * bumping the version (held open for someone passing: doors.ts), so only that join is redone.
+ *
+ * The answer is always the same as one flood of the whole map with the doors as they are
+ * (tests/reach.test.ts checks, with walls and doors built, broken and locked between questions).
  */
 interface Reach {
   version: number;
-  /** Base labels (-1: not passable with every door shut), and how many there are. */
-  labels: Int32Array;
+  /** How far into grid.ts's change log these labels have read. */
+  cursor: number;
+  /** Chunks across and down. */
+  cw: number;
+  ch: number;
+  /** Each tile's piece within its chunk (-1: not passable, with doors shut for door movers). */
+  local: Int32Array;
+  /** Pieces in each chunk, and where each chunk's pieces start among all of them. */
+  counts: Int32Array;
+  offsets: Int32Array;
+  /** Each chunk's links to its east and south neighbours (borderLinks). */
+  east: number[][];
+  south: number[][];
+  /** Every piece's root once the chunks are joined at their borders; how many pieces in all. */
+  baseRoot: Int32Array;
   count: number;
-  /** Which doors were open when the joins were made; each label's root; open door tiles' own labels (count and up). */
+  /** Which doors were open when the door joins were made; each root's root after them; open door tiles' own labels (count and up). */
   doors: string;
   root: Int32Array;
   doorIds: Map<number, number>;
@@ -168,7 +191,160 @@ function openDoors(grid: Grid, mover: Mover): string {
   return grid.open.join(',') + '|' + grid.edgeOpen.join(',');
 }
 
-/** Joins the base's pieces through the doors open now. */
+function chunkOf(r: Reach, width: number, i: number): number {
+  const x = i % width;
+  return Math.floor((i - x) / width / REACH_CHUNK) * r.cw + Math.floor(x / REACH_CHUNK);
+}
+
+/** A tile's piece after the chunks are joined (doors shut for door movers), or -1. */
+function baseLabel(r: Reach, width: number, i: number): number {
+  const l = r.local[i]!;
+  return l < 0 ? -1 : r.baseRoot[r.offsets[chunkOf(r, width, i)]! + l]!;
+}
+
+/** Passable for the flood (door movers: with every door shut), and across an edge (index e) the same way. */
+function rules(grid: Grid, mover: Mover) {
+  const shut = DOOR_MOVERS.includes(mover);
+  const pass = (x: number, y: number) => isPassable(grid, x, y, mover) && !(shut && grid.tiles[y * grid.width + x] === 'door');
+  const across = (e: number, ax: number, ay: number, bx: number, by: number) => {
+    const kind = grid.edges[e];
+    if (!kind) return true;
+    return !(shut && kind === EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
+  };
+  return { pass, across };
+}
+
+/** Floods one chunk into its own pieces. */
+function floodChunk(grid: Grid, r: Reach, mover: Mover, c: number, rule: ReturnType<typeof rules>, stack: Int32Array): void {
+  const { width, height } = grid;
+  const x0 = (c % r.cw) * REACH_CHUNK;
+  const y0 = Math.floor(c / r.cw) * REACH_CHUNK;
+  const x1 = Math.min(width, x0 + REACH_CHUNK);
+  const y1 = Math.min(height, y0 + REACH_CHUNK);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) r.local[y * width + x] = rule.pass(x, y) ? -2 : -1;
+  let next = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const start = y * width + x;
+      if (r.local[start] !== -2) continue;
+      r.local[start] = next;
+      let top = 0;
+      stack[top++] = start;
+      while (top > 0) {
+        const cur = stack[--top]!;
+        const cx = cur % width;
+        const cy = (cur - cx) / width;
+        // North (this tile's north edge), south (the next row's north edge), west (this tile's west edge), east (the next tile's west edge): within the chunk.
+        if (cy > y0) {
+          const n = cur - width;
+          if (r.local[n] === -2 && rule.across(cur * 2, cx, cy, cx, cy - 1)) {
+            r.local[n] = next;
+            stack[top++] = n;
+          }
+        }
+        if (cy < y1 - 1) {
+          const n = cur + width;
+          if (r.local[n] === -2 && rule.across(n * 2, cx, cy, cx, cy + 1)) {
+            r.local[n] = next;
+            stack[top++] = n;
+          }
+        }
+        if (cx > x0) {
+          const n = cur - 1;
+          if (r.local[n] === -2 && rule.across(cur * 2 + 1, cx, cy, cx - 1, cy)) {
+            r.local[n] = next;
+            stack[top++] = n;
+          }
+        }
+        if (cx < x1 - 1) {
+          const n = cur + 1;
+          if (r.local[n] === -2 && rule.across(n * 2 + 1, cx, cy, cx + 1, cy)) {
+            r.local[n] = next;
+            stack[top++] = n;
+          }
+        }
+      }
+      next++;
+    }
+  }
+  r.counts[c] = next;
+}
+
+/**
+ * A chunk's links to its east and south neighbours: pairs of (its piece, their piece) that touch
+ * across the border, each pair once. Worked out again only when either chunk changed.
+ */
+function borderLinks(grid: Grid, r: Reach, c: number, rule: ReturnType<typeof rules>): void {
+  const { width, height } = grid;
+  const x0 = (c % r.cw) * REACH_CHUNK;
+  const y0 = Math.floor(c / r.cw) * REACH_CHUNK;
+  const x1 = Math.min(width, x0 + REACH_CHUNK);
+  const y1 = Math.min(height, y0 + REACH_CHUNK);
+  const east: number[] = [];
+  const south: number[] = [];
+  const seen = new Set<number>();
+  // East: (x1 - 1, y) | (x1, y), across x1's west edge.
+  if (x1 < width) {
+    for (let y = y0; y < y1; y++) {
+      const b = y * width + x1;
+      const la = r.local[b - 1]!;
+      const lb = r.local[b]!;
+      if (la < 0 || lb < 0 || seen.has(la * 2048 + lb) || !rule.across(b * 2 + 1, x1, y, x1 - 1, y)) continue;
+      seen.add(la * 2048 + lb);
+      east.push(la, lb);
+    }
+  }
+  seen.clear();
+  // South: (x, y1 - 1) above (x, y1), across y1's north edge.
+  if (y1 < height) {
+    for (let x = x0; x < x1; x++) {
+      const b = y1 * width + x;
+      const la = r.local[b - width]!;
+      const lb = r.local[b]!;
+      if (la < 0 || lb < 0 || seen.has(la * 2048 + lb) || !rule.across(b * 2, x, y1, x, y1 - 1)) continue;
+      seen.add(la * 2048 + lb);
+      south.push(la, lb);
+    }
+  }
+  r.east[c] = east;
+  r.south[c] = south;
+}
+
+/** Joins pieces that touch across chunk borders (from each chunk's cached links). */
+function joinChunks(r: Reach): void {
+  const chunks = r.cw * r.ch;
+  let total = 0;
+  for (let c = 0; c < chunks; c++) {
+    r.offsets[c] = total;
+    total += r.counts[c]!;
+  }
+  r.count = total;
+  const parent = new Int32Array(total);
+  for (let k = 0; k < total; k++) parent[k] = k;
+  const find = (k: number): number => {
+    while (parent[k] !== k) {
+      parent[k] = parent[parent[k]!]!;
+      k = parent[k]!;
+    }
+    return k;
+  };
+  const unite = (ga: number, gb: number) => {
+    const ra = find(ga);
+    const rb = find(gb);
+    if (ra !== rb) parent[Math.max(ra, rb)] = Math.min(ra, rb);
+  };
+  for (let c = 0; c < chunks; c++) {
+    const east = r.east[c]!;
+    const south = r.south[c]!;
+    const o = r.offsets[c]!;
+    for (let k = 0; k < east.length; k += 2) unite(o + east[k]!, r.offsets[c + 1]! + east[k + 1]!);
+    for (let k = 0; k < south.length; k += 2) unite(o + south[k]!, r.offsets[c + r.cw]! + south[k + 1]!);
+  }
+  for (let k = 0; k < total; k++) parent[k] = find(k);
+  r.baseRoot = parent;
+}
+
+/** Joins the pieces through the doors open now. */
 function join(grid: Grid, r: Reach, mover: Mover): void {
   const { width } = grid;
   const doorTiles = grid.open.filter((i) => grid.tiles[i] === 'door' && isPassable(grid, i % width, Math.floor(i / width), mover));
@@ -182,7 +358,7 @@ function join(grid: Grid, r: Reach, mover: Mover): void {
     }
     return k;
   };
-  const labelAt = (i: number) => (r.labels[i]! >= 0 ? r.labels[i]! : r.doorIds.get(i) ?? -1);
+  const labelAt = (i: number) => (r.local[i]! >= 0 ? baseLabel(r, width, i) : r.doorIds.get(i) ?? -1);
   const unite = (a: number, b: number) => {
     if (a < 0 || b < 0) return;
     const ra = find(a);
@@ -220,11 +396,35 @@ function components(grid: Grid, version: number, mover: Mover): (i: number) => n
   const perMover = componentCache.get(grid) ?? {};
   componentCache.set(grid, perMover);
   const doorMover = DOOR_MOVERS.includes(mover);
+  const { width, height } = grid;
   let r = perMover[mover];
   if (!r || r.version !== version) {
-    const base = flood(grid, mover);
-    r = { version, labels: base.labels, count: base.count, doors: '', root: new Int32Array(0), doorIds: new Map() };
-    perMover[mover] = r;
+    const changed = r ? reachChangesSince(grid, r.cursor) : null;
+    const cursor = reachCursor(grid);
+    const rule = rules(grid, mover);
+    const stack = new Int32Array(REACH_CHUNK * REACH_CHUNK);
+    if (!r || !changed) {
+      const cw = Math.ceil(width / REACH_CHUNK);
+      const ch = Math.ceil(height / REACH_CHUNK);
+      r = { version, cursor, cw, ch, local: new Int32Array(width * height), counts: new Int32Array(cw * ch), offsets: new Int32Array(cw * ch), east: [], south: [], baseRoot: new Int32Array(0), count: 0, doors: '', root: new Int32Array(0), doorIds: new Map() };
+      perMover[mover] = r;
+      for (let c = 0; c < cw * ch; c++) floodChunk(grid, r, mover, c, rule, stack);
+      for (let c = 0; c < cw * ch; c++) borderLinks(grid, r, c, rule);
+    } else {
+      const dirty = new Set(changed);
+      for (const c of dirty) floodChunk(grid, r, mover, c, rule, stack);
+      // Links change for a changed chunk, and for the chunks west and north of it (their east and south links reach into it).
+      const relink = new Set<number>();
+      for (const c of dirty) {
+        relink.add(c);
+        if (c % r.cw > 0) relink.add(c - 1);
+        if (c >= r.cw) relink.add(c - r.cw);
+      }
+      for (const c of relink) borderLinks(grid, r, c, rule);
+      r.version = version;
+      r.cursor = cursor;
+    }
+    joinChunks(r);
     if (doorMover) join(grid, r, mover);
     r.doors = openDoors(grid, mover);
   } else if (doorMover) {
@@ -235,79 +435,11 @@ function components(grid: Grid, version: number, mover: Mover): (i: number) => n
     }
   }
   const reach = r;
-  if (!doorMover) return (i) => reach.labels[i]!;
+  if (!doorMover) return (i) => baseLabel(reach, width, i);
   return (i) => {
-    const l = reach.labels[i]! >= 0 ? reach.labels[i]! : reach.doorIds.get(i) ?? -1;
+    const l = reach.local[i]! >= 0 ? baseLabel(reach, width, i) : reach.doorIds.get(i) ?? -1;
     return l < 0 ? -1 : reach.root[l]!;
   };
-}
-
-/**
- * Floods the map into labels; for door movers, as if every door were shut. Hot (a whole map on
- * every walkability change), so: passability worked out once per tile into an array, neighbours
- * by index, and the edge rules only consulted where there's an edge.
- */
-function flood(grid: Grid, mover: Mover): { labels: Int32Array; count: number } {
-  const shut = DOOR_MOVERS.includes(mover);
-  const { width, height, edges } = grid;
-  const size = width * height;
-  const pass = new Uint8Array(size);
-  for (let i = 0; i < size; i++) {
-    const x = i % width;
-    const y = (i - x) / width;
-    pass[i] = isPassable(grid, x, y, mover) && !(shut && grid.tiles[i] === 'door') ? 1 : 0;
-  }
-  /** Across the edge `e` between tile a and its neighbour b (b passable). */
-  const across = (e: number, ax: number, ay: number, bx: number, by: number) => {
-    const kind = edges[e];
-    if (!kind) return true;
-    return !(shut && kind === EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
-  };
-  const labels = new Int32Array(size).fill(-1);
-  let next = 0;
-  const queue = new Int32Array(size);
-  for (let i = 0; i < size; i++) {
-    if (labels[i] !== -1 || pass[i] === 0) continue;
-    labels[i] = next;
-    let top = 0;
-    queue[top++] = i;
-    while (top > 0) {
-      const cur = queue[--top]!;
-      const cx = cur % width;
-      const cy = (cur - cx) / width;
-      // North (this tile's north edge), south (the next row's north edge), west (this tile's west edge), east (the next tile's west edge).
-      if (cy > 0) {
-        const n = cur - width;
-        if (pass[n] === 1 && labels[n] === -1 && across(cur * 2, cx, cy, cx, cy - 1)) {
-          labels[n] = next;
-          queue[top++] = n;
-        }
-      }
-      if (cy < height - 1) {
-        const n = cur + width;
-        if (pass[n] === 1 && labels[n] === -1 && across(n * 2, cx, cy, cx, cy + 1)) {
-          labels[n] = next;
-          queue[top++] = n;
-        }
-      }
-      if (cx > 0) {
-        const n = cur - 1;
-        if (pass[n] === 1 && labels[n] === -1 && across(cur * 2 + 1, cx, cy, cx - 1, cy)) {
-          labels[n] = next;
-          queue[top++] = n;
-        }
-      }
-      if (cx < width - 1) {
-        const n = cur + 1;
-        if (pass[n] === 1 && labels[n] === -1 && across(n * 2 + 1, cx, cy, cx + 1, cy)) {
-          labels[n] = next;
-          queue[top++] = n;
-        }
-      }
-    }
-    next++;
-  }
-  return { labels, count: next };
 }
 
 /**

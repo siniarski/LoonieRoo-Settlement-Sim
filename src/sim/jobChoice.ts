@@ -63,10 +63,15 @@ export function typesByPriority(s: Survivor): JobType[] {
 }
 
 function openJobsByDistance(state: SimState, type: JobType, from: Point): Job[] {
-  // Array.prototype.sort is stable, so ties keep queue order (deterministic).
-  return state.jobs
-    .filter((j) => j.type === type && j.reservedBy === null)
-    .sort((a, b) => manhattan(from, a) - manhattan(from, b));
+  // Nearest first, ties in queue order (as a stable sort by distance would give). Each job's
+  // distance is worked out once and folded with its place in the queue into one number, sorted as
+  // numbers: with a guard job per zombie and hundreds of colonists looking, the comparator sort was
+  // the slowest part of the worst ticks (the stress test, 2026-11-06).
+  const open = state.jobs.filter((j) => j.type === type && j.reservedBy === null);
+  const keys = new Float64Array(open.length);
+  for (let i = 0; i < open.length; i++) keys[i] = manhattan(from, open[i]!) * 1048576 + i;
+  keys.sort();
+  return Array.from(keys, (k) => open[k % 1048576]!);
 }
 
 function planJob(state: SimState, s: Survivor, job: Job): Plan | null {
