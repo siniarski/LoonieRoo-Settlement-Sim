@@ -18,7 +18,7 @@
 // or left open, containers hold loot (more further out, some already searched), and the dead
 // sleep inside bigger and further-out buildings.
 
-import { addFurniture, furnitureAt, type Look } from './furniture';
+import { LOOK_CAPACITY, addFurniture, furnitureAt, type Look } from './furniture';
 import { FUEL_MAX, VEHICLE_HEALTH, addVehicle, headingOf, parkable } from './vehicles';
 import { crateLoot, ruinDecay, zombieScale } from './difficulty';
 import { EDGE_DOOR, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
@@ -321,7 +321,7 @@ function drawBuilding(state: SimState, ctx: LotContext, lot: Lot, b: Placement, 
       const c = addFurniture(state, 'crate', w.x, w.y);
       c.look = f.look;
       c.table = f.table;
-      const n = 1 + Math.floor(r(100 + i) * Math.max(1, Math.floor(ctx.lootAt(w.x, w.y) / 3)));
+      const n = Math.min(LOOK_CAPACITY[f.look] ?? Infinity, 1 + Math.floor(r(100 + i) * Math.max(1, Math.floor(ctx.lootAt(w.x, w.y) / 3))));
       const searched = ctx.distance(w.x, w.y) < 80 && r(200 + i) < 0.25;
       c.loot = searched ? 0 : crateLoot(state, n) * (isRadioactive(state, w.x, w.y) ? 2 : 1);
     } else addFurniture(state, 'decor', w.x, w.y).look = f.look;

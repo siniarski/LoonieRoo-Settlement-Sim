@@ -27,6 +27,16 @@ function room(window: 'window' | 'brokenWindow' = 'window'): NonNullable<Scenari
 const MAP = ['.......', '.......', '.......', '.......', '.......'];
 
 describe('windows', () => {
+  it('a swing at the glass in front of you breaks it', () => {
+    const state = loadScenario({ seed: 1, map: MAP.map((r, y) => (y === 2 ? '...s...' : r)), edges: room() });
+    const s = state.survivors[0]!;
+    applyCommand(state, { type: 'takeControl', survivorId: s.id });
+    const pane = edgeBetween(state.grid, 3, 2, 4, 2);
+    expect(applyCommand(state, { type: 'swing', x: 4, y: 2 }).ok).toBe(true);
+    expect(state.grid.edges[pane]).toBe(EDGE_WINDOW_BROKEN);
+  });
+
+
   it('glass stops everyone walking; broken, you and the dead climb through, colonists use doors', () => {
     const state = loadScenario({ seed: 1, map: MAP, edges: room() });
     for (const m of ['survivor', 'free', 'zombie', 'raider'] as const) expect(crossable(state.grid, 3, 2, 4, 2, m), m).toBe(false);

@@ -11,7 +11,7 @@ export type LootTable =
   | 'kitchen' | 'bathroom' | 'bedroom' | 'living' | 'garage'
   | 'grocery' | 'pharmacy' | 'hardware' | 'bar' | 'station' | 'office'
   | 'police' | 'clinic' | 'church' | 'school'
-  | 'warehouse' | 'factory' | 'barn' | 'shed';
+  | 'warehouse' | 'factory' | 'barn' | 'shed' | 'trash';
 
 /** Each table's weights sum to 1. */
 export const LOOT_TABLES: Record<LootTable, readonly [ItemKind, number][]> = {
@@ -34,6 +34,8 @@ export const LOOT_TABLES: Record<LootTable, readonly [ItemKind, number][]> = {
   factory: [['scrap', 0.45], ['fuel', 0.2], ['wood', 0.15], ['hammer', 0.06], ['armour', 0.04], ['cloth', 0.1]],
   barn: [['food', 0.36], ['wood', 0.2], ['fuel', 0.15], ['axe', 0.08], ['hammer', 0.07], ['scrap', 0.09], ['cloth', 0.05]],
   shed: [['wood', 0.3], ['scrap', 0.25], ['fuel', 0.15], ['axe', 0.1], ['hammer', 0.1], ['cart', 0.05], ['cloth', 0.05]],
+  // Bins: what people threw out.
+  trash: [['scrap', 0.5], ['cloth', 0.25], ['food', 0.15], ['book', 0.1]],
 };
 
 /** What a building with this table is called, for a point of interest ("a pharmacy"). */
@@ -41,7 +43,7 @@ export const SITE_NAMES: Record<LootTable, string> = {
   kitchen: 'a house', bathroom: 'a house', bedroom: 'a house', living: 'a house', garage: 'a house',
   grocery: 'a grocery store', pharmacy: 'a pharmacy', hardware: 'a hardware store', bar: 'a bar', station: 'a petrol station', office: 'an office',
   police: 'a police station', clinic: 'a clinic', church: 'a church', school: 'a school',
-  warehouse: 'a warehouse', factory: 'a factory', barn: 'a farm', shed: 'a shed',
+  warehouse: 'a warehouse', factory: 'a factory', barn: 'a farm', shed: 'a shed', trash: 'a house',
 };
 
 /** Maps a [0, 1) roll to a find from a weighted table. */

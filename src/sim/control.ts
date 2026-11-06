@@ -325,11 +325,36 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     const dmg = boostDamage(s, GUN_DAMAGE + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard') + (hasTrait(s, 'hardened') ? HARDENED_DAMAGE : 0));
     return damageZombie(state, shotAt, dmg, s) ? 'shot it dead' : 'shot it';
   }
+  // Glass in front of you: the swing breaks it (loud, and maybe the alarm, as smashing it with E does).
+  const pane = paneInFront(state, s.pos, target, c.facing);
+  if (pane) {
+    c.nextSwing = state.tick + wait;
+    c.swungTick = state.tick;
+    exert(s, SWING_COST);
+    smashGlass(state, pane.edge);
+    maybeAlarm(state, pane.to, pane.edge);
+    return 'smashed the window';
+  }
   // A swing at nothing still takes the time, and the breath.
   c.nextSwing = state.tick + wait;
   c.swungTick = state.tick;
   exert(s, SWING_COST);
   return 'swung at nothing';
+}
+
+/**
+ * An unboarded window on the edge between you and the tile you swung at (if it's next to you), else
+ * the tile you face; facing a corner, either side of it.
+ */
+function paneInFront(state: SimState, from: Point, target: Point, facing: Point): { edge: number; to: Point } | null {
+  const face = nextTo(from, target) ? towards(from, target) ?? facing : facing;
+  const steps = face.x !== 0 && face.y !== 0 ? [{ x: face.x, y: 0 }, { x: 0, y: face.y }] : [face];
+  for (const d of steps) {
+    const to = { x: from.x + d.x, y: from.y + d.y };
+    const e = edgeBetween(state.grid, from.x, from.y, to.x, to.y);
+    if (e >= 0 && state.grid.edges[e] === EDGE_WINDOW && !state.grid.edgeBoarded.includes(e)) return { edge: e, to };
+  }
+  return null;
 }
 
 /** A resident (residents.ts) in the arc in front of you, within reach. */

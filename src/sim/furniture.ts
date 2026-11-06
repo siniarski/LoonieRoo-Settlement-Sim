@@ -58,9 +58,31 @@ export interface Furniture {
 }
 
 /** Containers (crates) and decor in generated buildings (buildings.ts). */
-export const CONTAINER_LOOKS = ['counter', 'icebox', 'shelf', 'wardrobe', 'dresser', 'cabinet', 'toolbox', 'locker', 'desk', 'pallet', 'sack', 'crate'] as const;
-export const DECOR_LOOKS = ['sofa', 'bed', 'toilet', 'bath', 'table', 'oven', 'tv', 'car', 'pew', 'altar', 'hay', 'tractor', 'pump', 'bench', 'cot', 'register', 'machine', 'silo'] as const;
+export const CONTAINER_LOOKS = ['counter', 'icebox', 'shelf', 'wardrobe', 'dresser', 'cabinet', 'toolbox', 'locker', 'desk', 'pallet', 'sack', 'crate', 'sink', 'bin', 'nightstand', 'bookcase'] as const;
+export const DECOR_LOOKS = ['sofa', 'bed', 'toilet', 'bath', 'table', 'oven', 'tv', 'car', 'pew', 'altar', 'hay', 'tractor', 'pump', 'bench', 'cot', 'register', 'machine', 'silo', 'shower', 'armchair', 'washer'] as const;
 export type Look = (typeof CONTAINER_LOOKS)[number] | (typeof DECOR_LOOKS)[number];
+
+/** What each look is called (an icebox is a house's fridge; the fridge you build is furniture kind 'fridge'). */
+export const LOOK_NAMES: Record<Look, string> = {
+  counter: 'counter', icebox: 'fridge', shelf: 'shelf', wardrobe: 'wardrobe', dresser: 'dresser', cabinet: 'cabinet', toolbox: 'toolbox',
+  locker: 'locker', desk: 'desk', pallet: 'pallet', sack: 'sacks', crate: 'crate', sink: 'sink', bin: 'bin', nightstand: 'nightstand',
+  bookcase: 'bookcase', sofa: 'sofa', bed: 'bed', toilet: 'toilet', bath: 'bath', table: 'table', oven: 'oven', tv: 'television', car: 'car',
+  pew: 'pew', altar: 'altar', hay: 'hay bales', tractor: 'tractor', pump: 'fuel pump', bench: 'bench', cot: 'cot', register: 'till',
+  machine: 'machine', silo: 'silo', shower: 'shower', armchair: 'armchair', washer: 'washing machine',
+};
+
+/** Small containers hold fewer finds (lots.ts caps a new one's loot at this). */
+export const LOOK_CAPACITY: Partial<Record<Look, number>> = { bin: 2, nightstand: 2, sink: 2, cabinet: 3, toolbox: 3 };
+
+/** A container's name from its look and what it holds: a medicine cabinet, a filing cabinet, a kitchen sink. */
+export function containerName(f: Pick<Furniture, 'look' | 'table'>): string {
+  const look = f.look ?? 'crate';
+  if (look === 'cabinet' && (f.table === 'bathroom' || f.table === 'clinic' || f.table === 'pharmacy')) return 'medicine cabinet';
+  if (look === 'cabinet' && (f.table === 'office' || f.table === 'police' || f.table === 'school')) return 'filing cabinet';
+  if (look === 'sink') return f.table === 'kitchen' ? 'kitchen sink' : 'bathroom sink';
+  if (look === 'bin') return 'rubbish bin';
+  return LOOK_NAMES[look];
+}
 
 /**
  * Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never

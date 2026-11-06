@@ -18,7 +18,7 @@
 // Rooms set the floor (boards, tiles, concrete) and what's in the containers (loot.ts).
 
 import type { Ground } from './grid';
-import type { Look } from './furniture';
+import { CONTAINER_LOOKS, type Look } from './furniture';
 import type { LootTable } from './loot';
 
 export const OUTSIDE = 0;
@@ -71,9 +71,8 @@ export type BuildingKind = 'house' | 'grocery' | 'pharmacy' | 'hardware' | 'bar'
 export type Rolls = (k: number) => number;
 
 /** Containers whose look is a container (the rest are decor). */
-const CONTAINERS: readonly Look[] = ['counter', 'icebox', 'shelf', 'wardrobe', 'dresser', 'cabinet', 'toolbox', 'locker', 'desk', 'pallet', 'sack', 'crate'];
 export function isContainerLook(look: Look): boolean {
-  return CONTAINERS.includes(look);
+  return (CONTAINER_LOOKS as readonly Look[]).includes(look);
 }
 
 // --- Drawing a plan ---------------------------------------------------------
@@ -238,6 +237,15 @@ export function housePlan(r: Rolls, o: HouseOptions): Plan {
     againstWall(p, b.x0, b.y0, b.x1, b.y1, 'bed', null, r(22 + i));
     againstWall(p, b.x0, b.y0, b.x1, b.y1, i === 0 ? 'wardrobe' : 'dresser', 'bedroom', r(24 + i));
   });
+  // The rest of each room's fittings, where there's wall left (after the above, so those stand where they did).
+  againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, 'sink', 'kitchen', r(33));
+  againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, 'bin', 'trash', r(34));
+  againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, 'sink', 'bathroom', r(35));
+  if (bathW !== 3) againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, 'shower', null, r(36));
+  bedrooms.forEach((b, i) => againstWall(p, b.x0, b.y0, b.x1, b.y1, 'nightstand', 'bedroom', r(26 + i)));
+  againstWall(p, living.x0, living.y0, living.x1, living.y1, 'armchair', null, r(37));
+  if (r(39) < 0.6) againstWall(p, living.x0, living.y0, living.x1, living.y1, 'bookcase', 'living', r(38));
+  if (garage && r(28) < 0.4) againstWall(p, W, Math.max(div, H - 7) + 1, W + 2, H - 2, 'washer', null, r(29));
   return toEdges(p);
 }
 
@@ -257,6 +265,7 @@ export function shopPlan(r: Rolls, kind: 'grocery' | 'pharmacy' | 'hardware' | '
   door(p, 2, div);
   door(p, Math.floor(W / 2) + 1, div);
   againstWall(p, 1, 1, 2, div - 1, 'toilet', null, r(5));
+  againstWall(p, 1, 1, 2, div - 1, 'sink', 'bathroom', r(45));
   const mid = Math.floor(W / 2);
   door(p, mid - 1, H - 1);
   door(p, mid, H - 1);
@@ -331,6 +340,7 @@ function fitOut(p: Plan, role: Role, x0: number, y0: number, x1: number, y1: num
   switch (role) {
     case 'desks':
       for (let y = y0 + 1; y < y1; y += 2) for (let x = x0 + 1; x < x1; x += 2) put(p, x, y, 'desk', 'office');
+      againstWall(p, x0, y0, x1, y1, 'bin', 'trash', r(k + 4));
       break;
     case 'lockers':
     case 'armoury':
@@ -344,6 +354,7 @@ function fitOut(p: Plan, role: Role, x0: number, y0: number, x1: number, y1: num
       floorAs(p, x0, y0, x1, y1, 'tiles');
       for (let x = x0; x <= x1; x += 2) put(p, x, y0, 'toilet', null);
       againstWall(p, x0, y0, x1, y1, 'cabinet', 'bathroom', r(k));
+      againstWall(p, x0, y0, x1, y1, 'sink', 'bathroom', r(k + 1));
       break;
     case 'ward':
       for (let x = x0; x <= x1; x += 2) put(p, x, y0, 'cot', null);

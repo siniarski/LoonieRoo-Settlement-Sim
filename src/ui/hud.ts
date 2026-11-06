@@ -2,6 +2,7 @@
 // bar, priority panel, and the debug panel (DOM). Reads state; changes go
 // out as sim commands or view-state changes.
 
+import { LOOK_NAMES, containerName } from '../sim/furniture';
 import { climateAt, isRadioactive } from '../sim/climate';
 import { errandsOf } from '../sim/errands';
 import { relation, type Settlement } from '../sim/settlements';
@@ -35,7 +36,7 @@ import type { Survivor } from '../sim/survivors';
 import { chooseCategory, chooseTool, toggleBuild } from './buildMode';
 import { SPEEDS } from './loop';
 import { CATEGORIES, getTool, toolsIn, type CategoryId, type ToolId } from './tools';
-import type { ViewState } from './view';
+import { survivorMode, toggleColonyMode, type ViewState } from './view';
 import { seasonOf } from '../sim/seasons';
 import { TRAIT_INFO, describeSkills } from '../sim/skills';
 import { INFECTION_TURN } from '../sim/infection';
@@ -116,6 +117,14 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   overviewButton.textContent = 'O Overview';
   overviewButton.addEventListener('click', () => (view.showOverview = !view.showOverview));
   bar.append(overviewButton);
+  // Under direct control: the colony's management out (G) or put away.
+  const colonyButton = el('button', 'hud-button');
+  colonyButton.textContent = 'G Colony';
+  colonyButton.title = 'Colony management: build, priorities, overview, neighbours (G)';
+  colonyButton.addEventListener('click', () => toggleColonyMode(view));
+  bar.append(colonyButton);
+  // Put away while you play one survivor (survivorMode).
+  for (const b of [buildButton, prioritiesButton, overviewButton]) b.classList.add('colony-only');
 
   const info = el('div', 'hud-info');
   const status = el('div', 'hud-status');
@@ -134,6 +143,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const helicopter = createHelicopterPanel(command, files);
   const alertList = createAlertList(view);
   const overview = createOverview(view, command);
+  for (const p of [wanderers, crafting, expeditions, traders, neighbours, prisoners]) p.root.classList.add('colony-only');
   info.append(status, succession.root, helicopter.root, controlLine, alertList.root, toast, story.root, roomPanel, wanderers.root, traders.root, crafting.root, expeditions.root, neighbours.root, prisoners.root, feed);
 
   const buildBar = createBuildBar(view);
@@ -151,6 +161,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   // Bottom left: the priority table (P) stacked over the character panel.
   const bottomLeft = el('div', 'hud-bottom-left');
   bottomLeft.append(priorities.root, card.root);
+  for (const r of [priorities.root, overview.root, buildBar.root]) r.classList.add('colony-only');
   root.append(pausedFrame, bar, info, bottomLeft, conditions.root, ...bag.roots, debug, overview.root, minimap.root, buildBar.root, pausedBanner, worldMap.root);
 
   // Only touch the DOM when text actually changes.
@@ -159,6 +170,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   let lastDebug = '';
   let lastClock = '';
   let lastFeed = '';
+  let lastControlled: string | null = null;
 
   return {
     update(state, fps, perf) {
@@ -173,9 +185,22 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
         .join('\n');
       feed.hidden = feedText === '';
       const you = controlled(state);
+      // Taking control of someone starts in survivor mode.
+      const nowControlled = you?.id ?? null;
+      if (nowControlled !== lastControlled) {
+        if (nowControlled) {
+          view.colonyMode = true;
+          toggleColonyMode(view); // off, closing build and the overview
+        }
+        lastControlled = nowControlled;
+      }
+      const solo = survivorMode(view, you !== undefined && you !== null);
+      root.classList.toggle('survivor-mode', solo);
+      colonyButton.hidden = !you;
+      colonyButton.classList.toggle('active', view.colonyMode);
       const controlText = you
         ? view.showKeys
-          ? 'WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide'
+          ? 'G colony · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide'
           : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'
@@ -206,7 +231,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       minimap.update(state);
       worldMap.update(state);
 
-      const text = statusText(state, view);
+      const text = statusText(state, view, solo);
       if (text !== lastStatus) status.textContent = lastStatus = text;
 
       const room = roomText(state, view.hover);
@@ -248,7 +273,7 @@ function drivingText(state: SimState): string {
   return `driving ${car.speed < 0 ? 'backwards ' : ''}${tiles} tiles/s · fuel ${Math.round((car.fuel * 100) / FUEL_MAX)}% · car ${Math.round((car.health * 100) / VEHICLE_HEALTH)}%`;
 }
 
-function statusText(state: SimState, view: ViewState): string {
+function statusText(state: SimState, view: ViewState, solo = false): string {
   const hover = view.hover;
   const { width, height, tiles } = state.grid;
   const tile =
@@ -269,7 +294,7 @@ function statusText(state: SimState, view: ViewState): string {
     selected && !you ? `${selected.name}: right-click to move` : '',
     place,
     drivingText(state),
-    `wood ${wood} · food ${food} · jobs ${state.jobs.length}${state.timeline ? ` · water ${waterOn(state) ? 'on' : 'off'} · power ${powerOn(state) ? 'on' : 'off'}` : ''}`,
+    [solo ? '' : `wood ${wood} · food ${food} · jobs ${state.jobs.length}`, state.timeline ? `water ${waterOn(state) ? 'on' : 'off'} · power ${powerOn(state) ? 'on' : 'off'}` : ''].filter((x) => x !== '').join(' · '),
   ].filter((x) => x !== '').join('  ·  ');
 }
 
@@ -290,7 +315,10 @@ function furnitureText(state: SimState, p: Point): string {
   if (f.kind === 'tree') return ` · tree (${f.loot} wood${f.scavenge ? ', marked for chopping' : ''})`;
   if (f.kind === 'workbench') return ` · workbench${f.stored > 0 ? ` (${f.stored} ${f.storedKind ?? 'wood'} in)` : ''}`;
   if (f.kind === 'stove') return ` · stove${f.stored > 0 ? ` (${f.stored} food in)` : ''}`;
-  return f.loot === 0 ? ' · crate (empty)' : ` · crate (${f.loot} left${f.scavenge ? ', marked' : ''})`;
+  if (f.kind === 'decor') return f.look ? ` · ${LOOK_NAMES[f.look]}` : '';
+  if (f.kind !== 'crate') return ` · ${f.kind}`;
+  const name = containerName(f);
+  return f.loot === 0 ? ` · ${name} (searched)` : ` · ${name} (${f.loot} left${f.scavenge ? ', marked' : ''})`;
 }
 
 // --- Build bar --------------------------------------------------------------
