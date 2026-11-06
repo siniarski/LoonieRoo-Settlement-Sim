@@ -82,7 +82,7 @@ export function updateOutposts(state: SimState): void {
       const item = id ? state.items.find((i) => i.id === id) : undefined;
       if (item) state.items.splice(state.items.indexOf(item), 1);
     }
-    for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
+    for (const f of ofKind(state, 'bed')) if (f.owner === s.id) f.owner = null; // only beds have owners
     logEvent(state, `${s.name} was killed at the ${x.target.label} outpost`);
     mournDeath(state, s);
     if (x.members.length === 0) state.expeditions.splice(state.expeditions.indexOf(x), 1);

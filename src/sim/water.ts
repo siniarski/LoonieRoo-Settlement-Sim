@@ -14,7 +14,7 @@ import { isTap, waterOn } from './timeline';
 import { slowTick } from './time';
 import { SICK_TICKS } from './corpses';
 import { isWet } from './seasons';
-import { furnitureAt } from './furniture';
+import { furnitureAt, ofKinds } from './furniture';
 import { getTile, neighbours4, type Point } from './grid';
 import { hashRoll, idNumber } from './hash';
 import { logEvent } from './events';
@@ -93,7 +93,8 @@ export function findWater(state: SimState, from: Point): Drink | null {
   const { grid } = state;
   const clean = new Map<number, WaterSource>();
   const tapsOn = waterOn(state);
-  for (const f of state.furniture) {
+  // (By kind, in list order as before: wells and collectors, and with the water on the fittings that can be taps.)
+  for (const f of ofKinds(state, tapsOn ? ['well', 'collector', 'crate', 'decor'] : ['well', 'collector'])) {
     if (f.kind === 'well') clean.set(f.y * grid.width + f.x, 'well');
     else if (f.kind === 'collector' && f.loot > 0) clean.set(f.y * grid.width + f.x, 'collector');
     else if (tapsOn && isTap(state, f)) clean.set(f.y * grid.width + f.x, 'tap');

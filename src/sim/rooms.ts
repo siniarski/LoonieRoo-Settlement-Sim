@@ -11,6 +11,7 @@
 // the older one wins (reconcileRoomDesignations drops the newer).
 
 import { getTile, type Point , EDGE_BARRICADE, EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeBetween, isWindow, takeChanges } from './grid';
+import { ofKind, type FurnitureKind } from './furniture';
 import type { ItemKind } from './items';
 import type { SimState } from './state';
 
@@ -222,7 +223,7 @@ export const MIN_STORAGE_TILES = 4;
 /** Requirements for a purpose. `room` is null when the anchor is outdoors. */
 export function evaluateRoom(state: SimState, room: Room | null, purpose: RoomPurpose): RoomStatus {
   const size = room?.tiles.length ?? 0;
-  const count = (kind: string) => (room ? state.furniture.filter((f) => f.kind === kind && labelAt(state, f.x, f.y) === room.index).length : 0);
+  const count = (kind: FurnitureKind) => (room ? ofKind(state, kind).filter((f) => labelAt(state, f.x, f.y) === room.index).length : 0);
   const beds = count('bed');
   const tables = count('table');
   const requirements: Requirement[] = [

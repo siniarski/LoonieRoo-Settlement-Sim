@@ -13,7 +13,7 @@
 
 import { slowTick } from './time';
 import { cropGrows, seasonOf } from './seasons';
-import { regrowTrees } from './furniture';
+import { regrowTrees, ofKind } from './furniture';
 import { getTile, type Point } from './grid';
 import { spawnItem, type ItemKind } from './items';
 import { completeRooms, labelAt } from './rooms';
@@ -108,7 +108,7 @@ export function updateFarm(state: SimState): void {
     if (plot.planted && plot.growth < growTicks(plot)) plot.growth = Math.min(growTicks(plot), plot.growth + growth);
   }
   const every = seasonOf(state.tick) === 'winter' ? 2 * EGG_EVERY : EGG_EVERY;
-  if (state.tick > 0 && state.tick % every === 0) for (const f of state.furniture) if (f.kind === 'coop') spawnItem(state, 'food', f.x, f.y);
+  if (state.tick > 0 && state.tick % every === 0) for (const f of ofKind(state, 'coop')) spawnItem(state, 'food', f.x, f.y);
 }
 
 export function plotPoint(plot: FarmPlot): Point {

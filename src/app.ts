@@ -2,6 +2,7 @@
 // createApp returns a dispose() so hot reload can tear it down cleanly.
 
 import { createArena } from './sim/arena';
+import { warmReach } from './sim/pathfinding';
 import { createMenu, type MenuActions } from './ui/menu';
 import { newGamePlus } from './sim/escape';
 import { installGameHooks, type GameHandle } from './debug/hooks';
@@ -148,6 +149,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     setDayScale(handle.state.settings.dayScale); // the clock reads right while paused
     view.camera = centredOn(handle.state.grid.width, handle.state.grid.height, view.camera.zoom);
     view.paused = true; // look before you play
+    warmReach(handle.state.grid, handle.state.walkabilityVersion); // while paused, not mid-play (pathfinding.ts)
     lastAutosaveDawn = dawns(handle.state.tick);
     toast(`Loaded ${from}${result.kind === 'bug' ? ' (bug report, replayed)' : ''}. Paused: Space to play.`);
     view.selectedId = handle.state.control?.survivorId ?? null;

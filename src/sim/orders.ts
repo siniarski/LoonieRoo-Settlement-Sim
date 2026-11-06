@@ -12,7 +12,7 @@
 // they fall behind, and step out of the way when they're standing in front of you.
 
 import { controlled } from './control';
-import { setScavenge } from './furniture';
+import { setScavenge, ofKind } from './furniture';
 import type { Point } from './grid';
 import type { JobType } from './jobTypes';
 import { findPath, findPathToAny, isPassable } from './pathfinding';
@@ -117,8 +117,8 @@ function stepAside(state: SimState, s: Survivor): boolean {
 /** The crates left to loot for a loot order: in the same room as the spot, or around it outdoors. */
 function crates(state: SimState, o: { x: number; y: number }): Furniture[] {
   const room = roomAt(state, o.x, o.y);
-  return state.furniture.filter(
-    (f) => f.kind === 'crate' && f.loot > 0 && (room ? roomAt(state, f.x, f.y)?.index === room.index : Math.max(Math.abs(f.x - o.x), Math.abs(f.y - o.y)) <= LOOT_RADIUS),
+  return ofKind(state, 'crate').filter(
+    (f) => f.loot > 0 && (room ? roomAt(state, f.x, f.y)?.index === room.index : Math.max(Math.abs(f.x - o.x), Math.abs(f.y - o.y)) <= LOOT_RADIUS),
   );
 }
 

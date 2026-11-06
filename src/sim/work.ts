@@ -10,7 +10,7 @@ import { LOOT_TABLES, pickFrom, type LootTable } from './loot';
 import { completeBlueprint, getBlueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
-import { getFurniture, setScavenge } from './furniture';
+import { getFurniture, setScavenge, ofKind } from './furniture';
 import { TREAT_TICKS } from './health';
 import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, hasTrait, skillLevel, workStep } from './skills';
 import { applyRemedy, isPatient, remediesFor } from './medicine';
@@ -312,7 +312,7 @@ export function interruptScouting(state: SimState, s: Survivor): void {
 function headHome(state: SimState, s: Survivor): void {
   releaseSurvivor(state, s, 'heading home before dark');
   s.note = 'heading home before dark';
-  const bed = state.furniture.find((f) => f.owner === s.id);
+  const bed = ofKind(state, 'bed').find((f) => f.owner === s.id); // only beds have owners
   const others = state.survivors.filter((o) => o !== s);
   const home = bed ?? (others.length > 0 ? { x: Math.round(others.reduce((a, o) => a + o.pos.x, 0) / others.length), y: Math.round(others.reduce((a, o) => a + o.pos.y, 0) / others.length) } : null);
   if (!home) return;

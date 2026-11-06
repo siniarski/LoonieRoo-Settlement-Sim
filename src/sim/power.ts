@@ -100,8 +100,8 @@ export function isWarmed(state: SimState, p: { x: number; y: number }): boolean 
 export function updateHeaters(state: SimState): void {
   const cold = isNight(state.tick) && (seasonOf(state.tick) === 'winter' || state.weather === 'blizzard');
   if (!cold) return;
-  for (const h of state.furniture) {
-    if (h.kind !== 'heater' || h.stored === 0) continue;
+  for (const h of [...ofKind(state, 'heater')]) {
+    if (h.stored === 0) continue;
     h.loot += 1;
     if (h.loot % TICKS_PER_HOUR === 0 && hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE && ignite(state, h.x, h.y)) logEvent(state, `The heater at (${h.x}, ${h.y}) set something alight!`);
     if (h.loot < HEATER_FUEL_TICKS) continue;
@@ -118,7 +118,8 @@ export function updateSpoilage(state: SimState): void {
   if (season === 'winter') return;
   const rate = (season === 'summer' ? 2 : 1) + (state.weather === 'heatwave' ? 1 : 0);
   const stores = completeRooms(state, 'storage');
-  const fridges = state.furniture.filter((f) => (f.kind === 'fridge' && isPowered(state, f)) || isMainsFridge(state, f));
+  // (Only ever asked whether any is near: order doesn't matter.)
+  const fridges = [...ofKind(state, 'fridge').filter((f) => isPowered(state, f)), ...ofKind(state, 'crate').filter((f) => isMainsFridge(state, f))];
   let rotted = 0;
   for (const item of [...state.items]) {
     if ((item.kind !== 'food' && item.kind !== 'meal') || !item.pos || item.reservedBy) continue;

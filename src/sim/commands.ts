@@ -17,7 +17,7 @@ import { TALK_RANGE, talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
-import { addFurniture, furnitureAt, getFurniture, removeFurniture, setScavenge } from './furniture';
+import { addFurniture, furnitureAt, getFurniture, removeFurniture, setScavenge, ofKind } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Point, type Tile } from './grid';
 import { dropItem, getItem, spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
@@ -303,12 +303,13 @@ function execute(state: SimState, command: Command): CommandResult {
     return marked.length > 0 ? changed() : unchanged();
   }
   if (command.type === 'assignBed') {
-    const bed = state.furniture.find((f) => f.id === command.bedId && f.kind === 'bed');
+    const found = getFurniture(state, command.bedId);
+    const bed = found?.kind === 'bed' ? found : undefined;
     if (!bed) return reject(`no bed ${command.bedId}`);
     const who = command.survivorId;
     if (who !== null && !getSurvivor(state, who)) return reject(`no survivor ${who}`);
     if (bed.owner === who) return unchanged();
-    for (const f of state.furniture) if (who !== null && f.owner === who) f.owner = null;
+    for (const f of ofKind(state, 'bed')) if (who !== null && f.owner === who) f.owner = null; // only beds have owners
     bed.owner = who;
     // Someone else asleep in it (or on the way) moves out next tick.
     if (bed.occupant && bed.occupant !== who) {

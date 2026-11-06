@@ -13,6 +13,7 @@
 //              Over SOAKED: the "soaked" thought.
 
 import { wearing } from './clothing';
+import { zombiesWithin } from './zombies';
 import { hashRoll, idNumber } from './hash';
 import { addThought } from './mood';
 import { isWarmed } from './power';
@@ -73,7 +74,7 @@ export function updateBody(state: SimState, s: Survivor): void {
   if (s.wetness > SOAKED) addThought(state, s, 'soaked');
   // Panic.
   if (state.tick % PANIC_EVERY !== 0) return;
-  const near = state.zombies.filter((z) => Math.max(Math.abs(z.pos.x - s.pos.x), Math.abs(z.pos.y - s.pos.y)) <= PANIC_RANGE).length;
+  const near = zombiesWithin(state, s.pos, PANIC_RANGE);
   if (near === 0) {
     s.panic = clamp(s.panic - 4);
     return;

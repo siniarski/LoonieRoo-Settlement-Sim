@@ -25,7 +25,7 @@ import { wakeComfort } from './wellbeing';
 import { isCold } from './seasons';
 import { EAT_TICKS, HOT_MEAL_VALUE, HUNGRY, MEAL_RETRY_TICKS, MEAL_VALUE, SATIETY_DRAIN, SATIETY_MAX } from './food';
 import { logEvent } from './events';
-import { furnitureAt, type Furniture, getFurniture } from './furniture';
+import { furnitureAt, type Furniture, getFurniture, ofKind } from './furniture';
 import {
   AWAKE_HEAL_EVERY,
   BANDAGE_HEAL,
@@ -358,7 +358,7 @@ export function killSurvivor(state: SimState, s: Survivor, cause: string, walked
   undress(state, s);
   // The infection's victims get up again (tick.ts); everyone else stays where they fell.
   if (cause !== 'the infection' && !walkedAway) leaveCorpse(state, s.pos, s.name);
-  for (const f of state.furniture) if (f.owner === s.id) f.owner = null;
+  for (const f of ofKind(state, 'bed')) if (f.owner === s.id) f.owner = null; // only beds have owners
   const i = state.survivors.indexOf(s);
   if (i >= 0) state.survivors.splice(i, 1);
   if (walkedAway) return;
@@ -416,7 +416,7 @@ function startSleep(state: SimState, s: Survivor): void {
   }
   bed.occupant = s.id;
   // Your first ordinary bed becomes yours (infirmary beds stay shared).
-  if (bed.owner === null && !isInfirmaryBed(state, bed) && !state.furniture.some((f) => f.owner === s.id)) bed.owner = s.id;
+  if (bed.owner === null && !isInfirmaryBed(state, bed) && !ofKind(state, 'bed').some((f) => f.owner === s.id)) bed.owner = s.id;
   s.sleep = { bedId: bed.id, asleep: false };
   s.note = `going to bed at (${bed.x}, ${bed.y})`;
   if (samePoint(s.pos, bed)) {
@@ -439,8 +439,8 @@ function nearestFreeBed(state: SimState, s: Survivor): Furniture | undefined {
   const guard = isGuard(s);
   const rank = (f: Furniture) =>
     (isInfirmaryBed(state, f) === hurt ? 0 : 4) + (f.owner === s.id ? 0 : 2) + (isBarracksBed(state, f) === guard ? 0 : 1);
-  return state.furniture
-    .filter((f) => f.kind === 'bed' && f.occupant === null && (f.owner === null || f.owner === s.id))
+  return ofKind(state, 'bed')
+    .filter((f) => f.occupant === null && (f.owner === null || f.owner === s.id))
     .sort((a, b) => rank(a) - rank(b) || manhattan(s.pos, a) - manhattan(s.pos, b))
     .find((f) => canReach(state.grid, state.walkabilityVersion, s.pos, [f]));
 }

@@ -97,14 +97,14 @@ export function alerts(state: SimState): Alert[] {
   const beds = ofKind(state, 'bed').length;
   if (people.length > beds) add('warn', `${people.length - beds} without a bed`);
   if (state.harsh) {
-    const clean = state.furniture.some((f) => f.kind === 'well' || (f.kind === 'collector' && f.loot > 0));
+    const clean = ofKind(state, 'well').length > 0 || ofKind(state, 'collector').some((f) => f.loot > 0);
     if (!clean) add('info', 'No clean water: build a well or a rain collector');
     const graves = completeRooms(state, 'graveyard');
     const rotting = state.items.filter((i) => isRotting(state, i, graves));
     if (rotting.length > 0) add('warn', `${rotting.length} bod${rotting.length === 1 ? 'y' : 'ies'} rotting: make a graveyard and haulers will bury them`, rotting[0]!.pos!);
   }
-  for (const g of state.furniture) {
-    if (g.kind === 'generator' && g.stored === 0) add('warn', `The generator at (${g.x}, ${g.y}) has no fuel`, g);
+  for (const g of ofKind(state, 'generator')) {
+    if (g.stored === 0) add('warn', `The generator at (${g.x}, ${g.y}) has no fuel`, g);
   }
 
   // Visitors and neighbours.
