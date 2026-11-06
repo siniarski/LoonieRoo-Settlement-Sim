@@ -18,7 +18,7 @@
 import { getTile, isOpen } from './grid';
 import { HUNGRY } from './food';
 import { ENTER_REACH, VEHICLE_RADIUS, drive, leaveVehicle, useVehicle, vehicleOf, vehiclesOf } from './vehicles';
-import { maybeAlarm } from './timeline';
+import { maybeAlarm, powerOn } from './timeline';
 import { EDGE_WINDOW, edgeBetween } from './grid';
 import { smashGlass } from './breach';
 import { fitsInPack, stow, unpack } from './inventory';
@@ -36,7 +36,7 @@ import { hitResident, meetResident, residentAt, type Resident } from './resident
 import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
 import { furnitureAt, getFurniture, type Furniture, setScavenge } from './furniture';
-import { DRINK_TICKS, HYDRATION_MAX, sourceAt } from './water';
+import { DRINK_TICKS, HYDRATION_MAX, drankFrom, sourceAt } from './water';
 import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX } from './rest';
 import { samePoint } from './space';
 import { applyRemedy, remediesFor } from './medicine';
@@ -74,9 +74,13 @@ export interface Control {
   /** Sneaking (C toggles): half pace, no running, hard to see and hear (sight.ts). */
   sneaking?: boolean;
   /** A timed action in progress: searching, eating, drinking, sleeping, treating, building, repairing, foraging. */
-  busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage'; targetId: string; progress: number; duration: number } | null;
+  busy: { what: 'search' | 'eat' | 'drink' | 'sleep' | 'treat' | 'build' | 'repair' | 'forage' | 'cook'; targetId: string; progress: number; duration: number } | null;
 }
 
+/** Ticks to cook a hot meal at a house's oven. */
+export const COOK_TICKS = 40;
+/** Rest back a slow tick asleep on a sofa: between the floor and a bed. */
+export const SOFA_REGEN = 3;
 /** You drink from a tap you use only if you're this far from full (else you search the counter). */
 export const TAP_THIRST = 200;
 
@@ -204,8 +208,17 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
     const source = sourceAt(state, x, y);
     if (!source) return;
     s.hydration = HYDRATION_MAX;
-    if (source === 'collector') furnitureAt(state, x, y)!.loot -= 1;
+    drankFrom(state, source, x, y);
     s.note = 'had a drink';
+    return;
+  }
+  if (busy.what === 'cook') {
+    // Raw food from the bag, a hot meal back in it.
+    const food = getItem(state, busy.targetId);
+    if (!food || food.kind !== 'food' || !s.pack.includes(food.id)) return;
+    food.kind = 'meal';
+    food.wear = 0;
+    s.note = 'cooked a hot meal';
     return;
   }
   const crate = getFurniture(state, busy.targetId);
@@ -238,7 +251,8 @@ function sleepTick(state: SimState, s: Survivor, c: Control, busy: NonNullable<C
   }
   if (!slowTick(state.tick)) return;
   // updateRest still drains a tick's worth; this makes up for it.
-  s.rest = Math.min(REST_MAX, s.rest + REST_DRAIN + (busy.targetId === 'floor' ? FLOOR_REGEN : BED_REGEN));
+  const sofa = busy.targetId !== 'floor' && getFurniture(state, busy.targetId)?.look === 'sofa';
+  s.rest = Math.min(REST_MAX, s.rest + REST_DRAIN + (busy.targetId === 'floor' ? FLOOR_REGEN : sofa ? SOFA_REGEN : BED_REGEN));
   busy.progress = s.rest;
   if (s.rest < REST_MAX) return;
   c.busy = null;
@@ -444,8 +458,18 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
     return 'drinking';
   }
   const bed = furnitureAt(state, target.x, target.y);
-  if (bed?.kind === 'bed' && samePoint(bed, s.pos)) return lieDown(s, c, bed.id);
-  if (bed?.kind === 'bed') {
+  // A house's oven with the power on: cook something from your bag.
+  if (bed?.kind === 'decor' && bed.look === 'oven') {
+    if (!powerOn(state)) return "the oven's dead: no power";
+    const food = s.pack.map((id) => getItem(state, id)).find((i) => i?.kind === 'food');
+    if (!food) return 'nothing in your bag to cook';
+    c.busy = { what: 'cook', targetId: food.id, progress: 0, duration: COOK_TICKS };
+    return 'cooking';
+  }
+  // A house's bed (or a sofa: a poorer night) sleeps like one of yours.
+  const sleepable = bed?.kind === 'bed' || (bed?.kind === 'decor' && (bed.look === 'bed' || bed.look === 'cot' || bed.look === 'sofa'));
+  if (bed && sleepable && samePoint(bed, s.pos)) return lieDown(s, c, bed.id);
+  if (bed && sleepable) {
     // Climb in first: one step onto it, then use it again (or E) to sleep.
     s.pos = { x: bed.x, y: bed.y };
     s.at = centre(s.pos);

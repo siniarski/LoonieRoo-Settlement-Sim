@@ -4,7 +4,9 @@
 // The player searches crates by day, eats, drinks (taps while the water's on), sleeps in the hut, fights
 // what's next to it, flees when hurt, treats itself and amputates; sneaks when the dead are about but not on
 // it, and forages when hungry with no food about; and drives to far crates when a car with fuel is beside
-// it (steering by heading, braking near, getting out when stuck). It does not yet barricade or hunt.
+// it (steering by heading, braking near, getting out when stuck). Hungry with no food about, it hunts deer and
+// rabbits (a swing beside one, or a shot with a loaded gun) before foraging; by day, once, it barricades the
+// shelter's door with wood (from the bag, a find on the ground, or a tree it chops; NO_BARRICADE=1 skips it).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { applyCommand, type Command } from '../src/sim/commands';
@@ -31,6 +33,9 @@ import { isIndoors } from '../src/sim/rooms';
 import { nearestTile } from '../src/sim/space';
 import { isTap } from '../src/sim/timeline';
 import { HEADINGS, vehicleOf, vehiclesOf, type Vehicle } from '../src/sim/vehicles';
+import type { Animal } from '../src/sim/animals';
+import { GUN_RANGE, loadedGun } from '../src/sim/weapons';
+import { clearShot } from '../src/sim/work';
 
 const cmd = (s: SimState, c: Command) => applyCommand(s, c);
 const out: string[] = [];
@@ -43,6 +48,10 @@ const dist = (a: Point, b: Point) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y 
 
 interface Bot {
   goal: string;
+  /** The shelter's door (barricaded once there's wood), if it has a door tile. */
+  door: Point | null;
+  hunted: number;
+  barricaded: number;
   path: Point[];
   pathFor: string;
   searched: number;
@@ -65,7 +74,7 @@ interface Bot {
  * (motion.ts): steer toward the centre of the next tile on the path, opening a closed door
  * that's next in the way (a colonist's path goes through doors; you have to open them).
  */
-function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Point, onto = false): void {
+function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Point, onto = false, act: 'use' | 'work' = 'use'): void {
   const c = state.control!;
   const stop = () => {
     if (c.dx !== 0 || c.dy !== 0) cmd(state, { type: 'steer', dx: 0, dy: 0 });
@@ -75,7 +84,7 @@ function goUse(state: SimState, s: Survivor, bot: Bot, key: string, target: Poin
   const settled = Math.abs(s.at.x - here.x) <= SUB / 4 && Math.abs(s.at.y - here.y) <= SUB / 4;
   if (onto ? at.x === target.x && at.y === target.y && settled : Math.abs(at.x - target.x) + Math.abs(at.y - target.y) <= 1) {
     stop();
-    if (!c.busy) cmd(state, { type: 'use', x: target.x, y: target.y });
+    if (!c.busy) cmd(state, { type: act, x: target.x, y: target.y });
     return;
   }
   if (bot.pathFor !== key || bot.path.length === 0 || state.tick % 40 === 0) {
@@ -218,6 +227,14 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
       if (dist(food.pos!, s.pos) <= 1) bot.ate++;
       return goUse(state, s, bot, `food${food.id}`, food.pos!);
     }
+    // Game about: hunt it.
+    if (!isNight(state.tick)) {
+      const prey = state.animals.filter((a) => (a.kind === 'deer' || a.kind === 'rabbit') && dist(a.pos, s.pos) <= 20).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos))[0];
+      if (prey) {
+        bot.goal = 'hunt';
+        return goSwing(state, s, bot, prey);
+      }
+    }
     // None about: forage (handiwork.ts), by day on open grass or a field not picked over today.
     if (forageTime(state)) {
       if (canForage(state, s) === null) {
@@ -241,6 +258,30 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
     if (w && dist(w.pos!, s.pos) < 30) {
       bot.goal = 'arm';
       return goUse(state, s, bot, `w${w.id}`, w.pos!);
+    }
+  }
+  // By day, once: barricade the shelter's door (R, with wood from the bag; find or chop some first).
+  if (!process.env.NO_BARRICADE && !isNight(state.tick) && bot.door && getTile(state.grid, bot.door.x, bot.door.y) === 'door') {
+    const door = bot.door;
+    const wood = inBag(['wood']) ?? (s.carrying ? state.items.find((i) => i.id === s.carrying && i.kind === 'wood') : undefined);
+    if (wood) {
+      bot.goal = 'barricade';
+      if (Math.abs(s.pos.x - door.x) + Math.abs(s.pos.y - door.y) === 1 && !c.busy) {
+        if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
+        if (cmd(state, { type: 'work', x: door.x, y: door.y }).ok) bot.barricaded++;
+        return;
+      }
+      return goUse(state, s, bot, 'door', door, false, 'work');
+    }
+    const lying = items('wood')[0];
+    if (lying && dist(lying.pos!, s.pos) < 25) {
+      bot.goal = 'get wood';
+      return goUse(state, s, bot, `wood${lying.id}`, lying.pos!);
+    }
+    const tree = state.furniture.filter((f) => f.kind === 'tree' && f.loot > 0 && dist(f, home) < 15).sort((a, b) => dist(a, s.pos) - dist(b, s.pos))[0];
+    if (tree) {
+      bot.goal = 'chop';
+      return goUse(state, s, bot, `tree${tree.id}`, tree);
     }
   }
   if (s.rest < TIRED || (isNight(state.tick) && s.rest < 1800)) {
@@ -278,6 +319,18 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
   if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
 }
 
+/** After an animal: a shot if there's a loaded gun and a clear line, a swing once beside it, else close in. */
+function goSwing(state: SimState, s: Survivor, bot: Bot, a: Animal): void {
+  const c = state.control!;
+  const shot = loadedGun(state, s) && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos);
+  if (shot || dist(a.pos, s.pos) <= 1) {
+    if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
+    if (cmd(state, { type: 'swing', x: a.pos.x, y: a.pos.y }).ok) bot.hunted++;
+    return;
+  }
+  goUse(state, s, bot, `hunt${a.id}@${a.pos.x},${a.pos.y}`, a.pos);
+}
+
 /** Steer a car toward bot.driveTo: turn toward it, go, brake near it, and get out (or when stuck, or the dead are at it). */
 function drive(state: SimState, s: Survivor, bot: Bot, car: Vehicle): void {
   const c = state.control!;
@@ -311,10 +364,11 @@ function run(seed: number, days: number): void {
   const bedF = state.furniture.find((f) => f.kind === 'bed')!;
   const bed = { x: bedF.x, y: bedF.y };
   const home = { ...s0.pos };
-  const bot: Bot = { goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, foraged: 0, sneaked: 0, drove: 0, driveTo: null, stuck: 0, treated: 0, amputated: 0 };
+  const door = nearestTile(state.grid, bed, (x, y) => getTile(state.grid, x, y) === 'door', 400);
+  const bot: Bot = { door, hunted: 0, barricaded: 0, goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, foraged: 0, sneaked: 0, drove: 0, driveTo: null, stuck: 0, treated: 0, amputated: 0 };
   const log = (why: string) => {
     const s = controlled(state);
-    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} foraged ${bot.foraged} sneaked ${bot.sneaked} drove ${bot.drove} treated ${bot.treated} amputated ${bot.amputated} infected ${s?.infection ?? '-'}`);
+    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} foraged ${bot.foraged} sneaked ${bot.sneaked} drove ${bot.drove} treated ${bot.treated} amputated ${bot.amputated} hunted ${bot.hunted} barricaded ${bot.barricaded} infected ${s?.infection ?? '-'}`);
   };
   out.push(`seed ${seed} (${process.env.PRESET ?? 'apocalypse'})`);
   for (let t = 0; t < days * DAY_LENGTH; t++) {

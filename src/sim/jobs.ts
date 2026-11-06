@@ -12,7 +12,7 @@
 import { cancelBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
 import { findById } from './lookup';
 import { getPlot, harvest, needsWork } from './farming';
-import { getAnimal } from './animals';
+import { getAnimal, isMenace } from './animals';
 import { getFurniture, ofKind, ofKinds, markedForScavenge } from './furniture';
 import { isPatient } from './medicine';
 import { getExploreArea } from './fog';
@@ -224,6 +224,9 @@ export function reconcileJobs(state: SimState): void {
   for (const z of state.zombies) {
     if (!hunted.has(z.id)) addJob(state, 'guard', z.pos.x, z.pos.y, null, null, null, z.id);
   }
+  // So does a wolf or bear that's going for your people (animals.ts isMenace): guards fight it off.
+  const guarding = new Set(state.jobs.filter((j) => j.type === 'guard' && j.animalId).map((j) => j.animalId));
+  for (const a of state.animals) if (isMenace(state, a) && !guarding.has(a.id)) addJob(state, 'guard', a.pos.x, a.pos.y, null, null).animalId = a.id;
 }
 
 /** Repairs are build jobs with no blueprint: they fix a damaged wall or door at x, y. */
@@ -261,6 +264,13 @@ function invalidReason(state: SimState, job: Job, stores: StoreRooms): string | 
       return needsWork(plot) ? null : 'crop is growing';
     }
     case 'guard': {
+      if (job.animalId) {
+        const a = getAnimal(state, job.animalId);
+        if (!a || !isMenace(state, a)) return 'the animal is gone';
+        job.x = a.pos.x;
+        job.y = a.pos.y;
+        return null;
+      }
       const z = job.zombieId ? getZombie(state, job.zombieId) : undefined;
       if (!z) return 'zombie gone';
       job.x = z.pos.x;

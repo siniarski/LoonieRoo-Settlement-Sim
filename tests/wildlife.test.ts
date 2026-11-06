@@ -6,6 +6,7 @@ import { loadScenario } from '../src/sim/scenario';
 import { manhattan } from '../src/sim/space';
 import type { SimState } from '../src/sim/state';
 import { tick } from '../src/sim/tick';
+import { placedAt } from '../src/sim/motion';
 import { DAY_LENGTH, TICKS_PER_HOUR } from '../src/sim/time';
 
 /** Open ground, size x size, one survivor in the middle. */
@@ -100,6 +101,24 @@ describe('wildlife', () => {
     const food = state.items.filter((i) => i.kind === 'food').length;
     expect(hitAnimal(state, s, lead.id, HEALTH.wolf)).toBe('brought it down');
     expect(state.items.filter((i) => i.kind === 'food').length - food).toBe(MEAT.wolf);
+  });
+
+  it('a starving wolf going for someone is fought off by a colonist on guard (a warning bite only drives it off)', () => {
+    const state = wild();
+    const s = state.survivors[0]!;
+    for (const k of Object.keys(s.priorities)) s.priorities[k as keyof typeof s.priorities] = 0;
+    const guard = { ...structuredClone(s), id: 's900', name: 'Guard', pos: { x: s.pos.x - 6, y: s.pos.y } };
+    Object.assign(guard, placedAt(guard.pos));
+    for (const k of Object.keys(guard.priorities)) guard.priorities[k as keyof typeof guard.priorities] = k === 'guard' ? 1 : 0;
+    state.survivors.push(guard);
+    const w = addAnimal(state, 'wolf', s.pos.x + 4, s.pos.y);
+    w.hunger = WOLF_STARVING;
+    let fought = false;
+    for (let k = 0; k < 600 && !fought; k++) {
+      tick(state);
+      fought = !state.animals.includes(w) || (w.health ?? 0) < HEALTH.wolf;
+    }
+    expect(fought).toBe(true);
   });
 
   it('animals far from everyone are gone at the hour', () => {

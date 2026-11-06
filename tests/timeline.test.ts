@@ -4,8 +4,8 @@ import { loadScenario } from '../src/sim/scenario';
 import { SIGHT_RADIUS, sightRadius } from '../src/sim/sight';
 import { tick } from '../src/sim/tick';
 import { DAY_LENGTH, dayOf, isNight, tickOfDay } from '../src/sim/time';
-import { ALARM_TICKS, isMainsFridge, maybeAlarm, mainsLit, powerOn, waterOn, type Timeline } from '../src/sim/timeline';
-import { sourceAt } from '../src/sim/water';
+import { ALARM_TICKS, TANK_WATER, isMainsFridge, maybeAlarm, mainsLit, powerOn, waterOn, type Timeline } from '../src/sim/timeline';
+import { drankFrom, sourceAt } from '../src/sim/water';
 import { CHUNK, createWorld, ensureGeneratedAround } from '../src/sim/worldgen';
 
 const timeline = (t: Partial<Timeline> = {}): Timeline => ({ waterOffDay: 5, powerOffDay: 6, helicopterDay: 0, heli: null, alarms: [], ...t });
@@ -36,14 +36,29 @@ describe('the mains', () => {
   it('kitchen counters, toilets and baths run while the water is on; iceboxes keep cold while the power is', () => {
     const state = createWorld(3, 128, { ...PRESETS.settler.settings });
     for (let y = 0; y < 128; y += CHUNK) for (let x = 0; x < 128; x += CHUNK) ensureGeneratedAround(state, { x, y });
-    const tap = state.furniture.find((f) => f.look === 'toilet' || f.look === 'counter');
+    const tap = state.furniture.find((f) => f.look === 'sink' || f.look === 'counter');
+    const toilet = state.furniture.find((f) => f.look === 'toilet');
     const icebox = state.furniture.find((f) => f.look === 'icebox');
-    expect(tap && icebox).toBeTruthy();
+    expect(tap && icebox && toilet).toBeTruthy();
     expect(sourceAt(state, tap!.x, tap!.y)).toBe('tap');
     expect(isMainsFridge(state, icebox!)).toBe(true);
     state.tick = startOf(state.timeline!.powerOffDay);
     expect(sourceAt(state, tap!.x, tap!.y)).toBeNull();
     expect(isMainsFridge(state, icebox!)).toBe(false);
+    // With the mains off a toilet's tank still holds a drink or two, then it's dry.
+    expect(sourceAt(state, toilet!.x, toilet!.y)).toBe('tank');
+    for (let k = 0; k < TANK_WATER.toilet!; k++) drankFrom(state, 'tank', toilet!.x, toilet!.y);
+    expect(sourceAt(state, toilet!.x, toilet!.y)).toBeNull();
+  }, 20000);
+
+  it('without the power, a house fridge rots a find a day', () => {
+    const state = createWorld(3, 128, { ...PRESETS.settler.settings });
+    for (let y = 0; y < 128; y += CHUNK) for (let x = 0; x < 128; x += CHUNK) ensureGeneratedAround(state, { x, y });
+    const icebox = state.furniture.find((f) => f.look === 'icebox' && f.loot > 0)!;
+    icebox.loot = 3;
+    state.tick = startOf(state.timeline!.powerOffDay + 1);
+    tick(state);
+    expect(icebox.loot).toBe(2);
   }, 20000);
 
   it('with the power on, indoors is lit at night and you see as far as by day', () => {

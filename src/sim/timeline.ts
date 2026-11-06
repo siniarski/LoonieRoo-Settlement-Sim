@@ -18,7 +18,7 @@
 // Rolls use hash.ts (seed and tick), not the sim RNG.
 
 import { logEvent } from './events';
-import type { Furniture } from './furniture';
+import { ofKind, type Furniture } from './furniture';
 import { inBounds, type Point } from './grid';
 import { hashRoll } from './hash';
 import { makeNoise } from './noise';
@@ -61,7 +61,9 @@ export const FAR_MAX = 45;
 /** Happenings go on until this many days after the power goes. */
 export const WIND_DOWN_DAYS = 3;
 /** Looks that are taps while the water's on. */
-export const TAP_LOOKS: readonly string[] = ['counter', 'toilet', 'bath'];
+export const TAP_LOOKS: readonly string[] = ['counter', 'sink', 'toilet', 'bath'];
+/** Drinks still in a toilet's tank or a bath once the mains are off (lots.ts fills them as the house is made). */
+export const TANK_WATER: Readonly<Record<string, number>> = { toilet: 2, bath: 4 };
 
 /** Sets the days the mains go off and the helicopter comes (generated worlds). */
 export function rollTimeline(state: SimState, seed: number): void {
@@ -140,6 +142,8 @@ export function updateTimeline(state: SimState): void {
   if (tickOfDay(state.tick) === 0 && state.tick > 0) {
     if (day === t.waterOffDay) logEvent(state, 'The taps ran dry: the water has been shut off.');
     if (day === t.powerOffDay) logEvent(state, 'The lights went out: the power is off for good.');
+    // Without the power, what's in the houses' fridges rots: a find a day.
+    if (day > t.powerOffDay) for (const f of ofKind(state, 'crate')) if (f.look === 'icebox' && f.loot > 0) f.loot -= 1;
   }
   // Alarms ring until they run down.
   t.alarms = t.alarms.filter((a) => state.tick < a.untilTick);

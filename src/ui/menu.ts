@@ -3,6 +3,7 @@
 //   new   the four presets, a Customise section (the sandbox settings, map size, a seed), Next
 //   character  who you are (sim/character.ts): a name, a profession, traits for points; Start
 //   load  the save slots, the autosave, and a file
+//   howto How to play (howto.ts)
 // Plain DOM over the canvas; it only calls the actions app.ts hands it.
 
 import type { Arena } from '../sim/arena';
@@ -13,6 +14,7 @@ import { TRAIT_INFO } from '../sim/skills';
 import { STORY_JOBS } from '../sim/story';
 import { AUTO_SLOT, SLOTS, slotLabel, slotTime } from './saves';
 import type { ViewState } from './view';
+import { HOW_TO_PLAY } from './howto';
 
 export interface MenuActions {
   /** Back to the game under the menu. */
@@ -72,7 +74,7 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
       const b = button('Continue', () => actions.load(continueFrom), 'menu-button primary');
       panel.append(b, el('div', 'menu-note', slotLabel(continueFrom) ?? ''));
     }
-    panel.append(button('New game', () => go('new')), button('Load', () => go('load')));
+    panel.append(button('New game', () => go('new')), button('Load', () => go('load')), button('How to play', () => go('howto')));
     if (view.inGame) {
       const saves = el('div', 'menu-row');
       saves.append(el('span', 'menu-label', 'Save to'));
@@ -197,6 +199,15 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
     panel.append(start, button('Back', () => go('new')));
   };
 
+  const howTo = (panel: HTMLElement) => {
+    panel.append(el('div', 'menu-heading', 'How to play'));
+    for (const part of HOW_TO_PLAY) {
+      panel.append(el('div', 'menu-subheading', part.heading));
+      for (const line of part.lines) panel.append(el('div', 'menu-text', line));
+    }
+    panel.append(button('Back', () => go('main')));
+  };
+
   const load = (panel: HTMLElement) => {
     panel.append(el('div', 'menu-heading', 'Load'));
     for (const slot of [...SLOTS, AUTO_SLOT]) {
@@ -223,6 +234,7 @@ export function createMenu(parent: HTMLElement, view: ViewState, actions: MenuAc
       if (view.menu === 'main') main(panel);
       else if (view.menu === 'new') newGame(panel);
       else if (view.menu === 'character') character(panel);
+      else if (view.menu === 'howto') howTo(panel);
       else load(panel);
       root.append(panel);
     },

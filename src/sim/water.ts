@@ -10,7 +10,7 @@
 // toilets and baths are taps (timeline.ts).
 
 import { scorching } from './climate';
-import { isTap, waterOn } from './timeline';
+import { TANK_WATER, isTap, waterOn } from './timeline';
 import { slowTick } from './time';
 import { SICK_TICKS } from './corpses';
 import { isWet } from './seasons';
@@ -40,7 +40,18 @@ export const THIRSTY_MOOD = -10;
 export const COLLECTOR_MAX = 20;
 export const COLLECTOR_FILL_EVERY = 50;
 
-export type WaterSource = 'well' | 'collector' | 'tap' | 'river';
+/** tank: what's left in a toilet's tank or a bath after the mains go off (timeline.ts TANK_WATER). */
+export type WaterSource = 'well' | 'collector' | 'tap' | 'tank' | 'river';
+
+/** Water standing in a fitting with the mains off. */
+function isTank(state: SimState, f: { kind: string; look: string | null; loot: number }): boolean {
+  return f.kind === 'decor' && f.look !== null && f.look in TANK_WATER && f.loot > 0 && !waterOn(state);
+}
+
+/** A drink taken from a source: collectors and tanks run down. */
+export function drankFrom(state: SimState, source: WaterSource, x: number, y: number): void {
+  if (source === 'collector' || source === 'tank') furnitureAt(state, x, y)!.loot -= 1;
+}
 
 export interface Drink {
   /** Where they'll stand to drink. */
@@ -78,6 +89,7 @@ export function sourceAt(state: SimState, x: number, y: number): WaterSource | n
   if (f?.kind === 'well') return 'well';
   if (f?.kind === 'collector' && f.loot > 0) return 'collector';
   if (f && isTap(state, f)) return 'tap';
+  if (f && isTank(state, f)) return 'tank';
   return getTile(state.grid, x, y) === 'water' ? 'river' : null;
 }
 
@@ -94,10 +106,12 @@ export function findWater(state: SimState, from: Point): Drink | null {
   const clean = new Map<number, WaterSource>();
   const tapsOn = waterOn(state);
   // (By kind, in list order as before: wells and collectors, and with the water on the fittings that can be taps.)
-  for (const f of ofKinds(state, tapsOn ? ['well', 'collector', 'crate', 'decor'] : ['well', 'collector'])) {
+  // (With the water off, decor too: what's left in toilets and baths.)
+  for (const f of ofKinds(state, tapsOn ? ['well', 'collector', 'crate', 'decor'] : ['well', 'collector', 'decor'])) {
     if (f.kind === 'well') clean.set(f.y * grid.width + f.x, 'well');
     else if (f.kind === 'collector' && f.loot > 0) clean.set(f.y * grid.width + f.x, 'collector');
     else if (tapsOn && isTap(state, f)) clean.set(f.y * grid.width + f.x, 'tap');
+    else if (isTank(state, f)) clean.set(f.y * grid.width + f.x, 'tank');
   }
   const passes: ((x: number, y: number) => WaterSource | undefined)[] = [
     (x, y) => clean.get(y * grid.width + x),
@@ -158,7 +172,7 @@ export function updateDrink(state: SimState, s: Survivor): boolean {
   if (d.progress < DRINK_TICKS) return true;
   s.hydration = HYDRATION_MAX;
   s.drink = null;
-  if (d.source === 'collector') furnitureAt(state, d.from.x, d.from.y)!.loot -= 1;
+  drankFrom(state, d.source, d.from.x, d.from.y);
   if (d.source === 'river' && s.sick === null && hashRoll(idNumber(s.id), state.tick, 7) < DIRTY_WATER_SICK) {
     s.sick = SICK_TICKS / 2;
     logEvent(state, `${s.name} got sick from river water (wells and rain collectors are clean)`);

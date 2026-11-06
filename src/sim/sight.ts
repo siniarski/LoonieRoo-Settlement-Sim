@@ -39,10 +39,13 @@ export const RUN_HEARD = 8;
 export const WALK_HEARD = 4;
 export const SNEAK_HEARD = 1;
 
-/** Does this tile stop sight passing through it (a wall, a shut door; water and barricades don't)? */
+/**
+ * Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed
+ * across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.
+ */
 function opaque(grid: SimState['grid'], x: number, y: number): boolean {
   const t = grid.tiles[tileIndex(grid, x, y)];
-  return t === 'wall' || (t === 'door' && !isOpen(grid, x, y));
+  return t === 'wall' || t === 'barricade' || (t === 'door' && !isOpen(grid, x, y));
 }
 
 /** A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round. */

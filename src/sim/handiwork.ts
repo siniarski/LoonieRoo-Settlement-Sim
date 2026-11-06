@@ -19,6 +19,7 @@ import { getItem, itemAt, removeItem, spawnItem } from './items';
 import { REPAIR_PER_TICK, repairStructure, structureDamage, isStructure } from './breach';
 import { isReinforced } from './defences';
 import { MEAT, provoke } from './animals';
+import { unpack } from './inventory';
 import { isIndoors } from './rooms';
 import { seasonOf } from './seasons';
 import type { SimState } from './state';
@@ -33,9 +34,15 @@ export const HUNT_CHANCE = 0.5;
 
 type Build = 'wall' | 'barricade' | 'reinforce';
 
+/** Wood in your hands, else in your bag (picked-up wood goes in the bag when it fits). */
 function carryingWood(state: SimState, s: Survivor) {
   const item = s.carrying ? getItem(state, s.carrying) : undefined;
-  return item?.kind === 'wood' ? item : undefined;
+  if (item?.kind === 'wood') return item;
+  for (const id of s.pack ?? []) {
+    const packed = getItem(state, id);
+    if (packed?.kind === 'wood') return packed;
+  }
+  return undefined;
 }
 
 /** What working this tile would do, or why not. */
@@ -43,13 +50,13 @@ function plan(state: SimState, s: Survivor, p: Point): { what: 'repair' } | { wh
   const tile = getTile(state.grid, p.x, p.y);
   if (isStructure(tile) && structureDamage(state, p.x, p.y) > 0) return { what: 'repair' };
   const wood = carryingWood(state, s);
-  if (tile === 'door') return wood ? { what: 'build', target: 'barricade' } : 'carry wood to barricade a door';
+  if (tile === 'door') return wood ? { what: 'build', target: 'barricade' } : 'you need wood to barricade a door';
   if (tile === 'wall' || tile === 'barricade') {
     if (isReinforced(state, p.x, p.y)) return 'already as strong as you can make it';
-    return wood ? { what: 'build', target: 'reinforce' } : 'carry wood to reinforce it';
+    return wood ? { what: 'build', target: 'reinforce' } : 'you need wood to reinforce it';
   }
   if (tile !== 'floor') return 'nothing to work on there';
-  if (!wood) return 'carry wood to put up a wall';
+  if (!wood) return 'you need wood to put up a wall';
   if (furnitureAt(state, p.x, p.y) || itemAt(state, p.x, p.y)) return 'something is in the way';
   if (state.survivors.some((o) => o.pos.x === p.x && o.pos.y === p.y) || state.zombies.some((z) => z.pos.x === p.x && z.pos.y === p.y)) return 'someone is in the way';
   return { what: 'build', target: 'wall' };
@@ -79,7 +86,8 @@ export function finishBuild(state: SimState, s: Survivor, targetId: string): str
   const now = plan(state, s, p);
   if (typeof now === 'string' || now.what !== 'build' || now.target !== target) return typeof now === 'string' ? now : 'it changed while you worked';
   const wood = carryingWood(state, s)!;
-  s.carrying = null;
+  if (s.carrying === wood.id) s.carrying = null;
+  unpack(s, wood.id);
   removeItem(state, wood);
   const bp: Blueprint = { id: `h${state.nextId++}`, x: p.x, y: p.y, target, needsMaterial: false, delivered: true, workDone: 0, workRequired: 0 };
   completeBlueprint(state, bp);

@@ -800,14 +800,32 @@ function createWandererPanel(command: (cmd: Command) => void) {
 
 function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
   const root = el('div', 'hud-priorities');
+  // A title bar: fold the list away, or open it out to every need and job priority.
+  const header = el('div', 'prio-header');
+  const title = el('span', 'prio-title');
+  const fold = el('button', 'hud-button prio-toggle');
+  fold.addEventListener('click', () => (view.roster = view.roster === 'folded' ? 'short' : 'folded'));
+  const more = el('button', 'hud-button prio-toggle');
+  more.addEventListener('click', () => (view.roster = view.roster === 'full' ? 'short' : 'full'));
+  header.append(title, more, fold);
+  const scroller = el('div', 'prio-scroll');
   const table = el('table', 'prio-table');
-  root.append(table);
+  scroller.append(table);
+  root.append(header, scroller);
   let lastKey = '';
 
   const rebuild = (state: SimState) => {
     table.innerHTML = '';
+    const full = view.roster === 'full';
+    title.textContent = `Survivors (${state.survivors.length})`;
+    fold.textContent = view.roster === 'folded' ? '▸' : '▾';
+    fold.title = view.roster === 'folded' ? 'Show the list' : 'Fold the list away';
+    more.textContent = full ? 'Less' : 'Jobs & needs';
+    more.hidden = view.roster === 'folded';
+    scroller.hidden = view.roster === 'folded';
+    if (view.roster === 'folded') return;
     const head = el('tr', '');
-    for (const label of ['Survivor', 'Mood', 'Resolve', 'Social', 'Comfort', 'Shift', 'Order', ...JOB_TYPES.map((t) => JOB_LABELS[t]), 'Doing']) {
+    for (const label of ['Survivor', 'Mood', ...(full ? ['Resolve', 'Social', 'Comfort', 'Shift'] : []), 'Order', ...(full ? JOB_TYPES.map((t) => JOB_LABELS[t]) : []), 'Doing']) {
       const th = el('th', '');
       th.textContent = label;
       head.append(th);
@@ -831,7 +849,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       const resolveCell = el('td', `prio-mood${isBreaking(s) ? ' low' : isSteeled(s) ? ' high' : ''}`);
       resolveCell.textContent = String(s.resolve);
       resolveCell.title = `${s.name} is ${describeResolve(s)}. Resolve drifts with mood each dawn (loneliness and poor sleep get in that way); requests seen through and promises kept lift it, deaths and broken promises cut it. Under ${BREAKING} they may walk away; at ${STEELED} or more they don't break down.`;
-      row.append(resolveCell);
+      if (full) row.append(resolveCell);
 
       for (const [value, about] of [
         [s.social, `Social: rises while near someone awake, and with every talk; sinks alone. Under ${LOW}: lonely (${LONELY_MOOD} mood).`],
@@ -840,7 +858,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
         const cell = el('td', `prio-mood${value < LOW ? ' low' : value > HIGH ? ' high' : ''}`);
         cell.textContent = String(value);
         cell.title = about;
-        row.append(cell);
+        if (full) row.append(cell);
       }
 
       const shiftCell = el('td', '');
@@ -849,7 +867,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       shift.title = `${s.name} works the ${s.shift} shift (sleeps ${s.shift === 'night' ? 'by day' : 'at night'}). Click to switch.`;
       shift.addEventListener('click', () => command({ type: 'setShift', survivorId: s.id, shift: s.shift === 'night' ? 'day' : 'night' }));
       shiftCell.append(shift);
-      row.append(shiftCell);
+      if (full) row.append(shiftCell);
 
       const orderCell = el('td', '');
       const order = el('button', 'prio-cell');
@@ -860,7 +878,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       orderCell.append(order);
       row.append(orderCell);
 
-      for (const type of JOB_TYPES) {
+      for (const type of full ? JOB_TYPES : []) {
         const td = el('td', '');
         const button = el('button', `prio-cell p${s.priorities[type]}`);
         button.textContent = s.priorities[type] === 0 ? '–' : String(s.priorities[type]);
@@ -891,7 +909,7 @@ function createPriorityPanel(view: ViewState, command: (cmd: Command) => void) {
       root.hidden = !shown;
       if (!shown) return;
       // Rebuild only when something shown in the table changed.
-      const key = JSON.stringify([view.selectedId, state.survivors.map((s) => [s.id, s.name, s.resolve, s.social, s.comfort, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
+      const key = JSON.stringify([view.selectedId, view.roster, state.survivors.map((s) => [s.id, s.name, s.resolve, s.social, s.comfort, s.shift, s.order, s.priorities, activity(state, s), moodTitle(state, s)])]);
       if (key === lastKey) return;
       lastKey = key;
       rebuild(state);
