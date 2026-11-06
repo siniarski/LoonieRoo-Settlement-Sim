@@ -39,4 +39,24 @@ export interface ViewState {
   showOverview: boolean;
   /** The full key list under direct control (K); otherwise just a reminder. */
   showKeys: boolean;
+  /**
+   * Under direct control, the colony's management (G): build, priorities, the overview, the
+   * neighbour and visitor panels. Off, you see only what your survivor would (survivorMode).
+   */
+  colonyMode: boolean;
+}
+
+/** Playing one survivor with the colony's management put away (G brings it back). */
+export function survivorMode(view: ViewState, controlling: boolean): boolean {
+  return controlling && !view.colonyMode;
+}
+
+/** G under direct control: the colony's management out, or put away (closing build and the overview). */
+export function toggleColonyMode(view: ViewState): void {
+  view.colonyMode = !view.colonyMode;
+  if (!view.colonyMode) {
+    view.buildOpen = false;
+    view.tool = null;
+    view.showOverview = false;
+  }
 }

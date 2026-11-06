@@ -130,6 +130,7 @@ export function drawFixture(ctx: CanvasRenderingContext2D, camera: Camera, viewp
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
   ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  if (size >= 10) drawDetail(ctx, f.look ?? 'crate', x, y, w, h);
   ctx.globalAlpha = 1;
   if (!container) return;
   if (f.scavenge) {
@@ -156,7 +157,111 @@ const LOOKS: Record<Look, [string, number, number]> = {
   pew: ['#5a4028', 0.95, 0.35], altar: ['#c8b070', 0.8, 0.5], hay: ['#b8a050', 0.85, 0.85], tractor: ['#8a3a20', 0.9, 0.9],
   pump: ['#a0302a', 0.4, 0.6], bench: ['#6a5a40', 0.8, 0.3], cot: ['#7a8a7a', 0.6, 0.9], register: ['#4a4a4a', 0.5, 0.4],
   machine: ['#4a5058', 0.9, 0.9], silo: ['#8a9098', 1, 1],
+  sink: ['#a8b4b8', 0.75, 0.5], bin: ['#3e4a40', 0.4, 0.45], nightstand: ['#6a4c34', 0.45, 0.45], bookcase: ['#4e3a28', 0.9, 0.4],
+  shower: ['#9ab0b8', 0.75, 0.75], armchair: ['#6a4a4a', 0.55, 0.55], washer: ['#d0d2d0', 0.65, 0.65],
 };
+
+/** A few strokes per look so each reads as what it is (doors, drawers, a basin, a seat), over its block of colour. */
+function drawDetail(ctx: CanvasRenderingContext2D, look: Look, x: number, y: number, w: number, h: number): void {
+  const line = (x0: number, y0: number, x1: number, y1: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x + x0 * w, y + y0 * h);
+    ctx.lineTo(x + x1 * w, y + y1 * h);
+    ctx.stroke();
+  };
+  const blob = (cx: number, cy: number, rx: number, ry: number, fill: string) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.ellipse(x + cx * w, y + cy * h, rx * w, ry * h, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const box = (x0: number, y0: number, x1: number, y1: number, fill: string) => {
+    ctx.fillStyle = fill;
+    ctx.fillRect(x + x0 * w, y + y0 * h, (x1 - x0) * w, (y1 - y0) * h);
+  };
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.lineWidth = 1;
+  switch (look) {
+    case 'icebox': // freezer door over the fridge door, and a handle
+      line(0, 0.35, 1, 0.35);
+      line(0.82, 0.12, 0.82, 0.25);
+      line(0.82, 0.48, 0.82, 0.75);
+      break;
+    case 'counter': // a worktop edge and cupboard doors
+      box(0, 0, 1, 0.25, 'rgba(255, 255, 255, 0.18)');
+      line(0.5, 0.25, 0.5, 1);
+      break;
+    case 'sink': // a worktop with a basin and a tap
+      blob(0.5, 0.55, 0.28, 0.3, '#5a6a70');
+      box(0.47, 0.05, 0.53, 0.25, '#d8dcdc');
+      break;
+    case 'oven': // four rings
+      for (const [cx, cy] of [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]] as const) blob(cx, cy, 0.13, 0.13, '#5a5a5e');
+      break;
+    case 'bin': // a lid
+      box(0, 0, 1, 0.22, 'rgba(255, 255, 255, 0.2)');
+      break;
+    case 'wardrobe': // two doors
+      line(0.5, 0, 0.5, 1);
+      line(0.42, 0.4, 0.42, 0.6);
+      line(0.58, 0.4, 0.58, 0.6);
+      break;
+    case 'dresser':
+    case 'nightstand': // drawers
+      line(0, 0.33, 1, 0.33);
+      line(0, 0.66, 1, 0.66);
+      break;
+    case 'cabinet': // a door and a handle
+      line(0.75, 0.3, 0.75, 0.7);
+      break;
+    case 'shelf':
+    case 'bookcase': // shelves (a bookcase with spines on them)
+      line(0, 0.5, 1, 0.5);
+      if (look === 'bookcase') for (let i = 0; i < 6; i++) box(0.06 + i * 0.15, 0.08, 0.13 + i * 0.15, 0.45, ['#8a3a2a', '#3a5a7a', '#6a7a3a'][i % 3]!);
+      break;
+    case 'locker': // vents
+      for (const v of [0.15, 0.25, 0.35]) line(0.2, v, 0.8, v);
+      break;
+    case 'toolbox': // a handle
+      line(0.3, 0.2, 0.7, 0.2);
+      break;
+    case 'toilet': // the cistern and the bowl
+      box(0, 0, 1, 0.3, 'rgba(0, 0, 0, 0.12)');
+      blob(0.5, 0.65, 0.38, 0.32, '#e0e4e4');
+      break;
+    case 'bath': // the tub
+      blob(0.5, 0.5, 0.42, 0.34, '#dfe6ea');
+      break;
+    case 'shower': // a tray and its drain
+      ctx.strokeRect(x + 0.12 * w, y + 0.12 * h, 0.76 * w, 0.76 * h);
+      blob(0.5, 0.5, 0.07, 0.07, '#4a5a60');
+      break;
+    case 'washer': // the door
+      blob(0.5, 0.55, 0.3, 0.3, '#6a7a88');
+      break;
+    case 'bed':
+    case 'cot': // a pillow
+      box(0.12, 0.06, 0.88, 0.24, '#d8d8d0');
+      break;
+    case 'sofa':
+    case 'armchair': // the back and the arms
+      box(0, 0, 1, 0.3, 'rgba(0, 0, 0, 0.2)');
+      box(0, 0, 0.15, 1, 'rgba(0, 0, 0, 0.2)');
+      box(0.85, 0, 1, 1, 'rgba(0, 0, 0, 0.2)');
+      break;
+    case 'tv': // the screen
+      box(0.08, 0.15, 0.92, 0.85, '#38424a');
+      break;
+    case 'desk': // a drawer
+      line(0.65, 0, 0.65, 1);
+      break;
+    case 'crate':
+    case 'pallet': // slats
+      line(0, 0.33, 1, 0.33);
+      line(0, 0.66, 1, 0.66);
+      break;
+  }
+}
 
 /** A slatted crate: dull when searched out, yellow dashed outline when marked, pips for finds left. */
 export function drawCrate(ctx: CanvasRenderingContext2D, camera: Camera, viewport: Viewport, f: Furniture, size: number): void {

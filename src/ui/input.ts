@@ -30,7 +30,7 @@ import type { Control } from '../sim/control';
 import type { Point, Side } from '../sim/grid';
 import { disarm, handleBuildKey } from './buildMode';
 import { getTool, tilesInBox, tilesOnLine } from './tools';
-import type { ViewState } from './view';
+import { survivorMode, toggleColonyMode, type ViewState } from './view';
 
 /** Screen pixels per second for keyboard panning. */
 const KEY_PAN_PX_PER_SEC = 600;
@@ -282,6 +282,12 @@ export function attachInput(ctx: InputContext): Input {
     }
     if (key === 'Escape' && !view.tool && !view.buildOpen && !view.selectedId && !view.showOverview) {
       ctx.toggleMenu();
+      return;
+    }
+    // Playing one survivor: the colony's keys (build, priorities, overview) bring its management out first.
+    if (survivorMode(view, ctx.control() !== null) && (key === 'b' || key === 'p' || key === 'o')) view.colonyMode = true;
+    if (key === 'g' && ctx.control()) {
+      toggleColonyMode(view);
       return;
     }
     if (handleBuildKey(view, key, e.shiftKey)) {

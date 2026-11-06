@@ -107,6 +107,20 @@ describe('building plans', () => {
     }
   });
 
+  it('each room is fitted out for what it is: a kitchen sink and bin, a bathroom sink, bedside tables', () => {
+    let kitchenSinks = 0, bins = 0, bathSinks = 0, nightstands = 0, washing = 0;
+    for (let n = 0; n < 60; n++) {
+      const p = housePlan(rolls(n), { maxW: 13, maxH: 12, garage: true });
+      kitchenSinks += p.furniture.filter((f) => f.look === 'sink' && f.table === 'kitchen').length;
+      bathSinks += p.furniture.filter((f) => f.look === 'sink' && f.table === 'bathroom').length;
+      bins += p.furniture.filter((f) => f.look === 'bin' && f.table === 'trash').length;
+      nightstands += p.furniture.filter((f) => f.look === 'nightstand' && f.table === 'bedroom').length;
+      washing += p.furniture.some((f) => f.look === 'bath' || f.look === 'shower') ? 1 : 0;
+    }
+    // Most houses have room for each (a cramped room may go without).
+    for (const [what, count] of [['kitchen sinks', kitchenSinks], ['bins', bins], ['bathroom sinks', bathSinks], ['nightstands', nightstands], ['a bath or shower', washing]] as const) expect(count, what).toBeGreaterThan(40);
+  });
+
   it('turns to face any street: a one-to-one map onto the turned footprint', () => {
     const p = housePlan(rolls(3), { maxW: 13, maxH: 12, garage: true });
     for (const facing of ['north', 'south', 'east', 'west'] as const) {

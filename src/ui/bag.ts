@@ -9,18 +9,14 @@ import type { Command } from '../sim/commands';
 import { controlled } from '../sim/control';
 import { ITEM_WEIGHT, PACK_MAX, containerOf, contents, packWeight } from '../sim/inventory';
 import { getItem } from '../sim/items';
-import { furnitureAt } from '../sim/furniture';
+import { containerName, furnitureAt } from '../sim/furniture';
 import { SUB } from '../sim/motion';
 import type { SimState } from '../sim/state';
 import { bootMax, vehicleNear, vehicleOf } from '../sim/vehicles';
 
 const kg = (tenths: number) => (tenths / 10).toFixed(1);
+const capitalise = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
-/** What a container looks like, for the loot list's title. */
-const NAMES: Record<string, string> = {
-  counter: 'Counter', icebox: 'Fridge', shelf: 'Shelf', wardrobe: 'Wardrobe', dresser: 'Dresser', cabinet: 'Cabinet', toolbox: 'Toolbox',
-  locker: 'Locker', desk: 'Desk', pallet: 'Pallet', sack: 'Sacks', crate: 'Crate',
-};
 
 /** The container beside you, if any: a car's boot, or a crate with things in it. */
 function beside(state: SimState, s: NonNullable<ReturnType<typeof controlled>>): { id: string; title: string } | null {
@@ -34,7 +30,7 @@ function beside(state: SimState, s: NonNullable<ReturnType<typeof controlled>>):
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const f = furnitureAt(state, s.pos.x + dx, s.pos.y + dy);
-      if (f?.kind === 'crate' && contents(state, f).length > 0) return { id: f.id, title: NAMES[f.look ?? 'crate'] ?? 'Container' };
+      if (f?.kind === 'crate' && contents(state, f).length > 0) return { id: f.id, title: capitalise(containerName(f)) };
     }
   }
   return null;
