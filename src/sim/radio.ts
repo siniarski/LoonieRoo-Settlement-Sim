@@ -2,9 +2,10 @@
 // (a hash of the day): either a distress call, which marks a point of
 // interest out there (an expedition to it brings the callers home,
 // expeditions.ts), or a neighbour asking for supplies (state.requests:
-// send them within REQUEST_DAYS for a lot of goodwill and something back).
+// send them within REQUEST_DAYS for a lot of goodwill and something back, by caravan).
 
 import { logEvent } from './events';
+import { sendCaravan } from './caravans';
 import { ofKind } from './furniture';
 import { hashRoll } from './hash';
 import type { ItemKind } from './items';
@@ -74,7 +75,8 @@ export function fulfilRequest(state: SimState, id: string): string | null {
   if (n) adjustReputation(state, n, REQUEST_REP);
   const thanks = THANKS[Math.floor(hashRoll(state.tick, 6) * THANKS.length)]!;
   const at = state.survivors[0]?.pos ?? { x: 0, y: 0 };
-  for (let k = 0; k < 2; k++) spawnItem(state, thanks, at.x, at.y);
-  logEvent(state, `Sent ${r.count} ${r.kind} to ${n?.name ?? 'the neighbours'}; they sent back 2 ${thanks}`);
+  // The thanks come by caravan (caravans.ts); with nobody left to send one, straight away.
+  if (!n || n.people <= 0 || !sendCaravan(state, n.id, 'you', at, 0, [thanks, thanks])) for (let k = 0; k < 2; k++) spawnItem(state, thanks, at.x, at.y);
+  logEvent(state, `Sent ${r.count} ${r.kind} to ${n?.name ?? 'the neighbours'}; 2 ${thanks} are on their way back by caravan`);
   return null;
 }

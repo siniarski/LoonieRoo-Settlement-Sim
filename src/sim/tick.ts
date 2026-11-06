@@ -2,6 +2,8 @@
 // frame, never what a tick means.
 
 import { closeBehind } from './doors';
+import { updateCaravans } from './caravans';
+import { updateErrands } from './errands';
 import { updateForage } from './forage';
 import { updateVehicles } from './vehicles';
 import { updateTimeline } from './timeline';
@@ -98,6 +100,8 @@ export function tick(state: SimState): void {
   updateTasks(state);
   updateSettlements(state);
   updateColonies(state);
+  updateCaravans(state);
+  updateErrands(state);
   updateResidents(state);
   updateFamily(state);
   updateHerds(state);

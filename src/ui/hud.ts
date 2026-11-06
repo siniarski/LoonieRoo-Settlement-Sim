@@ -3,6 +3,8 @@
 // out as sim commands or view-state changes.
 
 import { climateAt, isRadioactive } from '../sim/climate';
+import { errandsOf } from '../sim/errands';
+import { relation, type Settlement } from '../sim/settlements';
 import { createWorldMap } from './worldmap';
 import { FUEL_MAX, VEHICLE_HEALTH, vehicleOf } from '../sim/vehicles';
 import { SUB } from '../sim/motion';
@@ -536,13 +538,21 @@ function createPrisonerPanel(command: (cmd: Command) => void) {
 }
 
 /** Neighbouring settlements: what they think of you, and a gift button. */
+/** " · allies: X · feuding: Y" for a settlement, or ''. */
+function standing(state: SimState, n: Settlement): string {
+  const others = state.settlements.filter((o) => o !== n && !isFallen(o));
+  const allies = others.filter((o) => relation(n, o) === 'allies').map((o) => o.name);
+  const feuds = others.filter((o) => relation(n, o) === 'feud').map((o) => o.name);
+  return `${allies.length ? ` · allies: ${allies.join(', ')}` : ''}${feuds.length ? ` · feuding: ${feuds.join(', ')}` : ''}`;
+}
+
 function createSettlementPanel(command: (cmd: Command) => void) {
   const root = el('div', 'hud-wanderers');
   let last = '';
   return {
     root,
     update(state: SimState) {
-      const key = JSON.stringify([state.settlements, state.requests, state.items.length]);
+      const key = JSON.stringify([state.settlements, state.requests, state.items.length, state.errands, dayOf(state.tick)]);
       if (key === last) return;
       last = key;
       root.hidden = state.settlements.length === 0;
@@ -557,7 +567,7 @@ function createSettlementPanel(command: (cmd: Command) => void) {
         const mood = n.reputation <= HOSTILE ? 'hostile' : n.reputation >= FRIENDLY ? 'friendly' : 'wary';
         label.textContent = isFallen(n)
           ? `${n.name} (${n.x}, ${n.y}): fallen, nobody left`
-          : `${n.name} (${n.x}, ${n.y}): ${mood} ${n.reputation} · ${n.people} people, ${hungerOf(n)}, walls ${n.defence}/5`;
+          : `${n.name} (${n.x}, ${n.y}): ${mood} ${n.reputation} · ${n.people} people, ${hungerOf(n)}, walls ${n.defence}/5${standing(state, n)}`;
         const gift = el('button', 'hud-button');
         gift.textContent = `Gift ${GIFT_FOOD} food`;
         gift.disabled = food < GIFT_FOOD;
@@ -570,6 +580,15 @@ function createSettlementPanel(command: (cmd: Command) => void) {
         });
         if (isFallen(n)) row.append(label);
         else row.append(label, gift, raid);
+        root.append(row);
+      }
+      for (const e of errandsOf(state)) {
+        const n = state.settlements.find((s) => s.id === e.settlementId);
+        const days = Math.max(0, Math.ceil((e.until - state.tick) / DAY_LENGTH));
+        const row = el('div', 'hud-wanderer');
+        const text = el('span', 'hud-wanderer-label');
+        text.textContent = `${n?.name ?? '?'} asks: ${e.kind === 'nest' ? 'clear the dead' : `find ${e.who}`} near (${e.x}, ${e.y}), ${days} day${days === 1 ? '' : 's'} left (on your map)`;
+        row.append(text);
         root.append(row);
       }
       for (const r of state.requests) {

@@ -3,10 +3,14 @@
 // The ground you've explored (fogged where nobody has been), town names once you've seen their
 // middle, neighbours' settlements, places of interest, cars you've seen, your people, and you
 // (ringed). Your own notes (sim/mapnotes.ts): click the map to pin one, right-click a pin to take
-// it off. Wheel to zoom, drag to pan, double-click to look there in the game. M or Escape closes.
+// it off. Neighbours' errands are ringed in orange (errands.ts); caravans on ground you've seen
+// are small carts (caravans.ts). Wheel to zoom, drag to pan, double-click to look there in the
+// game. M or Escape closes.
 // Reads state only; notes go through commands.
 
 import type { Command } from '../sim/commands';
+import { caravansOf } from '../sim/caravans';
+import { errandsOf } from '../sim/errands';
 import { GROUNDS } from '../sim/grid';
 import { NOTE_MAX, notesOf, townNames } from '../sim/mapnotes';
 import { HOSTILE } from '../sim/settlements';
@@ -234,6 +238,25 @@ export function createWorldMap(view: ViewState, command: (cmd: Command) => void)
       for (const p of s.pointsOfInterest) {
         dot(p.x + 0.5, p.y + 0.5, '#ffd166', 3);
         if (cam.zoom >= 3) label(p.x + 0.5, p.y - 0.6, p.label, '#ffd166', '11px ui-monospace, monospace');
+      }
+      // Neighbours' errands for you (errands.ts): where, and what.
+      for (const e of errandsOf(s)) {
+        const n = s.settlements.find((x) => x.id === e.settlementId);
+        const p = toScreen(e.x + 0.5, e.y + 0.5);
+        ctx.strokeStyle = '#ffa24a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+        ctx.stroke();
+        label(e.x + 0.5, e.y - 1, `${e.kind === 'nest' ? 'the dead' : `missing: ${e.who}`} (${n?.name ?? '?'})`, '#ffbf80');
+      }
+      // Caravans on the road, on ground you've seen.
+      for (const c of caravansOf(s)) {
+        if (!seen(c.x, c.y)) continue;
+        const p = toScreen(c.x + 0.5, c.y + 0.5);
+        ctx.fillStyle = '#c49a5a';
+        ctx.fillRect(p.x - 4, p.y - 3, 8, 6);
+        if (cam.zoom >= 3) label(c.x + 0.5, c.y - 0.6, 'caravan', '#e0c9a0', '11px ui-monospace, monospace');
       }
       for (const v of vehiclesOf(s)) {
         if (!seen(v.pos.x, v.pos.y)) continue;

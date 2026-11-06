@@ -8,7 +8,9 @@
 //   growth  well fed, now and then someone new turns up
 //   walls   a surplus goes into defences, now and then
 //   the dead  a night attack can take one or two, less likely behind good walls
-//   help    a fed one sends food to a starving neighbour (the two warm to each other)
+//   help    a fed one sends food to a starving neighbour by caravan (caravans.ts; the two warm
+//           to each other when it arrives); allies send to a merely hungry one too
+//   feuds   feuding neighbours raid each other now and then, starving or not
 //   raids   a starving one raids the nearest neighbour for food, and both lose people
 //   splits  past SPLIT_AT people, a would-be leader leaves with a few to found their own
 //   falls   at none left it falls, and its compound is a ruin with the dead still in it
@@ -22,7 +24,8 @@ import { GROUNDS, inBounds, setTile, tileIndex, type Point } from './grid';
 import { hashRoll, idNumber } from './hash';
 import { spawnItem } from './items';
 import { seasonOf, type Season } from './seasons';
-import { adjustReputation, getSettlement, isHostile, newSettlement, type Settlement } from './settlements';
+import { adjustReputation, getSettlement, isHostile, newSettlement, relation, tieSettlements, type Settlement } from './settlements';
+import { caravansOf, sendCaravan } from './caravans';
 import type { SimState } from './state';
 import { DAY_LENGTH, dayOf } from './time';
 import { ensureGeneratedAround } from './worldgen';
@@ -91,6 +94,8 @@ function dawn(state: SimState): void {
       continue;
     }
     if (hungerOf(n) === 'starving') raidOrBeg(state, n, roll);
+    else if (hungerOf(n) === 'hungry') allyHelps(state, n, roll);
+    feud(state, n, roll);
     if (n.people >= SPLIT_AT && state.settlements.length < MAX_SETTLEMENTS) split(state, n, roll);
   }
   for (const n of state.settlements) syncResidents(state, n);
@@ -140,12 +145,12 @@ function raidOrBeg(state: SimState, n: Settlement, roll: (salt: number) => numbe
     .filter((o) => o !== n && !isFallen(o) && o.food > 0)
     .sort((a, b) => Math.abs(a.x - n.x) + Math.abs(a.y - n.y) - (Math.abs(b.x - n.x) + Math.abs(b.y - n.y)));
   const giver = others.find((o) => o.food >= o.people * WELL_FED_DAYS && (o.ties[n.id] ?? 0) >= 0);
-  if (giver && roll(5) < 0.5) {
+  if (giver && roll(5) < 0.5 && !caravansOf(state).some((c) => c.to === n.id)) {
     const sent = Math.floor(giver.food / 3);
     giver.food -= sent;
-    n.food += sent;
-    tie(giver, n, 20);
-    news(state, n, `${giver.name} sent food to a starving ${n.name}`);
+    sendCaravan(state, giver.id, n.id, { x: n.x, y: n.y }, sent);
+    tie(state, giver, n, 10);
+    news(state, n, `${giver.name} sent a caravan of food to a starving ${n.name}`);
     return;
   }
   const target = others[0];
@@ -155,12 +160,43 @@ function raidOrBeg(state: SimState, n: Settlement, roll: (salt: number) => numbe
   n.food += took;
   n.people = Math.max(0, n.people - 1);
   target.people = Math.max(0, target.people - (roll(7) < 0.5 ? 1 : 0));
-  tie(target, n, -40);
+  tie(state, target, n, -40);
   news(state, n, `${n.name} raided ${target.name} for food`);
 }
 
-function tie(a: Settlement, b: Settlement, by: number): void {
-  for (const [x, y] of [[a, b], [b, a]] as const) x.ties[y.id] = Math.max(-100, Math.min(100, (x.ties[y.id] ?? 0) + by));
+/** A hungry settlement's well-fed ally sends a little, by caravan (once one's on the way, no more). */
+function allyHelps(state: SimState, n: Settlement, roll: (salt: number) => number): void {
+  if (caravansOf(state).some((c) => c.to === n.id) || roll(10) >= 0.5) return;
+  const ally = state.settlements.find((o) => o !== n && !isFallen(o) && relation(o, n) === 'allies' && o.food >= o.people * WELL_FED_DAYS);
+  if (!ally) return;
+  const sent = Math.floor(ally.food / 4);
+  ally.food -= sent;
+  sendCaravan(state, ally.id, n.id, { x: n.x, y: n.y }, sent);
+  news(state, n, `${ally.name} sent a caravan to its ally ${n.name}`);
+}
+
+/** Feuding neighbours raid each other now and then (FEUD_RAID_CHANCE a day), fed or not. */
+export const FEUD_RAID_CHANCE = 0.08;
+function feud(state: SimState, n: Settlement, roll: (salt: number) => number): void {
+  const foe = state.settlements.find((o) => o !== n && !isFallen(o) && relation(n, o) === 'feud');
+  if (!foe || roll(11) >= FEUD_RAID_CHANCE) return;
+  const took = Math.ceil(foe.food / 3);
+  foe.food -= took;
+  n.food += took;
+  const win = roll(12) < 0.5;
+  (win ? foe : n).people = Math.max(0, (win ? foe : n).people - 1);
+  tie(state, n, foe, -10);
+  news(state, n, `${n.name} raided ${foe.name}, their old enemy: ${took} food taken, one of ${win ? foe.name : n.name} dead`);
+}
+
+/** Ties between two settlements, with the news when they become allies or fall out for good. */
+function tie(state: SimState, a: Settlement, b: Settlement, by: number): void {
+  const before = tieSettlements(a, b, by);
+  const after = relation(a, b);
+  if (after === before) return;
+  if (after === 'allies') logEvent(state, `${a.name} and ${b.name} are allies now`);
+  else if (after === 'feud') logEvent(state, `${a.name} and ${b.name} have fallen out: a feud`);
+  else logEvent(state, before === 'allies' ? `${a.name} and ${b.name} are no longer allies` : `The feud between ${a.name} and ${b.name} has cooled`);
 }
 
 function split(state: SimState, n: Settlement, roll: (salt: number) => number): void {
@@ -174,7 +210,7 @@ function split(state: SimState, n: Settlement, roll: (salt: number) => number): 
   n.food -= food;
   const child = newSettlement(state, name, x, y, SPLIT_PEOPLE, food, 0);
   child.reputation = n.reputation;
-  tie(n, child, -10);
+  tie(state, n, child, -10);
   logEvent(state, `A falling-out at ${n.name}: ${SPLIT_PEOPLE} left to found ${name}, near (${x}, ${y})`);
 }
 
