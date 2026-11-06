@@ -1,0 +1,9 @@
+[configuration]
+
+entry_symbol = "loonie_bench_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+
+windows.debug.x86_64 = "res://bin/loonie_bench.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/loonie_bench.windows.template_release.x86_64.dll"
