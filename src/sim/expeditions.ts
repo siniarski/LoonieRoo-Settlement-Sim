@@ -6,7 +6,14 @@
 // to CARRY each, rolled like scavenging; the crates keep the rest. Sleeping
 // zombies near the ruin make it dangerous: members may come back hurt, or
 // not at all. The ruin's sleepers are cleared either way. Abstract on
-// purpose: nothing walks the route, which is what keeps far trips cheap.
+// purpose: nobody walks the route, which is what keeps far trips cheap.
+//
+// The truck, though, is seen on the road (when it's a vehicle: outposts.ts): it
+// drives there in a straight line, waits while they search, and drives back,
+// and nobody else can take it meanwhile. Each hour on the road there's a
+// chance the dead catch it (ROAD_AMBUSH): someone's hurt, or killed if they
+// were hurt already; lose everyone and the truck stands where it stopped. An
+// outpost's truck stays parked at the outpost.
 
 import { spawnFind } from './difficulty';
 import { ofKind, setScavenge } from './furniture';
@@ -25,7 +32,11 @@ import { manhattan } from './space';
 import type { SimState } from './state';
 import type { Survivor } from './survivors';
 import { TICKS_PER_TILE } from './survivors';
-import { NEVER, takeTruck } from './outposts';
+import { NEVER, takeTruck, truckVehicleId } from './outposts';
+import { parkable, vehiclesOf } from './vehicles';
+import { centre } from './motion';
+import { nearestTile } from './space';
+import { TICKS_PER_HOUR } from './time';
 
 export const SEARCH_TICKS = 400;
 export const CARRY = 4;
@@ -45,7 +56,13 @@ export interface Expedition {
   truck: boolean;
   /** Staying as an outpost until recalled (outposts.ts). */
   outpost: boolean;
+  /** The truck vehicle on the road with them, and when they left (missing: no truck, or furniture). */
+  truckId?: string;
+  leftTick?: number;
 }
+
+/** Chance an hour on the road that the dead catch the truck. */
+export const ROAD_AMBUSH = 0.03;
 
 export function sendExpedition(state: SimState, members: Survivor[], poiId: string, outpost = false): string | null {
   const poi = state.pointsOfInterest.find((p) => p.id === poiId);
@@ -54,8 +71,13 @@ export function sendExpedition(state: SimState, members: Survivor[], poiId: stri
   const home = { ...members[0]!.pos };
   const distance = manhattan(home, poi);
   for (const s of members) state.survivors.splice(state.survivors.indexOf(s), 1);
+  const truckId = truckVehicleId(state);
   const inTruck = takeTruck(state);
+  const id = `x${state.nextId}`;
+  const v = inTruck && truckId ? vehiclesOf(state).find((q) => q.id === truckId) : undefined;
+  if (v) v.driverId = `x:${id}`; // out with the expedition: nobody else takes it
   state.expeditions.push({
+    ...(v ? { truckId: v.id, leftTick: state.tick } : {}),
     id: `x${state.nextId++}`,
     members,
     target: { x: poi.x, y: poi.y, label: poi.label },
@@ -70,11 +92,63 @@ export function sendExpedition(state: SimState, members: Survivor[], poiId: stri
 
 /** Brings back any expedition that's due. */
 export function updateExpeditions(state: SimState): void {
-  for (const x of [...state.expeditions]) if (state.tick >= x.returnTick) returnHome(state, x);
+  for (const x of [...state.expeditions]) {
+    if (x.truckId && onTheRoad(state, x)) continue;
+    if (state.tick >= x.returnTick) returnHome(state, x);
+  }
+}
+
+/**
+ * The truck on its way: where it is along the road (out, waiting at the ruin, back), and the dead
+ * on the way. Returns true if the expedition ended on the road.
+ */
+function onTheRoad(state: SimState, x: Expedition): boolean {
+  const v = vehiclesOf(state).find((q) => q.id === x.truckId);
+  if (!v || x.leftTick === undefined) return false;
+  const leg = Math.max(1, Math.floor(manhattan(x.home, x.target) * TICKS_PER_TILE / 2));
+  const e = state.tick - x.leftTick;
+  const driving = e < leg || (!x.outpost && e >= leg + SEARCH_TICKS);
+  const f = e < leg ? e / leg : x.outpost || e < leg + SEARCH_TICKS ? 1 : Math.max(0, 1 - (e - leg - SEARCH_TICKS) / leg);
+  const p = { x: Math.round(x.home.x + (x.target.x - x.home.x) * f), y: Math.round(x.home.y + (x.target.y - x.home.y) * f) };
+  v.pos = p;
+  v.at = centre(p);
+  if (x.outpost && e >= leg) {
+    // At the outpost: parked there.
+    v.driverId = null;
+    delete x.truckId;
+    return false;
+  }
+  if (!driving || state.tick % TICKS_PER_HOUR !== 0) return false;
+  if (hashRoll(idNumber(x.id), state.tick, 0x70ad) >= (ROAD_AMBUSH * state.settings.zombies) / 100) return false;
+  // The dead catch the truck: someone's hurt, or killed if they were hurt already.
+  const s = x.members[Math.floor(hashRoll(idNumber(x.id), state.tick, 1) * x.members.length)]!;
+  if (s.health > HEALTH_MAX - INJURY) {
+    s.health -= INJURY;
+    logEvent(state, `The dead caught the truck on the road near (${p.x}, ${p.y}): ${s.name} was hurt`);
+    return false;
+  }
+  x.members.splice(x.members.indexOf(s), 1);
+  mournDeath(state, s);
+  logEvent(state, `The dead caught the truck on the road near (${p.x}, ${p.y}): ${s.name} was killed`);
+  if (x.members.length > 0) return false;
+  // Nobody left: the truck stands where it stopped.
+  state.expeditions.splice(state.expeditions.indexOf(x), 1);
+  v.driverId = null;
+  logEvent(state, `Nobody from the expedition to the ${x.target.label} is coming back. The truck stands empty near (${p.x}, ${p.y})`);
+  return true;
 }
 
 function returnHome(state: SimState, x: Expedition): void {
   state.expeditions.splice(state.expeditions.indexOf(x), 1);
+  // The truck parks back at home.
+  const v = x.truckId ? vehiclesOf(state).find((q) => q.id === x.truckId) : undefined;
+  if (v) {
+    const spot = parkable(state, x.home) ? x.home : nearestTile(state.grid, x.home, (px, py) => parkable(state, { x: px, y: py }), 400) ?? x.home;
+    v.pos = { ...spot };
+    v.at = centre(spot);
+    v.was = { ...v.at };
+    v.driverId = null;
+  }
   const near = (p: { x: number; y: number }) => manhattan(p, x.target) <= RUIN_RADIUS;
   const sleepers = state.dormant.filter(near);
   state.dormant = state.dormant.filter((d) => !near(d));

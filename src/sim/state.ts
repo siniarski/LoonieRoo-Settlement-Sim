@@ -2,6 +2,7 @@
 // JSON-compatible data (architecture rule 7).
 
 import type { Command } from './commands';
+import type { ScavRun } from './runs';
 import type { Horde } from './hordes';
 import type { Caravan } from './caravans';
 import type { Errand } from './errands';
@@ -91,6 +92,10 @@ export interface SimState {
   errands?: Errand[];
   /** Zombies moving together (hordes.ts). Missing in older saves. */
   hordes?: Horde[];
+  /** Neighbours' scavenging runs out in the world (runs.ts). Missing in older saves. */
+  runs?: ScavRun[];
+  /** Last wild animal id (animals.ts): their own count, so wildlife coming and going shifts no other ids. Missing in older saves. */
+  wildId?: number;
   /** Today's weather, rolled at dawn (seasons.ts). */
   weather: Weather;
   /** Survivors away off the map (expeditions.ts). */
@@ -183,6 +188,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     caravans: [],
     errands: [],
     hordes: [],
+    runs: [],
     weather: 'clear',
     expeditions: [],
     traders: [],

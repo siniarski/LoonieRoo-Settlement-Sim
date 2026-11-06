@@ -246,7 +246,8 @@ export function batterVehicle(state: SimState, s: Survivor): boolean {
 export function updateVehicles(state: SimState): void {
   for (const v of vehiclesOf(state)) {
     v.was = { ...v.at };
-    if (!v.driverId) continue;
+    // Not driven, or out with an expedition (expeditions.ts drives it): nothing to do here.
+    if (!v.driverId || v.driverId.startsWith('x:')) continue;
     const s = state.survivors.find((x) => x.id === v.driverId);
     if (!s) {
       v.driverId = null;

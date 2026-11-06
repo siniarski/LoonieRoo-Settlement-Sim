@@ -46,6 +46,11 @@ function truckVehicle(state: SimState) {
   return vehiclesOf(state).find((v) => v.kind === 'truck' && v.health > 0 && v.driverId === null && isExplored(state, v.pos.x, v.pos.y));
 }
 
+/** The truck vehicle a trip would take now (seen, parked), if there is one. */
+export function truckVehicleId(state: SimState): string | undefined {
+  return truckVehicle(state)?.id;
+}
+
 /** Fuel a trip takes from the truck's own tank. */
 export const TRIP_FUEL = 1500;
 

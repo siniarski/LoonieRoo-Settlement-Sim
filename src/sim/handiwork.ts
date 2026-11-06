@@ -18,7 +18,7 @@ import { hashRoll, idNumber } from './hash';
 import { getItem, itemAt, removeItem, spawnItem } from './items';
 import { REPAIR_PER_TICK, repairStructure, structureDamage, isStructure } from './breach';
 import { isReinforced } from './defences';
-import { VENISON } from './animals';
+import { MEAT, provoke } from './animals';
 import { isIndoors } from './rooms';
 import { seasonOf } from './seasons';
 import type { SimState } from './state';
@@ -115,16 +115,28 @@ export function forgetForaging(state: SimState): void {
   for (const k of Object.keys(state.foraged)) if (state.foraged[k] !== today) delete state.foraged[k];
 }
 
-/** A swing or shot at a deer: maybe it drops; otherwise it bolts. Returns what happened. */
-export function hitDeer(state: SimState, s: Survivor, deerId: string): string {
-  const deer = state.animals.find((a) => a.id === deerId);
-  if (!deer) return 'it got away';
-  if (hashRoll(idNumber(deer.id), state.tick, 0xdee) >= HUNT_CHANCE) {
-    deer.leavesTick = Math.min(deer.leavesTick, state.tick + 50);
-    return 'missed: the deer bolts';
+/**
+ * A swing or shot at an animal. A deer drops to a lucky blow (HUNT_CHANCE) or bolts; the rest take
+ * `damage` from their health, and a wolf or bear that's hit comes for whoever hit it (its pack
+ * too). Brought down: MEAT by kind where it fell. Returns what happened.
+ */
+export function hitAnimal(state: SimState, s: Survivor, id: string, damage: number): string {
+  const a = state.animals.find((q) => q.id === id);
+  if (!a) return 'it got away';
+  if (a.kind === 'deer') {
+    if (hashRoll(idNumber(a.id), state.tick, 0xdee) >= HUNT_CHANCE) {
+      a.leavesTick = Math.min(a.leavesTick, state.tick + 50);
+      return 'missed: the deer bolts';
+    }
+  } else {
+    a.health = (a.health ?? 0) - damage;
+    if (a.health > 0) {
+      provoke(state, a, s);
+      return `hit the ${a.kind}`;
+    }
   }
-  state.animals.splice(state.animals.indexOf(deer), 1);
-  for (let i = 0; i < VENISON; i++) spawnItem(state, 'food', deer.pos.x, deer.pos.y);
-  logEvent(state, `${s.name} brought down a deer`);
+  state.animals.splice(state.animals.indexOf(a), 1);
+  for (let i = 0; i < MEAT[a.kind]; i++) spawnItem(state, 'food', a.pos.x, a.pos.y);
+  logEvent(state, `${s.name} brought down a ${a.kind}`);
   return 'brought it down';
 }

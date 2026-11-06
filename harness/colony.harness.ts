@@ -84,7 +84,7 @@ function run(seed: number, days: number): void {
       cmd(state, { type: 'planPerimeter', x0: start.x - R, y0: start.y - R, x1: start.x + R, y1: start.y + R });
       for (const [x, y] of [[start.x, start.y - R + 1], [start.x, start.y + R - 1], [start.x - R + 1, start.y], [start.x + R - 1, start.y]]) cmd(state, { type: 'designateBuild', x: x!, y: y!, structure: 'pit' });
     }
-    cmd(state, { type: 'designateHunt', x0: 0, y0: 0, x1: state.grid.width - 1, y1: state.grid.height - 1 });
+    cmd(state, { type: 'designateHunt', x0: 0, y0: 0, x1: state.grid.width - 1, y1: state.grid.height - 1, kinds: ['deer'] });
     for (let i = state.farm.length; i < 2 * state.survivors.length && i < 40; i++) cmd(state, { type: 'designateFarm', x: start.x - 8 + (i % 8), y: start.y + 6 + Math.floor(i / 8), crop: i % 8 === 7 ? 'herb' : i % 3 === 2 ? 'wheat' : 'potato' });
     const [dx, dy] = dirs[day % 4]!;
     const cx = start.x + dx! * (20 + day * 6);

@@ -9,7 +9,8 @@ import { spawnFind } from './difficulty';
 import { LOOT_TABLES, pickFrom, type LootTable } from './loot';
 import { completeBlueprint, getBlueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
-import { HUNT_WORK, VENISON, getAnimal } from './animals';
+import { HUNT_WORK, MEAT, getAnimal } from './animals';
+import { hitAnimal } from './handiwork';
 import { getFurniture, setScavenge, ofKind } from './furniture';
 import { TREAT_TICKS } from './health';
 import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, hasTrait, skillLevel, workStep } from './skills';
@@ -181,14 +182,22 @@ function workHunt(state: SimState, s: Survivor, job: Job): void {
   const a = job.animalId ? getAnimal(state, job.animalId) : undefined;
   if (!a) return releaseSurvivor(state, s, 'the animal got away');
   if (manhattan(s.pos, a.pos) > 1) return goTo(state, s, job, neighbours4(state.grid, a.pos.x, a.pos.y), 3);
+  if (a.kind === 'wolf' || a.kind === 'bear') {
+    // A fight: a blow every GUARD_ATTACK_EVERY ticks until it drops (it fights back: animals.ts).
+    if (state.tick % GUARD_ATTACK_EVERY !== 0) return;
+    makeNoise(state, a.pos, 'fighting');
+    const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
+    if (hitAnimal(state, s, a.id, blow) === 'brought it down') finishJob(state, s, job, `killed a ${a.kind} at (${a.pos.x}, ${a.pos.y})`);
+    return;
+  }
   const step = workStep(state, s, 'hunt');
   if (step === 0) return;
   job.progress += step;
   if (job.progress < HUNT_WORK) return;
   state.animals.splice(state.animals.indexOf(a), 1);
-  for (let n = 0; n < VENISON; n++) spawnItem(state, 'food', a.pos.x, a.pos.y);
+  for (let n = 0; n < MEAT[a.kind]; n++) spawnItem(state, 'food', a.pos.x, a.pos.y);
   makeNoise(state, a.pos, 'fighting');
-  finishJob(state, s, job, `hunted a deer at (${a.pos.x}, ${a.pos.y})`);
+  finishJob(state, s, job, `hunted a ${a.kind} at (${a.pos.x}, ${a.pos.y})`);
 }
 
 /** Beat a fire out from next to it. */

@@ -12,6 +12,7 @@
 //    called from fog.ts). (Entity ids come from state.nextId, so they do depend on generation
 //    order; ids are labels, nothing else.)
 
+import { placedAt } from './motion';
 import { NORMAL, type MapType, type Settings } from './difficulty';
 import { FUEL_MAX, addVehicle, parkable } from './vehicles';
 import { applyCharacter, characterProblem, type Character } from './character';
@@ -202,6 +203,12 @@ function settle(state: SimState, cx: number, cy: number): void {
     z.pos = nearestAcross(state, z.pos, floorOnly) ?? z.pos;
     z.move = null;
     z.path = [];
+  }
+  for (const a of state.animals) {
+    if (!inChunk(a.pos) || floorOnly(a.pos.x, a.pos.y)) continue;
+    a.pos = nearestAcross(state, a.pos, floorOnly) ?? a.pos;
+    Object.assign(a, placedAt(a.pos));
+    a.move = null;
   }
   for (const s of state.survivors) {
     if (!inChunk(s.pos) || open(s.pos.x, s.pos.y)) continue;

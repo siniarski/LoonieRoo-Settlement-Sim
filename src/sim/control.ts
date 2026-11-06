@@ -25,7 +25,7 @@ import { fitsInPack, stow, unpack } from './inventory';
 import { toggleEdgeDoor } from './doors';
 import { toggleDoor } from './commands';
 import { RUN_PCT, RUN_TICK_COST, SWING_COST, WINDED_DAMAGE_PCT, WINDED_WAIT, exert, isWinded, panicMiss } from './body';
-import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitDeer, repairTick, startWork } from './handiwork';
+import { canForage, FORAGE_TICKS, finishBuild, finishForage, hitAnimal, repairTick, startWork } from './handiwork';
 import { TIRED } from './rest';
 import { isNight, slowTick } from './time';
 import { wakeComfort } from './wellbeing';
@@ -302,7 +302,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
     const blow = blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard');
     return hitResident(state, person, blow, s) ? `killed ${person.name}` : `hit ${person.name}`;
   }
-  // A deer next to you, or one you're aiming at with a loaded gun (handiwork.ts).
+  // An animal next to you, or one you're aiming at with a loaded gun (handiwork.ts).
   const deer = nearestInArc(state.animals, s.at, swingDir(c), SWING_REACH, state.grid)
     ?? (loadedGun(state, s) ? state.animals.find((a) => a.pos.x === target.x && a.pos.y === target.y && Math.abs(a.pos.x - s.pos.x) + Math.abs(a.pos.y - s.pos.y) <= GUN_RANGE && clearShot(state.grid, s.pos, a.pos)) : undefined);
   if (deer) {
@@ -312,7 +312,7 @@ export function swing(state: SimState, s: Survivor, target: Point): string | nul
       loadedGun(state, s)!.wear -= 1;
       makeNoise(state, s.pos, 'gunfire');
     }
-    return hitDeer(state, s, deer.id);
+    return hitAnimal(state, s, deer.id, shot ? GUN_DAMAGE : blowDamage(s, GUARD_DAMAGE) + GUARD_DAMAGE_PER_LEVEL * skillLevel(s, 'guard'));
   }
   const gun = loadedGun(state, s);
   const shotAt = gun ? state.zombies.find((z) => z.pos.x === target.x && z.pos.y === target.y) : undefined;
