@@ -10,6 +10,7 @@
 
 import type { Command } from '../sim/commands';
 import { caravansOf } from '../sim/caravans';
+import { runsOf } from '../sim/runs';
 import { errandsOf } from '../sim/errands';
 import { GROUNDS } from '../sim/grid';
 import { NOTE_MAX, notesOf, townNames } from '../sim/mapnotes';
@@ -257,6 +258,14 @@ export function createWorldMap(view: ViewState, command: (cmd: Command) => void)
         ctx.fillStyle = '#c49a5a';
         ctx.fillRect(p.x - 4, p.y - 3, 8, 6);
         if (cam.zoom >= 3) label(c.x + 0.5, c.y - 0.6, 'caravan', '#e0c9a0', '11px ui-monospace, monospace');
+      }
+      // Neighbours' scavengers, on ground you've seen.
+      for (const r of runsOf(s)) {
+        if (!seen(r.x, r.y)) continue;
+        const p = toScreen(r.x + 0.5, r.y + 0.5);
+        ctx.fillStyle = '#e0c9a0';
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        if (cam.zoom >= 3) label(r.x + 0.5, r.y - 0.6, 'scavengers', '#e0c9a0', '11px ui-monospace, monospace');
       }
       for (const v of vehiclesOf(s)) {
         if (!seen(v.pos.x, v.pos.y)) continue;

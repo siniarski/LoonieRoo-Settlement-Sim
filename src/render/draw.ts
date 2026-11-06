@@ -2,6 +2,7 @@
 
 import { isRadioactive } from '../sim/climate';
 import { caravansOf } from '../sim/caravans';
+import { runsOf } from '../sim/runs';
 import { HEADINGS, vehiclesOf } from '../sim/vehicles';
 import { visibleNow } from '../sim/sight';
 import { isHostile } from '../sim/settlements';
@@ -11,6 +12,7 @@ import { structureHealth } from '../sim/breach';
 import { darkness } from '../sim/time';
 import type { RoomPurpose } from '../sim/rooms';
 import type { SimState } from '../sim/state';
+import type { Animal } from '../sim/animals';
 import type { ToolId } from '../ui/tools';
 import type { Wanderer } from '../sim/wanderers';
 import { LAMP_LIGHT, litLamps } from '../sim/power';
@@ -204,6 +206,20 @@ export function draw(
       ctx.fill();
     }
   }
+  // Neighbours' scavengers (runs.ts): a few people on foot, packs on.
+  for (const r of runsOf(state)) {
+    if (!inView(r.x, r.y)) continue;
+    const p = worldToScreen(camera, viewport, r.x + 0.5, r.y + 0.5);
+    for (let k = 0; k < r.people; k++) {
+      const x = p.x - size * 0.3 + k * size * 0.3;
+      ctx.fillStyle = '#e0c9a0';
+      ctx.beginPath();
+      ctx.arc(x, p.y, Math.max(2, size * 0.14), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6a5a3a';
+      ctx.fillRect(x - size * 0.08, p.y + size * 0.1, size * 0.16, size * 0.16);
+    }
+  }
   for (const h of state.herds) {
     const onScreen = h.x >= range.x0 && h.x <= range.x1 && h.y >= range.y0 && h.y <= range.y1;
     if (onScreen && (h.heard || shown(h.x, h.y))) drawHerd(ctx, camera, viewport, h, size);
@@ -222,15 +238,7 @@ export function draw(
     if (!inView(a.pos.x, a.pos.y)) continue;
     const w = worldPos(a, options.alpha);
     const p = worldToScreen(camera, viewport, w.x, w.y);
-    const r = Math.max(2, size * 0.24);
-    ctx.fillStyle = '#b07a46';
-    ctx.fillRect(p.x - r * 1.2, p.y - r * 0.5, r * 2.2, r);
-    ctx.strokeStyle = a.hunted ? '#ff5a4a' : '#e8d0a0';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(p.x + r * 0.8, p.y - r * 0.5);
-    ctx.lineTo(p.x + r * 1.1, p.y - r * 1.3);
-    ctx.stroke();
+    drawAnimal(ctx, a, p, size);
   }
   for (const q of state.prisoners) {
     if (!shown(q.x, q.y)) continue;
@@ -538,5 +546,33 @@ function drawEdges(ctx: CanvasRenderingContext2D, camera: Camera, viewport: View
         else ctx.fillRect(r.x, r.y + end, r.w * 0.6, t * 0.5);
       }
     }
+  }
+}
+
+/** An animal by kind: a deer with antlers, a small pale rabbit, a grey wolf, a big dark bear (red edge: marked to hunt). */
+function drawAnimal(ctx: CanvasRenderingContext2D, a: Animal, p: { x: number; y: number }, size: number): void {
+  const scale = { deer: 0.24, rabbit: 0.12, wolf: 0.2, bear: 0.34 }[a.kind];
+  const colour = { deer: '#b07a46', rabbit: '#cfc2a8', wolf: '#8a8f96', bear: '#4a3426' }[a.kind];
+  const r = Math.max(a.kind === 'rabbit' ? 1.5 : 2, size * scale);
+  ctx.fillStyle = colour;
+  ctx.fillRect(p.x - r * 1.2, p.y - r * 0.5, r * 2.2, r);
+  if (a.kind === 'deer') {
+    ctx.strokeStyle = '#e8d0a0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x + r * 0.8, p.y - r * 0.5);
+    ctx.lineTo(p.x + r * 1.1, p.y - r * 1.3);
+    ctx.stroke();
+  } else if (a.kind === 'rabbit') {
+    ctx.fillRect(p.x + r * 0.6, p.y - r * 1.4, r * 0.3, r);
+  } else {
+    // A head, with ears for wolves.
+    ctx.fillRect(p.x + r * 0.8, p.y - r * 0.9, r * 0.8, r * 0.8);
+    if (a.kind === 'wolf') ctx.fillRect(p.x + r * 0.9, p.y - r * 1.4, r * 0.25, r * 0.5);
+  }
+  if (a.hunted) {
+    ctx.strokeStyle = '#ff5a4a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(p.x - r * 1.3, p.y - r * 0.6, r * 2.4, r * 1.2);
   }
 }

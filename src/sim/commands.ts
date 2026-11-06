@@ -3,6 +3,7 @@
 // for replays. No-ops (painting a wall over a wall while dragging) are not
 // logged, since replaying them would change nothing.
 
+import type { AnimalKind } from './animals';
 import { escape } from './escape';
 import { addMapNote, removeMapNote } from './mapnotes';
 import { addVehicle, parkable } from './vehicles';
@@ -72,7 +73,7 @@ export type Command =
   /** Makes this floor tile a farm plot (no furniture on it), potatoes unless a crop is given. Drag it over an area. */
   | { type: 'designateFarm'; x: number; y: number; crop?: Crop }
   /** Marks every animal in a box for hunting (animals.ts). */
-  | { type: 'designateHunt'; x0: number; y0: number; x1: number; y1: number }
+  | { type: 'designateHunt'; x0: number; y0: number; x1: number; y1: number; /** Only these kinds (all if missing). */ kinds?: AnimalKind[] }
   /** Marks the crate on this tile (if it has loot left) for scavenging. Paint it over an area. */
   | { type: 'designateScavenge'; x: number; y: number }
   | { type: 'designateRoom'; x: number; y: number; purpose: RoomPurpose }
@@ -298,7 +299,7 @@ function execute(state: SimState, command: Command): CommandResult {
   if (command.type === 'designateHunt') {
     const [x0, x1] = [Math.min(command.x0, command.x1), Math.max(command.x0, command.x1)];
     const [y0, y1] = [Math.min(command.y0, command.y1), Math.max(command.y0, command.y1)];
-    const marked = state.animals.filter((a) => !a.hunted && a.pos.x >= x0 && a.pos.x <= x1 && a.pos.y >= y0 && a.pos.y <= y1);
+    const marked = state.animals.filter((a) => !a.hunted && (!command.kinds || command.kinds.includes(a.kind)) && a.pos.x >= x0 && a.pos.x <= x1 && a.pos.y >= y0 && a.pos.y <= y1);
     for (const a of marked) a.hunted = true;
     return marked.length > 0 ? changed() : unchanged();
   }
