@@ -3,7 +3,8 @@
 // Up to DAYS days (25) or BUDGET_MS (300000) per world, for each of SEEDS (1,2,3); PRESET (apocalypse); TRACE=1 logs every 150 ticks.
 // The player searches crates by day, eats, drinks (taps while the water's on), sleeps in the hut, fights
 // what's next to it, flees when hurt, treats itself and amputates; sneaks when the dead are about but not on
-// it, and forages when hungry with no food about. It does not yet barricade, hunt or drive.
+// it, and forages when hungry with no food about; and drives to far crates when a car with fuel is beside
+// it (steering by heading, braking near, getting out when stuck). It does not yet barricade or hunt.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { applyCommand, type Command } from '../src/sim/commands';
@@ -29,6 +30,7 @@ import { GROUNDS, isWalkable } from '../src/sim/grid';
 import { isIndoors } from '../src/sim/rooms';
 import { nearestTile } from '../src/sim/space';
 import { isTap } from '../src/sim/timeline';
+import { HEADINGS, vehicleOf, vehiclesOf, type Vehicle } from '../src/sim/vehicles';
 
 const cmd = (s: SimState, c: Command) => applyCommand(s, c);
 const out: string[] = [];
@@ -50,6 +52,10 @@ interface Bot {
   fled: number;
   foraged: number;
   sneaked: number;
+  drove: number;
+  /** Driving: where to, and ticks spent stuck. */
+  driveTo: Point | null;
+  stuck: number;
   treated: number;
   amputated: number;
 }
@@ -111,6 +117,9 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
     return;
   }
   if (s.move) return;
+  // Behind the wheel: drive on to where we were going.
+  const car = vehicleOf(state, s);
+  if (car) return drive(state, s, bot, car);
   // Where the dead really are: the tile under each one's centre (its pos can lag a tile behind: motion.ts).
   const zs = state.zombies.map((q) => ({ id: q.id, pos: tileOf(q.at), body: q })).filter((q) => dist(q.pos, s.pos) <= 6).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos));
   const z = zs[0];
@@ -246,12 +255,53 @@ function decide(state: SimState, s: Survivor, bot: Bot, home: Point, bed: Point)
   // Day: carry food home, else search the nearest crate with something left.
   const crate = state.furniture.filter((f) => f.kind === 'crate' && f.loot > 0 && dist(f, home) < 90).sort((a, b) => dist(a, s.pos) - dist(b, s.pos))[0];
   if (crate) {
+    // Far off, with a car with fuel right here: drive there.
+    const ride = dist(crate, s.pos) > 30 && !isNight(state.tick) ? vehiclesOf(state).find((v) => v.driverId === null && v.fuel > 300 && v.health > 0 && dist(v.pos, s.pos) <= 1) : undefined;
+    if (ride && (c.dx || c.dy ? cmd(state, { type: 'steer', dx: 0, dy: 0 }) : true) && cmd(state, { type: 'use', x: ride.pos.x, y: ride.pos.y }).ok && vehicleOf(state, s)) {
+      bot.drove++;
+      bot.driveTo = { x: crate.x, y: crate.y };
+      bot.stuck = 0;
+      bot.goal = 'drive';
+      return;
+    }
+    // Far off, and a car with fuel not far: walk to it first.
+    const near = dist(crate, s.pos) > 30 && !isNight(state.tick) ? vehiclesOf(state).filter((v) => v.driverId === null && v.fuel > 300 && v.health > 0 && dist(v.pos, s.pos) <= 15).sort((p, q) => dist(p.pos, s.pos) - dist(q.pos, s.pos))[0] : undefined;
+    if (near && dist(near.pos, s.pos) > 1) {
+      bot.goal = 'to car';
+      return goUse(state, s, bot, `car${near.id}`, near.pos);
+    }
     bot.goal = 'search';
     if (dist(crate, s.pos) <= 1) bot.searched++;
     return goUse(state, s, bot, `crate${crate.id}`, crate);
   }
   bot.goal = 'idle';
   if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
+}
+
+/** Steer a car toward bot.driveTo: turn toward it, go, brake near it, and get out (or when stuck, or the dead are at it). */
+function drive(state: SimState, s: Survivor, bot: Bot, car: Vehicle): void {
+  const c = state.control!;
+  const to = bot.driveTo;
+  const out = () => {
+    if (car.speed !== 0) {
+      if (c.dx !== 0 || c.dy !== 1) cmd(state, { type: 'steer', dx: 0, dy: 1 });
+      return;
+    }
+    if (c.dx || c.dy) cmd(state, { type: 'steer', dx: 0, dy: 0 });
+    cmd(state, { type: 'use', x: s.pos.x, y: s.pos.y });
+    bot.driveTo = null;
+    bot.goal = 'parked';
+  };
+  if (!to || dist(car.pos, to) <= 3 || car.fuel <= 0 || car.health <= 0 || isNight(state.tick)) return out();
+  bot.stuck = Math.abs(car.speed) < 8 ? bot.stuck + 1 : 0;
+  if (bot.stuck > 60) return out();
+  const want = ((Math.round((Math.atan2(to.y - car.pos.y, to.x - car.pos.x) / (2 * Math.PI)) * HEADINGS) % HEADINGS) + HEADINGS) % HEADINGS;
+  const diff = ((want - car.heading + HEADINGS * 1.5) % HEADINGS) - HEADINGS / 2;
+  const dx = diff === 0 ? 0 : Math.sign(diff);
+  // Sharp turns slowly; otherwise go.
+  const dy = Math.abs(diff) > 6 && car.speed > 60 ? 0 : -1;
+  if (c.dx !== dx || c.dy !== dy) cmd(state, { type: 'steer', dx, dy });
+  bot.goal = 'drive';
 }
 
 function run(seed: number, days: number): void {
@@ -261,10 +311,10 @@ function run(seed: number, days: number): void {
   const bedF = state.furniture.find((f) => f.kind === 'bed')!;
   const bed = { x: bedF.x, y: bedF.y };
   const home = { ...s0.pos };
-  const bot: Bot = { goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, foraged: 0, sneaked: 0, treated: 0, amputated: 0 };
+  const bot: Bot = { goal: '', path: [], pathFor: '', searched: 0, ate: 0, drank: 0, slept: 0, fled: 0, foraged: 0, sneaked: 0, drove: 0, driveTo: null, stuck: 0, treated: 0, amputated: 0 };
   const log = (why: string) => {
     const s = controlled(state);
-    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} foraged ${bot.foraged} sneaked ${bot.sneaked} treated ${bot.treated} amputated ${bot.amputated} infected ${s?.infection ?? '-'}`);
+    out.push(`  day ${dayOf(state.tick)} ${why}: ${s ? `hp ${s.health} food ${s.satiety} water ${s.hydration} rest ${s.rest} weapon ${s.weapon ? 'y' : 'n'} kills ${s.kills} goal ${bot.goal}` : 'dead'} | items food ${state.items.filter((i) => i.kind === 'food').length} zombies ${state.zombies.length} | searched ${bot.searched} ate ${bot.ate} drank ${bot.drank} slept ${bot.slept} fled ${bot.fled} foraged ${bot.foraged} sneaked ${bot.sneaked} drove ${bot.drove} treated ${bot.treated} amputated ${bot.amputated} infected ${s?.infection ?? '-'}`);
   };
   out.push(`seed ${seed} (${process.env.PRESET ?? 'apocalypse'})`);
   for (let t = 0; t < days * DAY_LENGTH; t++) {

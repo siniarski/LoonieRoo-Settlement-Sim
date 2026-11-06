@@ -11,9 +11,10 @@
 //   Right click    put the tool down
 //   Esc            put the tool down, then close build mode, then deselect, then open the menu
 // Direct control (F takes over the selected survivor, F again hands them back):
-//   WASD/arrows  walk (8 ways), Shift to run · Left click  swing at / shoot towards a tile
-//   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep) · E  use what's in front,
-//                else underfoot (on a bed, or bare floor: sleep)
+//   WASD/arrows  walk (8 ways), Shift to run, C sneak · the mouse aims · Left click  swing at / shoot towards a tile
+//   Right click  use a tile next to you (pick up, wear, eat, search, drink, sleep, smash a window, get in or
+//                out of a car) · E  use what's in front, else underfoot (on a bed, or bare floor: sleep or forage)
+//   In a car: W go, S brake and reverse, A/D steer, E get out · 1-9  use from the bag
 //   V  shout "follow me" to everyone near · H  shout "hold here" (each where they stand) · T  talk to whoever's nearest
 //   L  shout "loot that room" (the one under the mouse) · R  work the tile in front (repair; with wood:
 //      barricade a door, reinforce a wall, build a wall)
