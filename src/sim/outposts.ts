@@ -1,9 +1,10 @@
 // Vehicles and outposts.
 //
 // The truck: a generated world leaves one somewhere out past the camp
-// (worldgen). Once someone has seen it, expeditions take it when there's
+// (worldgen): a vehicle you can drive too (vehicles.ts). Once someone has seen
+// it, expeditions take it when it has half a tank (TRIP_FUEL), or there's
 // TRUCK_FUEL free fuel to burn: there and back in half the time, carrying
-// twice as much (expeditions.ts).
+// twice as much (expeditions.ts). (Hand-made maps can have a truck as furniture.)
 //
 // Outposts: an expedition can stay where it went (claimOutpost). Each dawn
 // an outpost sends home OUTPOST_FINDS per member (rolled like scavenging, by
@@ -12,6 +13,7 @@
 // home like any expedition.
 
 import { spawnFind } from './difficulty';
+import { vehiclesOf } from './vehicles';
 import { ofKind } from './furniture';
 import { logEvent } from './events';
 import { isExplored } from './fog';
@@ -33,13 +35,28 @@ export const OUTPOST_HURT = 350;
 export const NEVER = Number.MAX_SAFE_INTEGER;
 
 /** The colony's truck, if anyone's seen it. */
-export function truck(state: SimState) {
+export function truck(state: SimState): { x: number; y: number } | undefined {
+  const v = truckVehicle(state);
+  if (v) return v.pos;
   return ofKind(state, 'truck').find((f) => isExplored(state, f.x, f.y));
 }
+
+/** The truck as a vehicle, seen and parked (nobody driving it). */
+function truckVehicle(state: SimState) {
+  return vehiclesOf(state).find((v) => v.kind === 'truck' && v.health > 0 && v.driverId === null && isExplored(state, v.pos.x, v.pos.y));
+}
+
+/** Fuel a trip takes from the truck's own tank. */
+export const TRIP_FUEL = 1500;
 
 /** Takes the truck (and its fuel) for a trip, if it can go. */
 export function takeTruck(state: SimState): boolean {
   if (!truck(state)) return false;
+  const v = truckVehicle(state);
+  if (v && v.fuel >= TRIP_FUEL) {
+    v.fuel -= TRIP_FUEL;
+    return true;
+  }
   const fuel = state.items.filter((i) => i.kind === 'fuel' && i.pos !== null && i.reservedBy === null);
   if (fuel.length < TRUCK_FUEL) return false;
   for (const f of fuel.slice(0, TRUCK_FUEL)) state.items.splice(state.items.indexOf(f), 1);

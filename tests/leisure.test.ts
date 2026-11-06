@@ -112,11 +112,13 @@ describe('breakdowns', () => {
     // Not about to walk away (resolve.ts): this is about breakdowns.
     dry.survivors[0]!.social = 60;
     dry.survivors[0]!.resolve = STEELED - 1;
+    dry.survivors[0]!.nextForageTick = Number.MAX_SAFE_INTEGER; // not off foraging when it comes (forage.ts)
     runUntil(dry, () => dry.survivors[0]!.breakdown !== null, 20 * BREAKDOWN_CHECK_EVERY);
     const state = breakdownState(2);
     const s = state.survivors[0]!;
     s.social = 60;
     s.resolve = STEELED - 1;
+    s.nextForageTick = Number.MAX_SAFE_INTEGER;
     runUntil(state, () => state.tick === dry.tick - 15, 20 * BREAKDOWN_CHECK_EVERY);
     applyCommand(state, { type: 'designateRemove', x: 0, y: 1 });
     runUntil(state, () => s.breakdown !== null, 20);

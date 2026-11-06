@@ -63,7 +63,7 @@ describe('vehicles', () => {
     applyCommand(state, { type: 'use', x: 3, y: 3 });
     applyCommand(state, { type: 'steer', dx: 0, dy: -1 });
     let fastest = 0;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 120; i++) {
       tick(state);
       fastest = Math.max(fastest, car.speed);
     }
@@ -133,4 +133,64 @@ describe('vehicles', () => {
     expect(onRoad).toBeGreaterThan(cars.length / 2);
     for (const c of cars) expect(c.fuel).toBeLessThan(FUEL_MAX);
   }, 30000);
+});
+
+describe('vehicles: roads, trees and the boot', () => {
+  it('goes slower off the road, and a tree stops it like a wall', async () => {
+    const { GROUNDS: G } = await import('../src/sim/grid');
+    const { OFFROAD_MAX, MAX_SPEED } = await import('../src/sim/vehicles');
+    const { addFurniture } = await import('../src/sim/furniture');
+    const top = (road: boolean) => {
+      const { state, car } = field();
+      if (road) state.grid.ground.fill(G.indexOf('road'));
+      applyCommand(state, { type: 'use', x: 3, y: 3 });
+      applyCommand(state, { type: 'steer', dx: 0, dy: -1 });
+      let fastest = 0;
+      for (let i = 0; i < 25; i++) {
+        tick(state);
+        fastest = Math.max(fastest, car.speed);
+      }
+      return fastest;
+    };
+    expect(top(false)).toBe(OFFROAD_MAX);
+    expect(top(true)).toBe(MAX_SPEED);
+    const { state, car } = field();
+    addFurniture(state, 'tree', 12, 3);
+    applyCommand(state, { type: 'use', x: 3, y: 3 });
+    applyCommand(state, { type: 'steer', dx: 0, dy: -1 });
+    run(state, 80);
+    expect(car.pos.x).toBeLessThan(12);
+  });
+
+  it('things go in the boot from your bag, and come out again', async () => {
+    const { BOOT_MAX } = await import('../src/sim/vehicles');
+    const { ITEM_WEIGHT, contents } = await import('../src/sim/inventory');
+    const { state, s, car } = field();
+    const can = spawnItem(state, 'wood', 2, 3);
+    stow(state, s, can);
+    expect(applyCommand(state, { type: 'stash', itemId: can.id, containerId: car.id }).ok).toBe(true);
+    expect(s.pack).toEqual([]);
+    expect(contents(state, car).map((i) => i.id)).toEqual([can.id]);
+    expect(applyCommand(state, { type: 'takeAll', containerId: car.id }).ok).toBe(true);
+    expect(s.pack).toEqual([can.id]);
+    // It only holds so much.
+    for (let i = 0; i * ITEM_WEIGHT.wood <= BOOT_MAX; i++) {
+      const w = spawnItem(state, 'wood', 2, 3);
+      w.pos = null;
+      w.inside = car.id;
+    }
+    expect(applyCommand(state, { type: 'stash', itemId: can.id, containerId: car.id }).ok).toBe(false);
+  });
+
+  it("the expedition truck is a vehicle, and a trip takes fuel from its tank", async () => {
+    const { truck, takeTruck, TRIP_FUEL } = await import('../src/sim/outposts');
+    const state = createWorld(2, 128);
+    const t = (state.vehicles ?? []).find((v) => v.kind === 'truck')!;
+    expect(t).toBeDefined();
+    state.grid.explored.fill(1);
+    expect(truck(state)).toEqual(t.pos);
+    const fuel = t.fuel;
+    expect(takeTruck(state)).toBe(true);
+    expect(t.fuel).toBe(fuel - TRIP_FUEL);
+  }, 20000);
 });
