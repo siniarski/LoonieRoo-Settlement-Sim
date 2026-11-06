@@ -2,6 +2,7 @@
 // read-only (the HUD calls it every frame or so), so it never changes state.
 
 import { isRotting } from './corpses';
+import { ofKind } from './furniture';
 import { MEAL_VALUE, HOT_MEAL_VALUE, HUNGRY } from './food';
 import { isCritical } from './health';
 import { INFECTION_TURN } from './infection';
@@ -93,7 +94,7 @@ export function alerts(state: SimState): Alert[] {
     add('warn', `Winter in ${toWinter} day${toWinter === 1 ? '' : 's'}: food for about ${days.toFixed(1)} days, and nothing grows in winter`);
   } else if (people.length > 0 && days < 2) add('warn', `Food for about ${days.toFixed(1)} days`);
   if (toWinter > 0 && toWinter <= 2 && people.some((s) => !s.body)) add('info', 'Winter is coming: coats keep the cold off outdoors at night');
-  const beds = state.furniture.filter((f) => f.kind === 'bed').length;
+  const beds = ofKind(state, 'bed').length;
   if (people.length > beds) add('warn', `${people.length - beds} without a bed`);
   if (state.harsh) {
     const clean = state.furniture.some((f) => f.kind === 'well' || (f.kind === 'collector' && f.loot > 0));

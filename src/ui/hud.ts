@@ -3,6 +3,7 @@
 // out as sim commands or view-state changes.
 
 import { climateAt, isRadioactive } from '../sim/climate';
+import { createWorldMap } from './worldmap';
 import { FUEL_MAX, VEHICLE_HEALTH, vehicleOf } from '../sim/vehicles';
 import { SUB } from '../sim/motion';
 import { powerOn, waterOn } from '../sim/timeline';
@@ -137,6 +138,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   const priorities = createPriorityPanel(view, command);
   const debug = el('pre', 'hud-debug');
   const minimap = createMinimap(view);
+  const worldMap = createWorldMap(view, command);
   // Pause-to-plan: a tinted frame around the view plus a banner, so it's obvious nothing is ticking.
   const pausedFrame = el('div', 'hud-paused-frame');
   const pausedBanner = el('div', 'hud-paused-banner');
@@ -147,7 +149,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
   // Bottom left: the priority table (P) stacked over the character panel.
   const bottomLeft = el('div', 'hud-bottom-left');
   bottomLeft.append(priorities.root, card.root);
-  root.append(pausedFrame, bar, info, bottomLeft, conditions.root, ...bag.roots, debug, overview.root, minimap.root, buildBar.root, pausedBanner);
+  root.append(pausedFrame, bar, info, bottomLeft, conditions.root, ...bag.roots, debug, overview.root, minimap.root, buildBar.root, pausedBanner, worldMap.root);
 
   // Only touch the DOM when text actually changes.
   let lastStatus = '';
@@ -171,7 +173,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       const you = controlled(state);
       const controlText = you
         ? view.showKeys
-          ? 'WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · F let go · K hide'
+          ? 'WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide'
           : 'K: keys'
         : view.selectedId
           ? 'F: take control of the selected survivor'
@@ -200,6 +202,7 @@ export function createHud(root: HTMLElement, view: ViewState, command: (cmd: Com
       alertList.update(state);
       overview.update(state);
       minimap.update(state);
+      worldMap.update(state);
 
       const text = statusText(state, view);
       if (text !== lastStatus) status.textContent = lastStatus = text;

@@ -71,6 +71,7 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
     inGame: true,
     menuCustomOpen: false,
     showMinimap: true,
+    showMap: false,
     showOverview: false,
     showKeys: false,
     // Spread over the defaults so view state saved by older code gains new fields.
@@ -239,6 +240,10 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
       if (dawns(handle.state.tick) !== lastAutosaveDawn) {
         lastAutosaveDawn = dawns(handle.state.tick);
         if (saveToSlot(AUTO_SLOT, handle.state) === null) toast(`Autosaved at dawn, day ${dayOf(handle.state.tick)}.`);
+        // Start the command log afresh from here, so it doesn't grow all game: a bug report then
+        // replays from this dawn (the log is the app's record for replays, not anything the game reads).
+        handle.state.commandLog = [];
+        handle.initial = cloneState(handle.state);
       }
 
       input.update(frameMs);

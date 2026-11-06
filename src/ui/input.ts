@@ -19,7 +19,7 @@
 //      barricade a door, reinforce a wall, build a wall)
 // Always:
 //   Right/middle drag  pan · Wheel  zoom at the cursor · WASD/arrows  pan
-//   P priorities · M minimap · Space pause · ` debug panel · Home recentre
+//   P priorities · M map · N minimap · Space pause · ` debug panel · Home recentre
 
 import { centredOn, panByScreen, screenToTile, screenToWorld, zoomAt, type Viewport } from '../render/camera';
 import { AIM_MAX } from '../sim/control';
@@ -275,6 +275,10 @@ export function attachInput(ctx: InputContext): Input {
       if (key === 'Escape' && view.inGame) ctx.toggleMenu();
       return;
     }
+    if (key === 'Escape' && view.showMap) {
+      view.showMap = false;
+      return;
+    }
     if (key === 'Escape' && !view.tool && !view.buildOpen && !view.selectedId && !view.showOverview) {
       ctx.toggleMenu();
       return;
@@ -292,6 +296,8 @@ export function attachInput(ctx: InputContext): Input {
     } else if (key === 'p') {
       view.showPriorities = !view.showPriorities;
     } else if (key === 'm') {
+      view.showMap = !view.showMap;
+    } else if (key === 'n') {
       view.showMinimap = !view.showMinimap;
     } else if (key === 'o') {
       view.showOverview = !view.showOverview;

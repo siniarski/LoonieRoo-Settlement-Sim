@@ -20,16 +20,18 @@ function played() {
 }
 
 describe('save files', () => {
-  it('round-trip the whole state exactly', () => {
+  it('round-trip the whole state exactly, but for the command log, which a save leaves behind', () => {
     const { state } = played();
+    expect(state.commandLog.length).toBeGreaterThan(0);
     const loaded = loadFile(toSaveFile(state));
     expect(loaded.ok && loaded.kind).toBe('save');
     if (!loaded.ok) return;
-    expect(JSON.stringify(loaded.state)).toBe(JSON.stringify(state));
+    expect(loaded.state.commandLog).toEqual([]);
+    expect(JSON.stringify({ ...loaded.state, commandLog: [] })).toBe(JSON.stringify({ ...state, commandLog: [] }));
     // ...and play on identically from there.
     step(loaded.state, 300);
     step(state, 300);
-    expect(JSON.stringify(loaded.state)).toBe(JSON.stringify(state));
+    expect(JSON.stringify({ ...loaded.state, commandLog: [] })).toBe(JSON.stringify({ ...state, commandLog: [] }));
   });
 
   it('refuse files from another schema version, junk, and other JSON', () => {

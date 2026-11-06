@@ -2,6 +2,7 @@
 // JSON-compatible data (architecture rule 7).
 
 import type { Command } from './commands';
+import type { MapNote } from './mapnotes';
 import type { Vehicle } from './vehicles';
 import type { Timeline } from './timeline';
 import type { Blueprint } from './designations';
@@ -80,6 +81,8 @@ export interface SimState {
   timeline?: Timeline | null;
   /** Cars (vehicles.ts). Missing in older saves. */
   vehicles?: Vehicle[];
+  /** Your notes on the map (mapnotes.ts). Missing in older saves. */
+  mapNotes?: MapNote[];
   /** Today's weather, rolled at dawn (seasons.ts). */
   weather: Weather;
   /** Survivors away off the map (expeditions.ts). */
@@ -168,6 +171,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     world: null,
     timeline: null,
     vehicles: [],
+    mapNotes: [],
     weather: 'clear',
     expeditions: [],
     traders: [],

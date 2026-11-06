@@ -67,15 +67,18 @@ export type Look = (typeof CONTAINER_LOOKS)[number] | (typeof DECOR_LOOKS)[numbe
  * moves, and only addFurniture/removeFurniture change the list, so they drop the cache.
  * (A generated world has thousands of trees: scanning the list per tile was the cost.)
  */
-const indexes = new WeakMap<Furniture[], { byTile: Map<string, Furniture>; byId: Map<string, Furniture> }>();
+const indexes = new WeakMap<Furniture[], { byTile: Map<string, Furniture>; byId: Map<string, Furniture>; byKind: Map<FurnitureKind, Furniture[]> }>();
 
 function index(state: SimState) {
   let found = indexes.get(state.furniture);
   if (!found) {
-    found = { byTile: new Map(), byId: new Map() };
+    found = { byTile: new Map(), byId: new Map(), byKind: new Map() };
     for (const f of state.furniture) {
       if (!found.byTile.has(`${f.x},${f.y}`)) found.byTile.set(`${f.x},${f.y}`, f);
       found.byId.set(f.id, f);
+      const same = found.byKind.get(f.kind);
+      if (same) same.push(f);
+      else found.byKind.set(f.kind, [f]);
     }
     indexes.set(state.furniture, found);
   }
@@ -85,6 +88,22 @@ function index(state: SimState) {
 export function furnitureAt(state: SimState, x: number, y: number): Furniture | undefined {
   return index(state).byTile.get(`${x},${y}`);
 }
+
+/**
+ * Every piece of one kind, in list order (so results come out as a scan of the list would).
+ * Shared with the index: read it, never change it. (A world has thousands of trees and fittings;
+ * scanning them all each tick for the one generator was a steady cost.)
+ */
+export function ofKind(state: SimState, kind: FurnitureKind): readonly Furniture[] {
+  return index(state).byKind.get(kind) ?? NONE;
+}
+const NONE: readonly Furniture[] = [];
+
+/** Pieces of several kinds, in list order (furniture is only ever appended, so that's id order). */
+export function ofKinds(state: SimState, kinds: readonly FurnitureKind[]): Furniture[] {
+  return kinds.flatMap((k) => ofKind(state, k)).sort((a, b) => idOrder(a) - idOrder(b));
+}
+const idOrder = (f: Furniture) => Number(f.id.slice(1));
 
 export function getFurniture(state: SimState, id: string): Furniture | undefined {
   return index(state).byId.get(id);

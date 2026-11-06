@@ -31,8 +31,10 @@ export interface ViewState {
   inGame: boolean;
   /** The New game screen's Customise section is open. */
   menuCustomOpen: boolean;
-  /** The minimap (M). */
+  /** The minimap (N). */
   showMinimap: boolean;
+  /** The full-screen map (M: worldmap.ts). */
+  showMap: boolean;
   /** The colony overview (O). */
   showOverview: boolean;
   /** The full key list under direct control (K); otherwise just a reminder. */

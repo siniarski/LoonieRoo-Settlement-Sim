@@ -4,6 +4,7 @@
 // logged, since replaying them would change nothing.
 
 import { escape } from './escape';
+import { addMapNote, removeMapNote } from './mapnotes';
 import { addVehicle, parkable } from './vehicles';
 import { remediesFor } from './medicine';
 import { contents, dropFromPack, equipFromPack, stow } from './inventory';
@@ -128,6 +129,9 @@ export type Command =
   | { type: 'spawnZombie'; x: number; y: number }
   // Debug/sandbox: park a car (vehicles.ts) on a floor tile, full and facing east.
   | { type: 'spawnVehicle'; x: number; y: number }
+  /** Your map (mapnotes.ts): pin a note on a tile, or take one off. */
+  | { type: 'addMapNote'; x: number; y: number; text: string }
+  | { type: 'removeMapNote'; id: string }
   // Direct control (control.ts): take over a survivor (null hands them back), hold a direction, swing or use towards a tile.
   | { type: 'takeControl'; survivorId: string | null }
   | { type: 'steer'; dx: number; dy: number; run?: boolean }
@@ -186,6 +190,10 @@ function execute(state: SimState, command: Command): CommandResult {
     const s = controlled(state);
     if (!s) return reject('nobody is under control');
     const why = bagCommand(state, s, command);
+    return why === null ? changed() : reject(why);
+  }
+  if (command.type === 'addMapNote' || command.type === 'removeMapNote') {
+    const why = command.type === 'addMapNote' ? addMapNote(state, command.x, command.y, String(command.text)) : removeMapNote(state, command.id);
     return why === null ? changed() : reject(why);
   }
   if (command.type === 'sneak') {

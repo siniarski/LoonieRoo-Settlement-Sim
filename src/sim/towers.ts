@@ -5,7 +5,7 @@
 // do climbs the nearest free tower and keeps watch (jobs.ts). Any tower at
 // all lets the colony hear herds coming from further off (herds.ts).
 
-import { furnitureAt } from './furniture';
+import { furnitureAt, ofKind } from './furniture';
 import { findPathToAny } from './pathfinding';
 import { manhattan, samePoint } from './space';
 import type { SimState } from './state';
@@ -23,7 +23,7 @@ export function onTower(state: SimState, s: Survivor): boolean {
 }
 
 export function hasTower(state: SimState): boolean {
-  return state.furniture.some((f) => f.kind === 'tower');
+  return (ofKind(state, 'tower').length > 0);
 }
 
 /** Hourly, for every survivor: a night up a tower counts towards being vigilant. */

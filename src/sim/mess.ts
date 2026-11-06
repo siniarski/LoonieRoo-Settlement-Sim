@@ -3,7 +3,7 @@
 // nearest free seat and eat there (a mood boost; see mood.ts). One eater per seat.
 
 import { neighbours4, isWalkable, type Point } from './grid';
-import { furnitureAt } from './furniture';
+import { furnitureAt, ofKind } from './furniture';
 import { canReach } from './pathfinding';
 import { completeRooms, labelAt } from './rooms';
 import { manhattan, samePoint } from './space';
@@ -19,7 +19,7 @@ function isSeat(state: SimState, p: Point, halls: Set<number>): boolean {
   const room = labelAt(state, p.x, p.y);
   if (!halls.has(room) || !isWalkable(state.grid, p.x, p.y)) return false;
   if (furnitureAt(state, p.x, p.y)) return false;
-  return state.furniture.some((f) => f.kind === 'table' && manhattan(f, p) === 1 && labelAt(state, f.x, f.y) === room);
+  return ofKind(state, 'table').some((f) => manhattan(f, p) === 1 && labelAt(state, f.x, f.y) === room);
 }
 
 function seatTaken(state: SimState, s: Survivor, p: Point): boolean {

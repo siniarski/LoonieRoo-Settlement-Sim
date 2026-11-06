@@ -5,6 +5,7 @@
 // send them within REQUEST_DAYS for a lot of goodwill and something back).
 
 import { logEvent } from './events';
+import { ofKind } from './furniture';
 import { hashRoll } from './hash';
 import type { ItemKind } from './items';
 import { removeItem, spawnItem } from './items';
@@ -35,7 +36,7 @@ const ASKS: readonly [ItemKind, number][] = [
 const THANKS: readonly ItemKind[] = ['medicine', 'ammo', 'coat', 'book'];
 
 export function hasRadio(state: SimState): boolean {
-  return state.furniture.some((f) => f.kind === 'radio' && isPowered(state, f));
+  return ofKind(state, 'radio').some((f) => isPowered(state, f));
 }
 
 export function updateRadio(state: SimState): void {
