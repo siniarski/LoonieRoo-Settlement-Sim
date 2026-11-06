@@ -12,10 +12,11 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
+import { findById } from './lookup';
 import { batterVehicle } from './vehicles';
 import { EDGE_WINDOW_BROKEN, edgeBetween } from './grid';
 import { seesAcross } from './work';
-import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward } from './motion';
+import { BODY_RADIUS, REACH, SUB, centre, distance2, followTile, inReach, slide, tileOf, toward, type Body } from './motion';
 export { REACH } from './motion';
 import { placedAt } from './motion';
 import { HIT_PANIC, frighten } from './body';
@@ -130,7 +131,7 @@ export interface Zombie {
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
-  return state.zombies.find((z) => z.id === id);
+  return findById(state.zombies, id);
 }
 
 export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE_HEALTH, kind: ZombieKind = 'night'): Zombie {
@@ -314,7 +315,13 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
 
   // Someone within reach: wind up, then bite (if they're still there) instead of moving.
   {
-    const reachable = state.survivors.filter((s) => inReach(s, z, REACH, state.grid));
+    // (A plain loop, with a cheap box test before the real one: same list, same order; with
+    // hundreds of zombies and survivors this was a closure call per pair per tick.)
+    const reachable: Survivor[] = [];
+    for (const s of state.survivors) {
+      if (Math.abs(s.at.x - z.at.x) > REACH || Math.abs(s.at.y - z.at.y) > REACH) continue;
+      if (inReach(s, z, REACH, state.grid)) reachable.push(s);
+    }
     const victim = reachable.find((s) => s.id === z.targetId) ?? reachable[0];
     if (victim) {
       if (z.windup > 0) {
@@ -418,7 +425,7 @@ function glide(z: Zombie, to: Point, speed: number): boolean {
  * (not their tile), stopping just inside reach. Returns true if it took the tick.
  */
 function closeIn(state: SimState, z: Zombie, speed: number): boolean {
-  const target = z.targetId ? state.survivors.find((s) => s.id === z.targetId) : undefined;
+  const target = z.targetId ? findById(state.survivors, z.targetId) : undefined;
   if (!target) return false;
   const d2 = distance2(target.at, z.at);
   if (d2 > CLOSE_IN * CLOSE_IN || !clearLine(state, z.pos, target.pos)) return false;
@@ -469,17 +476,36 @@ function clearLine(state: SimState, a: Point, b: Point): boolean {
  * fixed order, sliding along walls. Only neighbours in nearby tiles are compared.
  */
 function pushApart(state: SimState): void {
-  const buckets = new Map<string, Zombie[]>();
+  // Buckets by tile index (tiles are in bounds; a neighbour off the map is skipped, as a string key
+  // for it would never have matched). Nobody's pos changes in here, only their at.
+  const { width, height } = state.grid;
+  const buckets = new Map<number, Zombie[]>();
   for (const z of state.zombies) {
-    const k = `${z.pos.x},${z.pos.y}`;
+    const k = z.pos.y * width + z.pos.x;
     const list = buckets.get(k);
     if (list) list.push(z);
     else buckets.set(k, [z]);
   }
+  // Everyone else a zombie can stand in, bucketed the same way, each with its place in the old
+  // combined list (survivors, residents, dogs, animals) so they're dealt with in that order.
+  const others = new Map<number, { s: Body; order: number }[]>();
+  let order = 0;
+  for (const list of [state.survivors, state.residents, state.dogs, state.animals] as Body[][]) {
+    for (const s of list) {
+      const k = s.pos.y * width + s.pos.x;
+      const entry = { s, order: order++ };
+      const at = others.get(k);
+      if (at) at.push(entry);
+      else others.set(k, [entry]);
+    }
+  }
   for (const z of state.zombies) {
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
-        for (const o of buckets.get(`${z.pos.x + dx},${z.pos.y + dy}`) ?? []) {
+        const nx = z.pos.x + dx;
+        const ny = z.pos.y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        for (const o of buckets.get(ny * width + nx) ?? []) {
           if (o === z || o.id < z.id) continue; // each pair once, in id order
           const d2 = distance2(z.at, o.at);
           if (d2 >= CROWD * CROWD) continue;
@@ -493,9 +519,19 @@ function pushApart(state: SimState): void {
         }
       }
     }
-    // Out of anyone (or anything) it's standing in.
-    for (const s of [...state.survivors, ...state.residents, ...state.dogs, ...state.animals]) {
-      if (Math.abs(s.pos.x - z.pos.x) > 1 || Math.abs(s.pos.y - z.pos.y) > 1) continue;
+    // Out of anyone (or anything) it's standing in: those within a tile, in their list order.
+    const near: { s: Body; order: number }[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = z.pos.x + dx;
+        const ny = z.pos.y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const at = others.get(ny * width + nx);
+        if (at) near.push(...at);
+      }
+    }
+    if (near.length > 1) near.sort((a, b) => a.order - b.order);
+    for (const { s } of near) {
       const d2 = distance2(z.at, s.at);
       if (d2 >= CROWD * CROWD) continue;
       const d = Math.sqrt(d2);

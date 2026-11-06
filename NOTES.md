@@ -19,7 +19,7 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
    - neighbours' errands, caravans, alliances and feuds;
    - colonists foraging.
    Questions: does free movement and combat feel right; is solo Apocalypse survivable (the scripted player reaches day 5); is the colony's winter readable (the alert points at coops and greenhouses).
-2. **Scale, measured first.** Before deciding on storeys, basements and slopes (as data, before any rendering), or big-world pathfinding (hierarchical paths or flow fields), run a very large stress test (huge map, many colonists, zombies, herds, cars) and profile it. The player asked for this.
+2. **Scale.** The stress harness exists (2026-11-06) and its first round of fixes is in: a 1024 world with 200 colonists and 1,500 zombies runs at 7 ms a tick. What's left at scale: full-map reachability floods when walls change or chunks generate (the 30-60 ms spikes), A* itself, and 1024 saves near the 5 MB storage limit. Storeys, basements and slopes as data are still to decide.
 3. **Rendering, last** (the player's call): isometric, or a Godot 3D port. The sim's tests are the spec.
 4. Smaller, any time: a How to play screen; the solo harness barricading and hunting; the sim in a Web Worker; residents running their own scavenging; the truck on expeditions shown on the road like a caravan.
 
@@ -42,6 +42,7 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 - solo: a scripted solo player under direct control (PRESET must be a solo start; TRACE=1, TRACE_EVERY). It fights by real reach, sneaks, forages, drinks from taps, and drives to far crates; it doesn't barricade or hunt.
 - bench: tick cost as colonists and zombies are added; save size and memory over 10 days.
 - profile: finds the slowest tick, replays to it (determinism), and V8-profiles just that tick.
+- stress: very large worlds (fully generated 512 and 1024; up to 200 colonists, 2,000 zombies, herds and caravans; colonists spread to a 1024 map's corners): build time, tick mean/p99/max, heap, save size and time, and a CPU profile of each (ONLY, TICKS, PROFILE=0; run with NODE_OPTIONS=--expose-gc for exact heap figures).
 Run several seeds in parallel as separate background processes (one SEEDS value each) to stay inside a few minutes.
 
 ## Project context (from initial planning)
@@ -615,3 +616,36 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
   - The solo harness drives: with its next crate over 30 tiles off by day and a fuelled car within 15 tiles, it walks to the car, gets in, steers by heading toward the crate (slowing for sharp turns), brakes within 3 tiles and gets out. Out of fuel, wrecked, night, or stuck for 60 ticks, it gets out and walks. Seed 2 drove 40 tiles west in about 80 ticks, parked and searched.
   - Checked in the browser: the character screen (8 points for a student now), the boot panel next to a car (0 / 40 kg), the stash button on a bag item, stashing food into the boot (the command log shows take, then stash), the key list. No console errors.
   - Not checked by eye: caravans and errands in the world and on the map. They take days of play or a talk with a neighbour's people to come up; tests cover them.
+- **2026-11-06, big-world stress test and fixes (branch stress).** Player: "Big world performance and stress test first".
+  - New harness/stress.harness.ts with six scenarios:
+    - gen-512 and gen-1024: whole worlds generated, 3 colonists;
+    - colony-512: 100 colonists, 500 zombies round them;
+    - horde-512: 30 colonists, 2,000 zombies all over, 6 herds, 20 caravans;
+    - spread-1024: 40 colonists in the four corners, 1,000 zombies;
+    - city-1024: 200 colonists, 1,500 zombies, 10 herds, 30 caravans.
+    It reports build time, tick mean/p99/max, heap, save size, and a CPU profile of each.
+  - What it found, and what changed (outcomes unchanged throughout: the solo harness dies on the same ticks, and the colony harness gives the same days, people and food):
+    - **A* allocated three map-sized arrays per search** (about 13 MB on 1024, filled every time), up to half of all time plus 14% in garbage collection. It now reuses scratch arrays with a generation stamp (pathfinding.ts scratchFor), so a search costs what it visits.
+    - **The job sweep scanned all furniture every tick** for the few pieces marked for scavenging (84% of an empty 1024 world's tick: 88,000 pieces). The furniture index keeps the marked list (markedForScavenge), invalidated through setScavenge, which all six places that change the mark now use.
+    - **Lookups by id scanned their lists:** getZombie, getJob, getItem, getSurvivor. A guard job per zombie made checking jobs O(zombies squared). New lookup.ts findById keeps a derived id-to-index map per list, checks every hit, and rebuilds on a miss, so answers are what a scan gives.
+    - **Zombies pushing out of people** built a combined list of every survivor, resident, dog and animal per zombie per tick. They're now bucketed by tile once a tick, and kept in their old order. Zombie buckets use numeric keys.
+    - **A zombie's who-can-I-bite check** called a closure per survivor; now a loop with a cheap box test first. Closing in finds its target by id.
+    - **Saves:** furniture goes out as rows of values in a fixed field order, trailing defaults dropped (savefile.ts packFurniture). Pieces with any other shape stay objects, so saves still round-trip exactly (a new test on a generated world). Old saves load.
+
+| Scenario | Tick mean before → after (ms) | p99 | max | Save before → after |
+|---|---|---|---|---|
+| gen-512 | 0.21 → 0.07 | 0.9 → 0.7 | 1.4 → 1.1 | 3.5 → 1.1 MB |
+| gen-1024 | 0.60 → 0.07 | 2.2 → 1.5 | 2.5 → 2.1 | 14.7 → 4.5 MB |
+| colony-512 | 8.8 → 2.7 | 36 → 12 | 76 → 23 | 0.8 → 0.5 MB |
+| horde-512 | 8.7 → 2.6 | 25 → 10 | 26 → 18 | 4.5 → 2.1 MB |
+| spread-1024 | 12.0 → 3.7 | 54 → 29 | 69 → 33 | 3.4 → 1.5 MB |
+| city-1024 | 39.4 → 7.3 | 263 → 32 | 648 → 64 | 15.7 → 5.6 MB |
+
+  - Memory: a fully generated 1024 world is about 105 MB of heap (88,000 furniture objects), and 135 MB with city-1024's load. It's flat over a run.
+  - Bench: everything quicker. Busy 128 0.66 → 0.63 ms, busy 256 0.61-0.65 → 0.52 ms, quiet worlds 2-5x quicker (0.016 ms on 256).
+  - Left at scale:
+    - the full-map reachability flood when walls change or new chunks generate (each mover type floods a million tiles on 1024: the 30-60 ms spikes);
+    - A* itself for long paths (hierarchical paths would help);
+    - zombie updates in general (22% of city-1024);
+    - 1024 saves near the 5 MB browser storage limit (1024 isn't on the menu; 512 is fine at 1.1 MB).
+  - 757 tests.

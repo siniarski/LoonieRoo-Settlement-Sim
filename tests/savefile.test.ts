@@ -93,3 +93,18 @@ describe('bug reports', () => {
     expect(loaded.ok).toBe(false);
   });
 });
+
+describe('save files: furniture as rows', () => {
+  it('a generated world full of furniture round-trips exactly, and much smaller than as objects', async () => {
+    const { createWorld, ensureGeneratedAround, CHUNK } = await import('../src/sim/worldgen');
+    const state = createWorld(5, 128);
+    for (let y = 0; y < 128; y += CHUNK) for (let x = 0; x < 128; x += CHUNK) ensureGeneratedAround(state, { x, y });
+    state.furniture[0]!.scavenge = true; // a non-default in the middle of a row
+    const text = toSaveFile(state);
+    const loaded = loadFile(text);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(JSON.stringify({ ...loaded.state, commandLog: [] })).toBe(JSON.stringify({ ...state, commandLog: [] }));
+    expect(text.length).toBeLessThan(JSON.stringify(state.furniture).length);
+  }, 20000);
+});

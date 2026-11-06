@@ -2,6 +2,7 @@
 // An item is either on the ground (`pos`) or carried (`carriedBy`), never both.
 
 import { isWalkable, type Point } from './grid';
+import { findById } from './lookup';
 import { isFurnitureTarget } from './designations';
 import { furnitureAt } from './furniture';
 import { nearestTile } from './space';
@@ -26,7 +27,7 @@ export interface Item {
 }
 
 export function getItem(state: SimState, id: string): Item | undefined {
-  return state.items.find((i) => i.id === id);
+  return findById(state.items, id);
 }
 
 export function itemAt(state: SimState, x: number, y: number): Item | undefined {
