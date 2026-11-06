@@ -152,3 +152,17 @@ describe('hordes', () => {
     expect(JSON.stringify({ ...copy, commandLog: [] })).toBe(JSON.stringify({ ...state, commandLog: [] }));
   });
 });
+
+describe('hordes on the move', () => {
+  it('a night wave crosses open ground to its prey and attacks', () => {
+    const map = Array.from({ length: 20 }, () => '.'.repeat(60)).map((r, y) => (y === 10 ? r.slice(0, 50) + 's' + r.slice(51) : r));
+    const state = loadScenario({ seed: 1, map });
+    quiet(state);
+    while (!isNight(state.tick)) state.tick += 10;
+    const wave = crowd(state, 2, 10, 5, 'night');
+    formHorde(state, wave, null, true);
+    for (let t = 0; t < 600 && state.survivors[0]!.health === 1000; t++) tick(state);
+    expect(Math.min(...wave.map((z) => Math.abs(z.pos.x - 50)))).toBeLessThanOrEqual(2);
+    expect(state.survivors[0]!.health).toBeLessThan(1000);
+  });
+});

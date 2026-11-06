@@ -68,7 +68,12 @@ export function isStation(kind: FurnitureKind): kind is Station {
 
 /** Items of this kind the colony has spare: on the ground or being hauled, not wielded or worn. */
 export function craftStock(state: SimState, kind: ItemKind): number {
-  return state.items.filter((i) => i.kind === kind && !state.survivors.some((s) => s.weapon === i.id || s.body === i.id || s.feet === i.id || s.cart === i.id || s.tool === i.id)).length;
+  // What people are using doesn't count: their ids gathered once, not every item checked against everyone.
+  const used = new Set<string>();
+  for (const s of state.survivors) for (const id of [s.weapon, s.body, s.feet, s.cart, s.tool]) if (id) used.add(id);
+  let n = 0;
+  for (const i of state.items) if (i.kind === kind && !used.has(i.id)) n++;
+  return n;
 }
 
 function target(state: SimState, kind: CraftKind): number {

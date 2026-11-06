@@ -33,7 +33,7 @@
 
 import { STRUCTURE_HEALTH, edgeHealth, isStructure } from './breach';
 import { logEvent } from './events';
-import { edgeBetween, getTile, inBounds, type Point } from './grid';
+import { EDGE_DOOR, edgeBetween, getTile, inBounds, type Point } from './grid';
 import { hashRoll, idNumber } from './hash';
 import { MATERIALIZE_RADIUS } from './herds';
 import { findById } from './lookup';
@@ -57,6 +57,8 @@ export interface Horde {
   /** The flow field's box (inclusive), from the last refresh. */
   box: { x0: number; y0: number; x1: number; y1: number };
   refreshTick: number;
+  /** When the goals were last taken afresh (GOAL_EVERY). Missing in older saves. */
+  goalTick?: number;
   /** A night's wave: knows where everyone is. */
   night: boolean;
 }
@@ -73,6 +75,12 @@ export const STEP = 10;
 export function batterRate(): number {
   return (ZOMBIE_DAMAGE * ZOMBIE_TICKS_PER_TILE) / ZOMBIE_ATTACK_EVERY;
 }
+/** A goal (a survivor) moving no further than this from where it was leaves the field as it is. */
+export const GOAL_SLACK = 3;
+/** Goals that moved further are taken afresh no more often than this. */
+export const GOAL_EVERY = 60;
+/** Members this close to the box's edge (not the map's) make it be worked out again. */
+export const BOX_SLACK = 4;
 export const JOIN_RADIUS = 10;
 export const LONER_JOIN = 6;
 export const STRAY_RADIUS = 24;
@@ -130,16 +138,32 @@ function refresh(state: SimState, h: Horde): void {
   if (zs.length === 0) return;
   // Who it's after: a night's wave, everyone; otherwise whoever any member notices.
   const prey: Survivor[] = h.night ? [...state.survivors] : state.survivors.filter((s) => zs.some((z) => noticesSurvivor(state, z, s)));
+  // Goals: kept as they were while the same people are only a step or two from where they were
+  // (GOAL_SLACK), so the field isn't worked out again for every shuffle.
+  const wasMode = h.mode;
+  const was = h.goals;
+  const wasIds = h.goalIds;
   if (prey.length > 0) {
     h.mode = 'hunt';
-    h.goals = prey.map((s) => ({ x: s.pos.x, y: s.pos.y }));
-    h.goalIds = prey.map((s) => s.id);
+    const goals = prey.map((s) => ({ x: s.pos.x, y: s.pos.y }));
+    const ids = prey.map((s) => s.id);
+    // The same people: kept while they've barely moved, or for up to GOAL_EVERY ticks whatever they did
+    // (with twenty people about someone is always on the move). Members close the last stretch on
+    // their target as it is (zombies.ts closeIn).
+    const samePeople = wasMode === 'hunt' && ids.length === wasIds.length && ids.every((id, i) => id === wasIds[i]);
+    const barely = samePeople && ids.every((_, i) => manhattan(goals[i]!, was[i]!) <= GOAL_SLACK);
+    if (!samePeople || (!barely && state.tick - (h.goalTick ?? -GOAL_EVERY) >= GOAL_EVERY)) {
+      h.goals = goals;
+      h.goalIds = ids;
+      h.goalTick = state.tick;
+    }
   } else {
     if (h.mode === 'hunt' && !h.heading && h.goals.length > 0) h.heading = { ...h.goals[0]! };
     h.mode = 'roam';
     h.goals = h.heading ? [{ ...h.heading }] : [];
     h.goalIds = [];
   }
+  const goalsKept = h.goals === was;
   // The box: round the members, and any goals not far from them, with a margin; no bigger than BOX_MAX.
   const mid = middle(zs);
   let x0 = mid.x;
@@ -164,7 +188,11 @@ function refresh(state: SimState, h: Horde): void {
   };
   [x0, x1] = clampBox(x0, x1, mid.x, width);
   [y0, y1] = clampBox(y0, y1, mid.y, height);
-  h.box = { x0, y0, x1, y1 };
+  // The box too stays as it was while the goals did and every member is still well inside it.
+  const b = h.box;
+  const inside = (q: Point) =>
+    (q.x - b.x0 >= BOX_SLACK || b.x0 === 0) && (b.x1 - q.x >= BOX_SLACK || b.x1 === width - 1) && (q.y - b.y0 >= BOX_SLACK || b.y0 === 0) && (b.y1 - q.y >= BOX_SLACK || b.y1 === height - 1);
+  if (!goalsKept || !zs.every((z) => inside(z.pos))) h.box = { x0, y0, x1, y1 };
   for (const z of zs) {
     z.targetId = null;
     if (h.mode === 'hunt') {
@@ -190,28 +218,43 @@ interface Field {
 const fields = new WeakMap<Horde, Field>();
 const UNREACHED = 0x7fffffff;
 
-/** What it costs a zombie to go from tile a into its neighbour b (Infinity: it can't, ever). */
-function stepCost(state: SimState, ax: number, ay: number, bx: number, by: number): number {
+/**
+ * Entering tile b: a step, plus battering it down if it's a wall, door or barricade (Infinity: never).
+ * `asShut`: a door counts as shut whether it is or not (the field's view: doors swing open and shut
+ * all the time, and the field shouldn't be worked out again for each).
+ */
+function enterCost(state: SimState, bx: number, by: number, asShut = false): number {
   const { grid } = state;
-  let cost = STEP;
   const tile = getTile(grid, bx, by);
   if (tile === undefined || tile === 'water') return Infinity;
-  if (!isPassable(grid, bx, by, 'zombie')) {
-    if (!isStructure(tile)) return Infinity;
-    const i = by * grid.width + bx;
-    cost += Math.ceil((STRUCTURE_HEALTH[tile] * (grid.reinforced.includes(i) ? 2.5 : 1) * STEP) / batterRate());
-  }
-  if (!crossable(grid, ax, ay, bx, by, 'zombie')) {
-    const e = edgeBetween(grid, ax, ay, bx, by);
-    cost += Math.ceil((Math.max(1, edgeHealth(grid, e)) * STEP) / batterRate());
-  }
-  return cost;
+  if (isPassable(grid, bx, by, 'zombie') && !(asShut && tile === 'door')) return STEP;
+  if (!isStructure(tile)) return Infinity;
+  const i = by * grid.width + bx;
+  return STEP + Math.ceil((STRUCTURE_HEALTH[tile] * (grid.reinforced.includes(i) ? 2.5 : 1) * STEP) / batterRate());
 }
 
-/** The horde's field: cost to a goal from each tile in its box, from what's stored on it and the walls now. */
+/** Crossing the border from a to b: battering it down if it's in the way, else nothing (`asShut`: an edge door counts as shut). */
+function edgeCost(state: SimState, ax: number, ay: number, bx: number, by: number, asShut = false): number {
+  const { grid } = state;
+  const e = edgeBetween(grid, ax, ay, bx, by);
+  if (e < 0 || grid.edges[e] === 0) return 0;
+  if (!(asShut && grid.edges[e] === EDGE_DOOR) && crossable(grid, ax, ay, bx, by, 'zombie')) return 0;
+  return Math.ceil((Math.max(1, edgeHealth(grid, e)) * STEP) / batterRate());
+}
+
+/** What it costs a zombie to go from tile a into its neighbour b (Infinity: it can't, ever). */
+function stepCost(state: SimState, ax: number, ay: number, bx: number, by: number): number {
+  const enter = enterCost(state, bx, by);
+  return enter === Infinity ? Infinity : enter + edgeCost(state, ax, ay, bx, by);
+}
+
+/**
+ * The horde's field: cost to a goal from each tile in its box, from what's stored on it and the walls
+ * now, every door taken as shut. (A member's own next step sees doors as they are: hordeStep.)
+ */
 export function flowField(state: SimState, h: Horde): Field {
-  const doors = state.grid.open.join(',') + '|' + state.grid.edgeOpen.join(',');
-  const key = `${h.refreshTick}|${state.walkabilityVersion}|${doors}`;
+  const b = h.box;
+  const key = `${h.goals.map((g) => `${g.x},${g.y}`).join(';')}|${b.x0},${b.y0},${b.x1},${b.y1}|${state.walkabilityVersion}`;
   const hit = fields.get(h);
   if (hit && hit.key === key) return hit;
   const { x0, y0, x1, y1 } = h.box;
@@ -219,17 +262,30 @@ export function flowField(state: SimState, h: Horde): Field {
   const ht = y1 - y0 + 1;
   const dist = new Int32Array(w * ht).fill(UNREACHED);
   // A binary heap on (cost, then local index): ties always come off in the same order.
-  const hc: number[] = [];
-  const hi: number[] = [];
+  let hc = new Float64Array(1024);
+  let hi = new Int32Array(1024);
+  let size = 0;
   const less = (a: number, b: number) => hc[a]! < hc[b]! || (hc[a] === hc[b] && hi[a]! < hi[b]!);
   const swap = (a: number, b: number) => {
-    [hc[a], hc[b]] = [hc[b]!, hc[a]!];
-    [hi[a], hi[b]] = [hi[b]!, hi[a]!];
+    const c = hc[a]!;
+    hc[a] = hc[b]!;
+    hc[b] = c;
+    const i = hi[a]!;
+    hi[a] = hi[b]!;
+    hi[b] = i;
   };
   const push = (c: number, i: number) => {
-    hc.push(c);
-    hi.push(i);
-    let k = hc.length - 1;
+    if (size === hc.length) {
+      const nc = new Float64Array(size * 2);
+      nc.set(hc);
+      hc = nc;
+      const ni = new Int32Array(size * 2);
+      ni.set(hi);
+      hi = ni;
+    }
+    hc[size] = c;
+    hi[size] = i;
+    let k = size++;
     while (k > 0) {
       const p = (k - 1) >> 1;
       if (!less(k, p)) break;
@@ -239,18 +295,17 @@ export function flowField(state: SimState, h: Horde): Field {
   };
   const pop = (): [number, number] => {
     const top: [number, number] = [hc[0]!, hi[0]!];
-    const lc = hc.pop()!;
-    const li = hi.pop()!;
-    if (hc.length > 0) {
-      hc[0] = lc;
-      hi[0] = li;
+    size--;
+    if (size > 0) {
+      hc[0] = hc[size]!;
+      hi[0] = hi[size]!;
       let k = 0;
       for (;;) {
         const l = 2 * k + 1;
         const r = l + 1;
         let m = k;
-        if (l < hc.length && less(l, m)) m = l;
-        if (r < hc.length && less(r, m)) m = r;
+        if (l < size && less(l, m)) m = l;
+        if (r < size && less(r, m)) m = r;
         if (m === k) break;
         swap(k, m);
         k = m;
@@ -273,7 +328,15 @@ export function flowField(state: SimState, h: Horde): Field {
       }
     }
   }
-  while (hc.length > 0) {
+  // Entering each tile costs the same from any side, but for the edge crossed: worked out once.
+  const enter = new Float64Array(w * ht).fill(-1);
+  const stepIn = (ax: number, ay: number, bx: number, by: number, bi: number) => {
+    if (enter[bi] === -1) enter[bi] = enterCost(state, bx, by, true);
+    const base = enter[bi]!;
+    if (base === Infinity) return Infinity;
+    return base + edgeCost(state, ax, ay, bx, by, true);
+  };
+  while (size > 0) {
     const [c, i] = pop();
     if (c >= dist[i]!) continue;
     dist[i] = c;
@@ -286,7 +349,7 @@ export function flowField(state: SimState, h: Horde): Field {
       if (!inBox(ax, ay)) continue;
       const j = (ay - y0) * w + (ax - x0);
       if (dist[j] !== UNREACHED) continue;
-      const step = stepCost(state, ax, ay, bx, by);
+      const step = stepIn(ax, ay, bx, by, i);
       if (step === Infinity) continue;
       push(c + step, j);
     }
@@ -303,9 +366,12 @@ export function hordeStep(state: SimState, z: Zombie, h: Horde): Point | null {
   const w = x1 - x0 + 1;
   const here = z.pos;
   if (here.x < x0 || here.x > x1 || here.y < y0 || here.y > y1) return null;
+  // At a goal already: stay. Otherwise the cheapest way on (its step, as things are now, and the
+  // rest of the way, from the field), ties in N, E, S, W order. (Comparing against this tile's own
+  // cost and moving only on a strictly lower one left them standing: on the best route the two are equal.)
+  if (f.dist[(here.y - y0) * w + (here.x - x0)] === 0) return null;
   let best: Point | null = null;
-  let bestCost = f.dist[(here.y - y0) * w + (here.x - x0)]!;
-  if (bestCost === 0) return null; // there
+  let bestCost = Infinity;
   for (const d of DIRS) {
     const nx = here.x + d.x;
     const ny = here.y + d.y;
