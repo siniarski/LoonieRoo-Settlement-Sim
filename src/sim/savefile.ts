@@ -8,10 +8,14 @@
 // migrated, same as hot reload.
 //
 // The grid's per-tile layers are run-length encoded on the way out (a world is
-// mostly long runs of grass and fog), and decoded on the way in. Files
-// without the encoding still load.
+// mostly long runs of grass and fog), and decoded on the way in. Furniture (tens
+// of thousands of trees and fittings in a big world) goes out as rows of values in
+// FURNITURE_FIELDS order, trailing defaults dropped, instead of objects with every
+// key (packFurniture): a fully explored 512 world's save fell from 3.5 MB. Files
+// without either encoding still load.
 
 import { replay } from './replay';
+import type { Furniture } from './furniture';
 import { SCHEMA_VERSION, cloneState, type LoggedCommand, type SimState } from './state';
 
 interface SaveFile {
@@ -57,11 +61,40 @@ export function runLengthDecode<T>(encoded: readonly (T | number)[]): T[] {
   return out;
 }
 
-/** A copy of the state with the grid's layers run-length encoded (marked `rle: true`). */
+/** A furniture piece's fields, in the order addFurniture makes them, and what each is when new. */
+const FURNITURE_FIELDS = ['id', 'kind', 'x', 'y', 'occupant', 'owner', 'loot', 'scavenge', 'stored', 'storedKind', 'look', 'table'] as const;
+const FURNITURE_DEFAULTS: readonly unknown[] = [undefined, undefined, undefined, undefined, null, null, 0, false, 0, null, null, null];
+
+/**
+ * Furniture as rows: each piece's values in FURNITURE_FIELDS order, trailing defaults dropped. A
+ * piece whose keys aren't exactly those, in that order, stays an object (so a save still comes
+ * back exactly as it went out).
+ */
+function packFurniture(list: readonly Furniture[]): { rows: unknown[] } {
+  const rows = list.map((f) => {
+    const keys = Object.keys(f);
+    if (keys.length !== FURNITURE_FIELDS.length || keys.some((k, i) => k !== FURNITURE_FIELDS[i])) return f;
+    const row: unknown[] = FURNITURE_FIELDS.map((k) => f[k]);
+    while (row.length > 4 && row[row.length - 1] === FURNITURE_DEFAULTS[row.length - 1]) row.pop();
+    return row;
+  });
+  return { rows };
+}
+
+function unpackFurniture(packed: { rows: unknown[] }): Furniture[] {
+  return packed.rows.map((r) => {
+    if (!Array.isArray(r)) return r as Furniture;
+    const f: Record<string, unknown> = {};
+    FURNITURE_FIELDS.forEach((k, i) => (f[k] = i < r.length ? r[i] : FURNITURE_DEFAULTS[i]));
+    return f as unknown as Furniture;
+  });
+}
+
+/** A copy of the state with the grid's layers run-length encoded (marked `rle: true`) and the furniture as rows. */
 function pack(state: SimState): unknown {
   const grid: Record<string, unknown> = { ...state.grid, rle: true };
   for (const layer of LAYERS) grid[layer] = runLengthEncode(state.grid[layer] as unknown[]);
-  return { ...state, grid };
+  return { ...state, grid, furniture: packFurniture(state.furniture) };
 }
 
 /** A save: the state as it is, without the history of how it got there. */
@@ -70,7 +103,9 @@ function snapshot(state: SimState): unknown {
 }
 
 /** Undoes pack (and passes unpacked states through). */
-function unpack(state: SimState): SimState {
+function unpack(packed: SimState): SimState {
+  const rows = packed.furniture as unknown;
+  const state = rows && !Array.isArray(rows) ? { ...packed, furniture: unpackFurniture(rows as { rows: unknown[] }) } : packed;
   const grid = state.grid as unknown as Record<string, unknown>;
   if (grid.rle !== true) return state;
   const out: Record<string, unknown> = { ...grid };

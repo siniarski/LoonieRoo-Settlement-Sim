@@ -17,7 +17,7 @@ import { TALK_RANGE, talk } from './talk';
 import { ORDER_JOBS, SHOUT_RANGE, describeOrder, withinOrder, type Order } from './orders';
 import type { Survivor } from './survivors';
 import { addBlueprint, blueprintAt, cancelBlueprint, evictFrom, hasRemovable, type FurnitureTarget } from './designations';
-import { addFurniture, furnitureAt, getFurniture, removeFurniture } from './furniture';
+import { addFurniture, furnitureAt, getFurniture, removeFurniture, setScavenge } from './furniture';
 import { getTile, inBounds, isWalkable, setTile, type Point, type Tile } from './grid';
 import { dropItem, getItem, spawnItem } from './items';
 import { releaseSurvivor } from './jobs';
@@ -504,7 +504,7 @@ function execute(state: SimState, command: Command): CommandResult {
     case 'designateScavenge': {
       const crate = furnitureAt(state, x, y);
       if ((crate?.kind !== 'crate' && crate?.kind !== 'tree') || (crate.kind === 'crate' && crate.loot === 0) || crate.scavenge) return unchanged();
-      crate.scavenge = true;
+      setScavenge(state, crate, true);
       return changed();
     }
     case 'designateRoom':
@@ -678,7 +678,7 @@ function cancelDesignation(state: SimState, x: number, y: number): CommandResult
   const crate = furnitureAt(state, x, y);
   if (crate?.kind === 'crate' || crate?.kind === 'tree') {
     if (!crate.scavenge) return unchanged();
-    crate.scavenge = false;
+    setScavenge(state, crate, false);
     return changed();
   }
   const room = roomAt(state, x, y);

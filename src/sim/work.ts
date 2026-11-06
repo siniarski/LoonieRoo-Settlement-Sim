@@ -10,7 +10,7 @@ import { LOOT_TABLES, pickFrom, type LootTable } from './loot';
 import { completeBlueprint, getBlueprint } from './designations';
 import { FARM_WORK, getPlot, harvest, isRipe, needsWork, plotPoint } from './farming';
 import { HUNT_WORK, VENISON, getAnimal } from './animals';
-import { getFurniture } from './furniture';
+import { getFurniture, setScavenge } from './furniture';
 import { TREAT_TICKS } from './health';
 import { GUARD_DAMAGE_PER_LEVEL, HARDENED_DAMAGE, hasTrait, skillLevel, workStep } from './skills';
 import { applyRemedy, isPatient, remediesFor } from './medicine';
@@ -217,7 +217,7 @@ function workScavenge(state: SimState, s: Survivor, job: Job): void {
   const kind = crate.kind === 'tree' ? 'wood' : scavengeFind(random(state), crate.table);
   spawnFind(state, kind, s.pos.x, s.pos.y);
   crate.loot -= 1;
-  if (crate.loot === 0 && crate.kind === 'crate') crate.scavenge = false; // trees stay marked: they grow back
+  if (crate.loot === 0 && crate.kind === 'crate') setScavenge(state, crate, false); // trees stay marked: they grow back
   finishJob(state, s, job, crate.kind === 'tree' ? `chopped wood from (${crate.x}, ${crate.y}), ${crate.loot} left` : `scavenged ${kind} from (${crate.x}, ${crate.y}), ${crate.loot} left`);
 }
 

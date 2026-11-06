@@ -67,12 +67,12 @@ export type Look = (typeof CONTAINER_LOOKS)[number] | (typeof DECOR_LOOKS)[numbe
  * moves, and only addFurniture/removeFurniture change the list, so they drop the cache.
  * (A generated world has thousands of trees: scanning the list per tile was the cost.)
  */
-const indexes = new WeakMap<Furniture[], { byTile: Map<string, Furniture>; byId: Map<string, Furniture>; byKind: Map<FurnitureKind, Furniture[]> }>();
+const indexes = new WeakMap<Furniture[], { byTile: Map<string, Furniture>; byId: Map<string, Furniture>; byKind: Map<FurnitureKind, Furniture[]>; marked: Furniture[] | null }>();
 
 function index(state: SimState) {
   let found = indexes.get(state.furniture);
   if (!found) {
-    found = { byTile: new Map(), byId: new Map(), byKind: new Map() };
+    found = { byTile: new Map(), byId: new Map(), byKind: new Map(), marked: null };
     for (const f of state.furniture) {
       if (!found.byTile.has(`${f.x},${f.y}`)) found.byTile.set(`${f.x},${f.y}`, f);
       found.byId.set(f.id, f);
@@ -98,6 +98,25 @@ export function ofKind(state: SimState, kind: FurnitureKind): readonly Furniture
   return index(state).byKind.get(kind) ?? NONE;
 }
 const NONE: readonly Furniture[] = [];
+
+/**
+ * Everything marked for scavenging, in list order: worked out once and kept until a mark changes
+ * (setScavenge) or furniture comes or goes. (A 1024 world has 88,000 pieces; the job sweep
+ * scanned them all every tick for the few that are marked.) Read it, never change it.
+ */
+export function markedForScavenge(state: SimState): readonly Furniture[] {
+  const ix = index(state);
+  ix.marked ??= state.furniture.filter((f) => f.scavenge);
+  return ix.marked;
+}
+
+/** Marks (or unmarks) a piece for scavenging. Always this way, never f.scavenge = ..., or the marked list goes stale. */
+export function setScavenge(state: SimState, f: Furniture, on: boolean): void {
+  if (f.scavenge === on) return;
+  f.scavenge = on;
+  const ix = indexes.get(state.furniture);
+  if (ix) ix.marked = null;
+}
 
 /** Pieces of several kinds, in list order (furniture is only ever appended, so that's id order). */
 export function ofKinds(state: SimState, kinds: readonly FurnitureKind[]): Furniture[] {

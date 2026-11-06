@@ -12,6 +12,7 @@
 // they fall behind, and step out of the way when they're standing in front of you.
 
 import { controlled } from './control';
+import { setScavenge } from './furniture';
 import type { Point } from './grid';
 import type { JobType } from './jobTypes';
 import { findPath, findPathToAny, isPassable } from './pathfinding';
@@ -152,7 +153,7 @@ function loot(state: SimState, s: Survivor, o: Extract<Order, { kind: 'loot' }>)
   o.progress = 0;
   const kind = spawnFind(state, scavengeFind(random(state), crate.table), s.pos.x, s.pos.y).kind;
   crate.loot -= 1;
-  if (crate.loot === 0) crate.scavenge = false;
+  if (crate.loot === 0) setScavenge(state, crate, false);
   s.note = `found ${kind}`;
   return true;
 }

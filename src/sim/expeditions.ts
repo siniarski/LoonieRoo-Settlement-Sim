@@ -9,7 +9,7 @@
 // purpose: nothing walks the route, which is what keeps far trips cheap.
 
 import { spawnFind } from './difficulty';
-import { ofKind } from './furniture';
+import { ofKind, setScavenge } from './furniture';
 import { logEvent } from './events';
 import { HEALTH_MAX } from './health';
 import { scavengeFind } from './jobs';
@@ -113,7 +113,7 @@ function returnHome(state: SimState, x: Expedition): void {
       found += 1;
       spawnFind(state, scavengeFind(random(state)), x.home.x, x.home.y);
     }
-    if (crate.loot === 0) crate.scavenge = false;
+    if (crate.loot === 0) setScavenge(state, crate, false);
   }
   state.pointsOfInterest = state.pointsOfInterest.filter((p) => !(p.x === x.target.x && p.y === x.target.y));
   for (const s of lost) mournDeath(state, s);

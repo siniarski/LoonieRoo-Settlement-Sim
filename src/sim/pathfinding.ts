@@ -86,9 +86,12 @@ export function findPathToAny(
   const startIdx = start.y * width + start.x;
   const goalSet = new Set(targets.map((g) => g.y * width + g.x));
 
-  const gScore = new Float64Array(size).fill(Infinity);
-  const cameFrom = new Int32Array(size).fill(-1);
-  const closed = new Uint8Array(size);
+  // Scratch reused across searches (scratchFor): a cell's g and cameFrom count only if it was
+  // touched in this search (seen === gen), so nothing map-sized is allocated or cleared per search.
+  const sc = scratchFor(size);
+  const gen = sc.gen;
+  const { seen, g: gScoreRaw, from: cameFrom, closed } = sc;
+  const gOf = (i: number) => (seen[i] === gen ? gScoreRaw[i]! : Infinity);
   const open = new MinHeap();
 
   const h = (idx: number) => {
@@ -99,25 +102,28 @@ export function findPathToAny(
     return best;
   };
 
-  gScore[startIdx] = 0;
+  seen[startIdx] = gen;
+  gScoreRaw[startIdx] = 0;
+  cameFrom[startIdx] = -1;
   open.push(startIdx, h(startIdx), h(startIdx));
 
   while (open.size > 0) {
     const current = open.pop();
     if (goalSet.has(current)) return reconstruct(cameFrom, current, width);
-    if (closed[current]) continue;
-    closed[current] = 1;
+    if (closed[current] === gen) continue;
+    closed[current] = gen;
 
     const cx = current % width;
     const cy = Math.floor(current / width);
-    const g = gScore[current]! + 1;
+    const g = gOf(current) + 1;
     for (const dir of DIRS) {
       const nx = cx + dir.x;
       const ny = cy + dir.y;
       if (!passable(nx, ny) || !crossable(grid, cx, cy, nx, ny, mover)) continue;
       const next = ny * width + nx;
-      if (closed[next] || g >= gScore[next]!) continue;
-      gScore[next] = g;
+      if (closed[next] === gen || g >= gOf(next)) continue;
+      seen[next] = gen;
+      gScoreRaw[next] = g;
       cameFrom[next] = current;
       const hn = h(next);
       open.push(next, g + hn, hn);
@@ -326,6 +332,16 @@ export function canReach(
     : DIRS.map((d) => ({ x: from.x + d.x, y: from.y + d.y })).filter((p) => passable(p) && crossable(grid, from.x, from.y, p.x, p.y, mover));
   const startLabels = new Set(starts.map((p) => label(p.y * width + p.x)));
   return goals.some((g) => passable(g) && startLabels.has(label(g.y * width + g.x)));
+}
+
+/** A*'s working arrays, kept between searches for the map size last used; each search takes a new generation. */
+let scratch: { size: number; gen: number; seen: Uint32Array; g: Float64Array; from: Int32Array; closed: Uint32Array } | null = null;
+function scratchFor(size: number) {
+  if (!scratch || scratch.size !== size || scratch.gen >= 0xfffffff0) {
+    scratch = { size, gen: 0, seen: new Uint32Array(size), g: new Float64Array(size), from: new Int32Array(size), closed: new Uint32Array(size) };
+  }
+  scratch.gen += 1;
+  return scratch;
 }
 
 function reconstruct(cameFrom: Int32Array, end: number, width: number): Point[] {

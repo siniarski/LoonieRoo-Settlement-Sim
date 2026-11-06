@@ -35,7 +35,7 @@ import { addThought } from './mood';
 import { hitResident, meetResident, residentAt, type Resident } from './residents';
 import { logEvent } from './events';
 import { EAT_TICKS, HOT_MEAL_VALUE, MEAL_VALUE, SATIETY_MAX } from './food';
-import { furnitureAt, getFurniture, type Furniture } from './furniture';
+import { furnitureAt, getFurniture, type Furniture, setScavenge } from './furniture';
 import { DRINK_TICKS, HYDRATION_MAX, sourceAt } from './water';
 import { BED_REGEN, FLOOR_REGEN, REST_DRAIN, REST_MAX } from './rest';
 import { samePoint } from './space';
@@ -225,7 +225,7 @@ function updateBusy(state: SimState, s: Survivor, c: Control): void {
     crate.loot -= 1;
     found.push(item.kind);
   }
-  crate.scavenge = false;
+  setScavenge(state, crate, false);
   s.note = found.length ? `found ${found.join(', ')}` : 'nothing in it';
 }
 

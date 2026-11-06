@@ -7,6 +7,7 @@
 // saying why (never stuck).
 
 import { passThrough } from './doors';
+import { findById } from './lookup';
 import { placedAt } from './motion';
 import type { Wish } from './wishes';
 import { startingResolve } from './resolve';
@@ -251,7 +252,7 @@ export function addSurvivor(state: SimState, x: number, y: number, name?: string
 }
 
 export function getSurvivor(state: SimState, id: string): Survivor | undefined {
-  return state.survivors.find((s) => s.id === id);
+  return findById(state.survivors, id);
 }
 
 /** The survivor standing on, or stepping onto, a tile. */

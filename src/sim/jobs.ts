@@ -10,9 +10,10 @@
 // survivor goes back to looking for work. Nobody gets stuck.
 
 import { cancelBlueprint, getBlueprint, preconditionHolds, type Blueprint } from './designations';
+import { findById } from './lookup';
 import { getPlot, harvest, needsWork } from './farming';
 import { getAnimal } from './animals';
-import { getFurniture, ofKind, ofKinds } from './furniture';
+import { getFurniture, ofKind, ofKinds, markedForScavenge } from './furniture';
 import { isPatient } from './medicine';
 import { getExploreArea } from './fog';
 import { isDirty, type Point } from './grid';
@@ -101,7 +102,7 @@ export const MAX_CANDIDATES = 8;
 export const IDLE_RETRY_TICKS = 5;
 
 export function getJob(state: SimState, id: string): Job | undefined {
-  return state.jobs.find((j) => j.id === id);
+  return findById(state.jobs, id);
 }
 
 // --- Reconcile -------------------------------------------------------------
@@ -187,7 +188,7 @@ export function reconcileJobs(state: SimState): void {
 
   // Marked crates with loot left get one scavenge job each.
   const searching = new Set(state.jobs.filter((j) => j.type === 'scavenge').map((j) => j.furnitureId));
-  for (const f of state.furniture) {
+  for (const f of markedForScavenge(state)) {
     if (f.scavenge && (f.kind === 'crate' || f.kind === 'tree') && f.loot > 0 && !searching.has(f.id)) {
       addJob(state, 'scavenge', f.x, f.y, null, null, f.id);
     }
