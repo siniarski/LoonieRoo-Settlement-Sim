@@ -6,6 +6,7 @@
 // the far side). Nothing is stored: a noise happens and its effects stay.
 
 import { logEvent } from './events';
+import { hordesHear } from './hordes';
 import { getTile, inBounds, type Point } from './grid';
 import { manhattan, nearestTile } from './space';
 import type { SimState } from './state';
@@ -25,11 +26,13 @@ export function makeNoise(state: SimState, p: Point, kind: NoiseKind): void {
   if (woke > 0) logEvent(state, `The ${kind} at (${p.x}, ${p.y}) woke ${woke === 1 ? 'a zombie' : `${woke} zombies`}`);
   const { width, height } = state.grid;
   for (const z of state.zombies) {
-    if ((z.kind !== 'static' && z.kind !== 'herd') || z.targetId !== null || manhattan(z.pos, p) > r) continue;
+    if ((z.kind !== 'static' && z.kind !== 'herd') || z.targetId !== null || z.hordeId || manhattan(z.pos, p) > r) continue;
     // Static zombies come to look (and stop there); herd zombies swing through it and on.
     z.heading = z.kind === 'static' ? { x: p.x, y: p.y } : { x: clamp(2 * p.x - z.pos.x, width), y: clamp(2 * p.y - z.pos.y, height) };
     z.path = [];
   }
+  // Hordes (hordes.ts): one mostly in earshot turns towards it, swinging through and on, like a herd; a part in earshot splits off.
+  hordesHear(state, p, r, (from) => ({ x: clamp(2 * p.x - from.x, width), y: clamp(2 * p.y - from.y, height) }));
   for (const h of state.herds) {
     if (manhattan(h, p) > r * HERD_HEARING) continue;
     const to = { x: clamp(2 * p.x - h.x, width), y: clamp(2 * p.y - h.y, height) };

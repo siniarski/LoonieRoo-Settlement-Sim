@@ -12,6 +12,7 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 
 import { passThrough } from './doors';
+import { formHorde, getHorde, hordeStep, updateHordes } from './hordes';
 import { findById } from './lookup';
 import { batterVehicle } from './vehicles';
 import { EDGE_WINDOW_BROKEN, edgeBetween } from './grid';
@@ -128,6 +129,8 @@ export interface Zombie {
   staggerUntil: number;
   /** Tick it was last hurt, -1 if never (the renderer flashes it). */
   hurtTick: number;
+  /** The horde it moves with (hordes.ts), or null/missing: a loner. */
+  hordeId?: string | null;
 }
 
 export function getZombie(state: SimState, id: string): Zombie | undefined {
@@ -299,6 +302,7 @@ export function updateZombies(state: SimState): void {
 }
 
 function updateAll(state: SimState): void {
+  updateHordes(state);
   const budget: Budget = { plans: PLANS_PER_TICK, near: survivorsNear(state) };
   for (const z of state.zombies) updateZombie(state, z, budget);
   pushApart(state);
@@ -343,13 +347,18 @@ function spawnGroup(state: SimState, n: number, health: number): void {
   const p = spawnPoint(state);
   if (!p) return;
   const night = nightNumber(state.tick) ?? 1;
-  giveVariant(addZombie(state, p.x, p.y, health), night);
+  const group = [addZombie(state, p.x, p.y, health)];
+  giveVariant(group[0]!, night);
   for (let i = 1; i < n; i++) {
     const free = (x: number, y: number) =>
       getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.zombies.some((z) => z.pos.x === x && z.pos.y === y);
     const q = nearestTile(state.grid, p, free) ?? p;
-    giveVariant(addZombie(state, q.x, q.y, health), night);
+    const z = addZombie(state, q.x, q.y, health);
+    giveVariant(z, night);
+    group.push(z);
   }
+  // Big enough, they come as a horde, on one flow field (hordes.ts).
+  formHorde(state, group, null, true);
   logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }
 
@@ -455,7 +464,12 @@ function updateZombie(state: SimState, z: Zombie, budget: Budget): void {
     fallInPit(state, z);
   }
 
-  if ((state.tick >= z.nextThinkTick || z.path.length === 0) && budget.plans > 0) {
+  // In a horde: the next step off its flow field (hordes.ts), no planning of its own.
+  const horde = getHorde(state, z.hordeId);
+  if (horde && z.path.length === 0) {
+    const step = hordeStep(state, z, horde);
+    z.path = step ? [step] : [];
+  } else if ((state.tick >= z.nextThinkTick || z.path.length === 0) && budget.plans > 0) {
     budget.plans -= 1;
     plan(state, z);
     z.nextThinkTick = state.tick + REPATH_EVERY;
@@ -684,6 +698,10 @@ function plan(state: SimState, z: Zombie): void {
 }
 
 /** Does a (static, herd or raider) zombie notice this survivor? */
+export function noticesSurvivor(state: SimState, z: Zombie, s: Survivor): boolean {
+  return notices(state, z, s);
+}
+
 function notices(state: SimState, z: Zombie, s: Survivor): boolean {
   const d = manhattan(z.pos, s.pos);
   if (d > AGGRO_RADIUS) return false;

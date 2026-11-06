@@ -4,6 +4,7 @@
 // The player walls in the camp, builds rooms and defences, sets priorities, amputates and plants herbs.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { it } from 'vitest';
+import { Session } from 'node:inspector';
 import { applyCommand, type Command } from '../src/sim/commands';
 import { foodDays } from '../src/sim/alerts';
 import { threatScale } from '../src/sim/director';
@@ -99,6 +100,14 @@ function run(seed: number, days: number): void {
     for (let b = beds; b < state.survivors.length; b++) cmd(state, { type: 'designateBuild', x: start.x - 10 + b, y: start.y - 10, structure: 'bed' });
     const t0 = performance.now();
     let worst = 0;
+    // PROFILE_DAY=n: a V8 profile of that day's ticks, top functions to harness/out/colony-profile.txt.
+    const session = process.env.PROFILE_DAY && Number(process.env.PROFILE_DAY) === day ? new Session() : null;
+    if (session) {
+      session.connect();
+      session.post('Profiler.enable');
+      session.post('Profiler.setSamplingInterval', { interval: 100 });
+      session.post('Profiler.start');
+    }
     for (let t = 0; t < DAY_LENGTH; t++) {
       const a = performance.now();
       tick(state);
@@ -109,6 +118,38 @@ function run(seed: number, days: number): void {
       for (const tr of state.traders) if (!tr.traded) tr.offers.forEach((_, i) => cmd(state, { type: 'trade', traderId: tr.id, offer: i }));
       for (const w of [...state.wanderers]) if (state.items.filter((i) => i.kind === 'food').length >= 3 * state.survivors.length) cmd(state, { type: 'acceptWanderer', wandererId: w.id });
       if (state.survivors.length === 0) break;
+    }
+    if (session) {
+      session.post('Profiler.stop', (err, res) => {
+        if (err || !res) return;
+        const prof = res.profile;
+        const byId = new Map(prof.nodes.map((n) => [n.id, n]));
+        const parent = new Map<number, number>();
+        for (const n of prof.nodes) for (const c of n.children ?? []) parent.set(c, n.id);
+        const name = (n: (typeof prof.nodes)[number]) => `${n.callFrame.functionName || '(anon)'} ${n.callFrame.url.split('/').pop()}:${n.callFrame.lineNumber + 1}`;
+        const self = new Map<string, number>();
+        const total = new Map<string, number>();
+        let all = 0;
+        for (const id of prof.samples ?? []) {
+          all++;
+          const seenK = new Set<string>();
+          let cur: number | undefined = id;
+          let first = true;
+          while (cur !== undefined) {
+            const k = name(byId.get(cur)!);
+            if (first) self.set(k, (self.get(k) ?? 0) + 1);
+            first = false;
+            if (!seenK.has(k)) {
+              seenK.add(k);
+              total.set(k, (total.get(k) ?? 0) + 1);
+            }
+            cur = parent.get(cur);
+          }
+        }
+        const top = (m: Map<string, number>) => [...m].filter(([k]) => /\.ts:/.test(k)).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, c]) => `${((100 * c) / all).toFixed(1).padStart(5)}%  ${k}`);
+        writeFileSync('harness/out/colony-profile.txt', [`seed ${seed} day ${day}`, 'TOTAL', ...top(total), 'SELF', ...top(self)].join('\n') + '\n');
+      });
+      session.disconnect();
     }
     const ev = state.events.filter((e) => e.tick >= seen).map((e) => e.message);
     seen = state.tick;
