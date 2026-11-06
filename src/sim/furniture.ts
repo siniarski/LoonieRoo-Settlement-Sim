@@ -91,7 +91,8 @@ export function furnitureAt(state: SimState, x: number, y: number): Furniture | 
 
 /**
  * Every piece of one kind, in list order (so results come out as a scan of the list would).
- * Shared with the index: read it, never change it. (A world has thousands of trees and fittings;
+ * Shared with the index, and kept up to date in place: read it, never change it, and don't add or
+ * remove furniture of that kind while looping over it. (A world has thousands of trees and fittings;
  * scanning them all each tick for the one generator was a steady cost.)
  */
 export function ofKind(state: SimState, kind: FurnitureKind): readonly Furniture[] {
@@ -144,7 +145,17 @@ export function addFurniture(state: SimState, kind: FurnitureKind, x: number, y:
     table: null,
   };
   state.furniture.push(f);
-  indexes.delete(state.furniture);
+  // Keep the index, if there is one, up to date in place (rebuilding it over a big world's
+  // 88,000 pieces for every piece added was a spike). New pieces go last, as in the list.
+  const ix = indexes.get(state.furniture);
+  if (ix) {
+    const key = `${x},${y}`;
+    if (!ix.byTile.has(key)) ix.byTile.set(key, f);
+    ix.byId.set(f.id, f);
+    const same = ix.byKind.get(kind);
+    if (same) same.push(f);
+    else ix.byKind.set(kind, [f]);
+  }
   return f;
 }
 
@@ -156,7 +167,24 @@ export function regrowTrees(state: SimState): void {
 
 export function removeFurniture(state: SimState, f: Furniture): void {
   const i = state.furniture.indexOf(f);
-  if (i >= 0) state.furniture.splice(i, 1);
-  indexes.delete(state.furniture);
+  if (i < 0) return;
+  state.furniture.splice(i, 1);
+  // The index, in place: the tile falls to the next piece there in list order, if any.
+  const ix = indexes.get(state.furniture);
+  if (ix) {
+    const key = `${f.x},${f.y}`;
+    if (ix.byTile.get(key) === f) {
+      const next = state.furniture.find((g) => g.x === f.x && g.y === f.y);
+      if (next) ix.byTile.set(key, next);
+      else ix.byTile.delete(key);
+    }
+    ix.byId.delete(f.id);
+    const same = ix.byKind.get(f.kind);
+    if (same) {
+      const k = same.indexOf(f);
+      if (k >= 0) same.splice(k, 1);
+    }
+    if (ix.marked) ix.marked = ix.marked.filter((g) => g !== f);
+  }
   for (let n = 0; n < f.stored; n++) spawnItem(state, f.storedKind ?? 'wood', f.x, f.y);
 }

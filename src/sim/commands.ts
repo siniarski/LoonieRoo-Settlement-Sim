@@ -8,7 +8,7 @@ import { addMapNote, removeMapNote } from './mapnotes';
 import { addVehicle, parkable } from './vehicles';
 import { remediesFor } from './medicine';
 import { contents, dropFromPack, equipFromPack, stow, containerOf, stash } from './inventory';
-import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, setEdge, type Side } from './grid';
+import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, setEdge, type Side, noteEdgeChange, noteChange } from './grid';
 import { succeed } from './succession';
 import { promise } from './wishes';
 import { meetResident } from './residents';
@@ -400,6 +400,7 @@ function execute(state: SimState, command: Command): CommandResult {
       const at = state.grid.edgeLocked.indexOf(e);
       if (at >= 0) state.grid.edgeLocked.splice(at, 1);
       else state.grid.edgeLocked.push(e);
+      noteEdgeChange(state.grid, e);
       state.walkabilityVersion += 1; // raiders' paths change
       return changed();
     }
@@ -413,6 +414,7 @@ function execute(state: SimState, command: Command): CommandResult {
       state.grid.locked.push(i);
       evictZombies(state, { x, y }); // a raider in the doorway is shut out
     }
+    noteChange(state.grid, i);
     state.walkabilityVersion += 1; // raiders' paths change
     return changed();
   }

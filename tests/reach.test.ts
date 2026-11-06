@@ -57,3 +57,59 @@ describe('reachability with doors swinging', () => {
     expect(reachable).toBeLessThan(checked);
   }, 30000);
 });
+
+describe('reachability, chunked, as the map changes', () => {
+  it('re-flooding only the changed chunks gives the same answers as one flood of the whole map', async () => {
+    const { setTile, setEdge, EDGE_WALL, EDGE_NONE, EDGE_WINDOW, EDGE_BARRICADE } = await import('../src/sim/grid');
+    const { applyCommand } = await import('../src/sim/commands');
+    const state = createWorld(12, 128);
+    for (let y = 0; y < 128; y += CHUNK) for (let x = 0; x < 128; x += CHUNK) ensureGeneratedAround(state, { x, y });
+    const { grid } = state;
+    const at = (i: number) => ({ x: i % grid.width, y: Math.floor(i / grid.width) });
+    const kinds = [EDGE_WALL, EDGE_NONE, EDGE_DOOR, EDGE_WINDOW, EDGE_BARRICADE] as const;
+    let checked = 0;
+    for (let round = 0; round < 12; round++) {
+      // Change things here and there (some on chunk borders: x or y a multiple of 32), as the sim does, and bump the version.
+      for (let k = 0; k < 25; k++) {
+        const x = Math.floor(hashRoll(round, k, 11) * 128);
+        const y = Math.floor(hashRoll(round, k, 12) * 128);
+        const bx = k % 5 === 0 ? 32 * (1 + Math.floor(hashRoll(round, k, 13) * 3)) : x;
+        const roll = hashRoll(round, k, 14);
+        if (roll < 0.3) setTile(grid, bx, y, roll < 0.15 ? 'wall' : 'floor');
+        else if (roll < 0.8) setEdge(grid, bx, y, roll < 0.55 ? 'n' : 'w', kinds[Math.floor(hashRoll(round, k, 15) * kinds.length)]!);
+        else if (grid.tiles[y * 128 + x] === 'door') applyCommand(state, { type: 'toggleLock', x, y });
+        else setTile(grid, x, y, 'door');
+      }
+      // And something that matters: a small room boxed in with edge walls (sometimes across a chunk
+      // border), asked about from inside; then, every other round, one wall made a door.
+      const cx = round % 3 === 0 ? 31 + (round % 2) : 10 + Math.floor(hashRoll(round, 31) * 100);
+      const cy = 10 + Math.floor(hashRoll(round, 32) * 100);
+      for (let x = cx; x <= cx + 2; x++) for (let y = cy; y <= cy + 2; y++) setTile(grid, x, y, 'floor');
+      for (let x = cx; x <= cx + 2; x++) {
+        setEdge(grid, x, cy, 'n', EDGE_WALL);
+        setEdge(grid, x, cy + 3, 'n', round % 2 === 1 && x === cx + 1 ? EDGE_NONE : EDGE_WALL);
+      }
+      for (let y = cy; y <= cy + 2; y++) {
+        setEdge(grid, cx, y, 'w', EDGE_WALL);
+        setEdge(grid, cx + 3, y, 'w', EDGE_WALL);
+      }
+      state.walkabilityVersion += 1;
+      for (const mover of ['zombie', 'survivor', 'breacher'] as const) {
+        for (const out of [{ x: cx + 1, y: cy + 6 }, { x: cx - 4, y: cy + 1 }]) {
+          expect(canReach(grid, state.walkabilityVersion, { x: cx + 1, y: cy + 1 }, [out], mover), `room round ${round} ${mover}`).toBe(reference(grid, { x: cx + 1, y: cy + 1 }, out, mover));
+          checked++;
+        }
+      }
+      const floor = grid.tiles.flatMap((t, i) => (t === 'floor' || t === 'door' ? [i] : []));
+      for (const mover of ['zombie', 'survivor', 'raider', 'free', 'breacher'] as const) {
+        for (let k = 0; k < 30; k++) {
+          const a = at(floor[Math.floor(hashRoll(round, k, 21) * floor.length)]!);
+          const b = k % 3 === 0 ? at(floor[Math.floor(hashRoll(round, k, 22) * floor.length)]!) : { x: Math.min(127, Math.max(0, a.x + Math.floor(hashRoll(round, k, 23) * 41) - 20)), y: Math.min(127, Math.max(0, a.y + Math.floor(hashRoll(round, k, 24) * 41) - 20)) };
+          expect(canReach(grid, state.walkabilityVersion, a, [b], mover), `round ${round} ${mover} ${a.x},${a.y} -> ${b.x},${b.y}`).toBe(reference(grid, a, b, mover));
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBe(12 * 5 * 30 + 12 * 6);
+  }, 60000);
+});
