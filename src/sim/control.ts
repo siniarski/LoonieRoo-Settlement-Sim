@@ -16,6 +16,7 @@
 // and so does being hurt while asleep.
 
 import { getTile, isOpen } from './grid';
+import { HUNGRY } from './food';
 import { ENTER_REACH, VEHICLE_RADIUS, drive, leaveVehicle, useVehicle, vehicleOf, vehiclesOf } from './vehicles';
 import { maybeAlarm } from './timeline';
 import { EDGE_WINDOW, edgeBetween } from './grid';
@@ -432,10 +433,11 @@ export function use(state: SimState, s: Survivor, target: Point): string | null 
     dropItem(state, carried, target);
     return `put down the ${carried.kind}`;
   }
-  // Nothing at all underfoot: sleep rough if tired or it's night, else forage if you can.
+  // Nothing at all underfoot: sleep rough at night or if tired (unless you're hungry and there's
+  // foraging to be done here: hunger first, by day), else forage if you can.
   if (samePoint(target, s.pos)) {
-    if (s.rest < TIRED || isNight(state.tick)) return lieDown(s, c, 'floor');
     const why = canForage(state, s);
+    if (isNight(state.tick) || (s.rest < TIRED && (why !== null || s.satiety >= HUNGRY))) return lieDown(s, c, 'floor');
     if (why) return why;
     c.busy = { what: 'forage', targetId: 'here', progress: 0, duration: FORAGE_TICKS };
     return 'foraging';

@@ -239,7 +239,7 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
 
 - **Is solo survivable for a human?** The scripted solo player died by day 2-5 (balance pass, 2026-11-04) before hand tools, foraging, hunting, longer days and group-sized nights; a human playtest is the real test. Watch food (2.4 a day to stay fed, 0.6x loot a year on), the crude starting weapon, and the hut door at night.
 - **Movement and combat feel.** Tile to tile at 4 ticks a tile, swings on a cooldown. Good enough under WASD, or does the sim need sub-tile positions? Decided by playtest.
-- **Colonies die in their first winter** (balance pass 5: days 17-19, just short of evacuation on day 20), with a scripted player that has no real defence plan. Levers: coats, siege size, food.
+- **Colonies die in their first winter** without coops or a greenhouse (balance pass 2026-11-06: with coops, two of three scripted colonies are alive at day 25). The game's autumn alert now points at both. Watch whether a human finds them in time.
 - **Infection may be too easy** for a player who uses herbs and amputation (balance pass 5: no infection deaths).
 - **Scale: macro vs colony.** Per-survivor A* is fine for tens of people; hundreds on a big map would need hierarchical pathfinding or flow fields, an item spatial index, and an active region. See "Big worlds".
 - **Residents are still simple:** they potter, trade in person, join, or fight; no caravans, scavenging runs or alliances of their own.
@@ -589,3 +589,15 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
     - The deal: within 4 days for +25 reputation and a caravan of thanks (3 food and two useful things), and the missing one goes home (+1 person). Let it lapse and it's -5. One errand at a time per settlement.
     - Marked on the map in orange with what it is and who asked, listed in the neighbours panel with the days left, and dotted on the minimap.
   - tests/neighbours.test.ts (9). 755 tests.
+- **2026-11-06, balance pass (branch balance).** Item 4 of "Do 1-4", after today's systems.
+  - The solo harness was losing fights it should have won.
+    - It judged the dead by `pos`, the tile a zombie last finished stepping onto, which can lag a tile behind its body. Bites reach 1.1 tiles centre to centre, so one "two tiles away" could bite it to death while it stood there.
+    - It now uses the bodies (tileOf(at)) and fights whatever is in swing reach as the game measures it (inReach, SWING_REACH), aiming at it.
+    - It also sneaks when the dead are within 10 tiles but not on it, forages when hungry with no food about, and drinks from taps while the water's on.
+  - Found while doing that: using your own tile put you to sleep on the floor whenever you were tired, even starving by day on open grass. Now hunger wins by day: tired and hungry where there's foraging to be done, you forage (control.ts use).
+  - Solo (Apocalypse) now: days 5, 5, 5 (was 3, 4, 3): two night attacks on night 5, one starvation after 53 forages. It still doesn't barricade, hunt or drive, so a human should do better. Apocalypse stays hard; no numbers changed.
+  - Colony: days 22, 20, 18 at first. All in the first winter: colonies of 20-odd people on under two days of food, sitting on 2,000 wood, starving once nothing grows.
+    - Taking fewer people in (only with four days' food, not from autumn) made it worse (19, 16, 11): small colonies die to attacks.
+    - Having the scripted player build chicken coops (one per three people, from day 6; they lay all year, half as often in winter) fixed it: alive at day 25 (6 people, 25 days of food), wiped out on day 24, alive at day 25 (7 people, 20 days).
+    - So the winter tools were already enough; nobody was using them. The harness now builds coops. The autumn alert ("Winter in N days: food for...") now says what keeps food coming: coops lay all year, a greenhouse grows all year.
+  - Open question updated: "Colonies die in their first winter" holds only without coops or a greenhouse.
