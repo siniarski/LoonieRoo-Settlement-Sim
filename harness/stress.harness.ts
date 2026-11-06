@@ -19,6 +19,7 @@ import { sendCaravan } from '../src/sim/caravans';
 import { isWalkable } from '../src/sim/grid';
 import { hashRoll } from '../src/sim/hash';
 import { toSaveFile } from '../src/sim/savefile';
+import { warmReach } from '../src/sim/pathfinding';
 import { nearestTile } from '../src/sim/space';
 import type { SimState } from '../src/sim/state';
 import { addSurvivor } from '../src/sim/survivors';
@@ -149,6 +150,10 @@ async function run(sc: Scenario): Promise<void> {
   const g0 = performance.now();
   const state = sc.build();
   const genMs = performance.now() - g0;
+  // As the game does on a new or loaded game, while paused (app.ts): every mover's reachability built up front.
+  const w0 = performance.now();
+  warmReach(state.grid, state.walkabilityVersion);
+  const warmMs = performance.now() - w0;
   const h1 = heapMb();
   for (let t = 0; t < 20; t++) tick(state); // warm up
   const session = process.env.PROFILE === '0' ? null : new Session();
@@ -187,7 +192,7 @@ async function run(sc: Scenario): Promise<void> {
   const h2 = heapMb();
   out.push(
     `${sc.name.padEnd(12)} size ${state.grid.width} | colonists ${state.survivors.length} zombies ${state.zombies.length} herds ${state.herds.length} caravans ${(state.caravans ?? []).length} furniture ${state.furniture.length} items ${state.items.length}`,
-    `   build ${(genMs / 1000).toFixed(1)} s | tick mean ${mean.toFixed(2)} ms  p99 ${times[Math.floor(times.length * 0.99)]!.toFixed(1)}  max ${times.at(-1)!.toFixed(1)} | ${(1000 / mean).toFixed(0)} ticks/s (10 needed at 1x, 40 at 4x)`,
+    `   build ${(genMs / 1000).toFixed(1)} s, warm-up ${warmMs.toFixed(0)} ms | tick mean ${mean.toFixed(2)} ms  p99 ${times[Math.floor(times.length * 0.99)]!.toFixed(1)}  max ${times.at(-1)!.toFixed(1)} | ${(1000 / mean).toFixed(0)} ticks/s (10 needed at 1x, 40 at 4x)`,
     `   heap ${h0.toFixed(0)} -> ${h1.toFixed(0)} after build -> ${h2.toFixed(0)} MB after run | save ${(save.length / 1e6).toFixed(1)} MB in ${saveMs.toFixed(0)} ms${gc ? '' : ' (no --expose-gc: heap figures include garbage)'}`,
     ...top,
   );

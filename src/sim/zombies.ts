@@ -156,12 +156,57 @@ export function addZombie(state: SimState, x: number, y: number, health = ZOMBIE
     hurtTick: -1,
   };
   state.zombies.push(z);
+  edited(state.zombies);
   return z;
+}
+
+/** How many times each zombie list has been added to or taken from in place (for zombiesWithin's buckets). */
+const edits = new WeakMap<Zombie[], number>();
+function edited(list: Zombie[]): void {
+  edits.set(list, (edits.get(list) ?? 0) + 1);
+}
+const buckets = new WeakMap<Zombie[], { tick: number; edit: number; cells: Map<number, Zombie[]> }>();
+
+/**
+ * How many zombies stand within `r` tiles (each way) of a point. The dead are bucketed by tile once
+ * a tick (and again if any are added or removed), and every one found is checked where it stands
+ * now, searching two tiles further than asked: a zombie knocked back since the buckets were made
+ * (it can't move further within the tick) is still counted exactly. (Every survivor counting every
+ * zombie for panic was hundreds of thousands of checks a tick with a big horde.)
+ */
+export function zombiesWithin(state: SimState, p: Point, r: number): number {
+  const list = state.zombies;
+  const { width } = state.grid;
+  const edit = edits.get(list) ?? 0;
+  let b = buckets.get(list);
+  if (!b || b.tick !== state.tick || b.edit !== edit) {
+    const cells = new Map<number, Zombie[]>();
+    for (const z of list) {
+      const k = z.pos.y * width + z.pos.x;
+      const at = cells.get(k);
+      if (at) at.push(z);
+      else cells.set(k, [z]);
+    }
+    b = { tick: state.tick, edit, cells };
+    buckets.set(list, b);
+  }
+  let n = 0;
+  const reach = r + 2;
+  for (let y = p.y - reach; y <= p.y + reach; y++) {
+    for (let x = p.x - reach; x <= p.x + reach; x++) {
+      if (x < 0 || x >= width) continue;
+      for (const z of b.cells.get(y * width + x) ?? []) if (Math.max(Math.abs(z.pos.x - p.x), Math.abs(z.pos.y - p.y)) <= r) n++;
+    }
+  }
+  return n;
 }
 
 export function removeZombie(state: SimState, z: Zombie): void {
   const i = state.zombies.indexOf(z);
-  if (i >= 0) state.zombies.splice(i, 1);
+  if (i >= 0) {
+    state.zombies.splice(i, 1);
+    edited(state.zombies);
+  }
 }
 
 /** Any zombie within `radius` (Manhattan) of a point. */
@@ -254,13 +299,15 @@ export function updateZombies(state: SimState): void {
 }
 
 function updateAll(state: SimState): void {
-  const budget = { plans: PLANS_PER_TICK };
+  const budget: Budget = { plans: PLANS_PER_TICK, near: survivorsNear(state) };
   for (const z of state.zombies) updateZombie(state, z, budget);
   pushApart(state);
   // Static zombies that came to look at a noise stop looking.
   for (const z of state.zombies) if (z.kind === 'static' && z.heading && manhattan(z.pos, z.heading) <= 1) z.heading = null;
   // Herd zombies that reached the herd's destination wander off the map.
-  state.zombies = state.zombies.filter((z) => !(z.kind === 'herd' && z.heading && manhattan(z.pos, z.heading) <= 1 && !z.move));
+  // (Only when one is leaving: a new list every tick threw away everything cached on the old one.)
+  const gone = (z: Zombie) => z.kind === 'herd' && z.heading && manhattan(z.pos, z.heading) <= 1 && !z.move;
+  if (state.zombies.some(gone)) state.zombies = state.zombies.filter((z) => !gone(z));
 }
 
 /** Where tonight's next group arrives: in the dark past explored ground, or (on a fully explored map) at the edge. */
@@ -306,7 +353,50 @@ function spawnGroup(state: SimState, n: number, health: number): void {
   logEvent(state, n === 1 ? `A zombie appeared at (${p.x}, ${p.y})` : `A group of ${n} zombies appeared at (${p.x}, ${p.y})`);
 }
 
-function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): void {
+/** What a tick's zombie updates share: the plans left, and who's near a point. */
+interface Budget {
+  plans: number;
+  near: (at: Point) => Survivor[];
+}
+
+/**
+ * Survivors by the tile under them, once a tick, to find who's within a bite of a zombie without
+ * checking every survivor for every zombie. A bite reaches REACH (1.1 tiles) centre to centre, so
+ * anyone in reach is within 2 tiles each way. Answers in list order. Nobody moves while the dead
+ * do; if the list changes meanwhile (someone captured), it falls back to the whole list.
+ */
+function survivorsNear(state: SimState): (at: Point) => Survivor[] {
+  const list = state.survivors;
+  const length = list.length;
+  const { width } = state.grid;
+  const order = new Map<Survivor, number>();
+  const cells = new Map<number, Survivor[]>();
+  list.forEach((s, i) => {
+    order.set(s, i);
+    const t = tileOf(s.at);
+    const k = t.y * width + t.x;
+    const at = cells.get(k);
+    if (at) at.push(s);
+    else cells.set(k, [s]);
+  });
+  return (at) => {
+    if (state.survivors !== list || list.length !== length) return list;
+    const t = tileOf(at);
+    const found: Survivor[] = [];
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const x = t.x + dx;
+        if (x < 0 || x >= width) continue;
+        const c = cells.get((t.y + dy) * width + x);
+        if (c) found.push(...c);
+      }
+    }
+    if (found.length > 1) found.sort((a, b) => order.get(a)! - order.get(b)!);
+    return found;
+  };
+}
+
+function updateZombie(state: SimState, z: Zombie, budget: Budget): void {
   z.cooldown = Math.max(0, z.cooldown - 1);
   z.move = null;
   followTile(z, 1);
@@ -318,7 +408,7 @@ function updateZombie(state: SimState, z: Zombie, budget: { plans: number }): vo
     // (A plain loop, with a cheap box test before the real one: same list, same order; with
     // hundreds of zombies and survivors this was a closure call per pair per tick.)
     const reachable: Survivor[] = [];
-    for (const s of state.survivors) {
+    for (const s of budget.near(z.at)) {
       if (Math.abs(s.at.x - z.at.x) > REACH || Math.abs(s.at.y - z.at.y) > REACH) continue;
       if (inReach(s, z, REACH, state.grid)) reachable.push(s);
     }

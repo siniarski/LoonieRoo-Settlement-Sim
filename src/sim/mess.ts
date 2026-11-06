@@ -32,8 +32,8 @@ export function pickSeat(state: SimState, s: Survivor, from: Point): Point | nul
   if (halls.size === 0) return null;
   const seats: Point[] = [];
   for (const index of [...halls].sort((a, b) => a - b)) {
-    for (const table of state.furniture) {
-      if (table.kind !== 'table' || labelAt(state, table.x, table.y) !== index) continue;
+    for (const table of ofKind(state, 'table')) {
+      if (labelAt(state, table.x, table.y) !== index) continue;
       for (const p of neighbours4(state.grid, table.x, table.y)) {
         if (!seats.some((q) => samePoint(q, p)) && isSeat(state, p, halls) && !seatTaken(state, s, p)) seats.push(p);
       }

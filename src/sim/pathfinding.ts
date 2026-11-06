@@ -442,6 +442,19 @@ function components(grid: Grid, version: number, mover: Mover): (i: number) => n
   };
 }
 
+/** Every kind of mover that asks about reachability. */
+const MOVERS: readonly Mover[] = ['survivor', 'free', 'zombie', 'breacher', 'raider', 'crawler'];
+
+/**
+ * Builds every mover's reachability now, so the first question during play doesn't pay for a
+ * whole-map build (20-30 ms on a 1024 map, the first time raiders or crawlers turn up). Derived
+ * data only: it changes no answer, only when the work is done. The app calls it on a new or loaded
+ * game, while it's paused.
+ */
+export function warmReach(grid: Grid, version: number): void {
+  for (const m of MOVERS) components(grid, version, m);
+}
+
 /**
  * True if any passable goal is reachable from `from` for this mover.
  * `version` must be the state's walkabilityVersion. An impassable `from`

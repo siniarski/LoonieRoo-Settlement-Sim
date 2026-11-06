@@ -127,7 +127,7 @@ export function zombieSees(state: SimState, z: Point, s: Point, sneaking = false
   return inBounds(state.grid, s.x, s.y) && sightLine(state.grid, z, s);
 }
 
-const seen = new WeakMap<SimState, { tick: number; who: string; mask: Uint8Array }>();
+const seen = new WeakMap<SimState, { tick: number; who: string; mask: Uint8Array; set: number[] }>();
 
 /**
  * What can be seen now: by the survivor you control, or by any survivor when nobody is
@@ -139,8 +139,16 @@ export function visibleNow(state: SimState): Uint8Array {
   const who = lookers.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join('|');
   const hit = seen.get(state);
   if (hit && hit.tick === state.tick && hit.who === who) return hit.mask;
-  const mask = new Uint8Array(state.grid.width * state.grid.height);
-  for (const s of lookers) for (const i of sightOf(state, s)) mask[i] = 1;
-  seen.set(state, { tick: state.tick, who, mask });
+  // The same mask each time (a new one was a megabyte a tick on a 1024 map): clear what was set
+  // last time, then set what's seen now. Callers read it, and don't keep it past the tick.
+  const size = state.grid.width * state.grid.height;
+  const mask = hit && hit.mask.length === size ? hit.mask : new Uint8Array(size);
+  if (hit && hit.mask === mask) for (const i of hit.set) mask[i] = 0;
+  const set: number[] = [];
+  for (const s of lookers) for (const i of sightOf(state, s)) if (mask[i] === 0) {
+    mask[i] = 1;
+    set.push(i);
+  }
+  seen.set(state, { tick: state.tick, who, mask, set });
   return mask;
 }

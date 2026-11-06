@@ -19,7 +19,7 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
    - neighbours' errands, caravans, alliances and feuds;
    - colonists foraging.
    Questions: does free movement and combat feel right; is solo Apocalypse survivable (the scripted player reaches day 5); is the colony's winter readable (the alert points at coops and greenhouses).
-2. **Scale.** The stress harness exists (2026-11-06) and two rounds of fixes are in: a 1024 world with 200 colonists and 1,500 zombies runs at 7 ms a tick, p99 24 ms, worst 33 ms; a 512 world full of zombies never goes over 12 ms. What's left at scale: herds' marker updates and chunk floods on the odd tick, A* for long paths, zombie updates in general, and 1024 saves near the 5 MB storage limit. Storeys, basements and slopes as data are still to decide.
+2. **Scale.** The stress harness exists (2026-11-06) and four rounds of root fixes are in: a 1024 world with 200 colonists and 1,500 zombies runs at 3.8 ms a tick, p99 9.7 ms, worst 12 ms; nothing in the stress scenarios goes over 12 ms. What's left is real work (zombies moving and crowding, A* for long paths) and 1024 saves near the 5 MB storage limit. Storeys, basements and slopes as data are still to decide.
 3. **Rendering, last** (the player's call): isometric, or a Godot 3D port. The sim's tests are the spec.
 4. Smaller, any time: a How to play screen; the solo harness barricading and hunting; the sim in a Web Worker; residents running their own scavenging; the truck on expeditions shown on the road like a caravan.
 
@@ -682,3 +682,26 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
     - Every spike so far was a whole-map pass or a quadratic loop that shouldn't have existed, and fixing those keeps outcomes identical.
     - A per-tick cap (count-based, never wall-clock: rule 1) already exists for zombie plans (PLANS_PER_TICK). It suits thinking that can wait a tick, like colonists choosing jobs if colonies grow to hundreds. But it changes outcomes, so it's a balance change.
     - A queue (work spread over ticks) only pays for single jobs too big for one tick: a first reachability build, generating many chunks at once, unfolding a settlement. Derived caches like reachability can't hand out half-built answers. They could be warmed ahead of time instead (on load or world creation, or in a Web Worker), with no outcome change.
+- **2026-11-06, more root fixes (branch root-fixes).** Player: "Fix more core/root issues". Found by profiling total and self time over 400 busy ticks of city-1024, and by profiling only its slowest ticks.
+  - **Furniture scans by kind.** Every per-tick or per-decision scan of all furniture for one kind now goes through the by-kind lists, in list order:
+    - generators and wells for alerts, lures, turrets, coops, mess-hall tables;
+    - crates for loot orders, heaters, fridges, room requirement counts, water sources (taps only while the water's on);
+    - beds: finding a free bed, owners on death, outposts, bed assignment and the way home. Only beds have owners.
+  - **Zombie reach.** Survivors are bucketed by the tile under them once a tick (survivorsNear), and each zombie looks only at the 5x5 tiles round it (a bite reaches 1.1 tiles). Same list, same order; if the survivor list changes mid-loop it falls back to the whole list.
+  - **The zombie list** is filtered only when a herd zombie is actually leaving. A new list every tick threw away the id-lookup cache every tick.
+  - **Panic.** It counted every zombie per survivor. zombiesWithin buckets the dead by tile once a tick (and again after any are added or removed, tracked by addZombie and removeZombie), searches two tiles further than asked, and checks each where it stands now, so a zombie knocked back mid-tick is still counted exactly.
+  - **nearestTile** allocated a byte per map tile every call (a megabyte on 1024), and it's called constantly. It now reuses stamped scratch arrays, one set per nesting depth in case a callback searches too, with an integer queue. Same search order.
+  - **visibleNow** (for drawing) reuses its mask and clears only what it set last time, instead of a new megabyte a tick.
+  - **findById**, on a miss, first indexes what was appended since, and rebuilds only when indices moved. A randomized test checks it against list.find.
+  - **Warm-up.** The first time raiders or crawlers turned up, their reachability was built from scratch mid-play (20-30 ms on 1024). warmReach builds every mover's reachability up front; the app calls it on a new or loaded game while paused (about 150 ms on 1024). The stress harness does the same and reports the warm-up on its own.
+  - Outcomes unchanged throughout (solo dies on the same ticks; colony the same days, people and food).
+  - city-1024 busy average 6.4 → 4.4 ms. No tick over 18 ms in 320 (there were five).
+
+| Scenario | mean (ms) | p99 | max (before → after) |
+|---|---|---|---|
+| colony-512 | 2.5 → 1.9 | 9.6 → 4.0 | 11.8 → 5.2 |
+| horde-512 | 2.4 → 2.3 | 4.7 → 3.7 | 5.0 → 4.5 |
+| spread-1024 | 1.8 → 1.6 | 7.5 → 5.3 | 8.8 → 6.3 |
+| city-1024 | 7.0 → 3.8 | 23.6 → 9.7 | 32.6 → 12.1 |
+
+  - 760 tests.

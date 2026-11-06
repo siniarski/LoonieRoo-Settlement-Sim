@@ -19,7 +19,7 @@
 // pool, a fire's glow, or a dog's nose.
 
 import { logEvent } from './events';
-import { furnitureAt } from './furniture';
+import { furnitureAt, ofKind } from './furniture';
 import { tileIndex, type Point } from './grid';
 import { clearShot } from './jobs';
 import { leaveCorpse } from './corpses';
@@ -62,10 +62,10 @@ export function seen(state: SimState, p: Point): boolean {
 
 /** Turrets shoot; lures rattle. Every tick. */
 export function updateDefences(state: SimState): void {
-  if (state.tick % TICKS_PER_HOUR === 0 && isNight(state.tick)) for (const f of state.furniture) if (f.kind === 'lure') makeNoise(state, f, 'lure');
+  if (state.tick % TICKS_PER_HOUR === 0 && isNight(state.tick)) for (const f of [...ofKind(state, 'lure')]) makeNoise(state, f, 'lure');
   if (state.tick % TURRET_EVERY !== 0 || state.zombies.length === 0) return;
-  for (const t of state.furniture) {
-    if (t.kind !== 'turret' || (t.loot === 0 && t.stored === 0)) continue;
+  for (const t of [...ofKind(state, 'turret')]) {
+    if (t.loot === 0 && t.stored === 0) continue;
     const z = state.zombies
       .filter((q) => manhattan(q.pos, t) <= TURRET_RANGE && seen(state, q.pos) && clearShot(state.grid, t, q.pos))
       .sort((a, b) => manhattan(a.pos, t) - manhattan(b.pos, t))[0];
