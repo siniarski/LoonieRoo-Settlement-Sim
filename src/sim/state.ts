@@ -2,6 +2,7 @@
 // JSON-compatible data (architecture rule 7).
 
 import type { Command } from './commands';
+import type { Horde } from './hordes';
 import type { Caravan } from './caravans';
 import type { Errand } from './errands';
 import type { MapNote } from './mapnotes';
@@ -88,6 +89,8 @@ export interface SimState {
   /** Caravans on the road (caravans.ts), and neighbours' errands for you (errands.ts). Missing in older saves. */
   caravans?: Caravan[];
   errands?: Errand[];
+  /** Zombies moving together (hordes.ts). Missing in older saves. */
+  hordes?: Horde[];
   /** Today's weather, rolled at dawn (seasons.ts). */
   weather: Weather;
   /** Survivors away off the map (expeditions.ts). */
@@ -179,6 +182,7 @@ export function createState({ seed, width, height }: NewStateOptions): SimState 
     mapNotes: [],
     caravans: [],
     errands: [],
+    hordes: [],
     weather: 'clear',
     expeditions: [],
     traders: [],

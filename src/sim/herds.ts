@@ -17,7 +17,8 @@ import { OUTDOORS, labelAt } from './rooms';
 import { manhattan, nearestTile } from './space';
 import type { SimState } from './state';
 import { TICKS_PER_HOUR, dayOf, tickOfDay } from './time';
-import { MAX_ZOMBIES, addZombie, zombieHealthForNight } from './zombies';
+import { MAX_ZOMBIES, addZombie, zombieHealthForNight, type Zombie } from './zombies';
+import { formHorde } from './hordes';
 import { TOWER_WARN_FACTOR, hasTower } from './towers';
 import { giveVariant } from './zombieKinds';
 
@@ -124,6 +125,7 @@ function materialize(state: SimState, h: Herd): void {
   const { width } = state.grid;
   const taken = new Set(state.zombies.map((z) => z.pos.y * width + z.pos.x));
   const free = (x: number, y: number) => getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !taken.has(y * width + x);
+  const made: Zombie[] = [];
   for (let i = 0; i < n; i++) {
     const p = nearestTile(state.grid, { x: h.x, y: h.y }, free);
     if (!p) break;
@@ -131,7 +133,10 @@ function materialize(state: SimState, h: Herd): void {
     taken.add(p.y * width + p.x);
     giveVariant(z, dayOf(state.tick));
     z.heading = { ...h.to };
+    made.push(z);
   }
+  // They stay together: a horde heading where the herd was (hordes.ts).
+  formHorde(state, made, { ...h.to }, false);
   if (n > 0) logEvent(state, `A herd of ${n} zombies is passing near (${h.x}, ${h.y})`);
 }
 
