@@ -31,6 +31,21 @@ import type { ViewState } from './ui/view';
 export interface ViewHooks {
   getView(): ViewState;
   tileToScreen(x: number, y: number): Point;
+  /** Benchmarks (experiments/render-bench): load a save file's text and play it; point the camera; run at a speed. */
+  loadSave(text: string): boolean;
+  look(x: number, y: number, zoom: number): void;
+  run(speed: 1 | 2 | 4): void;
+  /** Each frame's costs since the last call, raw (the debug panel's figures are smoothed). */
+  frameSamples(): FrameSample[];
+}
+
+/** One frame's costs (ms): drawing the world, the sim's ticks (how many), the HUD and menu, and the time since the last frame. */
+export interface FrameSample {
+  draw: number;
+  sim: number;
+  ticks: number;
+  hud: number;
+  frame: number;
 }
 
 declare global {
@@ -105,6 +120,17 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   });
   window.view = {
     getView: () => structuredClone(view),
+    loadSave: (text) => {
+      if (!replaceState(loadFile(text), 'a benchmark save')) return false;
+      play();
+      return true;
+    },
+    look: (x, y, zoom) => (view.camera = { x, y, zoom }),
+    run: (speed) => {
+      view.speed = speed;
+      view.paused = false;
+    },
+    frameSamples: () => frameSamples.splice(0),
     tileToScreen: (x, y) => {
       const p = worldToScreen(view.camera, viewport, x + 0.5, y + 0.5);
       const rect = canvas.getBoundingClientRect();
@@ -221,6 +247,8 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
   let fps = 0;
   /** Smoothed costs for the debug panel (ms): one sim tick, the frame's ticks, and drawing. */
   const perf = { tickMs: 0, simMs: 0, drawMs: 0, worstTickMs: 0 };
+  /** Each frame's costs for window.view.frameSamples (benchmarks), up to 10,000 frames. */
+  const frameSamples: FrameSample[] = [];
   const reported = new Set<string>();
   let frameId = requestAnimationFrame(function frame(now) {
     // Schedule first, so one bad frame (often a half-finished edit during
@@ -266,9 +294,12 @@ export function createApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement, state
         showDebug: view.showDebug,
         areaDrag: view.areaDrag,
       });
-      perf.drawMs = perf.drawMs * 0.9 + (performance.now() - drawStart) * 0.1;
+      const drawn = performance.now() - drawStart;
+      perf.drawMs = perf.drawMs * 0.9 + drawn * 0.1;
+      const hudStart = performance.now();
       hud.update(handle.state, fps, perf);
       menu.update();
+      if (frameSamples.length < 10000) frameSamples.push({ draw: drawn, sim: simMs, ticks: result.ticks, hud: performance.now() - hudStart, frame: frameMs });
     } catch (err) {
       const key = String(err);
       if (!reported.has(key)) {
