@@ -63,6 +63,17 @@ export interface Animal {
   backOffUntil?: number;
   /** No bite before this tick. */
   nextBite?: number;
+  /** When it last bit one of yours (menace: guards go for it a while after). */
+  bitTick?: number;
+}
+
+/** How long after biting someone a wolf or bear counts as a menace to fight off. */
+export const MENACE_TICKS = 300;
+
+/** A wolf or bear that's bitten someone lately, or is out for someone: colonists on guard go for it (jobs.ts). */
+export function isMenace(state: SimState, a: Animal): boolean {
+  if (a.kind !== 'wolf' && a.kind !== 'bear') return false;
+  return !!a.angryAt || (a.bitTick !== undefined && state.tick - a.bitTick <= MENACE_TICKS);
 }
 
 export const DEER_CHANCE = 0.6;
@@ -322,6 +333,7 @@ function attack(state: SimState, a: Animal, target: Animal | Survivor): void {
   }
   const s = target;
   s.health = Math.max(0, s.health - (bear ? BEAR_DAMAGE : WOLF_DAMAGE));
+  a.bitTick = state.tick;
   s.lastHurtBy = bear ? 'a bear' : 'wolves';
   s.hurtTick = state.tick;
   s.note = `attacked by a ${a.kind} at (${a.pos.x}, ${a.pos.y})`;

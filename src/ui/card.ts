@@ -109,7 +109,7 @@ export function moodTitle(state: SimState, s: Survivor): string {
   return `Mood ${mood(state, s)}${isMiserable(state, s) ? ' (miserable: works slower)' : ''}${factors.length ? `: ${factors.join(', ')}` : ''}`;
 }
 
-const BUSY = { eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating', build: 'building', repair: 'repairing', forage: 'foraging' } as const;
+const BUSY = { eat: 'eating', search: 'searching', drink: 'drinking', sleep: 'asleep', treat: 'treating', build: 'building', repair: 'repairing', forage: 'foraging', cook: 'cooking' } as const;
 
 /** What they're doing, in a few words. */
 export function activity(state: SimState, s: Survivor): string {

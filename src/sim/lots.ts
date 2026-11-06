@@ -19,6 +19,7 @@
 // sleep inside bigger and further-out buildings.
 
 import { LOOK_CAPACITY, addFurniture, furnitureAt, type Look } from './furniture';
+import { TANK_WATER } from './timeline';
 import { FUEL_MAX, VEHICLE_HEALTH, addVehicle, headingOf, parkable } from './vehicles';
 import { crateLoot, ruinDecay, zombieScale } from './difficulty';
 import { EDGE_DOOR, EDGE_WALL, EDGE_WINDOW, EDGE_WINDOW_BROKEN, GROUNDS, edgeIndex, setEdge, setTile, tileIndex, type Ground, type Point, type Side } from './grid';
@@ -324,7 +325,11 @@ function drawBuilding(state: SimState, ctx: LotContext, lot: Lot, b: Placement, 
       const n = Math.min(LOOK_CAPACITY[f.look] ?? Infinity, 1 + Math.floor(r(100 + i) * Math.max(1, Math.floor(ctx.lootAt(w.x, w.y) / 3))));
       const searched = ctx.distance(w.x, w.y) < 80 && r(200 + i) < 0.25;
       c.loot = searched ? 0 : crateLoot(state, n) * (isRadioactive(state, w.x, w.y) ? 2 : 1);
-    } else addFurniture(state, 'decor', w.x, w.y).look = f.look;
+    } else {
+      const d = addFurniture(state, 'decor', w.x, w.y);
+      d.look = f.look;
+      d.loot = TANK_WATER[f.look] ?? 0; // water standing in toilets and baths
+    }
   });
   // The dead asleep inside: none near the start, more in bigger buildings and further out.
   const d = ctx.distance(b.ox, b.oy);

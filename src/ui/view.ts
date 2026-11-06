@@ -26,7 +26,7 @@ export interface ViewState {
   showDebug: boolean;
   showPriorities: boolean;
   /** The menu screen over the game, or null when playing (menu.ts). */
-  menu: 'main' | 'new' | 'character' | 'load' | null;
+  menu: 'main' | 'new' | 'character' | 'load' | 'howto' | null;
   /** A game is going on under the menu (so it offers Resume and Save, not Continue). */
   inGame: boolean;
   /** The New game screen's Customise section is open. */
@@ -44,6 +44,8 @@ export interface ViewState {
    * neighbour and visitor panels. Off, you see only what your survivor would (survivorMode).
    */
   colonyMode: boolean;
+  /** The survivor list: folded to its title, short (name, mood, order, doing), or with every need and job priority. */
+  roster: 'folded' | 'short' | 'full';
 }
 
 /** Playing one survivor with the colony's management put away (G brings it back). */

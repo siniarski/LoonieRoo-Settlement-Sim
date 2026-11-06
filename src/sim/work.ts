@@ -75,7 +75,8 @@ export function updateWork(state: SimState, s: Survivor): void {
     case 'scout':
       return workScout(state, s, job);
     case 'guard':
-      return workGuard(state, s, job);
+      // A wolf or bear going for your people: fought like a hunt.
+      return job.animalId ? workHunt(state, s, job) : workGuard(state, s, job);
     case 'firefight':
       return workFirefight(state, s, job);
     case 'hunt':
