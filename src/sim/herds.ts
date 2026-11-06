@@ -119,12 +119,16 @@ const clamp = (v: number, size: number) => Math.max(0, Math.min(size - 1, v));
 function materialize(state: SimState, h: Herd): void {
   state.herds.splice(state.herds.indexOf(h), 1);
   const n = Math.min(h.size, MAX_ZOMBIES - state.zombies.length);
-  const free = (x: number, y: number) =>
-    getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !state.zombies.some((z) => z.pos.x === x && z.pos.y === y);
+  // Tiles the dead stand on, as a set kept up to date as they're placed (each placement searched
+  // outward checking every zombie on every tile: a herd of 30 among 1,200 dead was a million checks).
+  const { width } = state.grid;
+  const taken = new Set(state.zombies.map((z) => z.pos.y * width + z.pos.x));
+  const free = (x: number, y: number) => getTile(state.grid, x, y) === 'floor' && labelAt(state, x, y) === OUTDOORS && !taken.has(y * width + x);
   for (let i = 0; i < n; i++) {
     const p = nearestTile(state.grid, { x: h.x, y: h.y }, free);
     if (!p) break;
     const z = addZombie(state, p.x, p.y, zombieHealthForNight(dayOf(state.tick)), 'herd');
+    taken.add(p.y * width + p.x);
     giveVariant(z, dayOf(state.tick));
     z.heading = { ...h.to };
   }
@@ -135,8 +139,26 @@ function materialize(state: SimState, h: Herd): void {
 function wakeDormant(state: SimState): void {
   let woke = 0;
   let where: Point | null = null;
+  // Survivors by square of WAKE_RADIUS a side: anyone within WAKE_RADIUS of a sleeper is in its
+  // square or one next to it. (Every sleeper checked against every survivor was the cost.)
+  const cells = new Map<number, Point[]>();
+  const cell = (x: number, y: number) => Math.floor(y / WAKE_RADIUS) * 100003 + Math.floor(x / WAKE_RADIUS);
+  for (const s of state.survivors) {
+    const k = cell(s.pos.x, s.pos.y);
+    const at = cells.get(k);
+    if (at) at.push(s.pos);
+    else cells.set(k, [s.pos]);
+  }
+  const near = (d: Point) => {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (const p of cells.get(cell(d.x + dx * WAKE_RADIUS, d.y + dy * WAKE_RADIUS)) ?? []) if (manhattan(p, d) <= WAKE_RADIUS) return true;
+      }
+    }
+    return false;
+  };
   for (const d of [...state.dormant]) {
-    if (!state.survivors.some((s) => manhattan(s.pos, d) <= WAKE_RADIUS)) continue;
+    if (!near(d)) continue;
     if (state.zombies.length >= MAX_ZOMBIES) break;
     state.dormant.splice(state.dormant.indexOf(d), 1);
     const p = getTile(state.grid, d.x, d.y) === 'floor' ? d : nearestTile(state.grid, d, (x, y) => getTile(state.grid, x, y) === 'floor');
