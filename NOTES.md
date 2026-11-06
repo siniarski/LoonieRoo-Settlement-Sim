@@ -2,22 +2,30 @@
 
 Decisions log. Read this at the start of each session. After any non-trivial experiment, add: what was tried, what happened, what was decided.
 
-## Start here (state as of 2026-11-05)
+## Start here (state as of 2026-11-06)
 
-**What it is now.** A deterministic, top-down survival sim in TypeScript (browser, Canvas 2D). It began as a RimWorld-style colony sim (milestones 1-8, all done) and is turning into the player's vision (see "Design direction" below): **Project Zomboid-style survival where you control one survivor directly, with an optional colony sim** once you settle, other settlements living their own lives, and survivors with stories to hear and requests to see through. Schema version 63; 634 tests; everything pushed to origin/main.
+**What it is now.** A deterministic, top-down survival sim in TypeScript (browser, Canvas 2D). It began as a RimWorld-style colony sim (milestones 1-8, all done) and is now the player's vision (see "Design direction" below): **Project Zomboid-style survival where you control one survivor directly, with an optional colony sim** once you settle, other settlements living their own lives, and survivors with stories to hear and requests to see through. Movement is continuous (precise positions, free movement for you and the dead), walls and doors stand on tile edges, and buildings have windows. Schema version 71; about 755 tests. main is ahead of origin/main: push only when the player says so.
 
-**Run it.** `npm run dev` (the game opens on a main menu), `npm run check` (typecheck + tests: run before every commit), `npm run harness -- <name>` (balance players, a benchmark, a profiler: see harness/ and "Harness" below).
-
-**Branch `continuous-movement` (not merged yet):** movers have precise positions; you and zombies move freely (see the session log, 2026-11-05). Merge to main once the player has tried it.
+**Run it.** `npm run dev` (the game opens on a main menu: New game, then "Who you are"), `npm run check` (typecheck + tests: run before every commit), `npm run harness -- <name>` (balance players, a benchmark, a profiler: see harness/ and "Harness" below).
 
 **Next, in order.**
-1. **The player's playtest.** Nobody human has played since the control prototype; everything since is tested headless only. The questions it should answer: does tile-to-tile movement feel right under WASD; does combat feel right; is solo Apocalypse survivable; do talks, tasks, wishes, moodlets, resolve and the body meters add up to fun or noise.
-2. Then, by what the playtest says: movement and combat feel (smooth sub-tile movement if tiles feel stiff; wind-ups, shoves, lunges); an inventory rework (weight, a backpack, containers); the visual target (isometric or top-down) and z-levels for multi-storey buildings; neighbours with more life of their own (caravans, alliances, feuds).
-3. Smaller, any time: a How to play screen (left out of the menu by request); teach the solo harness to barricade, forage and hunt and re-run it; the sim in a Web Worker; compress the grid in saves; a Godot port plan (the tests are the spec).
+1. **The player's playtest.** Nothing built since 2026-11-05 has been played by a human. Systems to try:
+   - character creation;
+   - windows (see through, smash, climb, board up);
+   - line of sight and sneaking (C), sneak attacks;
+   - the water and power going off, the helicopter, alarms;
+   - cars (E to get in, W/S/A/D, the boot, fuel cans);
+   - the map (M) with notes;
+   - neighbours' errands, caravans, alliances and feuds;
+   - colonists foraging.
+   Questions: does free movement and combat feel right; is solo Apocalypse survivable (the scripted player reaches day 5); is the colony's winter readable (the alert points at coops and greenhouses).
+2. **Scale, measured first.** Before deciding on storeys, basements and slopes (as data, before any rendering), or big-world pathfinding (hierarchical paths or flow fields), run a very large stress test (huge map, many colonists, zombies, herds, cars) and profile it. The player asked for this.
+3. **Rendering, last** (the player's call): isometric, or a Godot 3D port. The sim's tests are the spec.
+4. Smaller, any time: a How to play screen; the solo harness barricading and hunting; the sim in a Web Worker; residents running their own scavenging; the truck on expeditions shown on the road like a caravan.
 
 **Working agreements (the player's).** Push only when the player says so, every time. Commit only on a green `npm run check`. Log every non-trivial change in the Session log below (what, numbers, what's left). Ask before adding dependencies. Tone: grim, no humour. The player likes to approve a batch ("do 1-5") and then have it built and checked end to end, with browser checks for anything visible.
 
-**Controls.** Colony: left click selects, right click moves, B build bar (1-0 tools, Tab/E/Q categories, Shift for instant), P priorities, O overview, M minimap, Space pause, 1x/2x/4x buttons, ` debug panel (with tick/draw ms), Esc cancels then opens the menu. Direct control (F on the selected survivor, F again to let go): WASD/arrows walk (8 ways), Shift run, click swing or shoot, right-click or E use (pick up, wear, eat, drink, sleep, treat yourself, search; E underfoot forages on grass by day or sleeps), R work the tile in front (repair; with wood: barricade a door, reinforce, build a wall), T talk, V "follow me", H "hold here", L "loot that room" (under the mouse).
+**Controls.** Colony: left click selects, right click moves, B build bar (1-0 tools, Tab/E/Q categories, Shift for instant), P priorities, O overview, M map (full screen: wheel zoom, drag pan, click to pin a note, right-click a pin to remove, double-click to look there), N minimap, Space pause, 1x/2x/4x buttons, ` debug panel (with tick/draw ms), Esc cancels then opens the menu. Direct control (F on the selected survivor, F again to let go): WASD/arrows walk (8 ways), Shift run, C sneak, the mouse aims, click swing or shoot, right-click or E use (pick up, wear, eat, drink, sleep, treat yourself, search, smash a window, get in or out of a car, fill a car from a fuel can; E underfoot forages on grass by day or sleeps), in a car W go / S brake and reverse / A D steer, 1-9 use from the bag (stash into a crate or car beside you from the bag panel), R work the tile in front (repair; with wood: barricade a door or board a window, reinforce, build a wall), T talk (neighbours' people may ask you for an errand), V "follow me", H "hold here", L "loot that room" (under the mouse), K the full key list.
 
 **Where things live (src/sim, pure and deterministic).**
 - Core: state.ts (all state; SCHEMA_VERSION), tick.ts (the order of everything each tick), commands.ts (the only way in), time.ts (clock; day length scale and onClock), rng.ts and hash.ts (sim RNG; stateless hash rolls for chances that mustn't shift the RNG stream), replay.ts, savefile.ts, scenario.ts (ASCII maps for tests), invariants.ts.
@@ -30,8 +38,8 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 - Outside the sim: render/ (draw.ts frame, drawThings.ts, drawPeople.ts, palette.ts, camera.ts, interp.ts), ui/ (menu.ts, hud.ts, card.ts (status icons and character panel), input.ts, overview.ts, minimap.ts, tools.ts, buildMode.ts, saves.ts, loop.ts, view.ts), debug/ (window.game hooks, ASCII text), app.ts (wiring, frame loop), main.ts (entry, hot reload).
 
 **Harness** (harness/*.harness.ts, run with `npm run harness -- <name>`, output in harness/out/, not part of npm test or the typecheck):
-- colony: a scripted colony player on generated worlds (SEEDS, DAYS, BUDGET_MS). Balance passes 3-5 used it.
-- solo: a scripted solo player under direct control (PRESET, TRACE=1). It doesn't yet barricade, forage or hunt.
+- colony: a scripted colony player on generated worlds (SEEDS, DAYS, BUDGET_MS). It walls in, farms, hunts, scavenges, builds coops from day 6, takes in wanderers and answers radio requests.
+- solo: a scripted solo player under direct control (PRESET must be a solo start; TRACE=1, TRACE_EVERY). It fights by real reach, sneaks, forages, drinks from taps, and drives to far crates; it doesn't barricade or hunt.
 - bench: tick cost as colonists and zombies are added; save size and memory over 10 days.
 - profile: finds the slowest tick, replays to it (determinism), and V8-profiles just that tick.
 Run several seeds in parallel as separate background processes (one SEEDS value each) to stay inside a few minutes.
@@ -601,3 +609,9 @@ The world is 256x256, but the code is shaped so it can grow towards 10,000x10,00
     - Having the scripted player build chicken coops (one per three people, from day 6; they lay all year, half as often in winter) fixed it: alive at day 25 (6 people, 25 days of food), wiped out on day 24, alive at day 25 (7 people, 20 days).
     - So the winter tools were already enough; nobody was using them. The harness now builds coops. The autumn alert ("Winter in N days: food for...") now says what keeps food coming: coops lay all year, a greenhouse grows all year.
   - Open question updated: "Colonies die in their first winter" holds only without coops or a greenhouse.
+- **2026-11-06, playtest prep (branch playtest-prep).** Item 1 of "Do 1-4", done last.
+  - "Start here" rewritten for today: what the game is now, the schema (71), the next steps (the playtest with a list of what to try; then a very large stress test before any scale or storey work, as the player asked; rendering last), and the full controls including C sneak, the car keys, the map, stash and errands.
+  - The in-game key list (K) and input.ts's header list the new keys.
+  - The solo harness drives: with its next crate over 30 tiles off by day and a fuelled car within 15 tiles, it walks to the car, gets in, steers by heading toward the crate (slowing for sharp turns), brakes within 3 tiles and gets out. Out of fuel, wrecked, night, or stuck for 60 ticks, it gets out and walks. Seed 2 drove 40 tiles west in about 80 ticks, parked and searched.
+  - Checked in the browser: the character screen (8 points for a student now), the boot panel next to a car (0 / 40 kg), the stash button on a bag item, stashing food into the boot (the command log shows take, then stash), the key list. No console errors.
+  - Not checked by eye: caravans and errands in the world and on the map. They take days of play or a talk with a neighbour's people to come up; tests cover them.
