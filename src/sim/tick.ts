@@ -2,6 +2,7 @@
 // frame, never what a tick means.
 
 import { closeBehind } from './doors';
+import { updateForage } from './forage';
 import { updateVehicles } from './vehicles';
 import { updateTimeline } from './timeline';
 import { syncStep, type Body } from './motion';
@@ -32,6 +33,7 @@ import {
   updateTreatment,
   wake,
   wakeLightSleepers,
+  nearestFreeItem,
 } from './needs';
 import { reconcileRoomDesignations } from './rooms';
 import type { SimState } from './state';
@@ -166,7 +168,7 @@ function behave(state: SimState, s: Survivor): void {
   // Standing still: eat, then treat wounds, then pick up a weapon, then sleep, then relax or work
   // (not mid-breakdown). A need taking over ends any rec-room visit.
   if (s.move || s.goal) return;
-  const needs = updateMeal(state, s) || updateDrink(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
+  const needs = updateMeal(state, s) || updateForage(state, s, () => nearestFreeItem(state, s, 'food') !== undefined || nearestFreeItem(state, s, 'meal') !== undefined) || updateDrink(state, s) || updateTreatment(state, s) || updateArming(state, s) || updateDressing(state, s) || updateSleep(state, s);
   if (needs) {
     s.leisure = null;
     stopReading(state, s, s.note ?? '');

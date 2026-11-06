@@ -18,6 +18,7 @@
 // Constants live in rest.ts and food.ts.
 
 import { slowTick } from './time';
+import { FORAGE_HUNGER, forageTime } from './forage';
 import { dropPack } from './inventory';
 import { beginSuccession } from './succession';
 import { wakeComfort } from './wellbeing';
@@ -131,6 +132,8 @@ export function interruptForNeeds(state: SimState, s: Survivor): void {
     releaseSurvivor(state, s, 'going to treat wounds');
   } else if (isHungry(s) && state.tick >= s.nextMealTick) {
     if (nearestFreeItem(state, s, 'food')) releaseSurvivor(state, s, 'hungry');
+    // Very hungry with nothing to eat: off to forage (forage.ts), when there's any foraging to be done.
+    else if (s.satiety < FORAGE_HUNGER && forageTime(state) && !onGuardDuty(state, s)) releaseSurvivor(state, s, 'going to forage');
     else s.nextMealTick = state.tick + MEAL_RETRY_TICKS;
   }
 }

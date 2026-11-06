@@ -7,7 +7,7 @@ import { escape } from './escape';
 import { addMapNote, removeMapNote } from './mapnotes';
 import { addVehicle, parkable } from './vehicles';
 import { remediesFor } from './medicine';
-import { contents, dropFromPack, equipFromPack, stow } from './inventory';
+import { contents, dropFromPack, equipFromPack, stow, containerOf, stash } from './inventory';
 import { EDGE_DOOR, EDGE_NONE, EDGE_WALL, edgeIndex, isWindow, setEdge, type Side } from './grid';
 import { succeed } from './succession';
 import { promise } from './wishes';
@@ -142,6 +142,8 @@ export type Command =
   | { type: 'takeAll'; containerId: string }
   | { type: 'drop'; itemId: string }
   | { type: 'useItem'; itemId: string }
+  /** Put something from your bag into a container beside you: a crate, or a car's boot. */
+  | { type: 'stash'; itemId: string; containerId: string }
   /** Where you're looking (the mouse): a direction, each part an integer within AIM_MAX (control.ts). */
   | { type: 'aim'; x: number; y: number }
   | { type: 'swing'; x: number; y: number }
@@ -186,7 +188,7 @@ function execute(state: SimState, command: Command): CommandResult {
     s.note = done;
     return state.control!.busy ? changed() : reject(done);
   }
-  if (command.type === 'take' || command.type === 'takeAll' || command.type === 'drop' || command.type === 'useItem') {
+  if (command.type === 'take' || command.type === 'takeAll' || command.type === 'drop' || command.type === 'useItem' || command.type === 'stash') {
     const s = controlled(state);
     if (!s) return reject('nobody is under control');
     const why = bagCommand(state, s, command);
@@ -829,11 +831,11 @@ function besideYou(s: Survivor, p: Point): boolean {
 }
 
 /** The bag's commands (inventory.ts). Returns why not, or null when done. */
-function bagCommand(state: SimState, s: Survivor, command: Extract<Command, { type: 'take' | 'takeAll' | 'drop' | 'useItem' }>): string | null {
+function bagCommand(state: SimState, s: Survivor, command: Extract<Command, { type: 'take' | 'takeAll' | 'drop' | 'useItem' | 'stash' }>): string | null {
   if (command.type === 'takeAll') {
-    const f = getFurniture(state, command.containerId);
-    if (!f || !besideYou(s, f)) return 'not beside you';
-    const inside = contents(state, f);
+    const box = containerOf(state, command.containerId);
+    if (!box || !besideYou(s, box.at)) return 'not beside you';
+    const inside = contents(state, { id: command.containerId });
     if (inside.length === 0) return 'nothing in it';
     let took = 0;
     for (const item of inside) if (stow(state, s, item) === null) took++;
@@ -842,13 +844,18 @@ function bagCommand(state: SimState, s: Survivor, command: Extract<Command, { ty
   const item = getItem(state, command.itemId);
   if (!item) return 'no such thing';
   if (command.type === 'take') {
-    const where = item.pos ?? (item.inside ? getFurniture(state, item.inside) : undefined);
+    const where = item.pos ?? (item.inside ? containerOf(state, item.inside)?.at : undefined);
     if (item.carriedBy !== s.id && (!where || !besideYou(s, where))) return 'not beside you';
     if (item.carriedBy === s.id && s.carrying !== item.id) return 'already yours';
     return stow(state, s, item);
   }
   if (!s.pack.includes(item.id)) return 'not in your bag';
   if (command.type === 'drop') return dropFromPack(state, s, item.id);
+  if (command.type === 'stash') {
+    const box = containerOf(state, command.containerId);
+    if (!box || !besideYou(s, box.at)) return 'not beside you';
+    return stash(state, s, item, command.containerId);
+  }
   // Use it: eat it, treat yourself with it, wield it or wear it.
   const c = state.control!;
   if (item.kind === 'food' || item.kind === 'meal') {

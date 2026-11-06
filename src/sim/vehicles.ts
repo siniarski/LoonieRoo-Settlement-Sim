@@ -14,13 +14,20 @@
 //   noise       the engine (noise 'engine') every ENGINE_NOISE_EVERY ticks while you're in it.
 //   crashes     hitting a wall faster than CRASH_SPEED stops you dead and dents it
 //               ((speed - CRASH_SPEED) * CRASH_DAMAGE); at 0 health it's wrecked: it won't go.
+//   off-road    on grass, dirt, fields and forest floor it won't go past OFFROAD_MAX. Trees and
+//               furniture block it (all but traps and pits): it hits them as it would a wall.
+//   the boot    a car carries BOOT_MAX (a truck TRUCK_BOOT_MAX) of things: items with `inside`
+//               set to its id, like a container (inventory.ts stash, take, takeAll).
+//   the truck   a generated world leaves one out past the camp; expeditions take it
+//               (outposts.ts). It drives like a car, slower, with a big boot.
 //   the dead    run one down at RAM_SPEED or more and it takes RAM_DAMAGE per unit of speed and
 //               is knocked aside; the car slows by a quarter and takes RAM_WEAR. The dead can't
 //               bite you through it: they batter the car instead (BATTER_DAMAGE a bite).
 // Positions are fixed point (motion.ts SUB), headings index HEADING_DIRS (integers, |v| = 256).
 
 import { logEvent } from './events';
-import { getTile, type Point } from './grid';
+import { GROUNDS, getTile, type Point } from './grid';
+import { furnitureAt } from './furniture';
 import { getItem, removeItem } from './items';
 import { unpack } from './inventory';
 import { BODY_RADIUS, centre, distance2, fits, slide, tileOf } from './motion';
@@ -45,6 +52,8 @@ export interface Vehicle {
   health: number;
   /** Who's driving, or null. */
   driverId: string | null;
+  /** A car, or the truck (slower, a bigger boot). Older saves have none: a car. */
+  kind?: 'car' | 'truck';
 }
 
 export const HEADINGS = 32;
@@ -76,16 +85,25 @@ export const BATTER_DAMAGE = 20;
 export const ENGINE_NOISE_EVERY = 20;
 /** You get into a car whose centre is this close to yours. */
 export const ENTER_REACH = 400;
+/** Top speed off the road (grass, dirt, fields, forest). */
+export const OFFROAD_MAX = 80;
+/** The truck's top speed. */
+export const TRUCK_MAX = 120;
+/** What a boot holds (tenths of a kilo, as inventory.ts weighs things). */
+export const BOOT_MAX = 400;
+export const TRUCK_BOOT_MAX = 1200;
+/** Ground a car goes at full speed on. */
+const PAVED: readonly string[] = ['road', 'bridge', 'paving', 'concrete', 'tiles', 'boards'];
 
 /** The cars on the map (older saves have none). */
 export function vehiclesOf(state: SimState): Vehicle[] {
   return state.vehicles ?? [];
 }
 
-export function addVehicle(state: SimState, x: number, y: number, heading = 0, fuel = FUEL_MAX, health = VEHICLE_HEALTH): Vehicle {
+export function addVehicle(state: SimState, x: number, y: number, heading = 0, fuel = FUEL_MAX, health = VEHICLE_HEALTH, kind: 'car' | 'truck' = 'car'): Vehicle {
   state.vehicles ??= [];
   const at = centre({ x, y });
-  const v: Vehicle = { id: `v${state.nextId++}`, at, was: { ...at }, pos: { x, y }, heading: ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed: 0, fuel, health, driverId: null };
+  const v: Vehicle = { id: `v${state.nextId++}`, at, was: { ...at }, pos: { x, y }, heading: ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed: 0, fuel, health, driverId: null, kind };
   state.vehicles.push(v);
   return v;
 }
@@ -137,9 +155,12 @@ export function drive(state: SimState, s: Survivor, dx: number, dy: number): voi
   if (!v) return;
   const runs = v.fuel > 0 && v.health > 0;
   // Pedals: W (dy -1) forward, S (dy 1) brake then reverse; neither, it rolls to a stop.
-  if (runs && dy < 0) v.speed = v.speed < 0 ? Math.min(0, v.speed + BRAKE) : Math.min(MAX_SPEED, v.speed + ACCEL);
+  const top = topSpeed(state, v);
+  if (runs && dy < 0) v.speed = v.speed < 0 ? Math.min(0, v.speed + BRAKE) : Math.min(top, v.speed + ACCEL);
   else if (runs && dy > 0) v.speed = v.speed > 0 ? Math.max(0, v.speed - BRAKE) : Math.max(-REVERSE_MAX, v.speed - ACCEL);
   else v.speed = v.speed > 0 ? Math.max(0, v.speed - FRICTION) : Math.min(0, v.speed + FRICTION);
+  // Faster than the ground allows (off the road): it slows to it.
+  if (v.speed > top) v.speed = Math.max(top, v.speed - BRAKE);
   // The wheel: only while moving, and backwards it turns the other way.
   if (dx !== 0 && Math.abs(v.speed) >= TURN_MIN_SPEED && state.tick % TURN_EVERY === 0) {
     v.heading = (v.heading + dx * Math.sign(v.speed) + HEADINGS) % HEADINGS;
@@ -158,7 +179,10 @@ export function drive(state: SimState, s: Survivor, dx: number, dy: number): voi
 function move(state: SimState, s: Survivor, v: Vehicle): void {
   const [cx, cy] = HEADING_DIRS[v.heading]!;
   const want = { x: Math.trunc((cx * v.speed) / 256), y: Math.trunc((cy * v.speed) / 256) };
-  const to = slide(state.grid, v.at, want.x, want.y, 'vehicle', VEHICLE_RADIUS);
+  const slid = slide(state.grid, v.at, want.x, want.y, 'vehicle', VEHICLE_RADIUS);
+  // A tree or furniture where it would end up stops it like a wall.
+  const into = tileOf(slid);
+  const to = (into.x !== v.pos.x || into.y !== v.pos.y) && blocked(state, into) ? v.at : slid;
   const got = { x: to.x - v.at.x, y: to.y - v.at.y };
   v.at = to;
   v.pos = tileOf(to);
@@ -184,6 +208,24 @@ function move(state: SimState, s: Survivor, v: Vehicle): void {
     dent(state, v, RAM_WEAR);
     if (Math.abs(v.speed) < RAM_SPEED) break;
   }
+}
+
+/** Top speed here: the truck is slower; off the road, slower still. */
+export function topSpeed(state: SimState, v: Vehicle): number {
+  const ground = GROUNDS[state.grid.ground[v.pos.y * state.grid.width + v.pos.x]!] ?? 'grass';
+  const base = v.kind === 'truck' ? TRUCK_MAX : MAX_SPEED;
+  return PAVED.includes(ground) ? base : Math.min(base, OFFROAD_MAX);
+}
+
+/** Is there something on this tile a car can't drive through (a tree, any furniture but a trap or a pit)? */
+export function blocked(state: SimState, p: Point): boolean {
+  const f = furnitureAt(state, p.x, p.y);
+  return f !== undefined && f.kind !== 'trap' && f.kind !== 'pit';
+}
+
+/** How much a vehicle's boot holds. */
+export function bootMax(v: Vehicle): number {
+  return v.kind === 'truck' ? TRUCK_BOOT_MAX : BOOT_MAX;
 }
 
 function dent(state: SimState, v: Vehicle, amount: number): void {
@@ -220,6 +262,6 @@ export function headingOf(dx: number, dy: number): number {
 
 /** Can a car be parked here (a floor tile it fits on)? */
 export function parkable(state: SimState, p: Point): boolean {
-  return getTile(state.grid, p.x, p.y) === 'floor' && fits(state.grid, centre(p), 'vehicle', VEHICLE_RADIUS);
+  return getTile(state.grid, p.x, p.y) === 'floor' && !blocked(state, p) && fits(state.grid, centre(p), 'vehicle', VEHICLE_RADIUS);
 }
 

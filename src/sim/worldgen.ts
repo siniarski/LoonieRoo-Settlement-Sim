@@ -13,6 +13,7 @@
 //    order; ids are labels, nothing else.)
 
 import { NORMAL, type MapType, type Settings } from './difficulty';
+import { FUEL_MAX, addVehicle, parkable } from './vehicles';
 import { applyCharacter, characterProblem, type Character } from './character';
 import { rollTimeline } from './timeline';
 import { addFurniture, CRATE_LOOT, furnitureAt } from './furniture';
@@ -242,7 +243,9 @@ export function createWorld(seed: number, size = WORLD_SIZE, settings: Settings 
   const near = { x: Math.round(l.start.x + Math.cos(angle) * 35), y: Math.round(l.start.y + Math.sin(angle) * 35) };
   const clamped = { x: Math.max(1, Math.min(size - 2, near.x)), y: Math.max(1, Math.min(size - 2, near.y)) };
   const spot = nearestTile(state.grid, clamped, (x, y) => getTile(state.grid, x, y) === 'floor' && !furnitureAt(state, x, y) && !itemAt(state, x, y));
-  if (spot) addFurniture(state, 'truck', spot.x, spot.y);
+  // The truck (vehicles.ts, outposts.ts): half a tank, a bit battered.
+  const park = spot && (parkable(state, spot) ? spot : nearestTile(state.grid, spot, (x, y) => parkable(state, { x, y })));
+  if (park) addVehicle(state, park.x, park.y, Math.floor(hashRoll(seed, 0x7a0d) * 32), FUEL_MAX / 2, 700, 'truck');
   state.grid.explored.fill(0);
   for (let y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++) {
     for (let x = l.start.x - START_REVEAL_RADIUS; x <= l.start.x + START_REVEAL_RADIUS; x++) {

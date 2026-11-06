@@ -19,7 +19,7 @@ function withPoi() {
 describe('the truck', () => {
   it('a generated world has one out past the camp', () => {
     const state = createWorld(2, 128);
-    expect(state.furniture.filter((f) => f.kind === 'truck')).toHaveLength(1);
+    expect((state.vehicles ?? []).filter((v) => v.kind === 'truck')).toHaveLength(1);
   });
 
   it('an expedition takes the seen truck and its fuel: there and back in half the time', () => {

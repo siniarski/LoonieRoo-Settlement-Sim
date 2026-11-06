@@ -236,9 +236,10 @@ export function draw(
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate((v.heading / HEADINGS) * Math.PI * 2);
-    const len = size * 1.05;
-    const wid = size * 0.6;
-    ctx.fillStyle = v.health <= 0 ? '#4a4440' : CAR_COLOURS[Number(v.id.slice(1)) % CAR_COLOURS.length]!;
+    const truck = v.kind === 'truck';
+    const len = size * (truck ? 1.4 : 1.05);
+    const wid = size * (truck ? 0.72 : 0.6);
+    ctx.fillStyle = v.health <= 0 ? '#4a4440' : truck ? '#5a6338' : CAR_COLOURS[Number(v.id.slice(1)) % CAR_COLOURS.length]!;
     ctx.fillRect(-len / 2, -wid / 2, len, wid);
     ctx.fillStyle = 'rgba(170, 210, 235, 0.8)';
     ctx.fillRect(len * 0.12, -wid * 0.38, len * 0.16, wid * 0.76);

@@ -8,10 +8,13 @@
 //              The UI's quick slots (keys 1 to 9) use the bag's first nine.
 //   containers searching one (control.ts) turns up everything left in it at once: the finds stay
 //              inside (item.inside, no pos), listed in the loot list, to take one at a time or all.
+//   stash      put something from the bag into a container beside you: a crate (CRATE_HOLD) or
+//              a car's boot (vehicles.ts bootMax). Containers are found by id (containerOf).
 //   death      the bag's contents fall where you fall.
 
 import { SLOT_OF, isGarment } from './clothing';
-import type { Furniture } from './furniture';
+import { getFurniture, type Furniture } from './furniture';
+import { bootMax, vehiclesOf } from './vehicles';
 import { dropItem, getItem, type Item, type ItemKind } from './items';
 import type { Point } from './grid';
 import type { SimState } from './state';
@@ -34,9 +37,35 @@ export function fitsInPack(state: SimState, s: Survivor, item: Item): boolean {
   return packWeight(state, s) + ITEM_WEIGHT[item.kind] <= PACK_MAX;
 }
 
-/** What's inside a container (found by searching it). */
-export function contents(state: SimState, f: Furniture): Item[] {
+/** What's inside a container (a crate, a car's boot), by its id. */
+export function contents(state: SimState, f: Pick<Furniture, 'id'>): Item[] {
   return state.items.filter((i) => i.inside === f.id);
+}
+
+/** What a crate holds (tenths of a kilo). */
+export const CRATE_HOLD = 300;
+
+/** A container by id: a crate, or a car's boot. Where it is, and what it holds. */
+export function containerOf(state: SimState, id: string): { at: Point; max: number } | null {
+  const f = getFurniture(state, id);
+  if (f) return f.kind === 'crate' ? { at: { x: f.x, y: f.y }, max: CRATE_HOLD } : null;
+  const v = vehiclesOf(state).find((x) => x.id === id);
+  return v ? { at: v.pos, max: bootMax(v) } : null;
+}
+
+/** Puts something from the bag into a container. Returns why not, or null. (Is it beside you? The caller checks.) */
+export function stash(state: SimState, s: Survivor, item: Item, containerId: string): string | null {
+  const box = containerOf(state, containerId);
+  if (!box) return 'not a container';
+  if (!s.pack.includes(item.id)) return 'not in your bag';
+  const load = contents(state, { id: containerId }).reduce((sum, i) => sum + ITEM_WEIGHT[i.kind], 0);
+  if (load + ITEM_WEIGHT[item.kind] > box.max) return "it won't fit";
+  unpack(s, item.id);
+  item.carriedBy = null;
+  item.pos = null;
+  item.reservedBy = null;
+  item.inside = containerId;
+  return null;
 }
 
 /** Puts an item into the bag: from the ground, a container, or your hands. Returns why not, or null. */

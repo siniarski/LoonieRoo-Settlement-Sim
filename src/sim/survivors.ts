@@ -88,6 +88,10 @@ export interface Survivor {
   meal: Meal | null;
   /** When hungry and no food was found, don't look again before this tick. */
   nextMealTick: number;
+  /** Foraging (forage.ts): where, and how far along; null or missing when not. */
+  forage?: { x: number; y: number; progress: number } | null;
+  /** Don't look for somewhere to forage again before this tick. */
+  nextForageTick?: number;
   /** 0..HEALTH_MAX. At 0 the survivor dies; see needs.ts. */
   health: number;
   /** What last hurt them (for the death message), e.g. "a zombie attack". */
