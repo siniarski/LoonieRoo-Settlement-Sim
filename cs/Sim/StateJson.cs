@@ -46,6 +46,8 @@ public static class StateJson
             case JsonObject oa when b is JsonObject ob:
                 foreach (var key in oa.Select(p => p.Key).Union(ob.Select(p => p.Key)))
                 {
+                    // The command log holds union-typed commands whose unset fields C# writes as defaults: not compared.
+                    if (path == "$" && key == "commandLog") continue;
                     oa.TryGetPropertyValue(key, out var va);
                     ob.TryGetPropertyValue(key, out var vb);
                     Walk(va, vb, $"{path}.{key}", out_, max);

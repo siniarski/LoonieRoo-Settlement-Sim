@@ -3,7 +3,7 @@
 // convert to 32-bit integers (ToInt32 / ToUint32) first; Math.imul multiplies as 32-bit integers.
 namespace LoonieRoo.Sim;
 
-public static class Js
+public static partial class Js
 {
     /// <summary>ECMAScript ToInt32: truncate, wrap modulo 2^32, as signed (what `x | 0` gives).</summary>
     public static int ToInt32(double x)

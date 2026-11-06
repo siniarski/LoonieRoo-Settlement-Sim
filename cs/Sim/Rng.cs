@@ -11,7 +11,7 @@ public interface IRngHolder
 public static class Rng
 {
     /// <summary>Pure step: a value in [0, 1) and the next RNG state.</summary>
-    public static (double value, uint next) Mulberry32(uint rngState)
+    public static (double value, uint next) mulberry32(uint rngState)
     {
         uint next = unchecked(rngState + 0x6d2b79f5u);
         int t = unchecked((int)next);
@@ -22,27 +22,27 @@ public static class Rng
     }
 
     /// <summary>Normalises any integer seed into a valid RNG state.</summary>
-    public static uint SeedRng(double seed) => Js.ToUint32(seed);
+    public static uint seedRng(double seed) => Js.ToUint32(seed);
 
     /// <summary>A double in [0, 1). Advances the holder's RNG.</summary>
-    public static double Random(IRngHolder holder)
+    public static double random(IRngHolder holder)
     {
-        var (value, next) = Mulberry32(Js.ToUint32(holder.rng));
+        var (value, next) = mulberry32(Js.ToUint32(holder.rng));
         holder.rng = next;
         return value;
     }
 
     /// <summary>An integer in [min, maxExclusive). Advances the holder's RNG.</summary>
-    public static int RandomInt(IRngHolder holder, int min, int maxExclusive)
+    public static int randomInt(IRngHolder holder, int min, int maxExclusive)
     {
         if (maxExclusive <= min) throw new InvalidOperationException($"randomInt: empty range [{min}, {maxExclusive})");
-        return min + (int)Math.Floor(Random(holder) * (maxExclusive - min));
+        return min + (int)Math.Floor(random(holder) * (maxExclusive - min));
     }
 
     /// <summary>Picks one element. Advances the holder's RNG.</summary>
-    public static T Pick<T>(IRngHolder holder, IReadOnlyList<T> items)
+    public static T pick<T>(IRngHolder holder, IReadOnlyList<T> items)
     {
         if (items.Count == 0) throw new InvalidOperationException("pick: empty array");
-        return items[RandomInt(holder, 0, items.Count)];
+        return items[randomInt(holder, 0, items.Count)];
     }
 }

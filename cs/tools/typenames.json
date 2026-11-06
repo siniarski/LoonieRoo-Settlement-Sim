@@ -1,0 +1,11 @@
+{
+ "buildings.ts": {
+  "Plan": "BuildingsPlan"
+ },
+ "jobChoice.ts": {
+  "Plan": "JobChoicePlan"
+ },
+ "planner.ts": {
+  "Plan": "PlannerPlan"
+ }
+}

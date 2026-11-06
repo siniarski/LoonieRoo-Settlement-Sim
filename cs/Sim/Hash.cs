@@ -4,7 +4,7 @@ namespace LoonieRoo.Sim;
 
 public static class Hash
 {
-    public static double HashRoll(params double[] nums)
+    public static double hashRoll(params double[] nums)
     {
         int h = unchecked((int)0x811c9dc5u);
         foreach (double n in nums)
@@ -17,7 +17,7 @@ public static class Hash
     }
 
     /// <summary>The number in an id like "z12": its digits, read as one number (0 if none). A double, as in JS: ids can run past int.</summary>
-    public static double IdNumber(string id)
+    public static double idNumber(string id)
     {
         var digits = new System.Text.StringBuilder();
         foreach (char c in id) if (c >= '0' && c <= '9') digits.Append(c);

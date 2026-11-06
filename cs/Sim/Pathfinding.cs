@@ -11,28 +11,28 @@ public static class Pathfinding
 {
     public const string SURVIVOR = "survivor", FREE = "free", ZOMBIE = "zombie", BREACHER = "breacher", RAIDER = "raider", CRAWLER = "crawler", VEHICLE = "vehicle";
 
-    public static bool IsPassable(Grid grid, int x, int y, string mover = SURVIVOR)
+    public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
-        if (mover == BREACHER) return InBounds(grid, x, y) && GetTile(grid, x, y) != WATER;
-        var tile = GetTile(grid, x, y);
-        bool openDoor = tile == DOOR && IsOpen(grid, x, y);
+        if (mover == BREACHER) return inBounds(grid, x, y) && getTile(grid, x, y) != WATER;
+        var tile = getTile(grid, x, y);
+        bool openDoor = tile == DOOR && isOpen(grid, x, y);
         if (mover == CRAWLER) return tile == FLOOR || tile == BARRICADE || openDoor;
         if (mover == VEHICLE) return tile == FLOOR;
-        if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !IsLocked(grid, x, y));
-        if (mover == SURVIVOR) return IsWalkable(grid, x, y);
+        if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
+        if (mover == SURVIVOR) return isWalkable(grid, x, y);
         if (mover == FREE) return tile == FLOOR || tile == BARRICADE || openDoor;
         return tile == FLOOR || openDoor;
     }
 
     /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>
-    public static bool Crossable(Grid grid, int ax, int ay, int bx, int by, string mover = SURVIVOR)
+    public static bool crossable(Grid grid, int ax, int ay, int bx, int by, string mover = SURVIVOR)
     {
-        int e = EdgeBetween(grid, ax, ay, bx, by);
+        int e = edgeBetween(grid, ax, ay, bx, by);
         if (e < 0) return true;
         int kind = grid.edges[e];
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
-        if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || EdgeIsOpen(grid, e);
+        if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
         if (kind == EDGE_BARRICADE) return mover == SURVIVOR || mover == FREE || mover == CRAWLER;
         if (kind == EDGE_WINDOW || grid.edgeBoarded.Contains(e)) return false;
         if (kind == EDGE_WINDOW_BROKEN) return mover != SURVIVOR;
@@ -42,13 +42,13 @@ public static class Pathfinding
     public static readonly Point[] DIRS = { new(0, -1), new(1, 0), new(0, 1), new(-1, 0) };
 
     /// <summary>Path from start to goal, excluding start, including goal; [] if already there; null if unreachable.</summary>
-    public static List<Point>? FindPath(Grid grid, Point start, Point goal) => FindPathToAny(grid, start, new[] { goal });
+    public static List<Point>? findPath(Grid grid, Point start, Point goal) => findPathToAny(grid, start, new[] { goal });
 
     /// <summary>Shortest path to whichever goal is nearest. Unwalkable goals are ignored.</summary>
-    public static List<Point>? FindPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR)
+    public static List<Point>? findPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR)
     {
-        if (!InBounds(grid, start.x, start.y)) return null;
-        var targets = goals.Where(g => IsPassable(grid, g.x, g.y, mover)).ToList();
+        if (!inBounds(grid, start.x, start.y)) return null;
+        var targets = goals.Where(g => isPassable(grid, g.x, g.y, mover)).ToList();
         if (targets.Count == 0) return null;
         if (targets.Any(g => g.x == start.x && g.y == start.y)) return new List<Point>();
 
@@ -93,7 +93,7 @@ public static class Pathfinding
             {
                 int nx = cx + dir.x;
                 int ny = cy + dir.y;
-                if (!IsPassable(grid, nx, ny, mover) || !Crossable(grid, cx, cy, nx, ny, mover)) continue;
+                if (!isPassable(grid, nx, ny, mover) || !crossable(grid, cx, cy, nx, ny, mover)) continue;
                 int next = ny * width + nx;
                 if (closed[next] == gen || g >= GOf(next)) continue;
                 seen[next] = gen;
@@ -157,12 +157,12 @@ public static class Pathfinding
         bool shut = DOOR_MOVERS.Contains(mover);
         return new Rules
         {
-            pass = (x, y) => IsPassable(grid, x, y, mover) && !(shut && grid.tiles[y * grid.width + x] == DOOR),
+            pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && grid.tiles[y * grid.width + x] == DOOR),
             across = (e, ax, ay, bx, by) =>
             {
                 int kind = e >= 0 && e < grid.edges.Count ? grid.edges[e] : 0;
                 if (kind == 0) return true;
-                return !(shut && kind == EDGE_DOOR) && Crossable(grid, ax, ay, bx, by, mover);
+                return !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
             },
         };
     }
@@ -297,7 +297,7 @@ public static class Pathfinding
     static void Join(Grid grid, Reach r, string mover)
     {
         int width = grid.width;
-        var doorTiles = grid.open.Where(i => grid.tiles[i] == DOOR && IsPassable(grid, i % width, i / width, mover)).ToList();
+        var doorTiles = grid.open.Where(i => grid.tiles[i] == DOOR && isPassable(grid, i % width, i / width, mover)).ToList();
         r.doorIds = new Dictionary<int, int>();
         for (int k = 0; k < doorTiles.Count; k++) r.doorIds[doorTiles[k]] = r.count + k;
         var root = new int[r.count + doorTiles.Count];
@@ -324,7 +324,7 @@ public static class Pathfinding
             foreach (var d in DIRS)
             {
                 int nx = x + d.x, ny = y + d.y;
-                if (!InBounds(grid, nx, ny) || !IsPassable(grid, nx, ny, mover) || !Crossable(grid, x, y, nx, ny, mover)) continue;
+                if (!inBounds(grid, nx, ny) || !isPassable(grid, nx, ny, mover) || !crossable(grid, x, y, nx, ny, mover)) continue;
                 Unite(r.doorIds[i], LabelAt(ny * width + nx));
             }
         }
@@ -335,7 +335,7 @@ public static class Pathfinding
             int x = i % width, y = i / width;
             int ox = e % 2 == 0 ? x : x - 1;
             int oy = e % 2 == 0 ? y - 1 : y;
-            if (!InBounds(grid, ox, oy) || !IsPassable(grid, x, y, mover) || !IsPassable(grid, ox, oy, mover)) continue;
+            if (!inBounds(grid, ox, oy) || !isPassable(grid, x, y, mover) || !isPassable(grid, ox, oy, mover)) continue;
             Unite(LabelAt(i), LabelAt(oy * width + ox));
         }
         for (int k = 0; k < root.Length; k++) root[k] = Find(k);
@@ -350,8 +350,8 @@ public static class Pathfinding
         perMover.TryGetValue(mover, out var r);
         if (r == null || r.version != version)
         {
-            var changed = r != null ? ReachChangesSince(grid, r.cursor) : null;
-            int cursor = ReachCursor(grid);
+            var changed = r != null ? reachChangesSince(grid, r.cursor) : null;
+            int cursor = reachCursor(grid);
             var rule = MakeRules(grid, mover);
             var stack = new int[REACH_CHUNK * REACH_CHUNK];
             if (r == null || changed == null)
@@ -407,21 +407,21 @@ public static class Pathfinding
     static readonly string[] MOVERS = { SURVIVOR, FREE, ZOMBIE, BREACHER, RAIDER, CRAWLER };
 
     /// <summary>Builds every mover's reachability now (derived data only), so the first question in play doesn't pay for it.</summary>
-    public static void WarmReach(Grid grid, int version)
+    public static void warmReach(Grid grid, int version)
     {
         foreach (var m in MOVERS) Components(grid, version, m);
     }
 
     /// <summary>True if any passable goal is reachable from `from` for this mover. `version` is the state's walkabilityVersion.</summary>
-    public static bool CanReach(Grid grid, int version, Point from, IReadOnlyList<Point> goals, string mover = SURVIVOR)
+    public static bool canReach(Grid grid, int version, Point from, IReadOnlyList<Point> goals, string mover = SURVIVOR)
     {
-        if (!InBounds(grid, from.x, from.y)) return false;
+        if (!inBounds(grid, from.x, from.y)) return false;
         var label = Components(grid, version, mover);
-        bool Passable(Point p) => IsPassable(grid, p.x, p.y, mover);
+        bool Passable(Point p) => isPassable(grid, p.x, p.y, mover);
         int width = grid.width;
         IEnumerable<Point> starts = Passable(from)
             ? new[] { from }
-            : DIRS.Select(d => new Point(from.x + d.x, from.y + d.y)).Where(p => Passable(p) && Crossable(grid, from.x, from.y, p.x, p.y, mover));
+            : DIRS.Select(d => new Point(from.x + d.x, from.y + d.y)).Where(p => Passable(p) && crossable(grid, from.x, from.y, p.x, p.y, mover));
         var startLabels = new HashSet<int>(starts.Select(p => label(p.y * width + p.x)));
         return goals.Any(g => Passable(g) && startLabels.Contains(label(g.y * width + g.x)));
     }
@@ -518,7 +518,7 @@ public static class Pathfinding
     const int STRAIGHTEN_LOOKAHEAD = 24;
 
     /// <summary>A four-way path straightened for walking (eight-way lines over open floor). Same ends as the path.</summary>
-    public static List<Point> Straighten(Grid grid, Point start, IReadOnlyList<Point> path)
+    public static List<Point> straighten(Grid grid, Point start, IReadOnlyList<Point> path)
     {
         if (path.Count < 2) return path.ToList();
         var pts = new List<Point> { start };
@@ -552,11 +552,11 @@ public static class Pathfinding
         int sx = Math.Sign(b.x - a.x), sy = Math.Sign(b.y - a.y);
         int x = a.x, y = a.y;
         int err = dx - dy;
-        bool Open(int px, int py) => InBounds(grid, px, py) && grid.tiles[py * grid.width + px] == FLOOR && IsPassable(grid, px, py, SURVIVOR);
+        bool Open(int px, int py) => inBounds(grid, px, py) && grid.tiles[py * grid.width + px] == FLOOR && isPassable(grid, px, py, SURVIVOR);
         bool Door(int px, int py) => grid.tiles[py * grid.width + px] == DOOR;
         bool Bare(int ax, int ay, int bx, int by)
         {
-            int e = EdgeBetween(grid, ax, ay, bx, by);
+            int e = edgeBetween(grid, ax, ay, bx, by);
             // grid.edges[-1] is undefined in the TypeScript, which is not EDGE_NONE.
             return e >= 0 && grid.edges[e] == EDGE_NONE;
         }
@@ -572,7 +572,7 @@ public static class Pathfinding
                 if (!Open(nx, y) || !Open(x, ny) || !Open(nx, ny) || Door(x, y)) return null;
                 if (!Bare(x, y, nx, y) || !Bare(x, y, x, ny) || !Bare(nx, y, nx, ny) || !Bare(x, ny, nx, ny)) return null;
             }
-            else if (!IsPassable(grid, nx, ny, SURVIVOR) || !Crossable(grid, x, y, nx, ny, SURVIVOR)) return null;
+            else if (!isPassable(grid, nx, ny, SURVIVOR) || !crossable(grid, x, y, nx, ny, SURVIVOR)) return null;
             if (!diagonal && (EdgeKindOf(grid, x, y, nx, ny) == EDGE_DOOR || EdgeKindOf(grid, x, y, nx, ny) == EDGE_BARRICADE) && (nx != b.x || ny != b.y)) return null;
             if (!diagonal && Door(nx, ny) && (nx != b.x || ny != b.y)) return null;
             tiles.Add(new Point(nx, ny));
@@ -583,7 +583,7 @@ public static class Pathfinding
     }
 
     /// <summary>Just the first straight line of Straighten, then the rest of the path as it was.</summary>
-    public static List<Point> StraightenAhead(Grid grid, Point start, IReadOnlyList<Point> path)
+    public static List<Point> straightenAhead(Grid grid, Point start, IReadOnlyList<Point> path)
     {
         if (path.Count < 2) return path.ToList();
         for (int j = Math.Min(path.Count - 1, STRAIGHTEN_LOOKAHEAD - 1); j >= 1; j--)
@@ -600,41 +600,41 @@ public static class Pathfinding
 
     static int EdgeKindOf(Grid grid, int ax, int ay, int bx, int by)
     {
-        int e = EdgeBetween(grid, ax, ay, bx, by);
+        int e = edgeBetween(grid, ax, ay, bx, by);
         return e < 0 ? EDGE_NONE : grid.edges[e];
     }
 
     /// <summary>Nothing solid between two tiles at most a step apart (for blows and bites).</summary>
-    public static bool OpenBetween(Grid grid, Point a, Point b)
+    public static bool openBetween(Grid grid, Point a, Point b)
     {
         int dx = b.x - a.x, dy = b.y - a.y;
         if ((dx == 0 && dy == 0) || Math.Abs(dx) > 1 || Math.Abs(dy) > 1) return true;
         bool Open(int px, int py, int qx, int qy)
         {
-            int e = EdgeBetween(grid, px, py, qx, qy);
+            int e = edgeBetween(grid, px, py, qx, qy);
             if (e < 0) return true;
             int kind = grid.edges[e];
-            return kind == EDGE_NONE || kind == EDGE_BARRICADE || (kind == EDGE_DOOR && EdgeIsOpen(grid, e)) || (kind == EDGE_WINDOW_BROKEN && !grid.edgeBoarded.Contains(e));
+            return kind == EDGE_NONE || kind == EDGE_BARRICADE || (kind == EDGE_DOOR && edgeIsOpen(grid, e)) || (kind == EDGE_WINDOW_BROKEN && !grid.edgeBoarded.Contains(e));
         }
         if (dx == 0 || dy == 0) return Open(a.x, a.y, b.x, b.y);
         return (Open(a.x, a.y, b.x, a.y) && Open(b.x, a.y, b.x, b.y)) || (Open(a.x, a.y, a.x, b.y) && Open(a.x, b.y, b.x, b.y));
     }
 
     /// <summary>Does sight pass this edge? Not a wall, a shut door or boards.</summary>
-    public static bool SeesThrough(Grid grid, int e)
+    public static bool seesThrough(Grid grid, int e)
     {
         if (e < 0) return true;
         int kind = e < grid.edges.Count ? grid.edges[e] : EDGE_NONE;
         if (kind == EDGE_WALL) return false;
-        if (kind == EDGE_DOOR) return EdgeIsOpen(grid, e);
+        if (kind == EDGE_DOOR) return edgeIsOpen(grid, e);
         if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);
         return true;
     }
 
     /// <summary>A step to a tile beside it, straight or diagonal (either way round), this mover could walk.</summary>
-    public static bool WalksAcross(Grid grid, Point a, Point b, string mover)
+    public static bool walksAcross(Grid grid, Point a, Point b, string mover)
     {
-        if (a.x == b.x || a.y == b.y) return Crossable(grid, a.x, a.y, b.x, b.y, mover);
-        return (Crossable(grid, a.x, a.y, b.x, a.y, mover) && Crossable(grid, b.x, a.y, b.x, b.y, mover)) || (Crossable(grid, a.x, a.y, a.x, b.y, mover) && Crossable(grid, a.x, b.y, b.x, b.y, mover));
+        if (a.x == b.x || a.y == b.y) return crossable(grid, a.x, a.y, b.x, b.y, mover);
+        return (crossable(grid, a.x, a.y, b.x, a.y, mover) && crossable(grid, b.x, a.y, b.x, b.y, mover)) || (crossable(grid, a.x, a.y, a.x, b.y, mover) && crossable(grid, a.x, b.y, b.x, b.y, mover));
     }
 }

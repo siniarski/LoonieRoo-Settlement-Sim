@@ -7,7 +7,7 @@ namespace LoonieRoo.Sim;
 
 public interface IHasId
 {
-    string id { get; }
+    string id { get; set; }
 }
 
 public static class Lookup
@@ -30,7 +30,7 @@ public static class Lookup
         return m;
     }
 
-    public static T? FindById<T>(List<T> list, string id) where T : class, IHasId
+    public static T? findById<T>(List<T> list, string id) where T : class, IHasId
     {
         var m = maps.TryGetValue(list, out var found) ? found : Rebuild(list);
         if (m.ids.TryGetValue(id, out int at))

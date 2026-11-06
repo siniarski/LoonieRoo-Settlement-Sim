@@ -17,9 +17,14 @@ const SIM = 'src/sim';
 const HAND = new Set(['Point', 'Grid']);
 /** Whole-number fields kept as int (Class.field): counters and the tick. Everything else numeric is a double. */
 const INTS = new Set(['SimState.tick', 'SimState.walkabilityVersion', 'SimState.nextId', 'SimState.namesGiven', 'SimState.schemaVersion', 'LoggedCommand.tick']);
+/** Field names that are always whole tile numbers (coordinates and sizes), in any class: int. */
+const INT_FIELDS = new Set(['x', 'y', 'x0', 'y0', 'x1', 'y1', 'w', 'h', 'width', 'height', 'ox', 'oy', 'cx', 'cy', 'u', 'v', 'ax', 'ay', 'bx', 'by']);
 
-// Every interface and type alias in the sim, by name.
+// Every interface and type alias in the sim, by name (a name declared in two modules is kept per module,
+// and gets its module's name in front in C#: csNames, written to cs/tools/typenames.json for the translator).
 const decls = new Map();
+const byFile = new Map(); // file -> Map(name -> decl)
+const seenNames = new Map(); // name -> [files]
 for (const f of readdirSync(SIM).filter((f) => f.endsWith('.ts'))) {
   const src = readFileSync(join(SIM, f), 'utf8');
   const ast = parseAst(src, { lang: 'ts' }, f);
@@ -29,18 +34,40 @@ for (const f of readdirSync(SIM).filter((f) => f.endsWith('.ts'))) {
     if (!d) return;
     if (d.type === 'TSInterfaceDeclaration' || d.type === 'TSTypeAliasDeclaration') {
       const leading = src.slice(0, d.start).match(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*(export\s+)?$/);
-      decls.set(d.id.name, { node: d, file: f, src, doc: leading ? clean(leading[1]) : '' });
+      const entry = { node: d, file: f, src, doc: leading ? clean(leading[1]) : '' };
+      if (!byFile.has(f)) byFile.set(f, new Map());
+      byFile.get(f).set(d.id.name, entry);
+      seenNames.set(d.id.name, [...(seenNames.get(d.id.name) ?? []), f]);
+      decls.set(d.id.name, entry);
     }
   };
   for (const n of ast.body) visit(n);
+}
+
+const pascalFile = (f) => f.replace(/\.ts$/, '').replace(/^\w/, (c) => c.toUpperCase());
+/** The C# class name for a type declared in a file. */
+function csName(name, file) {
+  return (seenNames.get(name)?.length ?? 0) > 1 ? pascalFile(file) + name : name;
+}
+/** The declaration a name means inside a file: its own first, else the one the file imports, else any. */
+function lookup(name, file) {
+  const own = byFile.get(file)?.get(name);
+  if (own) return own;
+  const src = file ? readFileSync(join(SIM, file), 'utf8') : '';
+  const m = src.match(new RegExp("import[^;]*\\b" + name + "\\b[^;]*from '\\./(\\w+)'"));
+  if (m) return byFile.get(m[1] + '.ts')?.get(name) ?? decls.get(name);
+  return decls.get(name);
 }
 
 function clean(doc) {
   return doc.split('\n').map((l) => l.replace(/^\s*\*\s?/, '').trim()).filter(Boolean).join(' ');
 }
 
-const classes = new Map(); // name -> Map(field -> { type, doc })
+const classes = new Map(); // C# name -> Map(field -> { type, doc })
+const classFile = new Map(); // C# name -> the file it was declared in
 const queue = [];
+/** The file whose types are being resolved (a name means what it means there). */
+let currentFile = null;
 
 const pascal = (s) => s.replace(/(^|[_\s-])(\w)/g, (_, __, c) => c.toUpperCase()).replace(/^\w/, (c) => c.toUpperCase());
 
@@ -71,12 +98,15 @@ function kindOf(t, seen = new Set()) {
     case 'TSTypeReference': {
       const name = refName(t);
       if (name === 'Record') return 'record';
+      if (['Int32Array', 'Uint32Array', 'Float64Array', 'Uint8Array', 'Int8Array', 'Uint16Array', 'Float32Array'].includes(name)) return 'typed';
+      if (name === 'Map' || name === 'WeakMap') return 'map';
+      if (name === 'Set') return 'set';
       if (name === 'Array' || name === 'ReadonlyArray') return 'array';
       if (['Partial', 'Required', 'Readonly'].includes(name)) return kindOf(t.typeArguments.params[0], seen);
       if (['Pick', 'Omit'].includes(name)) return 'object';
       if (name === 'Exclude' || name === 'Extract') return kindOf(t.typeArguments?.params[0], seen);
       if (HAND.has(name)) return 'object';
-      const d = decls.get(name);
+      const d = lookup(name, currentFile);
       if (!d || seen.has(name)) return 'other';
       seen.add(name);
       return d.node.type === 'TSInterfaceDeclaration' ? 'object' : kindOf(d.node.typeAnnotation, seen);
@@ -107,7 +137,7 @@ function objectParts(t) {
       const name = refName(t);
       if (['Partial', 'Required', 'Readonly'].includes(name)) return objectParts(t.typeArguments.params[0]);
       if (name === 'Omit' || name === 'Pick') return objectParts(t.typeArguments.params[0]);
-      const d = decls.get(name);
+      const d = lookup(name, currentFile);
       if (!d) return [];
       if (d.node.type === 'TSInterfaceDeclaration') {
         const own = [{ members: d.node.body.body, base: null }];
@@ -145,17 +175,20 @@ function csType(t, hint, intField) {
     }
     case 'record': {
       const r = deref(core);
-      return `Dictionary<string, ${csType(r.typeArguments.params[1], hint + 'Value', false)}>` + q;
+      return `JsRecord<${csType(r.typeArguments.params[1], hint + 'Value', false)}>` + q;
     }
     case 'object': {
       // A Record by another name (Priorities = Record<JobType, Priority>).
       if (core.type === 'TSTypeReference') {
-        const d = decls.get(refName(core));
+        const d = lookup(refName(core), currentFile);
         if (d && d.node.type === 'TSTypeAliasDeclaration' && kindOf(d.node.typeAnnotation) === 'record') return csType(d.node.typeAnnotation, hint, false) + q;
         if (HAND.has(refName(core))) return refName(core) + q;
       }
       return classFor(core, hint) + q;
     }
+    case 'typed': return { Int32Array: 'int[]', Uint32Array: 'uint[]', Float64Array: 'double[]', Uint8Array: 'byte[]', Int8Array: 'sbyte[]', Uint16Array: 'ushort[]', Float32Array: 'float[]' }[refName(core)] + q;
+    case 'map': return `JsMap<${csType(core.typeArguments.params[0], hint + 'Key', false).replace(/\?$/, '')}, ${csType(core.typeArguments.params[1], hint + 'Value', false)}>` + q;
+    case 'set': return `JsSet<${csType(core.typeArguments.params[0], hint + 'Item', false).replace(/\?$/, '')}>` + q;
     case 'mixed': return 'System.Text.Json.Nodes.JsonNode' + q;
     default: return 'System.Text.Json.Nodes.JsonNode' + q;
   }
@@ -168,7 +201,7 @@ function deref(t) {
     if (['Record', 'Array', 'ReadonlyArray'].includes(name)) return t;
     if (['Partial', 'Required', 'Readonly'].includes(name)) { t = t.typeArguments.params[0]; continue; }
     if (name === 'Exclude' || name === 'Extract') { t = t.typeArguments.params[0]; continue; }
-    const d = decls.get(name);
+    const d = lookup(name, currentFile);
     if (!d || d.node.type !== 'TSTypeAliasDeclaration') return t;
     t = d.node.typeAnnotation;
   }
@@ -179,45 +212,74 @@ function deref(t) {
 function classFor(t, hint) {
   let name = hint;
   if (t.type === 'TSTypeReference' && ['Partial', 'Required', 'Readonly', 'Pick', 'Omit'].includes(refName(t))) return classFor(t.typeArguments.params[0], hint);
-  if (t.type === 'TSTypeReference') name = refName(t);
-  if (HAND.has(name)) return name;
+  let file = currentFile;
+  if (t.type === 'TSTypeReference') {
+    name = refName(t);
+    if (HAND.has(name)) return name;
+    const d = lookup(name, currentFile);
+    if (d) {
+      file = d.file;
+      name = csName(name, d.file);
+    }
+  }
   if (!classes.has(name)) {
     classes.set(name, null);
-    queue.push([name, t]);
+    classFile.set(name, file);
+    queue.push([name, t, file]);
   }
   return name;
 }
 
-function build(name, t) {
+function build(name, t, file) {
+  currentFile = file;
   const fields = new Map();
   const parts = objectParts(t);
-  const union = parts.length > 1 && (t.type === 'TSUnionType' || (t.type === 'TSTypeReference' && decls.get(refName(t))?.node.typeAnnotation?.type === 'TSUnionType'));
+  const union = parts.length > 1 && (t.type === 'TSUnionType' || (t.type === 'TSTypeReference' && lookup(refName(t), currentFile)?.node.typeAnnotation?.type === 'TSUnionType'));
   for (const part of parts) {
     for (const m of part.members) {
       if (m.type !== 'TSPropertySignature' || !m.typeAnnotation) continue;
       const field = m.key.name ?? m.key.value;
-      const intField = INTS.has(`${name}.${field}`);
+      const intField = INTS.has(`${name}.${field}`) || INT_FIELDS.has(field);
       let type = csType(m.typeAnnotation.typeAnnotation, name + pascal(field), intField);
-      if ((m.optional || union) && !type.endsWith('?')) type += '?';
+      const explicitNull = type.endsWith('?');
+      // A union member's fields are there when its type says so (TypeScript narrows on it): plain values, unless optional.
+      if (m.optional && !type.endsWith('?')) type += '?';
       const prev = fields.get(field);
       if (prev) {
-        if (prev.type !== type) prev.type = prev.type.replace(/\?$/, '') === type.replace(/\?$/, '') ? prev.type.replace(/\?$/, '') + '?' : 'System.Text.Json.Nodes.JsonNode?';
+        // Union members: optional only if every member that has it leaves it optional (a command's x is there
+        // whenever its type says so: TypeScript narrows on the type, C# can't).
+        const a = prev.type.replace(/\?$/, '');
+        const b = type.replace(/\?$/, '');
+        if (a !== b) prev.type = 'System.Text.Json.Nodes.JsonNode?';
+        else if (union) {
+          prev.explicitNull ||= explicitNull;
+          prev.type = prev.explicitNull ? a + '?' : a;
+        }
         continue;
       }
       const decl = [...decls.values()].find((d) => d.node.start <= m.start && m.end <= d.node.end);
       const before = decl ? decl.src.slice(0, m.start).match(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*$/) : null;
-      fields.set(field, { type, doc: before ? clean(before[1]) : '' });
+      fields.set(field, { type: union && !explicitNull ? type.replace(/\?$/, '') : type, explicitNull, doc: before ? clean(before[1]) : '' });
     }
   }
   classes.set(name, fields);
 }
 
-const roots = [['SimState'], ['Command'], ['LoggedCommand']];
-for (const [name] of roots) classFor({ type: 'TSTypeReference', typeName: { type: 'Identifier', name } }, name);
-while (queue.length) {
-  const [name, t] = queue.shift();
-  build(name, t);
+// Every interface, and every alias for an object type or a union of them, in the sim: function signatures need them all.
+for (const [file, names] of byFile) {
+  for (const [name, d] of names) {
+    currentFile = file;
+    if (d.node.type === 'TSInterfaceDeclaration' || (d.node.typeAnnotation && kindOf(d.node.typeAnnotation) === 'object' && !d.node.typeParameters)) classFor({ type: 'TSTypeReference', typeName: { type: 'Identifier', name } }, name);
+  }
 }
+while (queue.length) {
+  const [name, t, file] = queue.shift();
+  build(name, t, file);
+}
+// For the translator: what each file calls each type it can see, where that isn't the plain name.
+const renames = {};
+for (const [file, names] of byFile) for (const name of names.keys()) if (csName(name, file) !== name) (renames[file] ??= {})[name] = csName(name, file);
+writeFileSync('cs/tools/typenames.json', JSON.stringify(renames, null, 1));
 
 const kw = new Set(['base', 'checked', 'class', 'default', 'event', 'fixed', 'lock', 'object', 'operator', 'out', 'override', 'params', 'ref', 'string', 'this', 'internal', 'is', 'as', 'new', 'in', 'readonly', 'static', 'var', 'void', 'from', 'where', 'select', 'delegate', 'goto', 'implicit', 'explicit', 'namespace', 'sizeof', 'struct', 'typeof', 'unchecked', 'using', 'virtual', 'volatile', 'while', 'abstract', 'case', 'catch', 'char', 'const', 'continue', 'decimal', 'do', 'double', 'else', 'enum', 'extern', 'false', 'finally', 'float', 'for', 'foreach', 'if', 'int', 'interface', 'long', 'null', 'private', 'protected', 'public', 'return', 'sbyte', 'sealed', 'short', 'stackalloc', 'switch', 'throw', 'true', 'try', 'uint', 'ulong', 'ushort', 'byte', 'bool', 'break']);
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -229,15 +291,20 @@ const lines = [
   '',
 ];
 for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]))) {
-  const d = decls.get(name);
+  const d = byFile.get(classFile.get(name))?.get(name.replace(/^[A-Z][a-z]+(?=[A-Z])/, (m) => (byFile.get(classFile.get(name))?.has(name) ? m : ''))) ?? decls.get(name);
   if (d?.doc) lines.push(`/// <summary>${esc(d.doc)}</summary>`);
-  lines.push(`public partial class ${name}`, '{');
+  const ifaces = [];
+  if (fields.get('id')?.type === 'string') ifaces.push('IHasId');
+  if (fields.get('at')?.type === 'Point') ifaces.push('IHasAt');
+  if (fields.get('pos')?.type === 'Point') ifaces.push('IHasPos');
+  lines.push(`public partial class ${name}${ifaces.length ? ' : ' + ifaces.join(', ') : ''}`, '{');
+  if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x, v.y);`);
   for (const [field, f] of fields) {
     if (f.doc) lines.push(`    /// <summary>${esc(f.doc)}</summary>`);
     const id = kw.has(field) ? '@' + field : field;
     const t = f.type;
-    const init = t.endsWith('?') || ['double', 'int', 'bool'].includes(t) ? ';' : t === 'string' ? ' = "";' : ' = new();';
-    lines.push(`    public ${t} ${id}${init}`);
+    const init = t.endsWith('?') || ['double', 'int', 'bool'].includes(t) || t.includes('JsonNode') || t.endsWith('[]') ? (t.includes('JsonNode') || t.endsWith('[]')) && !t.endsWith('?') ? ' = null!;' : ';' : t === 'string' ? ' = "";' : ' = new();';
+    lines.push(`    public ${t} ${id} { get; set; }${init === ';' ? '' : init}`);
   }
   lines.push('}', '');
 }

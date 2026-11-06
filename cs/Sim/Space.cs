@@ -31,9 +31,9 @@ public static class Space
     /// Nearest tile to `from` (by walking distance, BFS in N, E, S, W order) that `accept` likes. Searches
     /// through walkable tiles; `from` itself may be unwalkable. Null if none in the first `limit` tiles searched.
     /// </summary>
-    public static Point? NearestTile(Grid grid, Point from, Func<int, int, bool> accept, double limit = double.PositiveInfinity)
+    public static Point? nearestTile(Grid grid, Point from, Func<int, int, bool> accept, double limit = double.PositiveInfinity)
     {
-        if (!Grids.InBounds(grid, from.x, from.y)) return null;
+        if (!Grids.inBounds(grid, from.x, from.y)) return null;
         int width = grid.width;
         int size = width * grid.height;
         var sc = GetScratch(depth, size);
@@ -58,7 +58,7 @@ public static class Space
                 {
                     int nx = d == 1 ? x + 1 : d == 3 ? x - 1 : x;
                     int ny = d == 0 ? y - 1 : d == 2 ? y + 1 : y;
-                    if (!Grids.IsWalkable(grid, nx, ny)) continue;
+                    if (!Grids.isWalkable(grid, nx, ny)) continue;
                     int n = ny * width + nx;
                     if (seen[n] == gen) continue;
                     seen[n] = gen;
@@ -73,7 +73,7 @@ public static class Space
         }
     }
 
-    public static int Manhattan(Point a, Point b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
+    public static int manhattan(Point a, Point b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
 
-    public static bool SamePoint(Point a, Point b) => a.x == b.x && a.y == b.y;
+    public static bool samePoint(Point a, Point b) => a.x == b.x && a.y == b.y;
 }

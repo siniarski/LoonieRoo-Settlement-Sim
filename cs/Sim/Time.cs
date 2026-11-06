@@ -26,15 +26,15 @@ public static class Time
     public static int NIGHT_TICKS { get; private set; } = (HOURS_PER_DAY - NIGHT_START + NIGHT_END) * BASE_TICKS_PER_HOUR;
 
     /// <summary>Recompute something derived from the day now, and whenever the scale changes.</summary>
-    public static void OnClock(Action recompute)
+    public static void onClock(Action recompute)
     {
         listeners.Add(recompute);
         recompute();
     }
 
-    public static int DayScale() => scale;
+    public static int dayScale() => scale;
 
-    public static void SetDayScale(int n)
+    public static void setDayScale(int n)
     {
         if (n == scale) return;
         scale = n;
@@ -45,45 +45,45 @@ public static class Time
     }
 
     /// <summary>Things that run at a rate per tick (needs, crops, work) run on one tick in every `scale`.</summary>
-    public static bool SlowTick(int tick) => tick % scale == 0;
+    public static bool slowTick(int tick) => tick % scale == 0;
 
     static int ClockTicks(int tick) => tick + START_HOUR * TICKS_PER_HOUR;
 
     /// <summary>Ticks since midnight, 0 &lt;= t &lt; DAY_LENGTH.</summary>
-    public static int TickOfDay(int tick) => ClockTicks(tick) % DAY_LENGTH;
+    public static int tickOfDay(int tick) => ClockTicks(tick) % DAY_LENGTH;
 
     /// <summary>Day number, starting at 1.</summary>
-    public static int DayOf(int tick) => (int)Math.Floor((double)ClockTicks(tick) / DAY_LENGTH) + 1;
+    public static int dayOf(int tick) => (int)Math.Floor((double)ClockTicks(tick) / DAY_LENGTH) + 1;
 
     /// <summary>Fractional hour of the day, 0 &lt;= h &lt; 24.</summary>
-    public static double HourOf(int tick) => (double)(ClockTicks(tick) % DAY_LENGTH) / TICKS_PER_HOUR;
+    public static double hourOf(int tick) => (double)(ClockTicks(tick) % DAY_LENGTH) / TICKS_PER_HOUR;
 
-    public static bool IsNight(int tick)
+    public static bool isNight(int tick)
     {
-        double h = HourOf(tick);
+        double h = hourOf(tick);
         return h >= NIGHT_START || h < NIGHT_END;
     }
 
     /// <summary>The night in progress (1 = the first night, starting 21:00 on day 1), or null by day.</summary>
-    public static int? NightNumber(int tick)
+    public static int? nightNumber(int tick)
     {
-        if (!IsNight(tick)) return null;
-        return HourOf(tick) >= NIGHT_START ? DayOf(tick) : DayOf(tick) - 1;
+        if (!isNight(tick)) return null;
+        return hourOf(tick) >= NIGHT_START ? dayOf(tick) : dayOf(tick) - 1;
     }
 
     /// <summary>Ticks since the current night began at 21:00. Only meaningful at night.</summary>
-    public static int TicksIntoNight(int tick)
+    public static int ticksIntoNight(int tick)
     {
-        double h = HourOf(tick);
+        double h = hourOf(tick);
         double hoursIn = h >= NIGHT_START ? h - NIGHT_START : h + HOURS_PER_DAY - NIGHT_START;
         return (int)Js.Round(hoursIn * TICKS_PER_HOUR);
     }
 
     /// <summary>0 in full day, 1 in full night, ramping linearly through dusk and dawn. For rendering.</summary>
-    public static double Darkness(int tick)
+    public static double darkness(int tick)
     {
-        double h = HourOf(tick);
-        if (IsNight(tick)) return 1;
+        double h = hourOf(tick);
+        if (isNight(tick)) return 1;
         double duskStart = NIGHT_START - TWILIGHT_HOURS;
         if (h >= duskStart) return (h - duskStart) / TWILIGHT_HOURS;
         if (h < NIGHT_END + TWILIGHT_HOURS) return 1 - (h - NIGHT_END) / TWILIGHT_HOURS;
@@ -91,9 +91,9 @@ public static class Time
     }
 
     /// <summary>"06:30"</summary>
-    public static string ClockText(int tick)
+    public static string clockText(int tick)
     {
-        double h = HourOf(tick);
+        double h = hourOf(tick);
         int hours = (int)Math.Floor(h);
         int minutes = (int)Math.Floor((h - hours) * 60);
         return $"{hours:00}:{minutes:00}";

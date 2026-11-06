@@ -8,12 +8,23 @@ namespace LoonieRoo.Sim;
 /// <summary>A tile position (or any x, y pair). A class, as in the TypeScript (objects shared by reference).</summary>
 public sealed class Point
 {
-    public int x;
-    public int y;
+    public int x { get; set; }
+    public int y { get; set; }
     public Point() { }
     public Point(int x, int y) { this.x = x; this.y = y; }
     public Point Copy() => new(x, y);
     public override string ToString() => $"({x}, {y})";
+}
+
+/// <summary>Things with an at (a precise position: motion.ts), a pos (the tile under them), or an id.</summary>
+public interface IHasAt
+{
+    Point at { get; set; }
+}
+
+public interface IHasPos
+{
+    Point pos { get; set; }
 }
 
 public sealed class Grid
@@ -68,9 +79,9 @@ public static class Grids
     /// <summary>More changed tiles than this, and rooms are worked out in full.</summary>
     const int MAX_TRACKED = 2048;
 
-    public static bool IsWindow(int kind) => kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN;
+    public static bool isWindow(int kind) => kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN;
 
-    public static Grid CreateGrid(int width, int height, string fill = FLOOR)
+    public static Grid createGrid(int width, int height, string fill = FLOOR)
     {
         if (width <= 0 || height <= 0) throw new ArgumentException($"createGrid: invalid size {width}x{height}");
         int n = width * height;
@@ -88,30 +99,30 @@ public static class Grids
     }
 
     /// <summary>The index of a tile's north ("n") or west ("w") edge.</summary>
-    public static int EdgeIndex(Grid grid, int x, int y, string side) => (y * grid.width + x) * 2 + (side == "n" ? 0 : 1);
+    public static int edgeIndex(Grid grid, int x, int y, string side) => (y * grid.width + x) * 2 + (side == "n" ? 0 : 1);
 
     /// <summary>The edge between two tiles side by side, or -1 if they aren't.</summary>
-    public static int EdgeBetween(Grid grid, int ax, int ay, int bx, int by)
+    public static int edgeBetween(Grid grid, int ax, int ay, int bx, int by)
     {
-        if (!InBounds(grid, ax, ay) || !InBounds(grid, bx, by)) return -1;
-        if (ax == bx && by == ay - 1) return EdgeIndex(grid, ax, ay, "n");
-        if (ax == bx && by == ay + 1) return EdgeIndex(grid, bx, by, "n");
-        if (ay == by && bx == ax - 1) return EdgeIndex(grid, ax, ay, "w");
-        if (ay == by && bx == ax + 1) return EdgeIndex(grid, bx, by, "w");
+        if (!inBounds(grid, ax, ay) || !inBounds(grid, bx, by)) return -1;
+        if (ax == bx && by == ay - 1) return edgeIndex(grid, ax, ay, "n");
+        if (ax == bx && by == ay + 1) return edgeIndex(grid, bx, by, "n");
+        if (ay == by && bx == ax - 1) return edgeIndex(grid, ax, ay, "w");
+        if (ay == by && bx == ax + 1) return edgeIndex(grid, bx, by, "w");
         return -1;
     }
 
     /// <summary>What stands on an edge (EDGE_NONE for -1).</summary>
-    public static int EdgeKind(Grid grid, int e) => e < 0 || e >= grid.edges.Count ? EDGE_NONE : grid.edges[e];
+    public static int edgeKind(Grid grid, int e) => e < 0 || e >= grid.edges.Count ? EDGE_NONE : grid.edges[e];
 
     /// <summary>Puts a wall, a door or nothing on a tile's north or west edge.</summary>
-    public static bool SetEdge(Grid grid, int x, int y, string side, int kind)
+    public static bool setEdge(Grid grid, int x, int y, string side, int kind)
     {
-        if (!InBounds(grid, x, y)) return false;
-        int e = EdgeIndex(grid, x, y, side);
+        if (!inBounds(grid, x, y)) return false;
+        int e = edgeIndex(grid, x, y, side);
         if (grid.edges[e] == kind) return false;
         grid.edges[e] = kind;
-        NoteEdgeChange(grid, e);
+        noteEdgeChange(grid, e);
         Drop(grid.edgeOpen, e); // a new door starts shut
         Drop(grid.edgePassing, e);
         grid.edgeDamage.Remove(e.ToString()); // and undamaged
@@ -133,7 +144,7 @@ public static class Grids
     static readonly ConditionalWeakTable<Grid, ReachLog> reachLogs = new();
 
     /// <summary>A tile's wall, door, lock or edge changed.</summary>
-    public static void NoteChange(Grid grid, int i)
+    public static void noteChange(Grid grid, int i)
     {
         if (changes.TryGetValue(grid, out var list) && list.Count <= MAX_TRACKED) list.Add(i);
         if (reachLogs.TryGetValue(grid, out var log))
@@ -149,7 +160,7 @@ public static class Grids
     }
 
     /// <summary>Where the reachability log is now (starting it, if it wasn't).</summary>
-    public static int ReachCursor(Grid grid)
+    public static int reachCursor(Grid grid)
     {
         if (!reachLogs.TryGetValue(grid, out var log))
         {
@@ -160,51 +171,51 @@ public static class Grids
     }
 
     /// <summary>The chunks changed since `cursor` (repeats possible), or null if the log doesn't go back that far.</summary>
-    public static List<int>? ReachChangesSince(Grid grid, int cursor)
+    public static List<int>? reachChangesSince(Grid grid, int cursor)
     {
         if (!reachLogs.TryGetValue(grid, out var log) || cursor < log.start) return null;
         return log.chunks.GetRange(cursor - log.start, log.chunks.Count - (cursor - log.start));
     }
 
     /// <summary>An edge changed: both its tiles.</summary>
-    public static void NoteEdgeChange(Grid grid, int e)
+    public static void noteEdgeChange(Grid grid, int e)
     {
         int tile = e / 2;
-        NoteChange(grid, tile);
-        NoteChange(grid, e % 2 == 0 ? tile - grid.width : tile - 1);
+        noteChange(grid, tile);
+        noteChange(grid, e % 2 == 0 ? tile - grid.width : tile - 1);
     }
 
     /// <summary>The tiles changed since the last call (and starts recording); null if unknown or too many.</summary>
-    public static List<int>? TakeChanges(Grid grid)
+    public static List<int>? takeChanges(Grid grid)
     {
         changes.TryGetValue(grid, out var list);
         changes.AddOrUpdate(grid, new List<int>());
         return list != null && list.Count <= MAX_TRACKED ? list : null;
     }
 
-    public static bool EdgeIsOpen(Grid grid, int e) => grid.edgeOpen.Contains(e);
+    public static bool edgeIsOpen(Grid grid, int e) => grid.edgeOpen.Contains(e);
 
-    public static bool InBounds(Grid grid, int x, int y) => x >= 0 && y >= 0 && x < grid.width && y < grid.height;
+    public static bool inBounds(Grid grid, int x, int y) => x >= 0 && y >= 0 && x < grid.width && y < grid.height;
 
-    public static int TileIndex(Grid grid, int x, int y) => y * grid.width + x;
+    public static int tileIndex(Grid grid, int x, int y) => y * grid.width + x;
 
     /// <summary>The tile, or null when out of bounds.</summary>
-    public static string? GetTile(Grid grid, int x, int y) => InBounds(grid, x, y) ? grid.tiles[TileIndex(grid, x, y)] : null;
+    public static string? getTile(Grid grid, int x, int y) => inBounds(grid, x, y) ? grid.tiles[tileIndex(grid, x, y)] : null;
 
     /// <summary>Sets a tile. True if it changed. Callers that change walkability bump walkabilityVersion.</summary>
-    public static bool SetTile(Grid grid, int x, int y, string tile)
+    public static bool setTile(Grid grid, int x, int y, string tile)
     {
-        if (!InBounds(grid, x, y)) return false;
-        int i = TileIndex(grid, x, y);
+        if (!inBounds(grid, x, y)) return false;
+        int i = tileIndex(grid, x, y);
         if (grid.tiles[i] == tile) return false;
         grid.tiles[i] = tile;
-        NoteChange(grid, i);
+        noteChange(grid, i);
         if (tile != FLOOR && grid.dirt[i] == 1)
         {
             grid.dirt[i] = 0;
             Drop(grid.dirtList, i);
         }
-        SetDamage(grid, i, 0); // a new (or removed) structure starts undamaged
+        setDamage(grid, i, 0); // a new (or removed) structure starts undamaged
         Drop(grid.locked, i); // and unlocked
         Drop(grid.reinforced, i); // and plain
         Drop(grid.open, i); // and shut
@@ -212,14 +223,14 @@ public static class Grids
         return true;
     }
 
-    public static bool IsDirty(Grid grid, int x, int y) => InBounds(grid, x, y) && grid.dirt[TileIndex(grid, x, y)] == 1;
+    public static bool isDirty(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.dirt[tileIndex(grid, x, y)] == 1;
 
     /// <summary>Marks a floor tile dirty or clean. True if it changed. Non-floor tiles can't get dirty.</summary>
-    public static bool SetDirty(Grid grid, int x, int y, bool dirty)
+    public static bool setDirty(Grid grid, int x, int y, bool dirty)
     {
-        if (GetTile(grid, x, y) != FLOOR && dirty) return false;
-        if (IsDirty(grid, x, y) == dirty || !InBounds(grid, x, y)) return false;
-        int i = TileIndex(grid, x, y);
+        if (getTile(grid, x, y) != FLOOR && dirty) return false;
+        if (isDirty(grid, x, y) == dirty || !inBounds(grid, x, y)) return false;
+        int i = tileIndex(grid, x, y);
         grid.dirt[i] = dirty ? 1 : 0;
         if (dirty) grid.dirtList.Add(i);
         else Drop(grid.dirtList, i);
@@ -227,7 +238,7 @@ public static class Grids
     }
 
     /// <summary>Sets the damage on a tile index, keeping damageList in step.</summary>
-    public static void SetDamage(Grid grid, int i, double value)
+    public static void setDamage(Grid grid, int i, double value)
     {
         double was = grid.damage[i];
         if (was == value) return;
@@ -243,27 +254,27 @@ public static class Grids
     }
 
     /// <summary>Doors and barricades are walkable (for colonists).</summary>
-    public static bool IsWalkableTile(string tile) => tile == FLOOR || tile == DOOR || tile == BARRICADE;
+    public static bool isWalkableTile(string tile) => tile == FLOOR || tile == DOOR || tile == BARRICADE;
 
-    public static bool IsLocked(Grid grid, int x, int y) => InBounds(grid, x, y) && grid.locked.Contains(TileIndex(grid, x, y));
+    public static bool isLocked(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.locked.Contains(tileIndex(grid, x, y));
 
     /// <summary>A door standing open.</summary>
-    public static bool IsOpen(Grid grid, int x, int y) => InBounds(grid, x, y) && grid.open.Contains(TileIndex(grid, x, y));
+    public static bool isOpen(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.open.Contains(tileIndex(grid, x, y));
 
-    public static bool IsWalkable(Grid grid, int x, int y)
+    public static bool isWalkable(Grid grid, int x, int y)
     {
-        var tile = GetTile(grid, x, y);
-        return tile != null && IsWalkableTile(tile);
+        var tile = getTile(grid, x, y);
+        return tile != null && isWalkableTile(tile);
     }
 
     /// <summary>In-bounds 4-way neighbours in a fixed order: N, E, S, W.</summary>
-    public static List<Point> Neighbours4(Grid grid, int x, int y)
+    public static List<Point> neighbours4(Grid grid, int x, int y)
     {
         var out_ = new List<Point>(4);
-        if (InBounds(grid, x, y - 1)) out_.Add(new Point(x, y - 1));
-        if (InBounds(grid, x + 1, y)) out_.Add(new Point(x + 1, y));
-        if (InBounds(grid, x, y + 1)) out_.Add(new Point(x, y + 1));
-        if (InBounds(grid, x - 1, y)) out_.Add(new Point(x - 1, y));
+        if (inBounds(grid, x, y - 1)) out_.Add(new Point(x, y - 1));
+        if (inBounds(grid, x + 1, y)) out_.Add(new Point(x + 1, y));
+        if (inBounds(grid, x, y + 1)) out_.Add(new Point(x, y + 1));
+        if (inBounds(grid, x - 1, y)) out_.Add(new Point(x - 1, y));
         return out_;
     }
 }
