@@ -5,6 +5,12 @@
 // its trader away empty-handed cools it; a gift of food warms it a lot. At
 // HOSTILE or worse it counts you an enemy, and raids come more often. At
 // FRIENDLY or better it sends someone to join you every FRIENDLY_SEND_DAYS.
+//
+// Between themselves (ties, -100..100): at ALLY or better two settlements are allies (they
+// send each other food by caravan when one runs short: colonies.ts); at FEUD or worse they
+// feud (they raid each other now and then, starving or not). How you're seen spills over:
+// what you do for or to one, its allies feel half as much, and those feuding with it a
+// quarter as much the other way.
 
 import { logEvent } from './events';
 import { hashRoll } from './hash';
@@ -70,11 +76,35 @@ export function newSettlement(state: SimState, name: string, x: number, y: numbe
   return n;
 }
 
-export function adjustReputation(state: SimState, s: Settlement, by: number): void {
+export function adjustReputation(state: SimState, s: Settlement, by: number, spill = true): void {
   const was = isHostile(s);
   s.reputation = Math.max(-100, Math.min(100, s.reputation + by));
   if (!was && isHostile(s)) logEvent(state, `${s.name} now counts you an enemy: expect more raids`);
   if (was && !isHostile(s)) logEvent(state, `${s.name} no longer counts you an enemy`);
+  if (!spill) return;
+  // Allies feel half of it; those feuding with it, a quarter the other way.
+  for (const o of state.settlements) {
+    if (o === s || o.people <= 0) continue;
+    const t = s.ties[o.id] ?? 0;
+    if (t >= ALLY) adjustReputation(state, o, Math.trunc(by / 2), false);
+    else if (t <= FEUD) adjustReputation(state, o, -Math.trunc(by / 4), false);
+  }
+}
+
+export const ALLY = 40;
+export const FEUD = -40;
+
+/** How two settlements stand: allies, feuding, or neither. */
+export function relation(a: Settlement, b: Settlement): 'allies' | 'feud' | null {
+  const t = a.ties[b.id] ?? 0;
+  return t >= ALLY ? 'allies' : t <= FEUD ? 'feud' : null;
+}
+
+/** Warms (or cools) two settlements to each other, both ways. Returns how they stood before. */
+export function tieSettlements(a: Settlement, b: Settlement, by: number): 'allies' | 'feud' | null {
+  const before = relation(a, b);
+  for (const [x, y] of [[a, b], [b, a]] as const) x.ties[y.id] = Math.max(-100, Math.min(100, (x.ties[y.id] ?? 0) + by));
+  return before;
 }
 
 /** Whose turn it is to send a trader: friendly-ish settlements in turn, or none. */

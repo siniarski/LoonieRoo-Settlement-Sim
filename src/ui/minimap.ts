@@ -4,6 +4,8 @@
 // to jump there. Reads state only; redrawn every few frames.
 
 import { TILE_PX } from '../render/camera';
+import { caravansOf } from '../sim/caravans';
+import { errandsOf } from '../sim/errands';
 import { GROUNDS } from '../sim/grid';
 import { HOSTILE } from '../sim/settlements';
 import type { SimState } from '../sim/state';
@@ -87,6 +89,8 @@ export function createMinimap(view: ViewState) {
       for (const n of state.settlements) dot(n.x, n.y, n.people <= 0 ? '#777777' : n.reputation <= HOSTILE ? '#ff5a4a' : '#7ad7ff', 5);
       for (const z of state.zombies) if (seen(z.pos.x, z.pos.y)) dot(z.pos.x, z.pos.y, '#ff5a4a');
       for (const herd of state.herds) if (herd.heard || seen(herd.x, herd.y)) dot(herd.x, herd.y, '#ff5a4a', 4);
+      for (const e of errandsOf(state)) dot(e.x, e.y, '#ffa24a', 4);
+      for (const c of caravansOf(state)) if (seen(c.x, c.y)) dot(c.x, c.y, '#c49a5a', 3);
       for (const s of state.survivors) dot(s.pos.x, s.pos.y, '#ffffff');
       // What the main view shows (the canvas fills the window).
       const tiles = TILE_PX * view.camera.zoom;

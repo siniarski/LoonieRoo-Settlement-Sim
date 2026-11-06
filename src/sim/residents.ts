@@ -10,6 +10,7 @@
 // thinks well of you, ask one to come with you.
 
 import { REACH, inReach } from './motion';
+import { maybeAsk } from './errands';
 import { placedAt } from './motion';
 import { compound, isFallen } from './colonies';
 import { leaveCorpse } from './corpses';
@@ -183,6 +184,8 @@ export function meetResident(state: SimState, you: Survivor, r: Resident): strin
   if (n.lastTalk === dayOf(state.tick)) return `${r.name} has said all they want to today`;
   n.lastTalk = dayOf(state.tick);
   adjustReputation(state, n, TALK_REP);
+  // They may have something to ask (errands.ts).
+  if (maybeAsk(state, n, idNumber(r.id)) !== null) return null;
   logEvent(state, `${r.name} of ${n.name} talked with ${you.name} a while (${n.name} needs ${n.food < n.people * 2 ? 'food' : 'nothing much'})`);
   return null;
 }

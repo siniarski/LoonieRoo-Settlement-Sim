@@ -1,6 +1,7 @@
 // Top-down canvas view. Reads sim state only; never mutates it.
 
 import { isRadioactive } from '../sim/climate';
+import { caravansOf } from '../sim/caravans';
 import { HEADINGS, vehiclesOf } from '../sim/vehicles';
 import { visibleNow } from '../sim/sight';
 import { isHostile } from '../sim/settlements';
@@ -185,6 +186,22 @@ export function draw(
       if (grid.explored[i] !== 1 || seen[i] === 1) continue;
       const r = tileRect(camera, viewport, x, y);
       ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+  }
+  // Caravans (caravans.ts): a cart and its people, where you can see them.
+  for (const c of caravansOf(state)) {
+    if (!inView(c.x, c.y)) continue;
+    const p = worldToScreen(camera, viewport, c.x + 0.5, c.y + 0.5);
+    ctx.fillStyle = '#8a6a3a';
+    ctx.fillRect(p.x - size * 0.45, p.y - size * 0.25, size * 0.9, size * 0.5);
+    ctx.strokeStyle = '#2a2018';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(p.x - size * 0.45, p.y - size * 0.25, size * 0.9, size * 0.5);
+    ctx.fillStyle = '#e0c9a0';
+    for (let k = 0; k < c.people; k++) {
+      ctx.beginPath();
+      ctx.arc(p.x - size * 0.4 + k * size * 0.4, p.y + size * 0.5, Math.max(2, size * 0.14), 0, Math.PI * 2);
+      ctx.fill();
     }
   }
   for (const h of state.herds) {
