@@ -48,3 +48,27 @@ What it says:
   C# (needs the .NET SDK; it adds a compile on every change, not measured here), or the TypeScript sim kept and
   fed to Godot (Godot doesn't run JavaScript: the sim would run in Node and stream a render snapshot over a
   socket, the same snapshot problem as the Web Worker).
+
+## Pathfinding (A*)
+
+The same A* in every language (4 ways, Manhattan distance, a binary heap of f * 2^21 + tile, stale entries skipped;
+C++ uses std::priority_queue over the same keys) over the same start and goal pairs, picked in each world's biggest
+open area: `npm run harness -- godotastar` (TypeScript, after `godotexport`), `astar.gd` (GDScript, the C++ plugin's
+`BenchCpp.astar_paths`, and Godot's own `AStarGrid2D`), `astarcs.tscn` (C#). Every one found the same total path
+length (16,479 steps on the 128 world, 43,690 on the 1024), so they did the same work. Tiles only: edge walls are
+ignored, as `AStarGrid2D` can't express them. One timed run after a warm-up.
+
+| | 128 world, 200 paths | 1024 world, 60 long paths |
+|---|---|---|
+| TypeScript (Node, V8) | 12.6 ms | 341 ms |
+| The game's own findPath (TypeScript, with edge walls and doors) | 17.1 ms | 975 ms |
+| C#, Debug (as the editor runs it) | 15.6 ms | 471 ms |
+| C#, optimised | 7.8 ms | 190 ms |
+| C++ plugin (GDExtension) | 3.8 ms | 116 ms |
+| Godot's AStarGrid2D (C++) | 2.8 ms (+0.7 ms to set up the grid) | 458 ms (+47 ms setup) |
+| GDScript | 266 ms | 8,231 ms |
+
+- Against TypeScript: optimised C# is 1.6-1.8x faster, the C++ plugin 2.9-3.3x, GDScript 21-24x slower.
+- AStarGrid2D is the quickest on short paths and slower than our own C++ (and C#) on long ones.
+- The game's findPath costs 1.4-2.9x the plain A* for what it adds (edge walls, doors, and its caches).
+

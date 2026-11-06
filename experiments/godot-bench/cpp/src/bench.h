@@ -12,4 +12,5 @@ protected:
 
 public:
 	static int64_t bfs_floods(const godot::PackedByteArray &walk, int64_t size, const godot::PackedInt32Array &starts);
+	static int64_t astar_paths(const godot::PackedByteArray &walk, int64_t size, const godot::PackedInt32Array &pairs);
 };
