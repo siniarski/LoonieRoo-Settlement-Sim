@@ -1,0 +1,18 @@
+; Godot benchmark for the LoonieRoo dev loop (see README.md). Not part of the game.
+config_version=5
+
+[application]
+
+config/name="LoonieRoo Godot bench"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/vsync/vsync_mode=0
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
