@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The game's simulation, ported from src/sim (TypeScript). Pure C#: no Godot, so it builds, tests and runs
+       anywhere. Deterministic like the original: same seed and commands, same state, and the same as the
+       TypeScript sim (the Parity tool checks). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>LoonieRoo.Sim</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Generated code: nullable annotations outside a nullable context, and JS null checks on values C# knows are never null. -->
+    <NoWarn>$(NoWarn);CS8669;CS0472</NoWarn>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Parity/Parity.csproj" />
+  <Project Path="Sim.Tests/Sim.Tests.csproj" />
+  <Project Path="Sim/Sim.csproj" />
+</Solution>
