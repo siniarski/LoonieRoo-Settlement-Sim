@@ -33,7 +33,7 @@ public partial class ClothingTest
     }
 
     /// <summary>Just after nightfall (21:00) on the first night of winter, past the raid roll.</summary>
-    public static readonly double WINTER_NIGHT = (((3 * Seasons.SEASON_DAYS) * Time.DAY_LENGTH) + (15 * Time.TICKS_PER_HOUR)) + 1;
+    public static readonly double WINTER_NIGHT = (((double)(((double)(3) * (Seasons.SEASON_DAYS))) * (Time.DAY_LENGTH)) + ((double)(15) * (Time.TICKS_PER_HOUR))) + 1;
 
     /// <summary>clothing</summary>
     public class D001_clothing
@@ -76,7 +76,7 @@ public partial class ClothingTest
                 st.tick = Js.I(WINTER_NIGHT);
                 st.zombiesTonight = 0;
                 Js.NN(Js.Get(st.survivors, 0)).rest = 99999;
-                for (var i = 0; i < (2 * Time.TICKS_PER_HOUR); i++)
+                for (var i = 0; i < ((double)(2) * (Time.TICKS_PER_HOUR)); i++)
                 {
                     Tick.tick(st);
                 }
@@ -100,7 +100,7 @@ public partial class ClothingTest
             var z = Zombies.addZombie(state, s.pos.x, s.pos.y + 1, 200, "static");
             z.windup = 1;
             Tick.tick(state);
-            expect(Health.HEALTH_MAX - s.health).toBe(JsMath.round(((double)((Zombies.ZOMBIE_DAMAGE * 70)) / (100))));
+            expect(Health.HEALTH_MAX - s.health).toBe(JsMath.round(((double)(((double)(Zombies.ZOMBIE_DAMAGE) * (70))) / (100))));
             expect(s.body).toBeNull();
             expect(state.items).toHaveLength(0);
         }

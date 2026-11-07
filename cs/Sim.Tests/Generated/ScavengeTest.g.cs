@@ -83,7 +83,7 @@ public partial class ScavengeTest
             var state = setup(["s...c", "....."]);
             markAll(state);
             var ticks = runUntil(state, (st) => Js.NN(Js.Get(crates(st), 0)).loot == 0);
-            expect(ticks).toBeGreaterThanOrEqual(FurnitureMod.CRATE_LOOT * Jobs.SCAVENGE_WORK);
+            expect(ticks).toBeGreaterThanOrEqual(((double)(FurnitureMod.CRATE_LOOT) * (Jobs.SCAVENGE_WORK)));
             expect(state.items).toHaveLength(FurnitureMod.CRATE_LOOT);
             expect(Js.NN(Js.Get(crates(state), 0)).scavenge).toBe(false);
             for (var i = 0; i < 20; i++)
@@ -104,7 +104,7 @@ public partial class ScavengeTest
                 return state.items.map((i) => i.kind);
             }
             var kinds = run();
-            expect(kinds).toHaveLength(2 * FurnitureMod.CRATE_LOOT);
+            expect(kinds).toHaveLength(((double)(2) * (FurnitureMod.CRATE_LOOT)));
             var table = Jobs.SCAVENGE_TABLE.map((__p0) =>
         {
             var k = __p0.Item1;

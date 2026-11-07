@@ -106,7 +106,7 @@ public static partial class Zombies
             var cells = new JsMap<double, List<Zombie>>();
             foreach (var z in Js.Iter(list))
             {
-                var k = (z.pos.y * width) + z.pos.x;
+                var k = ((double)(z.pos.y) * (width)) + z.pos.x;
                 var at = cells.get(k);
                 if (Js.T(at))
                 {
@@ -130,7 +130,7 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                foreach (var z in Js.Iter(b.cells.get((y * width) + x) ?? []))
+                foreach (var z in Js.Iter(b.cells.get(((double)(y) * (width)) + x) ?? []))
                 {
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
@@ -171,7 +171,7 @@ public static partial class Zombies
 
     public static double zombieHealthForNight(double night)
     {
-        return ZOMBIE_HEALTH + (ZOMBIE_HEALTH_PER_NIGHT * (night - 1));
+        return ZOMBIE_HEALTH + ((double)(ZOMBIE_HEALTH_PER_NIGHT) * ((night - 1)));
     }
 
     /// <summary>Tonight's total: fixed at nightfall from the colony's size then.</summary>
@@ -203,7 +203,7 @@ public static partial class Zombies
         {
             return 0;
         }
-        return JsMath.min(size, count - (((double)(t) / (interval)) * size));
+        return JsMath.min(size, count - ((double)(((double)(t) / (interval))) * (size)));
     }
     public static double spawnsAt(double tick, double? total = default) => spawnsAt((int)tick, total);
 
@@ -240,7 +240,7 @@ public static partial class Zombies
             if (n > 0)
             {
                 state.zombies = state.zombies.filter((z) => !leaves(z));
-                Events.logEvent(state, $"{Js.Str(n)} zombie{Js.Str((n == 1) ? "" : "s")} shambled off at dawn");
+                Events.logEvent(state, $"{Js.Str(n)} zombie{Js.Str((n == 1) ? Js.Str("") : Js.Str("s"))} shambled off at dawn");
             }
             updateAll(state);
             return;
@@ -248,9 +248,9 @@ public static partial class Zombies
         var night = Js.NN(Time.nightNumber(state.tick));
         if (Time.ticksIntoNight(state.tick) == 0)
         {
-            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night)) * (state.harsh ? groupShare(state.survivors.length) : 1))));
+            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((double)(((double)(((double)(zombiesForNight(night, state.survivors.length)) * (Director.threatScale(state)))) * (EndgameMod.siegeFactor(state, night)))) * ((state.harsh ? groupShare(state.survivors.length) : 1))))));
             var siege = EndgameMod.siegeFactor(state, night) > 1;
-            Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(siege ? " (a SIEGE night)" : "")}");
+            Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(siege ? Js.Str(" (a SIEGE night)") : Js.Str(""))}");
         }
         var arriving = JsMath.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
         if (arriving > 0)
@@ -368,7 +368,7 @@ public static partial class Zombies
         {
             order.set(s, i);
             var t = Motion.tileOf(s.at);
-            var k = (t.y * width) + t.x;
+            var k = ((double)(t.y) * (width)) + t.x;
             var at = cells.get(k);
             if (Js.T(at))
             {
@@ -396,7 +396,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    var c = cells.get(((t.y + dy) * width) + x);
+                    var c = cells.get(((double)((t.y + dy)) * (width)) + x);
                     if (Js.T(c))
                     {
                         found.pushAll(c);
@@ -522,7 +522,7 @@ public static partial class Zombies
             var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
             if ((e >= 0) && (z.cooldown == 0))
             {
-                Breach.damageEdge(state, e, ZOMBIE_DAMAGE * Js.Get(ZombieKinds.VARIANTS, z.variant).battering);
+                Breach.damageEdge(state, e, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
                 z.cooldown = ZOMBIE_ATTACK_EVERY;
             }
             return;
@@ -537,7 +537,7 @@ public static partial class Zombies
                     {
                         Events.logEvent(state, $"Raiders firebombed the {Js.Str(Grids.getTile(state.grid, next.x, next.y))} at ({Js.Str(next.x)}, {Js.Str(next.y)})");
                     }
-                    Breach.damageStructure(state, next.x, next.y, ZOMBIE_DAMAGE * Js.Get(ZombieKinds.VARIANTS, z.variant).battering);
+                    Breach.damageStructure(state, next.x, next.y, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
                     z.cooldown = ZOMBIE_ATTACK_EVERY;
                 }
                 return;
@@ -556,14 +556,14 @@ public static partial class Zombies
     public const int CLOSE_IN = 640;
 
     /// <summary>Zombies push apart to this far, centre to centre.</summary>
-    public static readonly double CROWD = 2 * Motion.BODY_RADIUS;
+    public static readonly double CROWD = ((double)(2) * (Motion.BODY_RADIUS));
 
     /// <summary>Move a zombie's centre towards a point; true once it's there.</summary>
     public static bool glide(Zombie z, Point to, double speed)
     {
         var dx = to.x - z.at.x;
         var dy = to.y - z.at.y;
-        if (((dx * dx) + (dy * dy)) <= (speed * speed))
+        if ((((double)(dx) * (dx)) + ((double)(dy) * (dy))) <= ((double)(speed) * (speed)))
         {
             z.at = new Point { x = Js.I(to.x), y = Js.I(to.y) };
             return true;
@@ -582,7 +582,7 @@ public static partial class Zombies
             return false;
         }
         var d2 = Motion.distance2(target.at, z.at);
-        if ((d2 > (CLOSE_IN * CLOSE_IN)) || !clearLine(state, z.pos, target.pos))
+        if ((d2 > ((double)(CLOSE_IN) * (CLOSE_IN))) || !clearLine(state, z.pos, target.pos))
         {
             return false;
         }
@@ -629,7 +629,7 @@ public static partial class Zombies
             {
                 return true;
             }
-            var e2 = 2 * err;
+            var e2 = ((double)(2) * (err));
             var px = x;
             var py = y;
             if (e2 >= dy)
@@ -658,7 +658,7 @@ public static partial class Zombies
         var buckets = new JsMap<double, List<Zombie>>();
         foreach (var z in Js.Iter(state.zombies))
         {
-            var k = (z.pos.y * width) + z.pos.x;
+            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
             var list = buckets.get(k);
             if (Js.T(list))
             {
@@ -675,7 +675,7 @@ public static partial class Zombies
         {
             foreach (var s in Js.Iter(list))
             {
-                var k = (s.pos.y * width) + s.pos.x;
+                var k = ((double)(s.pos.y) * (width)) + s.pos.x;
                 PushApartOthers entry = new PushApartOthers { s = s, order = order++ };
                 var at = others.get(k);
                 if (Js.T(at))
@@ -700,14 +700,14 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    foreach (var o in Js.Iter(buckets.get((ny * width) + nx) ?? []))
+                    foreach (var o in Js.Iter(buckets.get(((double)(ny) * (width)) + nx) ?? []))
                     {
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
                             continue;
                         }
                         var d2 = Motion.distance2(z.at, o.at);
-                        if (d2 >= (CROWD * CROWD))
+                        if (d2 >= ((double)(CROWD) * (CROWD)))
                         {
                             continue;
                         }
@@ -715,8 +715,8 @@ public static partial class Zombies
                         var ux = (d == 0) ? 1 : ((double)((o.at.x - z.at.x)) / (d));
                         var uy = (d == 0) ? 0 : ((double)((o.at.y - z.at.y)) / (d));
                         var half = JsMath.ceil(((double)((CROWD - d)) / (2)));
-                        o.at = Motion.slide(state.grid, o.at, JsMath.round(ux * half), JsMath.round(uy * half), moverOf(o));
-                        z.at = Motion.slide(state.grid, z.at, -JsMath.round(ux * half), -JsMath.round(uy * half), moverOf(z));
+                        o.at = Motion.slide(state.grid, o.at, JsMath.round(((double)(ux) * (half))), JsMath.round(((double)(uy) * (half))), moverOf(o));
+                        z.at = Motion.slide(state.grid, z.at, -JsMath.round(((double)(ux) * (half))), -JsMath.round(((double)(uy) * (half))), moverOf(z));
                     }
                 }
             }
@@ -731,7 +731,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    var at = others.get((ny * width) + nx);
+                    var at = others.get(((double)(ny) * (width)) + nx);
                     if (Js.T(at))
                     {
                         near.pushAll(at);
@@ -746,14 +746,14 @@ public static partial class Zombies
             {
                 var s = __o5.s;
                 var d2 = Motion.distance2(z.at, s.at);
-                if (d2 >= (CROWD * CROWD))
+                if (d2 >= ((double)(CROWD) * (CROWD)))
                 {
                     continue;
                 }
                 var d = JsMath.sqrt(d2);
                 var ux = (d == 0) ? 1 : ((double)((z.at.x - s.at.x)) / (d));
                 var uy = (d == 0) ? 0 : ((double)((z.at.y - s.at.y)) / (d));
-                z.at = Motion.slide(state.grid, z.at, JsMath.round(ux * (CROWD - d)), JsMath.round(uy * (CROWD - d)), moverOf(z));
+                z.at = Motion.slide(state.grid, z.at, JsMath.round(((double)(ux) * ((CROWD - d)))), JsMath.round(((double)(uy) * ((CROWD - d)))), moverOf(z));
             }
         }
     }
@@ -835,7 +835,7 @@ public static partial class Zombies
         var damage = (z.kind == "raider") ? Visitors.RAIDER_DAMAGE : Js.Get(ZombieKinds.VARIANTS, z.variant).damage;
         var armoured = Clothing.wearing(state, s, "armour") != null;
         var limb = Wounds.maybeWound(state, s, z.id);
-        s.health = JsMath.max(0, s.health - Clothing.armourDamage(state, s, Skills.hasTrait(s, "tough") ? JsMath.round(((double)((damage * 3)) / (4))) : damage));
+        s.health = JsMath.max(0, s.health - Clothing.armourDamage(state, s, Skills.hasTrait(s, "tough") ? JsMath.round(((double)(((double)(damage) * (3))) / (4))) : damage));
         s.lastHurtBy = (z.kind == "raider") ? "a raider" : "a zombie attack";
         s.hurtTick = state.tick;
         s.note = $"attacked by a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})";
@@ -918,7 +918,7 @@ public static partial class Zombies
             return true;
         }
         Corpses.leaveCorpse(state, z.pos, null);
-        Events.logEvent(state, $"{Js.Str(by.name)} killed a {Js.Str((z.kind == "raider") ? "raider" : "zombie")}");
+        Events.logEvent(state, $"{Js.Str(by.name)} killed a {Js.Str((z.kind == "raider") ? Js.Str("raider") : Js.Str("zombie"))}");
         return true;
     }
 

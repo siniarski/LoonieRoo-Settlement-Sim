@@ -13,7 +13,7 @@ public partial class WildlifeTest
         var rows = Js.ArrayFrom(size, (int y) => (y == (Js.Shr(size, 1))) ? ((".".repeat(Js.Shr(size, 1)) + "s") + ".".repeat((size - (Js.Shr(size, 1))) - 1)) : ".".repeat(size));
         var state = ScenarioMod.loadScenario(new Scenario { seed = 5, map = rows });
         state.settings = Js.With(Js.CopyAs<Settings>(state.settings), __s0 => { __s0.zombies = 0; });
-        state.tick = Js.I((8 * Time.TICKS_PER_HOUR) + 1);
+        state.tick = Js.I(((double)(8) * (Time.TICKS_PER_HOUR)) + 1);
         return state;
     }
 
@@ -76,7 +76,7 @@ public partial class WildlifeTest
             var s = Js.NN(Js.Get(state.survivors, 0));
             var far = Animals.addAnimal(state, "wolf", s.pos.x + 10, s.pos.y);
             animals(state, 40);
-            expect(s.health).toBe(100 * 10);
+            expect(s.health).toBe(((double)(100) * (10)));
             state.animals.splice(state.animals.indexOf(far), 1);
             var close = Animals.addAnimal(state, "wolf", s.pos.x + 1, s.pos.y);
             animals(state, 30);
@@ -155,7 +155,7 @@ public partial class WildlifeTest
             var state = wild(200);
             var s = Js.NN(Js.Get(state.survivors, 0));
             var r = Animals.addAnimal(state, "rabbit", JsMath.min(199, (s.pos.x + Animals.WILD_RADIUS) + 5), s.pos.y);
-            state.tick = Js.I((10 * Time.TICKS_PER_HOUR) - 1);
+            state.tick = Js.I(((double)(10) * (Time.TICKS_PER_HOUR)) - 1);
             animals(state, 1);
             expect(state.animals.includes(r)).toBe(false);
         }
@@ -164,7 +164,7 @@ public partial class WildlifeTest
         public void T011_the_whole_sim_stays_sound_with_wildlife_about_for_a_few_days()
         {
             var state = wild();
-            for (var k = 0; k < (3 * Time.DAY_LENGTH); k++)
+            for (var k = 0; k < ((double)(3) * (Time.DAY_LENGTH)); k++)
             {
                 Tick.tick(state);
                 if ((k % 200) == 0)

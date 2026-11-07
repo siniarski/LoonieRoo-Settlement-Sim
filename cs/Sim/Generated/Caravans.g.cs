@@ -77,15 +77,15 @@ public static partial class Caravans
     /// <summary>The dead catch up with it: a person and a share of the load lost; all of them, and it's gone.</summary>
     public static bool ambushed(SimState state, Caravan c)
     {
-        var chance = ((double)(((AMBUSH_CHANCE * (1 + ((double)(Time.dayOf(state.tick)) / (20)))) * state.settings.zombies)) / (100));
+        var chance = ((double)(((double)(((double)(AMBUSH_CHANCE) * ((1 + ((double)(Time.dayOf(state.tick)) / (20)))))) * (state.settings.zombies))) / (100));
         if (Hash.hashRoll(Hash.idNumber(c.id), state.tick, 0xca2) >= chance)
         {
             return false;
         }
         var share = ((double)(1) / (c.people));
         c.people -= 1;
-        c.food = JsMath.floor(c.food * (1 - share));
-        c.goods = c.goods.slice(0, JsMath.floor(c.goods.length * (1 - share)));
+        c.food = JsMath.floor(((double)(c.food) * ((1 - share))));
+        c.goods = c.goods.slice(0, JsMath.floor(((double)(c.goods.length) * ((1 - share)))));
         var from = Settlements.getSettlement(state, c.from);
         if (Js.T(from))
         {

@@ -104,7 +104,7 @@ public partial class SightTest
             var seen = Sight.visibleNow(state);
             double at(double x, double y)
             {
-                return Js.Get(seen, (y * state.grid.width) + x);
+                return Js.Get(seen, ((double)(y) * (state.grid.width)) + x);
             }
             expect(at(7, 2)).toBe(1);
             expect(at(0, 7)).toBe(0);
@@ -198,7 +198,7 @@ public partial class SightTest
             var sneak = blow(false);
             var open = blow(true);
             expect(open).toBeGreaterThan(0);
-            expect(sneak).toBe(JsMath.round(((double)((open * ControlMod.SNEAK_ATTACK_PCT)) / (100))));
+            expect(sneak).toBe(JsMath.round(((double)(((double)(open) * (ControlMod.SNEAK_ATTACK_PCT))) / (100))));
         }
     }
 }

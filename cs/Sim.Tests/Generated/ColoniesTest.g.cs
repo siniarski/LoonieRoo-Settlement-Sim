@@ -14,7 +14,7 @@ public partial class ColoniesTest
 
     public static void dawn(SimState state, double day)
     {
-        state.tick = Js.I(day * Time.DAY_LENGTH);
+        state.tick = Js.I(((double)(day) * (Time.DAY_LENGTH)));
         Colonies.updateColonies(state);
     }
 

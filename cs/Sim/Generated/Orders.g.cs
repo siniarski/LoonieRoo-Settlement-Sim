@@ -126,7 +126,7 @@ public static partial class Orders
         {
             for (var k = 1; k <= FIRE_LANE; k++)
             {
-                if ((p.x == (leader.pos.x + (c.facing.x * k))) && (p.y == (leader.pos.y + (c.facing.y * k))))
+                if ((p.x == (leader.pos.x + ((double)(c.facing.x) * (k)))) && (p.y == (leader.pos.y + ((double)(c.facing.y) * (k)))))
                 {
                     return true;
                 }

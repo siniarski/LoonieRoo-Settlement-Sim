@@ -124,7 +124,7 @@ public partial class MedicineTest
                 return s.health - start;
             }
             var plain = healed([]);
-            expect(healed([new() { x = Js.I(1), y = Js.I(2), purpose = "infirmary" }])).toBe(2 * plain);
+            expect(healed([new() { x = Js.I(1), y = Js.I(2), purpose = "infirmary" }])).toBe(((double)(2) * (plain)));
         }
 
         [Fact(DisplayName = "infirmary > needs a bed; the planner furnishes one per 4 survivors")]

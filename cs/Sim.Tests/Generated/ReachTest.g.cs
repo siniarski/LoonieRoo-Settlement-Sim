@@ -14,9 +14,9 @@ public partial class ReachTest
         {
             return false;
         }
-        var seen = new Uint8Array(grid.width * grid.height);
+        var seen = new Uint8Array(((double)(grid.width) * (grid.height)));
         List<Point> stack = [from];
-        seen[Js.Idx((from.y * grid.width) + from.x)] = 1;
+        seen[Js.Idx(((double)(from.y) * (grid.width)) + from.x)] = 1;
         while (Js.T(stack.length))
         {
             var p = Js.NN(stack.pop());
@@ -27,7 +27,7 @@ public partial class ReachTest
             foreach (var d in Js.Iter(Pathfinding.DIRS))
             {
                 Point n = new Point { x = Js.I(p.x + d.x), y = Js.I(p.y + d.y) };
-                var i = (n.y * grid.width) + n.x;
+                var i = ((double)(n.y) * (grid.width)) + n.x;
                 if (Js.T((Js.T((Js.T(((((n.x < 0) || (n.y < 0)) || (n.x >= grid.width)) || (n.y >= grid.height)) || Js.T(Js.Get(seen, i)))) || !Pathfinding.isPassable(grid, n.x, n.y, mover))) || !Pathfinding.crossable(grid, p.x, p.y, n.x, n.y, mover)))
                 {
                     continue;
@@ -74,8 +74,8 @@ public partial class ReachTest
                 {
                     for (var k = 0; k < 40; k++)
                     {
-                        var a = at(Js.NN(Js.Get(floor, JsMath.floor(Hash.hashRoll(round, k, 3) * floor.length))));
-                        var b = ((k % 4) == 0) ? at(Js.NN(Js.Get(floor, JsMath.floor(Hash.hashRoll(round, k, 4) * floor.length)))) : new Point { x = Js.I(JsMath.min(127, JsMath.max(0, (a.x + JsMath.floor(Hash.hashRoll(round, k, 5) * 13)) - 6))), y = Js.I(JsMath.min(127, JsMath.max(0, (a.y + JsMath.floor(Hash.hashRoll(round, k, 6) * 13)) - 6))) };
+                        var a = at(Js.NN(Js.Get(floor, JsMath.floor(((double)(Hash.hashRoll(round, k, 3)) * (floor.length))))));
+                        var b = ((k % 4) == 0) ? at(Js.NN(Js.Get(floor, JsMath.floor(((double)(Hash.hashRoll(round, k, 4)) * (floor.length)))))) : new Point { x = Js.I(JsMath.min(127, JsMath.max(0, (a.x + JsMath.floor(((double)(Hash.hashRoll(round, k, 5)) * (13)))) - 6))), y = Js.I(JsMath.min(127, JsMath.max(0, (a.y + JsMath.floor(((double)(Hash.hashRoll(round, k, 6)) * (13)))) - 6))) };
                         var want = reference(grid, a, b, mover);
                         expect(Pathfinding.canReach(grid, state.walkabilityVersion, a, [b], mover), $"{Js.Str(mover)} {Js.Str(a.x)},{Js.Str(a.y)} -> {Js.Str(b.x)},{Js.Str(b.y)}").toBe(want);
                         @checked++;
@@ -86,7 +86,7 @@ public partial class ReachTest
                     }
                 }
             }
-            expect(@checked).toBe((6 * 4) * 40);
+            expect(@checked).toBe(((double)(((double)(6) * (4))) * (40)));
             expect(reachable).toBeGreaterThan(50);
             expect(reachable).toBeLessThan(@checked);
         }
@@ -119,9 +119,9 @@ public partial class ReachTest
             {
                 for (var k = 0; k < 25; k++)
                 {
-                    var x = JsMath.floor(Hash.hashRoll(round, k, 11) * 128);
-                    var y = JsMath.floor(Hash.hashRoll(round, k, 12) * 128);
-                    var bx = ((k % 5) == 0) ? (32 * (1 + JsMath.floor(Hash.hashRoll(round, k, 13) * 3))) : x;
+                    var x = JsMath.floor(((double)(Hash.hashRoll(round, k, 11)) * (128)));
+                    var y = JsMath.floor(((double)(Hash.hashRoll(round, k, 12)) * (128)));
+                    var bx = ((k % 5) == 0) ? ((double)(32) * ((1 + JsMath.floor(((double)(Hash.hashRoll(round, k, 13)) * (3)))))) : x;
                     var roll = Hash.hashRoll(round, k, 14);
                     if (roll < 0.3)
                     {
@@ -129,9 +129,9 @@ public partial class ReachTest
                     }
                     else if (roll < 0.8)
                     {
-                        Grids.setEdge(grid, bx, y, (roll < 0.55) ? "n" : "w", Js.NN(Js.Get(kinds, JsMath.floor(Hash.hashRoll(round, k, 15) * kinds.length))));
+                        Grids.setEdge(grid, bx, y, (roll < 0.55) ? "n" : "w", Js.NN(Js.Get(kinds, JsMath.floor(((double)(Hash.hashRoll(round, k, 15)) * (kinds.length))))));
                     }
-                    else if (Js.Get(grid.tiles, (y * 128) + x) == "door")
+                    else if (Js.Get(grid.tiles, ((double)(y) * (128)) + x) == "door")
                     {
                         Commands.applyCommand(state, new Command { type = "toggleLock", x = Js.I(x), y = Js.I(y) });
                     }
@@ -140,8 +140,8 @@ public partial class ReachTest
                         Grids.setTile(grid, x, y, "door");
                     }
                 }
-                var cx = ((round % 3) == 0) ? (31 + (round % 2)) : (10 + JsMath.floor(Hash.hashRoll(round, 31) * 100));
-                var cy = 10 + JsMath.floor(Hash.hashRoll(round, 32) * 100);
+                var cx = ((round % 3) == 0) ? (31 + (round % 2)) : (10 + JsMath.floor(((double)(Hash.hashRoll(round, 31)) * (100))));
+                var cy = 10 + JsMath.floor(((double)(Hash.hashRoll(round, 32)) * (100)));
                 for (var x = cx; x <= (cx + 2); x++)
                 {
                     for (var y = cy; y <= (cy + 2); y++)
@@ -173,14 +173,14 @@ public partial class ReachTest
                 {
                     for (var k = 0; k < 30; k++)
                     {
-                        var a = at(Js.NN(Js.Get(floor, JsMath.floor(Hash.hashRoll(round, k, 21) * floor.length))));
-                        var b = ((k % 3) == 0) ? at(Js.NN(Js.Get(floor, JsMath.floor(Hash.hashRoll(round, k, 22) * floor.length)))) : new Point { x = Js.I(JsMath.min(127, JsMath.max(0, (a.x + JsMath.floor(Hash.hashRoll(round, k, 23) * 41)) - 20))), y = Js.I(JsMath.min(127, JsMath.max(0, (a.y + JsMath.floor(Hash.hashRoll(round, k, 24) * 41)) - 20))) };
+                        var a = at(Js.NN(Js.Get(floor, JsMath.floor(((double)(Hash.hashRoll(round, k, 21)) * (floor.length))))));
+                        var b = ((k % 3) == 0) ? at(Js.NN(Js.Get(floor, JsMath.floor(((double)(Hash.hashRoll(round, k, 22)) * (floor.length)))))) : new Point { x = Js.I(JsMath.min(127, JsMath.max(0, (a.x + JsMath.floor(((double)(Hash.hashRoll(round, k, 23)) * (41)))) - 20))), y = Js.I(JsMath.min(127, JsMath.max(0, (a.y + JsMath.floor(((double)(Hash.hashRoll(round, k, 24)) * (41)))) - 20))) };
                         expect(Pathfinding.canReach(grid, state.walkabilityVersion, a, [b], mover), $"round {Js.Str(round)} {Js.Str(mover)} {Js.Str(a.x)},{Js.Str(a.y)} -> {Js.Str(b.x)},{Js.Str(b.y)}").toBe(reference(grid, a, b, mover));
                         @checked++;
                     }
                 }
             }
-            expect(@checked).toBe(((12 * 5) * 30) + (12 * 6));
+            expect(@checked).toBe(((double)(((double)(12) * (5))) * (30)) + ((double)(12) * (6)));
         }
     }
 }

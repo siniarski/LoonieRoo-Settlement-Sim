@@ -126,8 +126,8 @@ public static partial class BodyMod
             return;
         }
         var alone = !state.survivors.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= PANIC_RANGE));
-        var factor = (alone ? 1.5 : 1) * (Resolve.isSteeled(s) ? 0.5 : (Resolve.isBreaking(s) ? 1.5 : 1));
-        s.panic = clamp(s.panic + JsMath.round((near * PANIC_PER_ZOMBIE) * factor));
+        var factor = ((double)((alone ? 1.5 : 1)) * ((Resolve.isSteeled(s) ? 0.5 : (Resolve.isBreaking(s) ? 1.5 : 1))));
+        s.panic = clamp(s.panic + JsMath.round(((double)(((double)(near) * (PANIC_PER_ZOMBIE))) * (factor))));
     }
 
     public static bool isWinded(Survivor s)

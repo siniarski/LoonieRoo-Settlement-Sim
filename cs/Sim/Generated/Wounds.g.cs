@@ -14,12 +14,12 @@ public static partial class Wounds
 {
     static Wounds()
     {
-        Time.onClock(() => WOUND_TICKS = 2 * Time.DAY_LENGTH);
+        Time.onClock(() => WOUND_TICKS = ((double)(2) * (Time.DAY_LENGTH)));
     }
 
     public const double WOUND_CHANCE = 0.15;
 
-    public static double WOUND_TICKS = 2 * Time.DAY_LENGTH;
+    public static double WOUND_TICKS = ((double)(2) * (Time.DAY_LENGTH));
 
     public const int BLEED_EVERY = 15;
 

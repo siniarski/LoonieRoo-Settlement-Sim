@@ -39,11 +39,11 @@ public static partial class Herds
 
     public static void updateHerds(SimState state)
     {
-        if (((Time.dayOf(state.tick) >= 2) && (Time.tickOfDay(state.tick) == (HERD_HOUR * Time.TICKS_PER_HOUR))) && (Rng.random(state) < HERD_CHANCE))
+        if (((Time.dayOf(state.tick) >= 2) && (Time.tickOfDay(state.tick) == ((double)(HERD_HOUR) * (Time.TICKS_PER_HOUR)))) && (Rng.random(state) < HERD_CHANCE))
         {
             startHerd(state);
         }
-        var warnRadius = Towers.hasTower(state) ? (WARN_RADIUS * Towers.TOWER_WARN_FACTOR) : WARN_RADIUS;
+        var warnRadius = Towers.hasTower(state) ? ((double)(WARN_RADIUS) * (Towers.TOWER_WARN_FACTOR)) : WARN_RADIUS;
         foreach (var h in Js.Iter((state.herds).ToList()))
         {
             if (!Js.T(h.heard) && state.survivors.some((s) => Space.manhattan(s.pos, h) <= warnRadius))
@@ -102,7 +102,7 @@ public static partial class Herds
         {
             var cx = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0.0)) / (state.survivors.length)));
             var cy = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0.0)) / (state.survivors.length)));
-            to = new Point { x = Js.I(clamp((2 * cx) - from.x, width)), y = Js.I(clamp((2 * cy) - from.y, height)) };
+            to = new Point { x = Js.I(clamp(((double)(2) * (cx)) - from.x, width)), y = Js.I(clamp(((double)(2) * (cy)) - from.y, height)) };
         }
         else
         {
@@ -129,8 +129,8 @@ public static partial class Herds
         {
             return "nearby";
         }
-        var ns = ((JsMath.abs(dy) * 2) < JsMath.abs(dx)) ? "" : ((dy < 0) ? "north" : "south");
-        var ew = ((JsMath.abs(dx) * 2) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
+        var ns = (((double)(JsMath.abs(dy)) * (2)) < JsMath.abs(dx)) ? "" : ((dy < 0) ? "north" : "south");
+        var ew = (((double)(JsMath.abs(dx)) * (2)) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
         return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (ns is var __or1 && Js.T(__or1) ? __or1 : ew);
     }
     public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
@@ -147,10 +147,10 @@ public static partial class Herds
         var n = JsMath.min(h.size, Zombies.MAX_ZOMBIES - state.zombies.length);
         var __d2 = state.grid;
         var width = __d2.width;
-        var taken = Js.Set(state.zombies.map((z) => (z.pos.y * width) + z.pos.x));
+        var taken = Js.Set(state.zombies.map((z) => ((double)(z.pos.y) * (width)) + z.pos.x));
         bool free(double x, double y)
         {
-            return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has((y * width) + x);
+            return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has(((double)(y) * (width)) + x);
         }
         List<Zombie> made = [];
         for (var i = 0; i < n; i++)
@@ -161,7 +161,7 @@ public static partial class Herds
                 break;
             }
             var z = Zombies.addZombie(state, p.x, p.y, Zombies.zombieHealthForNight(Time.dayOf(state.tick)), "herd");
-            taken.add((p.y * width) + p.x);
+            taken.add(((double)(p.y) * (width)) + p.x);
             ZombieKinds.giveVariant(z, Time.dayOf(state.tick));
             z.heading = Js.CopyAs<Point>(h.to);
             made.push(z);
@@ -181,7 +181,7 @@ public static partial class Herds
         var cells = new JsMap<double, List<Point>>();
         double cell(double x, double y)
         {
-            return (JsMath.floor(((double)(y) / (WAKE_RADIUS))) * 100003) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
+            return ((double)(JsMath.floor(((double)(y) / (WAKE_RADIUS)))) * (100003)) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
         }
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -202,7 +202,7 @@ public static partial class Herds
             {
                 for (var dx = -1; dx <= 1; dx++)
                 {
-                    foreach (var p in Js.Iter(cells.get(cell(d.x + (dx * WAKE_RADIUS), d.y + (dy * WAKE_RADIUS))) ?? []))
+                    foreach (var p in Js.Iter(cells.get(cell(d.x + ((double)(dx) * (WAKE_RADIUS)), d.y + ((double)(dy) * (WAKE_RADIUS)))) ?? []))
                     {
                         if (Space.manhattan(p, d) <= WAKE_RADIUS)
                         {

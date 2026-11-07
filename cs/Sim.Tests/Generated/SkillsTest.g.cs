@@ -51,9 +51,9 @@ public partial class SkillsTest
         public void T003_each_level_makes_the_work_quicker_up_to_half_as_fast_again()
         {
             var novice = removeWall(0).ticks;
-            var master = removeWall(Skills.MAX_LEVEL * Skills.XP_PER_LEVEL).ticks;
+            var master = removeWall(((double)(Skills.MAX_LEVEL) * (Skills.XP_PER_LEVEL))).ticks;
             expect(master).toBeLessThan(novice);
-            expect(master).toBeGreaterThanOrEqual(JsMath.floor(((double)((novice * 2)) / (3))) - 2);
+            expect(master).toBeGreaterThanOrEqual(JsMath.floor(((double)(((double)(novice) * (2))) / (3))) - 2);
         }
     }
 
@@ -92,12 +92,12 @@ public partial class SkillsTest
             Tick.tick(state);
             expect(s.move?.duration).toBe(Survivors.TICKS_PER_TILE - 1);
             var fight = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["zs"] });
-            fight.tick = Js.I((17 * Time.TICKS_PER_HOUR) + 1);
+            fight.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
             Js.NN(Js.Get(fight.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
             Js.NN(Js.Get(fight.survivors, 0)).traits = ["tough"];
             runUntil(fight, (_) => Js.NN(Js.Get(fight.survivors, 0)).health < 1000, 50);
-            expect(1000 - Js.NN(Js.Get(fight.survivors, 0)).health).toBeGreaterThanOrEqual(JsMath.round(((double)((Zombies.ZOMBIE_DAMAGE * 3)) / (4))) - 1);
-            expect(1000 - Js.NN(Js.Get(fight.survivors, 0)).health).toBeLessThanOrEqual(JsMath.round(((double)((Zombies.ZOMBIE_DAMAGE * 3)) / (4))));
+            expect(1000 - Js.NN(Js.Get(fight.survivors, 0)).health).toBeGreaterThanOrEqual(JsMath.round(((double)(((double)(Zombies.ZOMBIE_DAMAGE) * (3))) / (4))) - 1);
+            expect(1000 - Js.NN(Js.Get(fight.survivors, 0)).health).toBeLessThanOrEqual(JsMath.round(((double)(((double)(Zombies.ZOMBIE_DAMAGE) * (3))) / (4))));
         }
 
         [Fact(DisplayName = "traits > a wanderer's traits show before you decide, and come with them when taken in")]

@@ -8,7 +8,7 @@ public partial class GunsTest
 {
 
     /// <summary>23:00 on day 1, just past a spawn boundary.</summary>
-    public static readonly double NIGHT = (17 * Time.TICKS_PER_HOUR) + 1;
+    public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR)) + 1;
 
     public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
     {
@@ -141,8 +141,8 @@ public partial class GunsTest
             {
                 for (var dx = -Towers.TOWER_SIGHT; (dx <= Towers.TOWER_SIGHT) && !Js.T(far); dx++)
                 {
-                    var d2 = (dx * dx) + (dy * dy);
-                    if (((d2 > (Sight.SIGHT_RADIUS * Sight.SIGHT_RADIUS)) && (d2 <= (JsMath.pow((Towers.TOWER_SIGHT - 1), 2)))) && !Fog.isExplored(state, s.pos.x + dx, s.pos.y + dy))
+                    var d2 = ((double)(dx) * (dx)) + ((double)(dy) * (dy));
+                    if (((d2 > ((double)(Sight.SIGHT_RADIUS) * (Sight.SIGHT_RADIUS))) && (d2 <= (JsMath.pow((Towers.TOWER_SIGHT - 1), 2)))) && !Fog.isExplored(state, s.pos.x + dx, s.pos.y + dy))
                     {
                         far = new Point { x = Js.I(s.pos.x + dx), y = Js.I(s.pos.y + dy) };
                     }

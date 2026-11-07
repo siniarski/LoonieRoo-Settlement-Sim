@@ -53,6 +53,7 @@ for (const [c, b] of baseClass) for (const [f, ft] of classFields.get(b) ?? []) 
   for (const f of readFileSync(new URL('../Sim/Grid.cs', import.meta.url), 'utf8').matchAll(/^    public ([\w<>?, \[\]]+) (\w+)( = [^;]*)?;/gm)) grid.set(f[2], f[1]);
   classFields.set('Grid', grid);
   classFields.set('Point', new Map([['x', 'int'], ['y', 'int']]));
+  classFields.set('PointD', new Map([['x', 'double'], ['y', 'double']]));
 }
 
 /** Field name -> the C# types it has across the state classes. */
@@ -86,7 +87,9 @@ const typeClasses = new Set([...stateSrc.matchAll(/public partial (?:class|inter
 
 const files = [...readdirSync(SIM).filter((f) => f.endsWith('.ts')).map((f) => f.replace(/\.ts$/, '')), 'debugText'];
 /** Where a module's source is (the sim's, or the ASCII renderer the tests use). */
-const sourcePath = (m) => (m === 'debugText' ? 'src/debug/text.ts' : m.startsWith('test:') ? `tests/${m.slice(5)}.test.ts` : join(SIM, m + '.ts'));
+const sourcePath = (m) => (m === 'debugText' ? 'src/debug/text.ts' : m.startsWith('test:') ? `tests/${m.slice(5)}.test.ts` : m.startsWith('harness:') ? `harness/${m.slice(8)}.harness.ts` : join(SIM, m + '.ts'));
+/** Harness tools translated like test files (an `it` each), into cs/Harness: the scripted balance players. */
+const harnessFiles = ['harness:colony', 'harness:solo'];
 /** Test files left out: they test the browser UI (Godot replaces it), the TypeScript itself, or need a browser. */
 const TEST_SKIP = new Set(['architecture', 'camera', 'card', 'interp', 'loop', 'tools']);
 const testFiles = readdirSync('tests').filter((f) => f.endsWith('.test.ts')).map((f) => 'test:' + f.replace(/\.test\.ts$/, '')).filter((m) => !TEST_SKIP.has(m.slice(5)));
@@ -102,6 +105,7 @@ function modClass(m) {
   if (HAND[m]) return HAND[m];
   if (m === 'debugText') return 'DebugText';
   if (m.startsWith('test:')) return m.slice(5).split(/[^A-Za-z0-9]+/).map(pascal).join('') + 'Test';
+  if (m.startsWith('harness:')) return m.slice(8).split(/[^A-Za-z0-9]+/).map(pascal).join('') + 'Harness';
   const p = pascal(m);
   return typeClasses.has(p) ? p + 'Mod' : p === 'State' ? 'States' : p;
 }
@@ -283,6 +287,9 @@ function fieldType(t) {
 
 /** The C# type for a TS annotation. `intName`: the variable's name (whole-number names get int). */
 function ty(t, mod, intName) {
+  if (t?.type === 'TSTypeReference' && t.typeName?.name === 'RegExp') return 'JsRegExp';
+  // Road centre lines (roads.ts): fractional points.
+  if (t?.type === 'TSTypeReference' && t.typeName?.name === 'RoadPoint') return 'PointD';
   if (!t) return null;
   const nullable = t.type === 'TSUnionType' && t.types.some((u) => u.type === 'TSNullKeyword' || u.type === 'TSUndefinedKeyword');
   let core = t;
@@ -434,6 +441,8 @@ function translate(mod) {
   for (const n of ast.body) {
     if (n.type !== 'ImportDeclaration') continue;
     if (n.source.value === 'vitest') continue;
+    // Node's own modules (fs, inspector): the harness shims them (cs/Harness/Node.cs).
+    if (mod.startsWith('harness:') && n.source.value.startsWith('node:')) continue;
     const from = moduleOf(n.source.value);
     const json = n.source.value.match(/^\.\.\/src\/scenarios\/([\w-]+\.json)$/);
     if (!from && json && n.specifiers.length === 1 && n.specifiers[0].type === 'ImportDefaultSpecifier') {
@@ -455,6 +464,29 @@ function translate(mod) {
     }
   }
   const moduleNames = new Set();
+  /** A harness file's own interfaces (the solo bot's Bot): classes declared in its output, known to the type table. */
+  const ownClasses = [];
+  if (mod.startsWith('harness:')) {
+    for (const n of ast.body) {
+      if (n.type !== 'TSInterfaceDeclaration') continue;
+      const name = n.id.name;
+      typeClasses.add(name);
+      const fields = new Map();
+      const lines = [`public partial class ${name}`, '{'];
+      for (const m of n.body.body) {
+        if (m.type !== 'TSPropertySignature') continue;
+        const f = String(m.key.name ?? m.key.value);
+        hint = name + pascal(f);
+        let c = ty(m.typeAnnotation?.typeAnnotation, mod, f) ?? 'object';
+        if (m.optional && !c.endsWith('?')) c += '?';
+        fields.set(f, c);
+        lines.push(`    public ${c} ${id(f)} { get; set; }${c.startsWith('List<') ? ' = new();' : c === 'string' ? ' = "";' : ''}`);
+      }
+      lines.push('}', '');
+      classFields.set(name, fields);
+      ownClasses.push(...lines);
+    }
+  }
 
   /** An operand: wrapped in parentheses when it's an operation itself, so precedence can't change. */
   function operand(e, bool = false) {
@@ -711,7 +743,8 @@ function translate(mod) {
         if (['&', '|', '^', '<<', '>>'].includes(op)) return 'int';
         if (op === '>>>') return 'double';
         const nul = /\?$/.test(exprType(e.left) ?? '') || /\?$/.test(exprType(e.right) ?? '') ? '?' : '';
-        if (['-', '*', '/', '%', '**'].includes(op) || (op === '+' && l && r)) return (l === 'int' && r === 'int' && op !== '/' && op !== '**' ? 'int' : 'double') + nul;
+        // * is a double even of two ints: JS multiplies in doubles, and squared distances overflow 32 bits.
+        if (['-', '*', '/', '%', '**'].includes(op) || (op === '+' && l && r)) return (l === 'int' && r === 'int' && op !== '/' && op !== '**' && op !== '*' ? 'int' : 'double') + nul;
         return null;
       }
       case 'UnaryExpression':
@@ -895,7 +928,15 @@ function translate(mod) {
         let s = '$"';
         e.quasis.forEach((q, i) => {
           s += q.value.cooked.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\{/g, '{{').replace(/\}/g, '}}');
-          if (i < e.expressions.length) s += `{Js.Str(${ex(e.expressions[i])})}`;
+          if (i < e.expressions.length) {
+            // `${cond ? n : '-'}`: each branch to a string, as C#'s ?: needs one type.
+            const x = e.expressions[i];
+            const asStr = (b) => ({ type: 'CallExpression', callee: { type: 'Identifier', name: 'String' }, arguments: [b] });
+            const branches = x.type === 'ConditionalExpression' ? { ...x, consequent: asStr(x.consequent), alternate: asStr(x.alternate) }
+              : x.type === 'LogicalExpression' && x.operator === '||' && strip(exprType(x.right)) !== 'string' && (strip(exprType(x.left)) === 'string' || x.right.type === 'Literal') ? { ...x, right: asStr(x.right) }
+              : x;
+            s += `{Js.Str(${ex(branches)})}`;
+          }
         });
         return s + '"';
       }
@@ -968,6 +1009,8 @@ function translate(mod) {
         if (op === '===' || op === '==') return `${l} == ${r}`;
         if (op === '!==' || op === '!=') return `${l} != ${r}`;
         if (op === '/') return `((double)(${l}) / (${r}))`;
+        // In doubles, as JS: int * int overflows 32 bits (squared distances in SUB units). A double's cast is free.
+        if (op === '*') return `((double)(${l}) * (${r}))`;
         if (op === '>>>') return `Js.Ushr(${l}, ${r})`;
         const bit = { '>>': 'Shr', '<<': 'Shl', '&': 'And', '|': 'BitOr', '^': 'Xor' }[op];
         if (bit) return `Js.${bit}(${ex(e.left)}, ${ex(e.right)})`;
@@ -1382,7 +1425,7 @@ function translate(mod) {
       const key = p.key.type === 'Identifier' ? p.key.name : p.key.value;
       if (p.value.type === 'ArrowFunctionExpression') p.value.__arity = fieldArity(String(key));
       const value = p.shorthand ? ex(p.key) : p.value.type === 'ArrowFunctionExpression' || p.value.type === 'FunctionExpression' ? lambda(p.value) : p.value.type === 'ObjectExpression' && recordField(String(key)) ? recordInit(p.value) : ex(p.value);
-      parts.push(`${id(String(key))} = ${INT_FIELDS.has(String(key)) ? `Js.I(${value})` : value}`);
+      parts.push(`${id(String(key))} = ${INT_FIELDS.has(String(key)) && e.__class !== 'PointD' ? `Js.I(${value})` : value}`);
     }
     if (spread) {
       const first = e.properties[0];
@@ -1609,7 +1652,18 @@ function translate(mod) {
     return 'var';
   }
 
+  /** Whether a node mentions an identifier (harness mode: V8 profiling through node:inspector has no C# equivalent). */
+  const mentions = (n, name) => {
+    if (!n || typeof n !== 'object') return false;
+    if (Array.isArray(n)) return n.some((x) => mentions(x, name));
+    if (n.type === 'Identifier' && n.name === name) return true;
+    for (const k in n) if (k !== 'type' && !k.startsWith('__') && typeof n[k] === 'object' && mentions(n[k], name)) return true;
+    return false;
+  };
   function stmt(s, ind, ctx) {
+    // Only the profiling statements themselves: `const session = ... new Session()`, `if (session) {...}`, `session.x()`.
+    const profiling = (s.type === 'VariableDeclaration' && mentions(s, 'Session')) || (s.type === 'IfStatement' && mentions(s.test, 'session')) || (s.type === 'ExpressionStatement' && mentions(s, 'session'));
+    if (mod.startsWith('harness:') && profiling) return [`${ind}// (left out: V8 profiling, node:inspector)`];
     switch (s.type) {
       case 'ExpressionStatement': {
         const x = s.expression;
@@ -1948,7 +2002,8 @@ function translate(mod) {
     return [head, ...b];
   }
 
-  const isTest = mod.startsWith('test:');
+  const isHarness = mod.startsWith('harness:');
+  const isTest = mod.startsWith('test:') || isHarness;
   let factCount = 0;
   const skipped = [];
   /** Names a node uses that weren't translated (the UI). */
@@ -2158,6 +2213,21 @@ function translate(mod) {
   // The module's header comment, kept.
   const header = src.match(/^(\s*\/\/.*\n)+/);
   const cls = modClass(mod);
+  if (isHarness) {
+    const tl = [
+      `// <auto-generated> by cs/tools/ts2cs.mjs from harness/${mod.slice(8)}.harness.ts, then fixed by hand where it says so.`,
+      '#nullable disable warnings',
+      'using LoonieRoo.Sim;',
+      'using static LoonieRoo.Harness.Node;',
+      'namespace LoonieRoo.Harness;',
+      '',
+      `public partial class ${cls}`,
+      '{',
+    ];
+    if (ctorBody.length) tl.push(`    static ${cls}()`, '    {', ...ctorBody, '    }');
+    tl.push(...members, '}', '', ...ownClasses);
+    return tl.join('\n');
+  }
   if (isTest) {
     const tl = [
       `// <auto-generated> by cs/tools/ts2cs.mjs from tests/${mod.slice(5)}.test.ts, then fixed by hand where it says so.`,
@@ -2216,6 +2286,13 @@ for (const m of testFiles) {
   testCount++;
   writeFileSync(join(TEST_OUT, modClass(m) + '.g.cs'), text);
 }
+const HARNESS_OUT = 'cs/Harness/Generated';
+mkdirSync(HARNESS_OUT, { recursive: true });
+for (const m of harnessFiles) {
+  if (only.length && !only.includes(m)) continue;
+  sources.set(m, readFileSync(sourcePath(m), 'utf8'));
+  writeFileSync(join(HARNESS_OUT, modClass(m) + '.g.cs'), translate(m));
+}
 const inl = ['// <auto-generated> by cs/tools/ts2cs.mjs: classes for object types written inline in the TypeScript.', '#nullable disable warnings', 'namespace LoonieRoo.Sim;', ''];
 for (const [name, [members, mod]] of inline) {
   const isRng = members.some((m) => (m.key.name ?? m.key.value) === 'rng');
@@ -2234,7 +2311,7 @@ writeFileSync(join(OUT, 'Inline.g.cs'), inl.join('\n'));
 // Hand fixes (fixups.mjs), applied to the files just written.
 let applied = 0;
 for (const [file, from, to] of FIXUPS) {
-  const path = file.startsWith('Tests/') ? join(TEST_OUT, file.slice(6) + '.g.cs') : join(OUT, file + '.g.cs');
+  const path = file.startsWith('Tests/') ? join(TEST_OUT, file.slice(6) + '.g.cs') : file.startsWith('Harness/') ? join(HARNESS_OUT, file.slice(8) + '.g.cs') : join(OUT, file + '.g.cs');
   const text = readFileSync(path, 'utf8');
   if (!text.includes(from)) {
     console.log(`fixup not found in ${file}: ${from.slice(0, 80)}`);

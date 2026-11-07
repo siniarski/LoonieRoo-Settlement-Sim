@@ -10,7 +10,7 @@ public partial class TimeTest
     /// <summary>The tick at which a given day and hour is reached (game starts at 06:00 on day 1).</summary>
     public static double at(double day, double hour)
     {
-        return ((day - 1) * Time.DAY_LENGTH) + ((hour - 6) * Time.TICKS_PER_HOUR);
+        return ((double)((day - 1)) * (Time.DAY_LENGTH)) + ((double)((hour - 6)) * (Time.TICKS_PER_HOUR));
     }
 
     /// <summary>world clock</summary>
@@ -73,10 +73,10 @@ public partial class TimeTest
         [Fact(DisplayName = "nights > counts ticks into the night from 21:00")]
         public void T008_counts_ticks_into_the_night_from_21_00()
         {
-            expect(Time.NIGHT_TICKS).toBe(8 * Time.TICKS_PER_HOUR);
+            expect(Time.NIGHT_TICKS).toBe(((double)(8) * (Time.TICKS_PER_HOUR)));
             expect(Time.ticksIntoNight(at(1, 21))).toBe(0);
-            expect(Time.ticksIntoNight(at(1, 23.5))).toBe(2.5 * Time.TICKS_PER_HOUR);
-            expect(Time.ticksIntoNight(at(2, 4))).toBe(7 * Time.TICKS_PER_HOUR);
+            expect(Time.ticksIntoNight(at(1, 23.5))).toBe(((double)(2.5) * (Time.TICKS_PER_HOUR)));
+            expect(Time.ticksIntoNight(at(2, 4))).toBe(((double)(7) * (Time.TICKS_PER_HOUR)));
         }
     }
 }

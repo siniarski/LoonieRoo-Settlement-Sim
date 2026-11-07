@@ -91,7 +91,7 @@ public partial class StorageTest
             var state = setup([STORAGE]);
             runUntil(state, (s) => inStorage(s) == 3);
             Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(12), y = Js.I(6), structure = "wall" });
-            runUntil(state, (s) => Js.Get(s.grid.tiles, (6 * s.grid.width) + 12) == "wall");
+            runUntil(state, (s) => Js.Get(s.grid.tiles, ((double)(6) * (s.grid.width)) + 12) == "wall");
             expect(inStorage(state)).toBe(2);
         }
 

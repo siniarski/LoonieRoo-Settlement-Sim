@@ -81,7 +81,7 @@ public partial class CharacterTest
             }
             expect(heard([])).toBe(Sight.RUN_HEARD);
             expect(heard(["graceful"])).toBe(((double)(Sight.RUN_HEARD) / (2)));
-            expect(heard(["clumsy"])).toBe(((double)((Sight.RUN_HEARD * 3)) / (2)));
+            expect(heard(["clumsy"])).toBe(((double)(((double)(Sight.RUN_HEARD) * (3))) / (2)));
             expect(Sight.WALK_HEARD).toBeGreaterThan(0);
         }
     }

@@ -91,7 +91,7 @@ public static partial class CharacterMod
         s.traits = (c.traits).ToList();
         foreach (var (type, level) in Js.Iter(Js.ObjectEntries(p.skills)))
         {
-            s.xp[Js.Idx(type)] = level * Skills.XP_PER_LEVEL;
+            s.xp[Js.Idx(type)] = ((double)(level) * (Skills.XP_PER_LEVEL));
         }
         var yours = state.control?.survivorId == s.id;
         foreach (var kind in Js.Iter(p.kit))

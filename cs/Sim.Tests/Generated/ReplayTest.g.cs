@@ -18,11 +18,11 @@ public partial class ReplayTest
             var live = States.cloneState(initial);
             for (var i = 0; i < 40; i++)
             {
-                var x = JsMath.floor(Rng.random(live) * 8);
-                var y = JsMath.floor(Rng.random(live) * 6);
+                var x = JsMath.floor(((double)(Rng.random(live)) * (8)));
+                var y = JsMath.floor(((double)(Rng.random(live)) * (6)));
                 var type = (Rng.random(live) < 0.7) ? "placeWall" : "placeDoor";
                 Commands.applyCommand(live, new Command { type = type, x = Js.I(x), y = Js.I(y) });
-                Tick.step(live, 1 + JsMath.floor(Rng.random(live) * 3));
+                Tick.step(live, 1 + JsMath.floor(((double)(Rng.random(live)) * (3))));
             }
             var replayed = Replay.replay(initial, live.commandLog, live.tick);
             expect(DebugText.dumpText(replayed)).toBe(DebugText.dumpText(live));

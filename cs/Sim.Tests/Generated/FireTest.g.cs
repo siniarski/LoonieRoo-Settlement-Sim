@@ -108,7 +108,7 @@ public partial class FireTest
             var s = Js.NN(Js.Get(state.survivors, 0));
             Js.NN(Js.Get(state.items, 0)).wear = -Corpses.CORPSE_ROT;
             Js.NN(Js.Get(state.items, 0)).tag = "Bea";
-            runUntil(state, (_) => Js.Run(() => { s.satiety = 3000; return s.sick != null; }), 200 * Corpses.CORPSE_CHECK_EVERY);
+            runUntil(state, (_) => Js.Run(() => { s.satiety = 3000; return s.sick != null; }), ((double)(200) * (Corpses.CORPSE_CHECK_EVERY)));
             expect(s.thoughts.some((t) => t.kind == "stench")).toBe(true);
             expect(s.sick).toBeLessThanOrEqual(Corpses.SICK_TICKS);
             state.items.push(new() { id = "med", kind = "medicine", pos = new Point { x = Js.I(3), y = Js.I(1) }, carriedBy = null, reservedBy = null, wear = 0, tag = null });

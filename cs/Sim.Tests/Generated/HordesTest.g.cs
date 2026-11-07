@@ -102,13 +102,13 @@ public partial class HordesTest
             for (var t = 0; (t < 1500) && !doorHit; t++)
             {
                 Tick.tick(state);
-                if (Js.NN(Js.Get(state.grid.damage, (9 * 40) + 24)) > 0)
+                if (Js.NN(Js.Get(state.grid.damage, ((double)(9) * (40)) + 24)) > 0)
                 {
                     doorHit = true;
                 }
                 for (var y = 6; y <= 12; y++)
                 {
-                    if (Js.NN(Js.Get(state.grid.damage, (y * 40) + 18)) > 0)
+                    if (Js.NN(Js.Get(state.grid.damage, ((double)(y) * (40)) + 18)) > 0)
                     {
                         wallHit = true;
                     }
@@ -168,7 +168,7 @@ public partial class HordesTest
             var big = Js.NN(Hordes.formHorde(state, crowd(state, 40, 40, 30), new Point { x = Js.I(42), y = Js.I(42) }, false));
             expect(Hordes.membersOf(state, big).length).toBeGreaterThanOrEqual(Hordes.SHED_MIN);
             var shed = false;
-            for (var t = 0; (t < (24 * Time.TICKS_PER_HOUR)) && !shed; t++)
+            for (var t = 0; (t < ((double)(24) * (Time.TICKS_PER_HOUR))) && !shed; t++)
             {
                 Tick.tick(state);
                 shed = state.events.some((e) => e.message.includes("broke away"));
@@ -176,7 +176,7 @@ public partial class HordesTest
             expect(shed).toBe(true);
             var left = Hordes.membersOf(state, big).length;
             expect(left).toBeLessThan(30);
-            expect(left).toBeGreaterThan(30 * 0.8);
+            expect(left).toBeGreaterThan(((double)(30) * (0.8)));
         }
 
         [Fact(DisplayName = "hordes > a roaming horde with nobody near becomes a herd marker again, and the count holds")]

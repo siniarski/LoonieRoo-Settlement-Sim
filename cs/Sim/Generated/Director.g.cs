@@ -18,8 +18,8 @@ public static partial class Director
     {
         Time.onClock(() =>
         {
-            RECENT = ((double)((3 * Time.DAY_LENGTH)) / (2));
-            RELIEF_GAP = 3 * Time.DAY_LENGTH;
+            RECENT = ((double)(((double)(3) * (Time.DAY_LENGTH))) / (2));
+            RELIEF_GAP = ((double)(3) * (Time.DAY_LENGTH));
         });
     }
 
@@ -33,9 +33,9 @@ public static partial class Director
 
     public const double MAX_THREAT = 1.6;
 
-    public static double RECENT = ((double)((3 * Time.DAY_LENGTH)) / (2));
+    public static double RECENT = ((double)(((double)(3) * (Time.DAY_LENGTH))) / (2));
 
-    public static double RELIEF_GAP = 3 * Time.DAY_LENGTH;
+    public static double RELIEF_GAP = ((double)(3) * (Time.DAY_LENGTH));
 
     public static double recentDeaths(SimState state)
     {
@@ -45,7 +45,7 @@ public static partial class Director
     public static double threatScale(SimState state)
     {
         var wealth = state.items.filter((i) => ((i.kind != "corpse") && (i.kind != "wood")) && (i.kind != "food")).length;
-        var scale = (1 + (THREAT_PER_WEALTH * JsMath.floor(((double)(wealth) / (WEALTH_STEP))))) - (THREAT_PER_DEATH * recentDeaths(state));
+        var scale = (1 + ((double)(THREAT_PER_WEALTH) * (JsMath.floor(((double)(wealth) / (WEALTH_STEP)))))) - ((double)(THREAT_PER_DEATH) * (recentDeaths(state)));
         return JsMath.max(MIN_THREAT, JsMath.min(MAX_THREAT, scale));
     }
 

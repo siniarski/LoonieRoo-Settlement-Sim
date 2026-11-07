@@ -108,6 +108,24 @@ foreach (var file in Directory.GetFiles(Path.Combine(dir, "states"), "*.json"))
     Check("state round trip", diffs.Count == 0, $"{Path.GetFileName(file)}:\n  " + string.Join("\n  ", diffs));
 }
 
+// Worlds made from nothing: the same seed, size and settings must generate the same world.
+var worldsDir = Path.Combine(dir, "worlds");
+if (File.Exists(Path.Combine(worldsDir, "index.json")))
+{
+    foreach (var c in System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(worldsDir, "index.json")))!.AsArray())
+    {
+        string name = (string)c!["name"]!;
+        double seed = (double)c["seed"]!, size = (double)c["size"]!;
+        string? preset = (string?)c["preset"];
+        var world = preset == null ? Worldgen.createWorld(seed, size) : Worldgen.createWorld(seed, size, Difficulty.PRESETS[preset].settings);
+        var want = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(worldsDir, name + ".json")));
+        var diffs = StateJson.Diff(want, System.Text.Json.Nodes.JsonNode.Parse(StateJson.Write(world)));
+        Check("world", diffs.Count == 0, $"{name}:\n  " + string.Join("\n  ", diffs));
+        // The C#'s world beside the TypeScript's, to look into.
+        if (diffs.Count > 0) File.WriteAllText(Path.Combine(worldsDir, name + ".cs.json"), StateJson.Write(world));
+    }
+}
+
 // Whole runs: from the TypeScript's start state, tick to each checkpoint and compare the whole state.
 // Stops a run at its first differing checkpoint (later ones only repeat the difference).
 var runsDir = Path.Combine(dir, "runs");
@@ -121,11 +139,25 @@ if (Directory.Exists(runsDir))
         catch (Exception e) { Check("run start", false, $"{name}: {e.Message}"); continue; }
         int done = 0;
         var checkpoints = JsonSerializer.Deserialize<int[]>(File.ReadAllText(Path.Combine(run, "checkpoints.json")))!;
+        // A command run: the TypeScript's command log, each command applied once the clock reaches its tick
+        // (after that tick ran; tick 0's before the first), in the order logged.
+        var commandsPath = Path.Combine(run, "commands.json");
+        var log = File.Exists(commandsPath) ? JsonSerializer.Deserialize<List<LoggedCommand>>(File.ReadAllText(commandsPath), StateJson.Options)! : new List<LoggedCommand>();
+        int next = 0;
+        void ApplyDue()
+        {
+            for (; next < log.Count && log[next].tick <= state.tick; next++) Commands.applyCommand(state, log[next].command);
+        }
+        ApplyDue();
         foreach (int at in checkpoints)
         {
             try
             {
-                for (; done < at; done++) Tick.tick(state);
+                for (; done < at; done++)
+                {
+                    Tick.tick(state);
+                    ApplyDue();
+                }
             }
             catch (Exception e)
             {

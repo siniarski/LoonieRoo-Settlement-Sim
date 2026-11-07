@@ -120,7 +120,7 @@ public static partial class Corpses
         var season = Seasons.seasonOf(state.tick);
         if ((((state.tick % Time.DAY_LENGTH) == 0) && ((season == "autumn") || (season == "winter"))) && (Hash.hashRoll(Time.dayOf(state.tick), 3870.0) < FLU_CHANCE))
         {
-            var s = Js.Get(state.survivors, JsMath.floor(Hash.hashRoll(Time.dayOf(state.tick), 1) * state.survivors.length));
+            var s = Js.Get(state.survivors, JsMath.floor(((double)(Hash.hashRoll(Time.dayOf(state.tick), 1)) * (state.survivors.length))));
             if (Js.T(s) && (s.sick == null))
             {
                 s.sick = SICK_TICKS;
@@ -142,7 +142,7 @@ public static partial class Corpses
             }
             var room = Js.NN(Js.Get(rooms, label));
             var heads = state.survivors.filter((o) => Rooms.labelAt(state, o.pos.x, o.pos.y) == label).length;
-            var chance = CONTAGION * ((((double)(room.tiles.length) / (heads)) < CRAMPED_TILES) ? 2 : 1);
+            var chance = ((double)(CONTAGION) * (((((double)(room.tiles.length) / (heads)) < CRAMPED_TILES) ? 2 : 1)));
             foreach (var o in Js.Iter(state.survivors))
             {
                 if (((o == carrier) || (o.sick != null)) || (Space.manhattan(o.pos, carrier.pos) > CONTAGION_RADIUS))

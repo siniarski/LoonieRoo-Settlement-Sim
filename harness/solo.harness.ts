@@ -383,6 +383,8 @@ function run(seed: number, days: number): void {
     decide(state, s, bot, home, bed);
     if (process.env.TRACE && state.tick % Number(process.env.TRACE_EVERY ?? 150) === 0) out.push(`   t${state.tick} z ${state.zombies.filter((q) => dist(tileOf(q.at), s.pos) <= 3).map((q) => `${tileOf(q.at).x},${tileOf(q.at).y}${q.windup ? "w" : ""}`).join(" ")} pos ${s.pos.x},${s.pos.y} goal ${bot.goal} sat ${s.satiety} hp ${s.health} busy ${state.control!.busy?.what ?? '-'} steer ${state.control!.dx},${state.control!.dy} path ${bot.path.length} note ${s.note}`);
     tick(state);
+    // LOG=path: the state (its command log included) at each dawn and at tick LOG_AT, to compare two runs (TypeScript and C#).
+    if (process.env.LOG && (state.tick % DAY_LENGTH === 0 || state.tick === Number(process.env.LOG_AT))) writeFileSync(`${process.env.LOG}-s${seed}-t${state.tick}.json`, JSON.stringify(state));
     if (state.tick % DAY_LENGTH === 0) log('dawn');
     if (performance.now() - began > BUDGET_MS) {
       out.push(`  out of time on day ${dayOf(state.tick)}`);

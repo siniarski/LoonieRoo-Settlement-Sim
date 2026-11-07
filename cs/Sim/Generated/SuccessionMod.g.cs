@@ -80,9 +80,9 @@ public static partial class SuccessionMod
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        var angle = (Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI) * 2;
-        var dist = ANEW_MIN + (Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD);
-        Point aim = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
+        var angle = ((double)(((double)(Hash.hashRoll(state.tick, near.x, near.y)) * (JsMath.PI))) * (2));
+        var dist = ANEW_MIN + ((double)(Hash.hashRoll(state.tick, near.y, near.x)) * (ANEW_SPREAD));
+        Point aim = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
         Worldgen.ensureGeneratedAround(state, aim);
         Point? spot = null;
         for (var r = 0; (r <= 20) && !Js.T(spot); r++)
@@ -122,7 +122,7 @@ public static partial class SuccessionMod
             {
                 if ((((x >= 0) && (y >= 0)) && (x < width)) && (y < height))
                 {
-                    state.grid.explored[Js.Idx((y * width) + x)] = 1;
+                    state.grid.explored[Js.Idx(((double)(y) * (width)) + x)] = 1;
                 }
             }
         }

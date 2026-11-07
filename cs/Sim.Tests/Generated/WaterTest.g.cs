@@ -77,8 +77,8 @@ public partial class WaterTest
             var c = Js.NN(Js.Get(state.furniture, 0));
             expect(c.loot).toBe(0);
             state.weather = "rain";
-            state.tick = Js.I((Water.COLLECTOR_FILL_EVERY * 10) - 1);
-            for (var i = 0; i < ((Water.COLLECTOR_FILL_EVERY * 2) + 1); i++)
+            state.tick = Js.I(((double)(Water.COLLECTOR_FILL_EVERY) * (10)) - 1);
+            for (var i = 0; i < (((double)(Water.COLLECTOR_FILL_EVERY) * (2)) + 1); i++)
             {
                 Tick.tick(state);
             }
@@ -110,12 +110,12 @@ public partial class WaterTest
             state.survivors = [];
             for (var i = 0; i < (((double)(Power.FOOD_SHELF) / (Power.SPOIL_CHECK_EVERY)) + 1); i++)
             {
-                state.tick = Js.I((i + 1) * Power.SPOIL_CHECK_EVERY);
+                state.tick = Js.I(((double)((i + 1)) * (Power.SPOIL_CHECK_EVERY)));
                 Tick.tick(state);
             }
             expect(state.items.map((i) => i.pos)).toEqual(Js.Arr([Js.Obj(("x", (object?)(1)), ("y", (object?)(2)))]));
             var winter = setup(["f.."]);
-            winter.tick = Js.I((3 * Seasons.SEASON_DAYS) * Time.DAY_LENGTH);
+            winter.tick = Js.I(((double)(((double)(3) * (Seasons.SEASON_DAYS))) * (Time.DAY_LENGTH)));
             for (var i = 0; i < 10; i++)
             {
                 winter.tick = Js.I(winter.tick + (Power.SPOIL_CHECK_EVERY - 1));
@@ -132,7 +132,7 @@ public partial class WaterTest
             Js.NN(state.furniture.find((f) => f.kind == "generator")).stored = 2;
             for (var i = 0; i < 20; i++)
             {
-                state.tick = Js.I((i + 1) * Power.SPOIL_CHECK_EVERY);
+                state.tick = Js.I(((double)((i + 1)) * (Power.SPOIL_CHECK_EVERY)));
                 Tick.tick(state);
             }
             expect(Js.NN(state.items.find((i) => i.kind == "food")).wear).toBe(0);
@@ -152,7 +152,7 @@ public partial class WaterTest
             expect(Power.isPowered(state, new Point { x = Js.I(4), y = Js.I(0) })).toBe(true);
             expect(Power.litLamps(state)).toEqual(Js.Arr([]));
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
-            state.tick = Js.I((15 * Time.TICKS_PER_HOUR) + 1);
+            state.tick = Js.I(((double)(15) * (Time.TICKS_PER_HOUR)) + 1);
             state.zombiesTonight = 0;
             expect(Power.litLamps(state)).toHaveLength(1);
             for (var i = 0; i < Power.FUEL_TICKS; i++)
@@ -170,8 +170,8 @@ public partial class WaterTest
                 var state = setup([(("s" + ".".repeat(19)) + "l.E") + ".".repeat(7)]);
                 state.harsh = false;
                 Js.NN(state.furniture.find((f) => f.kind == "generator")).stored = fuel;
-                state.tick = Js.I(15 * Time.TICKS_PER_HOUR);
-                for (var i = 0; i < (9 * Time.TICKS_PER_HOUR); i++)
+                state.tick = Js.I(((double)(15) * (Time.TICKS_PER_HOUR)));
+                for (var i = 0; i < ((double)(9) * (Time.TICKS_PER_HOUR)); i++)
                 {
                     Tick.tick(state);
                 }

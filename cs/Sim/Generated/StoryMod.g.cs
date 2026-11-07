@@ -27,15 +27,15 @@ public static partial class StoryMod
         var n = Hash.idNumber(id);
         T pick<T>(List<T> list, double salt)
         {
-            return Js.NN(Js.Get(list, JsMath.floor(Hash.hashRoll(n, salt) * list.length)));
+            return Js.NN(Js.Get(list, JsMath.floor(((double)(Hash.hashRoll(n, salt)) * (list.length)))));
         }
-        return new Story { job = JsMath.floor(Hash.hashRoll(n, 0x51) * STORY_JOBS.length), pride = JsMath.floor(Hash.hashRoll(n, 0x52) * PRIDES.length), regret = JsMath.floor(Hash.hashRoll(n, 0x53) * REGRETS.length), lost = lostOne(n), pet = (Hash.hashRoll(n, 0x57) < 0.5) ? pick(PET_NAMES, 0x58) : null, told = 0, nextTalk = 0, asked = [], town = JsMath.floor(Hash.hashRoll(n, 0x59) * TOWNS.length), knew = [], confessed = false };
+        return new Story { job = JsMath.floor(((double)(Hash.hashRoll(n, 0x51)) * (STORY_JOBS.length))), pride = JsMath.floor(((double)(Hash.hashRoll(n, 0x52)) * (PRIDES.length))), regret = JsMath.floor(((double)(Hash.hashRoll(n, 0x53)) * (REGRETS.length))), lost = lostOne(n), pet = (Hash.hashRoll(n, 0x57) < 0.5) ? pick(PET_NAMES, 0x58) : null, told = 0, nextTalk = 0, asked = [], town = JsMath.floor(((double)(Hash.hashRoll(n, 0x59)) * (TOWNS.length))), knew = [], confessed = false };
     }
 
     public static StoryLost lostOne(double n)
     {
-        var (relation, names) = Js.NN(Js.Get(RELATIONS, JsMath.floor(Hash.hashRoll(n, 0x55) * RELATIONS.length)));
-        return new StoryLost { name = Js.NN(Js.Get(names, JsMath.floor(Hash.hashRoll(n, 0x54) * names.length))), relation = relation, dead = Hash.hashRoll(n, 0x56) < 0.6 };
+        var (relation, names) = Js.NN(Js.Get(RELATIONS, JsMath.floor(((double)(Hash.hashRoll(n, 0x55)) * (RELATIONS.length)))));
+        return new StoryLost { name = Js.NN(Js.Get(names, JsMath.floor(((double)(Hash.hashRoll(n, 0x54)) * (names.length))))), relation = relation, dead = Hash.hashRoll(n, 0x56) < 0.6 };
     }
 
     /// <summary>The lines of a story, in the order they're told.</summary>

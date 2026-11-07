@@ -66,7 +66,7 @@ public static partial class Mapnotes
             return [];
         }
         var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
-        var offset = JsMath.floor(Hash.hashRoll(state.world.seed, 0x7041) * TOWN_NAMES.length);
+        var offset = JsMath.floor(((double)(Hash.hashRoll(state.world.seed, 0x7041)) * (TOWN_NAMES.length)));
         return plan.towns.map((t, i) => new TownName { x = Js.I(t.x), y = Js.I(t.y), name = Js.NN(Js.Get(TOWN_NAMES, (offset + i) % TOWN_NAMES.length)) });
     }
 }

@@ -74,7 +74,7 @@ public partial class ToolsRadioTest
             double day = 1;
             while (((state.requests.length == 0) && !state.pointsOfInterest.some((p) => p.label == Radio.DISTRESS_LABEL)) && (day < 40))
             {
-                state.tick = Js.I((day * Time.DAY_LENGTH) + ((Radio.RADIO_HOUR - 6) * Time.TICKS_PER_HOUR));
+                state.tick = Js.I(((double)(day) * (Time.DAY_LENGTH)) + ((double)((Radio.RADIO_HOUR - 6)) * (Time.TICKS_PER_HOUR)));
                 Radio.updateRadio(state);
                 day += 1;
             }

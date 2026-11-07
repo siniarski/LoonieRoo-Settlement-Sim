@@ -112,7 +112,7 @@ public partial class FogTest
         public void T009_scouts_stop_at_00_and_head_home_and_go_out_again_in_the_morn()
         {
             var state = dark(STRIP, new() { ["scout"] = 3 });
-            state.tick = Js.I(((Fog.SCOUT_HOME_HOUR - 6) * Time.TICKS_PER_HOUR) - 30);
+            state.tick = Js.I(((double)((Fog.SCOUT_HOME_HOUR - 6)) * (Time.TICKS_PER_HOUR)) - 30);
             Commands.applyCommand(state, new Command { type = "designateExplore", x0 = Js.I(40), y0 = Js.I(0), x1 = Js.I(59), y1 = Js.I(2) });
             var s = Js.NN(Js.Get(state.survivors, 0));
             runUntil(state, (_) => s.jobId != null, 20);

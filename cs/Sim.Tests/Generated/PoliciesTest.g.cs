@@ -36,7 +36,7 @@ public partial class PoliciesTest
             s.priorities = new(JobTypes.NO_JOBS) { ["scavenge"] = 3 };
             Commands.applyCommand(state, new Command { type = "designateScavenge", x = Js.I(2), y = Js.I(0) });
             Jobs.reconcileJobs(state);
-            state.tick = Js.I(17 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)));
             state.zombiesTonight = 0;
             expect(JobChoice.chooseJob(state, s)).not.toBeNull();
             Commands.applyCommand(state, new Command { type = "setPolicy", policy = "curfew", on = true });
@@ -89,7 +89,7 @@ public partial class PoliciesTest
             s.bleeding = true;
             s.bleedUntil = 1000000000.0;
             var h = s.health;
-            for (var t = 0; t < (Wounds.BLEED_EVERY * 4); t++)
+            for (var t = 0; t < ((double)(Wounds.BLEED_EVERY) * (4)); t++)
             {
                 state.tick = Js.I(t);
                 Wounds.updateWounds(state, s);

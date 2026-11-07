@@ -13,7 +13,7 @@ public static partial class Wanderers
 {
     static Wanderers()
     {
-        Time.onClock(() => WANDERER_PATIENCE = 3 * Time.TICKS_PER_HOUR);
+        Time.onClock(() => WANDERER_PATIENCE = ((double)(3) * (Time.TICKS_PER_HOUR)));
     }
 
     public const int ARRIVAL_HOUR = 10;
@@ -25,7 +25,7 @@ public static partial class Wanderers
     public const int SECOND_ARRIVAL_HOUR = 14;
 
     /// <summary>How long a wanderer waits for an answer: 3 in-game hours.</summary>
-    public static double WANDERER_PATIENCE = 3 * Time.TICKS_PER_HOUR;
+    public static double WANDERER_PATIENCE = ((double)(3) * (Time.TICKS_PER_HOUR));
 
     public static Wanderer? getWanderer(SimState state, string id)
     {
@@ -73,11 +73,11 @@ public static partial class Wanderers
             return;
         }
         var t = Time.tickOfDay(state.tick);
-        if (t == (ARRIVAL_HOUR * Time.TICKS_PER_HOUR))
+        if (t == ((double)(ARRIVAL_HOUR) * (Time.TICKS_PER_HOUR)))
         {
             arrive(state);
         }
-        if ((t == (SECOND_ARRIVAL_HOUR * Time.TICKS_PER_HOUR)) && (spareBeds(state) > 0))
+        if ((t == ((double)(SECOND_ARRIVAL_HOUR) * (Time.TICKS_PER_HOUR))) && (spareBeds(state) > 0))
         {
             arrive(state);
         }

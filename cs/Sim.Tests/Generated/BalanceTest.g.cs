@@ -66,7 +66,7 @@ public partial class BalanceTest
         public static List<double> arrivals(double night)
         {
             List<double> @out = [];
-            for (var t = (night - 1) * Time.DAY_LENGTH; t < ((night + 1) * Time.DAY_LENGTH); t++)
+            for (var t = ((double)((night - 1)) * (Time.DAY_LENGTH)); t < ((double)((night + 1)) * (Time.DAY_LENGTH)); t++)
             {
                 if ((Time.nightNumber(t) == night) && (Zombies.spawnsAt(t) > 0))
                 {
@@ -96,7 +96,7 @@ public partial class BalanceTest
             var map = Js.ArrayFrom(21, (int y) => (y == 10) ? $"{Js.Str(".".repeat(20))}s{Js.Str(".".repeat(20))}" : ".".repeat(41));
             var state = ScenarioMod.loadScenario(new Scenario { seed = 5, map = map });
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
-            var first = Js.NN(Js.ArrayFrom(2 * Time.DAY_LENGTH, (int i) => (3 * Time.DAY_LENGTH) + i).find((t) => Zombies.spawnsAt(t) == 2));
+            var first = Js.NN(Js.ArrayFrom(((double)(2) * (Time.DAY_LENGTH)), (int i) => ((double)(3) * (Time.DAY_LENGTH)) + i).find((t) => Zombies.spawnsAt(t) == 2));
             state.tick = Js.I(first);
             Tick.tick(state);
             expect(state.zombies).toHaveLength(2);
@@ -127,7 +127,7 @@ public partial class BalanceTest
             {
                 s.priorities = new(JobTypes.NO_JOBS) {  };
             }
-            state.tick = Js.I(Time.DAY_LENGTH + (15 * 200));
+            state.tick = Js.I(Time.DAY_LENGTH + ((double)(15) * (200)));
             Tick.tick(state);
             expect(state.zombiesTonight).toBe(Zombies.zombiesForNight(2, 5));
             expect(Js.NN(state.events.at(-1)).message).toBe("Night 2 falls: 4 zombies expected");

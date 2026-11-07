@@ -195,7 +195,7 @@ public static partial class Wishes
                 continue;
             }
             var options = candidates(state, s);
-            var pick = Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x3a6) * options.length));
+            var pick = Js.Get(options, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x3a6)) * (options.length))));
             if (Js.T(pick))
             {
                 s.wish = Js.With(Js.CopyAs<Wish>(pick), __s1 => { __s1.since = state.tick; __s1.until = state.tick + WISH_TICKS; __s1.promised = false; });

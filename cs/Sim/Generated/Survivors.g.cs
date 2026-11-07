@@ -109,7 +109,7 @@ public static partial class Survivors
         var diagonal = (next.x != s.pos.x) && (next.y != s.pos.y);
         Doors.passThrough(state, next.x, next.y, true, s.pos);
         var pace = stepPace(state, s, next);
-        s.move = new Movement { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)((pace * 1414)) / (1000))) : pace };
+        s.move = new Movement { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)(((double)(pace) * (1414))) / (1000))) : pace };
     }
 
     /// <summary>Advances a step in progress by a tick. Returns true once it has landed (or there was none).</summary>
@@ -140,7 +140,7 @@ public static partial class Survivors
     /// <summary>Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.</summary>
     public static double stepPace(SimState state, Survivor s, Point next)
     {
-        var road = ROAD_GROUNDS.includes(Js.NN(Js.Get(state.grid.ground, (next.y * state.grid.width) + next.x)));
+        var road = ROAD_GROUNDS.includes(Js.NN(Js.Get(state.grid.ground, ((double)(next.y) * (state.grid.width)) + next.x)));
         return JsMath.max(2, (((((Health.isHurt(s.health) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Skills.hasTrait(s, "quick") ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Wounds.legSlowed(s) ? 1 : 0)) - (Orders.hurries(state, s) ? 1 : 0)) + (Moodlets.boosted(s, "slowWalk") ? 1 : 0));
     }
 

@@ -58,8 +58,10 @@ public static partial class Roads
             return (p == a) ? q : p;
         });
             var longest = JsMath.max(linked.map((b) => d(a, b)));
-            var near = Js.Get(nodes.map((__1, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q)), 0);
-            if ((((near != null) && (d(a, near) < (longest * 1.4))) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5)) && !edges.some((__p2) =>
+            var __nears = nodes.map((__1, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q));
+            if (__nears.length == 0) return;
+            var near = __nears[0];
+            if ((((near != null) && (d(a, near) < ((double)(longest) * (1.4)))) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5)) && !edges.some((__p2) =>
         {
             var (p, q) = __p2;
             return (p == near) && (q == a);
@@ -72,17 +74,17 @@ public static partial class Roads
     }
 
     /// <summary>Routes a road from `from` to `to`; returns its smoothed centre line in tiles, or null if there's no way.</summary>
-    public static List<Point>? route(Nature n, Float32Array cost, Point from, Point to)
+    public static List<PointD>? route(Nature n, Float32Array cost, Point from, Point to)
     {
         var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
         double cell(Point p)
         {
-            return (JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            return ((double)(JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)))))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
         }
         var start = cell(from);
         var goal = cell(to);
-        var g = new Float32Array(N * N).fill(double.PositiveInfinity);
-        var came = new Int32Array(N * N).fill(-1);
+        var g = new Float32Array(((double)(N) * (N))).fill(double.PositiveInfinity);
+        var came = new Int32Array(((double)(N) * (N))).fill(-1);
         var gx = goal % N;
         var gy = JsMath.floor(((double)(goal) / (N)));
         List<List<double>> heap = [];
@@ -111,7 +113,7 @@ public static partial class Roads
                 double i = 0;
                 for (; ; )
                 {
-                    var l = (2 * i) + 1;
+                    var l = ((double)(2) * (i)) + 1;
                     var r = l + 1;
                     double m = i;
                     if ((l < heap.length) && (Js.Get(Js.NN(Js.Get(heap, l)), 0) < Js.Get(Js.NN(Js.Get(heap, m)), 0)))
@@ -144,7 +146,7 @@ public static partial class Roads
             }
             var cx = c % N;
             var cy = JsMath.floor(((double)(c) / (N)));
-            if (f > ((Js.NN(Js.Get(g, c)) + (MIN * JsMath.sqrt((JsMath.pow((gx - cx), 2)) + (JsMath.pow((gy - cy), 2))))) + 1e-6))
+            if (f > ((Js.NN(Js.Get(g, c)) + ((double)(MIN) * (JsMath.sqrt((JsMath.pow((gx - cx), 2)) + (JsMath.pow((gy - cy), 2)))))) + 1e-6))
             {
                 continue;
             }
@@ -162,8 +164,8 @@ public static partial class Roads
                     {
                         continue;
                     }
-                    var nc = (ny * N) + nx;
-                    var step = ((double)((Js.NN(Js.Get(cost, c)) + Js.NN(Js.Get(cost, nc)))) / (2)) * (((dx != 0) && (dy != 0)) ? JsMath.SQRT2 : 1);
+                    var nc = ((double)(ny) * (N)) + nx;
+                    var step = ((double)(((double)((Js.NN(Js.Get(cost, c)) + Js.NN(Js.Get(cost, nc)))) / (2))) * ((((dx != 0) && (dy != 0)) ? JsMath.SQRT2 : 1)));
                     if (!JsNumber.isFinite(step))
                     {
                         continue;
@@ -173,7 +175,7 @@ public static partial class Roads
                     {
                         g[Js.Idx(nc)] = ng;
                         came[Js.Idx(nc)] = c;
-                        push(ng + (MIN * JsMath.sqrt((JsMath.pow((gx - nx), 2)) + (JsMath.pow((gy - ny), 2)))), nc);
+                        push(ng + ((double)(MIN) * (JsMath.sqrt((JsMath.pow((gx - nx), 2)) + (JsMath.pow((gy - ny), 2))))), nc);
                     }
                 }
             }
@@ -185,18 +187,18 @@ public static partial class Roads
         List<Point> cells = [];
         for (var c = goal; c != -1; c = Js.NN(Js.Get(came, c)))
         {
-            cells.push(new Point { x = Js.I(((c % N) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))), y = Js.I((JsMath.floor(((double)(c) / (N))) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))) });
+            cells.push(new Point { x = Js.I(((double)((c % N)) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))), y = Js.I(((double)(JsMath.floor(((double)(c) / (N)))) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))) });
         }
         cells.reverse();
-        List<Point> line = [from, .. cells.slice(1, -1), to];
+        List<PointD> line = [from, .. cells.slice(1, -1), to];
         for (var pass = 0; pass < 2; pass++)
         {
-            List<Point> next = [Js.NN(Js.Get(line, 0))];
+            List<PointD> next = [Js.NN(Js.Get(line, 0))];
             for (var i = 0; i < (line.length - 1); i++)
             {
                 var a = Js.NN(Js.Get(line, i));
                 var b = Js.NN(Js.Get(line, i + 1));
-                next.pushAll([new Point { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new Point { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) }]);
+                next.pushAll([new PointD { x = (a.x * 0.75) + (b.x * 0.25), y = (a.y * 0.75) + (b.y * 0.25) }, new PointD { x = (a.x * 0.25) + (b.x * 0.75), y = (a.y * 0.25) + (b.y * 0.75) }]);
             }
             next.push(Js.NN(line.at(-1)));
             line = next;
@@ -208,31 +210,31 @@ public static partial class Roads
     public static Float32Array costGrid(Nature n, List<Town> towns)
     {
         var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
-        var c = new Float32Array(N * N);
+        var c = new Float32Array(((double)(N) * (N)));
         for (var j = 0; j < N; j++)
         {
             for (var i = 0; i < N; i++)
             {
-                var x = (i * ROAD_CELL) + ((double)(ROAD_CELL) / (2));
-                var y = (j * ROAD_CELL) + ((double)(ROAD_CELL) / (2));
+                var x = ((double)(i) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
+                var y = ((double)(j) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
                 var v = NatureMod.isSea(n, x, y) ? double.PositiveInfinity : (NatureMod.isWater(n, x, y) ? 14 : (NatureMod.isForest(n, x, y) ? 3 : 1));
-                if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < (t.radius * 0.9)))
+                if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((double)(t.radius) * (0.9))))
                 {
                     v += 4;
                 }
-                c[Js.Idx((j * N) + i)] = v;
+                c[Js.Idx(((double)(j) * (N)) + i)] = v;
             }
         }
         return c;
     }
 
     /// <summary>Marks a laid road's cells cheap, so later roads share it.</summary>
-    public static void reuse(Float32Array cost, double size, List<Point> line)
+    public static void reuse(Float32Array cost, double size, List<PointD> line)
     {
         var N = JsMath.ceil(((double)(size) / (ROAD_CELL)));
         foreach (var p in Js.Iter(line))
         {
-            var i = (JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            var i = ((double)(JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)))))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
             if (JsNumber.isFinite(Js.NN(Js.Get(cost, i))))
             {
                 cost[Js.Idx(i)] = 0.35;
@@ -241,7 +243,7 @@ public static partial class Roads
     }
 
     /// <summary>Draws a road's centre line into the mask, about two and a half tiles wide.</summary>
-    public static void drawLine(Uint8Array mask, double size, List<Point> line, double value)
+    public static void drawLine(Uint8Array mask, double size, List<PointD> line, double value)
     {
         for (var i = 0; i < (line.length - 1); i++)
         {
@@ -250,8 +252,8 @@ public static partial class Roads
             var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.sqrt((JsMath.pow((b.x - a.x), 2)) + (JsMath.pow((b.y - a.y), 2)))) / (0.4))));
             for (var s = 0; s <= steps; s++)
             {
-                var px = a.x + ((double)(((b.x - a.x) * s)) / (steps));
-                var py = a.y + ((double)(((b.y - a.y) * s)) / (steps));
+                var px = a.x + ((double)(((double)((b.x - a.x)) * (s))) / (steps));
+                var py = a.y + ((double)(((double)((b.y - a.y)) * (s))) / (steps));
                 for (var y = JsMath.floor(py - 1); y <= JsMath.ceil(py + 1); y++)
                 {
                     for (var x = JsMath.floor(px - 1); x <= JsMath.ceil(px + 1); x++)
@@ -260,9 +262,9 @@ public static partial class Roads
                         {
                             continue;
                         }
-                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (Js.Get(mask, (y * size) + x) == 0))
+                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (Js.Get(mask, ((double)(y) * (size)) + x) == 0))
                         {
-                            mask[Js.Idx((y * size) + x)] = value;
+                            mask[Js.Idx(((double)(y) * (size)) + x)] = value;
                         }
                     }
                 }

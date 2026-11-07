@@ -59,11 +59,11 @@ public partial class WorldgenTest
             var forward = States.createState(new NewStateOptions { seed = 7, width = Js.I(SIZE), height = Js.I(SIZE) });
             var backward = States.createState(new NewStateOptions { seed = 7, width = Js.I(SIZE), height = Js.I(SIZE) });
             var n = ((double)(SIZE) / (Worldgen.CHUNK));
-            for (var i = 0; i < (n * n); i++)
+            for (var i = 0; i < ((double)(n) * (n)); i++)
             {
                 Worldgen.generateChunk(forward, l, i % n, JsMath.floor(((double)(i) / (n))));
             }
-            for (var i = (n * n) - 1; i >= 0; i--)
+            for (var i = ((double)(n) * (n)) - 1; i >= 0; i--)
             {
                 Worldgen.generateChunk(backward, l, i % n, JsMath.floor(((double)(i) / (n))));
             }
@@ -157,8 +157,8 @@ public partial class WorldgenTest
         {
             var world = Worldgen.createWorld(9, 512);
             var n = ((double)(512) / (Worldgen.CHUNK));
-            expect(Js.NN(world.world).generated.filter((g) => g == 1)).toHaveLength(JsMath.pow(((2 * Worldgen.GENERATE_RADIUS) + 1), 2));
-            expect(Js.NN(world.world).generated.length).toBe(n * n);
+            expect(Js.NN(world.world).generated.filter((g) => g == 1)).toHaveLength(JsMath.pow((((double)(2) * (Worldgen.GENERATE_RADIUS)) + 1), 2));
+            expect(Js.NN(world.world).generated.length).toBe(((double)(n) * (n)));
             expect(Js.Missing(world.grid.tiles, 0) ? null : (object?)(Js.Get(world.grid.tiles, 0))).toBe("floor");
         }
 
@@ -174,11 +174,11 @@ public partial class WorldgenTest
             expect(Js.NN(lazy.world).generated.filter((g) => g == 1).length).toBeGreaterThan(before);
             var alone = States.createState(new NewStateOptions { seed = 9, width = Js.I(256), height = Js.I(256) });
             Worldgen.generateChunk(alone, Worldgen.layout(9, 256), 7, 4);
-            for (var y = 4 * Worldgen.CHUNK; y < (5 * Worldgen.CHUNK); y++)
+            for (var y = ((double)(4) * (Worldgen.CHUNK)); y < ((double)(5) * (Worldgen.CHUNK)); y++)
             {
-                for (var x = 7 * Worldgen.CHUNK; x < (8 * Worldgen.CHUNK); x++)
+                for (var x = ((double)(7) * (Worldgen.CHUNK)); x < ((double)(8) * (Worldgen.CHUNK)); x++)
                 {
-                    expect(Js.Missing(lazy.grid.tiles, (y * 256) + x) ? null : (object?)(Js.Get(lazy.grid.tiles, (y * 256) + x))).toBe(Js.Get(alone.grid.tiles, (y * 256) + x));
+                    expect(Js.Missing(lazy.grid.tiles, ((double)(y) * (256)) + x) ? null : (object?)(Js.Get(lazy.grid.tiles, ((double)(y) * (256)) + x))).toBe(Js.Get(alone.grid.tiles, ((double)(y) * (256)) + x));
                 }
             }
             expect(Invariants.checkInvariants(lazy)).toEqual(Js.Arr([]));

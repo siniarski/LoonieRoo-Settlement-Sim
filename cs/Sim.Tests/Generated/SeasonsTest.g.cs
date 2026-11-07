@@ -9,7 +9,7 @@ public partial class SeasonsTest
 
     public static double dayStart(double day)
     {
-        return (day - 1) * Time.DAY_LENGTH;
+        return ((double)((day - 1)) * (Time.DAY_LENGTH));
     }
 
     public static double growthOver(SimState state, double ticks)
@@ -90,7 +90,7 @@ public partial class SeasonsTest
             {
                 var state = ScenarioMod.loadScenario(new Scenario { seed = 2, map = map });
                 Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
-                state.tick = Js.I(dayStart(16) + (16 * Time.TICKS_PER_HOUR));
+                state.tick = Js.I(dayStart(16) + ((double)(16) * (Time.TICKS_PER_HOUR)));
                 for (var i = 0; i < 200; i++)
                 {
                     Tick.tick(state);

@@ -61,7 +61,7 @@ public static partial class Clothing
         }
         Items.removeItem(state, item);
         Js.SetProp(s, Js.Get(SLOT_OF, item.kind), null);
-        Events.logEvent(state, $"{Js.Str(s.name)}'s {Js.Str((item.kind == "boots") ? "boots" : item.kind)} fell apart");
+        Events.logEvent(state, $"{Js.Str(s.name)}'s {Js.Str((item.kind == "boots") ? Js.Str("boots") : Js.Str(item.kind))} fell apart");
     }
 
     /// <summary>Damage after armour (which takes the wear).</summary>
@@ -73,7 +73,7 @@ public static partial class Clothing
             return damage;
         }
         wearOut(state, s, armour);
-        return JsMath.round(((double)((damage * ARMOUR_DAMAGE_PCT)) / (100)));
+        return JsMath.round(((double)(((double)(damage) * (ARMOUR_DAMAGE_PCT))) / (100)));
     }
 
     /// <summary>Stepping onto a tile: an armed spike trap hurts the barefoot (boots take it instead).</summary>
@@ -103,7 +103,7 @@ public static partial class Clothing
     /// <summary>A garment that's half worn, if any.</summary>
     public static Item? needsMending(SimState state, Survivor s)
     {
-        return new List<string> { s.body, s.feet }.map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && isGarment(i.kind)) && ((i.wear * 2) >= Js.Get(GARMENT_LIFE, i.kind)));
+        return new List<string> { s.body, s.feet }.map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && isGarment(i.kind)) && (((double)(i.wear) * (2)) >= Js.Get(GARMENT_LIFE, i.kind)));
     }
 
     public static bool startDressing(SimState state, Survivor s)
@@ -229,6 +229,6 @@ public static partial class Clothing
     /// <summary>"coat, boots" for panels.</summary>
     public static string describeClothing(SimState state, Survivor s)
     {
-        return new List<string> { s.body, s.feet }.map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && isGarment(i.kind)).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= Js.Get(GARMENT_LIFE, i.kind)) ? " (worn)" : "")}").join(", ");
+        return new List<string> { s.body, s.feet }.map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && isGarment(i.kind)).map((i) => $"{Js.Str(i.kind)}{Js.Str((((double)(i.wear) * (2)) >= Js.Get(GARMENT_LIFE, i.kind)) ? Js.Str(" (worn)") : Js.Str(""))}").join(", ");
     }
 }

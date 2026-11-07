@@ -115,7 +115,7 @@ public static partial class EndgameMod
             {
                 return;
             }
-            eg.evacuation = (JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS) * Time.DAY_LENGTH;
+            eg.evacuation = ((double)((JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS)) * (Time.DAY_LENGTH));
             Events.logEvent(state, $"The beacon got through: a helicopter will come at dawn on day {Js.Str(Time.dayOf(Js.NN(eg.evacuation)))}. The night before will be the worst yet. Hold out");
             return;
         }

@@ -39,8 +39,8 @@ public partial class BodyTest
             {
                 Tick.tick(state);
             }
-            expect(s.at.x - x).toBe(6 * JsMath.round(((double)((JsMath.round(((double)(Motion.SUB) / (pace))) * BodyMod.RUN_PCT)) / (100))));
-            expect(s.endurance).toBeLessThanOrEqual((100 - (6 * BodyMod.RUN_TICK_COST)) + 2);
+            expect(s.at.x - x).toBe(((double)(6) * (JsMath.round(((double)(((double)(JsMath.round(((double)(Motion.SUB) / (pace)))) * (BodyMod.RUN_PCT))) / (100))))));
+            expect(s.endurance).toBeLessThanOrEqual((100 - ((double)(6) * (BodyMod.RUN_TICK_COST))) + 2);
             expect(s.endurance).toBeLessThan(100);
             s.endurance = BodyMod.WINDED - 1;
             x = s.at.x;
@@ -77,7 +77,7 @@ public partial class BodyTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.."] });
             var s = Js.NN(Js.Get(state.survivors, 0));
             state.weather = "rain";
-            for (var t = 0; t < (2 * Time.TICKS_PER_HOUR); t++)
+            for (var t = 0; t < ((double)(2) * (Time.TICKS_PER_HOUR)); t++)
             {
                 state.tick = Js.I(t);
                 BodyMod.updateBody(state, s);

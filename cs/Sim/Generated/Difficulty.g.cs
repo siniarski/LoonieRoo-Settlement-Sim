@@ -44,12 +44,12 @@ public static partial class Difficulty
 
     public static double zombieScale(SimState state, double count)
     {
-        return JsMath.round(((double)((count * state.settings.zombies)) / (100)));
+        return JsMath.round(((double)(((double)(count) * (state.settings.zombies))) / (100)));
     }
 
     public static double eventChance(SimState state, double @base)
     {
-        return JsMath.min(0.6, @base * Js.NN(Js.Get(EVENT_SCALE, state.settings.weather)));
+        return JsMath.min(0.6, ((double)(@base) * (Js.NN(Js.Get(EVENT_SCALE, state.settings.weather)))));
     }
 
     public static double coldEvery(SimState state)
@@ -59,7 +59,7 @@ public static partial class Difficulty
 
     public static double crateLoot(SimState state, double loot)
     {
-        return JsMath.max(1, JsMath.round(loot * Js.NN(Js.Get(LOOT_SCALE, state.settings.progression))));
+        return JsMath.max(1, JsMath.round(((double)(loot) * (Js.NN(Js.Get(LOOT_SCALE, state.settings.progression))))));
     }
 
     public static double ruinDecay(SimState state)
@@ -72,7 +72,7 @@ public static partial class Difficulty
     {
         var item = Items.spawnItem(state, kind, x, y);
         var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Clothing.isGarment(kind) ? Js.Get(Clothing.GARMENT_LIFE, kind) : 0);
-        item.wear = JsMath.floor(life * Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)));
+        item.wear = JsMath.floor(((double)(life) * (Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)))));
         return item;
     }
     public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, (int)x, (int)y);

@@ -15,6 +15,7 @@ import { canReach, findPathToAny, openBetween, straighten, walksAcross, type Mov
 import { nearestTile } from '../src/sim/space';
 import { isWalkable } from '../src/sim/grid';
 import { tick } from '../src/sim/tick';
+import { applyCommand, type Command } from '../src/sim/commands';
 import { SCENARIOS } from './stressScenarios';
 import { PRESETS } from '../src/sim/difficulty';
 import { clockText, darkness, dayOf, hourOf, isNight, nightNumber, setDayScale, tickOfDay, ticksIntoNight } from '../src/sim/time';
@@ -118,3 +119,53 @@ it('writes whole runs for the C# port', () => {
     }
   }
 }, 1800000);
+
+// Command runs: the colony player's opening (colony.harness.ts) as commands through the command path, so the C#
+// replays the command log and must match too. start.json is before any command; commands.json is the log
+// ({tick, command}: applied after the tick that brought the clock there, or at 0 before the first tick).
+it('writes command runs for the C# port', () => {
+  const dir = 'cs/Parity/data/runs/colony-commands-128';
+  mkdirSync(dir, { recursive: true });
+  const s = createWorld(1, 128);
+  writeFileSync(`${dir}/start.json`, JSON.stringify(s));
+  const start = { ...s.survivors[0]!.pos };
+  const cmd = (c: Command) => applyCommand(s, c);
+  cmd({ type: 'designateRoom', x: start.x - 3, y: start.y - 5, purpose: 'housing' });
+  for (const [kind, count] of [['weapon', 2], ['bandage', 2], ['medicine', 2], ['coat', 3]] as const) cmd({ type: 'setCraftTarget', kind, count });
+  cmd({ type: 'designateBuild', x: start.x + 6, y: start.y - 3, structure: 'workbench' });
+  for (const job of ['craft', 'doctor', 'cook'] as const) cmd({ type: 'setPriority', survivorId: s.survivors[0]!.id, jobType: job, priority: 1 });
+  cmd({ type: 'designateBuild', x: start.x + 6, y: start.y - 1, structure: 'stove' });
+  cmd({ type: 'designateBuild', x: start.x + 8, y: start.y - 1, structure: 'well' });
+  for (let x = start.x + 4; x <= start.x + 9; x++) for (let y = start.y + 6; y <= start.y + 10; y++) {
+    if (x === start.x + 4 || x === start.x + 9 || y === start.y + 6 || y === start.y + 10) cmd({ type: 'designateBuild', x, y, structure: x === start.x + 6 && y === start.y + 6 ? 'door' : 'wall' });
+  }
+  cmd({ type: 'designateHunt', x0: 0, y0: 0, x1: 127, y1: 127, kinds: ['deer'] });
+  for (let i = 0; i < 6; i++) cmd({ type: 'designateFarm', x: start.x - 8 + i, y: start.y + 6, crop: i % 3 === 2 ? 'wheat' : 'potato' });
+  cmd({ type: 'designateExplore', x0: start.x + 16, y0: start.y - 10, x1: start.x + 36, y1: start.y + 10 });
+  for (const f of s.furniture) if ((f.kind === 'crate' || f.kind === 'tree') && !f.scavenge) cmd({ type: 'designateScavenge', x: f.x, y: f.y });
+  const checkpoints = [1, 10, 100, 300, 1000, 2000, 3000, 4800, 7200, 9600];
+  writeFileSync(`${dir}/checkpoints.json`, JSON.stringify(checkpoints));
+  let done = 0;
+  for (const at of checkpoints) {
+    for (; done < at; done++) {
+      tick(s);
+      for (const r of [...s.requests]) cmd({ type: 'fulfilRequest', requestId: r.id });
+      for (const tr of s.traders) if (!tr.traded) tr.offers.forEach((_, i) => cmd({ type: 'trade', traderId: tr.id, offer: i }));
+      for (const w of [...s.wanderers]) cmd({ type: 'acceptWanderer', wandererId: w.id });
+      if (done === 2400) cmd({ type: 'planPerimeter', x0: start.x - 16, y0: start.y - 16, x1: start.x + 16, y1: start.y + 16 });
+    }
+    writeFileSync(`${dir}/t${at}.json`, JSON.stringify(s));
+  }
+  writeFileSync(`${dir}/commands.json`, JSON.stringify(s.commandLog));
+}, 600000);
+
+// Worlds made from nothing: the C# generates the same seed, size and settings and must match (worlds/<name>.json,
+// with the arguments in worlds/index.json).
+it('writes generated worlds for the C# port', () => {
+  mkdirSync('cs/Parity/data/worlds', { recursive: true });
+  const cases: { name: string; seed: number; size: number; preset: keyof typeof PRESETS | null }[] = [];
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 42]) for (const size of [64, 128]) cases.push({ name: `s${seed}-${size}`, seed, size, preset: null });
+  for (const preset of Object.keys(PRESETS) as (keyof typeof PRESETS)[]) cases.push({ name: `s9-96-${preset}`, seed: 9, size: 96, preset });
+  for (const c of cases) writeFileSync(`cs/Parity/data/worlds/${c.name}.json`, JSON.stringify(c.preset ? createWorld(c.seed, c.size, PRESETS[c.preset].settings) : createWorld(c.seed, c.size)));
+  writeFileSync('cs/Parity/data/worlds/index.json', JSON.stringify(cases));
+}, 600000);

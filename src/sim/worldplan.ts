@@ -11,7 +11,7 @@
 import type { MapType } from './difficulty';
 import type { Point } from './grid';
 import { isWater, nearStart, onFenceLine, roll, START_CLEAR_RADIUS, natureFor, type Nature } from './nature';
-import { costGrid, drawLine, network, reuse, route } from './roads';
+import { costGrid, drawLine, network, reuse, route, type RoadPoint } from './roads';
 import { growStreets, landGrid, siteTowns, STREET, type Street, type Town } from './towns';
 import type { Facing } from './lots';
 
@@ -34,7 +34,7 @@ export interface WorldPlan {
   towns: Town[];
   streets: Street[];
   /** Country roads' centre lines. */
-  roads: Point[][];
+  roads: RoadPoint[][];
   /** Per tile: 0 nothing, 1 a country road, 2 a town street. */
   roadMask: Uint8Array;
   lots: Lot[];
@@ -103,7 +103,7 @@ function makePlan(n: Nature): WorldPlan {
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
 
 /** Roads between towns (and the start), and a few out to the map's edge. */
-function layRoads(n: Nature, towns: Town[], streets: Street[], mask: Uint8Array): Point[][] {
+function layRoads(n: Nature, towns: Town[], streets: Street[], mask: Uint8Array): RoadPoint[][] {
   const size = n.size;
   // Each town meets the roads at its street ends; the start at the edge of its clearing.
   const ends = (ti: number): Point[] =>
@@ -125,7 +125,7 @@ function layRoads(n: Nature, towns: Town[], streets: Street[], mask: Uint8Array)
     links.push([nearestEnd(i, edge), edge]);
   });
   const cost = costGrid(n, towns);
-  const roads: Point[][] = [];
+  const roads: RoadPoint[][] = [];
   for (const [a, b] of links) {
     const line = route(n, cost, a, b);
     if (!line) continue;
@@ -195,7 +195,7 @@ function townLots(n: Nature, towns: Town[], streets: Street[], add: Add): void {
  * Along the country roads round each town: houses where the town spills out along its roads,
  * then farms (a farmstead and its fields, or fields alone) further out.
  */
-function farmLots(n: Nature, towns: Town[], roads: Point[][], add: Add): void {
+function farmLots(n: Nature, towns: Town[], roads: RoadPoint[][], add: Add): void {
   roads.forEach((line, ri) => {
     let since = 99;
     for (let i = 1; i < line.length; i++) {
@@ -267,7 +267,7 @@ function fieldLots(n: Nature, towns: Town[], add: Add): void {
   });
 }
 
-function cabinLots(n: Nature, roads: Point[][], add: Add): void {
+function cabinLots(n: Nature, roads: RoadPoint[][], add: Add): void {
   const size = n.size;
   for (let gy = 0; gy < size; gy += 48) {
     for (let gx = 0; gx < size; gx += 48) {

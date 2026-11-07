@@ -56,7 +56,7 @@ public partial class EdgesTest
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = box(1, 1, 3, 3) });
             var map = Rooms.getRoomMap(state);
-            var room = Js.NN(map.rooms.find((r) => r.tiles.includes((2 * 7) + 2)));
+            var room = Js.NN(map.rooms.find((r) => r.tiles.includes(((double)(2) * (7)) + 2)));
             expect(room).toBeDefined();
             expect(room.tiles).toHaveLength(9);
             expect(room.doors).toHaveLength(1);
@@ -69,8 +69,8 @@ public partial class EdgesTest
             var inside = Motion.centre(new Point { x = Js.I(1), y = Js.I(2) });
             expect(Motion.fits(state.grid, inside, "free")).toBe(true);
             var moved = Motion.slide(state.grid, inside, -Motion.SUB, 0, "free");
-            expect(moved.x).toBeGreaterThanOrEqual((1 * Motion.SUB) + 77);
-            expect(Motion.fits(state.grid, new Point { x = Js.I(1 * Motion.SUB), y = Js.I(inside.y) }, "free")).toBe(false);
+            expect(moved.x).toBeGreaterThanOrEqual(((double)(1) * (Motion.SUB)) + 77);
+            expect(Motion.fits(state.grid, new Point { x = Js.I(((double)(1) * (Motion.SUB))), y = Js.I(inside.y) }, "free")).toBe(false);
         }
 
         [Fact(DisplayName = "walls on tile edges > a colonist opens the edge door going through, and it shuts behind them")]

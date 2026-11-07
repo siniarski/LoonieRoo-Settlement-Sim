@@ -10,7 +10,7 @@ public partial class WanderersTest
     /// <summary>The tick at which a given day and hour begin (tick 0 is day 1, 06:00).</summary>
     public static double at(double day, double hour)
     {
-        return ((day - 1) * Time.DAY_LENGTH) + ((hour - Time.START_HOUR) * Time.TICKS_PER_HOUR);
+        return ((double)((day - 1)) * (Time.DAY_LENGTH)) + ((double)((hour - Time.START_HOUR)) * (Time.TICKS_PER_HOUR));
     }
 
     public static readonly List<string> OPEN = ["........", "...s....", "........", "........"];
@@ -214,7 +214,7 @@ public partial class WanderersTest
             var w = Js.NN(Js.Get(state.wanderers, 0));
             bool seen(double x, double y)
             {
-                return Js.Get(state.grid.explored, (y * 80) + x) == 1;
+                return Js.Get(state.grid.explored, ((double)(y) * (80)) + x) == 1;
             }
             expect(seen(w.x, w.y)).toBe(true);
             expect(Js.Arr([seen(w.x + 1, w.y), seen(w.x - 1, w.y), seen(w.x, w.y + 1), seen(w.x, w.y - 1)])).toContain(false);

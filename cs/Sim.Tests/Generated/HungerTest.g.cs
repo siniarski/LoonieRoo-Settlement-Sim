@@ -65,7 +65,7 @@ public partial class HungerTest
             runUntil(state, (_) => s.meal == null);
             expect(s.note).toBe("ate a meal");
             expect(state.items.map((i) => i.pos)).toEqual(Js.Arr([Js.Obj(("x", (object?)(8)), ("y", (object?)(0)))]));
-            expect(s.satiety).toBeGreaterThan(((((Food.HUNGRY - 1) + Food.MEAL_VALUE) - (5 * 4)) - Food.EAT_TICKS) - 5);
+            expect(s.satiety).toBeGreaterThan(((((Food.HUNGRY - 1) + Food.MEAL_VALUE) - ((double)(5) * (4))) - Food.EAT_TICKS) - 5);
         }
 
         [Fact(DisplayName = "hunger and food > two hungry survivors never go for the same food")]

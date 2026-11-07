@@ -9,6 +9,9 @@
 
 import { isForest, isSea, isWater, roll, type Nature } from './nature';
 import type { Point } from './grid';
+
+/** A point on a road's centre line, in tiles: fractional where the curve is smoothed (corner cutting). A Point's shape. */
+export type RoadPoint = Point;
 import type { Town } from './towns';
 
 export const ROAD_CELL = 4;
@@ -44,7 +47,7 @@ export function network(seed: number, nodes: Point[]): [number, number][] {
 }
 
 /** Routes a road from `from` to `to`; returns its smoothed centre line in tiles, or null if there's no way. */
-export function route(n: Nature, cost: Float32Array, from: Point, to: Point): Point[] | null {
+export function route(n: Nature, cost: Float32Array, from: Point, to: Point): RoadPoint[] | null {
   const N = Math.ceil(n.size / ROAD_CELL);
   const cell = (p: Point) => Math.min(N - 1, Math.max(0, Math.floor(p.y / ROAD_CELL))) * N + Math.min(N - 1, Math.max(0, Math.floor(p.x / ROAD_CELL)));
   const start = cell(from);
@@ -116,9 +119,9 @@ export function route(n: Nature, cost: Float32Array, from: Point, to: Point): Po
   for (let c = goal; c !== -1; c = came[c]!) cells.push({ x: (c % N) * ROAD_CELL + ROAD_CELL / 2, y: Math.floor(c / N) * ROAD_CELL + ROAD_CELL / 2 });
   cells.reverse();
   // The real ends, then two rounds of corner cutting (Chaikin) for a curve.
-  let line: Point[] = [from, ...cells.slice(1, -1), to];
+  let line: RoadPoint[] = [from, ...cells.slice(1, -1), to];
   for (let pass = 0; pass < 2; pass++) {
-    const next: Point[] = [line[0]!];
+    const next: RoadPoint[] = [line[0]!];
     for (let i = 0; i < line.length - 1; i++) {
       const a = line[i]!;
       const b = line[i + 1]!;
@@ -148,7 +151,7 @@ export function costGrid(n: Nature, towns: Town[]): Float32Array {
 }
 
 /** Marks a laid road's cells cheap, so later roads share it. */
-export function reuse(cost: Float32Array, size: number, line: Point[]): void {
+export function reuse(cost: Float32Array, size: number, line: RoadPoint[]): void {
   const N = Math.ceil(size / ROAD_CELL);
   for (const p of line) {
     const i = Math.min(N - 1, Math.max(0, Math.floor(p.y / ROAD_CELL))) * N + Math.min(N - 1, Math.max(0, Math.floor(p.x / ROAD_CELL)));
@@ -157,7 +160,7 @@ export function reuse(cost: Float32Array, size: number, line: Point[]): void {
 }
 
 /** Draws a road's centre line into the mask, about two and a half tiles wide. */
-export function drawLine(mask: Uint8Array, size: number, line: Point[], value: number): void {
+export function drawLine(mask: Uint8Array, size: number, line: RoadPoint[], value: number): void {
   for (let i = 0; i < line.length - 1; i++) {
     const a = line[i]!;
     const b = line[i + 1]!;

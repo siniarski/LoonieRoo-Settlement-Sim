@@ -14,7 +14,7 @@ public static partial class Family
 {
     static Family()
     {
-        Time.onClock(() => CHILDHOOD = 10 * Time.DAY_LENGTH);
+        Time.onClock(() => CHILDHOOD = ((double)(10) * (Time.DAY_LENGTH)));
     }
 
     public const int YEAR_DAYS = 20;
@@ -27,7 +27,7 @@ public static partial class Family
 
     public const int MAX_PARENT_AGE = 50;
 
-    public static double CHILDHOOD = 10 * Time.DAY_LENGTH;
+    public static double CHILDHOOD = ((double)(10) * (Time.DAY_LENGTH));
 
     /// <summary>Age a child is counted as once grown.</summary>
     public const int GROWN_AGE = 16;
@@ -47,12 +47,12 @@ public static partial class Family
     /// <summary>An adult's starting age, from their id.</summary>
     public static double startingAge(string id)
     {
-        return 18 + JsMath.floor(Hash.hashRoll(Hash.idNumber(id), 2718.0) * 45);
+        return 18 + JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(id), 2718.0)) * (45)));
     }
 
     public static void updateFamily(SimState state)
     {
-        if ((state.tick > 0) && ((state.tick % (YEAR_DAYS * Time.DAY_LENGTH)) == 0))
+        if ((state.tick > 0) && ((state.tick % ((double)(YEAR_DAYS) * (Time.DAY_LENGTH))) == 0))
         {
             foreach (var s in Js.Iter(state.survivors))
             {
@@ -118,7 +118,7 @@ public static partial class Family
         var b = Js.NN(Js.Get(HEAD_START, (n + 3) % HEAD_START.length));
         foreach (var t in Js.Iter((List<string>)[a, b]))
         {
-            s.xp[Js.Idx(t)] = (Js.Q(Js.Get(s.xp, t), 0)) + (2 * Skills.XP_PER_LEVEL);
+            s.xp[Js.Idx(t)] = (Js.Q(Js.Get(s.xp, t), 0)) + ((double)(2) * (Skills.XP_PER_LEVEL));
         }
         Events.logEvent(state, $"{Js.Str(s.name)} has grown up (good at {Js.Str(a)} and {Js.Str(b)})");
     }

@@ -31,7 +31,7 @@ public partial class AlertsTest
         public void T003_warns_about_winter_when_the_food_will_not_last_it()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["ssb.ffffff"] });
-            state.tick = Js.I(((2 * Seasons.SEASON_DAYS) + 2) * Time.DAY_LENGTH);
+            state.tick = Js.I(((double)((((double)(2) * (Seasons.SEASON_DAYS)) + 2)) * (Time.DAY_LENGTH)));
             expect(Alerts.daysToWinter(state.tick)).toBe(3);
             expect(Alerts.foodDays(state)).toBeLessThan(Seasons.SEASON_DAYS);
             expect(Alerts.alerts(state).some((a) => a.text.startsWith("Winter in 3 days"))).toBe(true);

@@ -54,7 +54,7 @@ public static partial class Hordes
     /// <summary>Damage a zombie does in the time it takes to walk a tile.</summary>
     public static double batterRate()
     {
-        return ((double)((Zombies.ZOMBIE_DAMAGE * Zombies.ZOMBIE_TICKS_PER_TILE)) / (Zombies.ZOMBIE_ATTACK_EVERY));
+        return ((double)(((double)(Zombies.ZOMBIE_DAMAGE) * (Zombies.ZOMBIE_TICKS_PER_TILE))) / (Zombies.ZOMBIE_ATTACK_EVERY));
     }
 
     /// <summary>A goal (a survivor) moving no further than this from where it was leaves the field as it is.</summary>
@@ -255,8 +255,8 @@ public static partial class Hordes
         {
             return double.PositiveInfinity;
         }
-        var i = (by * grid.width) + bx;
-        return STEP + JsMath.ceil(((double)(((Js.Get(Breach.STRUCTURE_HEALTH, tile) * (grid.reinforced.includes(i) ? 2.5 : 1)) * STEP)) / (batterRate())));
+        var i = ((double)(by) * (grid.width)) + bx;
+        return STEP + JsMath.ceil(((double)(((double)(((double)(Js.Get(Breach.STRUCTURE_HEALTH, tile)) * ((grid.reinforced.includes(i) ? 2.5 : 1)))) * (STEP))) / (batterRate())));
     }
     public static double enterCost(SimState state, double bx, double by, bool asShut = false) => enterCost(state, (int)bx, (int)by, asShut);
 
@@ -274,7 +274,7 @@ public static partial class Hordes
         {
             return 0;
         }
-        return JsMath.ceil(((double)((JsMath.max(1, Breach.edgeHealth(grid, e)) * STEP)) / (batterRate())));
+        return JsMath.ceil(((double)(((double)(JsMath.max(1, Breach.edgeHealth(grid, e))) * (STEP))) / (batterRate())));
     }
     public static double edgeCost(SimState state, double ax, double ay, double bx, double by, bool asShut = false) => edgeCost(state, (int)ax, (int)ay, (int)bx, (int)by, asShut);
 
@@ -303,7 +303,7 @@ public static partial class Hordes
         var y1 = __d3.y1;
         var w = (x1 - x0) + 1;
         var ht = (y1 - y0) + 1;
-        var dist = new Int32Array(w * ht).fill(UNREACHED);
+        var dist = new Int32Array(((double)(w) * (ht))).fill(UNREACHED);
         var hc = new Float64Array(1024);
         var hi = new Int32Array(1024);
         double size = 0;
@@ -324,10 +324,10 @@ public static partial class Hordes
         {
             if (size == hc.length)
             {
-                var nc = new Float64Array(size * 2);
+                var nc = new Float64Array(((double)(size) * (2)));
                 nc.set(hc);
                 hc = nc;
-                var ni = new Int32Array(size * 2);
+                var ni = new Int32Array(((double)(size) * (2)));
                 ni.set(hi);
                 hi = ni;
             }
@@ -356,7 +356,7 @@ public static partial class Hordes
                 double k = 0;
                 for (; ; )
                 {
-                    var l = (2 * k) + 1;
+                    var l = ((double)(2) * (k)) + 1;
                     var r = l + 1;
                     double m = k;
                     if ((l < size) && less(l, m))
@@ -386,7 +386,7 @@ public static partial class Hordes
         {
             if (inBox(g.x, g.y))
             {
-                push(0, ((g.y - y0) * w) + (g.x - x0));
+                push(0, ((double)((g.y - y0)) * (w)) + (g.x - x0));
             }
         }
         if (outside.length > 0)
@@ -408,11 +408,11 @@ public static partial class Hordes
                     {
                         best = JsMath.min(best, Space.manhattan(g, new Point { x = Js.I(x), y = Js.I(y) }));
                     }
-                    push(best * STEP, ((y - y0) * w) + (x - x0));
+                    push(((double)(best) * (STEP)), ((double)((y - y0)) * (w)) + (x - x0));
                 }
             }
         }
-        var enter = new Float64Array(w * ht).fill(-1);
+        var enter = new Float64Array(((double)(w) * (ht))).fill(-1);
         double stepIn(double ax, double ay, double bx, double by, double bi)
         {
             if (Js.Get(enter, bi) == -1)
@@ -444,7 +444,7 @@ public static partial class Hordes
                 {
                     continue;
                 }
-                var j = ((ay - y0) * w) + (ax - x0);
+                var j = ((double)((ay - y0)) * (w)) + (ax - x0);
                 if (Js.Get(dist, j) != UNREACHED)
                 {
                     continue;
@@ -477,7 +477,7 @@ public static partial class Hordes
         {
             return null;
         }
-        if (Js.Get(f.dist, ((here.y - y0) * w) + (here.x - x0)) == 0)
+        if (Js.Get(f.dist, ((double)((here.y - y0)) * (w)) + (here.x - x0)) == 0)
         {
             return null;
         }
@@ -491,7 +491,7 @@ public static partial class Hordes
             {
                 continue;
             }
-            var rest = Js.NN(Js.Get(f.dist, ((ny - y0) * w) + (nx - x0)));
+            var rest = Js.NN(Js.Get(f.dist, ((double)((ny - y0)) * (w)) + (nx - x0)));
             if (rest == UNREACHED)
             {
                 continue;
@@ -641,8 +641,8 @@ public static partial class Hordes
         {
             return;
         }
-        var share = SHED_SHARE_MIN + (roll(1) * (SHED_SHARE_MAX - SHED_SHARE_MIN));
-        var n = JsMath.max(1, JsMath.floor(zs.length * share));
+        var share = SHED_SHARE_MIN + ((double)(roll(1)) * ((SHED_SHARE_MAX - SHED_SHARE_MIN)));
+        var n = JsMath.max(1, JsMath.floor(((double)(zs.length) * (share))));
         var goal = Js.At(h.goals, 0, middle(zs));
         var back = Js.ListOf(zs).sort((a, b) => ((Space.manhattan(b.pos, goal) - Space.manhattan(a.pos, goal)) is var __or6 && Js.T(__or6) ? __or6 : ((string.CompareOrdinal(a.id, b.id) < 0) ? -1 : 1))).slice(0, n);
         var mid = middle(back);
@@ -652,7 +652,7 @@ public static partial class Hordes
         var __d7 = state.grid;
         var width = __d7.width;
         var height = __d7.height;
-        Point heading = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
+        Point heading = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - ((double)(side) * (dy))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + ((double)(side) * (dx))))) };
         foreach (var z in Js.Iter(back))
         {
             z.hordeId = null;
@@ -714,7 +714,7 @@ public static partial class Hordes
             }
             var mid = middle(heard);
             var heading = toward(mid);
-            if ((heard.length * 2) > zs.length)
+            if (((double)(heard.length) * (2)) > zs.length)
             {
                 h.heading = heading;
                 h.goals = [Js.Clone(heading)];

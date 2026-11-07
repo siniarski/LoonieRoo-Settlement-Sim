@@ -16,9 +16,9 @@ public partial class MotionTest
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["..#", "..."] });
             expect(Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(1), y = Js.I(0) }), "survivor")).toBe(true);
-            expect(Motion.fits(state.grid, new Point { x = Js.I(((2 * Motion.SUB) - Motion.BODY_RADIUS) + 1), y = Js.I(128) }, "survivor")).toBe(false);
+            expect(Motion.fits(state.grid, new Point { x = Js.I((((double)(2) * (Motion.SUB)) - Motion.BODY_RADIUS) + 1), y = Js.I(128) }, "survivor")).toBe(false);
             var moved = Motion.slide(state.grid, Motion.centre(new Point { x = Js.I(1), y = Js.I(0) }), 200, 60, "survivor");
-            expect(moved.x).toBeLessThanOrEqual((2 * Motion.SUB) - Motion.BODY_RADIUS);
+            expect(moved.x).toBeLessThanOrEqual(((double)(2) * (Motion.SUB)) - Motion.BODY_RADIUS);
             expect(moved.y).toBe(128 + 60);
         }
 
@@ -84,7 +84,7 @@ public partial class MotionTest
             Commands.applyCommand(state, new Command { type = "spawnZombie", x = Js.I(3), y = Js.I(0) });
             var ahead = Js.NN(Js.Get(state.zombies, 1));
             ahead.kind = "static";
-            ahead.at = new Point { x = Js.I((3 * Motion.SUB) + 60), y = Js.I(Motion.SUB + 40) };
+            ahead.at = new Point { x = Js.I(((double)(3) * (Motion.SUB)) + 60), y = Js.I(Motion.SUB + 40) };
             Js.NN(state.control).nextSwing = 0;
             Commands.applyCommand(state, new Command { type = "swing", x = Js.I(3), y = Js.I(1) });
             expect(ahead.health).toBeLessThan(ahead.maxHealth);

@@ -24,10 +24,10 @@ public static partial class Talk
 {
     static Talk()
     {
-        Time.onClock(() => TALK_EVERY = 2 * Time.TICKS_PER_HOUR);
+        Time.onClock(() => TALK_EVERY = ((double)(2) * (Time.TICKS_PER_HOUR)));
     }
 
-    public static double TALK_EVERY = 2 * Time.TICKS_PER_HOUR;
+    public static double TALK_EVERY = ((double)(2) * (Time.TICKS_PER_HOUR));
 
     /// <summary>Talking needs you within this many tiles.</summary>
     public const int TALK_RANGE = 2;
@@ -257,12 +257,12 @@ public static partial class Talk
         }
         var n = Hash.idNumber(s.id);
         var k = TASK_ORDER.indexOf(kind);
-        var angle = (Hash.hashRoll(n, k, 0x7a5) * JsMath.PI) * 2;
-        var dist = TASK_MIN + (Hash.hashRoll(n, k, 0x7a6) * TASK_SPREAD);
+        var angle = ((double)(((double)(Hash.hashRoll(n, k, 0x7a5)) * (JsMath.PI))) * (2));
+        var dist = TASK_MIN + ((double)(Hash.hashRoll(n, k, 0x7a6)) * (TASK_SPREAD));
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
+        Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
         Worldgen.ensureGeneratedAround(state, p);
         return Space.nearestTile(state.grid, p, (x, y) => (((Grids.inBounds(state.grid, x, y) && (Grids.getTile(state.grid, x, y) == "floor")) && Grids.isWalkable(state.grid, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
     }
@@ -342,7 +342,7 @@ public static partial class Talk
                 }
             case "radio":
                 {
-                    return ((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Radio.hasRadio(state)) ? callOut(state, task, giver) : null;
+                    return ((Time.tickOfDay(state.tick) == ((double)(12) * (Time.TICKS_PER_HOUR))) && Radio.hasRadio(state)) ? callOut(state, task, giver) : null;
                 }
             case "medicine":
                 {

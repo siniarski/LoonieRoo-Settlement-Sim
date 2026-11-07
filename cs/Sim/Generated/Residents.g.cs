@@ -91,7 +91,7 @@ public static partial class Residents
             }
             if ((state.tick >= r.nextThinkTick) && (r.path.length == 0))
             {
-                r.nextThinkTick = (state.tick + 40) + JsMath.floor(Hash.hashRoll(Hash.idNumber(r.id), state.tick) * 60);
+                r.nextThinkTick = (state.tick + 40) + JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(r.id), state.tick)) * (60)));
                 r.path = potter(state, r, n);
             }
             step(r);
@@ -115,7 +115,7 @@ public static partial class Residents
         {
             return Hash.hashRoll(Hash.idNumber(r.id), state.tick, salt);
         }
-        Point to = new Point { x = Js.I((box.x0 + 1) + JsMath.floor(roll(1) * ((box.x1 - box.x0) - 1))), y = Js.I((box.y0 + 2) + JsMath.floor(roll(2) * JsMath.max(1, (box.y1 - box.y0) - 2))) };
+        Point to = new Point { x = Js.I((box.x0 + 1) + JsMath.floor(((double)(roll(1)) * (((box.x1 - box.x0) - 1))))), y = Js.I((box.y0 + 2) + JsMath.floor(((double)(roll(2)) * (JsMath.max(1, (box.y1 - box.y0) - 2))))) };
         if (state.residents.some((o) => ((o != r) && (o.pos.x == to.x)) && (o.pos.y == to.y)))
         {
             return (List<Point>)[];
@@ -176,7 +176,7 @@ public static partial class Residents
             n.people = JsMath.max(0, n.people - 1);
         }
         Corpses.leaveCorpse(state, r.pos, r.name);
-        Events.logEvent(state, $"{Js.Str(by.name)} killed {Js.Str(r.name)}{Js.Str(Js.T(n) ? $" of {Js.Str(n.name)}" : "")}");
+        Events.logEvent(state, $"{Js.Str(by.name)} killed {Js.Str(r.name)}{Js.Str(Js.T(n) ? Js.Str($" of {Js.Str(n.name)}") : Js.Str(""))}");
         return true;
     }
 
@@ -230,7 +230,7 @@ public static partial class Residents
         {
             return null;
         }
-        Events.logEvent(state, $"{Js.Str(r.name)} of {Js.Str(n.name)} talked with {Js.Str(you.name)} a while ({Js.Str(n.name)} needs {Js.Str((n.food < (n.people * 2)) ? "food" : "nothing much")})");
+        Events.logEvent(state, $"{Js.Str(r.name)} of {Js.Str(n.name)} talked with {Js.Str(you.name)} a while ({Js.Str(n.name)} needs {Js.Str((n.food < ((double)(n.people) * (2))) ? Js.Str("food") : Js.Str("nothing much"))})");
         return null;
     }
 }

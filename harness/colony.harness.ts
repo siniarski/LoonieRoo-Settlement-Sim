@@ -175,6 +175,8 @@ function run(seed: number, days: number): void {
       ].join(' | '),
     );
     flush();
+    // LOG=path: the state (its command log included) after each day, to compare two runs (TypeScript and C#).
+    if (process.env.LOG) writeFileSync(`${process.env.LOG}-s${seed}-day${day}.json`, JSON.stringify(state));
     if (state.survivors.length === 0) {
       out.push(`s${seed} wiped out on day ${day}`);
       break;

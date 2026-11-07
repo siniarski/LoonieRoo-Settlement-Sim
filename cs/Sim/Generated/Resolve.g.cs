@@ -33,7 +33,7 @@ public static partial class Resolve
 
     public static double startingResolve(string id)
     {
-        return 40 + JsMath.floor(Hash.hashRoll(Hash.idNumber(id), 2021.0) * 21);
+        return 40 + JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(id), 2021.0)) * (21)));
     }
 
     public static void steel(Survivor s, int by)
@@ -73,7 +73,7 @@ public static partial class Resolve
             {
                 continue;
             }
-            if (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7847.0) < ((double)((BREAKING - s.resolve)) / ((2 * BREAKING))))
+            if (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7847.0) < ((double)((BREAKING - s.resolve)) / (((double)(2) * (BREAKING)))))
             {
                 leaving.push(s);
             }

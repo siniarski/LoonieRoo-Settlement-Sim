@@ -29,7 +29,7 @@ public static partial class Moodlets
     /// <summary>A blow's damage after moodlets.</summary>
     public static double boostDamage(Survivor s, double damage)
     {
-        return boosted(s, "harder") ? JsMath.round(((double)((damage * HARDER_PCT)) / (100))) : damage;
+        return boosted(s, "harder") ? JsMath.round(((double)(((double)(damage) * (HARDER_PCT))) / (100))) : damage;
     }
 
     /// <summary>Ticks between swings after moodlets.</summary>

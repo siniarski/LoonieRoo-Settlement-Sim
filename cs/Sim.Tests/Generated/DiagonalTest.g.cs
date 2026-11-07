@@ -37,8 +37,8 @@ public partial class DiagonalTest
         public void T002_across_open_ground_they_cut_corners_a_diagonal_is_quicker_th()
         {
             var open = walkTo(["s....", ".....", ".....", ".....", "....."], 4, 4);
-            var diag = 4 * JsMath.round(((double)((4 * 1414)) / (1000)));
-            expect(open.ticks).toBeLessThan(8 * 4);
+            var diag = ((double)(4) * (JsMath.round(((double)(((double)(4) * (1414))) / (1000)))));
+            expect(open.ticks).toBeLessThan(((double)(8) * (4)));
             expect(open.ticks).toBeLessThanOrEqual(diag + 2);
         }
 

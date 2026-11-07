@@ -25,7 +25,7 @@ public static partial class Towns
     /// <summary>How many towns, and how big, for a map this size.</summary>
     public static List<string> townKinds(double seed, double size)
     {
-        var count = (size <= 128) ? 1 : (JsMath.max(1, JsMath.round(((double)((size * size)) / ((170 * 170))))) + ((NatureMod.roll(seed, size, 0, 0x7100) < 0.5) ? 1 : 0));
+        var count = (size <= 128) ? 1 : (JsMath.max(1, JsMath.round(((double)(((double)(size) * (size))) / (((double)(170) * (170)))))) + ((NatureMod.roll(seed, size, 0, 0x7100) < 0.5) ? 1 : 0));
         List<string> kinds = [];
         for (var i = 0; i < count; i++)
         {
@@ -40,14 +40,14 @@ public static partial class Towns
     public static Uint8Array landGrid(Nature n)
     {
         var N = JsMath.ceil(((double)(n.size) / (4)));
-        var g = new Uint8Array(N * N);
+        var g = new Uint8Array(((double)(N) * (N)));
         for (var j = 0; j < N; j++)
         {
             for (var i = 0; i < N; i++)
             {
-                var x = (i * 4) + 2;
-                var y = (j * 4) + 2;
-                g[Js.Idx((j * N) + i)] = NatureMod.isWater(n, x, y) ? 2 : (NatureMod.isForest(n, x, y) ? 1 : 0);
+                var x = ((double)(i) * (4)) + 2;
+                var y = ((double)(j) * (4)) + 2;
+                g[Js.Idx(((double)(j) * (N)) + i)] = NatureMod.isWater(n, x, y) ? 2 : (NatureMod.isForest(n, x, y) ? 1 : 0);
             }
         }
         return g;
@@ -61,7 +61,7 @@ public static partial class Towns
         kinds.forEach((kind, i) =>
         {
             var (lo, hi) = Js.Get(RADII, kind);
-            var radius = JsMath.min(JsMath.floor(n.size * 0.19), lo + JsMath.floor(NatureMod.roll(n.seed, i, 2, 0x7102) * ((hi - lo) + 1)));
+            var radius = JsMath.min(JsMath.floor(((double)(n.size) * (0.19))), lo + JsMath.floor(((double)(NatureMod.roll(n.seed, i, 2, 0x7102)) * (((hi - lo) + 1)))));
             SiteTownsBest? best = null;
             var margin = radius + 3;
             for (var y = margin; y < (n.size - margin); y += 8)
@@ -86,8 +86,8 @@ public static partial class Towns
                     {
                         for (var k = JsMath.max(0, JsMath.floor(((double)((x - reach)) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)((x + reach)) / (4)))); k++)
                         {
-                            var d = JsMath.sqrt((JsMath.pow((((k * 4) + 2) - x), 2)) + (JsMath.pow((((j * 4) + 2) - y), 2)));
-                            var c = Js.NN(Js.Get(land, (j * N) + k));
+                            var d = JsMath.sqrt((JsMath.pow(((((double)(k) * (4)) + 2) - x), 2)) + (JsMath.pow(((((double)(j) * (4)) + 2) - y), 2)));
+                            var c = Js.NN(Js.Get(land, ((double)(j) * (N)) + k));
                             if (d <= radius)
                             {
                                 inside++;
@@ -116,7 +116,7 @@ public static partial class Towns
                         continue;
                     }
                     var wetShare = ((double)(wet) / (JsMath.max(1, around)));
-                    var score = ((dryShare - (((double)(wooded) / (JsMath.max(1, inside))) * 0.6)) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + (NatureMod.roll(n.seed, x, y, 0x7103) * 0.15);
+                    var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15));
                     if (!Js.T(best) || (score > best.score))
                     {
                         best = new SiteTownsBest { x = Js.I(x), y = Js.I(y), score = score };
@@ -146,7 +146,7 @@ public static partial class Towns
         var laid = new JsSet<double>();
         bool isStreet(double x, double y)
         {
-            return laid.has((y * n.size) + x);
+            return laid.has(((double)(y) * (n.size)) + x);
         }
         double run(double x, double y, double dx, double dy, double len, bool main)
         {
@@ -159,7 +159,7 @@ public static partial class Towns
             {
                 for (var o = 2; o <= 9; o++)
                 {
-                    if (isStreet(sx + (px * o), sy + (py * o)) || isStreet(sx - (px * (o - 1)), sy - (py * (o - 1))))
+                    if (isStreet(sx + ((double)(px) * (o)), sy + ((double)(py) * (o))) || isStreet(sx - ((double)(px) * ((o - 1))), sy - ((double)(py) * ((o - 1)))))
                     {
                         return true;
                     }
@@ -169,9 +169,9 @@ public static partial class Towns
             double steps = 0;
             while (steps < len)
             {
-                var nx = x + (dx * (steps + 1));
-                var ny = y + (dy * (steps + 1));
-                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > (t.radius * 1.05)))
+                var nx = x + ((double)(dx) * ((steps + 1)));
+                var ny = y + ((double)(dy) * ((steps + 1)));
+                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > ((double)(t.radius) * (1.05))))
                 {
                     break;
                 }
@@ -190,15 +190,15 @@ public static partial class Towns
             {
                 return 0;
             }
-            var x1 = x + (dx * steps);
-            var y1 = y + (dy * steps);
+            var x1 = x + ((double)(dx) * (steps));
+            var y1 = y + ((double)(dy) * (steps));
             Street s = new Street { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
             streets.push(s);
             for (var yy = s.y0; yy <= (s.y1 + (s.eastWest ? 1 : 0)); yy++)
             {
                 for (var xx = s.x0; xx <= (s.x1 + (s.eastWest ? 0 : 1)); xx++)
                 {
-                    laid.add((yy * n.size) + xx);
+                    laid.add(((double)(yy) * (n.size)) + xx);
                 }
             }
             return steps;
@@ -214,11 +214,11 @@ public static partial class Towns
                 return;
             }
             var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
-            double off = (STREET_GAP - 8) + JsMath.floor(r(k++) * 7);
+            double off = (STREET_GAP - 8) + JsMath.floor(((double)(r(k++)) * (7)));
             while (off < (steps - 4))
             {
-                var bx = x + (dx * off);
-                var by = y + (dy * off);
+                var bx = x + ((double)(dx) * (off));
+                var by = y + ((double)(dy) * (off));
                 foreach (var side in Js.Iter((List<double>)[1, -1]))
                 {
                     if (r(k++) > odds)
@@ -226,17 +226,17 @@ public static partial class Towns
                         continue;
                     }
                     var gap = (side == 1) ? 2 : -1;
-                    grow(bx + (px * gap), by + (py * gap), px * side, py * side, JsMath.floor(t.radius * (0.5 + (r(k++) * 0.6))), level + 1);
+                    grow(bx + ((double)(px) * (gap)), by + ((double)(py) * (gap)), ((double)(px) * (side)), ((double)(py) * (side)), JsMath.floor(((double)(t.radius) * ((0.5 + ((double)(r(k++)) * (0.6)))))), level + 1);
                 }
-                off += STREET_GAP + JsMath.floor(r(k++) * 6);
+                off += STREET_GAP + JsMath.floor(((double)(r(k++)) * (6)));
             }
         }
         var __c0 = t.eastWest; var ax = __c0 ? 1 : 0; var ay = __c0 ? 0 : 1;
         var __c1 = t.eastWest; var cx = __c1 ? 0 : 1; var cy = __c1 ? 1 : 0;
-        grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * (0.9 + (r(1) * 0.2))), 0);
-        grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * (0.9 + (r(2) * 0.2))), 0);
-        grow(t.x + (cx * 2), t.y + (cy * 2), cx, cy, JsMath.floor(t.radius * (0.6 + (r(3) * 0.4))), 0);
-        grow(t.x - cx, t.y - cy, -cx, -cy, JsMath.floor(t.radius * (0.6 + (r(4) * 0.4))), 0);
+        grow(t.x, t.y, ax, ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(1)) * (0.2)))))), 0);
+        grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(2)) * (0.2)))))), 0);
+        grow(t.x + ((double)(cx) * (2)), t.y + ((double)(cy) * (2)), cx, cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(3)) * (0.4)))))), 0);
+        grow(t.x - cx, t.y - cy, -cx, -cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(4)) * (0.4)))))), 0);
         return streets;
     }
 }

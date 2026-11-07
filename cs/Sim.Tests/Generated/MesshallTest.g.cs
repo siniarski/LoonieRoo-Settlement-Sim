@@ -221,7 +221,7 @@ public partial class MesshallTest
             var content = timeToRemove(false);
             var miserable = timeToRemove(true);
             expect(miserable).toBeGreaterThan(content);
-            expect(miserable).toBeLessThanOrEqual(JsMath.ceil(((double)((content * 4)) / (3))) + 2);
+            expect(miserable).toBeLessThanOrEqual(JsMath.ceil(((double)(((double)(content) * (4))) / (3))) + 2);
         }
     }
 }

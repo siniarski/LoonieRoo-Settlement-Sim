@@ -29,7 +29,7 @@ public partial class DefencesTest
         {
             s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
         }
-        state.tick = Js.I((17 * Time.TICKS_PER_HOUR) + 1);
+        state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
         return state;
     }
 
@@ -85,7 +85,7 @@ public partial class DefencesTest
         public void T006_are_built_from_wood_quickly()
         {
             var state = setup(["-..", "s.w"], new() { ["build"] = 3, ["haul"] = 3 });
-            state.tick = Js.I(6 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
             runUntil(state, (_) => Js.Get(state.grid.tiles, 0) == "barricade");
         }
     }

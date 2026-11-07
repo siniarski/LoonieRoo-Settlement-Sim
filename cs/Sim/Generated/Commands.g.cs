@@ -442,7 +442,7 @@ public static partial class Commands
             {
                 return reject($"({Js.Str(x_7)}, {Js.Str(y_8)}) is not a door");
             }
-            var i = (y_8 * state.grid.width) + x_7;
+            var i = ((double)(y_8) * (state.grid.width)) + x_7;
             var open = state.grid.open.indexOf(i);
             if (open >= 0)
             {
@@ -811,7 +811,7 @@ public static partial class Commands
         }
         if (structure == "reinforce")
         {
-            if (!Breach.isStructure(Grids.getTile(state.grid, x, y)) || state.grid.reinforced.includes((y * state.grid.width) + x))
+            if (!Breach.isStructure(Grids.getTile(state.grid, x, y)) || state.grid.reinforced.includes(((double)(y) * (state.grid.width)) + x))
             {
                 return unchanged();
             }
@@ -1086,7 +1086,7 @@ public static partial class Commands
         {
             return $"({Js.Str(x)}, {Js.Str(y)}) is not a door";
         }
-        var i = (y * state.grid.width) + x;
+        var i = ((double)(y) * (state.grid.width)) + x;
         var at = state.grid.open.indexOf(i);
         var passing = state.grid.passing.indexOf(i);
         if (passing >= 0)

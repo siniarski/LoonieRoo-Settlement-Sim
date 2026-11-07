@@ -120,7 +120,7 @@ public static partial class Vehicles
         Vehicle? best = null;
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
-            if ((Motion.distance2(v.at, at) <= (reach * reach)) && (!Js.T(best) || (Motion.distance2(v.at, at) < Motion.distance2(best.at, at))))
+            if ((Motion.distance2(v.at, at) <= ((double)(reach) * (reach))) && (!Js.T(best) || (Motion.distance2(v.at, at) < Motion.distance2(best.at, at))))
             {
                 best = v;
             }
@@ -194,7 +194,7 @@ public static partial class Vehicles
         }
         if (((dx != 0) && (JsMath.abs(v.speed) >= TURN_MIN_SPEED)) && ((state.tick % TURN_EVERY) == 0))
         {
-            v.heading = ((v.heading + (dx * JsMath.sign(v.speed))) + HEADINGS) % HEADINGS;
+            v.heading = ((v.heading + ((double)(dx) * (JsMath.sign(v.speed)))) + HEADINGS) % HEADINGS;
         }
         if (Js.T(runs))
         {
@@ -227,20 +227,20 @@ public static partial class Vehicles
     public static void move(SimState state, Survivor s, Vehicle v)
     {
         var (cx, cy) = Js.NN(Js.Get(HEADING_DIRS, v.heading));
-        Point want = new Point { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
+        Point want = new Point { x = Js.I(JsMath.trunc(((double)(((double)(cx) * (v.speed))) / (256)))), y = Js.I(JsMath.trunc(((double)(((double)(cy) * (v.speed))) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
         var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && blocked(state, into)) ? v.at : slid;
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
-        var lost = (Motion.distance2(want, got) * 9) > ((want.x * want.x) + (want.y * want.y));
+        var lost = ((double)(Motion.distance2(want, got)) * (9)) > (((double)(want.x) * (want.x)) + ((double)(want.y) * (want.y)));
         if (lost)
         {
             var fast = JsMath.abs(v.speed);
             if (fast > CRASH_SPEED)
             {
-                dent(state, v, (fast - CRASH_SPEED) * CRASH_DAMAGE);
+                dent(state, v, ((double)((fast - CRASH_SPEED)) * (CRASH_DAMAGE)));
                 Events.logEvent(state, $"{Js.Str(s.name)} crashed the car");
             }
             v.speed = 0;
@@ -253,16 +253,16 @@ public static partial class Vehicles
         var reach = VEHICLE_RADIUS + Motion.BODY_RADIUS;
         foreach (var z in Js.Iter((state.zombies).ToList()))
         {
-            if (Motion.distance2(z.at, v.at) > (reach * reach))
+            if (Motion.distance2(z.at, v.at) > ((double)(reach) * (reach)))
             {
                 continue;
             }
-            var killed = Zombies.damageZombie(state, z, JsMath.abs(v.speed) * RAM_DAMAGE, s);
+            var killed = Zombies.damageZombie(state, z, ((double)(JsMath.abs(v.speed)) * (RAM_DAMAGE)), s);
             if (!killed)
             {
                 Zombies.knockBack(state, z, v.at);
             }
-            v.speed = JsMath.trunc(((double)((v.speed * 3)) / (4)));
+            v.speed = JsMath.trunc(((double)(((double)(v.speed) * (3))) / (4)));
             dent(state, v, RAM_WEAR);
             if (JsMath.abs(v.speed) < RAM_SPEED)
             {
@@ -274,7 +274,7 @@ public static partial class Vehicles
     /// <summary>Top speed here: the truck is slower; off the road, slower still.</summary>
     public static double topSpeed(SimState state, Vehicle v)
     {
-        var ground = Js.At(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, (v.pos.y * state.grid.width) + v.pos.x)), "grass");
+        var ground = Js.At(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, ((double)(v.pos.y) * (state.grid.width)) + v.pos.x)), "grass");
         var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
     }

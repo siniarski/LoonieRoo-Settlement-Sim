@@ -71,7 +71,7 @@ public static partial class ControlMod
         }
         c.aim = new Point { x = Js.I(x), y = Js.I(y) };
         var big = JsMath.max(JsMath.abs(x), JsMath.abs(y));
-        c.facing = new Point { x = Js.I(((12 * JsMath.abs(x)) >= (5 * big)) ? JsMath.sign(x) : 0), y = Js.I(((12 * JsMath.abs(y)) >= (5 * big)) ? JsMath.sign(y) : 0) };
+        c.facing = new Point { x = Js.I((((double)(12) * (JsMath.abs(x))) >= ((double)(5) * (big))) ? JsMath.sign(x) : 0), y = Js.I((((double)(12) * (JsMath.abs(y))) >= ((double)(5) * (big))) ? JsMath.sign(y) : 0) };
         return null;
     }
     public static string? aim(Control c, double x, double y) => aim(c, (int)x, (int)y);
@@ -117,9 +117,9 @@ public static partial class ControlMod
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
             var climb = Motion.inWindowFrame(state.grid, s.at);
-            var pct = ((double)((((double)(((JsMath.max(CLUTCHED_MIN, 100 - (CLUTCH_PCT * clutchedBy(state, s))) * ((Js.T(run) && !climb) ? BodyMod.RUN_PCT : 100)) * (climb ? 2 : 5))) / (5)) * (Js.T(c.sneaking) ? SNEAK_PCT : 100))) / (100));
+            var pct = ((double)(((double)(((double)(((double)(((double)(JsMath.max(CLUTCHED_MIN, 100 - ((double)(CLUTCH_PCT) * (clutchedBy(state, s))))) * (((Js.T(run) && !climb) ? BodyMod.RUN_PCT : 100)))) * ((climb ? 2 : 5)))) / (5))) * ((Js.T(c.sneaking) ? SNEAK_PCT : 100)))) / (100));
             var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(state, s, s.pos))));
-            var v = Motion.toward(c.dx, c.dy, JsMath.round(((double)((walk * pct)) / (10000))));
+            var v = Motion.toward(c.dx, c.dy, JsMath.round(((double)(((double)(walk) * (pct))) / (10000))));
             s.at = Motion.slide(state.grid, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))
@@ -186,7 +186,7 @@ public static partial class ControlMod
             }
             Inventory.unpack(s, item.id);
             Items.removeItem(state, item);
-            s.note = $"ate {Js.Str((item.kind == "meal") ? "a hot meal" : "some food")}";
+            s.note = $"ate {Js.Str((item.kind == "meal") ? Js.Str("a hot meal") : Js.Str("some food"))}";
             return;
         }
         if (busy.what == "treat")
@@ -334,11 +334,11 @@ public static partial class ControlMod
             c.swungTick = state.tick;
             BodyMod.exert(s, BodyMod.SWING_COST);
             Noise.makeNoise(state, s.pos, "fighting");
-            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
-            var winded = BodyMod.isWinded(s) ? JsMath.round(((double)((full * BodyMod.WINDED_DAMAGE_PCT)) / (100))) : full;
+            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            var winded = BodyMod.isWinded(s) ? JsMath.round(((double)(((double)(full) * (BodyMod.WINDED_DAMAGE_PCT))) / (100))) : full;
             var unaware = (near.kind != "raider") && (near.targetId != s.id);
-            var blow = Js.T(unaware) ? JsMath.round(((double)((winded * SNEAK_ATTACK_PCT)) / (100))) : winded;
-            var killed = Zombies.damageZombie(state, near, Power.inLight(state, s.pos) ? JsMath.round(((double)((blow * Power.LIGHT_DAMAGE_PCT)) / (100))) : blow, s);
+            var blow = Js.T(unaware) ? JsMath.round(((double)(((double)(winded) * (SNEAK_ATTACK_PCT))) / (100))) : winded;
+            var killed = Zombies.damageZombie(state, near, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s);
             if (killed)
             {
                 Weapons.wearWeapon(state, s);
@@ -355,7 +355,7 @@ public static partial class ControlMod
             c.nextSwing = state.tick + Jobs.GUARD_ATTACK_EVERY;
             c.swungTick = state.tick;
             Noise.makeNoise(state, s.pos, "fighting");
-            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
+            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
             return Residents.hitResident(state, person, blow, s) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
         var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, a.pos)) : null);
@@ -368,7 +368,7 @@ public static partial class ControlMod
                 Js.NN(Weapons.loadedGun(state, s)).wear -= 1;
                 Noise.makeNoise(state, s.pos, "gunfire");
             }
-            return Handiwork.hitAnimal(state, s, deer.id, shot ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))));
+            return Handiwork.hitAnimal(state, s, deer.id, shot ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))));
         }
         var gun = Weapons.loadedGun(state, s);
         var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
@@ -382,7 +382,7 @@ public static partial class ControlMod
             c.nextSwing = state.tick + Weapons.GUN_EVERY;
             gun.wear -= 1;
             Noise.makeNoise(state, s.pos, "gunfire");
-            var dmg = Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            var dmg = Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
             return Zombies.damageZombie(state, shotAt, dmg, s) ? "shot it dead" : "shot it";
         }
         var pane = paneInFront(state, s.pos, target, c.facing);
@@ -437,7 +437,7 @@ public static partial class ControlMod
         double err = dx + dy;
         for (; ; )
         {
-            var e2 = 2 * err;
+            var e2 = ((double)(2) * (err));
             if (e2 >= dy)
             {
                 err += dy;

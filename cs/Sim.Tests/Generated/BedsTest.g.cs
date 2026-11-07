@@ -149,7 +149,7 @@ public partial class BedsTest
                 var s = Js.NN(Js.Get(state.survivors, 0));
                 tire(state, s);
                 runUntil(state, (_) => s.sleep?.asleep == true);
-                state.tick = Js.I((17 * Time.TICKS_PER_HOUR) + 1);
+                state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
                 Zombies.addZombie(state, 6, 5);
                 Tick.tick(state);
                 return s;

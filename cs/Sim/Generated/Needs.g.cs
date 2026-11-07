@@ -203,7 +203,7 @@ public static partial class Needs
         meal.progress += 1;
         if (meal.progress == 1)
         {
-            s.note = $"eating {Js.Str(Js.T(meal.seat) ? "at a table" : "standing")} at ({Js.Str(s.pos.x)}, {Js.Str(s.pos.y)})";
+            s.note = $"eating {Js.Str(Js.T(meal.seat) ? Js.Str("at a table") : Js.Str("standing"))} at ({Js.Str(s.pos.x)}, {Js.Str(s.pos.y)})";
         }
         if (meal.progress < Food.EAT_TICKS)
         {
@@ -366,7 +366,7 @@ public static partial class Needs
         Clothing.cancelDressing(state, s, "going to treat wounds");
         bandage.reservedBy = s.id;
         s.treatment = new SurvivorTreatment { itemId = bandage.id, progress = 0 };
-        s.note = $"going for {Js.Str((bandage.kind == "medicine") ? "medicine" : "a bandage")} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
+        s.note = $"going for {Js.Str((bandage.kind == "medicine") ? Js.Str("medicine") : Js.Str("a bandage"))} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
         return true;
     }
 
@@ -410,7 +410,7 @@ public static partial class Needs
         }
         else if (Js.T((s.health > 0) && Js.T(s.sleep?.asleep)))
         {
-            s.health = JsMath.min(Health.HEALTH_MAX, s.health + (Health.SLEEP_HEAL * (Medicine.inInfirmary(state, s) ? Medicine.INFIRMARY_HEAL_FACTOR : 1)));
+            s.health = JsMath.min(Health.HEALTH_MAX, s.health + ((double)(Health.SLEEP_HEAL) * ((Medicine.inInfirmary(state, s) ? Medicine.INFIRMARY_HEAL_FACTOR : 1))));
         }
         else if (((s.health > 0) && !isHungry(s)) && ((state.tick % Health.AWAKE_HEAL_EVERY) == 0))
         {

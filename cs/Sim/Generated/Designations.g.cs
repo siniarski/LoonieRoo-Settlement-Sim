@@ -62,7 +62,7 @@ public static partial class Designations
         }
         if (bp.target == "reinforce")
         {
-            return Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y)) && !state.grid.reinforced.includes((bp.y * state.grid.width) + bp.x);
+            return Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y)) && !state.grid.reinforced.includes(((double)(bp.y) * (state.grid.width)) + bp.x);
         }
         return (Grids.getTile(state.grid, bp.x, bp.y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, bp.x, bp.y));
     }
@@ -171,7 +171,7 @@ public static partial class Designations
             case "reinforce":
                 {
                     {
-                    var i_1 = (bp.y * state.grid.width) + bp.x;
+                    var i_1 = ((double)(bp.y) * (state.grid.width)) + bp.x;
                     if (!state.grid.reinforced.includes(i_1))
                     {
                         state.grid.reinforced.push(i_1);

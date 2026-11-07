@@ -74,7 +74,7 @@ public static partial class Jobs
         }
         var __d0 = state.grid;
         var width = __d0.width;
-        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => (j.y * width) + j.x));
+        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => ((double)(j.y) * (width)) + j.x));
         foreach (var i in Js.Iter(Js.ListOf(state.grid.dirtList).sort((a, b) => a - b)))
         {
             var x = i % width;
@@ -102,7 +102,7 @@ public static partial class Jobs
                 addJob(state, "haul", f.x, f.y, null, null, f.id);
             }
         }
-        var repairing = Js.Set(state.jobs.filter((j) => isRepairJob(j) && (j.edge == null)).map((j) => (j.y * width) + j.x));
+        var repairing = Js.Set(state.jobs.filter((j) => isRepairJob(j) && (j.edge == null)).map((j) => ((double)(j.y) * (width)) + j.x));
         foreach (var i in Js.Iter(Js.ListOf(state.grid.damageList).sort((a, b) => a - b)))
         {
             if (!repairing.has(i))
@@ -165,10 +165,10 @@ public static partial class Jobs
                 addJob(state, "farm", plot.x, plot.y, null, null, null, null, plot.id);
             }
         }
-        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => (j.y * width) + j.x));
+        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => ((double)(j.y) * (width)) + j.x));
         foreach (var f in Js.Iter(state.fires))
         {
-            if (!fighting.has((f.y * width) + f.x))
+            if (!fighting.has(((double)(f.y) * (width)) + f.x))
             {
                 addJob(state, "firefight", f.x, f.y, null, null);
             }

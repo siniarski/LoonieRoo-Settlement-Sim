@@ -90,7 +90,7 @@ public partial class CombatTest
             }
             var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(free, Js.NN(Js.Get(free.survivors, 0)), Js.NN(Js.Get(free.survivors, 0)).pos))));
             expect(moved(free)).toBe(walk);
-            expect(moved(held)).toBe(JsMath.round(((double)((walk * JsMath.max(ControlMod.CLUTCHED_MIN, 100 - ControlMod.CLUTCH_PCT))) / (100))));
+            expect(moved(held)).toBe(JsMath.round(((double)(((double)(walk) * (JsMath.max(ControlMod.CLUTCHED_MIN, 100 - ControlMod.CLUTCH_PCT)))) / (100))));
         }
 
         [Fact(DisplayName = "fights you can read > you look where you aim: walking does not turn you, and a swing lands in the arc round your aim")]

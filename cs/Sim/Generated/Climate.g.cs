@@ -28,7 +28,7 @@ public static partial class Climate
         {
             return "mild";
         }
-        var t = ((double)(y) / (world.size)) + (0.25 * (NatureMod.noise(world.seed, x, y, 64, 41) - 0.5));
+        var t = ((double)(y) / (world.size)) + ((double)(0.25) * ((NatureMod.noise(world.seed, x, y, 64, 41) - 0.5)));
         return (t < 0.33) ? "cold" : ((t > 0.67) ? "hot" : "mild");
     }
     public static string climateAt(SimState state, double x, double y) => climateAt(state, (int)x, (int)y);
@@ -66,7 +66,7 @@ public static partial class Climate
             return false;
         }
         var c = ((double)(world.size) / (2));
-        if (((JsMath.pow((x - c), 2)) + (JsMath.pow((y - c), 2))) < (CLEAN_RADIUS * CLEAN_RADIUS))
+        if (((JsMath.pow((x - c), 2)) + (JsMath.pow((y - c), 2))) < ((double)(CLEAN_RADIUS) * (CLEAN_RADIUS)))
         {
             return false;
         }

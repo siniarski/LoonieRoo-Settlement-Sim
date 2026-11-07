@@ -61,7 +61,7 @@ public partial class DifficultyTest
             {
                 var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s...."] });
                 state.settings.zombies = zombies;
-                state.tick = Js.I(15 * Time.TICKS_PER_HOUR);
+                state.tick = Js.I(((double)(15) * (Time.TICKS_PER_HOUR)));
                 Tick.tick(state);
                 return Js.NN(state.zombiesTonight);
             }
@@ -74,7 +74,7 @@ public partial class DifficultyTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.."] });
             state.settings.weather = 3;
             expect(Difficulty.eventChance(state, Seasons.EVENT_CHANCE)).toBeGreaterThan(Seasons.EVENT_CHANCE);
-            state.tick = Js.I((Time.DAY_LENGTH * 5) + (15 * Time.TICKS_PER_HOUR));
+            state.tick = Js.I(((double)(Time.DAY_LENGTH) * (5)) + ((double)(15) * (Time.TICKS_PER_HOUR)));
             var s = Js.NN(Js.Get(state.survivors, 0));
             expect(Seasons.isCold(state, s)).toBe(false);
             state.settings.winter = true;

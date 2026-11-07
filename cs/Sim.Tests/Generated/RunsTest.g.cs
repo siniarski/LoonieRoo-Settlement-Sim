@@ -45,7 +45,7 @@ public partial class RunsTest
             var sent = false;
             for (var d = 1; (d <= 20) && !sent; d++)
             {
-                state.tick = Js.I((d * Time.DAY_LENGTH) - 1);
+                state.tick = Js.I(((double)(d) * (Time.DAY_LENGTH)) - 1);
                 runs(state, 1);
                 sent = Runs.runsOf(state).length > 0;
             }
@@ -63,10 +63,10 @@ public partial class RunsTest
             state.settings = Js.With(Js.CopyAs<Settings>(state.settings), __s1 => { __s1.zombies = 0; });
             n.people -= 3;
             var r = run(state);
-            runs(state, 20 * Time.TICKS_PER_HOUR);
+            runs(state, ((double)(20) * (Time.TICKS_PER_HOUR)));
             expect(Runs.runsOf(state)).toHaveLength(0);
             expect(n.people).toBe(7);
-            expect(n.food).toBe(3 * Runs.RUN_FIND);
+            expect(n.food).toBe(((double)(3) * (Runs.RUN_FIND)));
             expect(r.phase).toBe("back");
         }
 
@@ -133,7 +133,7 @@ public partial class RunsTest
             expect(x.truckId).toBe(v.id);
             expect(v.driverId).toBe($"x:{Js.Str(x.id)}");
             double furthest = 0;
-            while ((state.expeditions.length > 0) && (state.tick < (Time.DAY_LENGTH * 2)))
+            while ((state.expeditions.length > 0) && (state.tick < ((double)(Time.DAY_LENGTH) * (2))))
             {
                 Tick.tick(state);
                 furthest = JsMath.max(furthest, v.pos.x);

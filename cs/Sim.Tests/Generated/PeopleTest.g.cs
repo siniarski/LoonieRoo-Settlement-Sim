@@ -87,7 +87,7 @@ public partial class PeopleTest
             var state = setup(["s...N", "....."], new() { ["clean"] = 3 });
             var s = Js.NN(Js.Get(state.survivors, 0));
             runUntil(state, (_) => (Js.Q(s.reading?.progress, 0)) > 10, 100);
-            state.grid.dirt[Js.Idx((1 * 5) + 0)] = 0;
+            state.grid.dirt[Js.Idx(((double)(1) * (5)) + 0)] = 0;
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(0), y = Js.I(1) });
             Js.NN(Js.Get(state.survivors, 0)).priorities["haul"] = 3;
             state.items.push(new() { id = "w1", kind = "wood", pos = new Point { x = Js.I(2), y = Js.I(1) }, carriedBy = null, reservedBy = null, wear = 0, tag = null });
@@ -106,7 +106,7 @@ public partial class PeopleTest
         public void T007_a_dog_barks_at_a_zombie_goes_for_it_and_brings_it_down()
         {
             var state = setup(["s.g.......", ".........."]);
-            state.tick = Js.I((17 * Time.TICKS_PER_HOUR) + 1);
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
             state.zombiesTonight = 0;
             Zombies.addZombie(state, 9, 1, 80, "static");
             expect((9 - 2) + 1).toBeLessThanOrEqual(Dogs.DOG_SENSE);
@@ -160,8 +160,8 @@ public partial class PeopleTest
         {
             var state = setup(["s...."]);
             state.settlements.push(new() { id = "n1", name = "Testville", x = Js.I(0), y = Js.I(0), reputation = Settlements.FRIENDLY, people = 8, food = 32, defence = 1, ties = new() {  }, unfolded = true, lastTalk = -1, lastRaid = -1 });
-            state.tick = Js.I((5 * Time.DAY_LENGTH) - (6 * Time.TICKS_PER_HOUR));
-            while ((state.wanderers.length == 0) && (state.tick < (6 * Time.DAY_LENGTH)))
+            state.tick = Js.I(((double)(5) * (Time.DAY_LENGTH)) - ((double)(6) * (Time.TICKS_PER_HOUR)));
+            while ((state.wanderers.length == 0) && (state.tick < ((double)(6) * (Time.DAY_LENGTH))))
             {
                 Tick.tick(state);
             }
@@ -189,7 +189,7 @@ public partial class PeopleTest
             double days = 0;
             while ((state.survivors.length < 3) && (days < 40))
             {
-                state.tick = Js.I((days * Time.DAY_LENGTH) + ((double)(Time.DAY_LENGTH) / (2)));
+                state.tick = Js.I(((double)(days) * (Time.DAY_LENGTH)) + ((double)(Time.DAY_LENGTH) / (2)));
                 Tick.tick(state);
                 days += 1;
             }

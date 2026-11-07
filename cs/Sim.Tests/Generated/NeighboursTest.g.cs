@@ -24,7 +24,7 @@ public partial class NeighboursTest
 
     public static void days(SimState state, double n)
     {
-        for (var i = 0; i < (n * Time.DAY_LENGTH); i++)
+        for (var i = 0; i < ((double)(n) * (Time.DAY_LENGTH)); i++)
         {
             Tick.tick(state);
         }

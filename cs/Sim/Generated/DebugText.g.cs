@@ -23,7 +23,7 @@ public static partial class DebugText
             List<string> row = [];
             for (var x = 0; x < width; x++)
             {
-                var i = (y * width) + x;
+                var i = ((double)(y) * (width)) + x;
                 var tile = Js.Get(tiles, i);
                 row.push((tile == null) ? "?" : ((Js.Get(dirt, i) == 1) ? ScenarioMod.ENTITY_CHARS["dirt"] : Js.Get(ScenarioMod.TILE_CHARS, tile)));
             }
@@ -88,12 +88,12 @@ public static partial class DebugText
         var height = __d1.height;
         var edges = __d1.edges;
         var edgeOpen = __d1.edgeOpen;
-        List<List<string>> @out = Js.ArrayFrom<List<string>>((height * 2) + 1, (int _i) => Js.Filled<string>((width * 2) + 1, " "));
+        List<List<string>> @out = Js.ArrayFrom<List<string>>(((double)(height) * (2)) + 1, (int _i) => Js.Filled<string>(((double)(width) * (2)) + 1, " "));
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
             {
-                Js.NN(Js.Get(@out, (y * 2) + 1))[Js.Idx((x * 2) + 1)] = Js.NN(Js.Get(Js.NN(Js.Get(rows, y)), x));
+                Js.NN(Js.Get(@out, ((double)(y) * (2)) + 1))[Js.Idx(((double)(x) * (2)) + 1)] = Js.NN(Js.Get(Js.NN(Js.Get(rows, y)), x));
             }
         }
         string mark(double kind, double e, bool across)
@@ -104,18 +104,18 @@ public static partial class DebugText
         {
             for (var x = 0; x < width; x++)
             {
-                var n = ((y * width) + x) * 2;
+                var n = ((double)((((double)(y) * (width)) + x)) * (2));
                 if (Js.T(Js.Get(edges, n)))
                 {
-                    Js.NN(Js.Get(@out, y * 2))[Js.Idx((x * 2) + 1)] = mark(Js.NN(Js.Get(edges, n)), n, true);
-                    Js.NN(Js.Get(@out, y * 2))[Js.Idx(x * 2)] = "+";
-                    Js.NN(Js.Get(@out, y * 2))[Js.Idx((x * 2) + 2)] = "+";
+                    Js.NN(Js.Get(@out, ((double)(y) * (2))))[Js.Idx(((double)(x) * (2)) + 1)] = mark(Js.NN(Js.Get(edges, n)), n, true);
+                    Js.NN(Js.Get(@out, ((double)(y) * (2))))[Js.Idx(((double)(x) * (2)))] = "+";
+                    Js.NN(Js.Get(@out, ((double)(y) * (2))))[Js.Idx(((double)(x) * (2)) + 2)] = "+";
                 }
                 if (Js.T(Js.Get(edges, n + 1)))
                 {
-                    Js.NN(Js.Get(@out, (y * 2) + 1))[Js.Idx(x * 2)] = mark(Js.NN(Js.Get(edges, n + 1)), n + 1, false);
-                    Js.NN(Js.Get(@out, y * 2))[Js.Idx(x * 2)] = "+";
-                    Js.NN(Js.Get(@out, (y * 2) + 2))[Js.Idx(x * 2)] = "+";
+                    Js.NN(Js.Get(@out, ((double)(y) * (2)) + 1))[Js.Idx(((double)(x) * (2)))] = mark(Js.NN(Js.Get(edges, n + 1)), n + 1, false);
+                    Js.NN(Js.Get(@out, ((double)(y) * (2))))[Js.Idx(((double)(x) * (2)))] = "+";
+                    Js.NN(Js.Get(@out, ((double)(y) * (2)) + 2))[Js.Idx(((double)(x) * (2)))] = "+";
                 }
             }
         }
@@ -137,7 +137,7 @@ public static partial class DebugText
             var row = "";
             for (var x = 0; x < width; x++)
             {
-                var i = (y * width) + x;
+                var i = ((double)(y) * (width)) + x;
                 var label = Js.NN(Js.Get(labels, i));
                 if (label >= 0)
                 {

@@ -29,7 +29,7 @@ public partial class WishesTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.s.s.s.s.s"] });
             for (var h = 1; h <= 24; h++)
             {
-                at(state, h * Time.TICKS_PER_HOUR);
+                at(state, ((double)(h) * (Time.TICKS_PER_HOUR)));
             }
             var got = state.survivors.filter((s) => Js.T(s.wish));
             expect(got.length).toBeGreaterThan(0);

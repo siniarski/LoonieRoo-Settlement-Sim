@@ -20,7 +20,7 @@ public static partial class Runs
 {
     static Runs()
     {
-        Time.onClock(() => RUN_SEARCH = 2 * Time.TICKS_PER_HOUR);
+        Time.onClock(() => RUN_SEARCH = ((double)(2) * (Time.TICKS_PER_HOUR)));
     }
 
     public const int RUN_PARTY = 3;
@@ -33,7 +33,7 @@ public static partial class Runs
 
     public const int RUN_STEP = 6;
 
-    public static double RUN_SEARCH = 2 * Time.TICKS_PER_HOUR;
+    public static double RUN_SEARCH = ((double)(2) * (Time.TICKS_PER_HOUR));
 
     public const int RUN_FIND = 2;
 
@@ -80,7 +80,7 @@ public static partial class Runs
             {
                 if (state.tick >= r.untilTick)
                 {
-                    r.food += r.people * RUN_FIND;
+                    r.food += ((double)(r.people) * (RUN_FIND));
                     r.phase = "back";
                 }
                 continue;
@@ -130,9 +130,9 @@ public static partial class Runs
             {
                 continue;
             }
-            var angle = (roll(1) * JsMath.PI) * 2;
-            var dist = RUN_MIN + JsMath.floor(roll(2) * (RUN_MAX - RUN_MIN));
-            Point ruin = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+            var angle = ((double)(((double)(roll(1)) * (JsMath.PI))) * (2));
+            var dist = RUN_MIN + JsMath.floor(((double)(roll(2)) * ((RUN_MAX - RUN_MIN))));
+            Point ruin = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
             var people = JsMath.min(RUN_PARTY, (n.people - RUN_MIN_HOME) + RUN_PARTY);
             n.people -= people;
             state.runs ??= [];
@@ -147,7 +147,7 @@ public static partial class Runs
     /// <summary>The dead catch up with them: one lost; all of them, and they lie where they fell. Returns true if the run is over.</summary>
     public static bool caught(SimState state, ScavRun r)
     {
-        var danger = ((double)(((((r.phase == "search") ? RUIN_DANGER : ROAD_DANGER) * (1 + ((double)(Time.dayOf(state.tick)) / (20)))) * state.settings.zombies)) / (100));
+        var danger = ((double)(((double)(((double)(((r.phase == "search") ? RUIN_DANGER : ROAD_DANGER)) * ((1 + ((double)(Time.dayOf(state.tick)) / (20)))))) * (state.settings.zombies))) / (100));
         if (Hash.hashRoll(Hash.idNumber(r.id), state.tick, 3562.0) >= danger)
         {
             return false;
@@ -204,7 +204,7 @@ public static partial class Runs
         {
             state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(r.ruin.x), y = Js.I(r.ruin.y), label = $"{Js.Str(n.name)}'s scavenging spot" });
         }
-        Events.logEvent(state, $"{Js.Str(you.name)} met {Js.Str(r.people)} scavengers from {Js.Str(n.name)}, {Js.Str((r.phase == "back") ? "on their way home" : $"on their way to a ruin at ({Js.Str(r.ruin.x)}, {Js.Str(r.ruin.y)})")}");
+        Events.logEvent(state, $"{Js.Str(you.name)} met {Js.Str(r.people)} scavengers from {Js.Str(n.name)}, {Js.Str((r.phase == "back") ? Js.Str("on their way home") : Js.Str($"on their way to a ruin at ({Js.Str(r.ruin.x)}, {Js.Str(r.ruin.y)})"))}");
     }
 
     public static void home(SimState state, ScavRun r)

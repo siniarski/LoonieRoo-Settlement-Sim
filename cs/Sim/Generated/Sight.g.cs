@@ -77,7 +77,7 @@ public static partial class Sight
         double err = dx + dy;
         while ((x != b.x) || (y != b.y))
         {
-            var e2 = 2 * err;
+            var e2 = ((double)(2) * (err));
             var px = x;
             var py = y;
             if (e2 >= dy)
@@ -110,13 +110,13 @@ public static partial class Sight
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                if (Js.T((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x)))))
+                if (Js.T((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > ((double)(r) * (r))) || Js.T(Js.T(skip?.Invoke(((double)(y) * (grid.width)) + x)))))
                 {
                     continue;
                 }
                 if (Js.T(Js.T(overWalls) || sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) })))
                 {
-                    @out.push((y * grid.width) + x);
+                    @out.push(((double)(y) * (grid.width)) + x);
                 }
             }
         }
@@ -147,14 +147,14 @@ public static partial class Sight
     {
         var c = (state.control?.survivorId == s.id) ? state.control : null;
         var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (((c.dx == 0) && (c.dy == 0)) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD)));
-        return Skills.hasTrait(s, "graceful") ? JsMath.floor(((double)(@base) / (2))) : (Skills.hasTrait(s, "clumsy") ? JsMath.round(((double)((@base * 3)) / (2))) : @base);
+        return Skills.hasTrait(s, "graceful") ? JsMath.floor(((double)(@base) / (2))) : (Skills.hasTrait(s, "clumsy") ? JsMath.round(((double)(((double)(@base) * (3))) / (2))) : @base);
     }
 
     /// <summary>Can a zombie at `z` see a survivor at `s` (`sneaking`: half as far)?</summary>
     public static bool zombieSees(SimState state, Point z, Point s, bool sneaking = false)
     {
         var r = ((double)((Time.isNight(state.tick) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
-        if (((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2))) > (r * r))
+        if (((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2))) > ((double)(r) * (r)))
         {
             return false;
         }
@@ -174,7 +174,7 @@ public static partial class Sight
         {
             return hit.mask;
         }
-        var size = state.grid.width * state.grid.height;
+        var size = ((double)(state.grid.width) * (state.grid.height));
         var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new Uint8Array(size);
         if (Js.T(hit) && (hit.mask == mask))
         {

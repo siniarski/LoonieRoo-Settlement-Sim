@@ -29,6 +29,10 @@ public static class JsListExtensions
         public int indexOf(int? x) => x is int v ? a.IndexOf(v) : -1;
         /// <summary>push of a whole number TypeScript narrowed to present.</summary>
         public int push(int? x) { a.Add(x!.Value); return a.Count; }
+        /// <summary>The same with a JS number (an index made by multiplying, which is a double: no 32-bit overflow).</summary>
+        public int indexOf(double? x) => x is double v ? a.indexOf(v) : -1;
+        public int push(double x) { a.Add(checked((int)x)); return a.Count; }
+        public int push(double? x) => a.push(x!.Value);
     }
 
     extension<T>(List<T> a)
@@ -232,6 +236,8 @@ public static class JsListExtensions
             return e > s ? a.GetRange(s, e - s) : new List<T>();
         }
 
+        /// <summary>splice at a JS number (an index made by multiplying is a double).</summary>
+        public List<T> splice(double start, int deleteCount) => a.splice((int)start, deleteCount);
         public List<T> splice(int start, int deleteCount, params ReadOnlySpan<T> items)
         {
             int n = a.Count;
@@ -437,7 +443,8 @@ public static class JsMath
     public static double sign(double x) => double.IsNaN(x) ? double.NaN : x > 0 ? 1 : x < 0 ? -1 : x;
     public static int sign(int x) => Math.Sign(x);
     public static double sqrt(double x) => Math.Sqrt(x);
-    public static double pow(double x, double y) => Math.Pow(x, y);
+    /// <summary>V8 gives x ** 2 as exactly x * x; .NET's Math.Pow(x, 2) can differ in the last bit (road edges moved a tile).</summary>
+    public static double pow(double x, double y) => y == 2 ? x * x : Math.Pow(x, y);
     public static double cos(double x) => Math.Cos(x);
     public static double sin(double x) => Math.Sin(x);
     public static double atan2(double y, double x) => Math.Atan2(y, x);
@@ -616,6 +623,8 @@ public static partial class Js
     /// <summary>x ?? n: a value that can't be null in C# stands as it is.</summary>
     public static double Q(double a, double b) => a;
     public static double Q(double? a, double b) => a ?? b;
+    /// <summary>An environment variable or a default (the harness: `Number(process.env.X ?? 300)`).</summary>
+    public static object Q(string? a, double b) => a ?? (object)b;
     public static int Q(int a, int b) => a;
     public static int Q(int? a, int b) => a ?? b;
 
@@ -667,7 +676,28 @@ public static partial class Js
         _ => x.ToString() ?? "",
     };
 
-    public static string ToFixed(double x, int digits) => Math.Round(x, digits, MidpointRounding.AwayFromZero).ToString("F" + digits, CultureInfo.InvariantCulture);
+    /// <summary>
+    /// Number.prototype.toFixed to the letter: the integer n nearest x * 10^digits on the double's exact value (ties
+    /// up), so 0.85 (really 0.8499999...) gives "0.8" as in JS, where rounding a scaled value would give "0.9".
+    /// </summary>
+    public static string ToFixed(double x, int digits)
+    {
+        if (double.IsNaN(x)) return "NaN";
+        if (Math.Abs(x) >= 1e21 || double.IsInfinity(x)) return Str(x);
+        if (x < 0) return "-" + ToFixed(-x, digits);
+        long bits = BitConverter.DoubleToInt64Bits(x);
+        int exp = (int)((bits >> 52) & 0x7FF);
+        long man = bits & 0xFFFFFFFFFFFFFL;
+        if (exp == 0) exp = 1; else man |= 1L << 52;
+        exp -= 1075; // x = man * 2^exp
+        var num = man * System.Numerics.BigInteger.Pow(10, digits);
+        var den = System.Numerics.BigInteger.One;
+        if (exp > 0) num <<= exp; else den <<= -exp;
+        var n = System.Numerics.BigInteger.DivRem(num, den, out var rem);
+        if (rem * 2 >= den) n += 1;
+        string s = n.ToString().PadLeft(digits + 1, '0');
+        return digits > 0 ? s[..^digits] + "." + s[^digits..] : s;
+    }
 
     /// <summary>x >>> n</summary>
     public static double Ushr(int x, int n) => (double)((uint)x >> (n & 31));

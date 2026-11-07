@@ -58,12 +58,12 @@ public static partial class Errands
         {
             return null;
         }
-        var angle = (roll(1) * JsMath.PI) * 2;
-        var dist = ERRAND_MIN + JsMath.floor(roll(2) * (ERRAND_MAX - ERRAND_MIN));
+        var angle = ((double)(((double)(roll(1)) * (JsMath.PI))) * (2));
+        var dist = ERRAND_MIN + JsMath.floor(((double)(roll(2)) * ((ERRAND_MAX - ERRAND_MIN))));
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        Point want = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
         Worldgen.ensureGeneratedAround(state, want);
         var spot = Space.nearestTile(state.grid, want, (x, y) => Grids.getTile(state.grid, x, y) == "floor", 400);
         if (!Js.T(spot))
@@ -72,7 +72,7 @@ public static partial class Errands
         }
         state.errands ??= [];
         var kind = (roll(3) < 0.5) ? "nest" : "missing";
-        Errand e = new Errand { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(Js.Get(MISSING, JsMath.floor(roll(4) * MISSING.length))), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
+        Errand e = new Errand { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(Js.Get(MISSING, JsMath.floor(((double)(roll(4)) * (MISSING.length))))), until = state.tick + ((double)(ERRAND_DAYS) * (Time.DAY_LENGTH)) };
         if (kind == "nest")
         {
             for (var k = 0; k < NEST_SIZE; k++)
@@ -115,7 +115,7 @@ public static partial class Errands
             {
                 list.splice(list.indexOf(e), 1);
                 Settlements.adjustReputation(state, n, LAPSED_REP);
-                Events.logEvent(state, $"{Js.Str(n.name)} gave up waiting: {Js.Str((e.kind == "nest") ? "the dead near them are still there" : $"nobody found {Js.Str(e.who)}")}");
+                Events.logEvent(state, $"{Js.Str(n.name)} gave up waiting: {Js.Str((e.kind == "nest") ? Js.Str("the dead near them are still there") : Js.Str($"nobody found {Js.Str(e.who)}"))}");
             }
         }
     }
@@ -140,7 +140,7 @@ public static partial class Errands
         {
             return Hash.hashRoll(Hash.idNumber(e.id), k);
         }
-        List<string> goods = [Js.NN(Js.Get(THANKS, JsMath.floor(roll(1) * THANKS.length))), Js.NN(Js.Get(THANKS, JsMath.floor(roll(2) * THANKS.length)))];
+        List<string> goods = [Js.NN(Js.Get(THANKS, JsMath.floor(((double)(roll(1)) * (THANKS.length))))), Js.NN(Js.Get(THANKS, JsMath.floor(((double)(roll(2)) * (THANKS.length)))))];
         Point home = Js.Get(state.survivors, 0)?.pos ?? new Point { x = Js.I(n.x), y = Js.I(n.y) };
         Caravans.sendCaravan(state, n.id, "you", home, 3, goods);
         Events.logEvent(state, (e.kind == "nest") ? $"The dead near {Js.Str(n.name)} are gone. They're sending thanks by caravan" : $"You found {Js.Str(e.who)}, and sent them home to {Js.Str(n.name)}. They're sending thanks by caravan");

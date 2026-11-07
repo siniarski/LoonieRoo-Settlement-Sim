@@ -109,7 +109,7 @@ public partial class FarmingTest
             }
             List<string> map = ["#".repeat(16), inner(".............."), inner("..~~~~~~......"), inner("..~~~~~~......"), inner(".............."), inner("...s..s..s...."), inner("...........fff"), "#".repeat(16)];
             var state = setup(map);
-            for (var i = 0; i < (3 * Time.DAY_LENGTH); i++)
+            for (var i = 0; i < ((double)(3) * (Time.DAY_LENGTH)); i++)
             {
                 Tick.tick(state);
             }

@@ -52,7 +52,7 @@ public static partial class Doors
         var occupied = new JsSet<double>();
         /*TODO return type*/object mark(double x, double y)
         {
-            return occupied.add((y * grid.width) + x);
+            return occupied.add(((double)(y) * (grid.width)) + x);
         }
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -130,15 +130,15 @@ public static partial class Doors
                 continue;
             }
             var tile = JsMath.floor(((double)(e) / (2)));
-            var x = (tile % grid.width) * Motion.SUB;
-            var y = JsMath.floor(((double)(tile) / (grid.width))) * Motion.SUB;
+            var x = ((double)((tile % grid.width)) * (Motion.SUB));
+            var y = ((double)(JsMath.floor(((double)(tile) / (grid.width)))) * (Motion.SUB));
             var __c2 = (e % 2) == 0; var x1 = __c2 ? (x + Motion.SUB) : x; var y1 = __c2 ? y : (y + Motion.SUB);
             var r = Motion.BODY_RADIUS + ((double)(Motion.SUB) / (8));
             var inDoorway = bodies.some((c) =>
         {
             var px = JsMath.max(x, JsMath.min(x1, c.x));
             var py = JsMath.max(y, JsMath.min(y1, c.y));
-            return ((JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2))) < (r * r);
+            return ((JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2))) < ((double)(r) * (r));
         });
             if (Js.T(inDoorway))
             {

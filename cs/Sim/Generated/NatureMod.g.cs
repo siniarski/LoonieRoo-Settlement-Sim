@@ -28,7 +28,7 @@ public static partial class NatureMod
 
     public static double smooth(double t)
     {
-        return (t * t) * (3 - (2 * t));
+        return ((double)(((double)(t) * (t))) * ((3 - ((double)(2) * (t)))));
     }
 
     /// <summary>Smooth value noise in [0, 1): hashed lattice every `scale` tiles, blended between.</summary>
@@ -42,9 +42,9 @@ public static partial class NatureMod
         {
             return roll(seed, gx + i, gy + j, salt);
         }
-        var top = c(0, 0) + ((c(1, 0) - c(0, 0)) * fx);
-        var bottom = c(0, 1) + ((c(1, 1) - c(0, 1)) * fx);
-        return top + ((bottom - top) * fy);
+        var top = c(0, 0) + ((double)((c(1, 0) - c(0, 0))) * (fx));
+        var bottom = c(0, 1) + ((double)((c(1, 1) - c(0, 1))) * (fx));
+        return top + ((double)((bottom - top)) * (fy));
     }
     public static double noise(double seed, double x, double y, double scale, double salt) => noise(seed, (int)x, (int)y, scale, salt);
 
@@ -52,13 +52,13 @@ public static partial class NatureMod
     {
         Point start = new Point { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
         var side = ((hash(seed, 0, 0, 3) % 2) == 0) ? -1 : 1;
-        var riverBase = start.y + (side * (48 + (hash(seed, 0, 0, 4) % 24)));
+        var riverBase = start.y + ((double)(side) * ((48 + (hash(seed, 0, 0, 4) % 24))));
         return new Nature { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };
     }
 
     public static bool nearStart(Nature n, int x, int y, double r)
     {
-        return ((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < (r * r);
+        return ((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < ((double)(r) * (r));
     }
     public static bool nearStart(Nature n, double x, double y, double r) => nearStart(n, (int)x, (int)y, r);
 
@@ -74,7 +74,7 @@ public static partial class NatureMod
             return false;
         }
         var r = ((double)(JsMath.sqrt((JsMath.pow((x - ((double)(n.size) / (2))), 2)) + (JsMath.pow((y - ((double)(n.size) / (2))), 2)))) / (((double)(n.size) / (2))));
-        return r > (0.78 + (0.18 * (noise(n.seed, x, y, 18, 30) - 0.5)));
+        return r > (0.78 + ((double)(0.18) * ((noise(n.seed, x, y, 18, 30) - 0.5))));
     }
     public static bool isSea(Nature n, double x, double y) => isSea(n, (int)x, (int)y);
 
@@ -90,8 +90,8 @@ public static partial class NatureMod
     {
         var along = n.riverAlongX ? x : y;
         var across = n.riverAlongX ? y : x;
-        var centre = n.riverBase + (28 * (noise(n.seed, along, 0, 40, 6) - 0.5));
-        var width = 3 + (2 * noise(n.seed, along, 0, 23, 7));
+        var centre = n.riverBase + ((double)(28) * ((noise(n.seed, along, 0, 40, 6) - 0.5)));
+        var width = 3 + ((double)(2) * (noise(n.seed, along, 0, 23, 7)));
         return JsMath.max(0, JsMath.abs(across - centre) - ((double)(width) / (2)));
     }
     public static double riverDistance(Nature n, double x, double y) => riverDistance(n, (int)x, (int)y);

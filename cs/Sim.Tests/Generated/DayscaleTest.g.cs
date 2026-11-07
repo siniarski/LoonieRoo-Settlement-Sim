@@ -17,10 +17,10 @@ public partial class DayscaleTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.."] });
             state.settings.dayScale = 2;
             Tick.tick(state);
-            expect(Time.DAY_LENGTH).toBe((2 * Time.BASE_TICKS_PER_HOUR) * Time.HOURS_PER_DAY);
-            expect(Time.dayOf(Time.BASE_TICKS_PER_HOUR * Time.HOURS_PER_DAY)).toBe(1);
-            expect(Infection.INFECTION_TURN).toBe(2 * Time.DAY_LENGTH);
-            expect(Mood.THOUGHTS["sawDeath"].duration).toBe(2 * Time.DAY_LENGTH);
+            expect(Time.DAY_LENGTH).toBe(((double)(((double)(2) * (Time.BASE_TICKS_PER_HOUR))) * (Time.HOURS_PER_DAY)));
+            expect(Time.dayOf(((double)(Time.BASE_TICKS_PER_HOUR) * (Time.HOURS_PER_DAY)))).toBe(1);
+            expect(Infection.INFECTION_TURN).toBe(((double)(2) * (Time.DAY_LENGTH)));
+            expect(Mood.THOUGHTS["sawDeath"].duration).toBe(((double)(2) * (Time.DAY_LENGTH)));
             var s = Js.NN(Js.Get(state.survivors, 0));
             Mood.addThought(state, s, "hotMeal");
             expect(Js.NN(Js.Get(s.thoughts, 0)).until - state.tick).toBe(((double)(Time.DAY_LENGTH) / (2)));
@@ -52,8 +52,8 @@ public partial class DayscaleTest
             Tick.tick(state);
             state.settings.dayScale = 1;
             Tick.tick(state);
-            expect(Time.DAY_LENGTH).toBe(Time.BASE_TICKS_PER_HOUR * Time.HOURS_PER_DAY);
-            expect(Mood.THOUGHTS["sawDeath"].duration).toBe(2 * Time.DAY_LENGTH);
+            expect(Time.DAY_LENGTH).toBe(((double)(Time.BASE_TICKS_PER_HOUR) * (Time.HOURS_PER_DAY)));
+            expect(Mood.THOUGHTS["sawDeath"].duration).toBe(((double)(2) * (Time.DAY_LENGTH)));
             expect((Func<SimState, Survivor, string, double>)((__f0, __f1, __f2) => Skills.workStep(__f0, __f1, __f2))).toBeTypeOf("function");
         }
 

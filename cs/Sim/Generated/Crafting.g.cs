@@ -72,7 +72,7 @@ public static partial class Crafting
 
     public static double target(SimState state, string kind)
     {
-        return (kind == "meal") ? (MEALS_PER_SURVIVOR * state.survivors.length) : Js.Get(state.craftTargets, kind);
+        return (kind == "meal") ? ((double)(MEALS_PER_SURVIVOR) * (state.survivors.length)) : Js.Get(state.craftTargets, kind);
     }
 
     /// <summary>Craftables for this station below their target, in CRAFTABLES order.</summary>

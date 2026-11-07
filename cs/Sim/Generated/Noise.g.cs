@@ -23,7 +23,7 @@ public static partial class Noise
         var woke = wakeDormantNear(state, (d) => Space.manhattan(d, p) <= r);
         if (woke > 0)
         {
-            Events.logEvent(state, $"The {Js.Str(kind)} at ({Js.Str(p.x)}, {Js.Str(p.y)}) woke {Js.Str((woke == 1) ? "a zombie" : $"{Js.Str(woke)} zombies")}");
+            Events.logEvent(state, $"The {Js.Str(kind)} at ({Js.Str(p.x)}, {Js.Str(p.y)}) woke {Js.Str((woke == 1) ? Js.Str("a zombie") : Js.Str($"{Js.Str(woke)} zombies"))}");
         }
         var __d0 = state.grid;
         var width = __d0.width;
@@ -34,17 +34,17 @@ public static partial class Noise
             {
                 continue;
             }
-            z.heading = (z.kind == "static") ? new Point { x = Js.I(p.x), y = Js.I(p.y) } : new Point { x = Js.I(clamp((2 * p.x) - z.pos.x, width)), y = Js.I(clamp((2 * p.y) - z.pos.y, height)) };
+            z.heading = (z.kind == "static") ? new Point { x = Js.I(p.x), y = Js.I(p.y) } : new Point { x = Js.I(clamp(((double)(2) * (p.x)) - z.pos.x, width)), y = Js.I(clamp(((double)(2) * (p.y)) - z.pos.y, height)) };
             z.path = [];
         }
-        Hordes.hordesHear(state, p, r, (from) => new Point { x = Js.I(clamp((2 * p.x) - from.x, width)), y = Js.I(clamp((2 * p.y) - from.y, height)) });
+        Hordes.hordesHear(state, p, r, (from) => new Point { x = Js.I(clamp(((double)(2) * (p.x)) - from.x, width)), y = Js.I(clamp(((double)(2) * (p.y)) - from.y, height)) });
         foreach (var h in Js.Iter(state.herds))
         {
-            if (Space.manhattan(h, p) > (r * HERD_HEARING))
+            if (Space.manhattan(h, p) > ((double)(r) * (HERD_HEARING)))
             {
                 continue;
             }
-            Point to = new Point { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
+            Point to = new Point { x = Js.I(clamp(((double)(2) * (p.x)) - h.x, width)), y = Js.I(clamp(((double)(2) * (p.y)) - h.y, height)) };
             if ((to.x == h.to.x) && (to.y == h.to.y))
             {
                 continue;

@@ -84,12 +84,12 @@ public static partial class Planner
         }
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")}: enough for the colony.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? Js.Str("") : Js.Str("s"))}: enough for the colony.");
             return new PlannerPlan { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
         List<Command> commands = spots.map((p) => new Command { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "bed" });
-        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? "" : "s")} (room holds {Js.Str(capacity)}, colony of {Js.Str(state.survivors.length)}).");
+        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? Js.Str("") : Js.Str("s"))} (room holds {Js.Str(capacity)}, colony of {Js.Str(state.survivors.length)}).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
@@ -114,7 +114,7 @@ public static partial class Planner
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (SEATS_PER_TABLE)))) - tablesHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(tablesHere)} table{Js.Str((tablesHere == 1) ? "" : "s")}: enough seats for the colony.");
+            notes.push($"Already has {Js.Str(tablesHere)} table{Js.Str((tablesHere == 1) ? Js.Str("") : Js.Str("s"))}: enough seats for the colony.");
             return new PlannerPlan { commands = [], notes = notes };
         }
         List<Point> spots = [];
@@ -131,7 +131,7 @@ public static partial class Planner
             spots.push(p);
         }
         List<Command> commands = spots.map((p) => new Command { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "table" });
-        notes.push($"Planned {Js.Str(spots.length)} table{Js.Str((spots.length == 1) ? "" : "s")} (seats for {Js.Str(SEATS_PER_TABLE)} each, colony of {Js.Str(state.survivors.length)}).");
+        notes.push($"Planned {Js.Str(spots.length)} table{Js.Str((spots.length == 1) ? Js.Str("") : Js.Str("s"))} (seats for {Js.Str(SEATS_PER_TABLE)} each, colony of {Js.Str(state.survivors.length)}).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
@@ -150,11 +150,11 @@ public static partial class Planner
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (INFIRMARY_PATIENTS_PER_BED)))) - bedsHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")}: enough for the colony.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? Js.Str("") : Js.Str("s"))}: enough for the colony.");
             return new PlannerPlan { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
-        notes.push($"Planned {Js.Str(spots.length)} infirmary bed{Js.Str((spots.length == 1) ? "" : "s")} (one per {Js.Str(INFIRMARY_PATIENTS_PER_BED)} survivors).");
+        notes.push($"Planned {Js.Str(spots.length)} infirmary bed{Js.Str((spots.length == 1) ? Js.Str("") : Js.Str("s"))} (one per {Js.Str(INFIRMARY_PATIENTS_PER_BED)} survivors).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
@@ -175,11 +175,11 @@ public static partial class Planner
         var toAdd = JsMath.min(capacity, JsMath.max(1, guards)) - bedsHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")} for {Js.Str(guards)} guard{Js.Str((guards == 1) ? "" : "s")}.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? Js.Str("") : Js.Str("s"))} for {Js.Str(guards)} guard{Js.Str((guards == 1) ? Js.Str("") : Js.Str("s"))}.");
             return new PlannerPlan { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
-        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? "" : "s")} for the guards (room holds {Js.Str(capacity)}, {Js.Str(guards)} guarding).");
+        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? Js.Str("") : Js.Str("s"))} for the guards (room holds {Js.Str(capacity)}, {Js.Str(guards)} guarding).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");

@@ -114,7 +114,7 @@ public static partial class Weapons
         }
         weapon.reservedBy = s.id;
         s.arming = weapon.id;
-        s.note = $"going for {Js.Str((weapon.kind == "ammo") ? "ammo" : ((weapon.kind == "gun") ? "a gun" : "a weapon"))} at ({Js.Str(weapon.pos.x)}, {Js.Str(weapon.pos.y)})";
+        s.note = $"going for {Js.Str((weapon.kind == "ammo") ? Js.Str("ammo") : Js.Str((weapon.kind == "gun") ? "a gun" : "a weapon"))} at ({Js.Str(weapon.pos.x)}, {Js.Str(weapon.pos.y)})";
         return true;
     }
 

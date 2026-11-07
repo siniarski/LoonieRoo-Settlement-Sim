@@ -16,7 +16,7 @@ public partial class TimelineTest
     /// <summary>The first tick of day `d`.</summary>
     public static double startOf(double d)
     {
-        double t = (d - 1) * Time.DAY_LENGTH;
+        double t = ((double)((d - 1)) * (Time.DAY_LENGTH));
         while (Time.dayOf(t) < d)
         {
             t += 1;
@@ -140,7 +140,7 @@ public partial class TimelineTest
             }
             state.timeline = timeline(new Timeline { helicopterDay = 1 });
             state.dormant = [new() { id = "d1", x = Js.I(5), y = Js.I(5) }];
-            while (Time.tickOfDay(state.tick) != JsMath.floor(Time.DAY_LENGTH * 0.6))
+            while (Time.tickOfDay(state.tick) != JsMath.floor(((double)(Time.DAY_LENGTH) * (0.6))))
             {
                 state.tick = Js.I(state.tick + 1);
             }

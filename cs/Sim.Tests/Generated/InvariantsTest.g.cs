@@ -132,7 +132,7 @@ public partial class InvariantsTest
         }
         if (((roll >= 111) && (roll < 115)) && Breach.isStructure(Grids.getTile(state.grid, x, y)))
         {
-            return new Command { type = "damageStructure", x = Js.I(x), y = Js.I(y), amount = 40 * (1 + (roll % 5)) };
+            return new Command { type = "damageStructure", x = Js.I(x), y = Js.I(y), amount = ((double)(40) * ((1 + (roll % 5)))) };
         }
         if ((roll >= 115) && (roll < 118))
         {
@@ -179,12 +179,12 @@ public partial class InvariantsTest
             {
                 for (var x = 12; x <= 23; x++)
                 {
-                    initial.grid.explored[Js.Idx((y * initial.grid.width) + x)] = 0;
+                    initial.grid.explored[Js.Idx(((double)(y) * (initial.grid.width)) + x)] = 0;
                 }
             }
-            initial.tick = Js.I(12 * 200);
+            initial.tick = Js.I(((double)(12) * (200)));
             var state = States.cloneState(initial);
-            RngHolder driver = new RngHolder { rng = Rng.seedRng(seed * 7919) };
+            RngHolder driver = new RngHolder { rng = Rng.seedRng(((double)(seed) * (7919))) };
             var stillWithGoal = new JsMap<string, double>();
             var before = new JsMap<string, TestBefore>();
             var idleWithWork = new JsMap<string, double>();
@@ -214,7 +214,7 @@ public partial class InvariantsTest
                         mealsAtTables += 1;
                     }
                     var prev = before.get(s.id);
-                    var needs = $"{Js.Str(Js.T(s.sleep) ? "sleep" : "")}{Js.Str(Js.T(s.meal) ? "meal" : "")}{Js.Str(Js.T(s.treatment) ? "treat" : "")}{Js.Str(Js.T(s.arming) ? "arm" : "")}";
+                    var needs = $"{Js.Str(Js.T(s.sleep) ? Js.Str("sleep") : Js.Str(""))}{Js.Str(Js.T(s.meal) ? Js.Str("meal") : Js.Str(""))}{Js.Str(Js.T(s.treatment) ? Js.Str("treat") : Js.Str(""))}{Js.Str(Js.T(s.arming) ? Js.Str("arm") : Js.Str(""))}";
                     var movedAside = ((prev != null) && !prev.moving) && (prev.pos != $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}");
                     var needKickedIn = ((prev != null) && (prev.needs != needs)) && (needs != "");
                     var jobSwitched = (((prev != null) && (prev.jobId != null)) && (s.jobId != null)) && (prev.jobId != s.jobId);

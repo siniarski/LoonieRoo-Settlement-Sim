@@ -142,7 +142,7 @@ public static partial class Lots
         var mirror = r(81) < 0.5;
         double along(double w, double margin)
         {
-            return margin + JsMath.floor(r(80) * JsMath.max(1, ((F - w) - (2 * margin)) + 1));
+            return margin + JsMath.floor(((double)(r(80)) * (JsMath.max(1, ((F - w) - ((double)(2) * (margin))) + 1))));
         }
         /*TODO return type*/object decor(double u, double v, string look)
         {
@@ -153,7 +153,7 @@ public static partial class Lots
             case "residential":
                 {
                     {
-                    var setback = 1 + JsMath.floor(r(90) * 3);
+                    var setback = 1 + JsMath.floor(((double)(r(90)) * (3)));
                     var house = Buildings.housePlan(r, new HouseOptions { maxW = F - 2, maxH = (D - setback) - 1, garage = true });
                     @out.buildings.push(setIn(lot, house, along(house.w, 1), setback, mirror));
                     var behind = (D - setback) - house.h;
@@ -180,7 +180,7 @@ public static partial class Lots
                     if (kind == "station")
                     {
                         decor(JsMath.floor(((double)(F) / (3))), 1, "pump");
-                        decor(JsMath.floor(((double)((2 * F)) / (3))), 1, "pump");
+                        decor(JsMath.floor(((double)(((double)(2) * (F))) / (3))), 1, "pump");
                     }
                     break;
                 }
@@ -189,13 +189,13 @@ public static partial class Lots
                 {
                     {
                     List<string> kinds = ["police", "clinic", "school", "church", "office"];
-                    var kind = Js.NN(Js.Get(kinds, JsMath.floor(r(0) * kinds.length)));
+                    var kind = Js.NN(Js.Get(kinds, JsMath.floor(((double)(r(0)) * (kinds.length)))));
                     var plan = (kind == "church") ? Buildings.churchPlan(r, F - 4, D - 3) : Buildings.civicPlan(r, kind, F - 4, D - 3);
                     @out.buildings.push(setIn(lot, plan, along(plan.w, 2), 2, mirror));
                     @out.yard = (_, _) => "paving";
                     for (var i = 0; i < 3; i++)
                     {
-                        decor(1 + JsMath.floor(r(70 + i) * (F - 2)), 0, "bench");
+                        decor(1 + JsMath.floor(((double)(r(70 + i)) * ((F - 2)))), 0, "bench");
                     }
                     break;
                 }
@@ -274,7 +274,7 @@ public static partial class Lots
         {
             for (var i = 0; i < 3; i++)
             {
-                @out.decor.push(Js.With(Js.CopyAs<LotLayoutDecorItem>(lotToMap(lot, 2 + JsMath.floor(r(40 + i) * (F - 4)), (yardDepth + 2) + JsMath.floor(r(50 + i) * JsMath.max(1, (D - yardDepth) - 4)))), __s2 => { __s2.look = "hay"; }));
+                @out.decor.push(Js.With(Js.CopyAs<LotLayoutDecorItem>(lotToMap(lot, 2 + JsMath.floor(((double)(r(40 + i)) * ((F - 4)))), (yardDepth + 2) + JsMath.floor(((double)(r(50 + i)) * (JsMath.max(1, (D - yardDepth) - 4)))))), __s2 => { __s2.look = "hay"; }));
             }
         }
         if (!stead)
@@ -365,7 +365,7 @@ public static partial class Lots
         }
         var __d7 = frame(lot);
         var w = __d7.F;
-        var u = 1 + JsMath.floor(r(1) * JsMath.max(1, w - 2));
+        var u = 1 + JsMath.floor(((double)(r(1)) * (JsMath.max(1, w - 2))));
         var p = lotToMap(lot, u, -2);
         if (Js.T((!inside(p.x, p.y) || !Vehicles.parkable(state, p)) || Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))))
         {
@@ -373,7 +373,7 @@ public static partial class Lots
         }
         var next = lotToMap(lot, u + 1, -2);
         var heading = Vehicles.headingOf(next.x - p.x, next.y - p.y) + ((r(2) < 0.5) ? 0 : 16);
-        Vehicles.addVehicle(state, p.x, p.y, heading, JsMath.floor((r(3) * 0.6) * Vehicles.FUEL_MAX), JsMath.floor((0.4 + (r(4) * 0.6)) * Vehicles.VEHICLE_HEALTH));
+        Vehicles.addVehicle(state, p.x, p.y, heading, JsMath.floor(((double)(((double)(r(3)) * (0.6))) * (Vehicles.FUEL_MAX))), JsMath.floor(((double)((0.4 + ((double)(r(4)) * (0.6)))) * (Vehicles.VEHICLE_HEALTH))));
     }
 
     public static void drawBuilding(SimState state, LotContext ctx, Lot lot, Placement b, double bi, Func<double, double, bool> inside, JsSet<string> covered)
@@ -382,7 +382,7 @@ public static partial class Lots
         var plan = __d8.plan;
         double r(double k)
         {
-            return Hash.hashRoll(ctx.seed, lot.x, lot.y, (0x9300 + (bi * 1000)) + k);
+            return Hash.hashRoll(ctx.seed, lot.x, lot.y, (0x9300 + ((double)(bi) * (1000))) + k);
         }
         var decay = Difficulty.ruinDecay(state);
         Point at(double x, double y)
@@ -412,7 +412,7 @@ public static partial class Lots
                 }
                 var fall = Hash.hashRoll(ctx.seed, w.x, w.y, 19);
                 var outer = (((Buildings.cellAt(plan, x - 1, y) == 0) || (Buildings.cellAt(plan, x + 1, y) == 0)) || (Buildings.cellAt(plan, x, y - 1) == 0)) || (Buildings.cellAt(plan, x, y + 1) == 0);
-                state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, w.x, w.y))] = Grids.GROUNDS.indexOf(Js.At(plan.ground, (y * plan.w) + x, "dirt"));
+                state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, w.x, w.y))] = Grids.GROUNDS.indexOf(Js.At(plan.ground, ((double)(y) * (plan.w)) + x, "dirt"));
                 if (c == Buildings.WALL)
                 {
                     Grids.setTile(state.grid, w.x, w.y, (fall > ((Js.T(outer) ? 0.08 : 0.04) + decay)) ? "wall" : "floor");
@@ -487,9 +487,9 @@ public static partial class Lots
                 var c = FurnitureMod.addFurniture(state, "crate", w.x, w.y);
                 c.look = f.look;
                 c.table = f.table;
-                var n = JsMath.min(Js.At(FurnitureMod.LOOK_CAPACITY, f.look, double.PositiveInfinity), 1 + JsMath.floor(r(100 + i) * JsMath.max(1, JsMath.floor(((double)(ctx.lootAt(w.x, w.y)) / (3))))));
+                var n = JsMath.min(Js.At(FurnitureMod.LOOK_CAPACITY, f.look, double.PositiveInfinity), 1 + JsMath.floor(((double)(r(100 + i)) * (JsMath.max(1, JsMath.floor(((double)(ctx.lootAt(w.x, w.y)) / (3))))))));
                 var searched = (ctx.distance(w.x, w.y) < 80) && (r(200 + i) < 0.25);
-                c.loot = Js.T(searched) ? 0 : (Difficulty.crateLoot(state, n) * (Climate.isRadioactive(state, w.x, w.y) ? 2 : 1));
+                c.loot = Js.T(searched) ? 0 : ((double)(Difficulty.crateLoot(state, n)) * ((Climate.isRadioactive(state, w.x, w.y) ? 2 : 1)));
             }
             else
             {
@@ -503,10 +503,10 @@ public static partial class Lots
         {
             return;
         }
-        var sleepers = Difficulty.zombieScale(state, JsMath.floor(r(300) * ((plan.sleepers + 1) + JsMath.floor(((double)(d) / (60))))));
+        var sleepers = Difficulty.zombieScale(state, JsMath.floor(((double)(r(300)) * (((plan.sleepers + 1) + JsMath.floor(((double)(d) / (60))))))));
         for (var k = 0; k < sleepers; k++)
         {
-            var p = Js.NN(Js.Get(floors, JsMath.floor(r(310 + k) * floors.length)));
+            var p = Js.NN(Js.Get(floors, JsMath.floor(((double)(r(310 + k)) * (floors.length)))));
             if (inside(p.x, p.y))
             {
                 state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });

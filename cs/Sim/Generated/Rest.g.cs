@@ -27,7 +27,7 @@ public static partial class Rest
     /// <summary>Survivors start staggered by index (100%, 85%, 70%, 55%, then repeat) so they don't all tire together.</summary>
     public static double initialRest(int index)
     {
-        return REST_MAX - JsMath.floor(((double)(((REST_MAX * 15) * (index % 4))) / (100)));
+        return REST_MAX - JsMath.floor(((double)(((double)(((double)(REST_MAX) * (15))) * ((index % 4)))) / (100)));
     }
     public static double initialRest(double index) => initialRest((int)index);
 }

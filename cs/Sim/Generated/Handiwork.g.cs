@@ -173,7 +173,7 @@ public static partial class Handiwork
         var i = Grids.tileIndex(state.grid, s.pos.x, s.pos.y);
         state.foraged[Js.Idx(Js.Str(i))] = Time.dayOf(state.tick);
         var field = (Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, i))) == "field") ? 2 : 1;
-        var chance = (FORAGE_CHANCE * field) * (state.settings.winter ? 0.5 : 1);
+        var chance = ((double)(((double)(FORAGE_CHANCE) * (field))) * ((state.settings.winter ? 0.5 : 1)));
         if (Hash.hashRoll(Hash.idNumber(s.id), i, state.tick) >= chance)
         {
             return "found nothing worth eating";

@@ -26,11 +26,11 @@ public static partial class Animals
 {
     static Animals()
     {
-        Time.onClock(() => DEER_STAYS = 2 * Time.DAY_LENGTH);
+        Time.onClock(() => DEER_STAYS = ((double)(2) * (Time.DAY_LENGTH)));
         Time.onClock(() =>
         {
             WOLF_HUNGRY = ((double)(Time.DAY_LENGTH) / (2));
-            WOLF_STARVING = 2 * Time.DAY_LENGTH;
+            WOLF_STARVING = ((double)(2) * (Time.DAY_LENGTH));
             PACK_STAYS = Time.DAY_LENGTH;
         });
     }
@@ -50,7 +50,7 @@ public static partial class Animals
 
     public const double DEER_CHANCE = 0.6;
 
-    public static double DEER_STAYS = 2 * Time.DAY_LENGTH;
+    public static double DEER_STAYS = ((double)(2) * (Time.DAY_LENGTH));
 
     public const int DEER_STEP_EVERY = 20;
 
@@ -101,7 +101,7 @@ public static partial class Animals
     /// <summary>Hunger (slowTick ticks) at which wolves hunt prey, and at which they'll come for people.</summary>
     public static double WOLF_HUNGRY = ((double)(Time.DAY_LENGTH) / (2));
 
-    public static double WOLF_STARVING = 2 * Time.DAY_LENGTH;
+    public static double WOLF_STARVING = ((double)(2) * (Time.DAY_LENGTH));
 
     /// <summary>A pack moves on after this long.</summary>
     public static double PACK_STAYS = Time.DAY_LENGTH;
@@ -173,7 +173,7 @@ public static partial class Animals
     public static void updateAnimals(SimState state)
     {
         var day = Time.dayOf(state.tick);
-        if (((Time.tickOfDay(state.tick) == (2 * Time.TICKS_PER_HOUR)) && (Hash.hashRoll(day, 57063.0) < DEER_CHANCE)) && (state.survivors.length > 0))
+        if (((Time.tickOfDay(state.tick) == ((double)(2) * (Time.TICKS_PER_HOUR))) && (Hash.hashRoll(day, 57063.0) < DEER_CHANCE)) && (state.survivors.length > 0))
         {
             var spot = Wanderers.frontierSpot(state, new JsSet<string>());
             if (Js.T(spot))
@@ -271,7 +271,7 @@ public static partial class Animals
         var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => canStep(state, a.pos, p));
         if (options.length > 0)
         {
-            step(a, Js.NN(Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))));
+            step(a, Js.NN(Js.Get(options, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(a.id), state.tick)) * (options.length))))));
         }
     }
 
@@ -287,7 +287,7 @@ public static partial class Animals
             return;
         }
         var near = state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= DEER_WARY);
-        var to = Js.T(near) ? Js.NN(Js.Get(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos)), 0)) : Js.NN(Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length)));
+        var to = Js.T(near) ? Js.NN(Js.Get(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos)), 0)) : Js.NN(Js.Get(options, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(a.id), state.tick)) * (options.length)))));
         step(a, to);
     }
 
@@ -309,7 +309,7 @@ public static partial class Animals
     public static void predator(SimState state, Animal a)
     {
         var hp = Js.Q(a.health, 0);
-        var hurt = hp < (Js.Get(HEALTH, a.kind) * 0.3);
+        var hurt = hp < ((double)(Js.Get(HEALTH, a.kind)) * (0.3));
         var nearest = closestSurvivor(state, a.pos);
         if ((Js.T(hurt && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
@@ -451,7 +451,7 @@ public static partial class Animals
         if (!a.hunted)
         {
             a.hunted = true;
-            Events.logEvent(state, $"{Js.Str(bear ? "A bear" : "Wolves")} attacked {Js.Str(s.name)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})!");
+            Events.logEvent(state, $"{Js.Str(bear ? Js.Str("A bear") : Js.Str("Wolves"))} attacked {Js.Str(s.name)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})!");
         }
     }
 
@@ -493,7 +493,7 @@ public static partial class Animals
             {
                 spawnNear(state, s.pos, "rabbit", roll(2), roll(3));
             }
-            var wolfChance = (WOLF_CHANCE * (Time.isNight(state.tick) ? 2 : 1)) * (winter ? 2 : 1);
+            var wolfChance = ((double)(((double)(WOLF_CHANCE) * ((Time.isNight(state.tick) ? 2 : 1)))) * ((winter ? 2 : 1)));
             if (((k == 0) && (near("wolf", 60).length == 0)) && (roll(4) < wolfChance))
             {
                 var lead = spawnNear(state, s.pos, "wolf", roll(5), roll(6));
@@ -519,7 +519,7 @@ public static partial class Animals
                     Events.logEvent(state, $"Wolves howling out past ({Js.Str(lead.pos.x)}, {Js.Str(lead.pos.y)})");
                 }
             }
-            if ((((k == 0) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR))) && !state.animals.some((a) => a.kind == "bear")) && (roll(7) < BEAR_CHANCE))
+            if ((((k == 0) && (Time.tickOfDay(state.tick) == ((double)(6) * (Time.TICKS_PER_HOUR)))) && !state.animals.some((a) => a.kind == "bear")) && (roll(7) < BEAR_CHANCE))
             {
                 var b = spawnNear(state, s.pos, "bear", roll(8), roll(9));
                 if (Js.T(b))
@@ -536,7 +536,7 @@ public static partial class Animals
             }
             var close = state.animals.filter((o) => (o.kind == "rabbit") && (Space.manhattan(o.pos, a.pos) <= 8)).length;
             var about = state.animals.filter((o) => (o.kind == "rabbit") && (Space.manhattan(o.pos, a.pos) <= RABBIT_RANGE)).length;
-            if (((close < 2) || (about >= (RABBITS_NEAR * 2))) || (Hash.hashRoll(hour, Hash.idNumber(a.id), 0xb7) >= BREED_CHANCE))
+            if (((close < 2) || (about >= ((double)(RABBITS_NEAR) * (2)))) || (Hash.hashRoll(hour, Hash.idNumber(a.id), 0xb7) >= BREED_CHANCE))
             {
                 continue;
             }
@@ -551,12 +551,12 @@ public static partial class Animals
     /// <summary>An animal out in the open 18-34 tiles from a point (by hash), or null.</summary>
     public static Animal? spawnNear(SimState state, Point from, string kind, double r1, double r2)
     {
-        var angle = (r1 * JsMath.PI) * 2;
-        var dist = 18 + JsMath.floor(r2 * 16);
+        var angle = ((double)(((double)(r1) * (JsMath.PI))) * (2));
+        var dist = 18 + JsMath.floor(((double)(r2) * (16)));
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        Point want = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
         bool clear(double x, double y)
         {
             return state.survivors.every((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);

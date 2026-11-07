@@ -75,7 +75,7 @@ public static partial class Wellbeing
         var bedroom = (Js.T(room) && ((purpose == "housing") || (purpose == "barracks"))) && Rooms.evaluateRoom(state, room, purpose).complete;
         var warm = Power.isWarmed(state, s.pos) || ((Seasons.seasonOf(state.tick) != "winter") && !state.settings.winter);
         var dirty = Js.T(room) ? room.tiles.filter((i) => Grids.isDirty(state.grid, i % state.grid.width, JsMath.floor(((double)(i) / (state.grid.width))))).length : 0;
-        return clamp(((((15 + (Js.T(inBed) ? 30 : 0)) + (Js.T(room) ? 20 : 0)) + (Js.T(bedroom) ? 15 : 0)) + (Js.T(warm) ? 15 : 0)) - JsMath.min(15, dirty * 5));
+        return clamp(((((15 + (Js.T(inBed) ? 30 : 0)) + (Js.T(room) ? 20 : 0)) + (Js.T(bedroom) ? 15 : 0)) + (Js.T(warm) ? 15 : 0)) - JsMath.min(15, ((double)(dirty) * (5))));
     }
 
     /// <summary>On waking: comfort moves halfway to the night's score.</summary>

@@ -65,13 +65,13 @@ public static partial class Seasons
     /// <summary>Lightning strikes something that burns near a survivor (a hash picks what).</summary>
     public static void lightning(SimState state)
     {
-        var s = Js.Get(state.survivors, JsMath.floor(Hash.hashRoll(state.tick, 1) * state.survivors.length));
+        var s = Js.Get(state.survivors, JsMath.floor(((double)(Hash.hashRoll(state.tick, 1)) * (state.survivors.length))));
         if (!Js.T(s))
         {
             return;
         }
         var targets = state.furniture.filter((f) => ((JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y)) <= 20) && !Rooms.isIndoors(state, f.x, f.y));
-        var t = Js.Get(targets, JsMath.floor(Hash.hashRoll(state.tick, 2) * targets.length));
+        var t = Js.Get(targets, JsMath.floor(((double)(Hash.hashRoll(state.tick, 2)) * (targets.length))));
         if (Js.T(t) && FireMod.ignite(state, t.x, t.y))
         {
             Events.logEvent(state, $"Lightning struck a {Js.Str(t.kind)} at ({Js.Str(t.x)}, {Js.Str(t.y)})!");

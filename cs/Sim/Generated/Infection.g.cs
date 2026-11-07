@@ -14,12 +14,12 @@ public static partial class Infection
 {
     static Infection()
     {
-        Time.onClock(() => INFECTION_TURN = 2 * Time.DAY_LENGTH);
+        Time.onClock(() => INFECTION_TURN = ((double)(2) * (Time.DAY_LENGTH)));
     }
 
     public const double INFECTION_CHANCE = 0.03;
 
-    public static double INFECTION_TURN = 2 * Time.DAY_LENGTH;
+    public static double INFECTION_TURN = ((double)(2) * (Time.DAY_LENGTH));
 
     /// <summary>What an infection does to mood while it lasts.</summary>
     public const double INFECTED_MOOD = -15;

@@ -26,15 +26,15 @@ public static partial class Alerts
             return double.PositiveInfinity;
         }
         var satiety = state.items.reduce((sum, i) => sum + ((i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0)), 0.0);
-        return ((double)(satiety) / ((people * DAILY_SATIETY)));
+        return ((double)(satiety) / (((double)(people) * (DAILY_SATIETY))));
     }
 
     /// <summary>Days until winter starts (0 in winter).</summary>
     public static double daysToWinter(int tick)
     {
         var day = Time.dayOf(tick);
-        var intoYear = (day - 1) % (4 * Seasons.SEASON_DAYS);
-        return (Seasons.seasonOf(tick) == "winter") ? 0 : ((3 * Seasons.SEASON_DAYS) - intoYear);
+        var intoYear = (day - 1) % ((double)(4) * (Seasons.SEASON_DAYS));
+        return (Seasons.seasonOf(tick) == "winter") ? 0 : (((double)(3) * (Seasons.SEASON_DAYS)) - intoYear);
     }
     public static double daysToWinter(double tick) => daysToWinter((int)tick);
 
@@ -54,11 +54,11 @@ public static partial class Alerts
         }
         if (near.length > raiders.length)
         {
-            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(((near.length - raiders.length) == 1) ? "" : "s")} near the colony", Js.NN(near.find((z) => z.kind != "raider")).pos);
+            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(((near.length - raiders.length) == 1) ? Js.Str("") : Js.Str("s"))} near the colony", Js.NN(near.find((z) => z.kind != "raider")).pos);
         }
         if (state.fires.length > 0)
         {
-            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str((state.fires.length == 1) ? "" : "s")} burning", Js.Get(state.fires, 0));
+            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str((state.fires.length == 1) ? Js.Str("") : Js.Str("s"))} burning", Js.Get(state.fires, 0));
         }
         foreach (var h in Js.Iter(state.herds))
         {
@@ -85,7 +85,7 @@ public static partial class Alerts
         var toSiege = EndgameMod.daysToSiege(state.tick);
         if (toSiege <= 2)
         {
-            add((toSiege == 0) ? "danger" : "warn", (toSiege == 0) ? "Siege tonight: a quarter more zombies" : $"Siege in {Js.Str(toSiege)} night{Js.Str((toSiege == 1) ? "" : "s")}");
+            add((toSiege == 0) ? "danger" : "warn", (toSiege == 0) ? "Siege tonight: a quarter more zombies" : $"Siege in {Js.Str(toSiege)} night{Js.Str((toSiege == 1) ? Js.Str("") : Js.Str("s"))}");
         }
         foreach (var s in Js.Iter(people))
         {
@@ -134,7 +134,7 @@ public static partial class Alerts
         }
         else if ((((people.length > 0) && (toWinter > 0)) && (toWinter <= 5)) && (days < Seasons.SEASON_DAYS))
         {
-            add("warn", $"Winter in {Js.Str(toWinter)} day{Js.Str((toWinter == 1) ? "" : "s")}: food for about {Js.Str(days.toFixed(1))} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)");
+            add("warn", $"Winter in {Js.Str(toWinter)} day{Js.Str((toWinter == 1) ? Js.Str("") : Js.Str("s"))}: food for about {Js.Str(days.toFixed(1))} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)");
         }
         else if ((people.length > 0) && (days < 2))
         {
@@ -160,7 +160,7 @@ public static partial class Alerts
             var rotting = state.items.filter((i) => Corpses.isRotting(state, i, graves));
             if (rotting.length > 0)
             {
-                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", Js.NN(Js.NN(Js.Get(rotting, 0)).pos));
+                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? Js.Str("y") : Js.Str("ies"))} rotting: make a graveyard and haulers will bury them", Js.NN(Js.NN(Js.Get(rotting, 0)).pos));
             }
         }
         foreach (var g in Js.Iter(FurnitureMod.ofKind(state, "generator")))

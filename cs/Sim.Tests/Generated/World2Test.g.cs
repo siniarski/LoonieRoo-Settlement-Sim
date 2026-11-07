@@ -69,7 +69,7 @@ public partial class World2Test
             }
             expect(water(state)).toBeGreaterThan(water(plain));
             var l = Worldgen.layout(11, SIZE, "islands");
-            for (var i = 0; i < (SIZE * SIZE); i++)
+            for (var i = 0; i < ((double)(SIZE) * (SIZE)); i++)
             {
                 if (Js.Get(l.plan.roadMask, i) == 0)
                 {
@@ -90,7 +90,7 @@ public partial class World2Test
             var state = Worldgen.createWorld(11, SIZE, Difficulty.NORMAL);
             expect(Climate.climateAt(state, ((double)(SIZE) / (2)), 5)).toBe("cold");
             expect(Climate.climateAt(state, ((double)(SIZE) / (2)), SIZE - 5)).toBe("hot");
-            state.tick = Js.I(((2 * Seasons.SEASON_DAYS) * Time.DAY_LENGTH) + (16 * Time.TICKS_PER_HOUR));
+            state.tick = Js.I(((double)(((double)(2) * (Seasons.SEASON_DAYS))) * (Time.DAY_LENGTH)) + ((double)(16) * (Time.TICKS_PER_HOUR)));
             expect(Climate.regionCold(state, ((double)(SIZE) / (2)), 5)).toBe(true);
             expect(Climate.regionCold(state, ((double)(SIZE) / (2)), ((double)(SIZE) / (2)))).toBe(false);
             expect(Climate.regionCold(state, ((double)(SIZE) / (2)), SIZE - 5)).toBe(false);
@@ -153,7 +153,7 @@ public partial class World2Test
         public void T010_left_waiting_it_goes_at_dusk()
         {
             var state = helicopterDown();
-            state.tick = Js.I(15 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(15) * (Time.TICKS_PER_HOUR)));
             Tick.tick(state);
             expect(state.endgame.helicopter).toBe(false);
             expect(state.survivors).toHaveLength(3);

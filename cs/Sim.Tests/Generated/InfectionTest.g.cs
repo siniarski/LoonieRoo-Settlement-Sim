@@ -53,8 +53,8 @@ public partial class InfectionTest
                     infected += 1;
                 }
             }
-            expect(infected).toBeGreaterThan((1000 * Infection.INFECTION_CHANCE) * 0.6);
-            expect(infected).toBeLessThan((1000 * Infection.INFECTION_CHANCE) * 1.4);
+            expect(infected).toBeGreaterThan(((double)(((double)(1000) * (Infection.INFECTION_CHANCE))) * (0.6)));
+            expect(infected).toBeLessThan(((double)(((double)(1000) * (Infection.INFECTION_CHANCE))) * (1.4)));
         }
 
         [Fact(DisplayName = "infection > untreated, it kills in a day and the survivor gets up as a zombie")]

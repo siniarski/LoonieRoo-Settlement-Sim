@@ -67,7 +67,7 @@ public partial class InjuriesTest
             var healthy = timeToRemove(1000);
             var injured = timeToRemove(450);
             expect(injured).toBeGreaterThan(healthy);
-            expect(injured).toBeLessThanOrEqual(JsMath.ceil(((double)((healthy * 4)) / (3))) + 2);
+            expect(injured).toBeLessThanOrEqual(JsMath.ceil(((double)(((double)(healthy) * (4))) / (3))) + 2);
         }
 
         [Fact(DisplayName = "injuries > a critically hurt survivor drops work, rests in bed, and gets up once recovered")]
@@ -91,7 +91,7 @@ public partial class InjuriesTest
         public void T005_a_critically_hurt_guard_falls_back_to_bed_instead_of_fightin()
         {
             var state = setup(["z..........s.b"], new() { ["guard"] = 3 });
-            state.tick = Js.I((17 * Time.TICKS_PER_HOUR) + 1);
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
             var s = Js.NN(Js.Get(state.survivors, 0));
             Tick.tick(state);
             expect(s.note).toMatch(new JsRegExp("^took guard job", ""));

@@ -38,7 +38,7 @@ public partial class OutpostsTest
             Commands.applyCommand(drive, new Command { type = "sendExpedition", survivorIds = [Js.NN(Js.Get(drive.survivors, 0)).id], poiId = "poi1" });
             expect(Js.NN(Js.Get(drive.expeditions, 0)).truck).toBe(true);
             expect(drive.items.filter((i) => i.kind == "fuel")).toHaveLength(2 - Outposts.TRUCK_FUEL);
-            expect(Js.NN(Js.Get(walk.expeditions, 0)).returnTick - Js.NN(Js.Get(drive.expeditions, 0)).returnTick).toBe(49 * Survivors.TICKS_PER_TILE);
+            expect(Js.NN(Js.Get(walk.expeditions, 0)).returnTick - Js.NN(Js.Get(drive.expeditions, 0)).returnTick).toBe(((double)(49) * (Survivors.TICKS_PER_TILE)));
         }
     }
 
@@ -58,7 +58,7 @@ public partial class OutpostsTest
             Tick.tick(state);
             expect(state.items.length).toBeGreaterThan(before);
             expect(Commands.applyCommand(state, new Command { type = "recallOutpost", expeditionId = x.id }).ok).toBe(true);
-            while ((state.expeditions.length > 0) && (state.tick < (3 * Time.DAY_LENGTH)))
+            while ((state.expeditions.length > 0) && (state.tick < ((double)(3) * (Time.DAY_LENGTH))))
             {
                 Tick.tick(state);
             }

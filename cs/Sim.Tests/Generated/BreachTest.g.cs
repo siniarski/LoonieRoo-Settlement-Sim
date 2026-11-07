@@ -8,7 +8,7 @@ public partial class BreachTest
 {
 
     /// <summary>23:00 on day 1, just past a spawn boundary.</summary>
-    public static readonly double NIGHT = (17 * Time.TICKS_PER_HOUR) + 1;
+    public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR)) + 1;
 
     public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
     {
@@ -61,7 +61,7 @@ public partial class BreachTest
         {
             var state = setup(HUT);
             var s = Js.NN(Js.Get(state.survivors, 0));
-            runUntil(state, (_) => Js.Get(state.grid.tiles, (3 * 11) + 5) == "floor");
+            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
             expect(lastEvents(state)).toContain("Zombies broke through the door at (5, 3)");
             expect(state.blueprints).toMatchObject(Js.Arr([Js.Obj(("x", (object?)(5)), ("y", (object?)(3)), ("target", (object?)("door")))]));
             expect(damageAt(state, 5, 3)).toBe(0);
@@ -74,9 +74,9 @@ public partial class BreachTest
             var state = setup(HUT);
             runUntil(state, (_) => damageAt(state, 5, 3) > 0);
             var first = state.tick;
-            runUntil(state, (_) => Js.Get(state.grid.tiles, (3 * 11) + 5) == "floor");
-            expect(state.tick - first).toBeGreaterThanOrEqual((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1) * 10);
-            expect(state.tick - first).toBeLessThanOrEqual(((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1) * 10) + 2);
+            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
+            expect(state.tick - first).toBeGreaterThanOrEqual(((double)((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1)) * (10)));
+            expect(state.tick - first).toBeLessThanOrEqual(((double)((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1)) * (10)) + 2);
         }
 
         [Fact(DisplayName = "breaching > with no door at all, it goes through a wall")]
@@ -129,10 +129,10 @@ public partial class BreachTest
         public void T008_a_broken_door_is_rebuilt_with_wood_like_any_other()
         {
             var state = setup(HUT.map((r, y) => (y == 4) ? "w.........." : r));
-            runUntil(state, (_) => Js.Get(state.grid.tiles, (3 * 11) + 5) == "floor");
+            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
             state.zombies = [];
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) { ["build"] = 3, ["haul"] = 3 };
-            runUntil(state, (_) => Js.Get(state.grid.tiles, (3 * 11) + 5) == "door", 2000);
+            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "door", 2000);
         }
 
         [Fact(DisplayName = "breaching > a repairer slows a breach but cannot hold the door alone")]
@@ -141,7 +141,7 @@ public partial class BreachTest
             double time(JsRecord<double> jobs)
             {
                 var state = setup(HUT, jobs);
-                return runUntil(state, (_) => Js.Get(state.grid.tiles, (3 * 11) + 5) == "floor", 3000);
+                return runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor", 3000);
             }
             expect(time(new() { ["build"] = 3 })).toBeGreaterThan(time(new() {  }) + 50);
         }

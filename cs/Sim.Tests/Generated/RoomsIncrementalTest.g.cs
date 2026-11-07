@@ -30,9 +30,9 @@ public partial class RoomsIncrementalTest
                     return Hash.hashRoll(n, k, 0x900d);
                 }
                 var rooms = Rooms.getRoomMap(state).rooms;
-                var room = ((rooms.length > 0) && (r(0) < 0.7)) ? Js.Get(rooms, JsMath.floor(r(1) * rooms.length)) : null;
-                var x = Js.T(room) ? (room.minX + JsMath.floor(r(2) * ((room.maxX - room.minX) + 2))) : (1 + JsMath.floor(r(2) * 126));
-                var y = Js.T(room) ? (room.minY + JsMath.floor(r(3) * ((room.maxY - room.minY) + 2))) : (1 + JsMath.floor(r(3) * 126));
+                var room = ((rooms.length > 0) && (r(0) < 0.7)) ? Js.Get(rooms, JsMath.floor(((double)(r(1)) * (rooms.length)))) : null;
+                var x = Js.T(room) ? (room.minX + JsMath.floor(((double)(r(2)) * (((room.maxX - room.minX) + 2))))) : (1 + JsMath.floor(((double)(r(2)) * (126))));
+                var y = Js.T(room) ? (room.minY + JsMath.floor(((double)(r(3)) * (((room.maxY - room.minY) + 2))))) : (1 + JsMath.floor(((double)(r(3)) * (126))));
                 var what = r(4);
                 if (what < 0.4)
                 {

@@ -66,7 +66,7 @@ public partial class LeisureTest
         public void T003_a_zombie_attack_leaves_its_mark()
         {
             var state = setup(["zs.."]);
-            state.tick = Js.I((17 * 200) + 1);
+            state.tick = Js.I(((double)(17) * (200)) + 1);
             runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).health < 1000);
             expect(thoughtsOf(Js.NN(Js.Get(state.survivors, 0)))).toContain("attacked");
         }
@@ -152,13 +152,13 @@ public partial class LeisureTest
             Js.NN(Js.Get(dry.survivors, 0)).social = 60;
             Js.NN(Js.Get(dry.survivors, 0)).resolve = Resolve.STEELED - 1;
             Js.NN(Js.Get(dry.survivors, 0)).nextForageTick = JsNumber.MAX_SAFE_INTEGER;
-            runUntil(dry, (_) => Js.NN(Js.Get(dry.survivors, 0)).breakdown != null, 20 * Leisure.BREAKDOWN_CHECK_EVERY);
+            runUntil(dry, (_) => Js.NN(Js.Get(dry.survivors, 0)).breakdown != null, ((double)(20) * (Leisure.BREAKDOWN_CHECK_EVERY)));
             var state = breakdownState(2);
             var s = Js.NN(Js.Get(state.survivors, 0));
             s.social = 60;
             s.resolve = Resolve.STEELED - 1;
             s.nextForageTick = JsNumber.MAX_SAFE_INTEGER;
-            runUntil(state, (_) => state.tick == (dry.tick - 15), 20 * Leisure.BREAKDOWN_CHECK_EVERY);
+            runUntil(state, (_) => state.tick == (dry.tick - 15), ((double)(20) * (Leisure.BREAKDOWN_CHECK_EVERY)));
             Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(0), y = Js.I(1) });
             runUntil(state, (_) => s.breakdown != null, 20);
             expect(s.jobId).toBeNull();
@@ -179,7 +179,7 @@ public partial class LeisureTest
         public void T011_only_the_miserable_break_down()
         {
             var state = setup(["s..."], [], new() {  }, 2);
-            for (var i = 0; (i < (40 * Leisure.BREAKDOWN_CHECK_EVERY)) && (i < 3000); i++)
+            for (var i = 0; (i < ((double)(40) * (Leisure.BREAKDOWN_CHECK_EVERY))) && (i < 3000); i++)
             {
                 Tick.tick(state);
             }
@@ -193,7 +193,7 @@ public partial class LeisureTest
             double when(double seed)
             {
                 var state = breakdownState(seed);
-                return runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).breakdown != null, 40 * Leisure.BREAKDOWN_CHECK_EVERY);
+                return runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).breakdown != null, ((double)(40) * (Leisure.BREAKDOWN_CHECK_EVERY)));
             }
             expect(when(4)).toBe(when(4));
         }

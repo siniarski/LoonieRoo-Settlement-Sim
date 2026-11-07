@@ -60,8 +60,8 @@ public static partial class Expeditions
         {
             v.driverId = $"x:{Js.Str(id)}";
         }
-        state.expeditions.push(Js.With(new Expedition { id = $"x{Js.Str(state.nextId++)}", members = members, target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }, home = home, returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((inTruck ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS), truck = inTruck, outpost = outpost }, __s0 => { if (Js.T(v)) { __s0.truckId = v.id; __s0.leftTick = state.tick; } else {  } }));
-        Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(inTruck ? " in the truck" : "")} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? " to hold it as an outpost" : "")}");
+        state.expeditions.push(Js.With(new Expedition { id = $"x{Js.Str(state.nextId++)}", members = members, target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }, home = home, returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + ((double)(((double)((inTruck ? 1 : 2)) * (distance))) * (Survivors.TICKS_PER_TILE))) + SEARCH_TICKS), truck = inTruck, outpost = outpost }, __s0 => { if (Js.T(v)) { __s0.truckId = v.id; __s0.leftTick = state.tick; } else {  } }));
+        Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(inTruck ? Js.Str(" in the truck") : Js.Str(""))} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? Js.Str(" to hold it as an outpost") : Js.Str(""))}");
         return null;
     }
 
@@ -89,11 +89,11 @@ public static partial class Expeditions
         {
             return false;
         }
-        var leg = JsMath.max(1, JsMath.floor(((double)((Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE)) / (2))));
+        var leg = JsMath.max(1, JsMath.floor(((double)(((double)(Space.manhattan(x.home, x.target)) * (Survivors.TICKS_PER_TILE))) / (2))));
         var e = state.tick - x.leftTick;
         var driving = (e < leg) || (!x.outpost && (e >= (leg + SEARCH_TICKS)));
         var f = (e < leg) ? ((double)(e) / (leg)) : ((x.outpost || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
-        Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
+        Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((double)((x.target.x - x.home.x)) * (f)))), y = Js.I(JsMath.round(x.home.y + ((double)((x.target.y - x.home.y)) * (f)))) };
         v.pos = p;
         v.at = Motion.centre(p);
         if (x.outpost && (e >= leg))
@@ -106,11 +106,11 @@ public static partial class Expeditions
         {
             return false;
         }
-        if (Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0x70ad) >= ((double)((ROAD_AMBUSH * state.settings.zombies)) / (100)))
+        if (Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0x70ad) >= ((double)(((double)(ROAD_AMBUSH) * (state.settings.zombies))) / (100)))
         {
             return false;
         }
-        var s = Js.NN(Js.Get(x.members, JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length)));
+        var s = Js.NN(Js.Get(x.members, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1)) * (x.members.length)))));
         if (s.health > (Health.HEALTH_MAX - INJURY))
         {
             s.health -= INJURY;
@@ -148,7 +148,7 @@ public static partial class Expeditions
         }
         var sleepers = state.dormant.filter((__f0) => near(__f0));
         state.dormant = state.dormant.filter((d) => !near(d));
-        var deathChance = JsMath.min(0.5, 0.05 + ((double)((0.08 * sleepers.length)) / (x.members.length)));
+        var deathChance = JsMath.min(0.5, 0.05 + ((double)(((double)(0.08) * (sleepers.length))) / (x.members.length)));
         List<Survivor> back = [];
         List<Survivor> lost = [];
         List<Survivor> hurt = [];
@@ -178,7 +178,7 @@ public static partial class Expeditions
             back.push(s);
         }
         state.survivors.pushAll(back);
-        double room = (CARRY * back.length) * (x.truck ? 2 : 1);
+        double room = ((double)(((double)(CARRY) * (back.length))) * ((x.truck ? 2 : 1)));
         double found = 0;
         foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && near(f))))
         {
@@ -199,7 +199,7 @@ public static partial class Expeditions
         {
             Mood.mournDeath(state, s);
         }
-        List<string> parts = [$"brought back {Js.Str(found)} find{Js.Str((found == 1) ? "" : "s")}"];
+        List<string> parts = [$"brought back {Js.Str(found)} find{Js.Str((found == 1) ? Js.Str("") : Js.Str("s"))}"];
         if (Js.T(hurt.length))
         {
             parts.push($"{Js.Str(hurt.map((s) => s.name).join(", "))} hurt");
@@ -210,7 +210,7 @@ public static partial class Expeditions
         }
         if ((x.target.label == Radio.DISTRESS_LABEL) && (back.length > 0))
         {
-            var n = 1 + JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), 0xd15) * 2);
+            var n = 1 + JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(x.id), 0xd15)) * (2)));
             List<string> names = [];
             for (var k = 0; k < n; k++)
             {

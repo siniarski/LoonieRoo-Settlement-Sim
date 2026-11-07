@@ -27,7 +27,7 @@ public partial class HerdsTest
         var map = Js.ArrayFrom(height, (int y) => (y == 4) ? ("s" + ".".repeat(width - 1)) : ".".repeat(width));
         var state = ScenarioMod.loadScenario(new Scenario { seed = 3, map = map });
         Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
-        state.tick = Js.I(6 * Time.TICKS_PER_HOUR);
+        state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
         return state;
     }
     public static SimState field(double width, double height = 9) => field((int)width, (int)height);
@@ -102,12 +102,12 @@ public partial class HerdsTest
             var state = field(40, 60);
             Js.NN(Js.Get(state.survivors, 0)).pos = new Point { x = Js.I(0), y = Js.I(0) };
             state.herds.push(new() { id = "h1", x = Js.I(39), y = Js.I(59), to = new Point { x = Js.I(39), y = Js.I(30) }, size = 4, nextStepTick = state.tick, heard = false });
-            for (var i = 0; i < (10 * Herds.HERD_TICKS_PER_TILE); i++)
+            for (var i = 0; i < ((double)(10) * (Herds.HERD_TICKS_PER_TILE)); i++)
             {
                 Tick.tick(state);
             }
             expect(Js.NN(Js.Get(state.herds, 0)).y).toBe(59 - 10);
-            runUntil(state, (_) => state.herds.length == 0, 40 * Herds.HERD_TICKS_PER_TILE);
+            runUntil(state, (_) => state.herds.length == 0, ((double)(40) * (Herds.HERD_TICKS_PER_TILE)));
             expect(state.zombies).toEqual(Js.Arr([]));
         }
 
@@ -132,10 +132,10 @@ public partial class HerdsTest
             /*TODO return type*/object herd()
             {
                 var state = field(80, 80);
-                state.tick = Js.I((Time.DAY_LENGTH + (2 * Time.TICKS_PER_HOUR)) - 1);
+                state.tick = Js.I((Time.DAY_LENGTH + ((double)(2) * (Time.TICKS_PER_HOUR))) - 1);
                 for (var day = 0; (day < 4) && (state.herds.length == 0); day++)
                 {
-                    state.tick = Js.I(((Time.DAY_LENGTH * (day + 1)) + (2 * Time.TICKS_PER_HOUR)) - 1);
+                    state.tick = Js.I((((double)(Time.DAY_LENGTH) * ((day + 1))) + ((double)(2) * (Time.TICKS_PER_HOUR))) - 1);
                     Tick.tick(state);
                     Tick.tick(state);
                 }
@@ -186,7 +186,7 @@ public partial class HerdsTest
             Js.NN(Js.Get(state.survivors, 0)).pos = new Point { x = Js.I(40), y = Js.I(40) };
             Tick.tick(state);
             Zombies.addZombie(state, 0, 0, 200, "static");
-            state.tick = Js.I(15 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(15) * (Time.TICKS_PER_HOUR)));
             runUntil(state, (_) => state.zombies.some((z_1) => z_1.kind == "night"), 3000);
             var z = Js.NN(state.zombies.find((zz) => zz.kind == "night"));
             expect(Fog.isExplored(state, z.pos.x, z.pos.y)).toBe(false);

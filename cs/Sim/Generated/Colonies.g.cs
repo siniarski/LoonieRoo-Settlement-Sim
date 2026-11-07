@@ -58,7 +58,7 @@ public static partial class Colonies
 
     public static string hungerOf(Settlement n)
     {
-        return (n.food <= 0) ? "starving" : ((n.food < (n.people * 2)) ? "hungry" : "fed");
+        return (n.food <= 0) ? "starving" : ((n.food < ((double)(n.people) * (2))) ? "hungry" : "fed");
     }
 
     /// <summary>Runs every tick: the dawn round of off-screen life, and unfolding near your people.</summary>
@@ -99,12 +99,12 @@ public static partial class Colonies
             {
                 return Hash.hashRoll(id, day, salt);
             }
-            var grown = Js.Get(GROWN, season) * (state.settings.winter ? 0.5 : 1);
-            n.food = ((double)(JsMath.round((((n.food * (1 - SPOIL_SHARE)) + (n.people * grown)) - n.people) * 10)) / (10));
+            var grown = ((double)(Js.Get(GROWN, season)) * ((state.settings.winter ? 0.5 : 1)));
+            n.food = ((double)(JsMath.round(((double)(((((double)(n.food) * ((1 - SPOIL_SHARE))) + ((double)(n.people) * (grown))) - n.people)) * (10)))) / (10));
             if (n.food < 0)
             {
                 n.food = 0;
-                var lost = JsMath.max(1, JsMath.round(n.people * STARVE_SHARE));
+                var lost = JsMath.max(1, JsMath.round(((double)(n.people) * (STARVE_SHARE))));
                 n.people -= lost;
                 news(state, n, $"{Js.Str(lost)} starved at {Js.Str(n.name)}");
                 if (!Settlements.isHostile(n))
@@ -112,7 +112,7 @@ public static partial class Colonies
                     Settlements.adjustReputation(state, n, DESPERATE_REP);
                 }
             }
-            else if ((n.food >= (n.people * WELL_FED_DAYS)) && (roll(1) < GROW_CHANCE))
+            else if ((n.food >= ((double)(n.people) * (WELL_FED_DAYS))) && (roll(1) < GROW_CHANCE))
             {
                 n.people += 1;
                 if ((n.defence < MAX_DEFENCE) && (roll(2) < 0.3))
@@ -120,7 +120,7 @@ public static partial class Colonies
                     n.defence += 1;
                 }
             }
-            if (roll(3) < (((double)(((0.06 + (day * 0.002)) * state.settings.zombies)) / (100)) - (n.defence * 0.015)))
+            if (roll(3) < (((double)(((double)((0.06 + ((double)(day) * (0.002)))) * (state.settings.zombies))) / (100)) - ((double)(n.defence) * (0.015))))
             {
                 var dead = (roll(4) < 0.3) ? 2 : 1;
                 n.people -= dead;
@@ -175,11 +175,11 @@ public static partial class Colonies
         }
         n.lastRaid = state.tick;
         var guns = armed.filter((s) => state.items.find((i) => i.id == s.weapon)?.kind == "gun").length;
-        var ours = (armed.length * 2) + (guns * 2);
-        var theirs = n.people + (n.defence * 2);
+        var ours = ((double)(armed.length) * (2)) + ((double)(guns) * (2));
+        var theirs = n.people + ((double)(n.defence) * (2));
         var roll = Hash.hashRoll(Hash.idNumber(n.id), state.tick, 0xa1);
         Settlements.adjustReputation(state, n, -60);
-        if ((ours * (0.5 + roll)) > theirs)
+        if (((double)(ours) * ((0.5 + roll))) > theirs)
         {
             var took = JsMath.ceil(((double)(n.food) / (2)));
             n.food -= took;
@@ -194,7 +194,7 @@ public static partial class Colonies
         }
         else
         {
-            var hurt = Js.NN(Js.Get(armed, JsMath.floor(roll * armed.length)));
+            var hurt = Js.NN(Js.Get(armed, JsMath.floor(((double)(roll) * (armed.length)))));
             hurt.health = JsMath.max(1, hurt.health - 150);
             hurt.lastHurtBy = "a raid gone wrong";
             hurt.hurtTick = state.tick;
@@ -212,7 +212,7 @@ public static partial class Colonies
     public static void raidOrBeg(SimState state, Settlement n, Func<double, double> roll)
     {
         var others = state.settlements.filter((o) => ((o != n) && !isFallen(o)) && (o.food > 0)).sort((a, b) => (JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y)) - (JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y)));
-        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((Js.Q(Js.Get(o.ties, n.id), 0)) >= 0));
+        var giver = others.find((o) => (o.food >= ((double)(o.people) * (WELL_FED_DAYS))) && ((Js.Q(Js.Get(o.ties, n.id), 0)) >= 0));
         if ((Js.T(giver) && (roll(5) < 0.5)) && !Caravans.caravansOf(state).some((c) => c.to == n.id))
         {
             var sent = JsMath.floor(((double)(giver.food) / (3)));
@@ -243,7 +243,7 @@ public static partial class Colonies
         {
             return;
         }
-        var ally = state.settlements.find((o) => (((o != n) && !isFallen(o)) && (Settlements.relation(o, n) == "allies")) && (o.food >= (o.people * WELL_FED_DAYS)));
+        var ally = state.settlements.find((o) => (((o != n) && !isFallen(o)) && (Settlements.relation(o, n) == "allies")) && (o.food >= ((double)(o.people) * (WELL_FED_DAYS))));
         if (!Js.T(ally))
         {
             return;
@@ -270,7 +270,7 @@ public static partial class Colonies
         var win = roll(12) < 0.5;
         (win ? foe : n).people = JsMath.max(0, (win ? foe : n).people - 1);
         tie(state, n, foe, -10);
-        news(state, n, $"{Js.Str(n.name)} raided {Js.Str(foe.name)}, their old enemy: {Js.Str(took)} food taken, one of {Js.Str(win ? foe.name : n.name)} dead");
+        news(state, n, $"{Js.Str(n.name)} raided {Js.Str(foe.name)}, their old enemy: {Js.Str(took)} food taken, one of {Js.Str(win ? Js.Str(foe.name) : Js.Str(n.name))} dead");
     }
 
     /// <summary>Ties between two settlements, with the news when they become allies or fall out for good.</summary>
@@ -299,12 +299,12 @@ public static partial class Colonies
 
     public static void split(SimState state, Settlement n, Func<double, double> roll)
     {
-        var angle = (roll(8) * JsMath.PI) * 2;
+        var angle = ((double)(((double)(roll(8)) * (JsMath.PI))) * (2));
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + (JsMath.cos(angle) * 30))));
-        var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + (JsMath.sin(angle) * 30))));
+        var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + ((double)(JsMath.cos(angle)) * (30)))));
+        var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + ((double)(JsMath.sin(angle)) * (30)))));
         var name = Js.NN(Js.Get(SPLIT_NAMES, state.settlements.length % SPLIT_NAMES.length));
         n.people -= SPLIT_PEOPLE;
         var food = JsMath.floor(((double)(n.food) / (3)));
@@ -406,6 +406,6 @@ public static partial class Colonies
             FurnitureMod.addFurniture(state, "table", p.x, p.y);
         }
         Residents.syncResidents(state, n);
-        Events.logEvent(state, $"You can see {Js.Str(n.name)}: {Js.Str(n.people)} people behind {Js.Str((n.defence >= 3) ? "good" : "thin")} walls");
+        Events.logEvent(state, $"You can see {Js.Str(n.name)}: {Js.Str(n.people)} people behind {Js.Str((n.defence >= 3) ? Js.Str("good") : Js.Str("thin"))} walls");
     }
 }

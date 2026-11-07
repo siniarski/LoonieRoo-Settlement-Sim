@@ -26,12 +26,12 @@ public partial class RelationshipsTest
         {
             var state = setup(["s.s.........s"]);
             var (a, b, far) = state.survivors;
-            for (var i = 0; i < (3 * Relationships.BOND_EVERY); i++)
+            for (var i = 0; i < ((double)(3) * (Relationships.BOND_EVERY)); i++)
             {
                 Tick.tick(state);
             }
-            expect(Relationships.opinion(Js.NN(a), Js.NN(b))).toBe(3 * Relationships.BOND);
-            expect(Relationships.opinion(Js.NN(b), Js.NN(a))).toBe(3 * Relationships.BOND);
+            expect(Relationships.opinion(Js.NN(a), Js.NN(b))).toBe(((double)(3) * (Relationships.BOND)));
+            expect(Relationships.opinion(Js.NN(b), Js.NN(a))).toBe(((double)(3) * (Relationships.BOND)));
             expect(Relationships.opinion(Js.NN(a), Js.NN(far))).toBe(0);
         }
 

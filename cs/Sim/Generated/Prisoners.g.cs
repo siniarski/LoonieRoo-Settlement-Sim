@@ -74,7 +74,7 @@ public static partial class Prisoners
             if (!cells.has(Rooms.labelAt(state, p.x, p.y)) || !Js.T(food))
             {
                 state.prisoners.splice(state.prisoners.indexOf(p), 1);
-                Events.logEvent(state, $"{Js.Str(p.name)} got away ({Js.Str(Js.T(food) ? "the cell is open" : "there was nothing to eat")})");
+                Events.logEvent(state, $"{Js.Str(p.name)} got away ({Js.Str(Js.T(food) ? Js.Str("the cell is open") : Js.Str("there was nothing to eat"))})");
                 continue;
             }
             Items.removeItem(state, food);
@@ -89,7 +89,7 @@ public static partial class Prisoners
         {
             return "no such prisoner";
         }
-        if (recruit && ((state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH)))
+        if (recruit && ((state.tick - p.since) < ((double)(RECRUIT_DAYS) * (Time.DAY_LENGTH))))
         {
             return $"{Js.Str(p.name)} isn't ready to join yet";
         }
@@ -110,7 +110,7 @@ public static partial class Prisoners
             {
                 Settlements.adjustReputation(state, home, RELEASE_REP);
             }
-            Events.logEvent(state, $"{Js.Str(p.name)} was let go{Js.Str(Js.T(home) ? $" ({Js.Str(home.name)} thinks better of you)" : "")}");
+            Events.logEvent(state, $"{Js.Str(p.name)} was let go{Js.Str(Js.T(home) ? Js.Str($" ({Js.Str(home.name)} thinks better of you)") : Js.Str(""))}");
         }
         return null;
     }

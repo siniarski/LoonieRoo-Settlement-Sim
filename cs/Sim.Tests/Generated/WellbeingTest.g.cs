@@ -18,7 +18,7 @@ public partial class WellbeingTest
             var (a, b, c) = state.survivors;
             for (var i = 0; i < 20; i++)
             {
-                state.tick = Js.I((i + 1) * Wellbeing.SOCIAL_EVERY);
+                state.tick = Js.I(((double)((i + 1)) * (Wellbeing.SOCIAL_EVERY)));
                 Wellbeing.updateSocial(state);
             }
             expect(a.social).toBe(80);

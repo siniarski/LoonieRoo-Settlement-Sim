@@ -64,7 +64,7 @@ public static partial class TimelineMod
         double roll(List<double> __p0, double key)
         {
             var (lo, hi) = __p0;
-            return (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));
+            return (hi == 0) ? 0 : (lo + JsMath.floor(((double)(Hash.hashRoll(seed, key)) * (((hi - lo) + 1)))));
         };
         state.timeline = new Timeline { waterOffDay = roll(w.water, 31358.0), powerOffDay = roll(w.power, 0x9077), helicopterDay = roll(w.heli, 19985.0), heli = null, alarms = [] };
     }
@@ -110,7 +110,7 @@ public static partial class TimelineMod
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        return new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + (JsMath.cos(a) * r))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + (JsMath.sin(a) * r))))) };
+        return new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + ((double)(JsMath.cos(a)) * (r)))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + ((double)(JsMath.sin(a)) * (r)))))) };
     }
 
     /// <summary>Which way, in words, from a to b.</summary>
@@ -118,8 +118,8 @@ public static partial class TimelineMod
     {
         var dx = b.x - a.x;
         var dy = b.y - a.y;
-        var ns = ((JsMath.abs(dy) * 2) > JsMath.abs(dx)) ? ((dy < 0) ? "north" : "south") : "";
-        var ew = ((JsMath.abs(dx) * 2) > JsMath.abs(dy)) ? ((dx < 0) ? "west" : "east") : "";
+        var ns = (((double)(JsMath.abs(dy)) * (2)) > JsMath.abs(dx)) ? ((dy < 0) ? "north" : "south") : "";
+        var ew = (((double)(JsMath.abs(dx)) * (2)) > JsMath.abs(dy)) ? ((dx < 0) ? "west" : "east") : "";
         return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : ((ns is var __or3 && Js.T(__or3) ? __or3 : ew) is var __or2 && Js.T(__or2) ? __or2 : "nearby");
     }
 
@@ -179,11 +179,11 @@ public static partial class TimelineMod
         var you = focus(state);
         if (((Js.T(Js.T(winding) && Js.T(you))) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), state.tick, 0xfa2) < FAR_CHANCE))
         {
-            var a = (Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI) * 2;
-            var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * ((FAR_MAX - FAR_MIN) + 1)));
+            var a = ((double)(((double)(Hash.hashRoll(state.tick, 0xfa3)) * (JsMath.PI))) * (2));
+            var at = off(state, you, a, FAR_MIN + JsMath.floor(((double)(Hash.hashRoll(state.tick, 0xfa4)) * (((FAR_MAX - FAR_MIN) + 1)))));
             var shots = Hash.hashRoll(state.tick, 0xfa5) < 0.6;
             Noise.makeNoise(state, at, shots ? "gunfire" : "scream");
-            Events.logEvent(state, $"{Js.Str(shots ? "Gunshots" : "A scream")}, far off to the {Js.Str(compass(you, at))}.");
+            Events.logEvent(state, $"{Js.Str(shots ? Js.Str("Gunshots") : Js.Str("A scream"))}, far off to the {Js.Str(compass(you, at))}.");
         }
     }
 
@@ -196,14 +196,14 @@ public static partial class TimelineMod
             {
                 return;
             }
-            if (Time.tickOfDay(state.tick) != JsMath.floor(Time.DAY_LENGTH * 0.6))
+            if (Time.tickOfDay(state.tick) != JsMath.floor(((double)(Time.DAY_LENGTH) * (0.6))))
             {
                 return;
             }
-            var a = (Hash.hashRoll(Js.Q(state.world?.seed, 0), 19986.0) * JsMath.PI) * 2;
+            var a = ((double)(((double)(Hash.hashRoll(Js.Q(state.world?.seed, 0), 19986.0)) * (JsMath.PI))) * (2));
             var from = off(state, you, a, 60);
             var exit = off(state, you, a + JsMath.PI, 80);
-            t.heli = new TimelineHeli { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + (60 * HELI_STEP), exit = exit };
+            t.heli = new TimelineHeli { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + ((double)(60) * (HELI_STEP)), exit = exit };
             Events.logEvent(state, $"A helicopter, coming in from the {Js.Str(compass(you, from))}...");
             return;
         }

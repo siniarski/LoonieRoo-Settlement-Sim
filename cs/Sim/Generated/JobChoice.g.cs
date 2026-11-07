@@ -53,7 +53,7 @@ public static partial class JobChoice
         var keys = new Float64Array(open.length);
         for (var i = 0; i < open.length; i++)
         {
-            keys[Js.Idx(i)] = (Space.manhattan(from, Js.NN(Js.Get(open, i))) * 1048576) + i;
+            keys[Js.Idx(i)] = ((double)(Space.manhattan(from, Js.NN(Js.Get(open, i)))) * (1048576)) + i;
         }
         keys.sort();
         return Js.ArrayFromMap(keys, (k) => Js.NN(Js.Get(open, k % 1048576)));

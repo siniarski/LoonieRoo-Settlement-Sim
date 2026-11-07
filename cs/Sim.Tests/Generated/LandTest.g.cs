@@ -33,7 +33,7 @@ public partial class LandTest
         return state;
     }
 
-    public static readonly double WINTER_NIGHT = (((3 * Seasons.SEASON_DAYS) * Time.DAY_LENGTH) + (15 * Time.TICKS_PER_HOUR)) + 1;
+    public static readonly double WINTER_NIGHT = (((double)(((double)(3) * (Seasons.SEASON_DAYS))) * (Time.DAY_LENGTH)) + ((double)(15) * (Time.TICKS_PER_HOUR))) + 1;
 
     /// <summary>heaters</summary>
     public class D001_heaters
@@ -92,7 +92,7 @@ public partial class LandTest
             {
                 p.planted = true;
             }
-            state.tick = Js.I((3 * Seasons.SEASON_DAYS) * Time.DAY_LENGTH);
+            state.tick = Js.I(((double)(((double)(3) * (Seasons.SEASON_DAYS))) * (Time.DAY_LENGTH)));
             for (var i = 0; i < 100; i++)
             {
                 Tick.tick(state);

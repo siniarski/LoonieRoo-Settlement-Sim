@@ -55,7 +55,7 @@ public partial class ControlTest
             cmd(state, new Command { type = "steer", dx = 1, dy = 0 });
             run(state, 1);
             expect(s.at.x).toBe(Motion.centre(new Point { x = Js.I(0), y = Js.I(0) }).x + ((double)(Motion.SUB) / (Survivors.TICKS_PER_TILE)));
-            run(state, (Survivors.TICKS_PER_TILE * 3) - 1);
+            run(state, ((double)(Survivors.TICKS_PER_TILE) * (3)) - 1);
             expect(s.at.x).toBe(Motion.centre(new Point { x = Js.I(3), y = Js.I(0) }).x);
             expect(s.pos).toEqual(Js.Obj(("x", (object?)(3)), ("y", (object?)(0))));
             cmd(state, new Command { type = "steer", dx = 0, dy = 0 });
@@ -77,7 +77,7 @@ public partial class ControlTest
             cmd(state, new Command { type = "steer", dx = 1, dy = 1 });
             run(state, 2);
             var moved = JsMath.sqrt((JsMath.pow((s.at.x - start.x), 2)) + (JsMath.pow((s.at.y - start.y), 2)));
-            expect(JsMath.abs(moved - ((double)((2 * Motion.SUB)) / (Survivors.TICKS_PER_TILE)))).toBeLessThan(2);
+            expect(JsMath.abs(moved - ((double)(((double)(2) * (Motion.SUB))) / (Survivors.TICKS_PER_TILE)))).toBeLessThan(2);
             s.at = Motion.centre(new Point { x = Js.I(0), y = Js.I(2) });
             s.pos = new Point { x = Js.I(0), y = Js.I(2) };
             cmd(state, new Command { type = "steer", dx = 1, dy = -1 });

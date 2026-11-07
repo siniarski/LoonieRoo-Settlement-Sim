@@ -158,7 +158,7 @@ public partial class VehiclesTest
         public void T008_no_door_window_or_barricade_lets_a_car_through()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["..."], edges = [new() { x = Js.I(1), y = Js.I(0), side = "w", kind = "door" }] });
-            state.grid.edgeOpen.push((1 * 2) + 1);
+            state.grid.edgeOpen.push(((double)(1) * (2)) + 1);
             expect(Pathfinding.crossable(state.grid, 0, 0, 1, 0, "vehicle")).toBe(false);
             expect(Pathfinding.crossable(state.grid, 1, 0, 2, 0, "vehicle")).toBe(true);
         }
@@ -176,7 +176,7 @@ public partial class VehiclesTest
             }
             var cars = state.vehicles ?? [];
             expect(cars.length).toBeGreaterThan(4);
-            var onRoad = cars.filter((c) => Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, (c.pos.y * 256) + c.pos.x))) == "road").length;
+            var onRoad = cars.filter((c) => Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, ((double)(c.pos.y) * (256)) + c.pos.x))) == "road").length;
             expect(onRoad).toBeGreaterThan(((double)(cars.length) / (2)));
             foreach (var c in Js.Iter(cars))
             {
@@ -237,7 +237,7 @@ public partial class VehiclesTest
             expect(Inventory.contents(state, new Furniture { id = car.id }).map((i) => i.id)).toEqual(Js.Arr([can.id]));
             expect(Commands.applyCommand(state, new Command { type = "takeAll", containerId = car.id }).ok).toBe(true);
             expect(s.pack).toEqual(Js.Arr([can.id]));
-            for (var i = 0; (i * Inventory.ITEM_WEIGHT["wood"]) <= Vehicles.BOOT_MAX; i++)
+            for (var i = 0; ((double)(i) * (Inventory.ITEM_WEIGHT["wood"])) <= Vehicles.BOOT_MAX; i++)
             {
                 var w = Items.spawnItem(state, "wood", 2, 3);
                 w.pos = null;

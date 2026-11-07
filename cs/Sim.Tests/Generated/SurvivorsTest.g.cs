@@ -39,7 +39,7 @@ public partial class SurvivorsTest
             var survivor = __d0.survivor;
             var id = __d0.id;
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = id, x = Js.I(4), y = Js.I(0) });
-            Tick.step(state, 4 * Survivors.TICKS_PER_TILE);
+            Tick.step(state, ((double)(4) * (Survivors.TICKS_PER_TILE)));
             expect(survivor().pos).toEqual(Js.Obj(("x", (object?)(3)), ("y", (object?)(0))));
             Tick.step(state, 1);
             expect(survivor().pos).toEqual(Js.Obj(("x", (object?)(4)), ("y", (object?)(0))));
@@ -97,7 +97,7 @@ public partial class SurvivorsTest
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = id, x = Js.I(5), y = Js.I(1) });
             Tick.step(state, 2);
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(5), y = Js.I(0) });
-            Tick.step(state, 3 * Survivors.TICKS_PER_TILE);
+            Tick.step(state, ((double)(3) * (Survivors.TICKS_PER_TILE)));
             expect(survivor().goal).toBeNull();
             expect(survivor().note).toBe("no path to (5, 1)");
             Tick.step(state, Survivors.TICKS_PER_TILE);

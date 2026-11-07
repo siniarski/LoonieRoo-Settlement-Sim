@@ -99,7 +99,7 @@ public partial class TalkTest
             var task = Js.NN(Js.Get(state.tasks, 0));
             expect(state.furniture.some((f) => ((f.kind == "crate") && (f.x == task.x)) && (f.y == task.y))).toBe(true);
             you.pos = new Point { x = Js.I(task.x + 1), y = Js.I(task.y) };
-            state.tick = Js.I(JsMath.ceil(((double)(state.tick) / (10))) * 10);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
             expect(them.thoughts.some((t) => t.kind == "wentHome")).toBe(true);
@@ -128,7 +128,7 @@ public partial class TalkTest
             state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(32), y = Js.I(32), purpose = "graveyard" })).toMatchObject(Js.Obj(("ok", (object?)(true))));
             body.pos = new Point { x = Js.I(32), y = Js.I(32) };
-            state.tick = Js.I(JsMath.ceil(((double)(state.tick) / (10))) * 10);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
             expect(them.thoughts.some((t) => t.kind == "laidToRest")).toBe(true);
@@ -169,7 +169,7 @@ public partial class TalkTest
             var task = Js.NN(Js.Get(state.tasks, 0));
             Commands.applyCommand(state, new Command { type = "ignite", x = Js.I(task.x), y = Js.I(task.y) });
             expect(state.fires.length).toBeGreaterThan(0);
-            state.tick = Js.I(JsMath.ceil(((double)(state.tick) / (10))) * 10);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
         }
@@ -181,7 +181,7 @@ public partial class TalkTest
             var them = Js.NN(Js.Get(state.survivors, 0));
             talkUntil(state, them, "home");
             state.survivors = [];
-            state.tick = Js.I(JsMath.ceil(((double)(state.tick) / (10))) * 10);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
         }
@@ -236,7 +236,7 @@ public partial class TalkTest
                 state.nextId = Js.I(n);
                 var s = Survivors.addSurvivor(state, 5, 1);
                 talkUntil(state, s, "radio");
-                state.tick = Js.I(((JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + 1) * Time.DAY_LENGTH) + (6 * Time.TICKS_PER_HOUR));
+                state.tick = Js.I(((double)((JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + 1)) * (Time.DAY_LENGTH)) + ((double)(6) * (Time.TICKS_PER_HOUR)));
                 Talk.updateTasks(state);
                 expect(state.tasks).toEqual(Js.Arr([]));
                 outcomes.add(state.wanderers.some((w) => w.name == s.story.lost.name) ? "answered" : "silence");
@@ -262,7 +262,7 @@ public partial class TalkTest
             med.carriedBy = you.id;
             you.carrying = med.id;
             you.pos = new Point { x = Js.I(66), y = Js.I(40) };
-            state.tick = Js.I(JsMath.ceil(((double)(state.tick) / (10))) * 10);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
             expect(you.carrying).toBeNull();

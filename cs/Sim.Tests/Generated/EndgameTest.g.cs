@@ -61,7 +61,7 @@ public partial class EndgameTest
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
             Tick.tick(state);
             expect(state.endgame.evacuation).toBeNull();
-            state.tick = Js.I((EndgameMod.EVAC_FROM_DAY - 1) * Time.DAY_LENGTH);
+            state.tick = Js.I(((double)((EndgameMod.EVAC_FROM_DAY - 1)) * (Time.DAY_LENGTH)));
             state.zombiesTonight = 0;
             Tick.tick(state);
             var evac = Js.NN(state.endgame.evacuation);
@@ -80,7 +80,7 @@ public partial class EndgameTest
             expect(EndgameMod.siegeFactor(state, EndgameMod.SIEGE_EVERY)).toBe(1);
             expect(EndgameMod.siegeFactor(state, EndgameMod.FIRST_SIEGE)).toBe(EndgameMod.SIEGE_FACTOR);
             expect(EndgameMod.siegeFactor(state, EndgameMod.FIRST_SIEGE + 1)).toBe(1);
-            expect(EndgameMod.daysToSiege((EndgameMod.FIRST_SIEGE - 1) * Time.DAY_LENGTH)).toBe(0);
+            expect(EndgameMod.daysToSiege(((double)((EndgameMod.FIRST_SIEGE - 1)) * (Time.DAY_LENGTH)))).toBe(0);
         }
     }
 }

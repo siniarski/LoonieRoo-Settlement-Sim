@@ -129,22 +129,22 @@ public static partial class Water
         {
             if (f.kind == "well")
             {
-                clean.set((f.y * grid.width) + f.x, "well");
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "well");
             }
             else if ((f.kind == "collector") && (f.loot > 0))
             {
-                clean.set((f.y * grid.width) + f.x, "collector");
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "collector");
             }
             else if (tapsOn && TimelineMod.isTap(state, f))
             {
-                clean.set((f.y * grid.width) + f.x, "tap");
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "tap");
             }
             else if (isTank(state, f))
             {
-                clean.set((f.y * grid.width) + f.x, "tank");
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "tank");
             }
         }
-        List<Func<double, double, string?>> passes = [(x, y) => clean.get((y * grid.width) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has((y * grid.width) + x)) ? "river" : null];
+        List<Func<double, double, string?>> passes = [(x, y) => clean.get(((double)(y) * (grid.width)) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has(((double)(y) * (grid.width)) + x)) ? "river" : null];
         foreach (var (i, sourceOf) in Js.Iter(passes.entries()))
         {
             if ((i == 0) && (clean.size == 0))
@@ -213,7 +213,7 @@ public static partial class Water
         d.progress += 1;
         if (d.progress == 1)
         {
-            s.note = $"drinking from {Js.Str((d.source == "river") ? "the river" : $"a {Js.Str(d.source)}")}";
+            s.note = $"drinking from {Js.Str((d.source == "river") ? Js.Str("the river") : Js.Str($"a {Js.Str(d.source)}"))}";
         }
         if (d.progress < DRINK_TICKS)
         {

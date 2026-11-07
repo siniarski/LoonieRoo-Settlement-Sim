@@ -25,7 +25,7 @@ public static partial class Breach
         {
             return 0;
         }
-        return grid.reinforced.includes(i) ? (Js.Get(STRUCTURE_HEALTH, tile) * 2.5) : Js.Get(STRUCTURE_HEALTH, tile);
+        return grid.reinforced.includes(i) ? ((double)(Js.Get(STRUCTURE_HEALTH, tile)) * (2.5)) : Js.Get(STRUCTURE_HEALTH, tile);
     }
     public static double structureHealth(Grid grid, double i) => structureHealth(grid, (int)i);
 

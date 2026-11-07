@@ -92,7 +92,7 @@ public static partial class Outposts
             {
                 continue;
             }
-            for (var k = 0; k < (x.members.length * OUTPOST_FINDS); k++)
+            for (var k = 0; k < ((double)(x.members.length) * (OUTPOST_FINDS)); k++)
             {
                 Difficulty.spawnFind(state, Work.scavengeFind(Hash.hashRoll(Hash.idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
             }
@@ -100,7 +100,7 @@ public static partial class Outposts
             {
                 continue;
             }
-            var s = Js.NN(Js.Get(x.members, JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length)));
+            var s = Js.NN(Js.Get(x.members, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1)) * (x.members.length)))));
             if (s.health > (Health.HEALTH_MAX - OUTPOST_HURT))
             {
                 s.health -= OUTPOST_HURT;
@@ -151,7 +151,7 @@ public static partial class Outposts
             return "no such outpost";
         }
         x.outpost = false;
-        x.returnTick = state.tick + (Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE);
+        x.returnTick = state.tick + ((double)(Space.manhattan(x.home, x.target)) * (Survivors.TICKS_PER_TILE));
         Events.logEvent(state, $"The {Js.Str(x.target.label)} outpost is packing up and heading home");
         return null;
     }

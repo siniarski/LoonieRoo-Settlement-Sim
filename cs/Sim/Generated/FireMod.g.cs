@@ -117,7 +117,7 @@ public static partial class FireMod
             {
                 foreach (var n in Js.Iter(Grids.neighbours4(state.grid, f.x, f.y)))
                 {
-                    var chance = (state.weather == "heatwave") ? (2 * SPREAD_CHANCE) : SPREAD_CHANCE;
+                    var chance = (state.weather == "heatwave") ? ((double)(2) * (SPREAD_CHANCE)) : SPREAD_CHANCE;
                     if ((burnable(state, n.x, n.y) && !Js.T(fireAt(state, n.x, n.y))) && (Hash.hashRoll(n.x, n.y, state.tick) < chance))
                     {
                         ignite(state, n.x, n.y);

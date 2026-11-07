@@ -8,7 +8,7 @@ public partial class ZombiesTest
 {
 
     /// <summary>23:00 on day 1: night, and the first spawn time.</summary>
-    public static readonly double NIGHT = 17 * Time.TICKS_PER_HOUR;
+    public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR));
 
     public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
     {
@@ -66,7 +66,7 @@ public partial class ZombiesTest
             var onEdge = (((z.pos.x == 0) || (z.pos.y == 0)) || (z.pos.x == 29)) || (z.pos.y == 11);
             expect(onEdge).toBe(true);
             expect(state.events.at(-1)?.message).toMatch(new JsRegExp("^A zombie appeared at", ""));
-            for (var i = 0; i < (6 * Time.TICKS_PER_HOUR); i++)
+            for (var i = 0; i < ((double)(6) * (Time.TICKS_PER_HOUR)); i++)
             {
                 Tick.tick(state);
                 expect(state.zombies.length).toBeLessThanOrEqual(Zombies.MAX_ZOMBIES);
@@ -79,7 +79,7 @@ public partial class ZombiesTest
             List<double> spawnTicks(double night)
             {
                 List<double> ticks = [];
-                for (var t = (night - 1) * Time.DAY_LENGTH; t < ((night * Time.DAY_LENGTH) + Time.DAY_LENGTH); t++)
+                for (var t = ((double)((night - 1)) * (Time.DAY_LENGTH)); t < (((double)(night) * (Time.DAY_LENGTH)) + Time.DAY_LENGTH); t++)
                 {
                     if (Zombies.isSpawnTick(t) && (Time.nightNumber(t) == night))
                     {
@@ -101,7 +101,7 @@ public partial class ZombiesTest
             var map = Js.ArrayFrom(20, (int y) => (y == 9) ? $"{Js.Str(".".repeat(17))}###{Js.Str(".".repeat(20))}" : ((y == 10) ? $"{Js.Str(".".repeat(17))}#s#{Js.Str(".".repeat(20))}" : ((y == 11) ? $"{Js.Str(".".repeat(17))}###{Js.Str(".".repeat(20))}" : ".".repeat(40))));
             var state = ScenarioMod.loadScenario(new Scenario { seed = 5, map = map });
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) {  };
-            for (var i = 0; i < (3 * Time.DAY_LENGTH); i++)
+            for (var i = 0; i < ((double)(3) * (Time.DAY_LENGTH)); i++)
             {
                 Tick.tick(state);
             }
@@ -135,7 +135,7 @@ public partial class ZombiesTest
         {
             List<string> map = ["z..........", "...#####...", "...#.s.#...", "...##D##...", "..........."];
             var state = night(map);
-            runUntil(state, (_) => Js.NN(Js.Get(state.grid.damage, (3 * 11) + 5)) > 0);
+            runUntil(state, (_) => Js.NN(Js.Get(state.grid.damage, ((double)(3) * (11)) + 5)) > 0);
             expect(Js.NN(Js.Get(state.survivors, 0)).health).toBe(1000);
             expect(Js.NN(Js.Get(state.zombies, 0)).targetId).toBe(Js.NN(Js.Get(state.survivors, 0)).id);
         }

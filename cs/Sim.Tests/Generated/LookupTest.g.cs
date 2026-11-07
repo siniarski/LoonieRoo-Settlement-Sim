@@ -27,7 +27,7 @@ public partial class LookupTest
                 {
                     list.splice((int)JsMath.floor(Hash.hashRoll(round, 2) * list.length), 1);
                 }
-                var id = $"x{Js.Str(JsMath.floor(Hash.hashRoll(round, 3) * (next + 2)))}";
+                var id = $"x{Js.Str(JsMath.floor(((double)(Hash.hashRoll(round, 3)) * ((next + 2)))))}";
                 expect(Lookup.findById(list, id)).toBe(list.find((x) => x.id == id));
             }
         }

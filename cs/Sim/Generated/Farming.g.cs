@@ -122,7 +122,7 @@ public static partial class Farming
                 plot.growth = JsMath.min(growTicks(plot), plot.growth + growth);
             }
         }
-        var every = (Seasons.seasonOf(state.tick) == "winter") ? (2 * EGG_EVERY) : EGG_EVERY;
+        var every = (Seasons.seasonOf(state.tick) == "winter") ? ((double)(2) * (EGG_EVERY)) : EGG_EVERY;
         if ((state.tick > 0) && ((state.tick % every) == 0))
         {
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "coop")))

@@ -66,10 +66,10 @@ public partial class PrisonersTest
             Tick.tick(state);
             expect(state.items.filter((i) => i.kind == "food")).toHaveLength(0);
             expect(state.prisoners).toHaveLength(2);
-            state.tick = Js.I((Prisoners.RECRUIT_DAYS * Time.DAY_LENGTH) + 1);
+            state.tick = Js.I(((double)(Prisoners.RECRUIT_DAYS) * (Time.DAY_LENGTH)) + 1);
             expect(Commands.applyCommand(state, new Command { type = "recruitPrisoner", prisonerId = "q1" }).ok).toBe(true);
             expect(state.survivors.map((s) => s.name)).toContain("Rook");
-            state.tick = Js.I(3 * Time.DAY_LENGTH);
+            state.tick = Js.I(((double)(3) * (Time.DAY_LENGTH)));
             Tick.tick(state);
             expect(state.prisoners).toEqual(Js.Arr([]));
         }
@@ -89,9 +89,9 @@ public partial class PrisonersTest
             {
                 s.rest = ((double)((Rest.TIRED + Rest.NIGHT_TIRED)) / (2));
             }
-            state.tick = Js.I(6 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
             expect(Js.Arr([Needs.isTired(state, Js.NN(day)), Needs.isTired(state, Js.NN(night))])).toEqual(Js.Arr([false, true]));
-            state.tick = Js.I(17 * Time.TICKS_PER_HOUR);
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)));
             expect(Js.Arr([Needs.isTired(state, Js.NN(day)), Needs.isTired(state, Js.NN(night))])).toEqual(Js.Arr([true, false]));
             expect(Commands.applyCommand(state, new Command { type = "setShift", survivorId = Js.NN(day).id, shift = "night" }).ok).toBe(true);
         }

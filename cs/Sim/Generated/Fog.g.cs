@@ -42,8 +42,8 @@ public static partial class Fog
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                var i = (y * grid.width) + x;
-                if ((Js.Get(grid.explored, i) == 1) || (((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)))
+                var i = ((double)(y) * (grid.width)) + x;
+                if ((Js.Get(grid.explored, i) == 1) || (((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > ((double)(r) * (r))))
                 {
                     continue;
                 }

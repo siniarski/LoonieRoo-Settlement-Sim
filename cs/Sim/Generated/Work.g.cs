@@ -112,7 +112,7 @@ public static partial class Work
         if (Farming.isRipe(plot))
         {
             Farming.harvest(state, plot);
-            finishJob(state, s, job, $"harvested {Js.Str((plot.crop == "herb") ? "herbs" : ((plot.crop == "wheat") ? "wheat" : "food"))} at ({Js.Str(plot.x)}, {Js.Str(plot.y)})");
+            finishJob(state, s, job, $"harvested {Js.Str((plot.crop == "herb") ? Js.Str("herbs") : Js.Str((plot.crop == "wheat") ? "wheat" : "food"))} at ({Js.Str(plot.x)}, {Js.Str(plot.y)})");
         }
         else
         {
@@ -132,7 +132,7 @@ public static partial class Work
         }
         var gun = Weapons.loadedGun(state, s);
         var range = Weapons.GUN_RANGE + (Towers.onTower(state, s) ? Towers.TOWER_RANGE_BONUS : 0);
-        var inReach = Motion.distance2(s.at, z.at) <= (Motion.SWING_REACH * Motion.SWING_REACH);
+        var inReach = Motion.distance2(s.at, z.at) <= ((double)(Motion.SWING_REACH) * (Motion.SWING_REACH));
         if (((Js.T(gun) && !inReach) && (Space.manhattan(s.pos, z.pos) <= range)) && clearShot(state.grid, s.pos, z.pos))
         {
             if (Skills.workStep(state, s, "guard") == 0)
@@ -146,7 +146,7 @@ public static partial class Work
             }
             gun.wear -= 1;
             Noise.makeNoise(state, s.pos, "gunfire");
-            if (!Zombies.damageZombie(state, z, Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0)), s))
+            if (!Zombies.damageZombie(state, z, Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0)), s))
             {
                 return;
             }
@@ -167,8 +167,8 @@ public static partial class Work
         }
         Noise.makeNoise(state, s.pos, "fighting");
         BodyMod.exert(s, BodyMod.GUARD_BLOW_COST);
-        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
-        if (!Zombies.damageZombie(state, z, Power.inLight(state, s.pos) ? JsMath.round(((double)((blow * Power.LIGHT_DAMAGE_PCT)) / (100))) : blow, s))
+        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+        if (!Zombies.damageZombie(state, z, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s))
         {
             return;
         }
@@ -263,7 +263,7 @@ public static partial class Work
                 return;
             }
             Noise.makeNoise(state, a.pos, "fighting");
-            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
+            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
             if (Handiwork.hitAnimal(state, s, a.id, blow) == "brought it down")
             {
                 finishJob(state, s, job, $"killed a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})");
@@ -306,7 +306,7 @@ public static partial class Work
         {
             return;
         }
-        job.progress += step * (Seasons.isWet(state.weather) ? 2 : 1);
+        job.progress += ((double)(step) * ((Seasons.isWet(state.weather) ? 2 : 1)));
         if (job.progress < FireMod.DOUSE_WORK)
         {
             return;
@@ -444,7 +444,7 @@ public static partial class Work
         {
             Events.logEvent(state, $"The stove at ({Js.Str(bench.x)}, {Js.Str(bench.y)}) caught fire!");
         }
-        var made = (kind == "meal") ? "cooked a hot meal" : ((kind == "medicine") ? "made medicine" : $"crafted {Js.Str(((kind == "armour") || (kind == "boots")) ? "" : "a ")}{Js.Str(kind)}");
+        var made = (kind == "meal") ? "cooked a hot meal" : ((kind == "medicine") ? "made medicine" : $"crafted {Js.Str(((kind == "armour") || (kind == "boots")) ? Js.Str("") : Js.Str("a "))}{Js.Str(kind)}");
         finishJob(state, s, job, $"{Js.Str(made)} at ({Js.Str(bench.x)}, {Js.Str(bench.y)})");
     }
 
@@ -461,7 +461,7 @@ public static partial class Work
             return;
         }
         var z = Zombies.getZombie(state, job.zombieId);
-        if (!Js.T(z) || (Motion.distance2(s.at, z.at) > (Motion.SWING_REACH * Motion.SWING_REACH)))
+        if (!Js.T(z) || (Motion.distance2(s.at, z.at) > ((double)(Motion.SWING_REACH) * (Motion.SWING_REACH))))
         {
             return;
         }
@@ -554,7 +554,7 @@ public static partial class Work
             item.pos = null;
             item.carriedBy = s.id;
             s.carrying = item.id;
-            s.note = $"picked up {Js.Str((item.kind == "medicine") ? "medicine" : "a bandage")} for {Js.Str(patient.name)}";
+            s.note = $"picked up {Js.Str((item.kind == "medicine") ? Js.Str("medicine") : Js.Str("a bandage"))} for {Js.Str(patient.name)}";
         }
         if (Space.manhattan(s.pos, patient.pos) != 1)
         {
@@ -661,7 +661,7 @@ public static partial class Work
         {
             return;
         }
-        if (Breach.repairStructure(state, job.x, job.y, Breach.REPAIR_PER_TICK * step) > 0)
+        if (Breach.repairStructure(state, job.x, job.y, ((double)(Breach.REPAIR_PER_TICK) * (step))) > 0)
         {
             return;
         }
@@ -682,7 +682,7 @@ public static partial class Work
         {
             return;
         }
-        if (Breach.repairEdge(state, e, Breach.REPAIR_PER_TICK * step) > 0)
+        if (Breach.repairEdge(state, e, ((double)(Breach.REPAIR_PER_TICK) * (step))) > 0)
         {
             return;
         }
@@ -783,7 +783,7 @@ public static partial class Work
         s.carrying = null;
         g.stored += 1;
         g.storedKind = fuel;
-        finishJob(state, s, job, $"{Js.Str((fuel == "ammo") ? "loaded" : "fuelled")} the {Js.Str(g.kind)} at ({Js.Str(g.x)}, {Js.Str(g.y)})");
+        finishJob(state, s, job, $"{Js.Str((fuel == "ammo") ? Js.Str("loaded") : Js.Str("fuelled"))} the {Js.Str(g.kind)} at ({Js.Str(g.x)}, {Js.Str(g.y)})");
     }
 
     public static void carryToStorage(SimState state, Survivor s, Job job, Item item)
@@ -826,7 +826,7 @@ public static partial class Work
             }
         }
         s.cartLoad = [];
-        finishJob(state, s, job, $"stored {Js.Str(item.kind)}{Js.Str(Js.T(extra) ? $" and {Js.Str(extra)} more from the cart" : "")} at ({Js.Str(job.dest.x)}, {Js.Str(job.dest.y)})");
+        finishJob(state, s, job, $"stored {Js.Str(item.kind)}{Js.Str(Js.T(extra) ? Js.Str($" and {Js.Str(extra)} more from the cart") : Js.Str(""))} at ({Js.Str(job.dest.x)}, {Js.Str(job.dest.y)})");
     }
 
     /// <summary>With a cart: take up to CART_LOAD - 1 more loose things from round here that belong in some store room.</summary>
@@ -904,7 +904,7 @@ public static partial class Work
         double err = dx + dy;
         for (; ; )
         {
-            var e2 = 2 * err;
+            var e2 = ((double)(2) * (err));
             var px = x;
             var py = y;
             if (e2 >= dy)

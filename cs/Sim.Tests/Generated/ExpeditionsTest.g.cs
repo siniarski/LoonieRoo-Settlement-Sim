@@ -42,7 +42,7 @@ public partial class ExpeditionsTest
             expect(state.survivors.map((s) => s.name)).not.toContain(ash.name);
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
             var due = Js.NN(Js.Get(state.expeditions, 0)).returnTick;
-            expect(due - state.tick).toBe(((2 * 30) * Survivors.TICKS_PER_TILE) + Expeditions.SEARCH_TICKS);
+            expect(due - state.tick).toBe(((double)(((double)(2) * (30))) * (Survivors.TICKS_PER_TILE)) + Expeditions.SEARCH_TICKS);
             while (state.tick < due)
             {
                 Tick.tick(state);
@@ -63,7 +63,7 @@ public partial class ExpeditionsTest
             for (var seed = 1; seed <= 12; seed++)
             {
                 var state = setup(8);
-                state.rng = seed * 7777;
+                state.rng = ((double)(seed) * (7777));
                 var (a, b) = state.survivors;
                 send(state, [Js.NN(a).id, Js.NN(b).id]);
                 var due = Js.NN(Js.Get(state.expeditions, 0)).returnTick;

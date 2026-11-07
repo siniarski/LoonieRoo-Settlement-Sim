@@ -29,7 +29,7 @@ public partial class ThreatsTest
             var kinds = Js.Set(late.map((z) => z.variant));
             expect(kinds).toEqual(Js.Set(["walker", "runner", "screamer", "brute", "crawler"]));
             var brute = Js.NN(late.find((z) => z.variant == "brute"));
-            expect(brute.maxHealth).toBe(((double)((200 * ZombieKinds.VARIANTS["brute"].healthPct)) / (100)));
+            expect(brute.maxHealth).toBe(((double)(((double)(200) * (ZombieKinds.VARIANTS["brute"].healthPct))) / (100)));
         }
 
         [Fact(DisplayName = "zombie kinds > crawlers get under barricades; walkers do not")]
@@ -72,9 +72,9 @@ public partial class ThreatsTest
             expect(Seasons.isCold(state, s)).toBe(true);
             var year = ScenarioMod.loadScenario(new Scenario { seed = 5, map = ["..."] });
             var seen = new JsSet<string>();
-            for (var d = 1; d < ((4 * Seasons.SEASON_DAYS) * 3); d++)
+            for (var d = 1; d < ((double)(((double)(4) * (Seasons.SEASON_DAYS))) * (3)); d++)
             {
-                year.tick = Js.I(d * Time.DAY_LENGTH);
+                year.tick = Js.I(((double)(d) * (Time.DAY_LENGTH)));
                 Tick.tick(year);
                 seen.add(year.weather);
             }
@@ -102,7 +102,7 @@ public partial class ThreatsTest
         public void T009_leaves_a_cache_when_the_colony_is_on_its_knees()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s....."] });
-            state.tick = Js.I(2 * Time.DAY_LENGTH);
+            state.tick = Js.I(((double)(2) * (Time.DAY_LENGTH)));
             Events.logEvent(state, "Bea died of testing");
             Events.logEvent(state, "Cal died of testing");
             Director.updateDirector(state);

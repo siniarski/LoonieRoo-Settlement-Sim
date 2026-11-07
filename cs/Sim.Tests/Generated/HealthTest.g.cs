@@ -45,7 +45,7 @@ public partial class HealthTest
             {
                 Tick.tick(state);
             }
-            expect(s.health).toBe(Health.HEALTH_MAX - (10 * Health.STARVE_DAMAGE));
+            expect(s.health).toBe(Health.HEALTH_MAX - ((double)(10) * (Health.STARVE_DAMAGE)));
         }
 
         [Fact(DisplayName = "health and death > a starving survivor dies, is removed cleanly, and the death is logged")]
@@ -127,7 +127,7 @@ public partial class HealthTest
             Commands.applyCommand(state, new Command { type = "setRest", survivorId = s.id, rest = 1200 });
             Tick.tick(state);
             expect(s.sleep).toBeNull();
-            state.tick = Js.I(Time.DAY_LENGTH - (2 * Time.TICKS_PER_HOUR));
+            state.tick = Js.I(Time.DAY_LENGTH - ((double)(2) * (Time.TICKS_PER_HOUR)));
             expect(Time.isNight(state.tick)).toBe(true);
             Commands.applyCommand(state, new Command { type = "setRest", survivorId = s.id, rest = 1200 });
             Tick.tick(state);

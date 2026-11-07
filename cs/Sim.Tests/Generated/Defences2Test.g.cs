@@ -21,7 +21,7 @@ public partial class Defences2Test
         throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}");
     }
 
-    public static readonly double NIGHT = (17 * Time.TICKS_PER_HOUR) + 1;
+    public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR)) + 1;
 
     /// <summary>reinforcing</summary>
     public class D001_reinforcing
@@ -52,7 +52,7 @@ public partial class Defences2Test
             var t = Js.NN(Js.Get(state.furniture, 0));
             t.stored = 1;
             t.storedKind = "ammo";
-            state.tick = Js.I(Defences.TURRET_EVERY * 10);
+            state.tick = Js.I(((double)(Defences.TURRET_EVERY) * (10)));
             Zombies.addZombie(state, 5, 0, 100, "static");
             for (var i = 0; i < (Defences.TURRET_EVERY + 1); i++)
             {

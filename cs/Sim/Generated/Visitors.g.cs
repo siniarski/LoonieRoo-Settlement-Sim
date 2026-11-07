@@ -18,7 +18,7 @@ public static partial class Visitors
 {
     static Visitors()
     {
-        Time.onClock(() => TRADER_PATIENCE = 4 * Time.TICKS_PER_HOUR);
+        Time.onClock(() => TRADER_PATIENCE = ((double)(4) * (Time.TICKS_PER_HOUR)));
     }
 
     public const int TRADER_FIRST_DAY = 3;
@@ -27,7 +27,7 @@ public static partial class Visitors
 
     public const int TRADER_HOUR = 12;
 
-    public static double TRADER_PATIENCE = 4 * Time.TICKS_PER_HOUR;
+    public static double TRADER_PATIENCE = ((double)(4) * (Time.TICKS_PER_HOUR));
 
     public const int RAID_FIRST_DAY = 6;
 
@@ -58,12 +58,12 @@ public static partial class Visitors
             }
         }
         var day = Time.dayOf(state.tick);
-        if (((day >= TRADER_FIRST_DAY) && (((day - TRADER_FIRST_DAY) % TRADER_EVERY) == 0)) && (Time.tickOfDay(state.tick) == (TRADER_HOUR * Time.TICKS_PER_HOUR)))
+        if (((day >= TRADER_FIRST_DAY) && (((day - TRADER_FIRST_DAY) % TRADER_EVERY) == 0)) && (Time.tickOfDay(state.tick) == ((double)(TRADER_HOUR) * (Time.TICKS_PER_HOUR))))
         {
             arrive(state);
         }
         var enemy = state.settlements.find((__f0) => Settlements.isHostile(__f0));
-        if (((day >= RAID_FIRST_DAY) && Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
+        if (((day >= RAID_FIRST_DAY) && Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < ((double)((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE)) * (Director.threatScale(state)))))
         {
             raid(state, day, enemy?.name);
         }
@@ -86,7 +86,7 @@ public static partial class Visitors
         }
         var from = Settlements.traderFrom(state);
         state.traders.push(new() { id = $"t{Js.Str(state.nextId++)}", x = Js.I(spot.x), y = Js.I(spot.y), leavesTick = state.tick + TRADER_PATIENCE, offers = offers, from = from?.id ?? null, traded = false });
-        Events.logEvent(state, $"A trader{Js.Str(Js.T(from) ? $" from {Js.Str(from.name)}" : "")} is waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
+        Events.logEvent(state, $"A trader{Js.Str(Js.T(from) ? Js.Str($" from {Js.Str(from.name)}") : Js.Str(""))} is waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
     }
 
     /// <summary>Swaps goods. Returns an error message, or null when done.</summary>
@@ -135,6 +135,6 @@ public static partial class Visitors
             var at = (Grids.getTile(state.grid, p.x, p.y) == "floor") ? p : spot;
             Zombies.addZombie(state, at.x, at.y, RAIDER_HEALTH, "raider");
         }
-        Events.logEvent(state, $"Raiders{Js.Str(Js.T(from) ? $" from {Js.Str(from)}" : "")}! {Js.Str(size)} of them, near ({Js.Str(spot.x)}, {Js.Str(spot.y)}). Locked doors will slow them.");
+        Events.logEvent(state, $"Raiders{Js.Str(Js.T(from) ? Js.Str($" from {Js.Str(from)}") : Js.Str(""))}! {Js.Str(size)} of them, near ({Js.Str(spot.x)}, {Js.Str(spot.y)}). Locked doors will slow them.");
     }
 }

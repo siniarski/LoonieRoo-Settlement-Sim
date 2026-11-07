@@ -53,14 +53,14 @@ public static partial class Settlements
             Point p = new Point { x = Js.I(0), y = Js.I(0) };
             for (var attempt = 0; attempt < 20; attempt++)
             {
-                p = new Point { x = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 1) * size)), y = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 2) * size)) };
+                p = new Point { x = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 1)) * (size)))), y = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 2)) * (size)))) };
                 if ((JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y)) >= ((double)(size) / (3)))
                 {
                     break;
                 }
             }
-            var people = 5 + JsMath.floor(Hash.hashRoll(seed, i, 3) * 8);
-            newSettlement(state, Js.NN(Js.Get(NAMES, (seed + i) % NAMES.length)), p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
+            var people = 5 + JsMath.floor(((double)(Hash.hashRoll(seed, i, 3)) * (8)));
+            newSettlement(state, Js.NN(Js.Get(NAMES, (seed + i) % NAMES.length)), p.x, p.y, people, ((double)(people) * (3)), JsMath.floor(((double)(Hash.hashRoll(seed, i, 4)) * (3))));
         }
     }
 
@@ -140,7 +140,7 @@ public static partial class Settlements
     /// <summary>Friendly settlements send someone to join, every FRIENDLY_SEND_DAYS at noon.</summary>
     public static void updateSettlements(SimState state)
     {
-        if ((Time.tickOfDay(state.tick) != (12 * Time.TICKS_PER_HOUR)) || ((Time.dayOf(state.tick) % FRIENDLY_SEND_DAYS) != 0))
+        if ((Time.tickOfDay(state.tick) != ((double)(12) * (Time.TICKS_PER_HOUR))) || ((Time.dayOf(state.tick) % FRIENDLY_SEND_DAYS) != 0))
         {
             return;
         }
@@ -178,7 +178,7 @@ public static partial class Settlements
         {
             state.items.splice(state.items.indexOf(f), 1);
         }
-        adjustReputation(state, s, (s.food <= 0) ? (GIFT_REP * 2) : GIFT_REP);
+        adjustReputation(state, s, (s.food <= 0) ? ((double)(GIFT_REP) * (2)) : GIFT_REP);
         s.food += GIFT_FOOD;
         Events.logEvent(state, $"Sent {Js.Str(GIFT_FOOD)} food to {Js.Str(s.name)} (they think better of you)");
         return null;

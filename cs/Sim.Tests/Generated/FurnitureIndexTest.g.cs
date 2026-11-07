@@ -22,15 +22,15 @@ public partial class FurnitureIndexTest
                 var roll = Hash.hashRoll(round, 1);
                 if ((roll < 0.55) || (state.furniture.length == 0))
                 {
-                    FurnitureMod.addFurniture(state, Js.NN(Js.Get(kinds, JsMath.floor(Hash.hashRoll(round, 2) * kinds.length))), JsMath.floor(Hash.hashRoll(round, 3) * 12), JsMath.floor(Hash.hashRoll(round, 4) * 12));
+                    FurnitureMod.addFurniture(state, Js.NN(Js.Get(kinds, JsMath.floor(((double)(Hash.hashRoll(round, 2)) * (kinds.length))))), JsMath.floor(((double)(Hash.hashRoll(round, 3)) * (12))), JsMath.floor(((double)(Hash.hashRoll(round, 4)) * (12))));
                 }
                 else if (roll < 0.85)
                 {
-                    FurnitureMod.removeFurniture(state, Js.NN(Js.Get(state.furniture, JsMath.floor(Hash.hashRoll(round, 5) * state.furniture.length))));
+                    FurnitureMod.removeFurniture(state, Js.NN(Js.Get(state.furniture, JsMath.floor(((double)(Hash.hashRoll(round, 5)) * (state.furniture.length))))));
                 }
                 else
                 {
-                    var f = Js.NN(Js.Get(state.furniture, JsMath.floor(Hash.hashRoll(round, 6) * state.furniture.length)));
+                    var f = Js.NN(Js.Get(state.furniture, JsMath.floor(((double)(Hash.hashRoll(round, 6)) * (state.furniture.length)))));
                     FurnitureMod.setScavenge(state, f, !f.scavenge);
                 }
                 if ((round % 20) != 0)

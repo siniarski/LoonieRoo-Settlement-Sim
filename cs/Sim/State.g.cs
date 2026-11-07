@@ -710,6 +710,15 @@ public partial class RoadNode : IHasAt
     public double? town { get; set; }
 }
 
+/// <summary>A point on a road's centre line, in tiles: fractional where the curve is smoothed (corner cutting). A Point's shape.</summary>
+public partial class RoadPoint
+{
+    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
+    public static implicit operator Point(RoadPoint v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
+    public int x { get; set; }
+    public int y { get; set; }
+}
+
 public partial class Room
 {
     public double index { get; set; }
@@ -1204,7 +1213,8 @@ public partial class WorldPlan
     public Nature nature { get; set; } = new();
     public List<Town> towns { get; set; } = new();
     public List<Street> streets { get; set; } = new();
-    public List<List<Point>> roads { get; set; } = new();
+    /// <summary>Containers: what's in them. Decor: null.</summary>
+    public List<List<PointD>> roads { get; set; } = new();
     public Uint8Array roadMask { get; set; } = null!;
     public List<Lot> lots { get; set; } = new();
     public Int32Array lotMask { get; set; } = null!;

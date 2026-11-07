@@ -21,11 +21,11 @@ public static partial class Power
 {
     static Power()
     {
-        Time.onClock(() => FUEL_TICKS = 2 * Time.TICKS_PER_HOUR);
-        Time.onClock(() => HEATER_FUEL_TICKS = 3 * Time.TICKS_PER_HOUR);
+        Time.onClock(() => FUEL_TICKS = ((double)(2) * (Time.TICKS_PER_HOUR)));
+        Time.onClock(() => HEATER_FUEL_TICKS = ((double)(3) * (Time.TICKS_PER_HOUR)));
         Time.onClock(() =>
         {
-            FOOD_SHELF = 4 * Time.DAY_LENGTH;
+            FOOD_SHELF = ((double)(4) * (Time.DAY_LENGTH));
             MEAL_SHELF = Time.DAY_LENGTH;
         });
     }
@@ -34,7 +34,7 @@ public static partial class Power
 
     public const int FUEL_MAX = 4;
 
-    public static double FUEL_TICKS = 2 * Time.TICKS_PER_HOUR;
+    public static double FUEL_TICKS = ((double)(2) * (Time.TICKS_PER_HOUR));
 
     public const int LAMP_DETER = 16;
 
@@ -48,14 +48,14 @@ public static partial class Power
     /// <summary>Heaters (braziers): keep anyone within HEAT_RADIUS from the cold, burning a wood every HEATER_FUEL_TICKS on cold nights.</summary>
     public const int HEAT_RADIUS = 4;
 
-    public static double HEATER_FUEL_TICKS = 3 * Time.TICKS_PER_HOUR;
+    public static double HEATER_FUEL_TICKS = ((double)(3) * (Time.TICKS_PER_HOUR));
 
     /// <summary>Chance per hour of burning that a heater sets its own tile alight.</summary>
     public const double HEATER_FIRE_CHANCE = 0.01;
 
     public const int SPOIL_CHECK_EVERY = 100;
 
-    public static double FOOD_SHELF = 4 * Time.DAY_LENGTH;
+    public static double FOOD_SHELF = ((double)(4) * (Time.DAY_LENGTH));
 
     public static double MEAL_SHELF = Time.DAY_LENGTH;
 
@@ -185,7 +185,7 @@ public static partial class Power
             {
                 continue;
             }
-            item.wear += ((double)((SPOIL_CHECK_EVERY * rate)) / ((stores.has(Rooms.labelAt(state, p.x, p.y)) ? 2 : 1)));
+            item.wear += ((double)(((double)(SPOIL_CHECK_EVERY) * (rate))) / ((stores.has(Rooms.labelAt(state, p.x, p.y)) ? 2 : 1)));
             if (item.wear < ((item.kind == "meal") ? MEAL_SHELF : FOOD_SHELF))
             {
                 continue;
@@ -195,7 +195,7 @@ public static partial class Power
         }
         if (rotted > 0)
         {
-            Events.logEvent(state, $"{Js.Str(rotted)} food {Js.Str((rotted == 1) ? "item" : "items")} rotted (cool storage, winter and fridges keep food)");
+            Events.logEvent(state, $"{Js.Str(rotted)} food {Js.Str((rotted == 1) ? Js.Str("item") : Js.Str("items"))} rotted (cool storage, winter and fridges keep food)");
         }
     }
 }

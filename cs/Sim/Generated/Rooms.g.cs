@@ -70,7 +70,7 @@ public static partial class Rooms
         var width = __d0.width;
         var height = __d0.height;
         var tiles = __d0.tiles;
-        var labels = new Int32Array(width * height).fill(NOT_FLOOR);
+        var labels = new Int32Array(((double)(width) * (height))).fill(NOT_FLOOR);
         var UNSEEN = -3;
         for (var i = 0; i < tiles.length; i++)
         {
@@ -107,7 +107,7 @@ public static partial class Rooms
                     {
                         continue;
                     }
-                    var n = (ny * width) + nx;
+                    var n = ((double)(ny) * (width)) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
@@ -170,7 +170,7 @@ public static partial class Rooms
         {
             return NOT_FLOOR;
         }
-        return Js.NN(Js.Get(getRoomMap(state).labels, (y * state.grid.width) + x));
+        return Js.NN(Js.Get(getRoomMap(state).labels, ((double)(y) * (state.grid.width)) + x));
     }
     public static double labelAt(SimState state, double x, double y) => labelAt(state, (int)x, (int)y);
 
@@ -254,7 +254,7 @@ public static partial class Rooms
         if ((purpose == "housing") || (purpose == "barracks"))
         {
             requirements.push(new() { label = "at least 1 bed", met = beds >= 1 });
-            requirements.push(new() { label = $"{Js.Str(TILES_PER_BED)} tiles per bed", met = (beds == 0) || (size >= (beds * TILES_PER_BED)) });
+            requirements.push(new() { label = $"{Js.Str(TILES_PER_BED)} tiles per bed", met = (beds == 0) || (size >= ((double)(beds) * (TILES_PER_BED))) });
         }
         else if (purpose == "infirmary")
         {
@@ -351,7 +351,7 @@ public static partial class Rooms
                 var ny = y + dy;
                 if ((((nx >= 0) && (ny >= 0)) && (nx < width)) && (ny < height))
                 {
-                    out_2.push((ny * width) + nx);
+                    out_2.push(((double)(ny) * (width)) + nx);
                 }
             }
             return out_2;
@@ -415,7 +415,7 @@ public static partial class Rooms
                     {
                         continue;
                     }
-                    var n = (ny * width) + nx;
+                    var n = ((double)(ny) * (width)) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
