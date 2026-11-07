@@ -41,6 +41,15 @@ public abstract class TypedArray<T> : IEnumerable<double> where T : struct
 
     public bool includes(double v) => indexOf(v) >= 0;
 
+    /// <summary>A typed array sorts numerically (NaN last), in place.</summary>
+    public TypedArray<T> sort()
+    {
+        var vs = this.ToArray();
+        Array.Sort(vs, (x, y) => double.IsNaN(x) ? (double.IsNaN(y) ? 0 : 1) : double.IsNaN(y) ? -1 : x.CompareTo(y));
+        for (int i = 0; i < vs.Length; i++) this[i] = vs[i];
+        return this;
+    }
+
     public IEnumerator<double> GetEnumerator()
     {
         for (int i = 0; i < a.Length; i++) yield return From(a[i]);

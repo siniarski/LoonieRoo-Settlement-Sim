@@ -66,7 +66,7 @@ public static partial class TimelineMod
             var (lo, hi) = __p0;
             return (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));
         };
-        state.timeline = new() { waterOffDay = roll(w.water, 31358.0), powerOffDay = roll(w.power, 0x9077), helicopterDay = roll(w.heli, 19985.0), heli = null, alarms = [] };
+        state.timeline = new Timeline { waterOffDay = roll(w.water, 31358.0), powerOffDay = roll(w.power, 0x9077), helicopterDay = roll(w.heli, 19985.0), heli = null, alarms = [] };
     }
 
     public static bool waterOn(SimState state)
@@ -203,7 +203,7 @@ public static partial class TimelineMod
             var a = (Hash.hashRoll(Js.Q(state.world?.seed, 0), 19986.0) * JsMath.PI) * 2;
             var from = off(state, you, a, 60);
             var exit = off(state, you, a + JsMath.PI, 80);
-            t.heli = new() { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + (60 * HELI_STEP), exit = exit };
+            t.heli = new TimelineHeli { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + (60 * HELI_STEP), exit = exit };
             Events.logEvent(state, $"A helicopter, coming in from the {Js.Str(compass(you, from))}...");
             return;
         }

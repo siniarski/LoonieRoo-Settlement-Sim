@@ -182,7 +182,7 @@ public static partial class Worldgen
         if (Js.T(solo))
         {
             var you = Js.NN(state.survivors[Js.Idx(0)]);
-            state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+            state.control = new Control { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
             var weapon = Items.spawnItem(state, "weapon", you.pos.x, you.pos.y);
             weapon.pos = null;
             weapon.carriedBy = you.id;
@@ -309,10 +309,10 @@ public static partial class Worldgen
     {
         settings ??= Difficulty.NORMAL;
         var state = States.createState(new() { seed = seed, width = Js.I(size), height = Js.I(size) });
-        state.settings = Js.Clone(settings);
+        state.settings = Js.CopyAs<Settings>(settings);
         var l = layout(seed, size, settings.map);
         var chunks = JsMath.ceil(((double)(size) / (CHUNK)));
-        state.world = new() { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(chunks * chunks, 0) };
+        state.world = new WorldInfo { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(chunks * chunks, 0) };
         ensureGeneratedAround(state, l.start);
         startCamp(state, l);
         if (Js.T(you) && (CharacterMod.characterProblem(you) == null))
@@ -326,7 +326,7 @@ public static partial class Worldgen
         Point near = new Point { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
         Point clamped = new Point { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
         var spot = Space.nearestTile(state.grid, clamped, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
-        var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))));
+        var park = (Js.T(spot) ? (Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))) : null);
         if (Js.T(park))
         {
             Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(Hash.hashRoll(seed, 0x7a0d) * 32), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");

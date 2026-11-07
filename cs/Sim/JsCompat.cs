@@ -594,6 +594,7 @@ public static partial class Js
     /// <summary>a[k] ?? b: b when a has no such key or index (JS's undefined) or holds null there.</summary>
     public static V At<V>(JsRecord<V> a, string k, V b) => a.TryGetValue(k, out var v) && v is not null ? v : b;
     public static V At<V>(JsRecord<V> a, double k, V b) => At(a, Str(k), b);
+    public static V At<V>(V[] a, double i, V b) => i >= 0 && i < a.Length && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
     public static V At<V>(List<V> a, double i, V b) => i >= 0 && i < a.Count && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
     public static V At<K, V>(JsMap<K, V> a, K k, V b) where K : notnull => a.has(k) && a.get(k) is V v ? v : b;
 

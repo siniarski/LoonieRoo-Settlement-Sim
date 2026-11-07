@@ -513,7 +513,7 @@ public static partial class Commands
                 s.traits = (w.traits).ToList();
                 if (Js.T(state.control))
                 {
-                    s.order = new() { kind = "follow" };
+                    s.order = new Order { kind = "follow" };
                 }
                 Events.logEvent(state, $"{Js.Str(w.name)} joined the colony");
             }
@@ -1156,7 +1156,7 @@ public static partial class Commands
         survivor.path = [];
         survivor.pathVersion = -1;
         survivor.note = "under your control";
-        state.control = new() { survivorId = id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+        state.control = new Control { survivorId = id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         return changed();
     }
 
@@ -1280,7 +1280,7 @@ public static partial class Commands
         var c = Js.NN(state.control);
         if ((item.kind == "food") || (item.kind == "meal"))
         {
-            c.busy = new() { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
+            c.busy = new ControlBusy { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
             s.note = "eating";
             return null;
         }
@@ -1290,7 +1290,7 @@ public static partial class Commands
             {
                 return "you don't need it";
             }
-            c.busy = new() { what = "treat", targetId = item.id, progress = 0, duration = Health.TREAT_TICKS };
+            c.busy = new ControlBusy { what = "treat", targetId = item.id, progress = 0, duration = Health.TREAT_TICKS };
             s.note = (item.kind == "medicine") ? "taking medicine" : "bandaging";
             return null;
         }

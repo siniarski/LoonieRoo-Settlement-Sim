@@ -107,7 +107,7 @@ public static partial class Mood
         {
             if (Skills.TRAIT_INFO[Js.Idx(t)].mood != 0)
             {
-                factors.push([Skills.TRAIT_INFO[Js.Idx(t)].label, Skills.TRAIT_INFO[Js.Idx(t)].mood]);
+                factors.push((Skills.TRAIT_INFO[Js.Idx(t)].label, Skills.TRAIT_INFO[Js.Idx(t)].mood));
             }
         }
         factors.pushAll(Wellbeing.wellbeingFactors(s)); factors.pushAll(BodyMod.bodyFactors(s));

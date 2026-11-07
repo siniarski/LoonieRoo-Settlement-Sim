@@ -212,7 +212,7 @@ public static partial class Hordes
         }
         if (!Js.T(goalsKept) || !zs.every((z) => Js.T(inside(z.pos))))
         {
-            h.box = new() { x0 = Js.I(x0), y0 = Js.I(y0), x1 = Js.I(x1), y1 = Js.I(y1) };
+            h.box = new HordeBox { x0 = Js.I(x0), y0 = Js.I(y0), x1 = Js.I(x1), y1 = Js.I(y1) };
         }
         foreach (var z in Js.Iter(zs))
         {

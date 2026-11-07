@@ -103,7 +103,7 @@ public static partial class Residents
         var next = r.path.shift();
         if (Js.T(next))
         {
-            r.move = new() { from = Js.Clone(r.pos), to = next, progress = 0, duration = RESIDENT_TICKS_PER_TILE };
+            r.move = new Movement { from = Js.Clone(r.pos), to = next, progress = 0, duration = RESIDENT_TICKS_PER_TILE };
         }
     }
 
@@ -216,7 +216,7 @@ public static partial class Residents
             state.residents.splice(state.residents.indexOf(r), 1);
             n.people -= 1;
             var s = Survivors.addSurvivor(state, r.pos.x, r.pos.y, r.name);
-            s.order = new() { kind = "follow" };
+            s.order = new Order { kind = "follow" };
             Events.logEvent(state, $"{Js.Str(r.name)} left {Js.Str(n.name)} to come with you");
             return null;
         }

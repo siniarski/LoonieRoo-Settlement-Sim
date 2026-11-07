@@ -26,7 +26,7 @@ public static partial class SuccessionMod
     /// <summary>Called as the survivor you control dies.</summary>
     public static void beginSuccession(SimState state, Survivor s, string cause)
     {
-        state.succession = new() { name = s.name, cause = cause, x = Js.I(s.pos.x), y = Js.I(s.pos.y) };
+        state.succession = new Succession { name = s.name, cause = cause, x = Js.I(s.pos.x), y = Js.I(s.pos.y) };
     }
 
     /// <summary>Choose who carries on. Returns an error, or null when done.</summary>
@@ -67,7 +67,7 @@ public static partial class SuccessionMod
 
     public static void take(SimState state, Survivor s)
     {
-        state.control = new() { survivorId = s.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+        state.control = new Control { survivorId = s.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         s.order = null;
         s.goal = null;
         s.path = [];

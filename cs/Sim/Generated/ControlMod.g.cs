@@ -516,7 +516,7 @@ public static partial class ControlMod
         var remedy = new[] { item, carriedRemedy }.ToList().find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
         if (Js.T(remedy))
         {
-            c.busy = new() { what = "treat", targetId = remedy.id, progress = 0, duration = Health.TREAT_TICKS };
+            c.busy = new ControlBusy { what = "treat", targetId = remedy.id, progress = 0, duration = Health.TREAT_TICKS };
             return (remedy.kind == "medicine") ? "taking medicine" : "bandaging";
         }
         if (Js.T(item) && !Js.T(item.reservedBy))
@@ -525,7 +525,7 @@ public static partial class ControlMod
         }
         if ((Water.sourceAt(state, target.x, target.y) == "tap") && (s.hydration < (Water.HYDRATION_MAX - TAP_THIRST)))
         {
-            c.busy = new() { what = "drink", targetId = $"{Js.Str(target.x)},{Js.Str(target.y)}", progress = 0, duration = Water.DRINK_TICKS };
+            c.busy = new ControlBusy { what = "drink", targetId = $"{Js.Str(target.x)},{Js.Str(target.y)}", progress = 0, duration = Water.DRINK_TICKS };
             return "drinking from the tap";
         }
         var crate = state.furniture.find((f) => ((f.x == target.x) && (f.y == target.y)) && ((f.kind == "crate") || (f.kind == "tree")));
@@ -536,7 +536,7 @@ public static partial class ControlMod
         var source = Water.sourceAt(state, target.x, target.y);
         if (Js.T(source))
         {
-            c.busy = new() { what = "drink", targetId = $"{Js.Str(target.x)},{Js.Str(target.y)}", progress = 0, duration = Water.DRINK_TICKS };
+            c.busy = new ControlBusy { what = "drink", targetId = $"{Js.Str(target.x)},{Js.Str(target.y)}", progress = 0, duration = Water.DRINK_TICKS };
             return "drinking";
         }
         var bed = FurnitureMod.furnitureAt(state, target.x, target.y);
@@ -551,7 +551,7 @@ public static partial class ControlMod
             {
                 return "nothing in your bag to cook";
             }
-            c.busy = new() { what = "cook", targetId = food.id, progress = 0, duration = COOK_TICKS };
+            c.busy = new ControlBusy { what = "cook", targetId = food.id, progress = 0, duration = COOK_TICKS };
             return "cooking";
         }
         var sleepable = (bed?.kind == "bed") || ((bed?.kind == "decor") && (((bed.look == "bed") || (bed.look == "cot")) || (bed.look == "sofa")));
@@ -583,7 +583,7 @@ public static partial class ControlMod
             {
                 return why;
             }
-            c.busy = new() { what = "forage", targetId = "here", progress = 0, duration = Handiwork.FORAGE_TICKS };
+            c.busy = new ControlBusy { what = "forage", targetId = "here", progress = 0, duration = Handiwork.FORAGE_TICKS };
             return "foraging";
         }
         return null;
@@ -622,7 +622,7 @@ public static partial class ControlMod
         {
             return "not tired";
         }
-        c.busy = new() { what = "sleep", targetId = where, progress = s.rest, duration = Rest.REST_MAX };
+        c.busy = new ControlBusy { what = "sleep", targetId = where, progress = s.rest, duration = Rest.REST_MAX };
         return (where == "floor") ? "sleeping on the floor" : "asleep in bed";
     }
 
@@ -630,7 +630,7 @@ public static partial class ControlMod
     {
         if ((item.kind == "food") || (item.kind == "meal"))
         {
-            c.busy = new() { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
+            c.busy = new ControlBusy { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
             return "eating";
         }
         var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Js.T(Clothing.isGarment(item.kind)) ? Clothing.SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
@@ -657,7 +657,7 @@ public static partial class ControlMod
         {
             return (crate.kind == "tree") ? null : "searched: what's left is in the loot list";
         }
-        c.busy = new() { what = "search", targetId = crate.id, progress = 0, duration = Jobs.SCAVENGE_WORK };
+        c.busy = new ControlBusy { what = "search", targetId = crate.id, progress = 0, duration = Jobs.SCAVENGE_WORK };
         s.note = (crate.kind == "tree") ? "chopping" : "searching";
         return s.note;
     }

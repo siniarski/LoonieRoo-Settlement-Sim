@@ -167,7 +167,7 @@ public static partial class Orders
         }
         if (!Js.T(crate))
         {
-            s.order = new() { kind = "follow" };
+            s.order = new Order { kind = "follow" };
             s.note = "nothing left to loot, coming back";
             return false;
         }
@@ -176,7 +176,7 @@ public static partial class Orders
             var path = Pathfinding.findPathToAny(state.grid, s.pos, Grids.neighbours4(state.grid, crate.x, crate.y));
             if (!Js.T(path) || (path.length == 0))
             {
-                s.order = new() { kind = "follow" };
+                s.order = new Order { kind = "follow" };
                 s.note = "can't get to the crates";
                 return false;
             }

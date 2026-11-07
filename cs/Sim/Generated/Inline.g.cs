@@ -51,12 +51,6 @@ public partial class ChooseJobResult
     public string why { get; set; }
 }
 
-public partial class ReconcileJobsWanted
-{
-    public object workbench { get; set; }
-    public object stove { get; set; }
-}
-
 public partial class FrameResult
 {
     public double F { get; set; }
@@ -160,7 +154,7 @@ public partial class FarmLotsLot
     public object facing { get; set; }
 }
 
-public partial class FarmLotsLotShape23
+public partial class FarmLotsLotShape22
 {
     public int x { get; set; }
     public int y { get; set; }

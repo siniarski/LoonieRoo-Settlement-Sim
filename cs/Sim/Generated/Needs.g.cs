@@ -247,7 +247,7 @@ public static partial class Needs
         Water.cancelDrink(s, "hungry");
         cancelTreatment(state, s, "hungry");
         food.reservedBy = s.id;
-        s.meal = new() { itemId = food.id, progress = 0, seat = Mess.pickSeat(state, s, food.pos) };
+        s.meal = new Meal { itemId = food.id, progress = 0, seat = Mess.pickSeat(state, s, food.pos) };
         s.note = $"going to eat at ({Js.Str(food.pos.x)}, {Js.Str(food.pos.y)})";
         return true;
     }
@@ -365,7 +365,7 @@ public static partial class Needs
         Weapons.cancelArming(state, s, "going to treat wounds");
         Clothing.cancelDressing(state, s, "going to treat wounds");
         bandage.reservedBy = s.id;
-        s.treatment = new() { itemId = bandage.id, progress = 0 };
+        s.treatment = new SurvivorTreatment { itemId = bandage.id, progress = 0 };
         s.note = $"going for {Js.Str((bandage.kind == "medicine") ? "medicine" : "a bandage")} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
         return true;
     }
@@ -505,7 +505,7 @@ public static partial class Needs
             return true;
         }
         bed.occupant = null;
-        s.sleep = new() { bedId = null, asleep = true };
+        s.sleep = new Sleep { bedId = null, asleep = true };
         s.note = "no way to a bed, asleep on the floor";
         return true;
     }
@@ -519,7 +519,7 @@ public static partial class Needs
         var bed = nearestFreeBed(state, s);
         if (!Js.T(bed))
         {
-            s.sleep = new() { bedId = null, asleep = true };
+            s.sleep = new Sleep { bedId = null, asleep = true };
             s.note = "no free bed, asleep on the floor";
             return;
         }
@@ -528,7 +528,7 @@ public static partial class Needs
         {
             bed.owner = s.id;
         }
-        s.sleep = new() { bedId = bed.id, asleep = false };
+        s.sleep = new Sleep { bedId = bed.id, asleep = false };
         s.note = $"going to bed at ({Js.Str(bed.x)}, {Js.Str(bed.y)})";
         if (Js.T(Space.samePoint(s.pos, bed)))
         {

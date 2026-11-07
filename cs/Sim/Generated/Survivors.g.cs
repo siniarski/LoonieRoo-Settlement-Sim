@@ -109,7 +109,7 @@ public static partial class Survivors
         var diagonal = (next.x != s.pos.x) && (next.y != s.pos.y);
         Doors.passThrough(state, next.x, next.y, true, s.pos);
         var pace = stepPace(state, s, next);
-        s.move = new() { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)((pace * 1414)) / (1000))) : pace };
+        s.move = new Movement { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)((pace * 1414)) / (1000))) : pace };
     }
 
     /// <summary>Advances a step in progress by a tick. Returns true once it has landed (or there was none).</summary>

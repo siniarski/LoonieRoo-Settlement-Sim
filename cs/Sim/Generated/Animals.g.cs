@@ -247,7 +247,7 @@ public static partial class Animals
     public static void step(Animal a, Point to, /*TODO param type*/object? pace = null)
     {
         pace ??= PACE[Js.Idx(a.kind)];
-        a.move = new() { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = (double)pace };
+        a.move = new Movement { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = (double)pace };
     }
 
     /// <summary>The neighbour that's furthest from (or nearest to) a point, of those an animal can step to.</summary>

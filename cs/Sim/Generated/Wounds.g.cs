@@ -40,7 +40,7 @@ public static partial class Wounds
         string limb = (Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 1) < 0.5) ? "arm" : "leg";
         if (!Js.T(s.wound) && (Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 2) < WOUND_CHANCE))
         {
-            s.wound = new() { limb = limb, until = state.tick + WOUND_TICKS };
+            s.wound = new Wound { limb = limb, until = state.tick + WOUND_TICKS };
             s.bleeding = true;
             s.bleedUntil = state.tick + BLEED_TICKS;
         }

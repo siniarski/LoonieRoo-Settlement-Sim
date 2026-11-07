@@ -55,7 +55,7 @@ public static partial class Books
             return false;
         }
         book.reservedBy = s.id;
-        s.reading = new() { itemId = book.id, progress = 0 };
+        s.reading = new SurvivorReading { itemId = book.id, progress = 0 };
         s.note = $"going to read {Js.Str(describeBook(book))}";
         return true;
     }

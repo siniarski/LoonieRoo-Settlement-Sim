@@ -303,7 +303,7 @@ public static partial class Worldplan
                 string zone = (r(4) < 0.6) ? "farm" : "field";
                 var cx = JsMath.round(b.x);
                 var cy = JsMath.round(b.y);
-                FarmLotsLotShape23 lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
+                FarmLotsLotShape22 lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
                 if (Js.T(add(Js.With(Js.CopyAs<Lot>(lot), __s6 => { __s6.zone = zone; __s6.town = null; }))))
                 {
                     since = 0;

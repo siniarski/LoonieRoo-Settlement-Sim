@@ -136,8 +136,8 @@ public static partial class Jobs
                 addJob(state, "doctor", p.pos.x, p.pos.y, null, null).patientId = p.id;
             }
         }
-        ReconcileJobsWanted wanted = new() { workbench = Crafting.wantedCraft(state, "workbench", true), stove = Crafting.wantedCraft(state, "stove") };
-        if (Js.T(Js.T(wanted.workbench) || Js.T(wanted.stove)))
+        JsRecord<string> wanted = new() { ["workbench"] = Crafting.wantedCraft(state, "workbench", true), ["stove"] = Crafting.wantedCraft(state, "stove") };
+        if (Js.T(Js.T(wanted["workbench"]) || Js.T(wanted["stove"])))
         {
             var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
             foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, ["workbench", "stove"])))

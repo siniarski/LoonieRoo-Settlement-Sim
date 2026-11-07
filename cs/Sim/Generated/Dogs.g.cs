@@ -118,7 +118,7 @@ public static partial class Dogs
         var next = dog.path.shift();
         if (Js.T(next))
         {
-            dog.move = new() { from = Js.Clone(dog.pos), to = next, progress = 0, duration = DOG_TICKS_PER_TILE };
+            dog.move = new Movement { from = Js.Clone(dog.pos), to = next, progress = 0, duration = DOG_TICKS_PER_TILE };
         }
     }
 

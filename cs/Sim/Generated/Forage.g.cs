@@ -105,7 +105,7 @@ public static partial class Forage
             s.nextForageTick = state.tick + FORAGE_RETRY_TICKS;
             return false;
         }
-        s.forage = new() { x = Js.I(p.x), y = Js.I(p.y), progress = 0 };
+        s.forage = new SurvivorForage { x = Js.I(p.x), y = Js.I(p.y), progress = 0 };
         s.note = $"going to forage at ({Js.Str(p.x)}, {Js.Str(p.y)})";
         return true;
     }

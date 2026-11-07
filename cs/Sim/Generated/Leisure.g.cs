@@ -51,7 +51,7 @@ public static partial class Leisure
         {
             return false;
         }
-        s.leisure = new() { x = Js.I(spot.x), y = Js.I(spot.y), progress = 0, at = at };
+        s.leisure = new SurvivorLeisure { x = Js.I(spot.x), y = Js.I(spot.y), progress = 0, at = at };
         s.note = (at == "graveyard") ? $"going to the graveyard at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"going to relax at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
         return true;
     }
@@ -171,7 +171,7 @@ public static partial class Leisure
         }
         s.leisure = null;
         Books.stopReading(state, s, "having a breakdown");
-        s.breakdown = new() { until = state.tick + BREAKDOWN_TICKS };
+        s.breakdown = new SurvivorBreakdown { until = state.tick + BREAKDOWN_TICKS };
         s.note = "having a breakdown";
         Events.logEvent(state, $"{Js.Str(s.name)} is having a breakdown");
         Relationships.lashOut(state, s);

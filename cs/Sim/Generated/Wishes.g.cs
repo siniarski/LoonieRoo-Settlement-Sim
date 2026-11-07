@@ -198,7 +198,7 @@ public static partial class Wishes
             var pick = options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x3a6) * options.length))];
             if (Js.T(pick))
             {
-                s.wish = Js.With(Js.Clone(pick), __s0 => { __s0.since = state.tick; __s0.until = state.tick + WISH_TICKS; __s0.promised = false; });
+                s.wish = Js.With(Js.CopyAs<Wish>(pick), __s0 => { __s0.since = state.tick; __s0.until = state.tick + WISH_TICKS; __s0.promised = false; });
             }
         }
     }
