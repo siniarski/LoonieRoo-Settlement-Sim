@@ -103,7 +103,7 @@ public static partial class Crafting
         {
             return craftStock(state, RECIPES[Js.Idx(k)].input) > 0;
         }
-        return ((wanted.find((k) => Js.T(holds(k)) && ((f.stored >= RECIPES[Js.Idx(k)].count) || Js.T(has(k)))) ?? wanted.find(has)) ?? wanted[Js.Idx(0)]) ?? null;
+        return ((wanted.find((k) => Js.T(holds(k)) && ((f.stored >= RECIPES[Js.Idx(k)].count) || Js.T(has(k)))) ?? wanted.find((__f0) => has(__f0))) ?? wanted[Js.Idx(0)]) ?? null;
     }
 
     /// <summary>Is this station in a complete workshop?</summary>

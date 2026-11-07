@@ -25,7 +25,7 @@ public static partial class Alerts
         {
             return double.PositiveInfinity;
         }
-        var satiety = state.items.reduce((sum, i) => sum + ((i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0)), 0);
+        var satiety = state.items.reduce((sum, i) => sum + ((i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0)), 0.0);
         return ((double)(satiety) / ((people * DAILY_SATIETY)));
     }
 

@@ -72,7 +72,7 @@ public static partial class Errands
         }
         state.errands ??= [];
         var kind = (roll(3) < 0.5) ? "nest" : "missing";
-        Errand e = new() { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(MISSING[Js.Idx(JsMath.floor(roll(4) * MISSING.length))]), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
+        Errand e = new Errand { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(MISSING[Js.Idx(JsMath.floor(roll(4) * MISSING.length))]), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
         if (kind == "nest")
         {
             for (var k = 0; k < NEST_SIZE; k++)

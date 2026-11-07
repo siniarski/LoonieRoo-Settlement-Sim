@@ -3,7 +3,7 @@
 // modules whose values derive from the day register with OnClock to recompute them.
 namespace LoonieRoo.Sim;
 
-public static class Time
+public static partial class Time
 {
     /// <summary>Ticks per in-game hour at day scale 1. 200 ticks = 20 s at 1x.</summary>
     public const int BASE_TICKS_PER_HOUR = 200;

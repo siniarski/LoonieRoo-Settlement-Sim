@@ -41,7 +41,7 @@ public static partial class Forage
             var g = Grids.GROUNDS[Js.Idx(Js.NN(grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))]))];
             return ((((g == "grass") || (g == "field")) && Js.T(Grids.isWalkable(grid, x, y))) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today)) && !Js.T(Rooms.isIndoors(state, x, y));
         }
-        var p = Space.nearestTile(grid, s.pos, open, FORAGE_SEARCH);
+        var p = Space.nearestTile(grid, s.pos, (__f0, __f1) => open(__f0, __f1), FORAGE_SEARCH);
         return (Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p]))) ? p : null;
     }
 

@@ -29,3 +29,28 @@ public static partial class Pathfinding
     public static bool isPassable(Grid grid, double x, double y, string mover = SURVIVOR) => Grids.inBounds(grid, x, y) ? isPassable(grid, (int)x, (int)y, mover) : mover != BREACHER && isPassable(grid, -1, -1, mover);
     public static bool crossable(Grid grid, double ax, double ay, double bx, double by, string mover = SURVIVOR) => crossable(grid, (int)ax, (int)ay, (int)bx, (int)by, mover);
 }
+
+// JS numbers into the other hand-ported modules: ticks and counts are whole numbers in the sim, so these convert.
+public static partial class Time
+{
+    public static bool slowTick(double tick) => slowTick((int)tick);
+    public static int tickOfDay(double tick) => tickOfDay((int)tick);
+    public static int dayOf(double tick) => dayOf((int)tick);
+    public static double hourOf(double tick) => hourOf((int)tick);
+    public static bool isNight(double tick) => isNight((int)tick);
+    public static int? nightNumber(double tick) => nightNumber((int)tick);
+    public static int ticksIntoNight(double tick) => ticksIntoNight((int)tick);
+    public static double darkness(double tick) => darkness((int)tick);
+    public static string clockText(double tick) => clockText((int)tick);
+    public static void setDayScale(double n) => setDayScale((int)n);
+}
+
+public static partial class Rng
+{
+    public static int randomInt(IRngHolder holder, double min, double maxExclusive) => randomInt(holder, (int)min, (int)maxExclusive);
+}
+
+public static partial class Grids
+{
+    public static bool setEdge(Grid grid, double x, double y, string side, double kind) => setEdge(grid, x, y, side, (int)kind);
+}

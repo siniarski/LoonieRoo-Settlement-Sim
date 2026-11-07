@@ -45,7 +45,7 @@ public static partial class Towers
     /// <summary>An idle guard at night: stay up the tower, or head for the nearest free one. Returns true if that's what they're doing.</summary>
     public static bool keepWatch(SimState state, Survivor s)
     {
-        if (!Js.T(Time.isNight(state.tick)) || (s.priorities.guard == 0))
+        if (!Js.T(Time.isNight(state.tick)) || (s.priorities["guard"] == 0))
         {
             return false;
         }

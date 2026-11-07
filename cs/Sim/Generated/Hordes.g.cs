@@ -104,7 +104,7 @@ public static partial class Hordes
             return null;
         }
         state.hordes ??= [];
-        Horde h = new() { id = $"hd{Js.Str(state.nextId++)}", members = members.map((z) => z.id), mode = Js.T(night) ? "hunt" : "roam", goals = [], goalIds = [], heading = heading, box = new() { x0 = Js.I(0), y0 = Js.I(0), x1 = Js.I(0), y1 = Js.I(0) }, refreshTick = -REFRESH_EVERY, night = night };
+        Horde h = new Horde { id = $"hd{Js.Str(state.nextId++)}", members = members.map((z) => z.id), mode = Js.T(night) ? "hunt" : "roam", goals = [], goalIds = [], heading = heading, box = new HordeBox { x0 = Js.I(0), y0 = Js.I(0), x1 = Js.I(0), y1 = Js.I(0) }, refreshTick = -REFRESH_EVERY, night = night };
         foreach (var z in Js.Iter(members))
         {
             z.hordeId = h.id;
@@ -457,7 +457,7 @@ public static partial class Hordes
                 push(c + step, j);
             }
         }
-        Field field = new() { key = key, dist = dist, box = h.box };
+        Field field = new Field { key = key, dist = dist, box = h.box };
         fields.set(h, field);
         return field;
     }

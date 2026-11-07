@@ -112,8 +112,8 @@ public static partial class Clothing
         {
             return false;
         }
-        List<string> body = (s.priorities.guard > 0) ? ["armour", "coat"] : ["coat", "armour"];
-        List<string> wants = [.. Js.T(s.body) ? [] : body, .. Js.T(s.feet) ? [] : (["boots"]), .. (Js.T(s.cart) || (s.priorities.haul == 0)) ? [] : (["cart"]), .. Js.T(s.tool) ? [] : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])]), .. Js.T(needsMending(state, s)) ? (["cloth"]) : []];
+        List<string> body = (s.priorities["guard"] > 0) ? ["armour", "coat"] : ["coat", "armour"];
+        List<string> wants = [.. Js.T(s.body) ? [] : body, .. Js.T(s.feet) ? [] : (["boots"]), .. (Js.T(s.cart) || (s.priorities["haul"] == 0)) ? [] : (["cart"]), .. Js.T(s.tool) ? [] : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])]), .. Js.T(needsMending(state, s)) ? (["cloth"]) : []];
         var item = wants.map((k) => Needs.nearestFreeItem(state, s, k)).find((i) => Js.T(Js.T(i?.pos)));
         if (!Js.T(Js.T(item?.pos)))
         {

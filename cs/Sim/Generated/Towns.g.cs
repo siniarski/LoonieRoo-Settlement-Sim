@@ -192,7 +192,7 @@ public static partial class Towns
             }
             var x1 = x + (dx * steps);
             var y1 = y + (dy * steps);
-            Street s = new() { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
+            Street s = new Street { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
             streets.push(s);
             for (var yy = s.y0; yy <= (s.y1 + (Js.T(s.eastWest) ? 1 : 0)); yy++)
             {

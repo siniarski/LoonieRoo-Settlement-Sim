@@ -53,7 +53,7 @@ public static partial class NatureMod
         Point start = new Point { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
         var side = ((hash(seed, 0, 0, 3) % 2) == 0) ? -1 : 1;
         var riverBase = start.y + (side * (48 + (hash(seed, 0, 0, 4) % 24)));
-        return new() { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };
+        return new Nature { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };
     }
 
     public static bool nearStart(Nature n, int x, int y, double r)

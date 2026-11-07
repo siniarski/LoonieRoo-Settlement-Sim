@@ -102,7 +102,7 @@ public static partial class Vehicles
     {
         state.vehicles ??= [];
         var at = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
-        Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new Point { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
+        Vehicle v = new Vehicle { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new Point { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
         state.vehicles.push(v);
         return v;
     }

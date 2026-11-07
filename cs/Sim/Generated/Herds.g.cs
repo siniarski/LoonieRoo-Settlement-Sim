@@ -100,8 +100,8 @@ public static partial class Herds
         Point to = default!;
         if ((state.survivors.length > 0) && (Rng.random(state) < HERD_TOWARD_COLONY))
         {
-            var cx = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0)) / (state.survivors.length)));
-            var cy = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0)) / (state.survivors.length)));
+            var cx = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0.0)) / (state.survivors.length)));
+            var cy = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0.0)) / (state.survivors.length)));
             to = new Point { x = Js.I(clamp((2 * cx) - from.x, width)), y = Js.I(clamp((2 * cy) - from.y, height)) };
         }
         else
@@ -117,8 +117,8 @@ public static partial class Herds
     public static void warn(SimState state, Herd h)
     {
         h.heard = true;
-        var cx = ((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0)) / (state.survivors.length));
-        var cy = ((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0)) / (state.survivors.length));
+        var cx = ((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0.0)) / (state.survivors.length));
+        var cy = ((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0.0)) / (state.survivors.length));
         Events.logEvent(state, $"A herd of {Js.Str(h.size)} is coming from the {Js.Str(direction(h.x - cx, h.y - cy))} ({Js.Str(h.x)}, {Js.Str(h.y)})");
     }
 
@@ -155,7 +155,7 @@ public static partial class Herds
         List<Zombie> made = [];
         for (var i = 0; i < n; i++)
         {
-            var p = Space.nearestTile(state.grid, new Point { x = Js.I(h.x), y = Js.I(h.y) }, free);
+            var p = Space.nearestTile(state.grid, new Point { x = Js.I(h.x), y = Js.I(h.y) }, (__f0, __f1) => free(__f0, __f1));
             if (!Js.T(p))
             {
                 break;

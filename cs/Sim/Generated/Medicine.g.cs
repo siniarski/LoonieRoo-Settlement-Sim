@@ -61,7 +61,7 @@ public static partial class Medicine
     /// <summary>Guards: anyone with guarding switched on. They prefer barracks beds and sleep lightly there.</summary>
     public static bool isGuard(Survivor s)
     {
-        return s.priorities.guard > 0;
+        return s.priorities["guard"] > 0;
     }
 
     /// <summary>Is this survivor resting in an infirmary bed right now?</summary>

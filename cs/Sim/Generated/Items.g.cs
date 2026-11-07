@@ -28,7 +28,7 @@ public static partial class Items
     /// <summary>Creates an item on the nearest free tile to (x, y).</summary>
     public static Item spawnItem(SimState state, string kind, int x, int y)
     {
-        Item item = new() { id = $"i{Js.Str(state.nextId++)}", kind = kind, pos = null, carriedBy = null, reservedBy = null, wear = 0, tag = null };
+        Item item = new Item { id = $"i{Js.Str(state.nextId++)}", kind = kind, pos = null, carriedBy = null, reservedBy = null, wear = 0, tag = null };
         if (kind == "book")
         {
             item.tag = Books.bookSubject(item.id);
@@ -64,6 +64,6 @@ public static partial class Items
         {
             return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))));
         }
-        item.pos = Space.nearestTile(state.grid, near, free) ?? new Point { x = Js.I(near.x), y = Js.I(near.y) };
+        item.pos = Space.nearestTile(state.grid, near, (__f0, __f1) => free(__f0, __f1)) ?? new Point { x = Js.I(near.x), y = Js.I(near.y) };
     }
 }

@@ -1,7 +1,7 @@
 // Spatial search helpers (space.ts).
 namespace LoonieRoo.Sim;
 
-public static class Space
+public static partial class Space
 {
     sealed class Scratch
     {

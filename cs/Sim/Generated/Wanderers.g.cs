@@ -35,7 +35,7 @@ public static partial class Wanderers
     public static Wanderer addWanderer(SimState state, int x, int y)
     {
         var id = $"v{Js.Str(state.nextId++)}";
-        Wanderer w = new() { id = id, traits = Skills.rollTraits(id), name = Survivors.nextSurvivorName(state), x = Js.I(x), y = Js.I(y), leavesTick = state.tick + WANDERER_PATIENCE };
+        Wanderer w = new Wanderer { id = id, traits = Skills.rollTraits(id), name = Survivors.nextSurvivorName(state), x = Js.I(x), y = Js.I(y), leavesTick = state.tick + WANDERER_PATIENCE };
         state.wanderers.push(w);
         return w;
     }
@@ -121,7 +121,7 @@ public static partial class Wanderers
             {
                 return (((Js.T(Fog.isExplored(state, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has($"{Js.Str(x)},{Js.Str(y)}")) && Pathfinding.DIRS.some((d) => Js.T(Grids.inBounds(state.grid, x + d.x, y + d.y)) && !Js.T(Fog.isExplored(state, x + d.x, y + d.y)));
             }
-            var p = Space.nearestTile(state.grid, near, ok);
+            var p = Space.nearestTile(state.grid, near, (__f0, __f1) => ok(__f0, __f1));
             if (Js.T(p))
             {
                 return p;

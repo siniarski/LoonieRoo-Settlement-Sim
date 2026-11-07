@@ -466,15 +466,8 @@ public partial class JobChoicePlan
 }
 
 /// <summary>A world's natural features and its plan (towns, roads, lots): what a chunk is drawn from.</summary>
-public partial class Layout
+public partial class Layout : Nature
 {
-    public double seed { get; set; }
-    /// <summary>Where it's going: a settlement id, or 'you'.</summary>
-    public double size { get; set; }
-    public string map { get; set; } = "";
-    public Point start { get; set; } = new();
-    public bool riverAlongX { get; set; }
-    public double riverBase { get; set; }
     public WorldPlan plan { get; set; } = new();
     public List<Town> towns { get; set; } = new();
 }

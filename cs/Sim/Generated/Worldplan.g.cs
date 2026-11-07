@@ -87,10 +87,10 @@ public static partial class Worldplan
             }
             return true;
         }
-        townLots(n, towns, streets, add);
-        farmLots(n, towns, roads, add);
-        fieldLots(n, towns, add);
-        cabinLots(n, roads, add);
+        townLots(n, towns, streets, (__f0) => add(__f0));
+        farmLots(n, towns, roads, (__f0) => add(__f0));
+        fieldLots(n, towns, (__f0) => add(__f0));
+        cabinLots(n, roads, (__f0) => add(__f0));
         var chunks = JsMath.ceil(((double)(size) / (PLAN_CHUNK)));
         List<List<double>> lotsByChunk = Js.ArrayFrom<List<double>>(chunks * chunks, (int _i) => []);
         foreach (var l in Js.Iter(lots))
@@ -103,7 +103,7 @@ public static partial class Worldplan
                 }
             }
         }
-        return new() { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk };
+        return new WorldPlan { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk };
     }
 
     public static double dist(int ax, int ay, int bx, int by)

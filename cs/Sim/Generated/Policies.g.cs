@@ -64,7 +64,7 @@ public static partial class Policies
                 continue;
             }
             var others = state.survivors.filter((o) => o != s);
-            var score = ((double)(others.reduce((sum, o) => sum + Relationships.opinion(o, s), 0)) / (others.length));
+            var score = ((double)(others.reduce((sum, o) => sum + Relationships.opinion(o, s), 0.0)) / (others.length));
             if (score >= bestScore)
             {
                 best = s;

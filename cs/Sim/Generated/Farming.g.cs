@@ -57,7 +57,7 @@ public static partial class Farming
 
     public static FarmPlot addPlot(SimState state, int x, int y, string crop = "potato")
     {
-        FarmPlot plot = new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), crop = crop, planted = false, growth = 0 };
+        FarmPlot plot = new FarmPlot { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), crop = crop, planted = false, growth = 0 };
         state.farm.push(plot);
         return plot;
     }

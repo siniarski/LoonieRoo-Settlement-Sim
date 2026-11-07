@@ -134,16 +134,16 @@ public static partial class Colonies
             }
             if (hungerOf(n) == "starving")
             {
-                raidOrBeg(state, n, roll);
+                raidOrBeg(state, n, (__f0) => roll(__f0));
             }
             else if (hungerOf(n) == "hungry")
             {
-                allyHelps(state, n, roll);
+                allyHelps(state, n, (__f0) => roll(__f0));
             }
-            feud(state, n, roll);
+            feud(state, n, (__f0) => roll(__f0));
             if ((n.people >= SPLIT_AT) && (state.settlements.length < MAX_SETTLEMENTS))
             {
-                split(state, n, roll);
+                split(state, n, (__f0) => roll(__f0));
             }
         }
         foreach (var n in Js.Iter(state.settlements))

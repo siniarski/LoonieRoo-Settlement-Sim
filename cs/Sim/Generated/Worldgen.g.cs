@@ -141,7 +141,7 @@ public static partial class Worldgen
     /// <summary>What drawing a lot needs to know about the world.</summary>
     public static LotContext lotContext(Layout l)
     {
-        return new() { seed = l.seed, lootAt = (x, y) => lootFor(JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2)))), distance = (x, y) => JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2))), calm = NatureMod.START_CLEAR_RADIUS + 24 };
+        return new LotContext { seed = l.seed, lootAt = (x, y) => lootFor(JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2)))), distance = (x, y) => JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2))), calm = NatureMod.START_CLEAR_RADIUS + 24 };
     }
 
     /// <summary>Finds in a crate this far from the start: CRATE_LOOT nearby, up to three times that at the far edge.</summary>
@@ -257,7 +257,7 @@ public static partial class Worldgen
             {
                 continue;
             }
-            z.pos = nearestAcross(state, z.pos, floorOnly) ?? z.pos;
+            z.pos = nearestAcross(state, z.pos, (__f0, __f1) => floorOnly(__f0, __f1)) ?? z.pos;
             z.move = null;
             z.path = [];
         }
@@ -267,7 +267,7 @@ public static partial class Worldgen
             {
                 continue;
             }
-            a.pos = nearestAcross(state, a.pos, floorOnly) ?? a.pos;
+            a.pos = nearestAcross(state, a.pos, (__f0, __f1) => floorOnly(__f0, __f1)) ?? a.pos;
             /*TODO Object.assign*/Js.Object_assign(a, Motion.placedAt(a.pos));
             a.move = null;
         }
@@ -277,7 +277,7 @@ public static partial class Worldgen
             {
                 continue;
             }
-            s.pos = nearestAcross(state, s.pos, open) ?? s.pos;
+            s.pos = nearestAcross(state, s.pos, (__f0, __f1) => open(__f0, __f1)) ?? s.pos;
             s.move = null;
             s.path = [];
             s.pathVersion = -1;

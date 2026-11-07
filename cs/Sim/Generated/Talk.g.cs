@@ -199,7 +199,7 @@ public static partial class Talk
             return;
         }
         s.story.asked.push(kind);
-        Task task = new() { id = $"q{Js.Str(state.nextId++)}", giverId = s.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), targetId = null };
+        Task task = new Task { id = $"q{Js.Str(state.nextId++)}", giverId = s.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), targetId = null };
         var __d0 = s.story;
         var lost = __d0.lost;
         var pet = __d0.pet;

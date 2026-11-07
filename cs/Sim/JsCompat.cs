@@ -310,6 +310,9 @@ public static class JsStringExtensions
         public bool startsWith(string x) => s.StartsWith(x, StringComparison.Ordinal);
         public bool endsWith(string x) => s.EndsWith(x, StringComparison.Ordinal);
         public int indexOf(string x) => s.IndexOf(x, StringComparison.Ordinal);
+        /// <summary>a.localeCompare(b): a culture-aware order (ICU's, as in Node), as -1, 0 or 1.</summary>
+        public int localeCompare(string b) => Math.Sign(string.Compare(s, b, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.CompareOptions.None));
+
         public string slice(int start, int? end = null)
         {
             int n = s.Length;

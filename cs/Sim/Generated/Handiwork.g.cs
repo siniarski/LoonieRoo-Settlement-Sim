@@ -136,7 +136,7 @@ public static partial class Handiwork
         }
         Inventory.unpack(s, wood.id);
         Items.removeItem(state, wood);
-        Blueprint bp = new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y), target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
+        Blueprint bp = new Blueprint { id = $"h{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y), target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
         Designations.completeBlueprint(state, bp);
         return (target == "wall") ? "put up a wall" : ((target == "barricade") ? "barricaded the door" : "reinforced it");
     }

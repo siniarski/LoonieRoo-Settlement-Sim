@@ -161,7 +161,7 @@ public static partial class Rooms
             var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             rooms.push(new() { index = index, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
-        return new() { labels = labels, rooms = rooms };
+        return new RoomMap { labels = labels, rooms = rooms };
     }
 
     public static double labelAt(SimState state, int x, int y)
@@ -272,7 +272,7 @@ public static partial class Rooms
         {
             requirements.push(new() { label = $"at least {Js.Str(MIN_STORAGE_TILES)} tiles", met = size >= MIN_STORAGE_TILES });
         }
-        return new() { purpose = purpose, complete = requirements.every((r) => Js.T(r.met)), requirements = requirements, beds = beds, tables = tables, size = size };
+        return new RoomStatus { purpose = purpose, complete = requirements.every((r) => Js.T(r.met)), requirements = requirements, beds = beds, tables = tables, size = size };
     }
 
     /// <summary>Status for a designation (finds its room).</summary>
@@ -312,7 +312,7 @@ public static partial class Rooms
             var no = refusing(c);
             return [c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r)))];
         }));
-        return new() { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
+        return new StoreRooms { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
     }
 
     /// <summary>Where an item belongs: the dead in a graveyard; weapons, guns and ammo in an armory if there is one, everything else (and those otherwise) in storage that takes it.</summary>
@@ -481,6 +481,6 @@ public static partial class Rooms
                 labels[Js.Idx(i)] = r.index;
             }
         }
-        return new() { labels = labels, rooms = @out };
+        return new RoomMap { labels = labels, rooms = @out };
     }
 }

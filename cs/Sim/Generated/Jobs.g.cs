@@ -491,7 +491,7 @@ public static partial class Jobs
 
     public static Job addJob(SimState state, string type, int x, int y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null)
     {
-        Job job = new() { id = $"j{Js.Str(state.nextId++)}", type = type, x = Js.I(x), y = Js.I(y), blueprintId = blueprintId, itemId = itemId, furnitureId = furnitureId, zombieId = zombieId, plotId = plotId, patientId = null, areaId = null, animalId = null, dest = null, progress = 0, reservedBy = null };
+        Job job = new Job { id = $"j{Js.Str(state.nextId++)}", type = type, x = Js.I(x), y = Js.I(y), blueprintId = blueprintId, itemId = itemId, furnitureId = furnitureId, zombieId = zombieId, plotId = plotId, patientId = null, areaId = null, animalId = null, dest = null, progress = 0, reservedBy = null };
         state.jobs.push(job);
         return job;
     }

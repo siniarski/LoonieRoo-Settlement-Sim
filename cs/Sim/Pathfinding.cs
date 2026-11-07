@@ -39,7 +39,7 @@ public static partial class Pathfinding
         return true;
     }
 
-    public static readonly Point[] DIRS = { new(0, -1), new(1, 0), new(0, 1), new(-1, 0) };
+    public static readonly List<Point> DIRS = [new(0, -1), new(1, 0), new(0, 1), new(-1, 0)];
 
     /// <summary>Path from start to goal, excluding start, including goal; [] if already there; null if unreachable.</summary>
     public static List<Point>? findPath(Grid grid, Point start, Point goal) => findPathToAny(grid, start, new[] { goal });

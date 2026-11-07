@@ -136,7 +136,7 @@ public static partial class Animals
 
     public static Animal addDeer(SimState state, int x, int y)
     {
-        Animal a = new() { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
+        Animal a = new Animal { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.animals.push(a);
         return a;
     }

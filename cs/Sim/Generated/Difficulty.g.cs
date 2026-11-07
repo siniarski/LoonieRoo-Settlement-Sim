@@ -88,10 +88,10 @@ public static partial class Difficulty
         {
             return (JsNumber.isInteger(n) && ((n) >= 0)) && ((n) < max);
         }
-        return (((((((((s.start == "group") || (s.start == "solo")) && JsNumber.isInteger(s.zombies)) && ((s.zombies) >= 25)) && ((s.zombies) <= 300)) && Js.T(level(s.weather, WEATHER_LEVELS.length))) && Js.T(level(s.progression, PROGRESSION_LEVELS.length))) && (/*TODO typeof*/Js.TypeOf(s.winter) == "boolean")) && (((s.dayScale == 1) || (s.dayScale == 2)) || (s.dayScale == 3))) && MAP_TYPES.some((__p0) =>
+        return (((((((((s["start"] == "group") || (s["start"] == "solo")) && JsNumber.isInteger(s["zombies"])) && ((s["zombies"]) >= 25)) && ((s["zombies"]) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((s["dayScale"] == 1) || (s["dayScale"] == 2)) || (s["dayScale"] == 3))) && MAP_TYPES.some((__p0) =>
         {
             var m = (__p0)[0];
-            return m == s.map;
+            return m == s["map"];
         });
     }
 }

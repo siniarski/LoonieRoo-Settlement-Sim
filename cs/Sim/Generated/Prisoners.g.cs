@@ -54,7 +54,7 @@ public static partial class Prisoners
             return false;
         }
         var from = state.settlements.find((s) => s.reputation < 0) ?? null;
-        Prisoner p = new() { id = $"q{Js.Str(state.nextId++)}", name = Survivors.nextSurvivorName(state), x = Js.I(spot.x), y = Js.I(spot.y), from = from?.id ?? null, since = state.tick };
+        Prisoner p = new Prisoner { id = $"q{Js.Str(state.nextId++)}", name = Survivors.nextSurvivorName(state), x = Js.I(spot.x), y = Js.I(spot.y), from = from?.id ?? null, since = state.tick };
         state.prisoners.push(p);
         Events.logEvent(state, $"{Js.Str(by)} took a raider alive: {Js.Str(p.name)} is in the cells");
         return true;

@@ -76,7 +76,7 @@ public static partial class Zombies
 
     public static Zombie addZombie(SimState state, int x, int y, double health = ZOMBIE_HEALTH, string kind = "night")
     {
-        Zombie z = new() { id = $"z{Js.Str(state.nextId++)}", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], targetId = null, health = health, maxHealth = health, cooldown = 0, nextThinkTick = 0, kind = kind, heading = null, variant = "walker", screamed = false, stuckUntil = 0, windup = 0, staggerUntil = 0, hurtTick = -1, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
+        Zombie z = new Zombie { id = $"z{Js.Str(state.nextId++)}", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], targetId = null, health = health, maxHealth = health, cooldown = 0, nextThinkTick = 0, kind = kind, heading = null, variant = "walker", screamed = false, stuckUntil = 0, windup = 0, staggerUntil = 0, hurtTick = -1, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.zombies.push(z);
         edited(state.zombies);
         return z;
@@ -236,7 +236,7 @@ public static partial class Zombies
             {
                 return (z.kind == "night") || (z.kind == "raider");
             }
-            var n = state.zombies.filter(leaves).length;
+            var n = state.zombies.filter((__f0) => leaves(__f0)).length;
             if (n > 0)
             {
                 state.zombies = state.zombies.filter((z) => !Js.T(leaves(z)));
@@ -263,7 +263,7 @@ public static partial class Zombies
     public static void updateAll(SimState state)
     {
         Hordes.updateHordes(state);
-        Budget budget = new() { plans = PLANS_PER_TICK, near = survivorsNear(state) };
+        Budget budget = new Budget { plans = PLANS_PER_TICK, near = survivorsNear(state) };
         foreach (var z in Js.Iter(state.zombies))
         {
             updateZombie(state, z, budget);
@@ -280,7 +280,7 @@ public static partial class Zombies
         {
             return (((z.kind == "herd") && Js.T(z.heading)) && (Space.manhattan(z.pos, z.heading) <= 1)) && !Js.T(z.move);
         }
-        if (state.zombies.some(gone))
+        if (state.zombies.some((__f0) => gone(__f0)))
         {
             state.zombies = state.zombies.filter((z) => !Js.T(gone(z)));
         }
@@ -346,7 +346,7 @@ public static partial class Zombies
             {
                 return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.zombies.some((z_1) => (z_1.pos.x == x) && (z_1.pos.y == y));
             }
-            var q = Space.nearestTile(state.grid, p, free) ?? p;
+            var q = Space.nearestTile(state.grid, p, (__f0, __f1) => free(__f0, __f1)) ?? p;
             var z = addZombie(state, q.x, q.y, health);
             ZombieKinds.giveVariant(z, night);
             group.push(z);

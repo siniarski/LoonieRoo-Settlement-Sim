@@ -41,7 +41,7 @@ public static partial class Caravans
             return null;
         }
         state.caravans ??= [];
-        Caravan c = new() { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = Js.I(from.x), y = Js.I(from.y), dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = (goods).ToList(), nextStepTick = state.tick + CARAVAN_STEP };
+        Caravan c = new Caravan { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = Js.I(from.x), y = Js.I(from.y), dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = (goods).ToList(), nextStepTick = state.tick + CARAVAN_STEP };
         state.caravans.push(c);
         return c;
     }

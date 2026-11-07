@@ -38,7 +38,7 @@ public static partial class Dogs
     public static Dog addDog(SimState state, int x, int y)
     {
         var n = state.nextId++;
-        Dog dog = new() { id = $"g{Js.Str(n)}", name = Js.NN(DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
+        Dog dog = new Dog { id = $"g{Js.Str(n)}", name = Js.NN(DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.dogs.push(dog);
         return dog;
     }

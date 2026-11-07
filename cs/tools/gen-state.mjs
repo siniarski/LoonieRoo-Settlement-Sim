@@ -253,8 +253,30 @@ function classFor(t, hint) {
   return name;
 }
 
+/** Class -> its base class: Layout = Nature & { ... } and interface X extends Y make X a Y in C# too. */
+const bases = new Map();
+function baseOf(t) {
+  let node = t;
+  if (t.type === 'TSTypeReference') {
+    const d = lookup(refName(t), currentFile);
+    if (!d) return null;
+    if (d.node.type === 'TSInterfaceDeclaration') {
+      const ext = d.node.extends ?? [];
+      return ext.length === 1 && ext[0].expression.type === 'Identifier' && !ext[0].typeArguments ? ext[0].expression.name : null;
+    }
+    node = d.node.typeAnnotation;
+  }
+  if (node?.type === 'TSIntersectionType' && node.types[0].type === 'TSTypeReference' && !node.types[0].typeArguments) {
+    const b = lookup(refName(node.types[0]), currentFile);
+    if (b && (b.node.type === 'TSInterfaceDeclaration' || b.node.typeAnnotation?.type === 'TSTypeLiteral')) return refName(node.types[0]);
+  }
+  return null;
+}
+
 function build(name, t, file) {
   currentFile = file;
+  const base = baseOf(t);
+  if (base) bases.set(name, classFor({ type: 'TSTypeReference', typeName: { type: 'Identifier', name: base } }, base));
   const fields = new Map();
   const parts = objectParts(t);
   const union = parts.length > 1 && (t.type === 'TSUnionType' || (t.type === 'TSTypeReference' && lookup(refName(t), currentFile)?.node.typeAnnotation?.type === 'TSUnionType'));
@@ -338,9 +360,13 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
   if (fields.get('pos')?.type === 'Point') ifaces.push('IHasPos');
   // A body (survivor, zombie, animal, dog, resident...): an id, a tile and a precise position.
   if (ifaces.includes('IHasId') && ifaces.includes('IHasAt') && ifaces.includes('IHasPos')) ifaces.push('IBody');
-  lines.push(`public partial class ${name}${ifaces.length ? ' : ' + ifaces.join(', ') : ''}`, '{');
+  const base = bases.get(name);
+  const inherited = base ? classes.get(base) : null;
+  const heads = [...(base ? [base] : []), ...ifaces.filter((i) => !inherited || i === 'Body' ? true : !['IHasId', 'IHasAt', 'IHasPos', 'IBody'].includes(i))];
+  lines.push(`public partial class ${name}${heads.length ? ' : ' + heads.join(', ') : ''}`, '{');
   if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x, v.y);`);
   for (const [field, f] of fields) {
+    if (inherited?.get(field)?.type === f.type) continue; // the base class has it
     if (f.doc) lines.push(`    /// <summary>${esc(f.doc)}</summary>`);
     const id = kw.has(field) ? '@' + field : field;
     const t = f.type;

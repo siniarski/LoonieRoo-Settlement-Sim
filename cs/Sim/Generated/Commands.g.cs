@@ -698,17 +698,17 @@ public static partial class Commands
 
     public static CommandResult reject(string reason)
     {
-        return new() { ok = false, reason = reason };
+        return new CommandResult { ok = false, reason = reason };
     }
 
     public static CommandResult changed()
     {
-        return new() { ok = true, changed = true };
+        return new CommandResult { ok = true, changed = true };
     }
 
     public static CommandResult unchanged()
     {
-        return new() { ok = true, changed = false };
+        return new CommandResult { ok = true, changed = false };
     }
 
     public static CommandResult setStructure(SimState state, int x, int y, string tile)

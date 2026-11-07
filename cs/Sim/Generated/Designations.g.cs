@@ -69,7 +69,7 @@ public static partial class Designations
 
     public static Blueprint addBlueprint(SimState state, int x, int y, string target, string? side = default)
     {
-        Blueprint bp = new() { id = $"b{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = BUILD_WORK[Js.Idx(target)] };
+        Blueprint bp = new Blueprint { id = $"b{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = BUILD_WORK[Js.Idx(target)] };
         if (Js.T(side))
         {
             bp.side = side;

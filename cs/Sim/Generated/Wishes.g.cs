@@ -67,7 +67,7 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "coat", targetId = null });
         }
-        if (!Js.T(s.weapon) && (s.priorities.guard > 0))
+        if (!Js.T(s.weapon) && (s.priorities["guard"] > 0))
         {
             @out.push(new() { kind = "weapon", targetId = null });
         }

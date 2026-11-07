@@ -485,7 +485,7 @@ public static partial class Work
         s.note = "heading home before dark";
         var bed = FurnitureMod.ofKind(state, "bed").find((f) => f.owner == s.id);
         var others = state.survivors.filter((o) => o != s);
-        var home = bed ?? ((others.length > 0) ? new Point { x = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0)) / (others.length)))), y = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0)) / (others.length)))) } : null);
+        var home = bed ?? ((others.length > 0) ? new Point { x = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0.0)) / (others.length)))), y = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0.0)) / (others.length)))) } : null);
         if (!Js.T(home))
         {
             return;

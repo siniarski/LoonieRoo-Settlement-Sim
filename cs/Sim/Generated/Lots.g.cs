@@ -115,7 +115,7 @@ public static partial class Lots
         facing ??= lot.facing;
         var a = lotToMap(lot, u0, v0);
         var b = lotToMap(lot, (u0 + plan.w) - 1, (v0 + plan.h) - 1);
-        return new() { plan = plan, ox = Js.I(JsMath.min(a.x, b.x)), oy = Js.I(JsMath.min(a.y, b.y)), facing = facing, mirror = mirror };
+        return new Placement { plan = plan, ox = Js.I(JsMath.min(a.x, b.x)), oy = Js.I(JsMath.min(a.y, b.y)), facing = facing, mirror = mirror };
     }
 
     public static readonly JsMap<Lot, LotLayout> layouts = new JsMap<Lot, LotLayout>();
@@ -138,7 +138,7 @@ public static partial class Lots
         var __d0 = frame(lot);
         var F = __d0.F;
         var D = __d0.D;
-        LotLayout @out = new() { buildings = [], yard = (_, _) => "grass", trees = [], decor = [] };
+        LotLayout @out = new LotLayout { buildings = [], yard = (_, _) => "grass", trees = [], decor = [] };
         var mirror = r(81) < 0.5;
         double along(double w, double margin)
         {
@@ -326,7 +326,7 @@ public static partial class Lots
             }
         }
         var covered = new JsSet<string>();
-        layout.buildings.forEach((b, bi) => drawBuilding(state, ctx, lot, b, bi, inside, covered));
+        layout.buildings.forEach((b, bi) => drawBuilding(state, ctx, lot, b, bi, (__f0, __f1) => inside(__f0, __f1), covered));
         foreach (var t in Js.Iter(layout.trees))
         {
             if (Js.T(inside(t.x, t.y)) && !covered.has($"{Js.Str(t.x)},{Js.Str(t.y)}"))
@@ -341,7 +341,7 @@ public static partial class Lots
                 FurnitureMod.addFurniture(state, "decor", d.x, d.y).look = d.look;
             }
         }
-        parkCar(state, ctx, lot, inside);
+        parkCar(state, ctx, lot, (__f0, __f1) => inside(__f0, __f1));
     }
     public static void drawLot(SimState state, LotContext ctx, Lot lot, double x0, double y0, double x1, double y1) => drawLot(state, ctx, lot, (int)x0, (int)y0, (int)x1, (int)y1);
 

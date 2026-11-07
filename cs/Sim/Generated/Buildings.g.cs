@@ -42,7 +42,7 @@ public static partial class Buildings
 
     public static BuildingsPlan newPlan(int w, int h, string kind, double sleepers)
     {
-        return new() { w = Js.I(w), h = Js.I(h), cells = /*TODO new Array*/new List<object>().fill(OUTSIDE), ground = /*TODO new Array*/new List<object>().fill(null), furniture = [], kind = kind, sleepers = sleepers, edges = [] };
+        return new BuildingsPlan { w = Js.I(w), h = Js.I(h), cells = /*TODO new Array*/new List<object>().fill(OUTSIDE), ground = /*TODO new Array*/new List<object>().fill(null), furniture = [], kind = kind, sleepers = sleepers, edges = [] };
     }
     public static BuildingsPlan newPlan(double w, double h, string kind, double sleepers) => newPlan((int)w, (int)h, kind, sleepers);
 
@@ -183,7 +183,7 @@ public static partial class Buildings
     {
         var cx = JsMath.floor(((double)((x0 + x1)) / (2)));
         var cy = JsMath.floor(((double)((y0 + y1)) / (2)));
-        foreach (var (dx, dy) in new (double, double)[] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
+        foreach (var (dx, dy) in new [] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
         {
             var x = cx + dx;
             var y = cy + dy;
@@ -214,13 +214,13 @@ public static partial class Buildings
         var inner = W - 2;
         var split = 1 + JsMath.max(3, JsMath.floor(inner * 0.55));
         vwall(p, split, div, H - 1);
-        HordeBox living = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
-        HordeBox kitchen = new() { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        HordeBox living = new HordeBox { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
+        HordeBox kitchen = new HordeBox { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         floorAs(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "tiles");
         door(p, JsMath.floor(((double)((living.x0 + living.x1)) / (2))), H - 1);
         door(p, split, JsMath.floor(((double)(((living.y0 + living.y1) + 1)) / (2))));
         var bathW = (inner >= 10) ? 3 : 2;
-        HordeBox bath = new() { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
+        HordeBox bath = new HordeBox { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
         vwall(p, bathW + 1, 0, div);
         floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
         HousePlanRest rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
@@ -326,7 +326,7 @@ public static partial class Buildings
         {
             againstWall(p, 4, 1, W - 2, div - 1, ((i % 2) == 0) ? "pallet" : "crate", table, r(7 + i));
         }
-        HordeBox floor = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        HordeBox floor = new HordeBox { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         if (kind == "office")
         {
             for (var y = floor.y0 + 1; y < floor.y1; y += 2)
@@ -745,7 +745,7 @@ public static partial class Buildings
         {
             for (var x = 0; x < w; x++)
             {
-                foreach (var (dx, dy) in new (double, double)[] { (0, -1), (-1, 0), (0, 1), (1, 0) })
+                foreach (var (dx, dy) in new [] { (0, -1), (-1, 0), (0, 1), (1, 0) })
                 {
                     var nx = x + dx;
                     var ny = y + dy;

@@ -42,7 +42,7 @@ public static partial class EndgameMod
 
     public static Endgame newEndgame()
     {
-        return new() { cure = 0, evacuation = null, won = null, helicopter = false, escaped = 0 };
+        return new Endgame { cure = 0, evacuation = null, won = null, helicopter = false, escaped = 0 };
     }
 
     /// <summary>A zombie went down: maybe it leaves a sample.</summary>

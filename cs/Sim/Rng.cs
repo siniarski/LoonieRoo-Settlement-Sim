@@ -8,7 +8,7 @@ public interface IRngHolder
     double rng { get; set; }
 }
 
-public static class Rng
+public static partial class Rng
 {
     /// <summary>Pure step: a value in [0, 1) and the next RNG state.</summary>
     public static (double value, uint next) mulberry32(uint rngState)

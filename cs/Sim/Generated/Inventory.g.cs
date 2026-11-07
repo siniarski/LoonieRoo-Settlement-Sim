@@ -26,7 +26,7 @@ public static partial class Inventory
 
     public static double packWeight(SimState state, Survivor s)
     {
-        return s.pack.reduce((sum, id) => sum + ITEM_WEIGHT[Js.Idx(Items.getItem(state, id)?.kind ?? "sample")], 0);
+        return s.pack.reduce((sum, id) => sum + ITEM_WEIGHT[Js.Idx(Items.getItem(state, id)?.kind ?? "sample")], 0.0);
     }
 
     public static bool fitsInPack(SimState state, Survivor s, Item item)
@@ -67,7 +67,7 @@ public static partial class Inventory
         {
             return "not in your bag";
         }
-        var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + ITEM_WEIGHT[Js.Idx(i.kind)], 0);
+        var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + ITEM_WEIGHT[Js.Idx(i.kind)], 0.0);
         if ((load + ITEM_WEIGHT[Js.Idx(item.kind)]) > box.max)
         {
             return "it won't fit";

@@ -157,7 +157,7 @@ public static partial class FurnitureMod
 
     public static Furniture addFurniture(SimState state, string kind, int x, int y)
     {
-        Furniture f = new() { id = $"f{Js.Str(state.nextId++)}", kind = kind, x = Js.I(x), y = Js.I(y), occupant = null, owner = null, loot = (kind == "crate") ? CRATE_LOOT : ((kind == "tree") ? TREE_WOOD : ((kind == "trap") ? TRAP_CHARGES : 0)), scavenge = false, stored = 0, storedKind = null, look = null, table = null };
+        Furniture f = new Furniture { id = $"f{Js.Str(state.nextId++)}", kind = kind, x = Js.I(x), y = Js.I(y), occupant = null, owner = null, loot = (kind == "crate") ? CRATE_LOOT : ((kind == "tree") ? TREE_WOOD : ((kind == "trap") ? TRAP_CHARGES : 0)), scavenge = false, stored = 0, storedKind = null, look = null, table = null };
         state.furniture.push(f);
         var ix = indexes.get(state.furniture);
         if (Js.T(ix))

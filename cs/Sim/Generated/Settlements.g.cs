@@ -66,7 +66,7 @@ public static partial class Settlements
 
     public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)
     {
-        Settlement n = new() { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new() {  }, unfolded = false, lastTalk = -1, lastRaid = -1 };
+        Settlement n = new Settlement { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new() {  }, unfolded = false, lastTalk = -1, lastRaid = -1 };
         state.settlements.push(n);
         return n;
     }
@@ -122,7 +122,7 @@ public static partial class Settlements
     public static string? tieSettlements(Settlement a, Settlement b, int by)
     {
         var before = relation(a, b);
-        foreach (var (x, y) in new (int, int)[] { (a, b), (b, a) })
+        foreach (var (x, y) in new (Settlement, Settlement)[] { (a, b), (b, a) })
         {
             x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(x.ties[Js.Idx(y.id)], 0)) + by));
         }

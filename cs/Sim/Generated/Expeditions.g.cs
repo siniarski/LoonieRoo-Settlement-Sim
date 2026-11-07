@@ -146,7 +146,7 @@ public static partial class Expeditions
         {
             return Space.manhattan(p, x.target) <= RUIN_RADIUS;
         }
-        var sleepers = state.dormant.filter(near);
+        var sleepers = state.dormant.filter((__f0) => near(__f0));
         state.dormant = state.dormant.filter((d) => !Js.T(near(d)));
         var deathChance = JsMath.min(0.5, 0.05 + ((double)((0.08 * sleepers.length)) / (x.members.length)));
         List<Survivor> back = [];
