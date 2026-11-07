@@ -446,6 +446,8 @@ function translate(mod) {
       if (x.type === 'Literal' && typeof x.value === 'number') return 'double';
       if (x.type === 'UnaryExpression' && x.argument.type === 'Literal' && typeof x.argument.value === 'number') return 'double';
       if (x.type === 'BinaryExpression' && ['<', '>', '<=', '>=', '===', '!==', '==', '!='].includes(x.operator)) return 'bool';
+      const pointish = (y) => y?.type === 'ObjectExpression' && y.properties.length === 2 && y.properties.every((q) => q.type === 'Property') && y.properties.map((q) => q.key.name).sort().join(',') === 'x,y';
+      if (pointish(x) || (x.type === 'ConditionalExpression' && pointish(x.consequent) && pointish(x.alternate))) return 'Point';
       if (x.type === 'Identifier' && exprType(x) && !['int', 'double'].includes(strip(exprType(x)))) return strip(exprType(x));
       if (x.type === 'Identifier' || x.type === 'BinaryExpression') return 'num?';
       return null;
@@ -788,6 +790,10 @@ function translate(mod) {
         if (k === 'string' && src && /^object\??$/.test(src)) return `(${ex(e.expression)} as string)`;
         if (k === 'record' && src && !/^JsRecord/.test(src)) return `Js.AsRecord(${ex(e.expression)})`;
         if (k === 'record' && !src) return `Js.AsRecord(${ex(e.expression)})`;
+        if (t.type === 'TSTypeLiteral') {
+          const c = ty(t, mod);
+          if (c && !c.includes('TODO')) return `((${c})(${ex(e.expression)}))`;
+        }
         if (k === 'object' && t.type === 'TSTypeReference') {
           const c = ty(t, mod);
           if (c && !c.includes('TODO')) return `((${c})(${ex(e.expression)}))`;
@@ -1105,6 +1111,8 @@ function translate(mod) {
 
   /** An object literal as a JsRecord: new() { ["k"] = v }. */
   function recordInit(o) {
+    const spreads = o.properties.filter((q) => q.type === 'SpreadElement');
+    if (spreads.length === 1 && o.properties[0].type === 'SpreadElement') return `new(${ex(spreads[0].argument)}) { ${o.properties.slice(1).map((q) => `[${str(String(q.key.name ?? q.key.value))}] = ${ex(q.value)}`).join(', ')} }`;
     return `new() { ${o.properties.map((p) => (p.type === 'Property' && !p.computed ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`;
   }
 
@@ -1280,7 +1288,7 @@ function translate(mod) {
     let lit = init;
     while (lit.type === 'TSAsExpression') lit = lit.expression;
     const constNum = (v) => (v.type === 'Literal' && typeof v.value === 'number') || (v.type === 'UnaryExpression' && v.operator === '-' && v.argument.type === 'Literal') || (v.type === 'MemberExpression' && !v.computed && /^[A-Z][A-Z_0-9]+$/.test(v.property.name)) || (v.type === 'Identifier' && /^[A-Z][A-Z_0-9]+$/.test(v.name));
-    for (const [k, test] of [['double', constNum], ['string', (v) => (v.type === 'Literal' && typeof v.value === 'string') || v.type === 'TemplateLiteral'], ['bool', (v) => v.type === 'Literal' && typeof v.value === 'boolean']]) {
+    for (const [k, test] of [['double', constNum], ['string', function strish(v) { return (v.type === 'Literal' && typeof v.value === 'string') || v.type === 'TemplateLiteral' || (v.type === 'ConditionalExpression' && strish(v.consequent) && strish(v.alternate)); }], ['bool', (v) => v.type === 'Literal' && typeof v.value === 'boolean']]) {
       if (lit.type === 'ObjectExpression' && lit.properties.length && lit.properties.every((p) => p.type === 'Property' && !p.computed && test(p.value))) {
         recordConsts.add(name);
         d.__record = true;
@@ -1376,7 +1384,9 @@ function translate(mod) {
         if (s.argument?.type === 'ArrayExpression' && /^List</.test(ctx.fnRet ?? '')) return [`${ind}return (${ctx.fnRet})${ex(s.argument)};`];
         if (s.argument?.type === 'CallExpression' && s.argument.callee.type === 'MemberExpression' && s.argument.callee.property?.name === 'map' && /^List<\w+>\??$/.test(ctx.fnRet ?? '')) s.argument.__targ = ctx.fnRet.match(/^List<(\w+)>/)[1];
         if (s.argument?.type === 'ObjectExpression' && classFields.has(strip(ctx.fnRet ?? '') ?? '')) s.argument.__class = strip(ctx.fnRet);
+        if (s.argument?.type === 'ObjectExpression' && s.argument.properties.some((q) => q.type === 'SpreadElement') && classFields.has(strip(ctx.fnRet ?? '') ?? '')) spreadAs = strip(ctx.fnRet);
         curRet = ctx.fnRet ?? '';
+        if (s.argument?.type === 'ConditionalExpression' && ctx.fnRet === 'void') return [`${ind}{ if (${ex(s.argument.test, true)}) { ${ex(s.argument.consequent)}; } else { ${ex(s.argument.alternate)}; } return; }`];
         if (s.argument && ctx.fnRet === 'void') return [`${ind}{ ${ex(s.argument)}; return; }`];
         return [`${ind}return${s.argument ? ' ' + ex(s.argument, ctx.fnRet === 'bool') : ''};`];
       case 'IfStatement': {

@@ -595,7 +595,6 @@ public static partial class Js
     public static V At<V>(JsRecord<V> a, string k, V b) => a.TryGetValue(k, out var v) && v is not null ? v : b;
     public static V At<V>(JsRecord<V> a, double k, V b) => At(a, Str(k), b);
     public static V At<V>(List<V> a, double i, V b) => i >= 0 && i < a.Count && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
-    public static V At<V>(List<V?> a, double i, V b) where V : struct => i >= 0 && i < a.Count && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
     public static V At<K, V>(JsMap<K, V> a, K k, V b) where K : notnull => a.has(k) && a.get(k) is V v ? v : b;
 
     /// <summary>a || b used as a value: a if truthy, else b.</summary>
@@ -603,7 +602,7 @@ public static partial class Js
 
     /// <summary>x! in TypeScript: for a nullable value type, its value.</summary>
     public static V NN<V>(V? x) where V : struct => x!.Value;
-    public static V NN<V>(V? x) where V : class => x!;
+    public static V NN<V>(V x) => x!;
     public static double NN(double x) => x;
     public static int NN(int x) => x;
     public static bool NN(bool x) => x;

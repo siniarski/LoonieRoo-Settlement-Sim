@@ -405,7 +405,7 @@ public static partial class ControlMod
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
         var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
-        var steps = ((face.x != 0) && (face.y != 0)) ? ((List<Point>)new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } }) : ((List<Point>)[face]);
+        List<Point> steps = ((face.x != 0) && (face.y != 0)) ? ((List<Point>)new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } }) : ((List<Point>)[face]);
         foreach (var d in Js.Iter(steps))
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };

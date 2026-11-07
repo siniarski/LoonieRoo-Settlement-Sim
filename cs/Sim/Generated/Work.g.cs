@@ -66,7 +66,7 @@ public static partial class Work
                 }
             case "guard":
                 {
-                    { Js.T(job.animalId) ? workHunt(state, s, job) : workGuard(state, s, job); return; }
+                    { if (Js.T(job.animalId)) { workHunt(state, s, job); } else { workGuard(state, s, job); } return; }
                 }
             case "firefight":
                 {
@@ -620,7 +620,7 @@ public static partial class Work
         }
         if (Js.T(bp.side))
         {
-            var sides = [new Point { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new Point { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new Point { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
+            List<Point> sides = [new Point { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new Point { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new Point { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
             if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
             {
                 { goTo(state, s, job, sides); return; }
@@ -672,7 +672,7 @@ public static partial class Work
     /// <summary>Mends an edge wall or door, standing on either side of it.</summary>
     public static void workRepairEdge(SimState state, Survivor s, Job job, int e)
     {
-        var sides = [new Point { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new Point { x = Js.I(job.x), y = Js.I(job.y - 1) } : new Point { x = Js.I(job.x - 1), y = Js.I(job.y) }];
+        List<Point> sides = [new Point { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new Point { x = Js.I(job.x), y = Js.I(job.y - 1) } : new Point { x = Js.I(job.x - 1), y = Js.I(job.y) }];
         if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
         {
             { goTo(state, s, job, sides); return; }

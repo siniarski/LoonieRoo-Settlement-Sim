@@ -798,6 +798,6 @@ public static partial class Buildings
                 }
             }
         }
-        return Js.With(Js.Clone(p), __s4 => { __s4.cells = cells; __s4.ground = ground; __s4.edges = edges; });
+        return Js.With(Js.CopyAs<BuildingsPlan>(p), __s4 => { __s4.cells = cells; __s4.ground = ground; __s4.edges = edges; });
     }
 }

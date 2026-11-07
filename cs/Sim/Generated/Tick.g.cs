@@ -156,7 +156,7 @@ public static partial class Tick
     /// <summary>Moving under its own steering, not tile steps (motion.ts).</summary>
     public static bool isFree(SimState state, Body e)
     {
-        var id = (e).id ?? "";
+        var id = ((IHasId)(e)).id ?? "";
         return id.startsWith("z") || ((state.control != null) && (id == state.control.survivorId));
     }
 

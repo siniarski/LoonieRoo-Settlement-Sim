@@ -34,7 +34,7 @@ public static partial class Worldgen
     public static Layout layout(double seed, double size, string map = "mainland")
     {
         var plan = Worldplan.planWorld(seed, size, map);
-        return Js.With(Js.Clone(plan.nature), __s0 => { __s0.plan = plan; __s0.towns = plan.towns; });
+        return Js.With(Js.CopyAs<Layout>(plan.nature), __s0 => { __s0.plan = plan; __s0.towns = plan.towns; });
     }
 
     /// <summary>A country road or town street on this tile.</summary>
