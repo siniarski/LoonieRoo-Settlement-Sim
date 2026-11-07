@@ -142,7 +142,7 @@ public sealed partial class WorldMap : Control
     void Rebuild(SimState s)
     {
         var grid = s.grid;
-        if (image == null || image.GetWidth() != grid.width || image.GetHeight() != grid.height) image = Image.CreateEmpty(grid.width, grid.height, false, Image.Format.Rgb8);
+        if (image == null || image.GetWidth() != grid.width || image.GetHeight() != grid.height) image = Image.CreateEmpty(grid.width, grid.height, false, Image.Format.Rgba8);
         for (int i = 0; i < grid.width * grid.height; i++)
         {
             int edge = grid.edges[i * 2] != 0 ? grid.edges[i * 2] : grid.edges[i * 2 + 1];

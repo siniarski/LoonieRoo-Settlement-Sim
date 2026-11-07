@@ -71,7 +71,7 @@ public sealed partial class Minimap : Control
             w = nw;
             h = nh;
             px = Math.Max(1, MAX_PX / w);
-            image = Image.CreateEmpty(w, h, false, Image.Format.Rgb8);
+            image = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
             CustomMinimumSize = new Vector2(w * px, h * px);
         }
         for (int py = 0; py < h; py++)
