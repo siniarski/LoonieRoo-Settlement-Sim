@@ -32,7 +32,7 @@ public static partial class Leisure
     /// <summary>Called when an idle survivor found no job. Returns true if they set off to relax.</summary>
     public static bool startLeisure(SimState state, Survivor s)
     {
-        if (Js.T(s.leisure) || Js.T(s.breakdown) || Mood.mood(state, s) >= RELAX_BELOW)
+        if ((Js.T(s.leisure) || Js.T(s.breakdown)) || (Mood.mood(state, s) >= RELAX_BELOW))
         {
             return false;
         }
@@ -40,8 +40,8 @@ public static partial class Leisure
         {
             return s.thoughts.some((t) => t.kind == kind);
         }
-        var grieving = Js.T(has("lostFriend")) || Js.T(has("sawDeath")) && !Js.T(has("paidRespects"));
-        string? at = Js.T(grieving) && Rooms.completeRooms(state, "graveyard").size > 0 ? "graveyard" : Js.T(has("relaxed")) ? null : "recroom";
+        var grieving = (Js.T(has("lostFriend")) || Js.T(has("sawDeath"))) && !Js.T(has("paidRespects"));
+        string? at = (Js.T(grieving) && (Rooms.completeRooms(state, "graveyard").size > 0)) ? "graveyard" : (Js.T(has("relaxed")) ? null : "recroom");
         if (!Js.T(at))
         {
             return false;
@@ -51,8 +51,8 @@ public static partial class Leisure
         {
             return false;
         }
-        s.leisure = new() { x = spot.x, y = spot.y, progress = 0, at = at };
-        s.note = at == "graveyard" ? $"going to the graveyard at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"going to relax at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
+        s.leisure = new() { x = Js.I(spot.x), y = Js.I(spot.y), progress = 0, at = at };
+        s.note = (at == "graveyard") ? $"going to the graveyard at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"going to relax at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
         return true;
     }
 
@@ -74,7 +74,7 @@ public static partial class Leisure
             }
             s.leisure = was;
         }
-        var spot = new() { x = s.leisure.x, y = s.leisure.y };
+        var spot = new() { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
         if (!Js.T(spotFree(state, s, spot, s.leisure.at)))
         {
             s.leisure = null;
@@ -84,7 +84,7 @@ public static partial class Leisure
         if (!Js.T(Space.samePoint(s.pos, spot)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [spot]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 s.leisure = null;
                 s.note = "can't reach the rec room";
@@ -113,7 +113,7 @@ public static partial class Leisure
     public static bool spotFree(SimState state, Survivor s, Point p, string at)
     {
         var rooms = Rooms.completeRooms(state, at);
-        return rooms.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) && !state.survivors.some((o) => o != s && Js.T(o.leisure) && o.leisure.x == p.x && o.leisure.y == p.y);
+        return (rooms.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Grids.isWalkable(state.grid, p.x, p.y))) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) && !state.survivors.some((o) => (o != s) && Js.T(o.leisure) && (o.leisure.x == p.x) && (o.leisure.y == p.y));
     }
 
     public static Point? pickSpot(SimState state, Survivor s, string at)
@@ -132,7 +132,7 @@ public static partial class Leisure
         {
             foreach (var i in Js.Iter(all[Js.Idx(index)]!.tiles))
             {
-                var p = new() { x = i % width, y = JsMath.floor(((double)(i) / (width))) };
+                var p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(spotFree(state, s, p, at)))
                 {
                     spots.push(p);
@@ -157,7 +157,7 @@ public static partial class Leisure
             s.note = "pulled themselves together";
             return;
         }
-        if (state.tick % BREAKDOWN_CHECK_EVERY != 0 || !Js.T(Mood.isMiserable(state, s)) || Js.T(Resolve.isSteeled(s)) || Js.T(s.sleep))
+        if (((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Js.T(Mood.isMiserable(state, s)) || Js.T(Resolve.isSteeled(s)) || Js.T(s.sleep))
         {
             return;
         }

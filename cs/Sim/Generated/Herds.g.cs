@@ -39,11 +39,11 @@ public static partial class Herds
 
     public static void updateHerds(SimState state)
     {
-        if (Time.dayOf(state.tick) >= 2 && Time.tickOfDay(state.tick) == HERD_HOUR * Time.TICKS_PER_HOUR && Rng.random(state) < HERD_CHANCE)
+        if ((Time.dayOf(state.tick) >= 2) && (Time.tickOfDay(state.tick) == (HERD_HOUR * Time.TICKS_PER_HOUR)) && (Rng.random(state) < HERD_CHANCE))
         {
             startHerd(state);
         }
-        var warnRadius = Js.T(Towers.hasTower(state)) ? WARN_RADIUS * Towers.TOWER_WARN_FACTOR : WARN_RADIUS;
+        var warnRadius = Js.T(Towers.hasTower(state)) ? (WARN_RADIUS * Towers.TOWER_WARN_FACTOR) : WARN_RADIUS;
         foreach (var h in Js.Iter([.. state.herds]))
         {
             if (!Js.T(h.heard) && state.survivors.some((s) => Space.manhattan(s.pos, h) <= warnRadius))
@@ -62,7 +62,7 @@ public static partial class Herds
             h.nextStepTick = state.tick + HERD_TICKS_PER_TILE;
             var dx = h.to.x - h.x;
             var dy = h.to.y - h.y;
-            if (dx == 0 && dy == 0)
+            if ((dx == 0) && (dy == 0))
             {
                 state.herds.splice(state.herds.indexOf(h), 1);
                 continue;
@@ -76,7 +76,7 @@ public static partial class Herds
                 h.y += JsMath.sign(dy);
             }
         }
-        if (state.tick % 10 == 0)
+        if ((state.tick % 10) == 0)
         {
             wakeDormant(state);
         }
@@ -90,26 +90,26 @@ public static partial class Herds
         List<Point> edge = [];
         for (var x = 0; x < width; x += 4)
         {
-            edge.push(new() { x = x, y = 0 }, new() { x = x, y = height - 1 });
+            edge.push(new() { x = Js.I(x), y = Js.I(0) }, new() { x = Js.I(x), y = Js.I(height - 1) });
         }
-        for (var y = 4; y < height - 1; y += 4)
+        for (var y = 4; y < (height - 1); y += 4)
         {
-            edge.push(new() { x = 0, y = y }, new() { x = width - 1, y = y });
+            edge.push(new() { x = Js.I(0), y = Js.I(y) }, new() { x = Js.I(width - 1), y = Js.I(y) });
         }
         var from = Rng.pick(state, edge);
         Point to = default!;
-        if (state.survivors.length > 0 && Rng.random(state) < HERD_TOWARD_COLONY)
+        if ((state.survivors.length > 0) && (Rng.random(state) < HERD_TOWARD_COLONY))
         {
             var cx = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0)) / (state.survivors.length)));
             var cy = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0)) / (state.survivors.length)));
-            to = new() { x = clamp(2 * cx - from.x, width), y = clamp(2 * cy - from.y, height) };
+            to = new() { x = Js.I(clamp((2 * cx) - from.x, width)), y = Js.I(clamp((2 * cy) - from.y, height)) };
         }
         else
         {
-            to = new() { x = width - 1 - from.x, y = height - 1 - from.y };
+            to = new() { x = Js.I((width - 1) - from.x), y = Js.I((height - 1) - from.y) };
         }
         var size = herdSize(Time.dayOf(state.tick));
-        state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = from.x, y = from.y, to = to, size = size, nextStepTick = state.tick, heard = false });
+        state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(from.x), y = Js.I(from.y), to = to, size = size, nextStepTick = state.tick, heard = false });
         Events.logEvent(state, $"A herd of about {Js.Str(size)} is on the move somewhere out there");
     }
 
@@ -125,13 +125,13 @@ public static partial class Herds
     /// <summary>Compass direction of an offset (y grows southwards).</summary>
     public static string direction(int dx, int dy)
     {
-        if (dx == 0 && dy == 0)
+        if ((dx == 0) && (dy == 0))
         {
             return "nearby";
         }
-        var ns = JsMath.abs(dy) * 2 < JsMath.abs(dx) ? "" : dy < 0 ? "north" : "south";
-        var ew = JsMath.abs(dx) * 2 < JsMath.abs(dy) ? "" : dx < 0 ? "west" : "east";
-        return Js.T(ns) && Js.T(ew) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : Js.Or(ns, ew);
+        var ns = (JsMath.abs(dy) * 2) < JsMath.abs(dx) ? "" : ((dy < 0) ? "north" : "south");
+        var ew = (JsMath.abs(dx) * 2) < JsMath.abs(dy) ? "" : ((dx < 0) ? "west" : "east");
+        return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
     }
 
     public static /*TODO return type*/object clamp(double v, double size)
@@ -146,21 +146,21 @@ public static partial class Herds
         var n = JsMath.min(h.size, Zombies.MAX_ZOMBIES - state.zombies.length);
         var __d1 = state.grid;
         var width = __d1.width;
-        var taken = Js.Set(state.zombies.map((z) => z.pos.y * width + z.pos.x));
+        var taken = Js.Set(state.zombies.map((z) => (z.pos.y * width) + z.pos.x));
         bool free(int x, int y)
         {
-            return Grids.getTile(state.grid, x, y) == "floor" && Rooms.labelAt(state, x, y) == Rooms.OUTDOORS && !taken.has(y * width + x);
+            return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !taken.has((y * width) + x);
         }
         List<Zombie> made = [];
         for (var i = 0; i < n; i++)
         {
-            var p = Space.nearestTile(state.grid, new() { x = h.x, y = h.y }, free);
+            var p = Space.nearestTile(state.grid, new() { x = Js.I(h.x), y = Js.I(h.y) }, free);
             if (!Js.T(p))
             {
                 break;
             }
             var z = Zombies.addZombie(state, p.x, p.y, Zombies.zombieHealthForNight(Time.dayOf(state.tick)), "herd");
-            taken.add(p.y * width + p.x);
+            taken.add((p.y * width) + p.x);
             ZombieKinds.giveVariant(z, Time.dayOf(state.tick));
             z.heading = Js.Clone(h.to);
             made.push(z);
@@ -180,7 +180,7 @@ public static partial class Herds
         var cells = new JsMap<double, List<Point>>();
         /*TODO return type*/object cell(int x, int y)
         {
-            return JsMath.floor(((double)(y) / (WAKE_RADIUS))) * 100003 + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
+            return (JsMath.floor(((double)(y) / (WAKE_RADIUS))) * 100003) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
         }
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -201,7 +201,7 @@ public static partial class Herds
             {
                 for (var dx = -1; dx <= 1; dx++)
                 {
-                    foreach (var p in Js.Iter(cells.get(cell(d.x + dx * WAKE_RADIUS, d.y + dy * WAKE_RADIUS)) ?? []))
+                    foreach (var p in Js.Iter(cells.get(cell(d.x + (dx * WAKE_RADIUS), d.y + (dy * WAKE_RADIUS))) ?? []))
                     {
                         if (Space.manhattan(p, d) <= WAKE_RADIUS)
                         {
@@ -223,18 +223,18 @@ public static partial class Herds
                 break;
             }
             state.dormant.splice(state.dormant.indexOf(d), 1);
-            var p = Grids.getTile(state.grid, d.x, d.y) == "floor" ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
+            var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
             if (!Js.T(p) || !Js.T(Grids.inBounds(state.grid, p.x, p.y)))
             {
                 continue;
             }
             ZombieKinds.giveVariant(Zombies.addZombie(state, p.x, p.y, Zombies.zombieHealthForNight(Time.dayOf(state.tick)), "static"), Time.dayOf(state.tick));
             woke += 1;
-            where ??= new() { x = p.x, y = p.y };
+            where ??= new() { x = Js.I(p.x), y = Js.I(p.y) };
         }
         if (Js.T(where))
         {
-            Events.logEvent(state, woke == 1 ? $"A zombie stirs at ({Js.Str(where.x)}, {Js.Str(where.y)})" : $"{Js.Str(woke)} zombies stir near ({Js.Str(where.x)}, {Js.Str(where.y)})");
+            Events.logEvent(state, (woke == 1) ? $"A zombie stirs at ({Js.Str(where.x)}, {Js.Str(where.y)})" : $"{Js.Str(woke)} zombies stir near ({Js.Str(where.x)}, {Js.Str(where.y)})");
         }
     }
 }

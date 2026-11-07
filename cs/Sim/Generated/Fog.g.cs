@@ -29,11 +29,11 @@ public static partial class Fog
 
     public static bool isExplored(SimState state, int x, int y)
     {
-        return Js.T(Grids.inBounds(state.grid, x, y)) && state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] == 1;
+        return Js.T(Grids.inBounds(state.grid, x, y)) && (state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] == 1);
     }
 
     /// <summary>Reveals a whole circle, walls or not (the camp at the start).</summary>
-    public static void revealAround(SimState state, Point p, /*TODO param type*/object? r = null)
+    public static void revealAround(SimState state, Point p, double? r = null)
     {
         r ??= Sight.SIGHT_RADIUS;
         var __d0 = state;
@@ -42,8 +42,8 @@ public static partial class Fog
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                var i = y * grid.width + x;
-                if (grid.explored[Js.Idx(i)] == 1 || JsMath.pow(x - p.x, 2) + JsMath.pow(y - p.y, 2) > r * r)
+                var i = (y * grid.width) + x;
+                if ((grid.explored[Js.Idx(i)] == 1) || (JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2)) > (r * r))
                 {
                     continue;
                 }
@@ -57,22 +57,22 @@ public static partial class Fog
     public static void noteFind(SimState state, int x, int y)
     {
         var f = FurnitureMod.furnitureAt(state, x, y);
-        if (f?.kind != "crate" || f.loot == 0)
+        if ((f?.kind != "crate") || (f.loot == 0))
         {
             return;
         }
-        if (state.pointsOfInterest.some((p) => Space.manhattan(p, new() { x = x, y = y }) <= POI_SPACING))
+        if (state.pointsOfInterest.some((p) => Space.manhattan(p, new() { x = Js.I(x), y = Js.I(y) }) <= POI_SPACING))
         {
             return;
         }
-        state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = x, y = y, label = "ruin with crates" });
+        state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), label = "ruin with crates" });
         Events.logEvent(state, $"Found a ruin with crates at ({Js.Str(x)}, {Js.Str(y)})");
     }
 
     /// <summary>Drops markers whose crates have all been searched.</summary>
     public static void reconcilePointsOfInterest(SimState state)
     {
-        if (state.tick % 50 != 0 || state.pointsOfInterest.length == 0)
+        if (((state.tick % 50) != 0) || (state.pointsOfInterest.length == 0))
         {
             return;
         }
@@ -83,7 +83,7 @@ public static partial class Fog
     /// <summary>Late in the day: scouts stop exploring until morning.</summary>
     public static bool scoutingOver(int tick)
     {
-        return Js.T(Time.isNight(tick)) || Time.hourOf(tick) >= SCOUT_HOME_HOUR;
+        return Js.T(Time.isNight(tick)) || (Time.hourOf(tick) >= SCOUT_HOME_HOUR);
     }
 
     /// <summary>What each survivor last looked at: skip the look when nothing it depends on has changed.</summary>
@@ -101,7 +101,7 @@ public static partial class Fog
         {
             Worldgen.ensureGeneratedAround(state, s.pos);
             var r = Sight.sightRadius(state, s);
-            doors ??= grid.open.join(",") + "|" + grid.edgeOpen.join(",");
+            doors ??= (grid.open.join(",") + "|") + grid.edgeOpen.join(",");
             var key = $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)},{Js.Str(r)},{Js.Str(Towers.onTower(state, s))},{Js.Str(state.walkabilityVersion)},{Js.Str(doors)}";
             if (last[Js.Idx(s.id)] == key)
             {
@@ -131,7 +131,7 @@ public static partial class Fog
             {
                 if (!Js.T(isExplored(state, x, y)) && Js.T(Grids.isWalkable(state.grid, x, y)))
                 {
-                    @out.push(new() { x = x, y = y });
+                    @out.push(new() { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }
@@ -141,7 +141,7 @@ public static partial class Fog
     /// <summary>The nearest unexplored tile in the area that `from` can walk to, or null when the area is done.</summary>
     public static Point? scoutTarget(SimState state, ExploreArea a, Point from)
     {
-        var targets = unexploredIn(state, a).sort((p, q) => Js.T(Space.manhattan(from, p) - Space.manhattan(from, q)) || Js.T(p.y - q.y) || Js.T(p.x - q.x));
+        var targets = unexploredIn(state, a).sort((p, q) => (Js.T(Space.manhattan(from, p) - Space.manhattan(from, q))) || (Js.T(p.y - q.y)) || (Js.T(p.x - q.x)));
         return targets.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p]))) ?? null;
     }
 

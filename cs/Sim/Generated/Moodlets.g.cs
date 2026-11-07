@@ -29,12 +29,12 @@ public static partial class Moodlets
     /// <summary>A blow's damage after moodlets.</summary>
     public static double boostDamage(Survivor s, double damage)
     {
-        return Js.T(boosted(s, "harder")) ? JsMath.round(((double)(damage * HARDER_PCT) / (100))) : damage;
+        return Js.T(boosted(s, "harder")) ? JsMath.round(((double)((damage * HARDER_PCT)) / (100))) : damage;
     }
 
     /// <summary>Ticks between swings after moodlets.</summary>
     public static double swingWait(Survivor s, double @base)
     {
-        return @base - Js.T(boosted(s, "faster")) ? SWING_SOONER : 0 + Js.T(boosted(s, "slower")) ? SWING_LATER : 0;
+        return (@base - (Js.T(boosted(s, "faster")) ? SWING_SOONER : 0)) + (Js.T(boosted(s, "slower")) ? SWING_LATER : 0);
     }
 }

@@ -37,12 +37,12 @@ public static partial class Crafting
 
     public static bool isCraftKind(object k)
     {
-        return /*TODO typeof*/Js.TypeOf(k) == "string" && ORDERABLE.includes(k);
+        return (/*TODO typeof*/Js.TypeOf(k) == "string") && (ORDERABLE).includes(k);
     }
 
     public static bool isStation(string kind)
     {
-        return kind == "workbench" || kind == "stove";
+        return (kind == "workbench") || (kind == "stove");
     }
 
     /// <summary>Items of this kind the colony has spare: on the ground or being hauled, not wielded or worn.</summary>
@@ -62,7 +62,7 @@ public static partial class Crafting
         var n = 0;
         foreach (var i in Js.Iter(state.items))
         {
-            if (i.kind == kind && !used.has(i.id))
+            if ((i.kind == kind) && !used.has(i.id))
             {
                 n++;
             }
@@ -72,13 +72,13 @@ public static partial class Crafting
 
     public static double target(SimState state, string kind)
     {
-        return kind == "meal" ? MEALS_PER_SURVIVOR * state.survivors.length : state.craftTargets[Js.Idx(kind)];
+        return (kind == "meal") ? (MEALS_PER_SURVIVOR * state.survivors.length) : state.craftTargets[Js.Idx(kind)];
     }
 
     /// <summary>Craftables for this station below their target, in CRAFTABLES order.</summary>
     public static List<string> wantedCrafts(SimState state, string station = "workbench", bool inWorkshop = false)
     {
-        return CRAFTABLES.filter((k) => RECIPES[Js.Idx(k)].station == station && Js.T(inWorkshop) || !Js.T(RECIPES[Js.Idx(k)].workshopOnly) && !Js.T(RECIPES[Js.Idx(k)].needs) || state.knowledge.includes(RECIPES[Js.Idx(k)].needs!) && craftStock(state, k) < target(state, k));
+        return CRAFTABLES.filter((k) => (RECIPES[Js.Idx(k)].station == station) && (Js.T(inWorkshop) || !Js.T(RECIPES[Js.Idx(k)].workshopOnly)) && (!Js.T(RECIPES[Js.Idx(k)].needs) || state.knowledge.includes(RECIPES[Js.Idx(k)].needs!)) && (craftStock(state, k) < target(state, k)));
     }
 
     /// <summary>The first craftable for this station below its target, or null when stocks are full.</summary>
@@ -97,13 +97,13 @@ public static partial class Crafting
         var wanted = wantedCrafts(state, f.kind, inWorkshop(state, f));
         bool holds(string k)
         {
-            return f.stored > 0 && RECIPES[Js.Idx(k)].input == f.storedKind;
+            return (f.stored > 0) && (RECIPES[Js.Idx(k)].input == f.storedKind);
         }
         bool has(string k)
         {
             return craftStock(state, RECIPES[Js.Idx(k)].input) > 0;
         }
-        return wanted.find((k) => Js.T(holds(k)) && f.stored >= RECIPES[Js.Idx(k)].count || Js.T(has(k))) ?? wanted.find(has) ?? wanted[Js.Idx(0)] ?? null;
+        return ((wanted.find((k) => Js.T(holds(k)) && (f.stored >= RECIPES[Js.Idx(k)].count) || Js.T(has(k))) ?? wanted.find(has)) ?? wanted[Js.Idx(0)]) ?? null;
     }
 
     /// <summary>Is this station in a complete workshop?</summary>

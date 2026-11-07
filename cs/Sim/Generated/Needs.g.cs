@@ -25,20 +25,20 @@ public static partial class Needs
 
     public static bool isTired(SimState state, Survivor s)
     {
-        var bedtime = s.shift == "night" ? !Js.T(Time.isNight(state.tick)) : Time.isNight(state.tick);
-        return s.rest < Js.T(bedtime) ? Rest.NIGHT_TIRED : Rest.TIRED;
+        var bedtime = (s.shift == "night") ? !Js.T(Time.isNight(state.tick)) : Time.isNight(state.tick);
+        return s.rest < (Js.T(bedtime) ? Rest.NIGHT_TIRED : Rest.TIRED);
     }
 
     /// <summary>A guard finishes the fight: needs don't pull them off a guard job. (Without this, a tired guard flip-flops between hunting and bed as the zombie drifts in and out of DANGER_RADIUS.)</summary>
     public static bool onGuardDuty(SimState state, Survivor s)
     {
-        return !Js.T(Health.isCritical(s.health)) && s.jobId != null && Jobs.getJob(state, s.jobId)?.type == "guard";
+        return (!Js.T(Health.isCritical(s.health)) && (s.jobId != null)) && (Jobs.getJob(state, s.jobId)?.type == "guard");
     }
 
     /// <summary>Tired with no zombie close enough to make lying down a bad idea, or critically hurt (then bed is where they recover, zombies or not).</summary>
     public static bool wantsSleep(SimState state, Survivor s)
     {
-        return Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos)) || Js.T(Health.isCritical(s.health)) || Js.T(Policies.quarantined(state, s));
+        return (Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos))) || Js.T(Health.isCritical(s.health)) || Js.T(Policies.quarantined(state, s));
     }
 
     public static bool isHungry(Survivor s)
@@ -49,7 +49,7 @@ public static partial class Needs
     public static Furniture? getBed(SimState state, string id)
     {
         var f = FurnitureMod.getFurniture(state, id);
-        return f?.kind == "bed" ? f : null;
+        return (f?.kind == "bed") ? f : null;
     }
 
     /// <summary>Drops sleep and meal plans whose bed or food has gone. Runs at the start of each tick.</summary>
@@ -60,7 +60,7 @@ public static partial class Needs
             if (Js.T(s.meal))
             {
                 var item = Items.getItem(state, s.meal.itemId);
-                if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos) && item.carriedBy != s.id)
+                if ((!Js.T(item) || (item.reservedBy != s.id)) || (!Js.T(item.pos) && (item.carriedBy != s.id)))
                 {
                     cancelMeal(state, s, "food gone");
                 }
@@ -68,7 +68,7 @@ public static partial class Needs
             if (Js.T(s.treatment))
             {
                 var item = Items.getItem(state, s.treatment.itemId);
-                if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos))
+                if ((!Js.T(item) || (item.reservedBy != s.id)) || !Js.T(item.pos))
                 {
                     cancelTreatment(state, s, "bandage gone");
                 }
@@ -80,7 +80,7 @@ public static partial class Needs
                 continue;
             }
             var bed = getBed(state, s.sleep.bedId);
-            if (Js.T(bed) && bed.occupant == s.id)
+            if (Js.T(bed) && (bed.occupant == s.id))
             {
                 continue;
             }
@@ -95,7 +95,7 @@ public static partial class Needs
     /// <summary>Interrupts work for a need before movement, so a tired or hungry hauler doesn't finish a long walk first. Hunger only interrupts if there is food to go to.</summary>
     public static void interruptForNeeds(SimState state, Survivor s)
     {
-        if (!Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.drink) || Js.T(s.treatment) || Js.T(onGuardDuty(state, s)))
+        if ((!Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.drink) || Js.T(s.treatment) || Js.T(onGuardDuty(state, s)))
         {
             return;
         }
@@ -118,17 +118,17 @@ public static partial class Needs
                 s.nextDrinkTick = state.tick + Water.DRINK_RETRY_TICKS;
             }
         }
-        else if (state.tick >= s.nextTreatTick && Js.T(nearestRemedy(state, s)))
+        else if ((state.tick >= s.nextTreatTick) && Js.T(nearestRemedy(state, s)))
         {
             Jobs.releaseSurvivor(state, s, "going to treat wounds");
         }
-        else if (Js.T(isHungry(s)) && state.tick >= s.nextMealTick)
+        else if (Js.T(isHungry(s)) && (state.tick >= s.nextMealTick))
         {
             if (Js.T(nearestFreeItem(state, s, "food")))
             {
                 Jobs.releaseSurvivor(state, s, "hungry");
             }
-            else if (s.satiety < Forage.FORAGE_HUNGER && Js.T(Forage.forageTime(state)) && !Js.T(onGuardDuty(state, s)))
+            else if ((s.satiety < Forage.FORAGE_HUNGER) && Js.T(Forage.forageTime(state)) && !Js.T(onGuardDuty(state, s)))
             {
                 Jobs.releaseSurvivor(state, s, "going to forage");
             }
@@ -156,7 +156,7 @@ public static partial class Needs
         }
         var meal = s.meal!;
         var item = Items.getItem(state, meal.itemId);
-        if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos) && item.carriedBy != s.id)
+        if ((!Js.T(item) || (item.reservedBy != s.id)) || (!Js.T(item.pos) && (item.carriedBy != s.id)))
         {
             cancelMeal(state, s, "food gone");
             return false;
@@ -166,7 +166,7 @@ public static partial class Needs
             if (!Js.T(Space.samePoint(s.pos, item.pos)))
             {
                 var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-                if (!Js.T(path) || path.length == 0)
+                if (!Js.T(path) || (path.length == 0))
                 {
                     cancelMeal(state, s, "can't reach the food");
                     s.nextMealTick = state.tick + Food.MEAL_RETRY_TICKS;
@@ -187,7 +187,7 @@ public static partial class Needs
                 meal.seat = null;
             }
         }
-        if (Js.T(meal.seat) && meal.progress == 0)
+        if (Js.T(meal.seat) && (meal.progress == 0))
         {
             var path = Js.T(Mess.seatUsable(state, s, meal.seat)) ? Pathfinding.findPathToAny(state.grid, s.pos, [meal.seat]) : null;
             if (!Js.T(path))
@@ -215,7 +215,7 @@ public static partial class Needs
         }
         Items.removeItem(state, item);
         var hot = item.kind == "meal";
-        s.satiety = JsMath.min(Food.SATIETY_MAX, s.satiety + Js.T(hot) ? Food.HOT_MEAL_VALUE : Food.MEAL_VALUE);
+        s.satiety = JsMath.min(Food.SATIETY_MAX, s.satiety + (Js.T(hot) ? Food.HOT_MEAL_VALUE : Food.MEAL_VALUE));
         Mood.addThought(state, s, Js.T(meal.seat) ? "ateAtTable" : "ateWithoutTable");
         if (Js.T(hot))
         {
@@ -228,7 +228,7 @@ public static partial class Needs
 
     public static bool startMeal(SimState state, Survivor s)
     {
-        if (!Js.T(isHungry(s)) || state.tick < s.nextMealTick)
+        if (!Js.T(isHungry(s)) || (state.tick < s.nextMealTick))
         {
             return false;
         }
@@ -255,7 +255,7 @@ public static partial class Needs
     /// <summary>Nearest unreserved item of a kind, on the ground, that this survivor can reach.</summary>
     public static Item? nearestFreeItem(SimState state, Survivor s, string kind)
     {
-        return state.items.filter((i) => i.kind == kind && i.pos != null && i.reservedBy == null).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos])));
+        return state.items.filter((i) => (i.kind == kind) && (i.pos != null) && (i.reservedBy == null)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos])));
     }
 
     /// <summary>Gives up the reserved food (if any). Safe to call when not eating.</summary>
@@ -266,12 +266,12 @@ public static partial class Needs
             return;
         }
         var item = Items.getItem(state, s.meal.itemId);
-        if (Js.T(item) && s.carrying == item.id)
+        if (Js.T(item) && (s.carrying == item.id))
         {
             s.carrying = null;
             Items.dropItem(state, item, s.pos);
         }
-        if (Js.T(item) && item.reservedBy == s.id)
+        if (Js.T(item) && (item.reservedBy == s.id))
         {
             item.reservedBy = null;
         }
@@ -299,7 +299,7 @@ public static partial class Needs
         }
         var treatment = s.treatment!;
         var item = Items.getItem(state, treatment.itemId);
-        if (!Js.T(Js.T(item?.pos)) || item.reservedBy != s.id)
+        if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {
             cancelTreatment(state, s, "bandage gone");
             return false;
@@ -307,7 +307,7 @@ public static partial class Needs
         if (!Js.T(Space.samePoint(s.pos, item.pos)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 cancelTreatment(state, s, "can't reach the bandage");
                 s.nextTreatTick = state.tick + Health.TREAT_RETRY_TICKS;
@@ -328,7 +328,7 @@ public static partial class Needs
         Items.removeItem(state, item);
         Medicine.applyRemedy(s, item.kind);
         s.treatment = null;
-        s.note = item.kind == "medicine" ? "took medicine for the infection" : "treated wounds with a bandage";
+        s.note = (item.kind == "medicine") ? "took medicine for the infection" : "treated wounds with a bandage";
         return true;
     }
 
@@ -348,7 +348,7 @@ public static partial class Needs
 
     public static bool startTreatment(SimState state, Survivor s)
     {
-        if (Medicine.remediesFor(s).length == 0 || state.tick < s.nextTreatTick)
+        if ((Medicine.remediesFor(s).length == 0) || (state.tick < s.nextTreatTick))
         {
             return false;
         }
@@ -366,7 +366,7 @@ public static partial class Needs
         Clothing.cancelDressing(state, s, "going to treat wounds");
         bandage.reservedBy = s.id;
         s.treatment = new() { itemId = bandage.id, progress = 0 };
-        s.note = $"going for {Js.Str(bandage.kind == "medicine" ? "medicine" : "a bandage")} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
+        s.note = $"going for {Js.Str((bandage.kind == "medicine") ? "medicine" : "a bandage")} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
         return true;
     }
 
@@ -378,7 +378,7 @@ public static partial class Needs
             return;
         }
         var item = Items.getItem(state, s.treatment.itemId);
-        if (Js.T(item) && item.reservedBy == s.id)
+        if (Js.T(item) && (item.reservedBy == s.id))
         {
             item.reservedBy = null;
         }
@@ -408,11 +408,11 @@ public static partial class Needs
         else if (Js.T(Seasons.isCold(state, s)))
         {
         }
-        else if (s.health > 0 && Js.T(Js.T(s.sleep?.asleep)))
+        else if ((s.health > 0) && Js.T(Js.T(s.sleep?.asleep)))
         {
-            s.health = JsMath.min(Health.HEALTH_MAX, s.health + Health.SLEEP_HEAL * Js.T(Medicine.inInfirmary(state, s)) ? Medicine.INFIRMARY_HEAL_FACTOR : 1);
+            s.health = JsMath.min(Health.HEALTH_MAX, s.health + (Health.SLEEP_HEAL * (Js.T(Medicine.inInfirmary(state, s)) ? Medicine.INFIRMARY_HEAL_FACTOR : 1)));
         }
-        else if (s.health > 0 && !Js.T(isHungry(s)) && state.tick % Health.AWAKE_HEAL_EVERY == 0)
+        else if ((s.health > 0) && !Js.T(isHungry(s)) && ((state.tick % Health.AWAKE_HEAL_EVERY) == 0))
         {
             s.health = JsMath.min(Health.HEALTH_MAX, s.health + 1);
         }
@@ -420,13 +420,13 @@ public static partial class Needs
         {
             return null;
         }
-        return s.satiety == 0 ? "starvation" : s.lastHurtBy ?? "injuries";
+        return (s.satiety == 0) ? "starvation" : (s.lastHurtBy ?? "injuries");
     }
 
     /// <summary>Death (or, with walkedAway, leaving for good: no body, no mourning).</summary>
     public static void killSurvivor(SimState state, Survivor s, string cause, bool walkedAway = false)
     {
-        if (state.control?.survivorId == s.id && !Js.T(walkedAway))
+        if ((state.control?.survivorId == s.id) && !Js.T(walkedAway))
         {
             SuccessionMod.beginSuccession(state, s, cause);
         }
@@ -443,7 +443,7 @@ public static partial class Needs
         Weapons.dropWeapon(state, s);
         Inventory.dropPack(state, s);
         Clothing.undress(state, s);
-        if (cause != "the infection" && !Js.T(walkedAway))
+        if ((cause != "the infection") && !Js.T(walkedAway))
         {
             Corpses.leaveCorpse(state, s.pos, s.name);
         }
@@ -499,7 +499,7 @@ public static partial class Needs
             return true;
         }
         var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && path.length > 0)
+        if (Js.T(path) && (path.length > 0))
         {
             Survivors.walk(s, path, state.walkabilityVersion);
             return true;
@@ -524,7 +524,7 @@ public static partial class Needs
             return;
         }
         bed.occupant = s.id;
-        if (bed.owner == null && !Js.T(Medicine.isInfirmaryBed(state, bed)) && !FurnitureMod.ofKind(state, "bed").some((f) => f.owner == s.id))
+        if ((bed.owner == null) && !Js.T(Medicine.isInfirmaryBed(state, bed)) && !FurnitureMod.ofKind(state, "bed").some((f) => f.owner == s.id))
         {
             bed.owner = s.id;
         }
@@ -537,7 +537,7 @@ public static partial class Needs
             return;
         }
         var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && path.length > 0)
+        if (Js.T(path) && (path.length > 0))
         {
             Survivors.walk(s, path, state.walkabilityVersion);
         }
@@ -550,9 +550,9 @@ public static partial class Needs
         var guard = Medicine.isGuard(s);
         /*TODO return type*/object rank(Furniture f)
         {
-            return Medicine.isInfirmaryBed(state, f) == hurt ? 0 : 4 + f.owner == s.id ? 0 : 2 + Medicine.isBarracksBed(state, f) == guard ? 0 : 1;
+            return ((Medicine.isInfirmaryBed(state, f) == hurt) ? 0 : 4) + ((f.owner == s.id) ? 0 : 2) + ((Medicine.isBarracksBed(state, f) == guard) ? 0 : 1);
         }
-        return FurnitureMod.ofKind(state, "bed").filter((f) => f.occupant == null && f.owner == null || f.owner == s.id).sort((a, b) => Js.Or(rank(a) - rank(b), Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b))).find((f) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [f])));
+        return FurnitureMod.ofKind(state, "bed").filter((f) => (f.occupant == null) && (f.owner == null) || (f.owner == s.id)).sort((a, b) => Js.Or(rank(a) - rank(b), Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b))).find((f) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [f])));
     }
 
     /// <summary>Drains or restores rest; wakes the survivor when full. Runs every tick, after movement and work.</summary>
@@ -567,9 +567,9 @@ public static partial class Needs
             s.rest = JsMath.max(0, s.rest - Rest.REST_DRAIN);
             return;
         }
-        var inBed = s.sleep.bedId != null && FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y)?.id == s.sleep.bedId;
-        s.rest = JsMath.min(Rest.REST_MAX, s.rest + Js.T(inBed) ? Rest.BED_REGEN : Rest.FLOOR_REGEN);
-        if (s.rest >= Rest.REST_MAX && !Js.T(Health.isHurt(s.health)) || Js.T(isHungry(s)))
+        var inBed = (s.sleep.bedId != null) && (FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y)?.id == s.sleep.bedId);
+        s.rest = JsMath.min(Rest.REST_MAX, s.rest + (Js.T(inBed) ? Rest.BED_REGEN : Rest.FLOOR_REGEN));
+        if ((s.rest >= Rest.REST_MAX) && (!Js.T(Health.isHurt(s.health)) || Js.T(isHungry(s))))
         {
             Mood.addThought(state, s, Js.T(s.sleep.bedId) ? "sleptInBed" : "sleptOnFloor");
             if (Js.T(s.sleep.bedId))
@@ -586,12 +586,12 @@ public static partial class Needs
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId) || !Js.T(Medicine.isGuard(s)) || Js.T(Health.isCritical(s.health)))
+            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Js.T(Medicine.isGuard(s)) || Js.T(Health.isCritical(s.health)))
             {
                 continue;
             }
             var bed = getBed(state, s.sleep.bedId);
-            if (Js.T(bed) && Js.T(Medicine.isBarracksBed(state, bed)) && Js.T(Zombies.zombieNear(state, s.pos)))
+            if ((Js.T(bed) && Js.T(Medicine.isBarracksBed(state, bed))) && Js.T(Zombies.zombieNear(state, s.pos)))
             {
                 wake(state, s, "woken for guard duty");
             }
@@ -605,7 +605,7 @@ public static partial class Needs
             return;
         }
         var bed = Js.T(s.sleep.bedId) ? getBed(state, s.sleep.bedId) : null;
-        if (Js.T(bed) && bed.occupant == s.id)
+        if (Js.T(bed) && (bed.occupant == s.id))
         {
             bed.occupant = null;
         }

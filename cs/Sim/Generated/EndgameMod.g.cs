@@ -48,7 +48,7 @@ public static partial class EndgameMod
     /// <summary>A zombie went down: maybe it leaves a sample.</summary>
     public static void maybeSample(SimState state, string zombieId, Point at)
     {
-        if (state.endgame.won == null && Hash.hashRoll(Hash.idNumber(zombieId), 0x5a3) < SAMPLE_CHANCE)
+        if ((state.endgame.won == null) && (Hash.hashRoll(Hash.idNumber(zombieId), 0x5a3) < SAMPLE_CHANCE))
         {
             Items.spawnItem(state, "sample", at.x, at.y);
         }
@@ -58,11 +58,11 @@ public static partial class EndgameMod
     public static double siegeFactor(SimState state, double night)
     {
         var evac = state.endgame.evacuation;
-        if (evac != null && Time.dayOf(evac) - 1 == night)
+        if ((evac != null) && ((Time.dayOf(evac) - 1) == night))
         {
             return EVAC_SIEGE;
         }
-        return night >= FIRST_SIEGE && night % SIEGE_EVERY == 0 ? SIEGE_FACTOR : 1;
+        return (night >= FIRST_SIEGE) && ((night % SIEGE_EVERY) == 0) ? SIEGE_FACTOR : 1;
     }
 
     /// <summary>Days to the next siege night (0: tonight).</summary>
@@ -73,12 +73,12 @@ public static partial class EndgameMod
         {
             return FIRST_SIEGE - day;
         }
-        return SIEGE_EVERY - day % SIEGE_EVERY % SIEGE_EVERY;
+        return (SIEGE_EVERY - (day % SIEGE_EVERY)) % SIEGE_EVERY;
     }
 
     public static bool researchWanted(SimState state)
     {
-        return state.endgame.won == null && state.endgame.cure < CURE_SAMPLES;
+        return (state.endgame.won == null) && (state.endgame.cure < CURE_SAMPLES);
     }
 
     /// <summary>A sample studied at a lab bench.</summary>
@@ -96,7 +96,7 @@ public static partial class EndgameMod
     public static void updateEndgame(SimState state)
     {
         var eg = state.endgame;
-        if (state.tick % Time.DAY_LENGTH == 0 && state.tick > 0)
+        if (((state.tick % Time.DAY_LENGTH) == 0) && (state.tick > 0))
         {
             var ahead = daysToSiege(state.tick);
             if (ahead == 2)
@@ -110,11 +110,11 @@ public static partial class EndgameMod
         }
         if (eg.evacuation == null)
         {
-            if (Time.dayOf(state.tick) < EVAC_FROM_DAY || !Js.T(Radio.hasRadio(state)) || !FurnitureMod.ofKind(state, "beacon").some((f) => Js.T(Power.isPowered(state, f))))
+            if ((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Js.T(Radio.hasRadio(state)) || !FurnitureMod.ofKind(state, "beacon").some((f) => Js.T(Power.isPowered(state, f))))
             {
                 return;
             }
-            eg.evacuation = JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS * Time.DAY_LENGTH;
+            eg.evacuation = (JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS) * Time.DAY_LENGTH;
             Events.logEvent(state, $"The beacon got through: a helicopter will come at dawn on day {Js.Str(Time.dayOf(eg.evacuation))}. The night before will be the worst yet. Hold out");
             return;
         }

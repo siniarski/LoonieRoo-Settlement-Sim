@@ -32,7 +32,7 @@ public static partial class Radio
     public static void updateRadio(SimState state)
     {
         state.requests = state.requests.filter((r) => r.until > state.tick);
-        if (Time.tickOfDay(state.tick) != RADIO_HOUR * Time.TICKS_PER_HOUR || !Js.T(hasRadio(state)) || state.survivors.length == 0)
+        if ((Time.tickOfDay(state.tick) != (RADIO_HOUR * Time.TICKS_PER_HOUR)) || !Js.T(hasRadio(state)) || (state.survivors.length == 0))
         {
             return;
         }
@@ -42,20 +42,20 @@ public static partial class Radio
             return;
         }
         var open = state.settlements.filter((s) => s.reputation > -30);
-        if (open.length > 0 && Hash.hashRoll(day, 2) < 0.5)
+        if ((open.length > 0) && (Hash.hashRoll(day, 2) < 0.5))
         {
             var n = open[Js.Idx(day % open.length)]!;
             var (kind, count) = ASKS[Js.Idx(JsMath.floor(Hash.hashRoll(day, 3) * ASKS.length))]!;
-            state.requests.push(new() { id = $"r{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, count = count, until = state.tick + REQUEST_DAYS * Time.DAY_LENGTH });
+            state.requests.push(new() { id = $"r{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, count = count, until = state.tick + (REQUEST_DAYS * Time.DAY_LENGTH) });
             Events.logEvent(state, $"On the radio: {Js.Str(n.name)} asks for {Js.Str(count)} {Js.Str(kind)} within {Js.Str(REQUEST_DAYS)} days");
             return;
         }
         var home = state.survivors[Js.Idx(0)]!.pos;
-        var angle = Hash.hashRoll(day, 4) * JsMath.PI * 2;
+        var angle = (Hash.hashRoll(day, 4) * JsMath.PI) * 2;
         var dist = 30 + JsMath.floor(Hash.hashRoll(day, 5) * 30);
-        var x = JsMath.max(0, JsMath.min(state.grid.width - 1, JsMath.round(home.x + JsMath.cos(angle) * dist)));
-        var y = JsMath.max(0, JsMath.min(state.grid.height - 1, JsMath.round(home.y + JsMath.sin(angle) * dist)));
-        state.pointsOfInterest.push(new() { id = $"poi{Js.Str(state.nextId++)}", x = x, y = y, label = DISTRESS_LABEL });
+        var x = JsMath.max(0, JsMath.min(state.grid.width - 1, JsMath.round(home.x + (JsMath.cos(angle) * dist))));
+        var y = JsMath.max(0, JsMath.min(state.grid.height - 1, JsMath.round(home.y + (JsMath.sin(angle) * dist))));
+        state.pointsOfInterest.push(new() { id = $"poi{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), label = DISTRESS_LABEL });
         Events.logEvent(state, $"On the radio: a distress call from near ({Js.Str(x)}, {Js.Str(y)}). An expedition could bring them in");
     }
 
@@ -67,7 +67,7 @@ public static partial class Radio
         {
             return "no such request";
         }
-        var free = state.items.filter((i) => i.kind == r.kind && i.pos != null && i.reservedBy == null);
+        var free = state.items.filter((i) => (i.kind == r.kind) && (i.pos != null) && (i.reservedBy == null));
         if (free.length < r.count)
         {
             return $"need {Js.Str(r.count)} free {Js.Str(r.kind)}";
@@ -83,8 +83,8 @@ public static partial class Radio
             Settlements.adjustReputation(state, n, REQUEST_REP);
         }
         var thanks = THANKS[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 6) * THANKS.length))]!;
-        var at = state.survivors[Js.Idx(0)]?.pos ?? new() { x = 0, y = 0 };
-        if (!Js.T(n) || n.people <= 0 || !Js.T(Caravans.sendCaravan(state, n.id, "you", at, 0, [thanks, thanks])))
+        var at = state.survivors[Js.Idx(0)]?.pos ?? new() { x = Js.I(0), y = Js.I(0) };
+        if ((!Js.T(n) || (n.people <= 0)) || !Js.T(Caravans.sendCaravan(state, n.id, "you", at, 0, [thanks, thanks])))
         {
             for (var k = 0; k < 2; k++)
             {

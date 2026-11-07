@@ -18,7 +18,7 @@ public static partial class Director
     {
         Time.onClock(() =>
         {
-            RECENT = ((double)(3 * Time.DAY_LENGTH) / (2));
+            RECENT = ((double)((3 * Time.DAY_LENGTH)) / (2));
             RELIEF_GAP = 3 * Time.DAY_LENGTH;
         });
     }
@@ -33,30 +33,30 @@ public static partial class Director
 
     public const double MAX_THREAT = 1.6;
 
-    public static double RECENT = ((double)(3 * Time.DAY_LENGTH) / (2));
+    public static double RECENT = ((double)((3 * Time.DAY_LENGTH)) / (2));
 
     public static double RELIEF_GAP = 3 * Time.DAY_LENGTH;
 
     public static double recentDeaths(SimState state)
     {
-        return state.events.filter((e) => e.tick >= state.tick - RECENT && e.message.includes(" died of ")).length;
+        return state.events.filter((e) => (e.tick >= (state.tick - RECENT)) && e.message.includes(" died of ")).length;
     }
 
     public static double threatScale(SimState state)
     {
-        var wealth = state.items.filter((i) => i.kind != "corpse" && i.kind != "wood" && i.kind != "food").length;
-        var scale = 1 + THREAT_PER_WEALTH * JsMath.floor(((double)(wealth) / (WEALTH_STEP))) - THREAT_PER_DEATH * recentDeaths(state);
+        var wealth = state.items.filter((i) => (i.kind != "corpse") && (i.kind != "wood") && (i.kind != "food")).length;
+        var scale = (1 + (THREAT_PER_WEALTH * JsMath.floor(((double)(wealth) / (WEALTH_STEP))))) - (THREAT_PER_DEATH * recentDeaths(state));
         return JsMath.max(MIN_THREAT, JsMath.min(MAX_THREAT, scale));
     }
 
     /// <summary>At dawn: maybe a cache, when the colony is on its knees.</summary>
     public static void updateDirector(SimState state)
     {
-        if (state.tick % Time.DAY_LENGTH != 0 || state.survivors.length == 0)
+        if (((state.tick % Time.DAY_LENGTH) != 0) || (state.survivors.length == 0))
         {
             return;
         }
-        if (state.tick - state.lastRelief < RELIEF_GAP || recentDeaths(state) < 2 || Alerts.foodDays(state) >= 1)
+        if (((state.tick - state.lastRelief) < RELIEF_GAP) || (recentDeaths(state) < 2) || (Alerts.foodDays(state) >= 1))
         {
             return;
         }

@@ -27,12 +27,12 @@ public static partial class Infection
     public static double roll(double a, double b)
     {
         var h = JsMath.imul(a ^ 668265263.0, 2246822507.0) ^ JsMath.imul(b, 3266489909.0);
-        h = JsMath.imul(h ^ Js.Ushr(h, 15), 0x2c1b3c6d);
-        return ((double)(Js.Ushr(h ^ Js.Ushr(h, 13), 0)) / (4294967296.0));
+        h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x2c1b3c6d);
+        return ((double)((Js.Ushr((h ^ (Js.Ushr(h, 13))), 0))) / (4294967296.0));
     }
 
     /// <summary>A zombie's hit: maybe it infects.</summary>
-    public static void maybeInfect(SimState state, Survivor s, string zombieId, /*TODO param type*/object? chance = null)
+    public static void maybeInfect(SimState state, Survivor s, string zombieId, double? chance = null)
     {
         chance ??= INFECTION_CHANCE;
         if (s.infection != null)
@@ -54,11 +54,11 @@ public static partial class Infection
         {
             return null;
         }
-        if (!Js.T(Medicine.inInfirmary(state, s)) || state.tick % 2 == 0)
+        if (!Js.T(Medicine.inInfirmary(state, s)) || ((state.tick % 2) == 0))
         {
             s.infection += 1;
         }
-        return s.infection >= INFECTION_TURN ? "the infection" : null;
+        return (s.infection >= INFECTION_TURN) ? "the infection" : null;
     }
 
     public static bool isInfected(Survivor s)

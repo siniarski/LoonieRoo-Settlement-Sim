@@ -50,23 +50,23 @@ public static partial class Settlements
         var size = state.grid.width;
         for (var i = 0; i < 3; i++)
         {
-            Point p = new() { x = 0, y = 0 };
+            Point p = new() { x = Js.I(0), y = Js.I(0) };
             for (var attempt = 0; attempt < 20; attempt++)
             {
-                p = new() { x = JsMath.floor(Hash.hashRoll(seed, i, attempt, 1) * size), y = JsMath.floor(Hash.hashRoll(seed, i, attempt, 2) * size) };
-                if (JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y) >= ((double)(size) / (3)))
+                p = new() { x = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 1) * size)), y = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 2) * size)) };
+                if ((JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y)) >= ((double)(size) / (3)))
                 {
                     break;
                 }
             }
             var people = 5 + JsMath.floor(Hash.hashRoll(seed, i, 3) * 8);
-            newSettlement(state, NAMES[Js.Idx(seed + i % NAMES.length)]!, p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
+            newSettlement(state, NAMES[Js.Idx((seed + i) % NAMES.length)]!, p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
         }
     }
 
     public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)
     {
-        Settlement n = new() { id = $"n{Js.Str(state.nextId++)}", name = name, x = x, y = y, reputation = 0, people = people, food = food, defence = defence, ties = new(), unfolded = false, lastTalk = -1, lastRaid = -1 };
+        Settlement n = new() { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new(), unfolded = false, lastTalk = -1, lastRaid = -1 };
         state.settlements.push(n);
         return n;
     }
@@ -89,7 +89,7 @@ public static partial class Settlements
         }
         foreach (var o in Js.Iter(state.settlements))
         {
-            if (o == s || o.people <= 0)
+            if ((o == s) || (o.people <= 0))
             {
                 continue;
             }
@@ -113,7 +113,7 @@ public static partial class Settlements
     public static string? relation(Settlement a, Settlement b)
     {
         var t = a.ties[Js.Idx(b.id)] ?? 0;
-        return t >= ALLY ? "allies" : t <= FEUD ? "feud" : null;
+        return (t >= ALLY) ? "allies" : ((t <= FEUD) ? "feud" : null);
     }
 
     /// <summary>Warms (or cools) two settlements to each other, both ways. Returns how they stood before.</summary>
@@ -122,7 +122,7 @@ public static partial class Settlements
         var before = relation(a, b);
         foreach (var (x, y) in Js.Iter([[a, b], [b, a]]))
         {
-            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, x.ties[Js.Idx(y.id)] ?? 0 + by));
+            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (x.ties[Js.Idx(y.id)] ?? 0) + by));
         }
         return before;
     }
@@ -131,19 +131,19 @@ public static partial class Settlements
     public static Settlement? traderFrom(SimState state)
     {
         var open = state.settlements.filter((s) => !Js.T(isHostile(s)));
-        return open.length > 0 ? open[Js.Idx(Time.dayOf(state.tick) % open.length)]! : null;
+        return (open.length > 0) ? open[Js.Idx(Time.dayOf(state.tick) % open.length)]! : null;
     }
 
     /// <summary>Friendly settlements send someone to join, every FRIENDLY_SEND_DAYS at noon.</summary>
     public static void updateSettlements(SimState state)
     {
-        if (Time.tickOfDay(state.tick) != 12 * Time.TICKS_PER_HOUR || Time.dayOf(state.tick) % FRIENDLY_SEND_DAYS != 0)
+        if ((Time.tickOfDay(state.tick) != (12 * Time.TICKS_PER_HOUR)) || ((Time.dayOf(state.tick) % FRIENDLY_SEND_DAYS) != 0))
         {
             return;
         }
         foreach (var s in Js.Iter(state.settlements))
         {
-            if (s.reputation < FRIENDLY || s.people <= 3)
+            if ((s.reputation < FRIENDLY) || (s.people <= 3))
             {
                 continue;
             }
@@ -166,7 +166,7 @@ public static partial class Settlements
         {
             return "no such settlement";
         }
-        var food = state.items.filter((i) => i.kind == "food" && i.pos != null && i.reservedBy == null);
+        var food = state.items.filter((i) => (i.kind == "food") && (i.pos != null) && (i.reservedBy == null));
         if (food.length < GIFT_FOOD)
         {
             return $"need {Js.Str(GIFT_FOOD)} free food";
@@ -175,7 +175,7 @@ public static partial class Settlements
         {
             state.items.splice(state.items.indexOf(f), 1);
         }
-        adjustReputation(state, s, s.food <= 0 ? GIFT_REP * 2 : GIFT_REP);
+        adjustReputation(state, s, (s.food <= 0) ? (GIFT_REP * 2) : GIFT_REP);
         s.food += GIFT_FOOD;
         Events.logEvent(state, $"Sent {Js.Str(GIFT_FOOD)} food to {Js.Str(s.name)} (they think better of you)");
         return null;

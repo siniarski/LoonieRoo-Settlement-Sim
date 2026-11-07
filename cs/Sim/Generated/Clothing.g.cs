@@ -36,7 +36,7 @@ public static partial class Clothing
 
     public static bool isGarment(string kind)
     {
-        return GARMENTS.includes(kind);
+        return (GARMENTS).includes(kind);
     }
 
     /// <summary>The garment of this kind the survivor has on, if any.</summary>
@@ -44,7 +44,7 @@ public static partial class Clothing
     {
         var id = s[Js.Idx(SLOT_OF[Js.Idx(kind)])];
         var item = Js.T(id) ? Items.getItem(state, id) : null;
-        return item?.kind == kind ? item : null;
+        return (item?.kind == kind) ? item : null;
     }
 
     /// <summary>Wears a garment; it falls apart at GARMENT_LIFE.</summary>
@@ -61,7 +61,7 @@ public static partial class Clothing
         }
         Items.removeItem(state, item);
         s[Js.Idx(SLOT_OF[Js.Idx(item.kind)])] = null;
-        Events.logEvent(state, $"{Js.Str(s.name)}'s {Js.Str(item.kind == "boots" ? "boots" : item.kind)} fell apart");
+        Events.logEvent(state, $"{Js.Str(s.name)}'s {Js.Str((item.kind == "boots") ? "boots" : item.kind)} fell apart");
     }
 
     /// <summary>Damage after armour (which takes the wear).</summary>
@@ -73,14 +73,14 @@ public static partial class Clothing
             return damage;
         }
         wearOut(state, s, armour);
-        return JsMath.round(((double)(damage * ARMOUR_DAMAGE_PCT) / (100)));
+        return JsMath.round(((double)((damage * ARMOUR_DAMAGE_PCT)) / (100)));
     }
 
     /// <summary>Stepping onto a tile: an armed spike trap hurts the barefoot (boots take it instead).</summary>
     public static void trapStep(SimState state, Survivor s)
     {
         var trap = FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y);
-        if (trap?.kind != "trap" || trap.loot <= 0)
+        if ((trap?.kind != "trap") || (trap.loot <= 0))
         {
             return;
         }
@@ -97,13 +97,13 @@ public static partial class Clothing
 
     public static bool free(SimState state, Survivor s)
     {
-        return !Js.T(s.jobId) && !Js.T(s.sleep) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.arming) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && state.tick >= s.nextDressTick;
+        return (!Js.T(s.jobId) && !Js.T(s.sleep)) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.arming) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && (state.tick >= s.nextDressTick);
     }
 
     /// <summary>A garment that's half worn, if any.</summary>
     public static Item? needsMending(SimState state, Survivor s)
     {
-        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => Js.T(i) && Js.T(isGarment(i.kind)) && i.wear * 2 >= GARMENT_LIFE[Js.Idx(i.kind)]);
+        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && Js.T(isGarment(i.kind))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
     }
 
     public static bool startDressing(SimState state, Survivor s)
@@ -112,8 +112,8 @@ public static partial class Clothing
         {
             return false;
         }
-        List<string> body = s.priorities.guard > 0 ? ["armour", "coat"] : ["coat", "armour"];
-        List<string> wants = [.. Js.T(s.body) ? [] : body, .. Js.T(s.feet) ? [] : ["boots"], .. Js.T(s.cart) || s.priorities.haul == 0 ? [] : ["cart"], .. Js.T(s.tool) ? [] : Js.ObjectKeys(Skills.TOOL_FOR).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])]), .. Js.T(needsMending(state, s)) ? ["cloth"] : []];
+        List<string> body = (s.priorities.guard > 0) ? ["armour", "coat"] : ["coat", "armour"];
+        List<string> wants = [.. Js.T(s.body) ? [] : body, .. Js.T(s.feet) ? [] : (["boots"]), .. (Js.T(s.cart) || (s.priorities.haul == 0)) ? [] : (["cart"]), .. Js.T(s.tool) ? [] : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])]), .. Js.T(needsMending(state, s)) ? (["cloth"]) : []];
         var item = wants.map((k) => Needs.nearestFreeItem(state, s, k)).find((i) => Js.T(Js.T(i?.pos)));
         if (!Js.T(Js.T(item?.pos)))
         {
@@ -122,7 +122,7 @@ public static partial class Clothing
         }
         item.reservedBy = s.id;
         s.dressing = item.id;
-        s.note = item.kind == "cloth" ? $"going for cloth to mend with at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})" : $"going for {Js.Str(item.kind)} at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})";
+        s.note = (item.kind == "cloth") ? $"going for cloth to mend with at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})" : $"going for {Js.Str(item.kind)} at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})";
         return true;
     }
 
@@ -134,7 +134,7 @@ public static partial class Clothing
             return false;
         }
         var item = Items.getItem(state, s.dressing!);
-        if (!Js.T(Js.T(item?.pos)) || item.reservedBy != s.id)
+        if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {
             cancelDressing(state, s, "clothing gone");
             return false;
@@ -142,7 +142,7 @@ public static partial class Clothing
         if (!Js.T(Space.samePoint(s.pos, item.pos)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 cancelDressing(state, s, "can't reach the clothing");
                 s.nextDressTick = state.tick + DRESS_RETRY_TICKS;
@@ -165,7 +165,7 @@ public static partial class Clothing
             s.note = $"mended their {Js.Str(worn.kind)}";
             return true;
         }
-        var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : item.kind == "cart" ? "cart" : /*TODO in*/Js.In(item.kind, Skills.TOOL_FOR) ? "tool" : null;
+        var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : (item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null);
         if (!Js.T(slot) || Js.T(s[Js.Idx(slot)]))
         {
             item.reservedBy = null;
@@ -175,7 +175,7 @@ public static partial class Clothing
         item.carriedBy = s.id;
         item.reservedBy = null;
         s[Js.Idx(slot)] = item.id;
-        s.note = item.kind == "cart" ? "took a cart for hauling" : slot == "tool" ? $"took a {Js.Str(item.kind)}" : $"put on {Js.Str(item.kind)}";
+        s.note = (item.kind == "cart") ? "took a cart for hauling" : ((slot == "tool") ? $"took a {Js.Str(item.kind)}" : $"put on {Js.Str(item.kind)}");
         return true;
     }
 
@@ -187,7 +187,7 @@ public static partial class Clothing
             return;
         }
         var item = Items.getItem(state, s.dressing);
-        if (Js.T(item) && item.reservedBy == s.id)
+        if (Js.T(item) && (item.reservedBy == s.id))
         {
             item.reservedBy = null;
         }
@@ -206,7 +206,7 @@ public static partial class Clothing
             return;
         }
         var item = Items.getItem(state, s.dressing);
-        if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos))
+        if ((!Js.T(item) || (item.reservedBy != s.id)) || !Js.T(item.pos))
         {
             cancelDressing(state, s, "clothing gone");
         }
@@ -229,6 +229,6 @@ public static partial class Clothing
     /// <summary>"coat, boots" for panels.</summary>
     public static string describeClothing(SimState state, Survivor s)
     {
-        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => i != null && Js.T(isGarment(i.kind))).map((i) => $"{Js.Str(i.kind)}{Js.Str(i.wear * 2 >= GARMENT_LIFE[Js.Idx(i.kind)] ? " (worn)" : "")}").join(", ");
+        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && Js.T(isGarment(i.kind))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
     }
 }

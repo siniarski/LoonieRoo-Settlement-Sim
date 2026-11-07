@@ -71,6 +71,9 @@ function inlineType(lit, mod) {
   return name;
 }
 
+/** Fields that are whole numbers in every class (gen-state.mjs INT_FIELDS). */
+const INT_FIELDS = new Set(['x', 'y', 'x0', 'y0', 'x1', 'y1', 'w', 'h', 'width', 'height', 'ox', 'oy', 'cx', 'cy', 'u', 'v', 'ax', 'ay', 'bx', 'by']);
+
 const INT_NAMES = new Set(['x', 'y', 'i', 'j', 'k', 'idx', 'index', 'cx', 'cy', 'nx', 'ny', 'x0', 'y0', 'x1', 'y1', 'dx', 'dy', 'ax', 'ay', 'bx', 'by', 'px', 'py', 'qx', 'qy', 'tx', 'ty', 'ox', 'oy', 'gx', 'gy', 'sx', 'sy', 'width', 'height', 'w', 'h', 'tick', 'e']);
 
 /** Kind of a TS type after resolving aliases: string | number | boolean | void | null | array | record | map | set | typed | fn | object | any. */
@@ -220,6 +223,13 @@ function translate(mod) {
   }
   const moduleNames = new Set();
 
+  /** An operand: wrapped in parentheses when it's an operation itself, so precedence can't change. */
+  function operand(e, bool = false) {
+    const s = ex(e, bool);
+    const compound = ['BinaryExpression', 'LogicalExpression', 'ConditionalExpression', 'AssignmentExpression', 'SequenceExpression', 'ArrowFunctionExpression', 'TSAsExpression'].includes(e.type);
+    return compound && !(s.startsWith('(') && s.endsWith(')')) ? `(${s})` : s;
+  }
+
   // Expressions. `bool`: wanted as a condition.
   function ex(e, bool = false) {
     const r = ex0(e, bool);
@@ -287,8 +297,8 @@ function translate(mod) {
       case 'TSNonNullExpression': return `${ex(e.expression)}!`;
       case 'ChainExpression': return ex(e.expression, bool);
       case 'UnaryExpression': {
-        if (e.operator === '!') return `!${ex(e.argument, true)}`;
-        if (e.operator === '-') return `-${ex(e.argument)}`;
+        if (e.operator === '!') return `!${operand(e.argument, true)}`;
+        if (e.operator === '-') return `-${operand(e.argument)}`;
         if (e.operator === '+') return `(double)(${ex(e.argument)})`;
         if (e.operator === 'typeof') return `/*TODO typeof*/Js.TypeOf(${ex(e.argument)})`;
         if (e.operator === 'void') return 'null';
@@ -302,8 +312,8 @@ function translate(mod) {
       case 'UpdateExpression': return e.prefix ? `${e.operator}${ex(e.argument)}` : `${ex(e.argument)}${e.operator}`;
       case 'BinaryExpression': {
         const op = e.operator;
-        const l = ex(e.left);
-        const r = ex(e.right);
+        const l = operand(e.left);
+        const r = operand(e.right);
         if (op === '===' || op === '==') return `${l} == ${r}`;
         if (op === '!==' || op === '!=') return `${l} != ${r}`;
         if (op === '/') return `((double)(${l}) / (${r}))`;
@@ -314,22 +324,23 @@ function translate(mod) {
         return `${l} ${op} ${r}`;
       }
       case 'LogicalExpression': {
-        if (e.operator === '??') return `${ex(e.left)} ?? ${ex(e.right)}`;
+        if (e.operator === '??') return `${operand(e.left)} ?? ${operand(e.right)}`;
         if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) return `Js.Or(${ex(e.left)}, ${ex(e.right)})`;
-        return `${ex(e.left, true)} ${e.operator} ${ex(e.right, true)}`;
+        return `${operand(e.left, true)} ${e.operator} ${operand(e.right, true)}`;
       }
-      case 'ConditionalExpression': return `${ex(e.test, true)} ? ${ex(e.consequent)} : ${ex(e.alternate)}`;
+      case 'ConditionalExpression': return `${operand(e.test, true)} ? ${operand(e.consequent)} : ${operand(e.alternate)}`;
       case 'AssignmentExpression': {
         if (e.left.type === 'ObjectPattern' || e.left.type === 'ArrayPattern') return `/*TODO destructuring assignment*/`;
         if (e.operator === '||=') return `${ex(e.left)} = Js.Or(${ex(e.left)}, ${ex(e.right)})`;
         if (e.operator === '&&=') return `/*TODO &&=*/`;
         if (e.operator === '/=') return `${ex(e.left)} = ((double)(${ex(e.left)}) / (${ex(e.right)}))`;
         if (e.operator === '>>>=') return `${ex(e.left)} = Js.Ushr(${ex(e.left)}, ${ex(e.right)})`;
+        if (e.operator === '=' && e.left.type === 'MemberExpression' && !e.left.computed && INT_FIELDS.has(e.left.property.name)) return `${ex(e.left)} = Js.I(${ex(e.right)})`;
         return `${ex(e.left)} ${e.operator} ${ex(e.right)}`;
       }
       case 'SequenceExpression': return `/*TODO sequence*/`;
       case 'MemberExpression': {
-        const obj = e.object.type === 'Super' ? 'base' : ex(e.object);
+        const obj = e.object.type === 'Super' ? 'base' : operand(e.object);
         const q = e.optional ? '?' : '';
         if (e.computed) return `${obj}${q}[Js.Idx(${ex(e.property)})]`;
         const name = e.property.name;
@@ -384,7 +395,7 @@ function translate(mod) {
         if (o.name === 'Array' && name === 'isArray') return `(${args()} is System.Collections.IList)`;
       }
       if (name === 'toString' && e.arguments.length === 0) return `Js.Str(${ex(o)})`;
-      return `${ex(o)}${c.optional ? '?' : ''}.${id(name)}${q ? '' : ''}(${args()})`;
+      return `${operand(o)}${c.optional ? '?' : ''}.${id(name)}${q ? '' : ''}(${args()})`;
     }
     if (c.type === 'Identifier') {
       if (c.name === 'String') return `Js.Str(${args()})`;
@@ -441,7 +452,7 @@ function translate(mod) {
       if (p.computed) return `/*TODO computed key*/new()`;
       const key = p.key.type === 'Identifier' ? p.key.name : p.key.value;
       const value = p.shorthand ? ex(p.key) : p.value.type === 'ArrowFunctionExpression' || p.value.type === 'FunctionExpression' ? lambda(p.value) : ex(p.value);
-      parts.push(`${id(String(key))} = ${value}`);
+      parts.push(`${id(String(key))} = ${INT_FIELDS.has(String(key)) ? `Js.I(${value})` : value}`);
     }
     if (spread) {
       const first = e.properties[0];
@@ -472,6 +483,7 @@ function translate(mod) {
     } else return `/*TODO param pattern*/object _p${tmp++}`;
     hint = pascal(curFn) + pascal(name);
     let cs = t ? ty(t, mod, name) : def ? (def.type === 'Literal' && typeof def.value === 'number' ? (Number.isInteger(def.value) && INT_NAMES.has(name) ? 'int' : 'double') : def.type === 'Literal' && typeof def.value === 'string' ? 'string' : def.type === 'Literal' && typeof def.value === 'boolean' ? 'bool' : null) : null;
+    if (!cs && def && ((def.type === 'Identifier' && /^[A-Z_0-9]+$/.test(def.name)) || def.type === 'BinaryExpression' || (def.type === 'MemberExpression' && /^[A-Z_0-9]+$/.test(def.property?.name ?? '')))) cs = 'double';
     if (!cs) cs = '/*TODO param type*/object';
     if (p.optional && !cs.endsWith('?')) cs += '?';
     if (def) {
@@ -671,10 +683,15 @@ function translate(mod) {
     curFn = name;
     const defaults = [];
     const tparams = f.typeParameters ? `<${f.typeParameters.params.map((p) => p.name.name ?? p.name).join(', ')}>` : '';
+    const where = (f.typeParameters?.params ?? []).filter((p) => p.constraint).map((p) => {
+      hint = pascal(name) + 'Constraint';
+      const c = ty(p.constraint, mod);
+      return c && !c.includes('TODO') && c !== 'object' ? ` where ${p.name.name ?? p.name} : class, ${c}` : ` where ${p.name.name ?? p.name} : class`;
+    }).join('');
     const ps = f.params.map((p) => param(p, defaults));
     hint = pascal(name) + 'Result';
     const ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
-    const head = `${ind}${top ? 'public static ' : ''}${ret} ${id(name)}${tparams}(${ps.join(', ')})`;
+    const head = `${ind}${top ? 'public static ' : ''}${ret} ${id(name)}${tparams}(${ps.join(', ')})${where}`;
     const b = block(f.body, ind + '    ', { fnRet: ret }).split('\n');
     b[0] = ind + b[0].trimStart();
     if (defaults.length) b.splice(1, 0, ...defaults.map((d) => `${ind}    ${d}`));

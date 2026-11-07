@@ -25,7 +25,7 @@ public static partial class Roads
         }
         /*TODO return type*/object d(double a, double b)
         {
-            return JsMath.sqrt(JsMath.pow(nodes[Js.Idx(a)]!.x - nodes[Js.Idx(b)]!.x, 2) + JsMath.pow(nodes[Js.Idx(a)]!.y - nodes[Js.Idx(b)]!.y, 2));
+            return JsMath.sqrt((JsMath.pow((nodes[Js.Idx(a)]!.x - nodes[Js.Idx(b)]!.x), 2)) + (JsMath.pow((nodes[Js.Idx(a)]!.y - nodes[Js.Idx(b)]!.y), 2)));
         }
         var inTree = [0];
         var rest = nodes.map((_, i) => i).slice(1);
@@ -36,7 +36,7 @@ public static partial class Roads
             {
                 foreach (var b in Js.Iter(rest))
                 {
-                    if (!Js.T(best) || d(a, b) < best[Js.Idx(2)])
+                    if (!Js.T(best) || (d(a, b) < best[Js.Idx(2)]))
                     {
                         best = [a, b, d(a, b)];
                     }
@@ -48,10 +48,10 @@ public static partial class Roads
         }
         nodes.forEach((_, a) =>
         {
-            var linked = edges.filter((/*TODO pattern*/_0) => p == a || q == a).map((/*TODO pattern*/_1) => p == a ? q : p);
+            var linked = edges.filter((/*TODO pattern*/_0) => (p == a) || (q == a)).map((/*TODO pattern*/_1) => (p == a) ? q : p);
             var longest = JsMath.max(linked.map((b) => d(a, b)));
-            var near = nodes.map((_, b) => b).filter((b) => b != a && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
-            if (near != null && d(a, near) < longest * 1.4 && NatureMod.roll(seed, a, near, 0x7300) < 0.5 && !edges.some((/*TODO pattern*/_2) => p == near && q == a))
+            var near = nodes.map((_, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
+            if ((near != null) && (d(a, near) < (longest * 1.4)) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5) && !edges.some((/*TODO pattern*/_2) => (p == near) && (q == a)))
             {
                 edges.push([a, near]);
             }
@@ -65,7 +65,7 @@ public static partial class Roads
         var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
         /*TODO return type*/object cell(Point p)
         {
-            return JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            return (JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
         }
         var start = cell(from);
         var goal = cell(to);
@@ -80,7 +80,7 @@ public static partial class Roads
             var i = heap.length - 1;
             while (i > 0)
             {
-                var p = i - 1 >> 1;
+                var p = (i - 1) >> 1;
                 if (heap[Js.Idx(p)]![Js.Idx(0)] <= heap[Js.Idx(i)]![Js.Idx(0)])
                 {
                     break;
@@ -99,14 +99,14 @@ public static partial class Roads
                 var i = 0;
                 for (; ; )
                 {
-                    var l = 2 * i + 1;
+                    var l = (2 * i) + 1;
                     var r = l + 1;
                     var m = i;
-                    if (l < heap.length && heap[Js.Idx(l)]![Js.Idx(0)] < heap[Js.Idx(m)]![Js.Idx(0)])
+                    if ((l < heap.length) && (heap[Js.Idx(l)]![Js.Idx(0)] < heap[Js.Idx(m)]![Js.Idx(0)]))
                     {
                         m = l;
                     }
-                    if (r < heap.length && heap[Js.Idx(r)]![Js.Idx(0)] < heap[Js.Idx(m)]![Js.Idx(0)])
+                    if ((r < heap.length) && (heap[Js.Idx(r)]![Js.Idx(0)] < heap[Js.Idx(m)]![Js.Idx(0)]))
                     {
                         m = r;
                     }
@@ -132,7 +132,7 @@ public static partial class Roads
             }
             var cx = c % N;
             var cy = JsMath.floor(((double)(c) / (N)));
-            if (f > g[Js.Idx(c)]! + MIN * JsMath.sqrt(JsMath.pow(gx - cx, 2) + JsMath.pow(gy - cy, 2)) + 1e-6)
+            if (f > ((g[Js.Idx(c)]! + (MIN * JsMath.sqrt((JsMath.pow((gx - cx), 2)) + (JsMath.pow((gy - cy), 2))))) + 1e-6))
             {
                 continue;
             }
@@ -140,18 +140,18 @@ public static partial class Roads
             {
                 for (var dx = -1; dx <= 1; dx++)
                 {
-                    if (dx == 0 && dy == 0)
+                    if ((dx == 0) && (dy == 0))
                     {
                         continue;
                     }
                     var nx = cx + dx;
                     var ny = cy + dy;
-                    if (nx < 0 || ny < 0 || nx >= N || ny >= N)
+                    if ((nx < 0) || (ny < 0) || (nx >= N) || (ny >= N))
                     {
                         continue;
                     }
-                    var nc = ny * N + nx;
-                    var step = ((double)(cost[Js.Idx(c)]! + cost[Js.Idx(nc)]!) / (2)) * dx != 0 && dy != 0 ? JsMath.SQRT2 : 1;
+                    var nc = (ny * N) + nx;
+                    var step = ((double)((cost[Js.Idx(c)]! + cost[Js.Idx(nc)]!)) / (2)) * ((dx != 0) && (dy != 0) ? JsMath.SQRT2 : 1);
                     if (!JsNumber.isFinite(step))
                     {
                         continue;
@@ -161,7 +161,7 @@ public static partial class Roads
                     {
                         g[Js.Idx(nc)] = ng;
                         came[Js.Idx(nc)] = c;
-                        push(ng + MIN * JsMath.sqrt(JsMath.pow(gx - nx, 2) + JsMath.pow(gy - ny, 2)), nc);
+                        push(ng + (MIN * JsMath.sqrt((JsMath.pow((gx - nx), 2)) + (JsMath.pow((gy - ny), 2)))), nc);
                     }
                 }
             }
@@ -173,18 +173,18 @@ public static partial class Roads
         List<Point> cells = [];
         for (var c = goal; c != -1; c = came[Js.Idx(c)]!)
         {
-            cells.push(new() { x = c % N * ROAD_CELL + ((double)(ROAD_CELL) / (2)), y = JsMath.floor(((double)(c) / (N))) * ROAD_CELL + ((double)(ROAD_CELL) / (2)) });
+            cells.push(new() { x = Js.I(((c % N) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))), y = Js.I((JsMath.floor(((double)(c) / (N))) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))) });
         }
         cells.reverse();
         List<Point> line = [from, .. cells.slice(1, -1), to];
         for (var pass = 0; pass < 2; pass++)
         {
             List<Point> next = [line[Js.Idx(0)]!];
-            for (var i = 0; i < line.length - 1; i++)
+            for (var i = 0; i < (line.length - 1); i++)
             {
                 var a = line[Js.Idx(i)]!;
                 var b = line[Js.Idx(i + 1)]!;
-                next.push(new() { x = a.x * 0.75 + b.x * 0.25, y = a.y * 0.75 + b.y * 0.25 }, new() { x = a.x * 0.25 + b.x * 0.75, y = a.y * 0.25 + b.y * 0.75 });
+                next.push(new() { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new() { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) });
             }
             next.push(line.at(-1)!);
             line = next;
@@ -201,14 +201,14 @@ public static partial class Roads
         {
             for (var i = 0; i < N; i++)
             {
-                var x = i * ROAD_CELL + ((double)(ROAD_CELL) / (2));
-                var y = j * ROAD_CELL + ((double)(ROAD_CELL) / (2));
-                var v = Js.T(NatureMod.isSea(n, x, y)) ? double.PositiveInfinity : Js.T(NatureMod.isWater(n, x, y)) ? 14 : Js.T(NatureMod.isForest(n, x, y)) ? 3 : 1;
-                if (towns.some((t) => JsMath.sqrt(JsMath.pow(x - t.x, 2) + JsMath.pow(y - t.y, 2)) < t.radius * 0.9))
+                var x = (i * ROAD_CELL) + ((double)(ROAD_CELL) / (2));
+                var y = (j * ROAD_CELL) + ((double)(ROAD_CELL) / (2));
+                var v = Js.T(NatureMod.isSea(n, x, y)) ? double.PositiveInfinity : (Js.T(NatureMod.isWater(n, x, y)) ? 14 : (Js.T(NatureMod.isForest(n, x, y)) ? 3 : 1));
+                if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < (t.radius * 0.9)))
                 {
                     v += 4;
                 }
-                c[Js.Idx(j * N + i)] = v;
+                c[Js.Idx((j * N) + i)] = v;
             }
         }
         return c;
@@ -220,7 +220,7 @@ public static partial class Roads
         var N = JsMath.ceil(((double)(size) / (ROAD_CELL)));
         foreach (var p in Js.Iter(line))
         {
-            var i = JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            var i = (JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
             if (JsNumber.isFinite(cost[Js.Idx(i)]!))
             {
                 cost[Js.Idx(i)] = 0.35;
@@ -231,26 +231,26 @@ public static partial class Roads
     /// <summary>Draws a road's centre line into the mask, about two and a half tiles wide.</summary>
     public static void drawLine(byte[] mask, double size, List<Point> line, double value)
     {
-        for (var i = 0; i < line.length - 1; i++)
+        for (var i = 0; i < (line.length - 1); i++)
         {
             var a = line[Js.Idx(i)]!;
             var b = line[Js.Idx(i + 1)]!;
-            var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.sqrt(JsMath.pow(b.x - a.x, 2) + JsMath.pow(b.y - a.y, 2))) / (0.4))));
+            var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.sqrt((JsMath.pow((b.x - a.x), 2)) + (JsMath.pow((b.y - a.y), 2)))) / (0.4))));
             for (var s = 0; s <= steps; s++)
             {
-                var px = a.x + ((double)(b.x - a.x * s) / (steps));
-                var py = a.y + ((double)(b.y - a.y * s) / (steps));
+                var px = a.x + ((double)(((b.x - a.x) * s)) / (steps));
+                var py = a.y + ((double)(((b.y - a.y) * s)) / (steps));
                 for (var y = JsMath.floor(py - 1); y <= JsMath.ceil(py + 1); y++)
                 {
                     for (var x = JsMath.floor(px - 1); x <= JsMath.ceil(px + 1); x++)
                     {
-                        if (x < 0 || y < 0 || x >= size || y >= size)
+                        if ((x < 0) || (y < 0) || (x >= size) || (y >= size))
                         {
                             continue;
                         }
-                        if (JsMath.pow(x + 0.5 - px, 2) + JsMath.pow(y + 0.5 - py, 2) <= 1.1 && mask[Js.Idx(y * size + x)] == 0)
+                        if (((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2)) <= 1.1) && (mask[Js.Idx((y * size) + x)] == 0))
                         {
-                            mask[Js.Idx(y * size + x)] = value;
+                            mask[Js.Idx((y * size) + x)] = value;
                         }
                     }
                 }

@@ -44,7 +44,7 @@ public static partial class Sight
     public static bool opaque(Grid grid, int x, int y)
     {
         var t = grid.tiles[Js.Idx(Grids.tileIndex(grid, x, y))];
-        return t == "wall" || t == "barricade" || t == "door" && !Js.T(Grids.isOpen(grid, x, y));
+        return (t == "wall") || (t == "barricade") || (t == "door") && !Js.T(Grids.isOpen(grid, x, y));
     }
 
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
@@ -54,12 +54,12 @@ public static partial class Sight
         {
             return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
         }
-        if (ax == bx || ay == by)
+        if ((ax == bx) || (ay == by))
         {
             return Js.T(clear(ax, ay, bx, by));
         }
-        var viaX = Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by)) && !Js.T(opaque(grid, bx, ay));
-        var viaY = Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)) && !Js.T(opaque(grid, ax, by));
+        var viaX = (Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by))) && !Js.T(opaque(grid, bx, ay));
+        var viaY = (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by))) && !Js.T(opaque(grid, ax, by));
         return Js.T(viaX) || Js.T(viaY);
     }
 
@@ -70,10 +70,10 @@ public static partial class Sight
         var y = a.y;
         var dx = JsMath.abs(b.x - a.x);
         var dy = -JsMath.abs(b.y - a.y);
-        var sx = a.x < b.x ? 1 : -1;
-        var sy = a.y < b.y ? 1 : -1;
+        var sx = (a.x < b.x) ? 1 : -1;
+        var sy = (a.y < b.y) ? 1 : -1;
         var err = dx + dy;
-        while (x != b.x || y != b.y)
+        while ((x != b.x) || (y != b.y))
         {
             var e2 = 2 * err;
             var px = x;
@@ -92,7 +92,7 @@ public static partial class Sight
             {
                 return false;
             }
-            if (x != b.x || y != b.y && Js.T(opaque(grid, x, y)))
+            if ((x != b.x) || (y != b.y) && Js.T(opaque(grid, x, y)))
             {
                 return false;
             }
@@ -108,13 +108,13 @@ public static partial class Sight
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                if (JsMath.pow(x - p.x, 2) + JsMath.pow(y - p.y, 2) > r * r || Js.T(Js.T(skip?.Invoke(y * grid.width + x))))
+                if ((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2)) > (r * r) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x))))
                 {
                     continue;
                 }
-                if (Js.T(overWalls) || Js.T(sightLine(grid, p, new() { x = x, y = y })))
+                if (Js.T(overWalls) || Js.T(sightLine(grid, p, new() { x = Js.I(x), y = Js.I(y) })))
                 {
-                    @out.push(y * grid.width + x);
+                    @out.push((y * grid.width) + x);
                 }
             }
         }
@@ -124,8 +124,8 @@ public static partial class Sight
     /// <summary>How far a survivor sees: less at night (unless the lights are on indoors: timeline.ts); more from a tower, or with the vigilant trait.</summary>
     public static double sightRadius(SimState state, Survivor s)
     {
-        var @base = Js.T(Towers.onTower(state, s)) ? Towers.TOWER_SIGHT : Js.T(Time.isNight(state.tick)) && !Js.T(TimelineMod.mainsLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS;
-        return @base + Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0;
+        var @base = Js.T(Towers.onTower(state, s)) ? Towers.TOWER_SIGHT : ((Js.T(Time.isNight(state.tick)) && !Js.T(TimelineMod.mainsLit(state, s.pos))) ? NIGHT_SIGHT : SIGHT_RADIUS);
+        return @base + (Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0);
     }
 
     /// <summary>What a survivor sees now (tile indices): from a tower, everything in range.</summary>
@@ -137,22 +137,22 @@ public static partial class Sight
     /// <summary>Is this survivor the one you control, sneaking?</summary>
     public static bool isSneaking(SimState state, Survivor s)
     {
-        return state.control?.survivorId == s.id && state.control.sneaking == true;
+        return (state.control?.survivorId == s.id) && (state.control.sneaking == true);
     }
 
     /// <summary>How far off (Manhattan) a survivor's movement can be heard, 0 standing still (traits: graceful, clumsy).</summary>
     public static double heardFrom(SimState state, Survivor s)
     {
-        var c = state.control?.survivorId == s.id ? state.control : null;
-        var @base = !Js.T(c) ? Js.T(s.move) ? WALK_HEARD : 0 : c.dx == 0 && c.dy == 0 ? 0 : Js.T(c.sneaking) ? SNEAK_HEARD : Js.T(c.running) ? RUN_HEARD : WALK_HEARD;
-        return Js.T(Skills.hasTrait(s, "graceful")) ? JsMath.floor(((double)(@base) / (2))) : Js.T(Skills.hasTrait(s, "clumsy")) ? JsMath.round(((double)(@base * 3) / (2))) : @base;
+        var c = (state.control?.survivorId == s.id) ? state.control : null;
+        var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (c.dx == 0) && (c.dy == 0) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD));
+        return Js.T(Skills.hasTrait(s, "graceful")) ? JsMath.floor(((double)(@base) / (2))) : (Js.T(Skills.hasTrait(s, "clumsy")) ? JsMath.round(((double)((@base * 3)) / (2))) : @base);
     }
 
     /// <summary>Can a zombie at `z` see a survivor at `s` (`sneaking`: half as far)?</summary>
     public static bool zombieSees(SimState state, Point z, Point s, bool sneaking = false)
     {
-        var r = ((double)(Js.T(Time.isNight(state.tick)) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT) / (Js.T(sneaking) ? 2 : 1));
-        if (JsMath.pow(z.x - s.x, 2) + JsMath.pow(z.y - s.y, 2) > r * r)
+        var r = ((double)((Js.T(Time.isNight(state.tick)) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
+        if ((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2)) > (r * r))
         {
             return false;
         }
@@ -168,13 +168,13 @@ public static partial class Sight
         var lookers = Js.T(you) ? [you] : state.survivors;
         var who = lookers.map((s) => $"{Js.Str(s.id)}@{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}").join("|");
         var hit = seen.get(state);
-        if (Js.T(hit) && hit.tick == state.tick && hit.who == who)
+        if ((Js.T(hit) && (hit.tick == state.tick)) && (hit.who == who))
         {
             return hit.mask;
         }
         var size = state.grid.width * state.grid.height;
-        var mask = Js.T(hit) && hit.mask.length == size ? hit.mask : new byte[size];
-        if (Js.T(hit) && hit.mask == mask)
+        var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new byte[size];
+        if (Js.T(hit) && (hit.mask == mask))
         {
             foreach (var i in Js.Iter(hit.set))
             {

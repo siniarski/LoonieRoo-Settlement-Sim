@@ -57,7 +57,7 @@ public static partial class Runs
     /// <summary>Every tick: setting out at dawn, moving, searching, trouble, meeting yours, coming home.</summary>
     public static void updateRuns(SimState state)
     {
-        if (state.tick > 0 && state.tick % Time.DAY_LENGTH == 0)
+        if ((state.tick > 0) && ((state.tick % Time.DAY_LENGTH) == 0))
         {
             setOut(state);
         }
@@ -68,7 +68,7 @@ public static partial class Runs
         }
         foreach (var r in Js.Iter([.. list]))
         {
-            if (state.tick % Time.TICKS_PER_HOUR == 0 && Js.T(caught(state, r)))
+            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(caught(state, r)))
             {
                 continue;
             }
@@ -90,10 +90,10 @@ public static partial class Runs
                 continue;
             }
             r.nextStepTick = state.tick + RUN_STEP;
-            var goal = r.phase == "out" ? r.ruin : r.home;
+            var goal = (r.phase == "out") ? r.ruin : r.home;
             r.x += JsMath.sign(goal.x - r.x);
             r.y += JsMath.sign(goal.y - r.y);
-            if (r.x != goal.x || r.y != goal.y)
+            if ((r.x != goal.x) || (r.y != goal.y))
             {
                 continue;
             }
@@ -117,7 +117,7 @@ public static partial class Runs
         var height = __d0.height;
         foreach (var n in Js.Iter(state.settlements))
         {
-            if (Js.T(Colonies.isFallen(n)) || n.people < RUN_MIN_HOME || runsOf(state).some((r) => r.from == n.id))
+            if ((Js.T(Colonies.isFallen(n)) || (n.people < RUN_MIN_HOME)) || runsOf(state).some((r) => r.from == n.id))
             {
                 continue;
             }
@@ -125,18 +125,18 @@ public static partial class Runs
             {
                 return Hash.hashRoll(Hash.idNumber(n.id), day, 0x5ca, k);
             }
-            var chance = Colonies.hungerOf(n) == "fed" ? ((double)(RUN_CHANCE) / (4)) : RUN_CHANCE;
+            var chance = (Colonies.hungerOf(n) == "fed") ? ((double)(RUN_CHANCE) / (4)) : RUN_CHANCE;
             if (roll(0) >= chance)
             {
                 continue;
             }
-            var angle = roll(1) * JsMath.PI * 2;
-            var dist = RUN_MIN + JsMath.floor(roll(2) * RUN_MAX - RUN_MIN);
-            var ruin = new() { x = JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + JsMath.cos(angle) * dist))), y = JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + JsMath.sin(angle) * dist))) };
-            var people = JsMath.min(RUN_PARTY, n.people - RUN_MIN_HOME + RUN_PARTY);
+            var angle = (roll(1) * JsMath.PI) * 2;
+            var dist = RUN_MIN + JsMath.floor(roll(2) * (RUN_MAX - RUN_MIN));
+            var ruin = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+            var people = JsMath.min(RUN_PARTY, (n.people - RUN_MIN_HOME) + RUN_PARTY);
             n.people -= people;
             state.runs ??= [];
-            state.runs.push(new() { id = $"sr{Js.Str(day)}x{Js.Str(Hash.idNumber(n.id))}", from = n.id, x = n.x, y = n.y, home = new() { x = n.x, y = n.y }, ruin = ruin, people = people, phase = "out", untilTick = 0, nextStepTick = state.tick + RUN_STEP, food = 0, met = false });
+            state.runs.push(new() { id = $"sr{Js.Str(day)}x{Js.Str(Hash.idNumber(n.id))}", from = n.id, x = Js.I(n.x), y = Js.I(n.y), home = new() { x = Js.I(n.x), y = Js.I(n.y) }, ruin = ruin, people = people, phase = "out", untilTick = 0, nextStepTick = state.tick + RUN_STEP, food = 0, met = false });
             if (!Js.T(Settlements.isHostile(n)))
             {
                 Events.logEvent(state, $"{Js.Str(people)} from {Js.Str(n.name)} went out scavenging towards ({Js.Str(ruin.x)}, {Js.Str(ruin.y)})");
@@ -147,7 +147,7 @@ public static partial class Runs
     /// <summary>The dead catch up with them: one lost; all of them, and they lie where they fell. Returns true if the run is over.</summary>
     public static bool caught(SimState state, ScavRun r)
     {
-        var danger = ((double)(r.phase == "search" ? RUIN_DANGER : ROAD_DANGER * 1 + ((double)(Time.dayOf(state.tick)) / (20)) * state.settings.zombies) / (100));
+        var danger = ((double)((((r.phase == "search") ? RUIN_DANGER : ROAD_DANGER) * (1 + ((double)(Time.dayOf(state.tick)) / (20))) * state.settings.zombies)) / (100));
         if (Hash.hashRoll(Hash.idNumber(r.id), state.tick, 3562.0) >= danger)
         {
             return false;
@@ -175,8 +175,8 @@ public static partial class Runs
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
         }
-        var at = spot ?? new() { x = r.x, y = r.y };
-        state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = at.x, y = at.y, label = DEAD_LABEL });
+        var at = spot ?? new() { x = Js.I(r.x), y = Js.I(r.y) };
+        state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(at.x), y = Js.I(at.y), label = DEAD_LABEL });
         if (Js.T(heard))
         {
             Events.logEvent(state, $"{Js.Str(n.name)}'s scavengers never came home: the dead got them near ({Js.Str(at.x)}, {Js.Str(at.y)})");
@@ -202,9 +202,9 @@ public static partial class Runs
         Settlements.adjustReputation(state, n, 3);
         if (!state.pointsOfInterest.some((p) => Space.manhattan(p, r.ruin) <= 5))
         {
-            state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = r.ruin.x, y = r.ruin.y, label = $"{Js.Str(n.name)}'s scavenging spot" });
+            state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(r.ruin.x), y = Js.I(r.ruin.y), label = $"{Js.Str(n.name)}'s scavenging spot" });
         }
-        Events.logEvent(state, $"{Js.Str(you.name)} met {Js.Str(r.people)} scavengers from {Js.Str(n.name)}, {Js.Str(r.phase == "back" ? "on their way home" : $"on their way to a ruin at ({Js.Str(r.ruin.x)}, {Js.Str(r.ruin.y)})")}");
+        Events.logEvent(state, $"{Js.Str(you.name)} met {Js.Str(r.people)} scavengers from {Js.Str(n.name)}, {Js.Str((r.phase == "back") ? "on their way home" : $"on their way to a ruin at ({Js.Str(r.ruin.x)}, {Js.Str(r.ruin.y)})")}");
     }
 
     public static void home(SimState state, ScavRun r)

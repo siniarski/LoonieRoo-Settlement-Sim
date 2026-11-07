@@ -30,7 +30,7 @@ public static partial class Savefile
         for (var i = 0; i < values.length; )
         {
             var j = i + 1;
-            while (j < values.length && values[Js.Idx(j)] == values[Js.Idx(i)])
+            while ((j < values.length) && (values[Js.Idx(j)] == values[Js.Idx(i)]))
             {
                 j++;
             }
@@ -46,7 +46,7 @@ public static partial class Savefile
         for (var k = 0; k < encoded.length; k += 2)
         {
             var value = ((T)(encoded[Js.Idx(k)]));
-            for (var n = 0; n < encoded[Js.Idx(k + 1)]; n++)
+            for (var n = 0; n < (encoded[Js.Idx(k + 1)]); n++)
             {
                 @out.push(value);
             }
@@ -65,12 +65,12 @@ public static partial class Savefile
         var rows = list.map((f) =>
         {
             var keys = Js.ObjectKeys(f);
-            if (keys.length != FURNITURE_FIELDS.length || keys.some((k, i) => k != FURNITURE_FIELDS[Js.Idx(i)]))
+            if ((keys.length != FURNITURE_FIELDS.length) || keys.some((k, i) => k != FURNITURE_FIELDS[Js.Idx(i)]))
             {
                 return f;
             }
             List<object> row = FURNITURE_FIELDS.map((k) => f[Js.Idx(k)]);
-            while (row.length > 4 && row[Js.Idx(row.length - 1)] == FURNITURE_DEFAULTS[Js.Idx(row.length - 1)])
+            while ((row.length > 4) && (row[Js.Idx(row.length - 1)] == FURNITURE_DEFAULTS[Js.Idx(row.length - 1)]))
             {
                 row.pop();
             }
@@ -88,7 +88,7 @@ public static partial class Savefile
                 return ((Furniture)(r));
             }
             JsRecord<object> f = new();
-            FURNITURE_FIELDS.forEach((k, i) => f[Js.Idx(k)] = i < r.length ? r[Js.Idx(i)] : FURNITURE_DEFAULTS[Js.Idx(i)]);
+            FURNITURE_FIELDS.forEach((k, i) => f[Js.Idx(k)] = (i < r.length) ? r[Js.Idx(i)] : FURNITURE_DEFAULTS[Js.Idx(i)]);
             return ((Furniture)(f));
         });
     }
@@ -114,7 +114,7 @@ public static partial class Savefile
     public static SimState unpack(SimState packed)
     {
         var rows = packed.furniture;
-        var state = Js.T(rows) && !Js.T((rows is System.Collections.IList)) ? Js.With(Js.Clone(packed), __s3 => { __s3.furniture = unpackFurniture(rows); }) : packed;
+        var state = (Js.T(rows) && !Js.T((rows is System.Collections.IList))) ? Js.With(Js.Clone(packed), __s3 => { __s3.furniture = unpackFurniture(rows); }) : packed;
         var grid = state.grid;
         if (grid.rle != true)
         {
@@ -153,12 +153,12 @@ public static partial class Savefile
         {
             return new() { ok = false, error = "not a JSON file" };
         }
-        if (/*TODO typeof*/Js.TypeOf(data) != "object" || data == null || !/*TODO in*/Js.In("format", data))
+        if ((/*TODO typeof*/Js.TypeOf(data) != "object") || (data == null) || !(/*TODO in*/Js.In("format", data)))
         {
             return new() { ok = false, error = "not a LoonieRoo file" };
         }
         var file = data;
-        if (file.format != "loonieroo-save" && file.format != "loonieroo-bug")
+        if ((file.format != "loonieroo-save") && (file.format != "loonieroo-bug"))
         {
             return new() { ok = false, error = "not a LoonieRoo file" };
         }
@@ -174,7 +174,7 @@ public static partial class Savefile
             }
             return new() { ok = true, state = States.cloneState(unpack(file.state)), kind = "save" };
         }
-        if (!Js.T(file.initial) || !Js.T(file.commands) || /*TODO typeof*/Js.TypeOf(file.tick) != "number")
+        if ((!Js.T(file.initial) || !Js.T(file.commands)) || (/*TODO typeof*/Js.TypeOf(file.tick) != "number"))
         {
             return new() { ok = false, error = "bug report is incomplete" };
         }

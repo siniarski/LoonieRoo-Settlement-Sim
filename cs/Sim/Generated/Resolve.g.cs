@@ -53,26 +53,26 @@ public static partial class Resolve
 
     public static string describeResolve(Survivor s)
     {
-        return Js.T(isBreaking(s)) ? "breaking" : Js.T(isSteeled(s)) ? "steeled" : s.resolve < 40 ? "wavering" : "steady";
+        return Js.T(isBreaking(s)) ? "breaking" : (Js.T(isSteeled(s)) ? "steeled" : ((s.resolve < 40) ? "wavering" : "steady"));
     }
 
     /// <summary>Dawn: drift with mood. Returns those who walk away (the caller removes them).</summary>
     public static List<Survivor> dawnResolve(SimState state)
     {
-        if (state.tick == 0 || state.tick % Time.DAY_LENGTH != 0)
+        if ((state.tick == 0) || ((state.tick % Time.DAY_LENGTH) != 0))
         {
             return [];
         }
         List<Survivor> leaving = [];
         foreach (var s in Js.Iter(state.survivors))
         {
-            var drift = JsMath.round(((double)(Mood.mood(state, s) - Mood.MOOD_BASE) / (MOOD_PER_POINT)));
+            var drift = JsMath.round(((double)((Mood.mood(state, s) - Mood.MOOD_BASE)) / (MOOD_PER_POINT)));
             steel(s, JsMath.max(-DAWN_LIMIT, JsMath.min(DAWN_LIMIT, drift)));
-            if (!Js.T(isBreaking(s)) || state.control?.survivorId == s.id || s.childUntil != null)
+            if ((!Js.T(isBreaking(s)) || (state.control?.survivorId == s.id)) || (s.childUntil != null))
             {
                 continue;
             }
-            if (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7847.0) < ((double)(BREAKING - s.resolve) / (2 * BREAKING)))
+            if (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7847.0) < ((double)((BREAKING - s.resolve)) / ((2 * BREAKING))))
             {
                 leaving.push(s);
             }
@@ -87,6 +87,6 @@ public static partial class Resolve
     /// <summary>Breaking, and you're in control: a swing may freeze.</summary>
     public static bool freezes(SimState state, Survivor s)
     {
-        return Js.T(isBreaking(s)) && Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0xf2) < FREEZE_CHANCE;
+        return Js.T(isBreaking(s)) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0xf2) < FREEZE_CHANCE);
     }
 }

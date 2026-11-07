@@ -47,7 +47,7 @@ public static partial class Handiwork
     public static object plan(SimState state, Survivor s, Point p)
     {
         var tile = Grids.getTile(state.grid, p.x, p.y);
-        if (Js.T(Breach.isStructure(tile)) && Breach.structureDamage(state, p.x, p.y) > 0)
+        if (Js.T(Breach.isStructure(tile)) && (Breach.structureDamage(state, p.x, p.y) > 0))
         {
             return new() { what = "repair" };
         }
@@ -56,7 +56,7 @@ public static partial class Handiwork
         {
             return Js.T(wood) ? new() { what = "build", target = "barricade" } : "you need wood to barricade a door";
         }
-        if (tile == "wall" || tile == "barricade")
+        if ((tile == "wall") || (tile == "barricade"))
         {
             if (Js.T(Defences.isReinforced(state, p.x, p.y)))
             {
@@ -76,7 +76,7 @@ public static partial class Handiwork
         {
             return "something is in the way";
         }
-        if (state.survivors.some((o) => o.pos.x == p.x && o.pos.y == p.y) || state.zombies.some((z) => z.pos.x == p.x && z.pos.y == p.y))
+        if (state.survivors.some((o) => (o.pos.x == p.x) && (o.pos.y == p.y)) || state.zombies.some((z) => (z.pos.x == p.x) && (z.pos.y == p.y)))
         {
             return "someone is in the way";
         }
@@ -86,7 +86,7 @@ public static partial class Handiwork
     /// <summary>Start working a tile next to you. Returns the busy action, or why not.</summary>
     public static object startWork(SimState state, Survivor s, Point p)
     {
-        if (p.x == s.pos.x && p.y == s.pos.y)
+        if ((p.x == s.pos.x) && (p.y == s.pos.y))
         {
             return "you can't build where you stand";
         }
@@ -118,11 +118,11 @@ public static partial class Handiwork
     public static string finishBuild(SimState state, Survivor s, string targetId)
     {
         var (xs, ys, target) = targetId.split(",");
-        var p = new() { x = Js.Num(xs), y = Js.Num(ys) };
+        var p = new() { x = Js.I(Js.Num(xs)), y = Js.I(Js.Num(ys)) };
         var now = plan(state, s, p);
-        if (/*TODO typeof*/Js.TypeOf(now) == "string" || now.what != "build" || now.target != target)
+        if ((/*TODO typeof*/Js.TypeOf(now) == "string") || (now.what != "build") || (now.target != target))
         {
-            return /*TODO typeof*/Js.TypeOf(now) == "string" ? now : "it changed while you worked";
+            return (/*TODO typeof*/Js.TypeOf(now) == "string") ? now : "it changed while you worked";
         }
         var wood = carryingWood(state, s)!;
         if (s.carrying == wood.id)
@@ -131,9 +131,9 @@ public static partial class Handiwork
         }
         Inventory.unpack(s, wood.id);
         Items.removeItem(state, wood);
-        Blueprint bp = new() { id = $"h{Js.Str(state.nextId++)}", x = p.x, y = p.y, target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
+        Blueprint bp = new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y), target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
         Designations.completeBlueprint(state, bp);
-        return target == "wall" ? "put up a wall" : target == "barricade" ? "barricaded the door" : "reinforced it";
+        return (target == "wall") ? "put up a wall" : ((target == "barricade") ? "barricaded the door" : "reinforced it");
     }
 
     /// <summary>Foraging needs open ground, daylight and a growing season; and each tile gives once a day.</summary>
@@ -143,7 +143,7 @@ public static partial class Handiwork
         var x = __d0.x;
         var y = __d0.y;
         var g = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]!)];
-        if (Js.T(Rooms.isIndoors(state, x, y)) || g != "grass" && g != "field")
+        if (Js.T(Rooms.isIndoors(state, x, y)) || (g != "grass") && (g != "field"))
         {
             return "nothing to forage here: find open grass, or a field";
         }
@@ -167,8 +167,8 @@ public static partial class Handiwork
     {
         var i = Grids.tileIndex(state.grid, s.pos.x, s.pos.y);
         state.foraged[Js.Idx(Js.Str(i))] = Time.dayOf(state.tick);
-        var field = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(i)]!)] == "field" ? 2 : 1;
-        var chance = FORAGE_CHANCE * field * Js.T(state.settings.winter) ? 0.5 : 1;
+        var field = (Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(i)]!)] == "field") ? 2 : 1;
+        var chance = (FORAGE_CHANCE * field) * (Js.T(state.settings.winter) ? 0.5 : 1);
         if (Hash.hashRoll(Hash.idNumber(s.id), i, state.tick) >= chance)
         {
             return "found nothing worth eating";
@@ -208,7 +208,7 @@ public static partial class Handiwork
         }
         else
         {
-            a.health = a.health ?? 0 - damage;
+            a.health = (a.health ?? 0) - damage;
             if (a.health > 0)
             {
                 Animals.provoke(state, a, s);

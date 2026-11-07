@@ -32,7 +32,7 @@ public static partial class Survivors
     public static Survivor addSurvivor(SimState state, int x, int y, string? name = default)
     {
         var n = state.nextId++;
-        Survivor survivor = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = x, y = y }), new() { id = $"s{Js.Str(n)}", name = name ?? nextSurvivorName(state), pos = new() { x = x, y = y }, move = null, goal = null, path = [], pathVersion = -1, note = null, priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES), jobId = null, carrying = null, nextSeekTick = 0, rest = Rest.initialRest(state.survivors.length), sleep = null, satiety = Food.initialSatiety(state.survivors.length), meal = null, nextMealTick = 0, health = Health.HEALTH_MAX, lastHurtBy = null, hurtTick = -1, treatment = null, nextTreatTick = 0, weapon = null, arming = null, nextArmTick = 0, thoughts = [], leisure = null, breakdown = null, xp = new(), traits = [], infection = null, opinions = new(), body = null, feet = null, dressing = null, nextDressTick = 0, sick = null, hydration = Water.HYDRATION_MAX, drink = null, nextDrinkTick = 0, reading = null, age = Family.startingAge($"s{Js.Str(n)}"), childUntil = null, cart = null, cartLoad = [], pack = [], tool = null, shift = "day", kills = 0, watchHours = 0, wound = null, bleeding = false, bleedUntil = 0, bitten = null, order = null, story = StoryMod.makeStory($"s{Js.Str(n)}"), resolve = Resolve.startingResolve($"s{Js.Str(n)}"), social = 60, comfort = 50, wish = null, endurance = 100, panic = 0, bodyHeat = 70, wetness = 0 });
+        Survivor survivor = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = Js.I(x), y = Js.I(y) }), new() { id = $"s{Js.Str(n)}", name = name ?? nextSurvivorName(state), pos = new() { x = Js.I(x), y = Js.I(y) }, move = null, goal = null, path = [], pathVersion = -1, note = null, priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES), jobId = null, carrying = null, nextSeekTick = 0, rest = Rest.initialRest(state.survivors.length), sleep = null, satiety = Food.initialSatiety(state.survivors.length), meal = null, nextMealTick = 0, health = Health.HEALTH_MAX, lastHurtBy = null, hurtTick = -1, treatment = null, nextTreatTick = 0, weapon = null, arming = null, nextArmTick = 0, thoughts = [], leisure = null, breakdown = null, xp = new(), traits = [], infection = null, opinions = new(), body = null, feet = null, dressing = null, nextDressTick = 0, sick = null, hydration = Water.HYDRATION_MAX, drink = null, nextDrinkTick = 0, reading = null, age = Family.startingAge($"s{Js.Str(n)}"), childUntil = null, cart = null, cartLoad = [], pack = [], tool = null, shift = "day", kills = 0, watchHours = 0, wound = null, bleeding = false, bleedUntil = 0, bitten = null, order = null, story = StoryMod.makeStory($"s{Js.Str(n)}"), resolve = Resolve.startingResolve($"s{Js.Str(n)}"), social = 60, comfort = 50, wish = null, endurance = 100, panic = 0, bodyHeat = 70, wetness = 0 });
         state.survivors.push(survivor);
         return survivor;
     }
@@ -45,12 +45,12 @@ public static partial class Survivors
     /// <summary>The survivor standing on, or stepping onto, a tile.</summary>
     public static Survivor? survivorAt(SimState state, int x, int y)
     {
-        return state.survivors.find((s) => s.pos.x == x && s.pos.y == y || s.move != null && s.move.to.x == x && s.move.to.y == y);
+        return state.survivors.find((s) => (s.pos.x == x) && (s.pos.y == y) || (s.move != null) && (s.move.to.x == x) && (s.move.to.y == y));
     }
 
     public static void setGoal(Survivor survivor, Point goal)
     {
-        survivor.goal = new() { x = goal.x, y = goal.y };
+        survivor.goal = new() { x = Js.I(goal.x), y = Js.I(goal.y) };
         survivor.path = [];
         survivor.pathVersion = -1;
         survivor.note = $"ordered to ({Js.Str(goal.x)}, {Js.Str(goal.y)})";
@@ -64,7 +64,7 @@ public static partial class Survivors
         {
             return;
         }
-        s.goal = new() { x = last.x, y = last.y };
+        s.goal = new() { x = Js.I(last.x), y = Js.I(last.y) };
         s.path = path.slice();
         s.pathVersion = version;
     }
@@ -81,16 +81,16 @@ public static partial class Survivors
         {
             return;
         }
-        if (s.pos.x == goal.x && s.pos.y == goal.y)
+        if ((s.pos.x == goal.x) && (s.pos.y == goal.y))
         {
             stop(s, Js.T(s.jobId) ? s.note : $"arrived at ({Js.Str(goal.x)}, {Js.Str(goal.y)})");
             return;
         }
-        if (s.pathVersion != state.walkabilityVersion || s.path.length == 0)
+        if ((s.pathVersion != state.walkabilityVersion) || (s.path.length == 0))
         {
             var wasRepath = s.pathVersion != -1;
             var path = Pathfinding.findPath(state.grid, s.pos, goal);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 stop(s, $"no path to ({Js.Str(goal.x)}, {Js.Str(goal.y)})");
                 return;
@@ -104,10 +104,10 @@ public static partial class Survivors
             s.path = Pathfinding.straightenAhead(state.grid, s.pos, s.path);
         }
         var next = s.path.shift()!;
-        var diagonal = next.x != s.pos.x && next.y != s.pos.y;
+        var diagonal = (next.x != s.pos.x) && (next.y != s.pos.y);
         Doors.passThrough(state, next.x, next.y, true, s.pos);
         var pace = stepPace(state, s, next);
-        s.move = new() { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)(pace * 1414) / (1000))) : pace };
+        s.move = new() { from = Js.Clone(s.pos), to = next, progress = 0, duration = Js.T(diagonal) ? JsMath.round(((double)((pace * 1414)) / (1000))) : pace };
     }
 
     /// <summary>Advances a step in progress by a tick. Returns true once it has landed (or there was none).</summary>
@@ -138,8 +138,8 @@ public static partial class Survivors
     /// <summary>Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.</summary>
     public static double stepPace(SimState state, Survivor s, Point next)
     {
-        var road = ROAD_GROUNDS.includes(state.grid.ground[Js.Idx(next.y * state.grid.width + next.x)]!);
-        return JsMath.max(2, Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE - Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0 - Js.T(road) ? 1 : 0 + Js.T(Wounds.legSlowed(s)) ? 1 : 0 - Js.T(Orders.hurries(state, s)) ? 1 : 0 + Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0);
+        var road = ROAD_GROUNDS.includes(state.grid.ground[Js.Idx((next.y * state.grid.width) + next.x)]!);
+        return JsMath.max(2, (Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0) - (Js.T(road) ? 1 : 0) + (Js.T(Wounds.legSlowed(s)) ? 1 : 0) - (Js.T(Orders.hurries(state, s)) ? 1 : 0) + (Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0));
     }
 
     public static void trackDirt(SimState state, Point p)
@@ -148,7 +148,7 @@ public static partial class Survivors
         {
             return;
         }
-        if (Rng.random(state) < DIRT_CHANCE && Js.T(Rooms.isIndoors(state, p.x, p.y)))
+        if ((Rng.random(state) < DIRT_CHANCE) && Js.T(Rooms.isIndoors(state, p.x, p.y)))
         {
             Grids.setDirty(state.grid, p.x, p.y, true);
         }

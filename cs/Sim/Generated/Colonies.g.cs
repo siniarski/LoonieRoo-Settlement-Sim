@@ -58,7 +58,7 @@ public static partial class Colonies
 
     public static string hungerOf(Settlement n)
     {
-        return n.food <= 0 ? "starving" : n.food < n.people * 2 ? "hungry" : "fed";
+        return (n.food <= 0) ? "starving" : ((n.food < (n.people * 2)) ? "hungry" : "fed");
     }
 
     /// <summary>Runs every tick: the dawn round of off-screen life, and unfolding near your people.</summary>
@@ -68,11 +68,11 @@ public static partial class Colonies
         {
             return;
         }
-        if (state.tick > 0 && state.tick % Time.DAY_LENGTH == 0)
+        if ((state.tick > 0) && ((state.tick % Time.DAY_LENGTH) == 0))
         {
             dawn(state);
         }
-        if (state.tick % 50 == 0)
+        if ((state.tick % 50) == 0)
         {
             foreach (var n in Js.Iter(state.settlements))
             {
@@ -99,8 +99,8 @@ public static partial class Colonies
             {
                 return Hash.hashRoll(id, day, salt);
             }
-            var grown = GROWN[Js.Idx(season)] * Js.T(state.settings.winter) ? 0.5 : 1;
-            n.food = ((double)(JsMath.round(n.food * 1 - SPOIL_SHARE + n.people * grown - n.people * 10)) / (10));
+            var grown = GROWN[Js.Idx(season)] * (Js.T(state.settings.winter) ? 0.5 : 1);
+            n.food = ((double)(JsMath.round(((n.food * (1 - SPOIL_SHARE)) + (n.people * grown) - n.people) * 10)) / (10));
             if (n.food < 0)
             {
                 n.food = 0;
@@ -112,17 +112,17 @@ public static partial class Colonies
                     Settlements.adjustReputation(state, n, DESPERATE_REP);
                 }
             }
-            else if (n.food >= n.people * WELL_FED_DAYS && roll(1) < GROW_CHANCE)
+            else if ((n.food >= (n.people * WELL_FED_DAYS)) && (roll(1) < GROW_CHANCE))
             {
                 n.people += 1;
-                if (n.defence < MAX_DEFENCE && roll(2) < 0.3)
+                if ((n.defence < MAX_DEFENCE) && (roll(2) < 0.3))
                 {
                     n.defence += 1;
                 }
             }
-            if (roll(3) < ((double)(0.06 + day * 0.002 * state.settings.zombies) / (100)) - n.defence * 0.015)
+            if (roll(3) < ((double)(((0.06 + (day * 0.002)) * state.settings.zombies)) / (100)) - (n.defence * 0.015))
             {
-                var dead = roll(4) < 0.3 ? 2 : 1;
+                var dead = (roll(4) < 0.3) ? 2 : 1;
                 n.people -= dead;
                 news(state, n, $"The dead got into {Js.Str(n.name)} in the night: {Js.Str(dead)} lost");
             }
@@ -141,7 +141,7 @@ public static partial class Colonies
                 allyHelps(state, n, roll);
             }
             feud(state, n, roll);
-            if (n.people >= SPLIT_AT && state.settlements.length < MAX_SETTLEMENTS)
+            if ((n.people >= SPLIT_AT) && (state.settlements.length < MAX_SETTLEMENTS))
             {
                 split(state, n, roll);
             }
@@ -164,26 +164,26 @@ public static partial class Colonies
         {
             return "nobody is left there";
         }
-        if (Time.dayOf(n.lastRaid) == Time.dayOf(state.tick) && n.lastRaid >= 0)
+        if ((Time.dayOf(n.lastRaid) == Time.dayOf(state.tick)) && (n.lastRaid >= 0))
         {
             return "already raided today";
         }
-        var armed = state.survivors.filter((s) => Js.T(s.weapon) && s.childUntil == null && !Js.T(Js.T(s.sleep?.asleep)));
+        var armed = state.survivors.filter((s) => (Js.T(s.weapon) && (s.childUntil == null)) && !Js.T(Js.T(s.sleep?.asleep)));
         if (armed.length == 0)
         {
             return "nobody armed to send";
         }
         n.lastRaid = state.tick;
         var guns = armed.filter((s) => state.items.find((i) => i.id == s.weapon)?.kind == "gun").length;
-        var ours = armed.length * 2 + guns * 2;
-        var theirs = n.people + n.defence * 2;
+        var ours = (armed.length * 2) + (guns * 2);
+        var theirs = n.people + (n.defence * 2);
         var roll = Hash.hashRoll(Hash.idNumber(n.id), state.tick, 0xa1);
         Settlements.adjustReputation(state, n, -60);
-        if (ours * 0.5 + roll > theirs)
+        if ((ours * (0.5 + roll)) > theirs)
         {
             var took = JsMath.ceil(((double)(n.food) / (2)));
             n.food -= took;
-            var killed = 1 + roll > 0.8 ? 1 : 0;
+            var killed = 1 + ((roll > 0.8) ? 1 : 0);
             n.people = JsMath.max(0, n.people - killed);
             var home = armed[Js.Idx(0)]!.pos;
             for (var i = 0; i < JsMath.min(10, took); i++)
@@ -211,19 +211,19 @@ public static partial class Colonies
     /// <summary>A starving settlement: a fed neighbour may help; otherwise it may raid the nearest one with food.</summary>
     public static void raidOrBeg(SimState state, Settlement n, Func<double, double> roll)
     {
-        var others = state.settlements.filter((o) => o != n && !Js.T(isFallen(o)) && o.food > 0).sort((a, b) => JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y) - JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y));
-        var giver = others.find((o) => o.food >= o.people * WELL_FED_DAYS && o.ties[Js.Idx(n.id)] ?? 0 >= 0);
-        if (Js.T(giver) && roll(5) < 0.5 && !Caravans.caravansOf(state).some((c) => c.to == n.id))
+        var others = state.settlements.filter((o) => (o != n) && !Js.T(isFallen(o)) && (o.food > 0)).sort((a, b) => (JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y)) - (JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y)));
+        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((o.ties[Js.Idx(n.id)] ?? 0) >= 0));
+        if ((Js.T(giver) && (roll(5) < 0.5)) && !Caravans.caravansOf(state).some((c) => c.to == n.id))
         {
             var sent = JsMath.floor(((double)(giver.food) / (3)));
             giver.food -= sent;
-            Caravans.sendCaravan(state, giver.id, n.id, new() { x = n.x, y = n.y }, sent);
+            Caravans.sendCaravan(state, giver.id, n.id, new() { x = Js.I(n.x), y = Js.I(n.y) }, sent);
             tie(state, giver, n, 10);
             news(state, n, $"{Js.Str(giver.name)} sent a caravan of food to a starving {Js.Str(n.name)}");
             return;
         }
         var target = others[Js.Idx(0)];
-        if (!Js.T(target) || roll(6) > 0.4)
+        if (!Js.T(target) || (roll(6) > 0.4))
         {
             return;
         }
@@ -231,7 +231,7 @@ public static partial class Colonies
         target.food -= took;
         n.food += took;
         n.people = JsMath.max(0, n.people - 1);
-        target.people = JsMath.max(0, target.people - roll(7) < 0.5 ? 1 : 0);
+        target.people = JsMath.max(0, target.people - ((roll(7) < 0.5) ? 1 : 0));
         tie(state, target, n, -40);
         news(state, n, $"{Js.Str(n.name)} raided {Js.Str(target.name)} for food");
     }
@@ -239,18 +239,18 @@ public static partial class Colonies
     /// <summary>A hungry settlement's well-fed ally sends a little, by caravan (once one's on the way, no more).</summary>
     public static void allyHelps(SimState state, Settlement n, Func<double, double> roll)
     {
-        if (Caravans.caravansOf(state).some((c) => c.to == n.id) || roll(10) >= 0.5)
+        if (Caravans.caravansOf(state).some((c) => c.to == n.id) || (roll(10) >= 0.5))
         {
             return;
         }
-        var ally = state.settlements.find((o) => o != n && !Js.T(isFallen(o)) && Settlements.relation(o, n) == "allies" && o.food >= o.people * WELL_FED_DAYS);
+        var ally = state.settlements.find((o) => (o != n) && !Js.T(isFallen(o)) && (Settlements.relation(o, n) == "allies") && (o.food >= (o.people * WELL_FED_DAYS)));
         if (!Js.T(ally))
         {
             return;
         }
         var sent = JsMath.floor(((double)(ally.food) / (4)));
         ally.food -= sent;
-        Caravans.sendCaravan(state, ally.id, n.id, new() { x = n.x, y = n.y }, sent);
+        Caravans.sendCaravan(state, ally.id, n.id, new() { x = Js.I(n.x), y = Js.I(n.y) }, sent);
         news(state, n, $"{Js.Str(ally.name)} sent a caravan to its ally {Js.Str(n.name)}");
     }
 
@@ -259,8 +259,8 @@ public static partial class Colonies
 
     public static void feud(SimState state, Settlement n, Func<double, double> roll)
     {
-        var foe = state.settlements.find((o) => o != n && !Js.T(isFallen(o)) && Settlements.relation(n, o) == "feud");
-        if (!Js.T(foe) || roll(11) >= FEUD_RAID_CHANCE)
+        var foe = state.settlements.find((o) => (o != n) && !Js.T(isFallen(o)) && (Settlements.relation(n, o) == "feud"));
+        if (!Js.T(foe) || (roll(11) >= FEUD_RAID_CHANCE))
         {
             return;
         }
@@ -268,7 +268,7 @@ public static partial class Colonies
         foe.food -= took;
         n.food += took;
         var win = roll(12) < 0.5;
-        Js.T(win) ? foe : n.people = JsMath.max(0, Js.T(win) ? foe : n.people - 1);
+        (Js.T(win) ? foe : n).people = JsMath.max(0, (Js.T(win) ? foe : n).people - 1);
         tie(state, n, foe, -10);
         news(state, n, $"{Js.Str(n.name)} raided {Js.Str(foe.name)}, their old enemy: {Js.Str(took)} food taken, one of {Js.Str(Js.T(win) ? foe.name : n.name)} dead");
     }
@@ -292,18 +292,18 @@ public static partial class Colonies
         }
         else
         {
-            Events.logEvent(state, before == "allies" ? $"{Js.Str(a.name)} and {Js.Str(b.name)} are no longer allies" : $"The feud between {Js.Str(a.name)} and {Js.Str(b.name)} has cooled");
+            Events.logEvent(state, (before == "allies") ? $"{Js.Str(a.name)} and {Js.Str(b.name)} are no longer allies" : $"The feud between {Js.Str(a.name)} and {Js.Str(b.name)} has cooled");
         }
     }
 
     public static void split(SimState state, Settlement n, Func<double, double> roll)
     {
-        var angle = roll(8) * JsMath.PI * 2;
+        var angle = (roll(8) * JsMath.PI) * 2;
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + JsMath.cos(angle) * 30)));
-        var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + JsMath.sin(angle) * 30)));
+        var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + (JsMath.cos(angle) * 30))));
+        var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + (JsMath.sin(angle) * 30))));
         var name = SPLIT_NAMES[Js.Idx(state.settlements.length % SPLIT_NAMES.length)]!;
         n.people -= SPLIT_PEOPLE;
         var food = JsMath.floor(((double)(n.food) / (3)));
@@ -332,19 +332,19 @@ public static partial class Colonies
     public static CompoundResult compound(Settlement n)
     {
         var w = JsMath.max(7, JsMath.min(15, 5 + JsMath.ceil(((double)(n.people) / (2)))));
-        return new() { x0 = n.x - JsMath.floor(((double)(w) / (2))), y0 = n.y - 3, x1 = n.x - JsMath.floor(((double)(w) / (2))) + w - 1, y1 = n.y + 3 };
+        return new() { x0 = Js.I(n.x - JsMath.floor(((double)(w) / (2)))), y0 = Js.I(n.y - 3), x1 = Js.I(((n.x - JsMath.floor(((double)(w) / (2)))) + w) - 1), y1 = Js.I(n.y + 3) };
     }
 
     /// <summary>Builds the real thing: walls and a door, beds, food, and residents (or a ruin, if it fell).</summary>
     public static void unfold(SimState state, Settlement n)
     {
         n.unfolded = true;
-        Worldgen.ensureGeneratedAround(state, new() { x = n.x, y = n.y });
+        Worldgen.ensureGeneratedAround(state, new() { x = Js.I(n.x), y = Js.I(n.y) });
         var box = compound(n);
         var __d1 = state;
         var grid = __d1.grid;
         var fallen = isFallen(n);
-        var door = new() { x = n.x, y = box.y1 };
+        var door = new() { x = Js.I(n.x), y = Js.I(box.y1) };
         for (var y = box.y0; y <= box.y1; y++)
         {
             for (var x = box.x0; x <= box.x1; x++)
@@ -358,14 +358,14 @@ public static partial class Colonies
                 {
                     FurnitureMod.removeFurniture(state, old);
                 }
-                state.items = state.items.filter((i) => !Js.T(i.pos) || i.pos.x != x || i.pos.y != y);
+                state.items = state.items.filter((i) => (!Js.T(i.pos) || (i.pos.x != x)) || (i.pos.y != y));
                 grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))] = Grids.GROUNDS.indexOf("dirt");
-                var edge = x == box.x0 || x == box.x1 || y == box.y0 || y == box.y1;
-                var broken = Js.T(fallen) && Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25;
-                Grids.setTile(grid, x, y, Js.T(edge) && !Js.T(broken) ? x == door.x && y == door.y ? "door" : "wall" : "floor");
+                var edge = (x == box.x0) || (x == box.x1) || (y == box.y0) || (y == box.y1);
+                var broken = Js.T(fallen) && (Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25);
+                Grids.setTile(grid, x, y, (Js.T(edge) && !Js.T(broken)) ? ((x == door.x) && (y == door.y) ? "door" : "wall") : "floor");
                 if (Js.T(edge))
                 {
-                    Zombies.evictZombies(state, new() { x = x, y = y });
+                    Zombies.evictZombies(state, new() { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }
@@ -377,17 +377,17 @@ public static partial class Colonies
             {
                 if (Js.T(Grids.inBounds(grid, x, y)))
                 {
-                    inside.push(new() { x = x, y = y });
+                    inside.push(new() { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }
-        var top = inside.filter((p) => p.y == box.y0 + 1);
+        var top = inside.filter((p) => p.y == (box.y0 + 1));
         var beds = JsMath.min(top.length, JsMath.max(n.people, Js.T(fallen) ? 3 : 1));
         foreach (var p in Js.Iter(top.slice(0, beds)))
         {
             FurnitureMod.addFurniture(state, "bed", p.x, p.y);
         }
-        var rest = inside.filter((p) => p.y > box.y0 + 1);
+        var rest = inside.filter((p) => p.y > (box.y0 + 1));
         if (Js.T(fallen))
         {
             foreach (var p in Js.Iter(rest.slice(0, 2)))
@@ -396,7 +396,7 @@ public static partial class Colonies
             }
             foreach (var p in Js.Iter(rest.slice(-3)))
             {
-                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = p.x, y = p.y });
+                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });
             }
             return;
         }
@@ -405,6 +405,6 @@ public static partial class Colonies
             FurnitureMod.addFurniture(state, "table", p.x, p.y);
         }
         Residents.syncResidents(state, n);
-        Events.logEvent(state, $"You can see {Js.Str(n.name)}: {Js.Str(n.people)} people behind {Js.Str(n.defence >= 3 ? "good" : "thin")} walls");
+        Events.logEvent(state, $"You can see {Js.Str(n.name)}: {Js.Str(n.people)} people behind {Js.Str((n.defence >= 3) ? "good" : "thin")} walls");
     }
 }

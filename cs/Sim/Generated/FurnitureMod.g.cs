@@ -52,17 +52,17 @@ public static partial class FurnitureMod
     public static string containerName(Furniture f)
     {
         var look = f.look ?? "crate";
-        if (look == "cabinet" && f.table == "bathroom" || f.table == "clinic" || f.table == "pharmacy")
+        if ((look == "cabinet") && (f.table == "bathroom") || (f.table == "clinic") || (f.table == "pharmacy"))
         {
             return "medicine cabinet";
         }
-        if (look == "cabinet" && f.table == "office" || f.table == "police" || f.table == "school")
+        if ((look == "cabinet") && (f.table == "office") || (f.table == "police") || (f.table == "school"))
         {
             return "filing cabinet";
         }
         if (look == "sink")
         {
-            return f.table == "kitchen" ? "kitchen sink" : "bathroom sink";
+            return (f.table == "kitchen") ? "kitchen sink" : "bathroom sink";
         }
         if (look == "bin")
         {
@@ -156,7 +156,7 @@ public static partial class FurnitureMod
 
     public static Furniture addFurniture(SimState state, string kind, int x, int y)
     {
-        Furniture f = new() { id = $"f{Js.Str(state.nextId++)}", kind = kind, x = x, y = y, occupant = null, owner = null, loot = kind == "crate" ? CRATE_LOOT : kind == "tree" ? TREE_WOOD : kind == "trap" ? TRAP_CHARGES : 0, scavenge = false, stored = 0, storedKind = null, look = null, table = null };
+        Furniture f = new() { id = $"f{Js.Str(state.nextId++)}", kind = kind, x = Js.I(x), y = Js.I(y), occupant = null, owner = null, loot = (kind == "crate") ? CRATE_LOOT : (kind == "tree") ? TREE_WOOD : ((kind == "trap") ? TRAP_CHARGES : 0), scavenge = false, stored = 0, storedKind = null, look = null, table = null };
         state.furniture.push(f);
         var ix = indexes.get(state.furniture);
         if (Js.T(ix))
@@ -183,13 +183,13 @@ public static partial class FurnitureMod
     /// <summary>Trees grow back a piece of wood each TREE_REGROW_TICKS (up to TREE_WOOD).</summary>
     public static void regrowTrees(SimState state)
     {
-        if (state.tick % TREE_REGROW_TICKS != 0)
+        if ((state.tick % TREE_REGROW_TICKS) != 0)
         {
             return;
         }
         foreach (var f in Js.Iter(state.furniture))
         {
-            if (f.kind == "tree" && f.loot < TREE_WOOD)
+            if ((f.kind == "tree") && (f.loot < TREE_WOOD))
             {
                 f.loot += 1;
             }
@@ -210,7 +210,7 @@ public static partial class FurnitureMod
             var key = $"{Js.Str(f.x)},{Js.Str(f.y)}";
             if (ix.byTile.get(key) == f)
             {
-                var next = state.furniture.find((g) => g.x == f.x && g.y == f.y);
+                var next = state.furniture.find((g) => (g.x == f.x) && (g.y == f.y));
                 if (Js.T(next))
                 {
                     ix.byTile.set(key, next);

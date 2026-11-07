@@ -14,10 +14,10 @@ public static partial class NatureMod
     /// <summary>A well-mixed 32-bit hash of the seed and up to three integers.</summary>
     public static double hash(double seed, double a, double b, double salt)
     {
-        var h = JsMath.imul(seed ^ 2654435769.0, 2246822507.0) ^ JsMath.imul(a, 3266489909.0) ^ JsMath.imul(b, 668265263.0) ^ JsMath.imul(salt, 0x165667b1);
-        h = JsMath.imul(h ^ Js.Ushr(h, 15), 0x2c1b3c6d);
-        h = JsMath.imul(h ^ Js.Ushr(h, 12), 0x297a2d39);
-        return Js.Ushr(h ^ Js.Ushr(h, 15), 0);
+        var h = (JsMath.imul(seed ^ 2654435769.0, 2246822507.0) ^ JsMath.imul(a, 3266489909.0)) ^ JsMath.imul(b, 668265263.0) ^ JsMath.imul(salt, 0x165667b1);
+        h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x2c1b3c6d);
+        h = JsMath.imul(h ^ (Js.Ushr(h, 12)), 0x297a2d39);
+        return Js.Ushr((h ^ (Js.Ushr(h, 15))), 0);
     }
 
     /// <summary>Uniform in [0, 1).</summary>
@@ -28,7 +28,7 @@ public static partial class NatureMod
 
     public static /*TODO return type*/object smooth(double t)
     {
-        return t * t * 3 - 2 * t;
+        return (t * t) * (3 - (2 * t));
     }
 
     /// <summary>Smooth value noise in [0, 1): hashed lattice every `scale` tiles, blended between.</summary>
@@ -42,28 +42,28 @@ public static partial class NatureMod
         {
             return roll(seed, gx + i, gy + j, salt);
         }
-        var top = c(0, 0) + c(1, 0) - c(0, 0) * fx;
-        var bottom = c(0, 1) + c(1, 1) - c(0, 1) * fx;
-        return top + bottom - top * fy;
+        var top = c(0, 0) + ((c(1, 0) - c(0, 0)) * fx);
+        var bottom = c(0, 1) + ((c(1, 1) - c(0, 1)) * fx);
+        return top + ((bottom - top) * fy);
     }
 
     public static Nature natureFor(double seed, double size, string map)
     {
-        var start = new() { x = JsMath.floor(((double)(size) / (2))), y = JsMath.floor(((double)(size) / (2))) };
-        var side = hash(seed, 0, 0, 3) % 2 == 0 ? -1 : 1;
-        var riverBase = start.y + side * 48 + hash(seed, 0, 0, 4) % 24;
-        return new() { seed = seed, size = size, map = map, start = start, riverAlongX = hash(seed, 0, 0, 5) % 2 == 0, riverBase = riverBase };
+        var start = new() { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
+        var side = ((hash(seed, 0, 0, 3) % 2) == 0) ? -1 : 1;
+        var riverBase = start.y + (side * (48 + (hash(seed, 0, 0, 4) % 24)));
+        return new() { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };
     }
 
     public static bool nearStart(Nature n, int x, int y, double r)
     {
-        return JsMath.pow(x - n.start.x, 2) + JsMath.pow(y - n.start.y, 2) < r * r;
+        return (JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2)) < (r * r);
     }
 
     /// <summary>Open sea round an island or a chain (no bridges reach out into it): beyond a coast that wanders around 40% of the map's width from the middle.</summary>
     public static bool isSea(Nature n, int x, int y)
     {
-        if (n.map != "island" && n.map != "islands")
+        if ((n.map != "island") && (n.map != "islands"))
         {
             return false;
         }
@@ -71,14 +71,14 @@ public static partial class NatureMod
         {
             return false;
         }
-        var r = ((double)(JsMath.sqrt(JsMath.pow(x - ((double)(n.size) / (2)), 2) + JsMath.pow(y - ((double)(n.size) / (2)), 2))) / (((double)(n.size) / (2))));
-        return r > 0.78 + 0.18 * noise(n.seed, x, y, 18, 30) - 0.5;
+        var r = ((double)(JsMath.sqrt((JsMath.pow((x - ((double)(n.size) / (2))), 2)) + (JsMath.pow((y - ((double)(n.size) / (2))), 2)))) / (((double)(n.size) / (2))));
+        return r > (0.78 + (0.18 * (noise(n.seed, x, y, 18, 30) - 0.5)));
     }
 
     /// <summary>An island chain: channels between the islands, which roads cross on bridges.</summary>
     public static bool isChannel(Nature n, int x, int y)
     {
-        return n.map == "islands" && JsMath.abs(noise(n.seed, x, y, 40, 31) - 0.5) < 0.045;
+        return (n.map == "islands") && (JsMath.abs(noise(n.seed, x, y, 40, 31) - 0.5) < 0.045);
     }
 
     /// <summary>The river's distance from (x, y), across it, in tiles (negative never).</summary>
@@ -86,8 +86,8 @@ public static partial class NatureMod
     {
         var along = Js.T(n.riverAlongX) ? x : y;
         var across = Js.T(n.riverAlongX) ? y : x;
-        var centre = n.riverBase + 28 * noise(n.seed, along, 0, 40, 6) - 0.5;
-        var width = 3 + 2 * noise(n.seed, along, 0, 23, 7);
+        var centre = n.riverBase + (28 * (noise(n.seed, along, 0, 40, 6) - 0.5));
+        var width = 3 + (2 * noise(n.seed, along, 0, 23, 7));
         return JsMath.max(0, JsMath.abs(across - centre) - ((double)(width) / (2)));
     }
 
@@ -129,6 +129,6 @@ public static partial class NatureMod
             return false;
         }
         var s = n.size;
-        return x == 2 || y == 2 || x == s - 3 || y == s - 3 && x >= 2 && y >= 2 && x <= s - 3 && y <= s - 3;
+        return (x == 2) || (y == 2) || (x == (s - 3)) || (y == (s - 3)) && (x >= 2) && (y >= 2) && (x <= (s - 3)) && (y <= (s - 3));
     }
 }

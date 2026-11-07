@@ -46,7 +46,7 @@ public static partial class Visitors
     {
         foreach (var t in Js.Iter([.. state.traders]))
         {
-            if (state.tick >= t.leavesTick || Js.T(Time.isNight(state.tick)))
+            if ((state.tick >= t.leavesTick) || Js.T(Time.isNight(state.tick)))
             {
                 state.traders.splice(state.traders.indexOf(t), 1);
                 var home = Settlements.getSettlement(state, t.from);
@@ -54,16 +54,16 @@ public static partial class Visitors
                 {
                     Settlements.adjustReputation(state, home, Settlements.SNUB_REP);
                 }
-                Events.logEvent(state, Js.T(home) && !Js.T(t.traded) ? $"The trader went back to {Js.Str(home.name)} empty-handed (they won't forget it)" : "The trader packed up and left");
+                Events.logEvent(state, (Js.T(home) && !Js.T(t.traded)) ? $"The trader went back to {Js.Str(home.name)} empty-handed (they won't forget it)" : "The trader packed up and left");
             }
         }
         var day = Time.dayOf(state.tick);
-        if (day >= TRADER_FIRST_DAY && day - TRADER_FIRST_DAY % TRADER_EVERY == 0 && Time.tickOfDay(state.tick) == TRADER_HOUR * Time.TICKS_PER_HOUR)
+        if ((day >= TRADER_FIRST_DAY) && (((day - TRADER_FIRST_DAY) % TRADER_EVERY) == 0) && (Time.tickOfDay(state.tick) == (TRADER_HOUR * Time.TICKS_PER_HOUR)))
         {
             arrive(state);
         }
         var enemy = state.settlements.find(Settlements.isHostile);
-        if (day >= RAID_FIRST_DAY && Js.T(Zombies.nightFallsNow(state.tick)) && Rng.random(state) < Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE * Director.threatScale(state))
+        if ((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < (Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state)))
         {
             raid(state, day, enemy?.name);
         }
@@ -85,7 +85,7 @@ public static partial class Visitors
             offers.push(Js.Clone(o));
         }
         var from = Settlements.traderFrom(state);
-        state.traders.push(new() { id = $"t{Js.Str(state.nextId++)}", x = spot.x, y = spot.y, leavesTick = state.tick + TRADER_PATIENCE, offers = offers, from = from?.id ?? null, traded = false });
+        state.traders.push(new() { id = $"t{Js.Str(state.nextId++)}", x = Js.I(spot.x), y = Js.I(spot.y), leavesTick = state.tick + TRADER_PATIENCE, offers = offers, from = from?.id ?? null, traded = false });
         Events.logEvent(state, $"A trader{Js.Str(Js.T(from) ? $" from {Js.Str(from.name)}" : "")} is waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
     }
 
@@ -98,7 +98,7 @@ public static partial class Visitors
         {
             return "no such offer";
         }
-        var free = state.items.filter((i) => i.kind == o.want && i.pos != null && i.reservedBy == null);
+        var free = state.items.filter((i) => (i.kind == o.want) && (i.pos != null) && (i.reservedBy == null));
         if (free.length < o.wantCount)
         {
             return $"not enough {Js.Str(o.want)} (need {Js.Str(o.wantCount)}, have {Js.Str(free.length)} free)";
@@ -131,8 +131,8 @@ public static partial class Visitors
         var size = 2 + JsMath.floor(((double)(day) / (6)));
         for (var n = 0; n < size; n++)
         {
-            Point p = new() { x = spot.x + n % 2, y = spot.y + JsMath.floor(((double)(n) / (2))) };
-            var at = Grids.getTile(state.grid, p.x, p.y) == "floor" ? p : spot;
+            Point p = new() { x = Js.I(spot.x + (n % 2)), y = Js.I(spot.y + JsMath.floor(((double)(n) / (2)))) };
+            var at = (Grids.getTile(state.grid, p.x, p.y) == "floor") ? p : spot;
             Zombies.addZombie(state, at.x, at.y, RAIDER_HEALTH, "raider");
         }
         Events.logEvent(state, $"Raiders{Js.Str(Js.T(from) ? $" from {Js.Str(from)}" : "")}! {Js.Str(size)} of them, near ({Js.Str(spot.x)}, {Js.Str(spot.y)}). Locked doors will slow them.");

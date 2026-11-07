@@ -28,7 +28,7 @@ public static partial class Policies
 
     public static bool isPolicy(object p)
     {
-        return /*TODO typeof*/Js.TypeOf(p) == "string" && POLICIES.includes(p);
+        return (/*TODO typeof*/Js.TypeOf(p) == "string") && (POLICIES).includes(p);
     }
 
     public static bool policyOn(SimState state, string p)
@@ -39,13 +39,13 @@ public static partial class Policies
     /// <summary>Rationing: satiety drains three ticks in four.</summary>
     public static bool satietyDrains(SimState state)
     {
-        return !Js.T(policyOn(state, "rationing")) || state.tick % 4 != 0;
+        return !Js.T(policyOn(state, "rationing")) || ((state.tick % 4) != 0);
     }
 
     /// <summary>Quarantine: the infected and sick stay in bed.</summary>
     public static bool quarantined(SimState state, Survivor s)
     {
-        return Js.T(policyOn(state, "quarantine")) && s.infection != null || s.sick != null;
+        return Js.T(policyOn(state, "quarantine")) && (s.infection != null) || (s.sick != null);
     }
 
     /// <summary>The best-thought-of survivor, if anyone is thought well enough of.</summary>
@@ -76,12 +76,12 @@ public static partial class Policies
 
     public static void updateLeader(SimState state)
     {
-        if (state.tick % Time.DAY_LENGTH != 0)
+        if ((state.tick % Time.DAY_LENGTH) != 0)
         {
             return;
         }
         var leader = chooseLeader(state);
-        if (leader?.id ?? null == state.leaderId)
+        if ((leader?.id ?? null) == state.leaderId)
         {
             return;
         }

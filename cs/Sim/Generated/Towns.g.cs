@@ -25,12 +25,12 @@ public static partial class Towns
     /// <summary>How many towns, and how big, for a map this size.</summary>
     public static List<string> townKinds(double seed, double size)
     {
-        var count = size <= 128 ? 1 : JsMath.max(1, JsMath.round(((double)(size * size) / (170 * 170)))) + NatureMod.roll(seed, size, 0, 0x7100) < 0.5 ? 1 : 0;
+        var count = (size <= 128) ? 1 : (JsMath.max(1, JsMath.round(((double)((size * size)) / ((170 * 170))))) + ((NatureMod.roll(seed, size, 0, 0x7100) < 0.5) ? 1 : 0));
         List<string> kinds = [];
         for (var i = 0; i < count; i++)
         {
             var r = NatureMod.roll(seed, i, 1, 0x7101);
-            kinds.push(size >= 384 && r < 0.2 ? "city" : r < 0.6 ? "town" : "village");
+            kinds.push((size >= 384) && (r < 0.2) ? "city" : ((r < 0.6) ? "town" : "village"));
         }
         JsRecord<double> order = new() { city = 0, town = 1, village = 2 };
         return kinds.sort((a, b) => order[Js.Idx(a)] - order[Js.Idx(b)]);
@@ -45,9 +45,9 @@ public static partial class Towns
         {
             for (var i = 0; i < N; i++)
             {
-                var x = i * 4 + 2;
-                var y = j * 4 + 2;
-                g[Js.Idx(j * N + i)] = Js.T(NatureMod.isWater(n, x, y)) ? 2 : Js.T(NatureMod.isForest(n, x, y)) ? 1 : 0;
+                var x = (i * 4) + 2;
+                var y = (j * 4) + 2;
+                g[Js.Idx((j * N) + i)] = Js.T(NatureMod.isWater(n, x, y)) ? 2 : (Js.T(NatureMod.isForest(n, x, y)) ? 1 : 0);
             }
         }
         return g;
@@ -61,18 +61,18 @@ public static partial class Towns
         kinds.forEach((kind, i) =>
         {
             var (lo, hi) = RADII[Js.Idx(kind)];
-            var radius = JsMath.min(JsMath.floor(n.size * 0.19), lo + JsMath.floor(NatureMod.roll(n.seed, i, 2, 0x7102) * hi - lo + 1));
+            var radius = JsMath.min(JsMath.floor(n.size * 0.19), lo + JsMath.floor(NatureMod.roll(n.seed, i, 2, 0x7102) * ((hi - lo) + 1)));
             SiteTownsBest? best = null;
             var margin = radius + 3;
-            for (var y = margin; y < n.size - margin; y += 8)
+            for (var y = margin; y < (n.size - margin); y += 8)
             {
-                for (var x = margin; x < n.size - margin; x += 8)
+                for (var x = margin; x < (n.size - margin); x += 8)
                 {
-                    if (JsMath.sqrt(JsMath.pow(x - n.start.x, 2) + JsMath.pow(y - n.start.y, 2)) < radius + NatureMod.START_CLEAR_RADIUS + 6)
+                    if (JsMath.sqrt((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < ((radius + NatureMod.START_CLEAR_RADIUS) + 6))
                     {
                         continue;
                     }
-                    if (towns.some((t) => JsMath.sqrt(JsMath.pow(x - t.x, 2) + JsMath.pow(y - t.y, 2)) < radius + t.radius + 48))
+                    if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((radius + t.radius) + 48)))
                     {
                         continue;
                     }
@@ -82,12 +82,12 @@ public static partial class Towns
                     var around = 0;
                     var wet = 0;
                     var reach = radius + 14;
-                    for (var j = JsMath.max(0, JsMath.floor(((double)(y - reach) / (4)))); j <= JsMath.min(N - 1, JsMath.floor(((double)(y + reach) / (4)))); j++)
+                    for (var j = JsMath.max(0, JsMath.floor(((double)((y - reach)) / (4)))); j <= JsMath.min(N - 1, JsMath.floor(((double)((y + reach)) / (4)))); j++)
                     {
-                        for (var k = JsMath.max(0, JsMath.floor(((double)(x - reach) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)(x + reach) / (4)))); k++)
+                        for (var k = JsMath.max(0, JsMath.floor(((double)((x - reach)) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)((x + reach)) / (4)))); k++)
                         {
-                            var d = JsMath.sqrt(JsMath.pow(k * 4 + 2 - x, 2) + JsMath.pow(j * 4 + 2 - y, 2));
-                            var c = land[Js.Idx(j * N + k)]!;
+                            var d = JsMath.sqrt((JsMath.pow((((k * 4) + 2) - x), 2)) + (JsMath.pow((((j * 4) + 2) - y), 2)));
+                            var c = land[Js.Idx((j * N) + k)]!;
                             if (d <= radius)
                             {
                                 inside++;
@@ -116,16 +116,16 @@ public static partial class Towns
                         continue;
                     }
                     var wetShare = ((double)(wet) / (JsMath.max(1, around)));
-                    var score = dryShare - ((double)(wooded) / (JsMath.max(1, inside))) * 0.6 + wetShare > 0.02 && wetShare < 0.3 ? 0.3 : 0 + NatureMod.roll(n.seed, x, y, 0x7103) * 0.15;
-                    if (!Js.T(best) || score > best.score)
+                    var score = (dryShare - (((double)(wooded) / (JsMath.max(1, inside))) * 0.6)) + ((wetShare > 0.02) && (wetShare < 0.3) ? 0.3 : 0) + (NatureMod.roll(n.seed, x, y, 0x7103) * 0.15);
+                    if (!Js.T(best) || (score > best.score))
                     {
-                        best = new() { x = x, y = y, score = score };
+                        best = new() { x = Js.I(x), y = Js.I(y), score = score };
                     }
                 }
             }
             if (Js.T(best))
             {
-                towns.push(new() { x = best.x, y = best.y, radius = radius, kind = kind, eastWest = NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2 == 0 });
+                towns.push(new() { x = Js.I(best.x), y = Js.I(best.y), radius = radius, kind = kind, eastWest = (NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2) == 0 });
             }
         });
         return towns;
@@ -141,12 +141,12 @@ public static partial class Towns
         }
         bool blocked(int x, int y)
         {
-            return x < 3 || y < 3 || x >= n.size - 4 || y >= n.size - 4 || Js.T(NatureMod.isWater(n, x, y)) || Js.T(NatureMod.isWater(n, x + 1, y + 1)) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
+            return (x < 3) || (y < 3) || (x >= (n.size - 4)) || (y >= (n.size - 4)) || Js.T(NatureMod.isWater(n, x, y)) || Js.T(NatureMod.isWater(n, x + 1, y + 1)) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
         }
         var laid = new JsSet<double>();
         bool isStreet(int x, int y)
         {
-            return laid.has(y * n.size + x);
+            return laid.has((y * n.size) + x);
         }
         double run(int x, int y, int dx, int dy, double len, bool main)
         {
@@ -159,7 +159,7 @@ public static partial class Towns
             {
                 for (var o = 2; o <= 9; o++)
                 {
-                    if (Js.T(isStreet(sx + px * o, sy + py * o)) || Js.T(isStreet(sx - px * o - 1, sy - py * o - 1)))
+                    if (Js.T(isStreet(sx + (px * o), sy + (py * o))) || Js.T(isStreet(sx - (px * (o - 1)), sy - (py * (o - 1)))))
                     {
                         return true;
                     }
@@ -169,9 +169,9 @@ public static partial class Towns
             var steps = 0;
             while (steps < len)
             {
-                var nx = x + dx * steps + 1;
-                var ny = y + dy * steps + 1;
-                if (Js.T(blocked(nx, ny)) || JsMath.sqrt(JsMath.pow(nx - t.x, 2) + JsMath.pow(ny - t.y, 2)) > t.radius * 1.05)
+                var nx = x + (dx * (steps + 1));
+                var ny = y + (dy * (steps + 1));
+                if (Js.T(blocked(nx, ny)) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > (t.radius * 1.05)))
                 {
                     break;
                 }
@@ -180,7 +180,7 @@ public static partial class Towns
                     steps++;
                     break;
                 }
-                if (steps >= 2 && Js.T(crowded(nx, ny)))
+                if ((steps >= 2) && Js.T(crowded(nx, ny)))
                 {
                     break;
                 }
@@ -190,53 +190,53 @@ public static partial class Towns
             {
                 return 0;
             }
-            var x1 = x + dx * steps;
-            var y1 = y + dy * steps;
-            Street s = new() { x0 = JsMath.min(x, x1), y0 = JsMath.min(y, y1), x1 = JsMath.max(x, x1), y1 = JsMath.max(y, y1), eastWest = dy == 0, main = main, town = ti };
+            var x1 = x + (dx * steps);
+            var y1 = y + (dy * steps);
+            Street s = new() { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
             streets.push(s);
-            for (var yy = s.y0; yy <= s.y1 + Js.T(s.eastWest) ? 1 : 0; yy++)
+            for (var yy = s.y0; yy <= (s.y1 + (Js.T(s.eastWest) ? 1 : 0)); yy++)
             {
-                for (var xx = s.x0; xx <= s.x1 + Js.T(s.eastWest) ? 0 : 1; xx++)
+                for (var xx = s.x0; xx <= (s.x1 + (Js.T(s.eastWest) ? 0 : 1)); xx++)
                 {
-                    laid.add(yy * n.size + xx);
+                    laid.add((yy * n.size) + xx);
                 }
             }
             return steps;
         }
-        var levels = t.kind == "village" ? 1 : 2;
-        var odds = t.kind == "village" ? 0.55 : 0.75;
+        var levels = (t.kind == "village") ? 1 : 2;
+        var odds = (t.kind == "village") ? 0.55 : 0.75;
         var k = 10;
         void grow(int x, int y, int dx, int dy, double len, double level)
         {
             var steps = run(x, y, dx, dy, len, level == 0);
-            if (steps == 0 || level >= levels)
+            if ((steps == 0) || (level >= levels))
             {
                 return;
             }
             var (px, py) = [JsMath.abs(dy), JsMath.abs(dx)];
-            var off = STREET_GAP - 8 + JsMath.floor(r(k++) * 7);
-            while (off < steps - 4)
+            var off = (STREET_GAP - 8) + JsMath.floor(r(k++) * 7);
+            while (off < (steps - 4))
             {
-                var bx = x + dx * off;
-                var by = y + dy * off;
+                var bx = x + (dx * off);
+                var by = y + (dy * off);
                 foreach (var side in Js.Iter([1, -1]))
                 {
                     if (r(k++) > odds)
                     {
                         continue;
                     }
-                    var gap = side == 1 ? 2 : -1;
-                    grow(bx + px * gap, by + py * gap, px * side, py * side, JsMath.floor(t.radius * 0.5 + r(k++) * 0.6), level + 1);
+                    var gap = (side == 1) ? 2 : -1;
+                    grow(bx + (px * gap), by + (py * gap), px * side, py * side, JsMath.floor(t.radius * (0.5 + (r(k++) * 0.6))), level + 1);
                 }
                 off += STREET_GAP + JsMath.floor(r(k++) * 6);
             }
         }
         var (ax, ay) = Js.T(t.eastWest) ? [1, 0] : [0, 1];
         var (cx, cy) = Js.T(t.eastWest) ? [0, 1] : [1, 0];
-        grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * 0.9 + r(1) * 0.2), 0);
-        grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * 0.9 + r(2) * 0.2), 0);
-        grow(t.x + cx * 2, t.y + cy * 2, cx, cy, JsMath.floor(t.radius * 0.6 + r(3) * 0.4), 0);
-        grow(t.x - cx, t.y - cy, -cx, -cy, JsMath.floor(t.radius * 0.6 + r(4) * 0.4), 0);
+        grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * (0.9 + (r(1) * 0.2))), 0);
+        grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * (0.9 + (r(2) * 0.2))), 0);
+        grow(t.x + (cx * 2), t.y + (cy * 2), cx, cy, JsMath.floor(t.radius * (0.6 + (r(3) * 0.4))), 0);
+        grow(t.x - cx, t.y - cy, -cx, -cy, JsMath.floor(t.radius * (0.6 + (r(4) * 0.4))), 0);
         return streets;
     }
 }

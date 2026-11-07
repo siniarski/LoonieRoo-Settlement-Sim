@@ -13,7 +13,7 @@ public static partial class Designations
 
     public static bool isFurnitureTarget(string target)
     {
-        return FURNITURE_TARGETS.includes(target);
+        return (FURNITURE_TARGETS).includes(target);
     }
 
     /// <summary>Ticks of work (10 ticks = 1s at 1x).</summary>
@@ -22,7 +22,7 @@ public static partial class Designations
     /// <summary>What a blueprint needs delivered: scrap to reinforce, wood for everything else.</summary>
     public static string materialFor(string target)
     {
-        return target == "reinforce" ? "scrap" : "wood";
+        return (target == "reinforce") ? "scrap" : "wood";
     }
 
     public static Blueprint? getBlueprint(SimState state, string id)
@@ -32,14 +32,14 @@ public static partial class Designations
 
     public static Blueprint? blueprintAt(SimState state, int x, int y)
     {
-        return state.blueprints.find((b) => b.x == x && b.y == y);
+        return state.blueprints.find((b) => (b.x == x) && (b.y == y));
     }
 
     /// <summary>Can something be removed here?</summary>
     public static bool hasRemovable(SimState state, int x, int y)
     {
         var tile = Grids.getTile(state.grid, x, y);
-        return tile == "wall" || tile == "door" || tile == "barricade" || FurnitureMod.furnitureAt(state, x, y) != null;
+        return (tile == "wall") || (tile == "door") || (tile == "barricade") || (FurnitureMod.furnitureAt(state, x, y) != null);
     }
 
     /// <summary>Building needs empty floor (no furniture); removing needs something to remove.</summary>
@@ -48,7 +48,7 @@ public static partial class Designations
         if (Js.T(bp.side))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
-            if (bp.target == "barricade" && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(e)])))
+            if ((bp.target == "barricade") && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(e)])))
             {
                 return !state.grid.edgeBoarded.includes(e);
             }
@@ -60,14 +60,14 @@ public static partial class Designations
         }
         if (bp.target == "reinforce")
         {
-            return Js.T(Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y))) && !state.grid.reinforced.includes(bp.y * state.grid.width + bp.x);
+            return Js.T(Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y))) && !state.grid.reinforced.includes((bp.y * state.grid.width) + bp.x);
         }
-        return Grids.getTile(state.grid, bp.x, bp.y) == "floor" && !Js.T(FurnitureMod.furnitureAt(state, bp.x, bp.y));
+        return (Grids.getTile(state.grid, bp.x, bp.y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, bp.x, bp.y));
     }
 
     public static Blueprint addBlueprint(SimState state, int x, int y, string target, string? side = default)
     {
-        Blueprint bp = new() { id = $"b{Js.Str(state.nextId++)}", x = x, y = y, target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = BUILD_WORK[Js.Idx(target)] };
+        Blueprint bp = new() { id = $"b{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = BUILD_WORK[Js.Idx(target)] };
         if (Js.T(side))
         {
             bp.side = side;
@@ -98,7 +98,7 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if (Js.T(bp.side) && bp.target == "barricade" && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))])))
+        if ((Js.T(bp.side) && (bp.target == "barricade")) && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))])))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
             if (!state.grid.edgeBoarded.includes(e))
@@ -109,9 +109,9 @@ public static partial class Designations
             state.walkabilityVersion += 1;
             return;
         }
-        if (Js.T(bp.side) && bp.target == "wall" || bp.target == "door" || bp.target == "barricade")
+        if (Js.T(bp.side) && (bp.target == "wall") || (bp.target == "door") || (bp.target == "barricade"))
         {
-            if (Js.T(Grids.setEdge(state.grid, bp.x, bp.y, bp.side, bp.target == "wall" ? Grids.EDGE_WALL : bp.target == "door" ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE)))
+            if (Js.T(Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE))))
             {
                 state.walkabilityVersion += 1;
             }
@@ -168,7 +168,7 @@ public static partial class Designations
             case "reinforce":
                 {
                     {
-                    var i = bp.y * state.grid.width + bp.x;
+                    var i = (bp.y * state.grid.width) + bp.x;
                     if (!state.grid.reinforced.includes(i))
                     {
                         state.grid.reinforced.push(i);
@@ -200,7 +200,7 @@ public static partial class Designations
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            var onIt = Js.T(Space.samePoint(s.pos, tile)) || s.move != null && Js.T(Space.samePoint(s.move.to, tile));
+            var onIt = Js.T(Space.samePoint(s.pos, tile)) || (s.move != null) && Js.T(Space.samePoint(s.move.to, tile));
             if (!Js.T(onIt))
             {
                 continue;

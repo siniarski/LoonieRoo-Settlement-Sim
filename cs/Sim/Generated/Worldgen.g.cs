@@ -40,13 +40,13 @@ public static partial class Worldgen
     /// <summary>A country road or town street on this tile.</summary>
     public static bool isRoad(Layout l, int x, int y)
     {
-        return x >= 0 && y >= 0 && x < l.size && y < l.size && l.plan.roadMask[Js.Idx(y * l.size + x)] != 0;
+        return (x >= 0) && (y >= 0) && (x < l.size) && (y < l.size) && (l.plan.roadMask[Js.Idx((y * l.size) + x)] != 0);
     }
 
     /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
-        return l.plan.lotMask[Js.Idx(y * l.size + x)] != 0;
+        return l.plan.lotMask[Js.Idx((y * l.size) + x)] != 0;
     }
 
     /// <summary>A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it.</summary>
@@ -71,9 +71,9 @@ public static partial class Worldgen
     {
         var x0 = cx * CHUNK;
         var y0 = cy * CHUNK;
-        for (var y = y0; y < y0 + CHUNK; y++)
+        for (var y = y0; y < (y0 + CHUNK); y++)
         {
-            for (var x = x0; x < x0 + CHUNK; x++)
+            for (var x = x0; x < (x0 + CHUNK); x++)
             {
                 if (!Js.T(Grids.inBounds(state.grid, x, y)))
                 {
@@ -112,20 +112,20 @@ public static partial class Worldgen
         }
         var chunks = JsMath.ceil(((double)(l.size) / (CHUNK)));
         var ctx = lotContext(l);
-        foreach (var id in Js.Iter(l.plan.lotsByChunk[Js.Idx(cy * chunks + cx)] ?? []))
+        foreach (var id in Js.Iter(l.plan.lotsByChunk[Js.Idx((cy * chunks) + cx)] ?? []))
         {
             Lots.drawLot(state, ctx, l.plan.lots[Js.Idx(id)]!, x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
-        for (var y = y0; y < y0 + CHUNK; y++)
+        for (var y = y0; y < (y0 + CHUNK); y++)
         {
-            for (var x = x0; x < x0 + CHUNK; x++)
+            for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if (!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y)) || Js.T(onLot(l, x, y)) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)))
+                if ((!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y))) || Js.T(onLot(l, x, y)) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)))
                 {
                     continue;
                 }
                 var i = Grids.tileIndex(state.grid, x, y);
-                if (state.grid.tiles[Js.Idx(i)] == "floor" && state.grid.ground[Js.Idx(i)] == FOREST && NatureMod.roll(l.seed, x, y, 12) < 0.3)
+                if ((state.grid.tiles[Js.Idx(i)] == "floor") && (state.grid.ground[Js.Idx(i)] == FOREST) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
                 {
                     FurnitureMod.addFurniture(state, "tree", x, y);
                 }
@@ -136,13 +136,13 @@ public static partial class Worldgen
     /// <summary>What drawing a lot needs to know about the world.</summary>
     public static LotContext lotContext(Layout l)
     {
-        return new() { seed = l.seed, lootAt = (x, y) => lootFor(JsMath.sqrt(JsMath.pow(x - l.start.x, 2) + JsMath.pow(y - l.start.y, 2))), distance = (x, y) => JsMath.sqrt(JsMath.pow(x - l.start.x, 2) + JsMath.pow(y - l.start.y, 2)), calm = NatureMod.START_CLEAR_RADIUS + 24 };
+        return new() { seed = l.seed, lootAt = (x, y) => lootFor(JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2)))), distance = (x, y) => JsMath.sqrt((JsMath.pow((x - l.start.x), 2)) + (JsMath.pow((y - l.start.y), 2))), calm = NatureMod.START_CLEAR_RADIUS + 24 };
     }
 
     /// <summary>Finds in a crate this far from the start: CRATE_LOOT nearby, up to three times that at the far edge.</summary>
     public static double lootFor(double distance)
     {
-        return FurnitureMod.CRATE_LOOT - 2 + JsMath.min(2 * FurnitureMod.CRATE_LOOT, JsMath.floor(((double)(distance) / (20))));
+        return (FurnitureMod.CRATE_LOOT - 2) + JsMath.min(2 * FurnitureMod.CRATE_LOOT, JsMath.floor(((double)(distance) / (20))));
     }
 
     /// <summary>The start: an intact hut with three beds, three survivors, and some wood and food.</summary>
@@ -153,14 +153,14 @@ public static partial class Worldgen
         var sy = __d1.y;
         var x0 = sx - 4;
         var y0 = sy - 7;
-        for (var y = y0; y <= y0 + 5; y++)
+        for (var y = y0; y <= (y0 + 5); y++)
         {
-            for (var x = x0; x <= x0 + 7; x++)
+            for (var x = x0; x <= (x0 + 7); x++)
             {
                 ground(state, x, y, "dirt");
-                if (x == x0 || x == x0 + 7 || y == y0 || y == y0 + 5)
+                if ((x == x0) || (x == (x0 + 7)) || (y == y0) || (y == (y0 + 5)))
                 {
-                    Grids.setTile(state.grid, x, y, x == x0 + 3 && y == y0 + 5 ? "door" : "wall");
+                    Grids.setTile(state.grid, x, y, (x == (x0 + 3)) && (y == (y0 + 5)) ? "door" : "wall");
                 }
             }
         }
@@ -177,22 +177,22 @@ public static partial class Worldgen
         if (Js.T(solo))
         {
             var you = state.survivors[Js.Idx(0)]!;
-            state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new() { x = 0, y = 1 }, nextSwing = 0, busy = null };
+            state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new() { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
             var weapon = Items.spawnItem(state, "weapon", you.pos.x, you.pos.y);
             weapon.pos = null;
             weapon.carriedBy = you.id;
             you.weapon = weapon.id;
             Items.spawnItem(state, "bandage", you.pos.x, you.pos.y);
         }
-        for (var i = 0; i < Js.T(solo) ? 4 : 12; i++)
+        for (var i = 0; i < (Js.T(solo) ? 4 : 12); i++)
         {
-            Items.spawnItem(state, "wood", sx - 6 + i % 4, sy + 3 + JsMath.floor(((double)(i) / (4))));
+            Items.spawnItem(state, "wood", (sx - 6) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
-        for (var i = 0; i < Js.T(solo) ? 4 : 10; i++)
+        for (var i = 0; i < (Js.T(solo) ? 4 : 10); i++)
         {
-            Items.spawnItem(state, "food", sx + 3 + i % 4, sy + 3 + JsMath.floor(((double)(i) / (4))));
+            Items.spawnItem(state, "food", (sx + 3) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
-        var c = Space.nearestTile(state.grid, new() { x = sx + 5, y = sy + 1 }, (x, y) => Grids.getTile(state.grid, x, y) == "floor" && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        var c = Space.nearestTile(state.grid, new() { x = Js.I(sx + 5), y = Js.I(sy + 1) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
         if (Js.T(c))
         {
             FurnitureMod.addFurniture(state, "collector", c.x, c.y).loot = START_WATER;
@@ -217,7 +217,7 @@ public static partial class Worldgen
         {
             for (var cx = JsMath.max(0, pcx - GENERATE_RADIUS); cx <= JsMath.min(world.chunks - 1, pcx + GENERATE_RADIUS); cx++)
             {
-                var i = cy * world.chunks + cx;
+                var i = (cy * world.chunks) + cx;
                 if (world.generated[Js.Idx(i)] == 1)
                 {
                     continue;
@@ -236,7 +236,7 @@ public static partial class Worldgen
     {
         bool inChunk(Point q)
         {
-            return JsMath.floor(((double)(q.x) / (CHUNK))) == cx && JsMath.floor(((double)(q.y) / (CHUNK))) == cy;
+            return (JsMath.floor(((double)(q.x) / (CHUNK))) == cx) && (JsMath.floor(((double)(q.y) / (CHUNK))) == cy);
         }
         /*TODO return type*/object open(int x, int y)
         {
@@ -284,13 +284,13 @@ public static partial class Worldgen
     {
         for (var r = 1; r <= CHUNK; r++)
         {
-            for (var y = p.y - r; y <= p.y + r; y++)
+            for (var y = p.y - r; y <= (p.y + r); y++)
             {
-                for (var x = p.x - r; x <= p.x + r; x++)
+                for (var x = p.x - r; x <= (p.x + r); x++)
                 {
-                    if (JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r && Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y)))
+                    if ((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y)))
                     {
-                        return new() { x = x, y = y };
+                        return new() { x = Js.I(x), y = Js.I(y) };
                     }
                 }
             }
@@ -299,37 +299,37 @@ public static partial class Worldgen
     }
 
     /// <summary>A new generated world; `you`, if given, becomes the first survivor (character.ts).</summary>
-    public static SimState createWorld(double seed, /*TODO param type*/object? size = null, Settings? settings = null, Character? you = default)
+    public static SimState createWorld(double seed, double? size = null, Settings? settings = null, Character? you = default)
     {
         size ??= WORLD_SIZE;
         settings ??= Difficulty.NORMAL;
-        var state = States.createState(new() { seed = seed, width = size, height = size });
+        var state = States.createState(new() { seed = seed, width = Js.I(size), height = Js.I(size) });
         state.settings = Js.Clone(settings);
         var l = layout(seed, size, settings.map);
         var chunks = JsMath.ceil(((double)(size) / (CHUNK)));
         state.world = new() { seed = seed, size = size, chunks = chunks, generated = /*TODO new Array*/new List<object>().fill(0) };
         ensureGeneratedAround(state, l.start);
         startCamp(state, l);
-        if (Js.T(you) && CharacterMod.characterProblem(you) == null)
+        if (Js.T(you) && (CharacterMod.characterProblem(you) == null))
         {
             CharacterMod.applyCharacter(state, state.survivors[Js.Idx(0)]!, you);
         }
         state.harsh = true;
         TimelineMod.rollTimeline(state, seed);
         Settlements.placeSettlements(state, l.start, seed);
-        var angle = Hash.hashRoll(seed, 0x7a0c) * JsMath.PI * 2;
-        var near = new() { x = JsMath.round(l.start.x + JsMath.cos(angle) * 35), y = JsMath.round(l.start.y + JsMath.sin(angle) * 35) };
-        var clamped = new() { x = JsMath.max(1, JsMath.min(size - 2, near.x)), y = JsMath.max(1, JsMath.min(size - 2, near.y)) };
-        var spot = Space.nearestTile(state.grid, clamped, (x, y) => Grids.getTile(state.grid, x, y) == "floor" && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
-        var park = Js.T(spot) && Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new() { x = x, y = y })));
+        var angle = (Hash.hashRoll(seed, 0x7a0c) * JsMath.PI) * 2;
+        var near = new() { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
+        var clamped = new() { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
+        var spot = Space.nearestTile(state.grid, clamped, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new() { x = Js.I(x), y = Js.I(y) }))));
         if (Js.T(park))
         {
             Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(Hash.hashRoll(seed, 0x7a0d) * 32), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");
         }
         state.grid.explored.fill(0);
-        for (var y = l.start.y - START_REVEAL_RADIUS; y <= l.start.y + START_REVEAL_RADIUS; y++)
+        for (var y = l.start.y - START_REVEAL_RADIUS; y <= (l.start.y + START_REVEAL_RADIUS); y++)
         {
-            for (var x = l.start.x - START_REVEAL_RADIUS; x <= l.start.x + START_REVEAL_RADIUS; x++)
+            for (var x = l.start.x - START_REVEAL_RADIUS; x <= (l.start.x + START_REVEAL_RADIUS); x++)
             {
                 if (Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1)))
                 {

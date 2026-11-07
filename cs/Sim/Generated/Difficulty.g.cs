@@ -44,7 +44,7 @@ public static partial class Difficulty
 
     public static double zombieScale(SimState state, double count)
     {
-        return JsMath.round(((double)(count * state.settings.zombies) / (100)));
+        return JsMath.round(((double)((count * state.settings.zombies)) / (100)));
     }
 
     public static double eventChance(SimState state, double @base)
@@ -71,22 +71,22 @@ public static partial class Difficulty
     public static Item spawnFind(SimState state, string kind, int x, int y)
     {
         var item = Items.spawnItem(state, kind, x, y);
-        var life = kind == "weapon" ? Weapons.WEAPON_KILLS : Js.T(Clothing.isGarment(kind)) ? Clothing.GARMENT_LIFE[Js.Idx(kind)] : 0;
+        var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Js.T(Clothing.isGarment(kind)) ? Clothing.GARMENT_LIFE[Js.Idx(kind)] : 0);
         item.wear = JsMath.floor(life * FOUND_WEAR[Js.Idx(state.settings.progression)]!);
         return item;
     }
 
     public static bool isSettings(object v)
     {
-        if (/*TODO typeof*/Js.TypeOf(v) != "object" || v == null)
+        if ((/*TODO typeof*/Js.TypeOf(v) != "object") || (v == null))
         {
             return false;
         }
         var s = v;
         bool level(object n, double max)
         {
-            return JsNumber.isInteger(n) && n >= 0 && n < max;
+            return (JsNumber.isInteger(n) && ((n) >= 0)) && ((n) < max);
         }
-        return s.start == "group" || s.start == "solo" && JsNumber.isInteger(s.zombies) && s.zombies >= 25 && s.zombies <= 300 && Js.T(level(s.weather, WEATHER_LEVELS.length)) && Js.T(level(s.progression, PROGRESSION_LEVELS.length)) && /*TODO typeof*/Js.TypeOf(s.winter) == "boolean" && s.dayScale == 1 || s.dayScale == 2 || s.dayScale == 3 && MAP_TYPES.some((/*TODO pattern*/_0) => m == s.map);
+        return (s.start == "group") || (s.start == "solo") && JsNumber.isInteger(s.zombies) && ((s.zombies) >= 25) && ((s.zombies) <= 300) && Js.T(level(s.weather, WEATHER_LEVELS.length)) && Js.T(level(s.progression, PROGRESSION_LEVELS.length)) && (/*TODO typeof*/Js.TypeOf(s.winter) == "boolean") && (s.dayScale == 1) || (s.dayScale == 2) || (s.dayScale == 3) && MAP_TYPES.some((/*TODO pattern*/_0) => m == s.map);
     }
 }

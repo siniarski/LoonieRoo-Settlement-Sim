@@ -28,7 +28,7 @@ public static partial class Mapnotes
     public static string? addMapNote(SimState state, int x, int y, string text)
     {
         var clean = text.replace(/*TODO regex /[\u0000-\u001f]/g*/null, "").trim().slice(0, NOTE_MAX);
-        if (!JsNumber.isInteger(x) || !JsNumber.isInteger(y) || !Js.T(Grids.inBounds(state.grid, x, y)))
+        if ((!JsNumber.isInteger(x) || !JsNumber.isInteger(y)) || !Js.T(Grids.inBounds(state.grid, x, y)))
         {
             return "not on the map";
         }
@@ -41,7 +41,7 @@ public static partial class Mapnotes
         {
             return $"the map is full ({Js.Str(MAX_NOTES)} notes)";
         }
-        state.mapNotes.push(new() { id = $"n{Js.Str(state.nextId++)}", x = x, y = y, text = clean });
+        state.mapNotes.push(new() { id = $"n{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), text = clean });
         return null;
     }
 
@@ -66,6 +66,6 @@ public static partial class Mapnotes
         }
         var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
         var offset = JsMath.floor(Hash.hashRoll(state.world.seed, 0x7041) * TOWN_NAMES.length);
-        return plan.towns.map((t, i) => new() { x = t.x, y = t.y, name = TOWN_NAMES[Js.Idx(offset + i % TOWN_NAMES.length)]! });
+        return plan.towns.map((t, i) => new() { x = Js.I(t.x), y = Js.I(t.y), name = TOWN_NAMES[Js.Idx((offset + i) % TOWN_NAMES.length)]! });
     }
 }

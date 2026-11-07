@@ -43,7 +43,7 @@ public static partial class Outposts
     /// <summary>The truck as a vehicle, seen and parked (nobody driving it).</summary>
     public static /*TODO return type*/object truckVehicle(SimState state)
     {
-        return Vehicles.vehiclesOf(state).find((v) => v.kind == "truck" && v.health > 0 && v.driverId == null && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y)));
+        return Vehicles.vehiclesOf(state).find((v) => (v.kind == "truck") && (v.health > 0) && (v.driverId == null) && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y)));
     }
 
     /// <summary>The truck vehicle a trip would take now (seen, parked), if there is one.</summary>
@@ -63,12 +63,12 @@ public static partial class Outposts
             return false;
         }
         var v = truckVehicle(state);
-        if (Js.T(v) && v.fuel >= TRIP_FUEL)
+        if (Js.T(v) && (v.fuel >= TRIP_FUEL))
         {
             v.fuel -= TRIP_FUEL;
             return true;
         }
-        var fuel = state.items.filter((i) => i.kind == "fuel" && i.pos != null && i.reservedBy == null);
+        var fuel = state.items.filter((i) => (i.kind == "fuel") && (i.pos != null) && (i.reservedBy == null));
         if (fuel.length < TRUCK_FUEL)
         {
             return false;
@@ -82,7 +82,7 @@ public static partial class Outposts
 
     public static void updateOutposts(SimState state)
     {
-        if (state.tick % Time.DAY_LENGTH != 0 || state.tick == 0)
+        if (((state.tick % Time.DAY_LENGTH) != 0) || (state.tick == 0))
         {
             return;
         }
@@ -92,16 +92,16 @@ public static partial class Outposts
             {
                 continue;
             }
-            for (var k = 0; k < x.members.length * OUTPOST_FINDS; k++)
+            for (var k = 0; k < (x.members.length * OUTPOST_FINDS); k++)
             {
                 Difficulty.spawnFind(state, Jobs.scavengeFind(Hash.hashRoll(Hash.idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
             }
-            if (Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0xd4) >= OUTPOST_DANGER || x.members.length == 0)
+            if ((Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0xd4) >= OUTPOST_DANGER) || (x.members.length == 0))
             {
                 continue;
             }
             var s = x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]!;
-            if (s.health > Health.HEALTH_MAX - OUTPOST_HURT)
+            if (s.health > (Health.HEALTH_MAX - OUTPOST_HURT))
             {
                 s.health -= OUTPOST_HURT;
                 Events.logEvent(state, $"Trouble at the {Js.Str(x.target.label)} outpost: {Js.Str(s.name)} was hurt");
@@ -151,7 +151,7 @@ public static partial class Outposts
             return "no such outpost";
         }
         x.outpost = false;
-        x.returnTick = state.tick + Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE;
+        x.returnTick = state.tick + (Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE);
         Events.logEvent(state, $"The {Js.Str(x.target.label)} outpost is packing up and heading home");
         return null;
     }

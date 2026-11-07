@@ -43,7 +43,7 @@ public static partial class FireMod
 
     public static Fire? fireAt(SimState state, int x, int y)
     {
-        return state.fires.find((f) => f.x == x && f.y == y);
+        return state.fires.find((f) => (f.x == x) && (f.y == y));
     }
 
     /// <summary>Can a fire here keep going (and catch from a neighbour)?</summary>
@@ -54,17 +54,17 @@ public static partial class FireMod
         {
             return false;
         }
-        return t == "wall" || t == "door" || t == "barricade" || t == "floor" && FurnitureMod.furnitureAt(state, x, y) != null;
+        return (t == "wall") || (t == "door") || (t == "barricade") || (t == "floor") && (FurnitureMod.furnitureAt(state, x, y) != null);
     }
 
     /// <summary>Sets a tile alight. Returns false if it can't burn (water, already alight, too many fires).</summary>
     public static bool ignite(SimState state, int x, int y)
     {
-        if (!Js.T(Grids.inBounds(state.grid, x, y)) || Grids.getTile(state.grid, x, y) == "water" || Js.T(fireAt(state, x, y)) || state.fires.length >= MAX_FIRES)
+        if ((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y)) || (state.fires.length >= MAX_FIRES))
         {
             return false;
         }
-        state.fires.push(new() { x = x, y = y, left = Js.T(burnable(state, x, y)) ? FIRE_BURN : GROUND_BURN });
+        state.fires.push(new() { x = Js.I(x), y = Js.I(y), left = Js.T(burnable(state, x, y)) ? FIRE_BURN : GROUND_BURN });
         return true;
     }
 
@@ -88,7 +88,7 @@ public static partial class FireMod
         {
             foreach (var s in Js.Iter(state.survivors))
             {
-                if (s.pos.x != f.x || s.pos.y != f.y)
+                if ((s.pos.x != f.x) || (s.pos.y != f.y))
                 {
                     continue;
                 }
@@ -98,7 +98,7 @@ public static partial class FireMod
             }
             foreach (var z in Js.Iter([.. state.zombies]))
             {
-                if (z.pos.x != f.x || z.pos.y != f.y)
+                if ((z.pos.x != f.x) || (z.pos.y != f.y))
                 {
                     continue;
                 }
@@ -110,12 +110,12 @@ public static partial class FireMod
                 Zombies.removeZombie(state, z);
                 Corpses.leaveCorpse(state, z.pos, null);
             }
-            if (state.tick % SPREAD_EVERY == 0 && Js.T(burnable(state, f.x, f.y)))
+            if (((state.tick % SPREAD_EVERY) == 0) && Js.T(burnable(state, f.x, f.y)))
             {
                 foreach (var n in Js.Iter(Grids.neighbours4(state.grid, f.x, f.y)))
                 {
-                    var chance = state.weather == "heatwave" ? 2 * SPREAD_CHANCE : SPREAD_CHANCE;
-                    if (Js.T(burnable(state, n.x, n.y)) && !Js.T(fireAt(state, n.x, n.y)) && Hash.hashRoll(n.x, n.y, state.tick) < chance)
+                    var chance = (state.weather == "heatwave") ? (2 * SPREAD_CHANCE) : SPREAD_CHANCE;
+                    if ((Js.T(burnable(state, n.x, n.y)) && !Js.T(fireAt(state, n.x, n.y))) && (Hash.hashRoll(n.x, n.y, state.tick) < chance))
                     {
                         ignite(state, n.x, n.y);
                     }
@@ -140,7 +140,7 @@ public static partial class FireMod
             FurnitureMod.removeFurniture(state, furniture);
         }
         var t = Grids.getTile(state.grid, f.x, f.y);
-        if (t == "wall" || t == "door" || t == "barricade")
+        if ((t == "wall") || (t == "door") || (t == "barricade"))
         {
             Grids.setTile(state.grid, f.x, f.y, "floor");
             state.walkabilityVersion += 1;

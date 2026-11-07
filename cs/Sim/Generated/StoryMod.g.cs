@@ -29,7 +29,7 @@ public static partial class StoryMod
         {
             return list[Js.Idx(JsMath.floor(Hash.hashRoll(n, salt) * list.length))]!;
         }
-        return new() { job = JsMath.floor(Hash.hashRoll(n, 0x51) * STORY_JOBS.length), pride = JsMath.floor(Hash.hashRoll(n, 0x52) * PRIDES.length), regret = JsMath.floor(Hash.hashRoll(n, 0x53) * REGRETS.length), lost = lostOne(n), pet = Hash.hashRoll(n, 0x57) < 0.5 ? pick(PET_NAMES, 0x58) : null, told = 0, nextTalk = 0, asked = [], town = JsMath.floor(Hash.hashRoll(n, 0x59) * TOWNS.length), knew = [], confessed = false };
+        return new() { job = JsMath.floor(Hash.hashRoll(n, 0x51) * STORY_JOBS.length), pride = JsMath.floor(Hash.hashRoll(n, 0x52) * PRIDES.length), regret = JsMath.floor(Hash.hashRoll(n, 0x53) * REGRETS.length), lost = lostOne(n), pet = (Hash.hashRoll(n, 0x57) < 0.5) ? pick(PET_NAMES, 0x58) : null, told = 0, nextTalk = 0, asked = [], town = JsMath.floor(Hash.hashRoll(n, 0x59) * TOWNS.length), knew = [], confessed = false };
     }
 
     public static LostOneResult lostOne(double n)

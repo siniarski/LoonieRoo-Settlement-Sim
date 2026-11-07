@@ -55,6 +55,6 @@ public static partial class Health
     /// <summary>Does work advance this tick? Slowed survivors (hurt or miserable) lose one tick in HURT_WORK_SKIP_EVERY.</summary>
     public static bool worksThisTick(int tick, bool slowed)
     {
-        return !Js.T(slowed) || tick % HURT_WORK_SKIP_EVERY != 0;
+        return !Js.T(slowed) || ((tick % HURT_WORK_SKIP_EVERY) != 0);
     }
 }

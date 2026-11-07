@@ -25,16 +25,16 @@ public static partial class Alerts
         {
             return double.PositiveInfinity;
         }
-        var satiety = state.items.reduce((sum, i) => sum + i.kind == "food" ? Food.MEAL_VALUE : i.kind == "meal" ? Food.HOT_MEAL_VALUE : 0, 0);
-        return ((double)(satiety) / (people * DAILY_SATIETY));
+        var satiety = state.items.reduce((sum, i) => sum + (i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0), 0);
+        return ((double)(satiety) / ((people * DAILY_SATIETY)));
     }
 
     /// <summary>Days until winter starts (0 in winter).</summary>
     public static double daysToWinter(int tick)
     {
         var day = Time.dayOf(tick);
-        var intoYear = day - 1 % 4 * Seasons.SEASON_DAYS;
-        return Seasons.seasonOf(tick) == "winter" ? 0 : 3 * Seasons.SEASON_DAYS - intoYear;
+        var intoYear = (day - 1) % (4 * Seasons.SEASON_DAYS);
+        return (Seasons.seasonOf(tick) == "winter") ? 0 : ((3 * Seasons.SEASON_DAYS) - intoYear);
     }
 
     public static List<Alert> alerts(SimState state)
@@ -53,11 +53,11 @@ public static partial class Alerts
         }
         if (near.length > raiders.length)
         {
-            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(near.length - raiders.length == 1 ? "" : "s")} near the colony", near.find((z) => z.kind != "raider")!.pos);
+            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(((near.length - raiders.length) == 1) ? "" : "s")} near the colony", near.find((z) => z.kind != "raider")!.pos);
         }
         if (state.fires.length > 0)
         {
-            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str(state.fires.length == 1 ? "" : "s")} burning", state.fires[Js.Idx(0)]);
+            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str((state.fires.length == 1) ? "" : "s")} burning", state.fires[Js.Idx(0)]);
         }
         foreach (var h in Js.Iter(state.herds))
         {
@@ -67,7 +67,7 @@ public static partial class Alerts
             }
         }
         var hour = Time.hourOf(state.tick);
-        if (!Js.T(Time.isNight(state.tick)) && hour >= Time.NIGHT_START - 3)
+        if (!Js.T(Time.isNight(state.tick)) && (hour >= (Time.NIGHT_START - 3)))
         {
             var night = Time.dayOf(state.tick);
             add("info", $"Night in {Js.Str(Time.NIGHT_START - hour)}h: about {Js.Str(Zombies.zombiesForNight(night, people.length))} zombies expected");
@@ -75,7 +75,7 @@ public static partial class Alerts
         var eg = state.endgame;
         if (Js.T(eg.won))
         {
-            add("info", eg.won == "cure" ? "You found the cure. You have won" : "The helicopter came. You have won");
+            add("info", (eg.won == "cure") ? "You found the cure. You have won" : "The helicopter came. You have won");
         }
         else if (eg.evacuation != null)
         {
@@ -84,13 +84,13 @@ public static partial class Alerts
         var toSiege = EndgameMod.daysToSiege(state.tick);
         if (toSiege <= 2)
         {
-            add(toSiege == 0 ? "danger" : "warn", toSiege == 0 ? "Siege tonight: a quarter more zombies" : $"Siege in {Js.Str(toSiege)} night{Js.Str(toSiege == 1 ? "" : "s")}");
+            add((toSiege == 0) ? "danger" : "warn", (toSiege == 0) ? "Siege tonight: a quarter more zombies" : $"Siege in {Js.Str(toSiege)} night{Js.Str((toSiege == 1) ? "" : "s")}");
         }
         foreach (var s in Js.Iter(people))
         {
             if (s.infection != null)
             {
-                add("danger", $"{Js.Str(s.name)} is infected: about {Js.Str(JsMath.ceil(((double)(Infection.INFECTION_TURN - s.infection) / (Time.TICKS_PER_HOUR))))}h to cure them (medicine)", s.pos);
+                add("danger", $"{Js.Str(s.name)} is infected: about {Js.Str(JsMath.ceil(((double)((Infection.INFECTION_TURN - s.infection)) / (Time.TICKS_PER_HOUR))))}h to cure them (medicine)", s.pos);
             }
             else if (Js.T(Health.isCritical(s.health)))
             {
@@ -104,11 +104,11 @@ public static partial class Alerts
             {
                 add("warn", $"{Js.Str(s.name)} is hungry", s.pos);
             }
-            if (Js.T(state.harsh) && s.hydration == 0)
+            if (Js.T(state.harsh) && (s.hydration == 0))
             {
                 add("danger", $"{Js.Str(s.name)} is dying of thirst", s.pos);
             }
-            else if (Js.T(state.harsh) && s.hydration < ((double)(Water.THIRSTY) / (2)))
+            else if (Js.T(state.harsh) && (s.hydration < ((double)(Water.THIRSTY) / (2))))
             {
                 add("warn", $"{Js.Str(s.name)} is thirsty", s.pos);
             }
@@ -127,19 +127,19 @@ public static partial class Alerts
         }
         var days = foodDays(state);
         var toWinter = daysToWinter(state.tick);
-        if (people.length > 0 && days < 1)
+        if ((people.length > 0) && (days < 1))
         {
             add("danger", $"Food for less than a day ({Js.Str(people.length)} to feed)");
         }
-        else if (people.length > 0 && toWinter > 0 && toWinter <= 5 && days < Seasons.SEASON_DAYS)
+        else if ((people.length > 0) && (toWinter > 0) && (toWinter <= 5) && (days < Seasons.SEASON_DAYS))
         {
-            add("warn", $"Winter in {Js.Str(toWinter)} day{Js.Str(toWinter == 1 ? "" : "s")}: food for about {Js.Str(days.toFixed(1))} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)");
+            add("warn", $"Winter in {Js.Str(toWinter)} day{Js.Str((toWinter == 1) ? "" : "s")}: food for about {Js.Str(days.toFixed(1))} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)");
         }
-        else if (people.length > 0 && days < 2)
+        else if ((people.length > 0) && (days < 2))
         {
             add("warn", $"Food for about {Js.Str(days.toFixed(1))} days");
         }
-        if (toWinter > 0 && toWinter <= 2 && people.some((s) => !Js.T(s.body)))
+        if ((toWinter > 0) && (toWinter <= 2) && people.some((s) => !Js.T(s.body)))
         {
             add("info", "Winter is coming: coats keep the cold off outdoors at night");
         }
@@ -150,7 +150,7 @@ public static partial class Alerts
         }
         if (Js.T(state.harsh))
         {
-            var clean = FurnitureMod.ofKind(state, "well").length > 0 || FurnitureMod.ofKind(state, "collector").some((f) => f.loot > 0);
+            var clean = (FurnitureMod.ofKind(state, "well").length > 0) || FurnitureMod.ofKind(state, "collector").some((f) => f.loot > 0);
             if (!Js.T(clean))
             {
                 add("info", "No clean water: build a well or a rain collector");
@@ -159,7 +159,7 @@ public static partial class Alerts
             var rotting = state.items.filter((i) => Js.T(Corpses.isRotting(state, i, graves)));
             if (rotting.length > 0)
             {
-                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str(rotting.length == 1 ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", rotting[Js.Idx(0)]!.pos!);
+                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", rotting[Js.Idx(0)]!.pos!);
             }
         }
         foreach (var g in Js.Iter(FurnitureMod.ofKind(state, "generator")))
@@ -196,7 +196,7 @@ public static partial class Alerts
         {
             if (i.kind != "corpse")
             {
-                counts.set(i.kind, counts.get(i.kind) ?? 0 + 1);
+                counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
             }
         }
         return [.. counts.entries()].sort((a, b) => Js.Or(b[Js.Idx(1)] - a[Js.Idx(1)], a[Js.Idx(0)].localeCompare(b[Js.Idx(0)])));

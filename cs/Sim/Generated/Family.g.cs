@@ -52,7 +52,7 @@ public static partial class Family
 
     public static void updateFamily(SimState state)
     {
-        if (state.tick > 0 && state.tick % YEAR_DAYS * Time.DAY_LENGTH == 0)
+        if ((state.tick > 0) && ((state.tick % (YEAR_DAYS * Time.DAY_LENGTH)) == 0))
         {
             foreach (var s in Js.Iter(state.survivors))
             {
@@ -61,12 +61,12 @@ public static partial class Family
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (s.childUntil != null && state.tick >= s.childUntil)
+            if ((s.childUntil != null) && (state.tick >= s.childUntil))
             {
                 growUp(state, s);
             }
         }
-        if (Js.T(state.harsh) && state.tick % Time.DAY_LENGTH == ((double)(Time.DAY_LENGTH) / (2)))
+        if (Js.T(state.harsh) && (state.tick % Time.DAY_LENGTH) == ((double)(Time.DAY_LENGTH) / (2)))
         {
             births(state);
         }
@@ -79,14 +79,14 @@ public static partial class Family
         {
             return;
         }
-        var adults = state.survivors.filter((s) => !Js.T(isChild(s)) && s.age <= MAX_PARENT_AGE);
+        var adults = state.survivors.filter((s) => !Js.T(isChild(s)) && (s.age <= MAX_PARENT_AGE));
         for (var i = 0; i < adults.length; i++)
         {
             for (var j = i + 1; j < adults.length; j++)
             {
                 var a = adults[Js.Idx(i)]!;
                 var b = adults[Js.Idx(j)]!;
-                if (Relationships.opinion(a, b) < LOVERS || Relationships.opinion(b, a) < LOVERS)
+                if ((Relationships.opinion(a, b) < LOVERS) || (Relationships.opinion(b, a) < LOVERS))
                 {
                     continue;
                 }
@@ -115,10 +115,10 @@ public static partial class Family
         s.priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES);
         var n = Hash.idNumber(s.id);
         var a = HEAD_START[Js.Idx(n % HEAD_START.length)]!;
-        var b = HEAD_START[Js.Idx(n + 3 % HEAD_START.length)]!;
+        var b = HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]!;
         foreach (var t in Js.Iter([a, b]))
         {
-            s.xp[Js.Idx(t)] = s.xp[Js.Idx(t)] ?? 0 + 2 * Skills.XP_PER_LEVEL;
+            s.xp[Js.Idx(t)] = (s.xp[Js.Idx(t)] ?? 0) + (2 * Skills.XP_PER_LEVEL);
         }
         Events.logEvent(state, $"{Js.Str(s.name)} has grown up (good at {Js.Str(a)} and {Js.Str(b)})");
     }

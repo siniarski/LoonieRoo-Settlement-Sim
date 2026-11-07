@@ -98,13 +98,13 @@ public static partial class Vehicles
         return state.vehicles ?? [];
     }
 
-    public static Vehicle addVehicle(SimState state, int x, int y, double heading = 0, /*TODO param type*/object? fuel = null, /*TODO param type*/object? health = null, string kind = "car")
+    public static Vehicle addVehicle(SimState state, int x, int y, double heading = 0, double? fuel = null, double? health = null, string kind = "car")
     {
         fuel ??= FUEL_MAX;
         health ??= VEHICLE_HEALTH;
         state.vehicles ??= [];
-        var at = Motion.centre(new() { x = x, y = y });
-        Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new() { x = x, y = y }, heading = heading % HEADINGS + HEADINGS % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
+        var at = Motion.centre(new() { x = Js.I(x), y = Js.I(y) });
+        Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new() { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
         state.vehicles.push(v);
         return v;
     }
@@ -116,13 +116,13 @@ public static partial class Vehicles
     }
 
     /// <summary>The nearest car within reach of a point (SUB units), or undefined.</summary>
-    public static Vehicle? vehicleNear(SimState state, Point at, /*TODO param type*/object? reach = null)
+    public static Vehicle? vehicleNear(SimState state, Point at, double? reach = null)
     {
         reach ??= ENTER_REACH;
         Vehicle? best = null;
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
-            if (Motion.distance2(v.at, at) <= reach * reach && !Js.T(best) || Motion.distance2(v.at, at) < Motion.distance2(best.at, at))
+            if ((Motion.distance2(v.at, at) <= (reach * reach)) && (!Js.T(best) || (Motion.distance2(v.at, at) < Motion.distance2(best.at, at))))
             {
                 best = v;
             }
@@ -138,7 +138,7 @@ public static partial class Vehicles
             return "someone is driving it";
         }
         var can = s.pack.map((id) => Items.getItem(state, id)).find((i) => i?.kind == "fuel");
-        if (Js.T(can) && v.fuel <= FUEL_MAX - ((double)(FUEL_PER_CAN) / (2)))
+        if (Js.T(can) && (v.fuel <= (FUEL_MAX - ((double)(FUEL_PER_CAN) / (2)))))
         {
             v.fuel = JsMath.min(FUEL_MAX, v.fuel + FUEL_PER_CAN);
             Inventory.unpack(s, can.id);
@@ -149,7 +149,7 @@ public static partial class Vehicles
         s.move = null;
         s.at = Js.Clone(v.at);
         s.pos = Js.Clone(v.pos);
-        return v.health <= 0 ? "got in: it's a wreck, it won't go" : v.fuel <= 0 ? "got in: the tank is empty" : "got in";
+        return (v.health <= 0) ? "got in: it's a wreck, it won't go" : ((v.fuel <= 0) ? "got in: the tank is empty" : "got in");
     }
 
     /// <summary>Out of the car, onto the nearest free tile beside it.</summary>
@@ -162,7 +162,7 @@ public static partial class Vehicles
         }
         v.driverId = null;
         v.speed = 0;
-        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => x != v.pos.x || y != v.pos.y && Js.T(Motion.fits(state.grid, Motion.centre(new() { x = x, y = y }), "free"))) ?? v.pos;
+        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => (x != v.pos.x) || (y != v.pos.y) && Js.T(Motion.fits(state.grid, Motion.centre(new() { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
         s.at = Motion.centre(spot);
         s.pos = spot;
         return "got out";
@@ -176,27 +176,27 @@ public static partial class Vehicles
         {
             return;
         }
-        var runs = v.fuel > 0 && v.health > 0;
+        var runs = (v.fuel > 0) && (v.health > 0);
         var top = topSpeed(state, v);
-        if (Js.T(runs) && dy < 0)
+        if (Js.T(runs) && (dy < 0))
         {
-            v.speed = v.speed < 0 ? JsMath.min(0, v.speed + BRAKE) : JsMath.min(top, v.speed + ACCEL);
+            v.speed = (v.speed < 0) ? JsMath.min(0, v.speed + BRAKE) : JsMath.min(top, v.speed + ACCEL);
         }
-        else if (Js.T(runs) && dy > 0)
+        else if (Js.T(runs) && (dy > 0))
         {
-            v.speed = v.speed > 0 ? JsMath.max(0, v.speed - BRAKE) : JsMath.max(-REVERSE_MAX, v.speed - ACCEL);
+            v.speed = (v.speed > 0) ? JsMath.max(0, v.speed - BRAKE) : JsMath.max(-REVERSE_MAX, v.speed - ACCEL);
         }
         else
         {
-            v.speed = v.speed > 0 ? JsMath.max(0, v.speed - FRICTION) : JsMath.min(0, v.speed + FRICTION);
+            v.speed = (v.speed > 0) ? JsMath.max(0, v.speed - FRICTION) : JsMath.min(0, v.speed + FRICTION);
         }
         if (v.speed > top)
         {
             v.speed = JsMath.max(top, v.speed - BRAKE);
         }
-        if (dx != 0 && JsMath.abs(v.speed) >= TURN_MIN_SPEED && state.tick % TURN_EVERY == 0)
+        if ((dx != 0) && (JsMath.abs(v.speed) >= TURN_MIN_SPEED) && ((state.tick % TURN_EVERY) == 0))
         {
-            v.heading = v.heading + dx * JsMath.sign(v.speed) + HEADINGS % HEADINGS;
+            v.heading = ((v.heading + (dx * JsMath.sign(v.speed))) + HEADINGS) % HEADINGS;
         }
         if (Js.T(runs))
         {
@@ -204,7 +204,7 @@ public static partial class Vehicles
             {
                 v.fuel -= 1;
             }
-            else if (state.tick % IDLE_BURN == 0)
+            else if ((state.tick % IDLE_BURN) == 0)
             {
                 v.fuel -= 1;
             }
@@ -212,7 +212,7 @@ public static partial class Vehicles
             {
                 Events.logEvent(state, $"{Js.Str(s.name)}'s car ran out of fuel");
             }
-            if (state.tick % ENGINE_NOISE_EVERY == 0)
+            if ((state.tick % ENGINE_NOISE_EVERY) == 0)
             {
                 Noise.makeNoise(state, v.pos, "engine");
             }
@@ -228,20 +228,20 @@ public static partial class Vehicles
     public static void move(SimState state, Survivor s, Vehicle v)
     {
         var (cx, cy) = HEADING_DIRS[Js.Idx(v.heading)]!;
-        var want = new() { x = JsMath.trunc(((double)(cx * v.speed) / (256))), y = JsMath.trunc(((double)(cy * v.speed) / (256))) };
+        var want = new() { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
-        var to = into.x != v.pos.x || into.y != v.pos.y && Js.T(blocked(state, into)) ? v.at : slid;
-        var got = new() { x = to.x - v.at.x, y = to.y - v.at.y };
+        var to = (into.x != v.pos.x) || (into.y != v.pos.y) && Js.T(blocked(state, into)) ? v.at : slid;
+        var got = new() { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
-        var lost = Motion.distance2(want, got) * 9 > want.x * want.x + want.y * want.y;
+        var lost = (Motion.distance2(want, got) * 9) > (want.x * want.x) + (want.y * want.y);
         if (Js.T(lost))
         {
             var fast = JsMath.abs(v.speed);
             if (fast > CRASH_SPEED)
             {
-                dent(state, v, fast - CRASH_SPEED * CRASH_DAMAGE);
+                dent(state, v, (fast - CRASH_SPEED) * CRASH_DAMAGE);
                 Events.logEvent(state, $"{Js.Str(s.name)} crashed the car");
             }
             v.speed = 0;
@@ -254,7 +254,7 @@ public static partial class Vehicles
         var reach = VEHICLE_RADIUS + Motion.BODY_RADIUS;
         foreach (var z in Js.Iter([.. state.zombies]))
         {
-            if (Motion.distance2(z.at, v.at) > reach * reach)
+            if (Motion.distance2(z.at, v.at) > (reach * reach))
             {
                 continue;
             }
@@ -263,7 +263,7 @@ public static partial class Vehicles
             {
                 Zombies.knockBack(state, z, v.at);
             }
-            v.speed = JsMath.trunc(((double)(v.speed * 3) / (4)));
+            v.speed = JsMath.trunc(((double)((v.speed * 3)) / (4)));
             dent(state, v, RAM_WEAR);
             if (JsMath.abs(v.speed) < RAM_SPEED)
             {
@@ -275,8 +275,8 @@ public static partial class Vehicles
     /// <summary>Top speed here: the truck is slower; off the road, slower still.</summary>
     public static double topSpeed(SimState state, Vehicle v)
     {
-        var ground = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(v.pos.y * state.grid.width + v.pos.x)]!)] ?? "grass";
-        var @base = v.kind == "truck" ? TRUCK_MAX : MAX_SPEED;
+        var ground = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx((v.pos.y * state.grid.width) + v.pos.x)]!)] ?? "grass";
+        var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
     }
 
@@ -284,20 +284,20 @@ public static partial class Vehicles
     public static bool blocked(SimState state, Point p)
     {
         var f = FurnitureMod.furnitureAt(state, p.x, p.y);
-        return f != null && f.kind != "trap" && f.kind != "pit";
+        return (f != null) && (f.kind != "trap") && (f.kind != "pit");
     }
 
     /// <summary>How much a vehicle's boot holds.</summary>
     public static double bootMax(Vehicle v)
     {
-        return v.kind == "truck" ? TRUCK_BOOT_MAX : BOOT_MAX;
+        return (v.kind == "truck") ? TRUCK_BOOT_MAX : BOOT_MAX;
     }
 
     public static void dent(SimState state, Vehicle v, double amount)
     {
         var was = v.health;
         v.health = JsMath.max(0, v.health - amount);
-        if (was > 0 && v.health == 0)
+        if ((was > 0) && (v.health == 0))
         {
             Events.logEvent(state, $"The car at ({Js.Str(v.pos.x)}, {Js.Str(v.pos.y)}) is wrecked");
         }
@@ -341,12 +341,12 @@ public static partial class Vehicles
     /// <summary>A heading pointing along (dx, dy) (one of the four ways).</summary>
     public static double headingOf(int dx, int dy)
     {
-        return dx > 0 ? 0 : dy > 0 ? 8 : dx < 0 ? 16 : 24;
+        return (dx > 0) ? 0 : (dy > 0) ? 8 : ((dx < 0) ? 16 : 24);
     }
 
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)
     {
-        return Grids.getTile(state.grid, p.x, p.y) == "floor" && !Js.T(blocked(state, p)) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS));
+        return (Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p)) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS));
     }
 }

@@ -31,8 +31,8 @@ public static partial class Prisoners
         {
             foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
             {
-                var p = new() { x = i % width, y = JsMath.floor(((double)(i) / (width))) };
-                if (Js.T(Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) && !state.prisoners.some((q) => q.x == p.x && q.y == p.y))
+                var p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                if ((Js.T(Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.prisoners.some((q) => (q.x == p.x) && (q.y == p.y)))
                 {
                     return p;
                 }
@@ -44,7 +44,7 @@ public static partial class Prisoners
     /// <summary>A raider brought down: maybe taken alive. Returns true if so (the caller removes the raider).</summary>
     public static bool maybeCapture(SimState state, Zombie z, string by)
     {
-        if (z.kind != "raider" || Hash.hashRoll(Hash.idNumber(z.id), 0xca9) >= CAPTURE_CHANCE)
+        if ((z.kind != "raider") || (Hash.hashRoll(Hash.idNumber(z.id), 0xca9) >= CAPTURE_CHANCE))
         {
             return false;
         }
@@ -54,7 +54,7 @@ public static partial class Prisoners
             return false;
         }
         var from = state.settlements.find((s) => s.reputation < 0) ?? null;
-        Prisoner p = new() { id = $"q{Js.Str(state.nextId++)}", name = Survivors.nextSurvivorName(state), x = spot.x, y = spot.y, from = from?.id ?? null, since = state.tick };
+        Prisoner p = new() { id = $"q{Js.Str(state.nextId++)}", name = Survivors.nextSurvivorName(state), x = Js.I(spot.x), y = Js.I(spot.y), from = from?.id ?? null, since = state.tick };
         state.prisoners.push(p);
         Events.logEvent(state, $"{Js.Str(by)} took a raider alive: {Js.Str(p.name)} is in the cells");
         return true;
@@ -63,14 +63,14 @@ public static partial class Prisoners
     /// <summary>Dawn: feed them or lose them.</summary>
     public static void updatePrisoners(SimState state)
     {
-        if (state.prisoners.length == 0 || state.tick % Time.DAY_LENGTH != 0)
+        if ((state.prisoners.length == 0) || ((state.tick % Time.DAY_LENGTH) != 0))
         {
             return;
         }
         var cells = Rooms.completeRooms(state, "cell");
         foreach (var p in Js.Iter([.. state.prisoners]))
         {
-            var food = state.items.find((i) => i.kind == "food" && i.pos != null && i.reservedBy == null);
+            var food = state.items.find((i) => (i.kind == "food") && (i.pos != null) && (i.reservedBy == null));
             if (!cells.has(Rooms.labelAt(state, p.x, p.y)) || !Js.T(food))
             {
                 state.prisoners.splice(state.prisoners.indexOf(p), 1);
@@ -89,7 +89,7 @@ public static partial class Prisoners
         {
             return "no such prisoner";
         }
-        if (Js.T(recruit) && state.tick - p.since < RECRUIT_DAYS * Time.DAY_LENGTH)
+        if (Js.T(recruit) && (state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH))
         {
             return $"{Js.Str(p.name)} isn't ready to join yet";
         }

@@ -37,8 +37,8 @@ public static partial class Wounds
     /// <summary>A blow landed: maybe a wound (and the limb a bite would have gone into).</summary>
     public static string maybeWound(SimState state, Survivor s, string attackerId)
     {
-        string limb = Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 1) < 0.5 ? "arm" : "leg";
-        if (!Js.T(s.wound) && Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 2) < WOUND_CHANCE)
+        string limb = (Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 1) < 0.5) ? "arm" : "leg";
+        if (!Js.T(s.wound) && (Hash.hashRoll(Hash.idNumber(attackerId), state.tick, Hash.idNumber(s.id), 2) < WOUND_CHANCE))
         {
             s.wound = new() { limb = limb, until = state.tick + WOUND_TICKS };
             s.bleeding = true;
@@ -49,15 +49,15 @@ public static partial class Wounds
 
     public static void updateWounds(SimState state, Survivor s)
     {
-        if (Js.T(s.wound) && state.tick >= s.wound.until)
+        if (Js.T(s.wound) && (state.tick >= s.wound.until))
         {
             s.wound = null;
         }
-        if (Js.T(s.bleeding) && state.tick >= s.bleedUntil)
+        if (Js.T(s.bleeding) && (state.tick >= s.bleedUntil))
         {
             s.bleeding = false;
         }
-        if (Js.T(s.bleeding) && state.tick % BLEED_EVERY == 0)
+        if (Js.T(s.bleeding) && ((state.tick % BLEED_EVERY) == 0))
         {
             s.health = JsMath.max(0, s.health - 1);
             s.lastHurtBy = "bleeding";
@@ -67,18 +67,18 @@ public static partial class Wounds
     /// <summary>Slowed at work: a wounded or lost arm.</summary>
     public static bool armSlowed(Survivor s)
     {
-        return s.wound?.limb == "arm" || Js.T(Skills.hasTrait(s, "lostArm"));
+        return (s.wound?.limb == "arm") || Js.T(Skills.hasTrait(s, "lostArm"));
     }
 
     /// <summary>Slowed walking: a wounded or lost leg.</summary>
     public static bool legSlowed(Survivor s)
     {
-        return s.wound?.limb == "leg" || Js.T(Skills.hasTrait(s, "lostLeg"));
+        return (s.wound?.limb == "leg") || Js.T(Skills.hasTrait(s, "lostLeg"));
     }
 
     public static bool canAmputate(Survivor s)
     {
-        return s.infection != null && s.infection < amputateWindow() && s.bitten != null;
+        return (s.infection != null) && (s.infection < amputateWindow()) && (s.bitten != null);
     }
 
     /// <summary>Takes the bitten limb off. Returns an error, or null when done.</summary>
@@ -86,7 +86,7 @@ public static partial class Wounds
     {
         if (!Js.T(canAmputate(s)))
         {
-            return s.infection == null ? $"{Js.Str(s.name)} isn't infected" : "too late: it has spread";
+            return (s.infection == null) ? $"{Js.Str(s.name)} isn't infected" : "too late: it has spread";
         }
         var limb = s.bitten!;
         s.infection = null;
@@ -95,7 +95,7 @@ public static partial class Wounds
         s.bleedUntil = state.tick + BLEED_TICKS;
         s.health = JsMath.max(1, s.health - AMPUTATION_COST);
         s.lastHurtBy = "an amputation";
-        var trait = limb == "arm" ? "lostArm" : "lostLeg";
+        var trait = (limb == "arm") ? "lostArm" : "lostLeg";
         if (!s.traits.includes(trait))
         {
             s.traits.push(trait);

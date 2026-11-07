@@ -38,7 +38,7 @@ public static partial class Dogs
     public static Dog addDog(SimState state, int x, int y)
     {
         var n = state.nextId++;
-        Dog dog = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = x, y = y }), new() { id = $"g{Js.Str(n)}", name = DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]!, pos = new() { x = x, y = y }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false });
+        Dog dog = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = Js.I(x), y = Js.I(y) }), new() { id = $"g{Js.Str(n)}", name = DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]!, pos = new() { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false });
         state.dogs.push(dog);
         return dog;
     }
@@ -46,7 +46,7 @@ public static partial class Dogs
     public static void updateDogs(SimState state)
     {
         var day = Time.dayOf(state.tick);
-        if (day >= 2 && Time.tickOfDay(state.tick) == 6 * Time.TICKS_PER_HOUR && Hash.hashRoll(day, 0xd06) < STRAY_CHANCE && state.survivors.length > 0)
+        if ((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR)) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE) && (state.survivors.length > 0))
         {
             var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]!.pos;
             var dog = addDog(state, spot.x, spot.y);
@@ -56,7 +56,7 @@ public static partial class Dogs
         {
             updateDog(state, dog);
         }
-        if (state.tick % PET_EVERY == 0 && state.dogs.length > 0)
+        if (((state.tick % PET_EVERY) == 0) && (state.dogs.length > 0))
         {
             foreach (var s in Js.Iter(state.survivors))
             {
@@ -97,7 +97,7 @@ public static partial class Dogs
             dog.move = null;
         }
         var zombie = state.zombies.filter((z) => Space.manhattan(z.pos, dog.pos) <= DOG_SENSE).sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos))[Js.Idx(0)];
-        if (Js.T(zombie) && state.tick - dog.barkedTick >= BARK_EVERY)
+        if (Js.T(zombie) && ((state.tick - dog.barkedTick) >= BARK_EVERY))
         {
             bark(state, dog, zombie);
         }
@@ -109,7 +109,7 @@ public static partial class Dogs
             }
             return;
         }
-        if (state.tick >= dog.nextThinkTick || dog.path.length == 0)
+        if ((state.tick >= dog.nextThinkTick) || (dog.path.length == 0))
         {
             dog.nextThinkTick = state.tick + 15;
             dog.path = plan(state, dog, zombie);
@@ -129,7 +129,7 @@ public static partial class Dogs
             return Pathfinding.findPathToAny(state.grid, dog.pos, Grids.neighbours4(state.grid, zombie.pos.x, zombie.pos.y)) ?? [];
         }
         var owner = state.survivors.slice().sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos))[Js.Idx(0)];
-        if (!Js.T(owner) || Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW)
+        if (!Js.T(owner) || (Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW))
         {
             return [];
         }
@@ -143,14 +143,14 @@ public static partial class Dogs
         var woke = 0;
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(Medicine.isGuard(s)) || Space.manhattan(s.pos, dog.pos) > 2 * DOG_SENSE)
+            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(Medicine.isGuard(s))) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))
             {
                 continue;
             }
             Needs.wake(state, s, $"woken by {Js.Str(dog.name)}'s barking");
             woke += 1;
         }
-        Events.logEvent(state, $"{Js.Str(dog.name)} is barking: something's coming near ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)}){Js.Str(Js.T(woke) ? $"; {Js.Str(woke)} guard{Js.Str(woke == 1 ? "" : "s")} up" : "")}");
+        Events.logEvent(state, $"{Js.Str(dog.name)} is barking: something's coming near ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)}){Js.Str(Js.T(woke) ? $"; {Js.Str(woke)} guard{Js.Str((woke == 1) ? "" : "s")} up" : "")}");
     }
 
     public static void bite(SimState state, Dog dog, Zombie z)

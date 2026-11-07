@@ -26,7 +26,7 @@ public static partial class Books
         var roll = Hash.hashRoll(Hash.idNumber(id), 0xb00c);
         if (roll < ((double)(1) / (KNOWLEDGE_BOOK_ONE_IN)))
         {
-            return Js.ObjectKeys(KNOWLEDGE)[Js.Idx(JsMath.floor(roll * KNOWLEDGE_BOOK_ONE_IN * 2) % 2)]!;
+            return (Js.ObjectKeys(KNOWLEDGE))[Js.Idx(JsMath.floor((roll * KNOWLEDGE_BOOK_ONE_IN) * 2) % 2)]!;
         }
         return SKILL_BOOKS[Js.Idx(JsMath.floor(roll * 1000) % SKILL_BOOKS.length)]!;
     }
@@ -77,7 +77,7 @@ public static partial class Books
                 return true;
             }
             var book = Items.getItem(state, was.itemId);
-            if (Js.T(Js.T(book?.pos)) && book.reservedBy == null)
+            if (Js.T(Js.T(book?.pos)) && (book.reservedBy == null))
             {
                 book.reservedBy = s.id;
                 s.reading = was;
@@ -88,7 +88,7 @@ public static partial class Books
             }
         }
         var book = Items.getItem(state, s.reading.itemId);
-        if (!Js.T(Js.T(book?.pos)) || book.reservedBy != s.id)
+        if (!Js.T(Js.T(book?.pos)) || (book.reservedBy != s.id))
         {
             stopReading(state, s, "book gone");
             return false;
@@ -96,7 +96,7 @@ public static partial class Books
         if (!Js.T(Space.samePoint(s.pos, book.pos)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [book.pos]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 stopReading(state, s, "can't reach the book");
                 return false;
@@ -133,7 +133,7 @@ public static partial class Books
             return;
         }
         var type = subject;
-        s.xp[Js.Idx(type)] = s.xp[Js.Idx(type)] ?? 0 + Skills.XP_PER_LEVEL;
+        s.xp[Js.Idx(type)] = (s.xp[Js.Idx(type)] ?? 0) + Skills.XP_PER_LEVEL;
         s.note = $"read a book on {Js.Str(type)}";
     }
 
@@ -145,7 +145,7 @@ public static partial class Books
             return;
         }
         var book = Items.getItem(state, s.reading.itemId);
-        if (Js.T(book) && book.reservedBy == s.id)
+        if (Js.T(book) && (book.reservedBy == s.id))
         {
             book.reservedBy = null;
         }

@@ -86,11 +86,11 @@ public static partial class Escape
         }
         /*TODO return type*/object map(string? id)
         {
-            return Js.T(id) ? ids.get(id) ?? null : null;
+            return Js.T(id) ? (ids.get(id) ?? null) : null;
         }
         var me = States.cloneState(old).survivors.find((s) => s.id == you.id)!;
         /*TODO Object.assign*/Js.Object_assign(fresh, new() { name = me.name, traits = me.traits, xp = me.xp, kills = me.kills, watchHours = me.watchHours, age = me.age, resolve = me.resolve, story = Js.With(Js.Clone(me.story), __s2 => { __s2.knew = []; __s2.nextTalk = 0; }), health = me.health, satiety = me.satiety, hydration = me.hydration, rest = me.rest, infection = me.infection, bitten = me.bitten, wound = me.wound, weapon = map(me.weapon), body = map(me.body), feet = map(me.feet), cart = map(me.cart), tool = map(me.tool), carrying = map(me.carrying), cartLoad = me.cartLoad.map(map).filter((id) => id != null) });
-        state.endgame.escaped = old.endgame.escaped + old.survivors.length - 1;
+        state.endgame.escaped = (old.endgame.escaped + old.survivors.length) - 1;
         Events.logEvent(state, $"{Js.Str(fresh.name)} came down somewhere new, with what they could carry. {Js.Str(old.survivors.length - 1)} more flew out with them, and went their own way.");
         return state;
     }

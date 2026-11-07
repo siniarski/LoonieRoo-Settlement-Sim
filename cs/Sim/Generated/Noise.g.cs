@@ -23,29 +23,29 @@ public static partial class Noise
         var woke = wakeDormantNear(state, (d) => Space.manhattan(d, p) <= r);
         if (woke > 0)
         {
-            Events.logEvent(state, $"The {Js.Str(kind)} at ({Js.Str(p.x)}, {Js.Str(p.y)}) woke {Js.Str(woke == 1 ? "a zombie" : $"{Js.Str(woke)} zombies")}");
+            Events.logEvent(state, $"The {Js.Str(kind)} at ({Js.Str(p.x)}, {Js.Str(p.y)}) woke {Js.Str((woke == 1) ? "a zombie" : $"{Js.Str(woke)} zombies")}");
         }
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (z.kind != "static" && z.kind != "herd" || z.targetId != null || Js.T(z.hordeId) || Space.manhattan(z.pos, p) > r)
+            if ((z.kind != "static") && (z.kind != "herd") || (z.targetId != null) || Js.T(z.hordeId) || (Space.manhattan(z.pos, p) > r))
             {
                 continue;
             }
-            z.heading = z.kind == "static" ? new() { x = p.x, y = p.y } : new() { x = clamp(2 * p.x - z.pos.x, width), y = clamp(2 * p.y - z.pos.y, height) };
+            z.heading = (z.kind == "static") ? new() { x = Js.I(p.x), y = Js.I(p.y) } : new() { x = Js.I(clamp((2 * p.x) - z.pos.x, width)), y = Js.I(clamp((2 * p.y) - z.pos.y, height)) };
             z.path = [];
         }
-        Hordes.hordesHear(state, p, r, (from) => new() { x = clamp(2 * p.x - from.x, width), y = clamp(2 * p.y - from.y, height) });
+        Hordes.hordesHear(state, p, r, (from) => new() { x = Js.I(clamp((2 * p.x) - from.x, width)), y = Js.I(clamp((2 * p.y) - from.y, height)) });
         foreach (var h in Js.Iter(state.herds))
         {
-            if (Space.manhattan(h, p) > r * HERD_HEARING)
+            if (Space.manhattan(h, p) > (r * HERD_HEARING))
             {
                 continue;
             }
-            var to = new() { x = clamp(2 * p.x - h.x, width), y = clamp(2 * p.y - h.y, height) };
-            if (to.x == h.to.x && to.y == h.to.y)
+            var to = new() { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
+            if ((to.x == h.to.x) && (to.y == h.to.y))
             {
                 continue;
             }
@@ -74,7 +74,7 @@ public static partial class Noise
                 break;
             }
             state.dormant.splice(state.dormant.indexOf(d), 1);
-            var p = Grids.getTile(state.grid, d.x, d.y) == "floor" ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
+            var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
             if (!Js.T(p) || !Js.T(Grids.inBounds(state.grid, p.x, p.y)))
             {
                 continue;

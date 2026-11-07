@@ -21,14 +21,14 @@ public static partial class Work
                 return;
             }
             s.nextSeekTick = state.tick + Jobs.IDLE_RETRY_TICKS;
-            if (!Js.T(s.order) && !Js.T(Towers.keepWatch(state, s)) && !Js.T(Books.startReading(state, s)))
+            if ((!Js.T(s.order) && !Js.T(Towers.keepWatch(state, s))) && !Js.T(Books.startReading(state, s)))
             {
                 Leisure.startLeisure(state, s);
             }
             return;
         }
         var job = Jobs.getJob(state, s.jobId);
-        if (!Js.T(job) || job.reservedBy != s.id)
+        if (!Js.T(job) || (job.reservedBy != s.id))
         {
             Jobs.releaseSurvivor(state, s, "job vanished");
             return;
@@ -112,7 +112,7 @@ public static partial class Work
         if (Js.T(Farming.isRipe(plot)))
         {
             Farming.harvest(state, plot);
-            finishJob(state, s, job, $"harvested {Js.Str(plot.crop == "herb" ? "herbs" : plot.crop == "wheat" ? "wheat" : "food")} at ({Js.Str(plot.x)}, {Js.Str(plot.y)})");
+            finishJob(state, s, job, $"harvested {Js.Str((plot.crop == "herb") ? "herbs" : ((plot.crop == "wheat") ? "wheat" : "food"))} at ({Js.Str(plot.x)}, {Js.Str(plot.y)})");
         }
         else
         {
@@ -131,22 +131,22 @@ public static partial class Work
             return Jobs.releaseSurvivor(state, s, "zombie gone");
         }
         var gun = Weapons.loadedGun(state, s);
-        var range = Weapons.GUN_RANGE + Js.T(Towers.onTower(state, s)) ? Towers.TOWER_RANGE_BONUS : 0;
-        var inReach = Motion.distance2(s.at, z.at) <= Motion.SWING_REACH * Motion.SWING_REACH;
-        if (Js.T(gun) && !Js.T(inReach) && Space.manhattan(s.pos, z.pos) <= range && Js.T(clearShot(state.grid, s.pos, z.pos)))
+        var range = Weapons.GUN_RANGE + (Js.T(Towers.onTower(state, s)) ? Towers.TOWER_RANGE_BONUS : 0);
+        var inReach = Motion.distance2(s.at, z.at) <= (Motion.SWING_REACH * Motion.SWING_REACH);
+        if ((Js.T(gun) && !Js.T(inReach)) && (Space.manhattan(s.pos, z.pos) <= range) && Js.T(clearShot(state.grid, s.pos, z.pos)))
         {
             if (Skills.workStep(state, s, "guard") == 0)
             {
                 return;
             }
             job.progress += 1;
-            if (job.progress % Weapons.GUN_EVERY != 1)
+            if ((job.progress % Weapons.GUN_EVERY) != 1)
             {
                 return;
             }
             gun.wear -= 1;
             Noise.makeNoise(state, s.pos, "gunfire");
-            if (!Js.T(Zombies.damageZombie(state, z, Moodlets.boostDamage(s, Weapons.GUN_DAMAGE + Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard") + Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0), s)))
+            if (!Js.T(Zombies.damageZombie(state, z, Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0)), s)))
             {
                 return;
             }
@@ -161,14 +161,14 @@ public static partial class Work
             return;
         }
         job.progress += 1;
-        if (job.progress % Jobs.GUARD_ATTACK_EVERY != 1)
+        if ((job.progress % Jobs.GUARD_ATTACK_EVERY) != 1)
         {
             return;
         }
         Noise.makeNoise(state, s.pos, "fighting");
         BodyMod.exert(s, BodyMod.GUARD_BLOW_COST);
-        var blow = Moodlets.boostDamage(s, Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard") + Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0);
-        if (!Js.T(Zombies.damageZombie(state, z, Js.T(Power.inLight(state, s.pos)) ? JsMath.round(((double)(blow * Power.LIGHT_DAMAGE_PCT) / (100))) : blow, s)))
+        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0));
+        if (!Js.T(Zombies.damageZombie(state, z, Js.T(Power.inLight(state, s.pos)) ? JsMath.round(((double)((blow * Power.LIGHT_DAMAGE_PCT)) / (100))) : blow, s)))
         {
             return;
         }
@@ -180,7 +180,7 @@ public static partial class Work
     public static void workResearch(SimState state, Survivor s, Job job)
     {
         var lab = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-        if (!Js.T(lab) || lab.kind != "lab")
+        if (!Js.T(lab) || (lab.kind != "lab"))
         {
             return Jobs.releaseSurvivor(state, s, "lab gone");
         }
@@ -256,14 +256,14 @@ public static partial class Work
         {
             return goTo(state, s, job, Grids.neighbours4(state.grid, a.pos.x, a.pos.y), 3);
         }
-        if (a.kind == "wolf" || a.kind == "bear")
+        if ((a.kind == "wolf") || (a.kind == "bear"))
         {
-            if (state.tick % Jobs.GUARD_ATTACK_EVERY != 0)
+            if ((state.tick % Jobs.GUARD_ATTACK_EVERY) != 0)
             {
                 return;
             }
             Noise.makeNoise(state, a.pos, "fighting");
-            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard");
+            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
             if (Handiwork.hitAnimal(state, s, a.id, blow) == "brought it down")
             {
                 finishJob(state, s, job, $"killed a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})");
@@ -306,7 +306,7 @@ public static partial class Work
         {
             return;
         }
-        job.progress += step * Js.T(Seasons.isWet(state.weather)) ? 2 : 1;
+        job.progress += step * (Js.T(Seasons.isWet(state.weather)) ? 2 : 1);
         if (job.progress < FireMod.DOUSE_WORK)
         {
             return;
@@ -319,7 +319,7 @@ public static partial class Work
     public static void workScavenge(SimState state, Survivor s, Job job)
     {
         var crate = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-        if (!Js.T(crate) || crate.loot <= 0)
+        if (!Js.T(crate) || (crate.loot <= 0))
         {
             return Jobs.releaseSurvivor(state, s, "crate is empty");
         }
@@ -337,14 +337,14 @@ public static partial class Work
         {
             return;
         }
-        var kind = crate.kind == "tree" ? "wood" : scavengeFind(Rng.random(state), crate.table);
+        var kind = (crate.kind == "tree") ? "wood" : scavengeFind(Rng.random(state), crate.table);
         Difficulty.spawnFind(state, kind, s.pos.x, s.pos.y);
         crate.loot -= 1;
-        if (crate.loot == 0 && crate.kind == "crate")
+        if ((crate.loot == 0) && (crate.kind == "crate"))
         {
             FurnitureMod.setScavenge(state, crate, false);
         }
-        finishJob(state, s, job, crate.kind == "tree" ? $"chopped wood from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left" : $"scavenged {Js.Str(kind)} from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left");
+        finishJob(state, s, job, (crate.kind == "tree") ? $"chopped wood from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left" : $"scavenged {Js.Str(kind)} from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left");
     }
 
     /// <summary>Maps a [0, 1) roll to a find: from the container's loot table (loot.ts), else SCAVENGE_TABLE.</summary>
@@ -367,7 +367,7 @@ public static partial class Work
         {
             return Jobs.releaseSurvivor(state, s, "stocks are full");
         }
-        if (bench.stored > 0 && bench.storedKind != Crafting.RECIPES[Js.Idx(kind)].input)
+        if ((bench.stored > 0) && (bench.storedKind != Crafting.RECIPES[Js.Idx(kind)].input))
         {
             for (var n = 0; n < bench.stored; n++)
             {
@@ -379,7 +379,7 @@ public static partial class Work
         var site = Grids.neighbours4(state.grid, bench.x, bench.y);
         var recipe = Crafting.RECIPES[Js.Idx(kind)];
         var cost = recipe.count;
-        var station = bench.kind == "stove" ? "the stove" : "the workbench";
+        var station = (bench.kind == "stove") ? "the stove" : "the workbench";
         if (bench.stored < cost)
         {
             var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
@@ -430,7 +430,7 @@ public static partial class Work
             return;
         }
         job.progress += step;
-        if (job.progress < Js.T(workshop) ? Crafting.WORKSHOP_CRAFT_WORK : Crafting.CRAFT_WORK)
+        if (job.progress < (Js.T(workshop) ? Crafting.WORKSHOP_CRAFT_WORK : Crafting.CRAFT_WORK))
         {
             return;
         }
@@ -440,11 +440,11 @@ public static partial class Work
             bench.storedKind = null;
         }
         Items.spawnItem(state, kind, s.pos.x, s.pos.y);
-        if (kind == "meal" && Hash.hashRoll(bench.x, bench.y, state.tick) < FireMod.STOVE_FIRE_CHANCE && Js.T(FireMod.ignite(state, bench.x, bench.y)))
+        if ((kind == "meal") && (Hash.hashRoll(bench.x, bench.y, state.tick) < FireMod.STOVE_FIRE_CHANCE) && Js.T(FireMod.ignite(state, bench.x, bench.y)))
         {
             Events.logEvent(state, $"The stove at ({Js.Str(bench.x)}, {Js.Str(bench.y)}) caught fire!");
         }
-        var made = kind == "meal" ? "cooked a hot meal" : kind == "medicine" ? "made medicine" : $"crafted {Js.Str(kind == "armour" || kind == "boots" ? "" : "a ")}{Js.Str(kind)}";
+        var made = (kind == "meal") ? "cooked a hot meal" : ((kind == "medicine") ? "made medicine" : $"crafted {Js.Str((kind == "armour") || (kind == "boots") ? "" : "a ")}{Js.Str(kind)}");
         finishJob(state, s, job, $"{Js.Str(made)} at ({Js.Str(bench.x)}, {Js.Str(bench.y)})");
     }
 
@@ -456,12 +456,12 @@ public static partial class Work
             return;
         }
         var job = Jobs.getJob(state, s.jobId);
-        if (job?.type != "guard" || !Js.T(job.zombieId))
+        if ((job?.type != "guard") || !Js.T(job.zombieId))
         {
             return;
         }
         var z = Zombies.getZombie(state, job.zombieId);
-        if (!Js.T(z) || Motion.distance2(s.at, z.at) > Motion.SWING_REACH * Motion.SWING_REACH)
+        if (!Js.T(z) || (Motion.distance2(s.at, z.at) > (Motion.SWING_REACH * Motion.SWING_REACH)))
         {
             return;
         }
@@ -472,7 +472,7 @@ public static partial class Work
 
     public static void interruptScouting(SimState state, Survivor s)
     {
-        if (Js.T(s.jobId) && Js.T(Fog.scoutingOver(state.tick)) && Jobs.getJob(state, s.jobId)?.type == "scout")
+        if ((Js.T(s.jobId) && Js.T(Fog.scoutingOver(state.tick))) && (Jobs.getJob(state, s.jobId)?.type == "scout"))
         {
             headHome(state, s);
         }
@@ -485,12 +485,12 @@ public static partial class Work
         s.note = "heading home before dark";
         var bed = FurnitureMod.ofKind(state, "bed").find((f) => f.owner == s.id);
         var others = state.survivors.filter((o) => o != s);
-        var home = bed ?? others.length > 0 ? new() { x = JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0)) / (others.length))), y = JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0)) / (others.length))) } : null;
+        var home = bed ?? ((others.length > 0) ? new() { x = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0)) / (others.length)))), y = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0)) / (others.length)))) } : null);
         if (!Js.T(home))
         {
             return;
         }
-        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [new() { x = x, y = y }])));
+        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [new() { x = Js.I(x), y = Js.I(y) }])));
         if (Js.T(spot) && !Js.T(Space.samePoint(spot, s.pos)))
         {
             Survivors.setGoal(s, spot);
@@ -508,13 +508,13 @@ public static partial class Work
         {
             return headHome(state, s);
         }
-        var target = Js.T(Fog.isExplored(state, job.x, job.y)) ? Fog.scoutTarget(state, area, s.pos) : new() { x = job.x, y = job.y };
+        var target = Js.T(Fog.isExplored(state, job.x, job.y)) ? Fog.scoutTarget(state, area, s.pos) : new() { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(target))
         {
             return finishJob(state, s, job, $"scouted ({Js.Str(area.x0)}, {Js.Str(area.y0)})-({Js.Str(area.x1)}, {Js.Str(area.y1)}) as far as it goes");
         }
-        job.x = target.x;
-        job.y = target.y;
+        job.x = Js.I(target.x);
+        job.y = Js.I(target.y);
         if (!Js.T(Space.samePoint(s.pos, target)))
         {
             return goTo(state, s, job, [target]);
@@ -554,7 +554,7 @@ public static partial class Work
             item.pos = null;
             item.carriedBy = s.id;
             s.carrying = item.id;
-            s.note = $"picked up {Js.Str(item.kind == "medicine" ? "medicine" : "a bandage")} for {Js.Str(patient.name)}";
+            s.note = $"picked up {Js.Str((item.kind == "medicine") ? "medicine" : "a bandage")} for {Js.Str(patient.name)}";
         }
         if (Space.manhattan(s.pos, patient.pos) != 1)
         {
@@ -573,7 +573,7 @@ public static partial class Work
         Items.removeItem(state, item);
         s.carrying = null;
         Medicine.applyRemedy(patient, item.kind);
-        finishJob(state, s, job, item.kind == "medicine" ? $"cured {Js.Str(patient.name)}'s infection" : $"treated {Js.Str(patient.name)}'s wounds");
+        finishJob(state, s, job, (item.kind == "medicine") ? $"cured {Js.Str(patient.name)}'s infection" : $"treated {Js.Str(patient.name)}'s wounds");
     }
 
     /// <summary>Nearest free item of a kind that the survivor can reach and carry on to the site.</summary>
@@ -582,13 +582,13 @@ public static partial class Work
         var __d0 = state;
         var grid = __d0.grid;
         var v = __d0.walkabilityVersion;
-        var free = state.items.filter((i) => i.pos != null && i.reservedBy == null && i.kind == kind).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
+        var free = state.items.filter((i) => (i.pos != null) && (i.reservedBy == null) && (i.kind == kind)).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
         return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Js.T(Pathfinding.canReach(grid, v, from, [i.pos])) && Js.T(Pathfinding.canReach(grid, v, i.pos, site)));
     }
 
     public static void workClean(SimState state, Survivor s, Job job)
     {
-        var target = new() { x = job.x, y = job.y };
+        var target = new() { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(Space.samePoint(s.pos, target)))
         {
             return goTo(state, s, job, [target]);
@@ -620,7 +620,7 @@ public static partial class Work
         }
         if (Js.T(bp.side))
         {
-            var sides = [new() { x = bp.x, y = bp.y }, bp.side == "n" ? new() { x = bp.x, y = bp.y - 1 } : new() { x = bp.x - 1, y = bp.y }];
+            var sides = [new() { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new() { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new() { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
             if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
             {
                 return goTo(state, s, job, sides);
@@ -642,7 +642,7 @@ public static partial class Work
         }
         Designations.completeBlueprint(state, bp);
         Noise.makeNoise(state, bp, "building");
-        finishJob(state, s, job, bp.target == "floor" ? $"removed structure at ({Js.Str(bp.x)}, {Js.Str(bp.y)})" : $"built {Js.Str(bp.target)} at ({Js.Str(bp.x)}, {Js.Str(bp.y)})");
+        finishJob(state, s, job, (bp.target == "floor") ? $"removed structure at ({Js.Str(bp.x)}, {Js.Str(bp.y)})" : $"built {Js.Str(bp.target)} at ({Js.Str(bp.x)}, {Js.Str(bp.y)})");
     }
 
     /// <summary>Patch up a damaged wall or door from a tile next to it.</summary>
@@ -672,7 +672,7 @@ public static partial class Work
     /// <summary>Mends an edge wall or door, standing on either side of it.</summary>
     public static void workRepairEdge(SimState state, Survivor s, Job job, int e)
     {
-        var sides = [new() { x = job.x, y = job.y }, e % 2 == 0 ? new() { x = job.x, y = job.y - 1 } : new() { x = job.x - 1, y = job.y }];
+        var sides = [new() { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new() { x = Js.I(job.x), y = Js.I(job.y - 1) } : new() { x = Js.I(job.x - 1), y = Js.I(job.y) }];
         if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
         {
             return goTo(state, s, job, sides);
@@ -687,7 +687,7 @@ public static partial class Work
             return;
         }
         Noise.makeNoise(state, job, "building");
-        finishJob(state, s, job, "repaired the " + state.grid.edges[Js.Idx(e)] == 1 ? "wall" : "door" + " at (" + job.x + ", " + job.y + ")");
+        finishJob(state, s, job, ((((("repaired the " + ((state.grid.edges[Js.Idx(e)] == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
     }
 
     public static void workHaul(SimState state, Survivor s, Job job)
@@ -743,7 +743,7 @@ public static partial class Work
     public static void workFuel(SimState state, Survivor s, Job job)
     {
         var g = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-        if (!Js.T(g) || !/*TODO in*/Js.In(g.kind, Jobs.FUEL))
+        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, Jobs.FUEL)))
         {
             return Jobs.releaseSurvivor(state, s, $"{Js.Str(g?.kind ?? "generator")} gone");
         }
@@ -782,7 +782,7 @@ public static partial class Work
         s.carrying = null;
         g.stored += 1;
         g.storedKind = fuel;
-        finishJob(state, s, job, $"{Js.Str(fuel == "ammo" ? "loaded" : "fuelled")} the {Js.Str(g.kind)} at ({Js.Str(g.x)}, {Js.Str(g.y)})");
+        finishJob(state, s, job, $"{Js.Str((fuel == "ammo") ? "loaded" : "fuelled")} the {Js.Str(g.kind)} at ({Js.Str(g.x)}, {Js.Str(g.y)})");
     }
 
     public static void carryToStorage(SimState state, Survivor s, Job job, Item item)
@@ -835,9 +835,9 @@ public static partial class Work
         bool astray(/*TODO inline type*/object i)
         {
             var home = Rooms.homeFor(stores, i.kind);
-            return home.size > 0 && !home.has(Rooms.labelAt(state, i.pos.x, i.pos.y));
+            return (home.size > 0) && !home.has(Rooms.labelAt(state, i.pos.x, i.pos.y));
         }
-        var extra = state.items.filter((i) => i.pos != null && i.reservedBy == null && Space.manhattan(i.pos, s.pos) <= Jobs.CART_REACH && Js.T(astray(i))).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)).slice(0, Jobs.CART_LOAD - 1);
+        var extra = state.items.filter((i) => (i.pos != null) && (i.reservedBy == null) && (Space.manhattan(i.pos, s.pos) <= Jobs.CART_REACH) && Js.T(astray(i))).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)).slice(0, Jobs.CART_LOAD - 1);
         foreach (var i in Js.Iter(extra))
         {
             i.pos = null;
@@ -853,7 +853,7 @@ public static partial class Work
     /// <summary>A storage tile is free if it can hold an item and no other active store job has reserved it.</summary>
     public static bool storageTileFree(SimState state, Job job, Point p, JsSet<double> storage)
     {
-        return storage.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Items.canHoldItem(state, p.x, p.y)) && !state.jobs.some((j) => j != job && j.reservedBy != null && j.dest != null && Js.T(Space.samePoint(j.dest, p)));
+        return (storage.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Items.canHoldItem(state, p.x, p.y))) && !state.jobs.some((j) => (j != job) && (j.reservedBy != null) && (j.dest != null) && Js.T(Space.samePoint(j.dest, p)));
     }
 
     /// <summary>Nearest free, reachable tile in any of the given complete rooms.</summary>
@@ -868,7 +868,7 @@ public static partial class Work
         {
             foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
             {
-                var p = new() { x = i % width, y = JsMath.floor(((double)(i) / (width))) };
+                var p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(storageTileFree(state, job, p, storage)))
                 {
                     candidates.push(p);
@@ -883,7 +883,7 @@ public static partial class Work
     public static void goTo(SimState state, Survivor s, Job job, List<Point> goals, double? steps = default)
     {
         var path = Pathfinding.findPathToAny(state.grid, s.pos, goals);
-        if (!Js.T(path) || path.length == 0)
+        if (!Js.T(path) || (path.length == 0))
         {
             Jobs.releaseSurvivor(state, s, $"can't reach {Js.Str(job.type)} job at ({Js.Str(job.x)}, {Js.Str(job.y)})");
             return;
@@ -898,8 +898,8 @@ public static partial class Work
         var y = a.y;
         var dx = JsMath.abs(b.x - a.x);
         var dy = -JsMath.abs(b.y - a.y);
-        var sx = a.x < b.x ? 1 : -1;
-        var sy = a.y < b.y ? 1 : -1;
+        var sx = (a.x < b.x) ? 1 : -1;
+        var sy = (a.y < b.y) ? 1 : -1;
         var err = dx + dy;
         for (; ; )
         {
@@ -920,12 +920,12 @@ public static partial class Work
             {
                 return false;
             }
-            if (x == b.x && y == b.y)
+            if ((x == b.x) && (y == b.y))
             {
                 return true;
             }
             var t = Grids.getTile(grid, x, y);
-            if (t == "wall" || t == "door" || t == "barricade")
+            if ((t == "wall") || (t == "door") || (t == "barricade"))
             {
                 return false;
             }
@@ -950,10 +950,10 @@ public static partial class Work
         {
             return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
         }
-        if (ax == bx || ay == by)
+        if ((ax == bx) || (ay == by))
         {
             return Js.T(clear(ax, ay, bx, by));
         }
-        return Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by)) || Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by));
+        return (Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by))) || (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)));
     }
 }

@@ -568,6 +568,12 @@ public static partial class Js
         return x;
     }
 
+    /// <summary>A whole-number field (a coordinate) set from a number: as JS stores it, when it's whole (Math.floor and friends return doubles).</summary>
+    public static int I(int i) => i;
+    public static int I(double d) => (int)d;
+    public static int? I(int? i) => i;
+    public static int? I(double? d) => d is double v ? (int)v : null;
+
     /// <summary>A computed index (list[i], record[key]): a whole number for lists, as JS arrays read them.</summary>
     public static int Idx(int i) => i;
     public static int Idx(double d) => (int)d;

@@ -205,11 +205,11 @@ public static partial class ScenarioMod
     {
         var height = scenario.map.length;
         var width = scenario.map[Js.Idx(0)]?.length ?? 0;
-        if (height == 0 || width == 0)
+        if ((height == 0) || (width == 0))
         {
             throw new Exception("loadScenario: map is empty");
         }
-        var state = States.createState(new() { seed = scenario.seed, width = width, height = height });
+        var state = States.createState(new() { seed = scenario.seed, width = Js.I(width), height = Js.I(height) });
         scenario.map.forEach((row, y) =>
         {
             if (row.length != width)
@@ -237,7 +237,7 @@ public static partial class ScenarioMod
         }
         foreach (var room in Js.Iter(scenario.rooms ?? []))
         {
-            state.roomDesignations.push(new() { id = $"r{Js.Str(state.nextId++)}", x = room.x, y = room.y, purpose = room.purpose });
+            state.roomDesignations.push(new() { id = $"r{Js.Str(state.nextId++)}", x = Js.I(room.x), y = Js.I(room.y), purpose = room.purpose });
         }
         return state;
     }

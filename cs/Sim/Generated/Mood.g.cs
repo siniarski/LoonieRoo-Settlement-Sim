@@ -95,7 +95,7 @@ public static partial class Mood
         {
             factors.push(["on rations", Policies.RATIONED_MOOD]);
         }
-        if (Js.T(state.leaderId) && state.leaderId != s.id && state.survivors.some((o) => o.id == state.leaderId))
+        if ((Js.T(state.leaderId) && (state.leaderId != s.id)) && state.survivors.some((o) => o.id == state.leaderId))
         {
             factors.push(["a good leader", Policies.LEADER_MOOD]);
         }

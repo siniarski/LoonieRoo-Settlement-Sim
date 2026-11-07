@@ -37,7 +37,7 @@ public static partial class Weapons
 
     public static bool wantsWeapon(SimState state, Survivor s)
     {
-        return !Js.T(s.dressing) && s.priorities.guard > 0 && !Js.T(s.jobId) && !Js.T(s.sleep) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && state.tick >= s.nextArmTick;
+        return (!Js.T(s.dressing) && (s.priorities.guard > 0)) && !Js.T(s.jobId) && !Js.T(s.sleep) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && (state.tick >= s.nextArmTick);
     }
 
     /// <summary>Runs when standing still, after treatment and before sleep: walk to the reserved weapon and pick it up. Returns true if arming handled this tick.</summary>
@@ -48,7 +48,7 @@ public static partial class Weapons
             return false;
         }
         var item = Items.getItem(state, s.arming!);
-        if (!Js.T(Js.T(item?.pos)) || item.reservedBy != s.id)
+        if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {
             cancelArming(state, s, "weapon gone");
             return false;
@@ -56,7 +56,7 @@ public static partial class Weapons
         if (!Js.T(Space.samePoint(s.pos, item.pos)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 cancelArming(state, s, "can't reach the weapon");
                 s.nextArmTick = state.tick + ARM_RETRY_TICKS;
@@ -83,7 +83,7 @@ public static partial class Weapons
         item.carriedBy = s.id;
         item.reservedBy = null;
         s.weapon = item.id;
-        s.note = item.kind == "gun" ? "armed with a gun" : "armed with a weapon";
+        s.note = (item.kind == "gun") ? "armed with a gun" : "armed with a weapon";
         return true;
     }
 
@@ -91,7 +91,7 @@ public static partial class Weapons
     public static /*TODO return type*/object loadedGun(SimState state, Survivor s)
     {
         var gun = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        return gun?.kind == "gun" && gun.wear > 0 ? gun : null;
+        return (gun?.kind == "gun") && (gun.wear > 0) ? gun : null;
     }
 
     public static bool startArming(SimState state, Survivor s)
@@ -101,7 +101,7 @@ public static partial class Weapons
             return false;
         }
         var held = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : held.kind == "gun" && held.wear == 0 ? ["ammo"] : [];
+        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : ((held.kind == "gun") && (held.wear == 0) ? ["ammo"] : []);
         if (wants.length == 0)
         {
             return false;
@@ -114,7 +114,7 @@ public static partial class Weapons
         }
         weapon.reservedBy = s.id;
         s.arming = weapon.id;
-        s.note = $"going for {Js.Str(weapon.kind == "ammo" ? "ammo" : weapon.kind == "gun" ? "a gun" : "a weapon")} at ({Js.Str(weapon.pos.x)}, {Js.Str(weapon.pos.y)})";
+        s.note = $"going for {Js.Str((weapon.kind == "ammo") ? "ammo" : ((weapon.kind == "gun") ? "a gun" : "a weapon"))} at ({Js.Str(weapon.pos.x)}, {Js.Str(weapon.pos.y)})";
         return true;
     }
 
@@ -126,7 +126,7 @@ public static partial class Weapons
             return;
         }
         var item = Items.getItem(state, s.arming);
-        if (Js.T(item) && item.reservedBy == s.id)
+        if (Js.T(item) && (item.reservedBy == s.id))
         {
             item.reservedBy = null;
         }
@@ -145,7 +145,7 @@ public static partial class Weapons
             return;
         }
         var item = Items.getItem(state, s.arming);
-        if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos))
+        if ((!Js.T(item) || (item.reservedBy != s.id)) || !Js.T(item.pos))
         {
             cancelArming(state, s, "weapon gone");
         }
@@ -161,7 +161,7 @@ public static partial class Weapons
     public static void wearWeapon(SimState state, Survivor s)
     {
         var item = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        if (!Js.T(item) || item.kind == "gun")
+        if (!Js.T(item) || (item.kind == "gun"))
         {
             return;
         }

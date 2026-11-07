@@ -25,12 +25,12 @@ public static partial class Breach
         {
             return 0;
         }
-        return grid.reinforced.includes(i) ? STRUCTURE_HEALTH[Js.Idx(tile)] * 2.5 : STRUCTURE_HEALTH[Js.Idx(tile)];
+        return grid.reinforced.includes(i) ? (STRUCTURE_HEALTH[Js.Idx(tile)] * 2.5) : STRUCTURE_HEALTH[Js.Idx(tile)];
     }
 
     public static bool isStructure(string? tile)
     {
-        return tile == "wall" || tile == "door" || tile == "barricade";
+        return (tile == "wall") || (tile == "door") || (tile == "barricade");
     }
 
     public static double structureDamage(SimState state, int x, int y)
@@ -88,7 +88,7 @@ public static partial class Breach
         {
             return GLASS_HEALTH;
         }
-        return kind == Grids.EDGE_WALL ? STRUCTURE_HEALTH["wall"] : kind == Grids.EDGE_DOOR ? STRUCTURE_HEALTH["door"] : kind == Grids.EDGE_BARRICADE ? STRUCTURE_HEALTH["barricade"] : 0;
+        return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : (kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : 0);
     }
 
     public static double edgeDamage(Grid grid, int e)
@@ -103,7 +103,7 @@ public static partial class Breach
         var grid = __d0.grid;
         var kind = grid.edges[Js.Idx(e)];
         var boarded = grid.edgeBoarded.includes(e);
-        if (kind != Grids.EDGE_WALL && kind != Grids.EDGE_DOOR && kind != Grids.EDGE_BARRICADE && kind != Grids.EDGE_WINDOW && !Js.T(boarded))
+        if ((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR) && (kind != Grids.EDGE_BARRICADE) && (kind != Grids.EDGE_WINDOW) && !Js.T(boarded))
         {
             return false;
         }
@@ -113,7 +113,7 @@ public static partial class Breach
             grid.edgeDamage[Js.Idx(Js.Str(e))] = damage;
             return false;
         }
-        if (Js.T(boarded) || kind == Grids.EDGE_WINDOW)
+        if (Js.T(boarded) || (kind == Grids.EDGE_WINDOW))
         {
             grid.edgeDamage.Remove(Js.Str(Js.Str(e)));
             var tile = JsMath.floor(((double)(e) / (2)));
@@ -129,7 +129,7 @@ public static partial class Breach
             }
             Grids.noteEdgeChange(grid, e);
             state.walkabilityVersion += 1;
-            Events.logEvent(state, "Zombies " + Js.T(boarded) ? "tore the boards off" : "smashed" + " the window at (" + x + ", " + y + ")");
+            Events.logEvent(state, ((((("Zombies " + (Js.T(boarded) ? "tore the boards off" : "smashed")) + " the window at (") + x) + ", ") + y) + ")");
             return true;
         }
         grid.edges[Js.Idx(e)] = Grids.EDGE_NONE;
@@ -147,7 +147,7 @@ public static partial class Breach
         }
         state.walkabilityVersion += 1;
         var tile = JsMath.floor(((double)(e) / (2)));
-        Events.logEvent(state, "Zombies broke through the " + kind == Grids.EDGE_WALL ? "wall" : kind == Grids.EDGE_DOOR ? "door" : "barricade" + " at (" + tile % grid.width + ", " + JsMath.floor(((double)(tile) / (grid.width))) + ")");
+        Events.logEvent(state, ((("Zombies broke through the " + (kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade")) + " at (") + (tile % grid.width) + ", ") + JsMath.floor(((double)(tile) / (grid.width))) + ")");
         return true;
     }
 
@@ -184,6 +184,6 @@ public static partial class Breach
         Grids.noteEdgeChange(grid, e);
         state.walkabilityVersion += 1;
         var tile = JsMath.floor(((double)(e) / (2)));
-        Noise.makeNoise(state, new() { x = tile % grid.width, y = JsMath.floor(((double)(tile) / (grid.width))) }, "glass");
+        Noise.makeNoise(state, new() { x = Js.I(tile % grid.width), y = Js.I(JsMath.floor(((double)(tile) / (grid.width)))) }, "glass");
     }
 }

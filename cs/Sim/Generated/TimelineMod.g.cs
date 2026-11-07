@@ -61,43 +61,43 @@ public static partial class TimelineMod
     public static void rollTimeline(SimState state, double seed)
     {
         var w = WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]!;
-        var roll = (/*TODO pattern*/_0, key) => hi == 0 ? 0 : lo + JsMath.floor(Hash.hashRoll(seed, key) * hi - lo + 1);
+        var roll = (/*TODO pattern*/_0, key) => (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));
         state.timeline = new() { waterOffDay = roll(w.water, 31358.0), powerOffDay = roll(w.power, 0x9077), helicopterDay = roll(w.heli, 19985.0), heli = null, alarms = [] };
     }
 
     public static bool waterOn(SimState state)
     {
-        return state.timeline != null && Time.dayOf(state.tick) < state.timeline.waterOffDay;
+        return (state.timeline != null) && (Time.dayOf(state.tick) < state.timeline.waterOffDay);
     }
 
     public static bool powerOn(SimState state)
     {
-        return state.timeline != null && Time.dayOf(state.tick) < state.timeline.powerOffDay;
+        return (state.timeline != null) && (Time.dayOf(state.tick) < state.timeline.powerOffDay);
     }
 
     /// <summary>Is this a tap with water coming out of it?</summary>
     public static bool isTap(SimState state, Furniture f)
     {
-        return f.look != null && TAP_LOOKS.includes(f.look) && Js.T(waterOn(state));
+        return (f.look != null) && TAP_LOOKS.includes(f.look) && Js.T(waterOn(state));
     }
 
     /// <summary>Does this keep food cold (an icebox with the power on)?</summary>
     public static bool isMainsFridge(SimState state, Furniture f)
     {
-        return f.look == "icebox" && Js.T(powerOn(state));
+        return (f.look == "icebox") && Js.T(powerOn(state));
     }
 
     /// <summary>Indoors at night with the power on: the lights are on.</summary>
     public static bool mainsLit(SimState state, Point p)
     {
-        return Js.T(Time.isNight(state.tick)) && Js.T(powerOn(state)) && Js.T(Grids.inBounds(state.grid, p.x, p.y)) && Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS;
+        return (Js.T(Time.isNight(state.tick)) && Js.T(powerOn(state))) && Js.T(Grids.inBounds(state.grid, p.x, p.y)) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
     }
 
     /// <summary>Who the world's happenings come looking for: the one you control, else the first survivor.</summary>
     public static Point? focus(SimState state)
     {
         var you = Js.T(state.control) ? state.survivors.find((s) => s.id == state.control!.survivorId) : null;
-        return you ?? state.survivors[Js.Idx(0)]?.pos ?? null;
+        return (you ?? state.survivors[Js.Idx(0)])?.pos ?? null;
     }
 
     /// <summary>A point `r` tiles from `p` in the direction `a` (radians), on the map.</summary>
@@ -106,7 +106,7 @@ public static partial class TimelineMod
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        return new() { x = JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + JsMath.cos(a) * r))), y = JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + JsMath.sin(a) * r))) };
+        return new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + (JsMath.cos(a) * r))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + (JsMath.sin(a) * r))))) };
     }
 
     /// <summary>Which way, in words, from a to b.</summary>
@@ -114,20 +114,20 @@ public static partial class TimelineMod
     {
         var dx = b.x - a.x;
         var dy = b.y - a.y;
-        var ns = JsMath.abs(dy) * 2 > JsMath.abs(dx) ? dy < 0 ? "north" : "south" : "";
-        var ew = JsMath.abs(dx) * 2 > JsMath.abs(dy) ? dx < 0 ? "west" : "east" : "";
-        return Js.T(ns) && Js.T(ew) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : Js.T(ns) || Js.T(ew) || Js.T("nearby");
+        var ns = (JsMath.abs(dy) * 2) > JsMath.abs(dx) ? ((dy < 0) ? "north" : "south") : "";
+        var ew = (JsMath.abs(dx) * 2) > JsMath.abs(dy) ? ((dx < 0) ? "west" : "east") : "";
+        return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.T(ns) || Js.T(ew)) || Js.T("nearby");
     }
 
     /// <summary>Ring an alarm (a window smashed into a building while the power's on, maybe).</summary>
     public static void maybeAlarm(SimState state, Point p, double key)
     {
         var t = state.timeline;
-        if (!Js.T(t) || !Js.T(powerOn(state)) || Hash.hashRoll(key, state.tick, 0xa1a) >= ALARM_CHANCE)
+        if ((!Js.T(t) || !Js.T(powerOn(state))) || (Hash.hashRoll(key, state.tick, 0xa1a) >= ALARM_CHANCE))
         {
             return;
         }
-        t.alarms.push(new() { x = p.x, y = p.y, untilTick = state.tick + ALARM_TICKS });
+        t.alarms.push(new() { x = Js.I(p.x), y = Js.I(p.y), untilTick = state.tick + ALARM_TICKS });
         Events.logEvent(state, $"An alarm went off at ({Js.Str(p.x)}, {Js.Str(p.y)})!");
         Noise.makeNoise(state, p, "alarm");
     }
@@ -141,7 +141,7 @@ public static partial class TimelineMod
             return;
         }
         var day = Time.dayOf(state.tick);
-        if (Time.tickOfDay(state.tick) == 0 && state.tick > 0)
+        if ((Time.tickOfDay(state.tick) == 0) && (state.tick > 0))
         {
             if (day == t.waterOffDay)
             {
@@ -155,7 +155,7 @@ public static partial class TimelineMod
             {
                 foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "crate")))
                 {
-                    if (f.look == "icebox" && f.loot > 0)
+                    if ((f.look == "icebox") && (f.loot > 0))
                     {
                         f.loot -= 1;
                     }
@@ -163,7 +163,7 @@ public static partial class TimelineMod
             }
         }
         t.alarms = t.alarms.filter((a) => state.tick < a.untilTick);
-        if (state.tick % 20 == 0)
+        if ((state.tick % 20) == 0)
         {
             foreach (var a in Js.Iter(t.alarms))
             {
@@ -171,12 +171,12 @@ public static partial class TimelineMod
             }
         }
         updateHeli(state, t);
-        var winding = t.powerOffDay > 0 && day < t.powerOffDay + WIND_DOWN_DAYS;
+        var winding = (t.powerOffDay > 0) && (day < (t.powerOffDay + WIND_DOWN_DAYS));
         var you = focus(state);
-        if (Js.T(winding) && Js.T(you) && state.tick % Time.TICKS_PER_HOUR == 0 && Hash.hashRoll(state.world?.seed ?? 0, state.tick, 0xfa2) < FAR_CHANCE)
+        if ((Js.T(winding) && Js.T(you)) && ((state.tick % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(state.world?.seed ?? 0, state.tick, 0xfa2) < FAR_CHANCE))
         {
-            var a = Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI * 2;
-            var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * FAR_MAX - FAR_MIN + 1));
+            var a = (Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI) * 2;
+            var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * ((FAR_MAX - FAR_MIN) + 1)));
             var shots = Hash.hashRoll(state.tick, 0xfa5) < 0.6;
             Noise.makeNoise(state, at, Js.T(shots) ? "gunfire" : "scream");
             Events.logEvent(state, $"{Js.Str(Js.T(shots) ? "Gunshots" : "A scream")}, far off to the {Js.Str(compass(you, at))}.");
@@ -188,7 +188,7 @@ public static partial class TimelineMod
         var you = focus(state);
         if (!Js.T(t.heli))
         {
-            if (t.helicopterDay == 0 || Time.dayOf(state.tick) != t.helicopterDay || !Js.T(you))
+            if ((t.helicopterDay == 0) || (Time.dayOf(state.tick) != t.helicopterDay) || !Js.T(you))
             {
                 return;
             }
@@ -196,26 +196,26 @@ public static partial class TimelineMod
             {
                 return;
             }
-            var a = Hash.hashRoll(state.world?.seed ?? 0, 19986.0) * JsMath.PI * 2;
+            var a = (Hash.hashRoll(state.world?.seed ?? 0, 19986.0) * JsMath.PI) * 2;
             var from = off(state, you, a, 60);
             var exit = off(state, you, a + JsMath.PI, 80);
-            t.heli = new() { x = from.x, y = from.y, leaveTick = state.tick + HELI_HOVER + 60 * HELI_STEP, exit = exit };
+            t.heli = new() { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + (60 * HELI_STEP), exit = exit };
             Events.logEvent(state, $"A helicopter, coming in from the {Js.Str(compass(you, from))}...");
             return;
         }
         var h = t.heli;
         var leaving = state.tick >= h.leaveTick;
-        var goal = Js.T(leaving) ? h.exit : you ?? h.exit;
-        if (state.tick % HELI_STEP == 0)
+        var goal = Js.T(leaving) ? h.exit : (you ?? h.exit);
+        if ((state.tick % HELI_STEP) == 0)
         {
             h.x += JsMath.sign(goal.x - h.x);
             h.y += JsMath.sign(goal.y - h.y);
         }
-        if (state.tick % HELI_NOISE_EVERY == 0)
+        if ((state.tick % HELI_NOISE_EVERY) == 0)
         {
             Noise.makeNoise(state, h, "helicopter");
         }
-        if (Js.T(leaving) && h.x == h.exit.x && h.y == h.exit.y)
+        if ((Js.T(leaving) && (h.x == h.exit.x)) && (h.y == h.exit.y))
         {
             t.heli = null;
             t.helicopterDay = 0;

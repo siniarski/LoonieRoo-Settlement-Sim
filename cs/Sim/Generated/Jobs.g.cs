@@ -74,7 +74,7 @@ public static partial class Jobs
         }
         var __d0 = state.grid;
         var width = __d0.width;
-        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => j.y * width + j.x));
+        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => (j.y * width) + j.x));
         foreach (var i in Js.Iter([.. state.grid.dirtList].sort((a, b) => a - b)))
         {
             var x = i % width;
@@ -88,7 +88,7 @@ public static partial class Jobs
         foreach (var item in Js.Iter(state.items))
         {
             var home = Rooms.homeFor(stores, item.kind);
-            if (!Js.T(item.pos) || home.size == 0 || storing.has(item.id) || home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
+            if ((!Js.T(item.pos) || (home.size == 0)) || storing.has(item.id) || home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
             {
                 continue;
             }
@@ -97,12 +97,12 @@ public static partial class Jobs
         var fuelling = Js.Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
         foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.ObjectKeys(FUEL))))
         {
-            if (f.stored < fuelMax(f.kind) && !fuelling.has(f.id))
+            if ((f.stored < fuelMax(f.kind)) && !fuelling.has(f.id))
             {
                 addJob(state, "haul", f.x, f.y, null, null, f.id);
             }
         }
-        var repairing = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && j.edge == null).map((j) => j.y * width + j.x));
+        var repairing = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge == null)).map((j) => (j.y * width) + j.x));
         foreach (var i in Js.Iter([.. state.grid.damageList].sort((a, b) => a - b)))
         {
             if (!repairing.has(i))
@@ -110,7 +110,7 @@ public static partial class Jobs
                 addJob(state, "build", i % width, JsMath.floor(((double)(i) / (width))), null, null);
             }
         }
-        var mending = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && j.edge != null).map((j) => j.edge!));
+        var mending = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge != null)).map((j) => j.edge!));
         foreach (var e in Js.Iter(Js.ObjectKeys(state.grid.edgeDamage).map(Number).sort((a, b) => a - b)))
         {
             if (mending.has(e))
@@ -125,7 +125,7 @@ public static partial class Jobs
         {
             if (!scouting.has(a.id))
             {
-                addJob(state, "scout", JsMath.floor(((double)(a.x0 + a.x1) / (2))), JsMath.floor(((double)(a.y0 + a.y1) / (2))), null, null).areaId = a.id;
+                addJob(state, "scout", JsMath.floor(((double)((a.x0 + a.x1)) / (2))), JsMath.floor(((double)((a.y0 + a.y1)) / (2))), null, null).areaId = a.id;
             }
         }
         var treating = Js.Set(state.jobs.filter((j) => j.type == "doctor").map((j) => j.patientId));
@@ -139,20 +139,20 @@ public static partial class Jobs
         var wanted = new() { workbench = Crafting.wantedCraft(state, "workbench", true), stove = Crafting.wantedCraft(state, "stove") };
         if (Js.T(wanted.workbench) || Js.T(wanted.stove))
         {
-            var stationed = Js.Set(state.jobs.filter((j) => j.type == "craft" || j.type == "cook").map((j) => j.furnitureId));
+            var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
             foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, ["workbench", "stove"])))
             {
-                if (!Js.T(Crafting.isStation(f.kind)) || !Js.T(wanted[Js.Idx(f.kind)]) || stationed.has(f.id) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
+                if ((!Js.T(Crafting.isStation(f.kind)) || !Js.T(wanted[Js.Idx(f.kind)])) || stationed.has(f.id) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
                 {
                     continue;
                 }
-                addJob(state, f.kind == "stove" ? "cook" : "craft", f.x, f.y, null, null, f.id);
+                addJob(state, (f.kind == "stove") ? "cook" : "craft", f.x, f.y, null, null, f.id);
             }
         }
         var searching = Js.Set(state.jobs.filter((j) => j.type == "scavenge").map((j) => j.furnitureId));
         foreach (var f in Js.Iter(FurnitureMod.markedForScavenge(state)))
         {
-            if (Js.T(f.scavenge) && f.kind == "crate" || f.kind == "tree" && f.loot > 0 && !searching.has(f.id))
+            if ((Js.T(f.scavenge) && (f.kind == "crate") || (f.kind == "tree")) && (f.loot > 0) && !searching.has(f.id))
             {
                 addJob(state, "scavenge", f.x, f.y, null, null, f.id);
             }
@@ -165,10 +165,10 @@ public static partial class Jobs
                 addJob(state, "farm", plot.x, plot.y, null, null, null, null, plot.id);
             }
         }
-        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => j.y * width + j.x));
+        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => (j.y * width) + j.x));
         foreach (var f in Js.Iter(state.fires))
         {
-            if (!fighting.has(f.y * width + f.x))
+            if (!fighting.has((f.y * width) + f.x))
             {
                 addJob(state, "firefight", f.x, f.y, null, null);
             }
@@ -176,10 +176,10 @@ public static partial class Jobs
         if (Js.T(EndgameMod.researchWanted(state)))
         {
             var researching = Js.Set(state.jobs.filter((j) => j.type == "research").map((j) => j.furnitureId));
-            var samples = state.items.some((i) => i.kind == "sample" && i.pos != null);
+            var samples = state.items.some((i) => (i.kind == "sample") && (i.pos != null));
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "lab")))
             {
-                if (!researching.has(f.id) && f.stored > 0 || Js.T(samples) && Js.T(Power.isPowered(state, f)))
+                if ((!researching.has(f.id) && (f.stored > 0) || Js.T(samples)) && Js.T(Power.isPowered(state, f)))
                 {
                     addJob(state, "research", f.x, f.y, null, null, f.id);
                 }
@@ -201,7 +201,7 @@ public static partial class Jobs
                 addJob(state, "guard", z.pos.x, z.pos.y, null, null, null, z.id);
             }
         }
-        var guarding = Js.Set(state.jobs.filter((j) => j.type == "guard" && Js.T(j.animalId)).map((j) => j.animalId));
+        var guarding = Js.Set(state.jobs.filter((j) => (j.type == "guard") && Js.T(j.animalId)).map((j) => j.animalId));
         foreach (var a in Js.Iter(state.animals))
         {
             if (Js.T(Animals.isMenace(state, a)) && !guarding.has(a.id))
@@ -214,12 +214,12 @@ public static partial class Jobs
     /// <summary>Repairs are build jobs with no blueprint: they fix a damaged wall or door at x, y.</summary>
     public static bool isRepairJob(Job job)
     {
-        return job.type == "build" && job.blueprintId == null;
+        return (job.type == "build") && (job.blueprintId == null);
     }
 
     public static bool isStoreJob(Job job)
     {
-        return job.type == "haul" && job.blueprintId == null && job.furnitureId == null;
+        return (job.type == "haul") && (job.blueprintId == null) && (job.furnitureId == null);
     }
 
     /// <summary>What each fed piece of furniture takes, and how much it holds.</summary>
@@ -227,18 +227,18 @@ public static partial class Jobs
 
     public static double fuelMax(string kind)
     {
-        return kind == "turret" ? Defences.TURRET_AMMO_MAX : Power.FUEL_MAX;
+        return (kind == "turret") ? Defences.TURRET_AMMO_MAX : Power.FUEL_MAX;
     }
 
     /// <summary>Fuel hauls: wood to a generator or heater, ammo to a turret (`furnitureId`).</summary>
     public static bool isFuelJob(Job job)
     {
-        return job.type == "haul" && job.furnitureId != null;
+        return (job.type == "haul") && (job.furnitureId != null);
     }
 
     public static string wantedJobType(Blueprint bp)
     {
-        return Js.T(bp.needsMaterial) && !Js.T(bp.delivered) ? "haul" : "build";
+        return (Js.T(bp.needsMaterial) && !Js.T(bp.delivered)) ? "haul" : "build";
     }
 
     public static string? invalidReason(SimState state, Job job, StoreRooms stores)
@@ -274,8 +274,8 @@ public static partial class Jobs
                         {
                             return "the animal is gone";
                         }
-                        job.x = a.pos.x;
-                        job.y = a.pos.y;
+                        job.x = Js.I(a.pos.x);
+                        job.y = Js.I(a.pos.y);
                         return null;
                     }
                     var z = Js.T(job.zombieId) ? Zombies.getZombie(state, job.zombieId) : null;
@@ -283,14 +283,14 @@ public static partial class Jobs
                     {
                         return "zombie gone";
                     }
-                    job.x = z.pos.x;
-                    job.y = z.pos.y;
+                    job.x = Js.I(z.pos.x);
+                    job.y = Js.I(z.pos.y);
                     return null;
                 }
                 }
             case "scout":
                 {
-                    return Js.T(job.areaId) && Js.T(Fog.getExploreArea(state, job.areaId)) ? null : "area explored";
+                    return (Js.T(job.areaId) && Js.T(Fog.getExploreArea(state, job.areaId))) ? null : "area explored";
                 }
             case "firefight":
                 {
@@ -300,7 +300,7 @@ public static partial class Jobs
                 {
                     {
                     var lab = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-                    if (!Js.T(lab) || lab.kind != "lab")
+                    if (!Js.T(lab) || (lab.kind != "lab"))
                     {
                         return "lab gone";
                     }
@@ -315,7 +315,7 @@ public static partial class Jobs
                         {
                             return "item gone";
                         }
-                        if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
                         {
                             return "item taken by someone else";
                         }
@@ -331,8 +331,8 @@ public static partial class Jobs
                     {
                         return "the animal got away";
                     }
-                    job.x = a.pos.x;
-                    job.y = a.pos.y;
+                    job.x = Js.I(a.pos.x);
+                    job.y = Js.I(a.pos.y);
                     return null;
                 }
                 }
@@ -344,8 +344,8 @@ public static partial class Jobs
                     {
                         return "patient is up and about";
                     }
-                    job.x = patient.pos.x;
-                    job.y = patient.pos.y;
+                    job.x = Js.I(patient.pos.x);
+                    job.y = Js.I(patient.pos.y);
                     if (Js.T(job.itemId))
                     {
                         var item = Items.getItem(state, job.itemId);
@@ -353,7 +353,7 @@ public static partial class Jobs
                         {
                             return "item gone";
                         }
-                        if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
                         {
                             return "item taken by someone else";
                         }
@@ -377,7 +377,7 @@ public static partial class Jobs
                         {
                             return "item gone";
                         }
-                        if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
                         {
                             return "item taken by someone else";
                         }
@@ -397,7 +397,7 @@ public static partial class Jobs
                     {
                         return "no longer marked for scavenging";
                     }
-                    return crate.loot > 0 ? null : crate.kind == "tree" ? "tree is bare" : "crate is empty";
+                    return (crate.loot > 0) ? null : ((crate.kind == "tree") ? "tree is bare" : "crate is empty");
                 }
                 }
             case "build":
@@ -406,7 +406,7 @@ public static partial class Jobs
                     {
                     if (Js.T(isRepairJob(job)))
                     {
-                        return job.edge != null ? Breach.edgeDamage(state.grid, job.edge) : Breach.structureDamage(state, job.x, job.y) > 0 ? null : "nothing to repair";
+                        return ((job.edge != null) ? Breach.edgeDamage(state.grid, job.edge) : Breach.structureDamage(state, job.x, job.y) > 0) ? null : "nothing to repair";
                     }
                     if (Js.T(isStoreJob(job)))
                     {
@@ -415,7 +415,7 @@ public static partial class Jobs
                     if (Js.T(isFuelJob(job)))
                     {
                         var g = FurnitureMod.getFurniture(state, job.furnitureId!);
-                        if (!Js.T(g) || !/*TODO in*/Js.In(g.kind, FUEL))
+                        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, FUEL)))
                         {
                             return "generator gone";
                         }
@@ -426,12 +426,12 @@ public static partial class Jobs
                             {
                                 return "item gone";
                             }
-                            if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+                            if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
                             {
                                 return "item taken by someone else";
                             }
                         }
-                        return g.stored < fuelMax(g.kind) ? null : $"{Js.Str(g.kind)} is full";
+                        return (g.stored < fuelMax(g.kind)) ? null : $"{Js.Str(g.kind)} is full";
                     }
                     var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
                     if (!Js.T(bp))
@@ -442,14 +442,14 @@ public static partial class Jobs
                     {
                         return "designation moved on";
                     }
-                    if (job.type == "haul" && Js.T(job.itemId))
+                    if ((job.type == "haul") && Js.T(job.itemId))
                     {
                         var item = Items.getItem(state, job.itemId);
                         if (!Js.T(item))
                         {
                             return "item gone";
                         }
-                        if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
                         {
                             return "item taken by someone else";
                         }
@@ -467,7 +467,7 @@ public static partial class Jobs
         {
             return "item gone";
         }
-        if (Js.T(item.carriedBy) && item.carriedBy != job.reservedBy)
+        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
         {
             return "item taken by someone else";
         }
@@ -482,15 +482,15 @@ public static partial class Jobs
             {
                 return "already in storage";
             }
-            job.x = item.pos.x;
-            job.y = item.pos.y;
+            job.x = Js.I(item.pos.x);
+            job.y = Js.I(item.pos.y);
         }
         return null;
     }
 
     public static Job addJob(SimState state, string type, int x, int y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null)
     {
-        Job job = new() { id = $"j{Js.Str(state.nextId++)}", type = type, x = x, y = y, blueprintId = blueprintId, itemId = itemId, furnitureId = furnitureId, zombieId = zombieId, plotId = plotId, patientId = null, areaId = null, animalId = null, dest = null, progress = 0, reservedBy = null };
+        Job job = new() { id = $"j{Js.Str(state.nextId++)}", type = type, x = Js.I(x), y = Js.I(y), blueprintId = blueprintId, itemId = itemId, furnitureId = furnitureId, zombieId = zombieId, plotId = plotId, patientId = null, areaId = null, animalId = null, dest = null, progress = 0, reservedBy = null };
         state.jobs.push(job);
         return job;
     }
@@ -498,7 +498,7 @@ public static partial class Jobs
     public static void removeJob(SimState state, Job job, string reason)
     {
         var worker = Js.T(job.reservedBy) ? Survivors.getSurvivor(state, job.reservedBy) : null;
-        if (Js.T(worker) && worker.jobId == job.id)
+        if (Js.T(worker) && (worker.jobId == job.id))
         {
             releaseSurvivor(state, worker, reason);
         }
@@ -513,11 +513,11 @@ public static partial class Jobs
     public static void releaseSurvivor(SimState state, Survivor s, string reason)
     {
         var job = Js.T(s.jobId) ? getJob(state, s.jobId) : null;
-        if (Js.T(job) && job.reservedBy == s.id)
+        if (Js.T(job) && (job.reservedBy == s.id))
         {
             job.reservedBy = null;
             var reserved = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
-            if (Js.T(reserved) && reserved.reservedBy == s.id)
+            if (Js.T(reserved) && (reserved.reservedBy == s.id))
             {
                 reserved.reservedBy = null;
             }

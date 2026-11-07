@@ -43,7 +43,7 @@ public static partial class Wellbeing
 
     public static void updateSocial(SimState state)
     {
-        if (state.tick % SOCIAL_EVERY != 0)
+        if ((state.tick % SOCIAL_EVERY) != 0)
         {
             return;
         }
@@ -54,8 +54,8 @@ public static partial class Wellbeing
             {
                 continue;
             }
-            var company = awake.some((o) => o != s && JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= COMPANY);
-            s.social = clamp(s.social + Js.T(company) ? 1 : -1);
+            var company = awake.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= COMPANY));
+            s.social = clamp(s.social + (Js.T(company) ? 1 : -1));
         }
     }
 
@@ -68,19 +68,19 @@ public static partial class Wellbeing
     public static double nightScore(SimState state, Survivor s, string? bedId)
     {
         var bed = Js.T(bedId) ? FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y) : null;
-        var inBed = bed?.kind == "bed" && bed.id == bedId;
+        var inBed = (bed?.kind == "bed") && (bed.id == bedId);
         var room = Rooms.roomAt(state, s.pos.x, s.pos.y);
         var purpose = Js.T(room) ? Rooms.designationOf(state, room)?.purpose : null;
-        var bedroom = Js.T(room) && purpose == "housing" || purpose == "barracks" && Js.T(Rooms.evaluateRoom(state, room, purpose).complete);
-        var warm = Js.T(Power.isWarmed(state, s.pos)) || Seasons.seasonOf(state.tick) != "winter" && !Js.T(state.settings.winter);
+        var bedroom = (Js.T(room) && (purpose == "housing") || (purpose == "barracks")) && Js.T(Rooms.evaluateRoom(state, room, purpose).complete);
+        var warm = Js.T(Power.isWarmed(state, s.pos)) || (Seasons.seasonOf(state.tick) != "winter") && !Js.T(state.settings.winter);
         var dirty = Js.T(room) ? room.tiles.filter((i) => Js.T(Grids.isDirty(state.grid, i % state.grid.width, JsMath.floor(((double)(i) / (state.grid.width)))))).length : 0;
-        return clamp(15 + Js.T(inBed) ? 30 : 0 + Js.T(room) ? 20 : 0 + Js.T(bedroom) ? 15 : 0 + Js.T(warm) ? 15 : 0 - JsMath.min(15, dirty * 5));
+        return clamp((15 + (Js.T(inBed) ? 30 : 0)) + (Js.T(room) ? 20 : 0) + (Js.T(bedroom) ? 15 : 0) + (Js.T(warm) ? 15 : 0) - JsMath.min(15, dirty * 5));
     }
 
     /// <summary>On waking: comfort moves halfway to the night's score.</summary>
     public static void wakeComfort(SimState state, Survivor s, string? bedId)
     {
-        s.comfort = JsMath.round(((double)(s.comfort + nightScore(state, s, bedId)) / (2)));
+        s.comfort = JsMath.round(((double)((s.comfort + nightScore(state, s, bedId))) / (2)));
     }
 
     /// <summary>Mood factors from the higher needs, as [label, effect] pairs.</summary>

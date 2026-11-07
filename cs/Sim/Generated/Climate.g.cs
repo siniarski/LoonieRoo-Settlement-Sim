@@ -28,8 +28,8 @@ public static partial class Climate
         {
             return "mild";
         }
-        var t = ((double)(y) / (world.size)) + 0.25 * Worldgen.noise(world.seed, x, y, 64, 41) - 0.5;
-        return t < 0.33 ? "cold" : t > 0.67 ? "hot" : "mild";
+        var t = ((double)(y) / (world.size)) + (0.25 * (Worldgen.noise(world.seed, x, y, 64, 41) - 0.5));
+        return (t < 0.33) ? "cold" : ((t > 0.67) ? "hot" : "mild");
     }
 
     /// <summary>Is the open air cold here and now, by region and season? (Blizzards are handled by the caller.)</summary>
@@ -44,15 +44,15 @@ public static partial class Climate
         var night = Time.isNight(state.tick);
         if (climate == "cold")
         {
-            return season == "winter" || Js.T(night) && season == "autumn" || Js.T(night) && Js.T(state.settings.winter);
+            return (season == "winter") || (Js.T(night) && (season == "autumn")) || (Js.T(night) && Js.T(state.settings.winter));
         }
-        return Js.T(night) && season == "winter" || Js.T(state.settings.winter);
+        return Js.T(night) && (season == "winter") || Js.T(state.settings.winter);
     }
 
     /// <summary>Summer days in the hot south: thirst comes twice as fast.</summary>
     public static bool scorching(SimState state, int x, int y)
     {
-        return Seasons.seasonOf(state.tick) == "summer" && !Js.T(Time.isNight(state.tick)) && climateAt(state, x, y) == "hot";
+        return (Seasons.seasonOf(state.tick) == "summer") && !Js.T(Time.isNight(state.tick)) && (climateAt(state, x, y) == "hot");
     }
 
     public static bool isRadioactive(SimState state, int x, int y)
@@ -63,7 +63,7 @@ public static partial class Climate
             return false;
         }
         var c = ((double)(world.size) / (2));
-        if (JsMath.pow(x - c, 2) + JsMath.pow(y - c, 2) < CLEAN_RADIUS * CLEAN_RADIUS)
+        if ((JsMath.pow((x - c), 2)) + (JsMath.pow((y - c), 2)) < (CLEAN_RADIUS * CLEAN_RADIUS))
         {
             return false;
         }
@@ -73,7 +73,7 @@ public static partial class Climate
     /// <summary>Every RAD_EVERY ticks in a hot spot: health, and the thought of it.</summary>
     public static void updateRadiation(SimState state, Survivor s)
     {
-        if (state.tick % RAD_EVERY != 0 || !Js.T(isRadioactive(state, s.pos.x, s.pos.y)))
+        if (((state.tick % RAD_EVERY) != 0) || !Js.T(isRadioactive(state, s.pos.x, s.pos.y)))
         {
             return;
         }

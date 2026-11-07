@@ -30,7 +30,7 @@ public static partial class Farming
 
     public static FarmPlot? plotAt(SimState state, int x, int y)
     {
-        return state.farm.find((p) => p.x == x && p.y == y);
+        return state.farm.find((p) => (p.x == x) && (p.y == y));
     }
 
     public static FarmPlot? getPlot(SimState state, string id)
@@ -45,7 +45,7 @@ public static partial class Farming
 
     public static bool isRipe(FarmPlot plot)
     {
-        return Js.T(plot.planted) && plot.growth >= growTicks(plot);
+        return Js.T(plot.planted) && (plot.growth >= growTicks(plot));
     }
 
     /// <summary>Does this plot need a survivor right now (to sow, or to harvest)?</summary>
@@ -56,14 +56,14 @@ public static partial class Farming
 
     public static FarmPlot addPlot(SimState state, int x, int y, string crop = "potato")
     {
-        FarmPlot plot = new() { id = $"p{Js.Str(state.nextId++)}", x = x, y = y, crop = crop, planted = false, growth = 0 };
+        FarmPlot plot = new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), crop = crop, planted = false, growth = 0 };
         state.farm.push(plot);
         return plot;
     }
 
     public static bool isCrop(object c)
     {
-        return c == "potato" || c == "wheat" || c == "herb";
+        return (c == "potato") || (c == "wheat") || (c == "herb");
     }
 
     public static void removePlot(SimState state, FarmPlot plot)
@@ -106,7 +106,7 @@ public static partial class Farming
         }
         FurnitureMod.regrowTrees(state);
         var outdoors = Seasons.cropGrows(state);
-        var greenhouses = state.farm.length > 0 ? Rooms.completeRooms(state, "greenhouse") : new JsSet<double>();
+        var greenhouses = (state.farm.length > 0) ? Rooms.completeRooms(state, "greenhouse") : new JsSet<double>();
         foreach (var plot in Js.Iter([.. state.farm]))
         {
             if (Grids.getTile(state.grid, plot.x, plot.y) != "floor")
@@ -115,13 +115,13 @@ public static partial class Farming
                 continue;
             }
             var growth = greenhouses.has(Rooms.labelAt(state, plot.x, plot.y)) ? 1 : outdoors;
-            if (Js.T(plot.planted) && plot.growth < growTicks(plot))
+            if (Js.T(plot.planted) && (plot.growth < growTicks(plot)))
             {
                 plot.growth = JsMath.min(growTicks(plot), plot.growth + growth);
             }
         }
-        var every = Seasons.seasonOf(state.tick) == "winter" ? 2 * EGG_EVERY : EGG_EVERY;
-        if (state.tick > 0 && state.tick % every == 0)
+        var every = (Seasons.seasonOf(state.tick) == "winter") ? (2 * EGG_EVERY) : EGG_EVERY;
+        if ((state.tick > 0) && ((state.tick % every) == 0))
         {
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "coop")))
             {
@@ -132,6 +132,6 @@ public static partial class Farming
 
     public static Point plotPoint(FarmPlot plot)
     {
-        return new() { x = plot.x, y = plot.y };
+        return new() { x = Js.I(plot.x), y = Js.I(plot.y) };
     }
 }

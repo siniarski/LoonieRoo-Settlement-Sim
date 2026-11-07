@@ -42,7 +42,7 @@ public static partial class Relationships
     /// <summary>Every BOND_EVERY ticks: survivors near each other, both awake, warm to each other.</summary>
     public static void updateRelationships(SimState state)
     {
-        if (state.tick % BOND_EVERY != 0)
+        if ((state.tick % BOND_EVERY) != 0)
         {
             return;
         }
@@ -66,7 +66,7 @@ public static partial class Relationships
     /// <summary>A breakdown begins: lash out at the nearest awake survivor; a rival hits back.</summary>
     public static void lashOut(SimState state, Survivor s)
     {
-        var target = state.survivors.filter((o) => o != s && !Js.T(Js.T(o.sleep?.asleep)) && Space.manhattan(o.pos, s.pos) <= 5).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos))[Js.Idx(0)];
+        var target = state.survivors.filter((o) => (o != s) && !Js.T(Js.T(o.sleep?.asleep)) && (Space.manhattan(o.pos, s.pos) <= 5)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos))[Js.Idx(0)];
         if (!Js.T(target))
         {
             return;
@@ -108,7 +108,7 @@ public static partial class Relationships
     {
         /*TODO return type*/object names(Func<double, bool> pick)
         {
-            return state.survivors.filter((o) => o != s && Js.T(pick(opinion(s, o)))).map((o) => o.name);
+            return state.survivors.filter((o) => (o != s) && Js.T(pick(opinion(s, o)))).map((o) => o.name);
         }
         var friends = names((v) => v >= FRIEND);
         var rivals = names((v) => v <= RIVAL);

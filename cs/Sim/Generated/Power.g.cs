@@ -69,7 +69,7 @@ public static partial class Power
     /// <summary>Is a generator with fuel within reach of this point?</summary>
     public static bool isPowered(SimState state, Point p)
     {
-        return generators(state).some((g) => g.stored > 0 && Space.manhattan(g, p) <= POWER_RADIUS);
+        return generators(state).some((g) => (g.stored > 0) && (Space.manhattan(g, p) <= POWER_RADIUS));
     }
 
     /// <summary>Lamps that are lit right now.</summary>
@@ -96,13 +96,13 @@ public static partial class Power
             {
                 continue;
             }
-            var load = CONSUMERS.some((kind) => kind != "lamp" || Js.T(Time.isNight(state.tick)) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
+            var load = CONSUMERS.some((kind) => (kind != "lamp") || Js.T(Time.isNight(state.tick)) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
             if (!Js.T(load))
             {
                 continue;
             }
             g.loot += 1;
-            if (state.tick % Time.TICKS_PER_HOUR == 0)
+            if ((state.tick % Time.TICKS_PER_HOUR) == 0)
             {
                 Noise.makeNoise(state, g, "generator");
             }
@@ -123,13 +123,13 @@ public static partial class Power
     /// <summary>A lit heater within reach.</summary>
     public static bool isWarmed(SimState state, Point p)
     {
-        return FurnitureMod.ofKind(state, "heater").some((f) => f.stored > 0 && Space.manhattan(f, p) <= HEAT_RADIUS);
+        return FurnitureMod.ofKind(state, "heater").some((f) => (f.stored > 0) && (Space.manhattan(f, p) <= HEAT_RADIUS));
     }
 
     /// <summary>Heaters burn on cold nights (winter, or a blizzard).</summary>
     public static void updateHeaters(SimState state)
     {
-        var cold = Js.T(Time.isNight(state.tick)) && Seasons.seasonOf(state.tick) == "winter" || state.weather == "blizzard";
+        var cold = Js.T(Time.isNight(state.tick)) && (Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard");
         if (!Js.T(cold))
         {
             return;
@@ -141,7 +141,7 @@ public static partial class Power
                 continue;
             }
             h.loot += 1;
-            if (h.loot % Time.TICKS_PER_HOUR == 0 && Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE && Js.T(FireMod.ignite(state, h.x, h.y)))
+            if (((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE) && Js.T(FireMod.ignite(state, h.x, h.y)))
             {
                 Events.logEvent(state, $"The heater at ({Js.Str(h.x)}, {Js.Str(h.y)}) set something alight!");
             }
@@ -161,7 +161,7 @@ public static partial class Power
     /// <summary>Food and meals age, and rot. Harsh games only.</summary>
     public static void updateSpoilage(SimState state)
     {
-        if (!Js.T(state.harsh) || state.tick % SPOIL_CHECK_EVERY != 0)
+        if (!Js.T(state.harsh) || ((state.tick % SPOIL_CHECK_EVERY) != 0))
         {
             return;
         }
@@ -170,13 +170,13 @@ public static partial class Power
         {
             return;
         }
-        var rate = season == "summer" ? 2 : 1 + state.weather == "heatwave" ? 1 : 0;
+        var rate = ((season == "summer") ? 2 : 1) + ((state.weather == "heatwave") ? 1 : 0);
         var stores = Rooms.completeRooms(state, "storage");
         var fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
         var rotted = 0;
         foreach (var item in Js.Iter([.. state.items]))
         {
-            if (item.kind != "food" && item.kind != "meal" || !Js.T(item.pos) || Js.T(item.reservedBy))
+            if ((item.kind != "food") && (item.kind != "meal") || !Js.T(item.pos) || Js.T(item.reservedBy))
             {
                 continue;
             }
@@ -185,8 +185,8 @@ public static partial class Power
             {
                 continue;
             }
-            item.wear += ((double)(SPOIL_CHECK_EVERY * rate) / (stores.has(Rooms.labelAt(state, p.x, p.y)) ? 2 : 1));
-            if (item.wear < item.kind == "meal" ? MEAL_SHELF : FOOD_SHELF)
+            item.wear += ((double)((SPOIL_CHECK_EVERY * rate)) / ((stores.has(Rooms.labelAt(state, p.x, p.y)) ? 2 : 1)));
+            if (item.wear < ((item.kind == "meal") ? MEAL_SHELF : FOOD_SHELF))
             {
                 continue;
             }
@@ -195,7 +195,7 @@ public static partial class Power
         }
         if (rotted > 0)
         {
-            Events.logEvent(state, $"{Js.Str(rotted)} food {Js.Str(rotted == 1 ? "item" : "items")} rotted (cool storage, winter and fridges keep food)");
+            Events.logEvent(state, $"{Js.Str(rotted)} food {Js.Str((rotted == 1) ? "item" : "items")} rotted (cool storage, winter and fridges keep food)");
         }
     }
 }

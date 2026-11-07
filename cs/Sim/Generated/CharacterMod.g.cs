@@ -34,13 +34,13 @@ public static partial class CharacterMod
     public static Profession? professionOf(double job)
     {
         var name = StoryMod.STORY_JOBS[Js.Idx(job)];
-        return name == null ? null : PROFESSIONS[Js.Idx(name)];
+        return (name == null) ? null : PROFESSIONS[Js.Idx(name)];
     }
 
     /// <summary>Points left with this profession and these traits.</summary>
     public static double pointsLeft(Character c)
     {
-        return START_POINTS + professionOf(c.job)?.points ?? 0 - c.traits.reduce((sum, t) => sum + TRAIT_COST[Js.Idx(t)] ?? 0, 0);
+        return (START_POINTS + (professionOf(c.job)?.points ?? 0)) - c.traits.reduce((sum, t) => sum + (TRAIT_COST[Js.Idx(t)] ?? 0), 0);
     }
 
     /// <summary>Tidies a typed name: letters, spaces, hyphens, apostrophes; at most NAME_MAX.</summary>

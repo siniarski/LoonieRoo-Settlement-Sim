@@ -19,13 +19,13 @@ public static partial class Doors
         if (Js.T(from))
         {
             var e = Grids.edgeBetween(state.grid, from.x, from.y, x, y);
-            if (e >= 0 && state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR && !Js.T(Grids.edgeIsOpen(state.grid, e)) && Js.T(hasKey) || !state.grid.edgeLocked.includes(e))
+            if ((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR) && !Js.T(Grids.edgeIsOpen(state.grid, e)) && (Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))
             {
                 state.grid.edgeOpen.push(e);
                 state.grid.edgePassing.push(e);
             }
         }
-        if (Grids.getTile(state.grid, x, y) != "door" || Js.T(Grids.isOpen(state.grid, x, y)))
+        if ((Grids.getTile(state.grid, x, y) != "door") || Js.T(Grids.isOpen(state.grid, x, y)))
         {
             return;
         }
@@ -51,7 +51,7 @@ public static partial class Doors
         var occupied = new JsSet<double>();
         /*TODO return type*/object mark(int x, int y)
         {
-            return occupied.add(y * grid.width + x);
+            return occupied.add((y * grid.width) + x);
         }
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -129,15 +129,15 @@ public static partial class Doors
                 continue;
             }
             var tile = JsMath.floor(((double)(e) / (2)));
-            var x = tile % grid.width * Motion.SUB;
+            var x = (tile % grid.width) * Motion.SUB;
             var y = JsMath.floor(((double)(tile) / (grid.width))) * Motion.SUB;
-            var (x1, y1) = e % 2 == 0 ? [x + Motion.SUB, y] : [x, y + Motion.SUB];
+            var (x1, y1) = ((e % 2) == 0) ? [x + Motion.SUB, y] : [x, y + Motion.SUB];
             var r = Motion.BODY_RADIUS + ((double)(Motion.SUB) / (8));
             var inDoorway = bodies.some((c) =>
         {
             var px = JsMath.max(x, JsMath.min(x1, c.x));
             var py = JsMath.max(y, JsMath.min(y1, c.y));
-            return JsMath.pow(c.x - px, 2) + JsMath.pow(c.y - py, 2) < r * r;
+            return (JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2)) < (r * r);
         });
             if (Js.T(inDoorway))
             {
@@ -158,7 +158,7 @@ public static partial class Doors
         var __d2 = state;
         var grid = __d2.grid;
         var e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
-        if (e < 0 || grid.edges[Js.Idx(e)] != Grids.EDGE_DOOR)
+        if ((e < 0) || (grid.edges[Js.Idx(e)] != Grids.EDGE_DOOR))
         {
             return null;
         }

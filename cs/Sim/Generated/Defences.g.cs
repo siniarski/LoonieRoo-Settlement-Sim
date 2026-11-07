@@ -54,13 +54,13 @@ public static partial class Defences
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            var sight = Js.T(Towers.onTower(state, s)) ? TOWER_NIGHT_SIGHT : NIGHT_SIGHT + Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0;
+            var sight = (Js.T(Towers.onTower(state, s)) ? TOWER_NIGHT_SIGHT : NIGHT_SIGHT) + (Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0);
             if (Space.manhattan(s.pos, p) <= sight)
             {
                 return true;
             }
         }
-        if (Power.litLamps(state).some((l) => Space.manhattan(l, p) <= Power.LAMP_LIGHT + 1))
+        if (Power.litLamps(state).some((l) => Space.manhattan(l, p) <= (Power.LAMP_LIGHT + 1)))
         {
             return true;
         }
@@ -74,24 +74,24 @@ public static partial class Defences
     /// <summary>Turrets shoot; lures rattle. Every tick.</summary>
     public static void updateDefences(SimState state)
     {
-        if (state.tick % Time.TICKS_PER_HOUR == 0 && Js.T(Time.isNight(state.tick)))
+        if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(Time.isNight(state.tick)))
         {
             foreach (var f in Js.Iter([.. FurnitureMod.ofKind(state, "lure")]))
             {
                 Noise.makeNoise(state, f, "lure");
             }
         }
-        if (state.tick % TURRET_EVERY != 0 || state.zombies.length == 0)
+        if (((state.tick % TURRET_EVERY) != 0) || (state.zombies.length == 0))
         {
             return;
         }
         foreach (var t in Js.Iter([.. FurnitureMod.ofKind(state, "turret")]))
         {
-            if (t.loot == 0 && t.stored == 0)
+            if ((t.loot == 0) && (t.stored == 0))
             {
                 continue;
             }
-            var z = state.zombies.filter((q) => Space.manhattan(q.pos, t) <= TURRET_RANGE && Js.T(seen(state, q.pos)) && Js.T(Jobs.clearShot(state.grid, t, q.pos))).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t))[Js.Idx(0)];
+            var z = state.zombies.filter((q) => (Space.manhattan(q.pos, t) <= TURRET_RANGE) && Js.T(seen(state, q.pos)) && Js.T(Jobs.clearShot(state.grid, t, q.pos))).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t))[Js.Idx(0)];
             if (!Js.T(z))
             {
                 continue;

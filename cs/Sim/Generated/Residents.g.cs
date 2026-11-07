@@ -42,14 +42,14 @@ public static partial class Residents
 
     public static Resident? residentAt(SimState state, Point p)
     {
-        return state.residents.find((r) => r.pos.x == p.x && r.pos.y == p.y);
+        return state.residents.find((r) => (r.pos.x == p.x) && (r.pos.y == p.y));
     }
 
     /// <summary>One resident a head: newcomers at the door, and the last ones gone when there are fewer.</summary>
     public static void syncResidents(SimState state, Settlement n)
     {
         var here = residentsOf(state, n);
-        var want = Js.T(n.unfolded) && !Js.T(Colonies.isFallen(n)) ? n.people : 0;
+        var want = (Js.T(n.unfolded) && !Js.T(Colonies.isFallen(n))) ? n.people : 0;
         foreach (var r in Js.Iter(here.slice(want)))
         {
             state.residents.splice(state.residents.indexOf(r), 1);
@@ -58,8 +58,8 @@ public static partial class Residents
         for (var i = here.length; i < want; i++)
         {
             var id = $"r{Js.Str(state.nextId++)}";
-            var spot = new() { x = box.x0 + 1 + i % JsMath.max(1, box.x1 - box.x0 - 1), y = box.y1 - 1 - JsMath.floor(((double)(i) / (JsMath.max(1, box.x1 - box.x0 - 1)))) % 3 };
-            var where = Js.T(Grids.inBounds(state.grid, spot.x, spot.y)) ? spot : new() { x = n.x, y = n.y };
+            var spot = new() { x = Js.I((box.x0 + 1) + (i % JsMath.max(1, (box.x1 - box.x0) - 1))), y = Js.I((box.y1 - 1) - (JsMath.floor(((double)(i) / (JsMath.max(1, (box.x1 - box.x0) - 1)))) % 3)) };
+            var where = Js.T(Grids.inBounds(state.grid, spot.x, spot.y)) ? spot : new() { x = Js.I(n.x), y = Js.I(n.y) };
             state.residents.push(/*TODO object spread*/Js.Spread(Motion.placedAt(where), new() { id = id, settlementId = n.id, name = NAMES[Js.Idx(Hash.idNumber(id) % NAMES.length)]!, pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0 }));
         }
     }
@@ -89,9 +89,9 @@ public static partial class Residents
             {
                 continue;
             }
-            if (state.tick >= r.nextThinkTick && r.path.length == 0)
+            if ((state.tick >= r.nextThinkTick) && (r.path.length == 0))
             {
-                r.nextThinkTick = state.tick + 40 + JsMath.floor(Hash.hashRoll(Hash.idNumber(r.id), state.tick) * 60);
+                r.nextThinkTick = (state.tick + 40) + JsMath.floor(Hash.hashRoll(Hash.idNumber(r.id), state.tick) * 60);
                 r.path = potter(state, r, n);
             }
             step(r);
@@ -115,12 +115,12 @@ public static partial class Residents
         {
             return Hash.hashRoll(Hash.idNumber(r.id), state.tick, salt);
         }
-        var to = new() { x = box.x0 + 1 + JsMath.floor(roll(1) * box.x1 - box.x0 - 1), y = box.y0 + 2 + JsMath.floor(roll(2) * JsMath.max(1, box.y1 - box.y0 - 2)) };
-        if (state.residents.some((o) => o != r && o.pos.x == to.x && o.pos.y == to.y))
+        var to = new() { x = Js.I((box.x0 + 1) + JsMath.floor(roll(1) * ((box.x1 - box.x0) - 1))), y = Js.I((box.y0 + 2) + JsMath.floor(roll(2) * JsMath.max(1, (box.y1 - box.y0) - 2))) };
+        if (state.residents.some((o) => (o != r) && (o.pos.x == to.x) && (o.pos.y == to.y)))
         {
             return [];
         }
-        return Pathfinding.findPath(state.grid, r.pos, to) ?? [].slice(0, 8);
+        return (Pathfinding.findPath(state.grid, r.pos, to) ?? []).slice(0, 8);
     }
 
     /// <summary>An enemy's resident goes for the nearest of your people in sight. Returns true if it took the tick.</summary>
@@ -147,10 +147,10 @@ public static partial class Residents
             target.hurtTick = state.tick;
             return true;
         }
-        if (state.tick >= r.nextThinkTick || r.path.length == 0)
+        if ((state.tick >= r.nextThinkTick) || (r.path.length == 0))
         {
             r.nextThinkTick = state.tick + 10;
-            r.path = Pathfinding.findPathToAny(state.grid, r.pos, Grids.neighbours4(state.grid, target.pos.x, target.pos.y)) ?? [].slice(0, 6);
+            r.path = (Pathfinding.findPathToAny(state.grid, r.pos, Grids.neighbours4(state.grid, target.pos.x, target.pos.y)) ?? []).slice(0, 6);
         }
         step(r);
         return true;
@@ -162,7 +162,7 @@ public static partial class Residents
         var n = Settlements.getSettlement(state, r.settlementId);
         if (Js.T(n) && !Js.T(Settlements.isHostile(n)))
         {
-            Settlements.adjustReputation(state, n, Settlements.HOSTILE - ATTACKED_BELOW_HOSTILE - n.reputation);
+            Settlements.adjustReputation(state, n, (Settlements.HOSTILE - ATTACKED_BELOW_HOSTILE) - n.reputation);
             Events.logEvent(state, $"{Js.Str(by.name)} attacked {Js.Str(r.name)} of {Js.Str(n.name)}. They'll fight back now.");
         }
         r.health -= damage;
@@ -193,8 +193,8 @@ public static partial class Residents
             return $"{Js.Str(r.name)} won't talk to you";
         }
         var carried = Js.T(you.carrying) ? Items.getItem(state, you.carrying) : null;
-        var worth = Js.T(carried) ? TRADE_FOOD[Js.Idx(carried.kind)] ?? 0 : 0;
-        if (Js.T(carried) && worth > 0)
+        var worth = Js.T(carried) ? (TRADE_FOOD[Js.Idx(carried.kind)] ?? 0) : 0;
+        if (Js.T(carried) && (worth > 0))
         {
             if (n.food < worth)
             {
@@ -211,7 +211,7 @@ public static partial class Residents
             Events.logEvent(state, $"{Js.Str(r.name)} of {Js.Str(n.name)} took the {Js.Str(carried.kind)} for {Js.Str(worth)} food");
             return null;
         }
-        if (n.reputation >= Settlements.FRIENDLY && n.people > 3)
+        if ((n.reputation >= Settlements.FRIENDLY) && (n.people > 3))
         {
             state.residents.splice(state.residents.indexOf(r), 1);
             n.people -= 1;
@@ -230,7 +230,7 @@ public static partial class Residents
         {
             return null;
         }
-        Events.logEvent(state, $"{Js.Str(r.name)} of {Js.Str(n.name)} talked with {Js.Str(you.name)} a while ({Js.Str(n.name)} needs {Js.Str(n.food < n.people * 2 ? "food" : "nothing much")})");
+        Events.logEvent(state, $"{Js.Str(r.name)} of {Js.Str(n.name)} talked with {Js.Str(you.name)} a while ({Js.Str(n.name)} needs {Js.Str((n.food < (n.people * 2)) ? "food" : "nothing much")})");
         return null;
     }
 }

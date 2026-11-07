@@ -20,13 +20,13 @@ public static partial class SuccessionMod
     /// <summary>Who could take over now, most resolved first.</summary>
     public static List<Survivor> heirs(SimState state)
     {
-        return state.survivors.filter((s) => s.childUntil == null && s.resolve >= STEP_UP).sort((a, b) => Js.Or(b.resolve - a.resolve, a.id.localeCompare(b.id)));
+        return state.survivors.filter((s) => (s.childUntil == null) && (s.resolve >= STEP_UP)).sort((a, b) => Js.Or(b.resolve - a.resolve, a.id.localeCompare(b.id)));
     }
 
     /// <summary>Called as the survivor you control dies.</summary>
     public static void beginSuccession(SimState state, Survivor s, string cause)
     {
-        state.succession = new() { name = s.name, cause = cause, x = s.pos.x, y = s.pos.y };
+        state.succession = new() { name = s.name, cause = cause, x = Js.I(s.pos.x), y = Js.I(s.pos.y) };
     }
 
     /// <summary>Choose who carries on. Returns an error, or null when done.</summary>
@@ -67,7 +67,7 @@ public static partial class SuccessionMod
 
     public static void take(SimState state, Survivor s)
     {
-        state.control = new() { survivorId = s.id, dx = 0, dy = 0, facing = new() { x = 0, y = 1 }, nextSwing = 0, busy = null };
+        state.control = new() { survivorId = s.id, dx = 0, dy = 0, facing = new() { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         s.order = null;
         s.goal = null;
         s.path = [];
@@ -80,16 +80,16 @@ public static partial class SuccessionMod
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var angle = Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI * 2;
-        var dist = ANEW_MIN + Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD;
-        var aim = new() { x = JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + JsMath.cos(angle) * dist))), y = JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + JsMath.sin(angle) * dist))) };
+        var angle = (Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI) * 2;
+        var dist = ANEW_MIN + (Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD);
+        var aim = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, aim);
         Point? spot = null;
-        for (var r = 0; r <= 20 && !Js.T(spot); r++)
+        for (var r = 0; (r <= 20) && !Js.T(spot); r++)
         {
-            for (var dy = -r; dy <= r && !Js.T(spot); dy++)
+            for (var dy = -r; (dy <= r) && !Js.T(spot); dy++)
             {
-                for (var dx = -r; dx <= r && !Js.T(spot); dx++)
+                for (var dx = -r; (dx <= r) && !Js.T(spot); dx++)
                 {
                     if (JsMath.max(JsMath.abs(dx), JsMath.abs(dy)) != r)
                     {
@@ -97,9 +97,9 @@ public static partial class SuccessionMod
                     }
                     var x = aim.x + dx;
                     var y = aim.y + dy;
-                    if (x >= 0 && y >= 0 && x < width && y < height && Grids.getTile(state.grid, x, y) == "floor" && Js.T(Grids.isWalkable(state.grid, x, y)))
+                    if ((x >= 0) && (y >= 0) && (x < width) && (y < height) && (Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y)))
                     {
-                        spot = new() { x = x, y = y };
+                        spot = new() { x = Js.I(x), y = Js.I(y) };
                     }
                 }
             }
@@ -116,13 +116,13 @@ public static partial class SuccessionMod
         weapon.carriedBy = s.id;
         s.weapon = weapon.id;
         Items.spawnItem(state, "bandage", spot.x, spot.y);
-        for (var y = spot.y - 6; y <= spot.y + 6; y++)
+        for (var y = spot.y - 6; y <= (spot.y + 6); y++)
         {
-            for (var x = spot.x - 6; x <= spot.x + 6; x++)
+            for (var x = spot.x - 6; x <= (spot.x + 6); x++)
             {
-                if (x >= 0 && y >= 0 && x < width && y < height)
+                if ((x >= 0) && (y >= 0) && (x < width) && (y < height))
                 {
-                    state.grid.explored[Js.Idx(y * width + x)] = 1;
+                    state.grid.explored[Js.Idx((y * width) + x)] = 1;
                 }
             }
         }

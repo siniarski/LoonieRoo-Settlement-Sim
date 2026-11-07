@@ -22,19 +22,19 @@ public static partial class Rooms
 
     public static string? categoryOf(string kind)
     {
-        if (kind == "food" || kind == "meal")
+        if ((kind == "food") || (kind == "meal"))
         {
             return "food";
         }
-        if (kind == "wood" || kind == "cloth" || kind == "scrap")
+        if ((kind == "wood") || (kind == "cloth") || (kind == "scrap"))
         {
             return "materials";
         }
-        if (kind == "bandage" || kind == "medicine")
+        if ((kind == "bandage") || (kind == "medicine"))
         {
             return "medical";
         }
-        return kind == "corpse" ? null : "gear";
+        return (kind == "corpse") ? null : "gear";
     }
 
     /// <summary>Label for floor tiles that are outside: see computeRooms.</summary>
@@ -54,12 +54,12 @@ public static partial class Rooms
     public static RoomMap getRoomMap(SimState state)
     {
         var cached = cache.get(state.grid);
-        if (Js.T(cached) && cached.version == state.walkabilityVersion)
+        if (Js.T(cached) && (cached.version == state.walkabilityVersion))
         {
             return cached.map;
         }
         var changed = Grids.takeChanges(state.grid);
-        var map = Js.T(cached) && Js.T(changed) ? updateRooms(state.grid, cached.map, changed) : computeRooms(state.grid);
+        var map = (Js.T(cached) && Js.T(changed)) ? updateRooms(state.grid, cached.map, changed) : computeRooms(state.grid);
         cache.set(state.grid, new() { version = state.walkabilityVersion, map = map });
         return map;
     }
@@ -95,7 +95,7 @@ public static partial class Rooms
                 var i = region[Js.Idx(head)]!;
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
-                if (x == 0 || y == 0 || x == width - 1 || y == height - 1)
+                if ((x == 0) || (y == 0) || (x == (width - 1)) || (y == (height - 1)))
                 {
                     touchesEdge = true;
                 }
@@ -103,13 +103,13 @@ public static partial class Rooms
                 {
                     var nx = x + dx;
                     var ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
                     {
                         continue;
                     }
-                    var n = ny * width + nx;
+                    var n = (ny * width) + nx;
                     var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
-                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || Js.T(Grids.isWindow(edge)))
+                    if ((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
                     }
@@ -134,7 +134,7 @@ public static partial class Rooms
                     region.push(n);
                 }
             }
-            if (Js.T(touchesEdge) || region.length > MAX_ROOM_TILES)
+            if (Js.T(touchesEdge) || (region.length > MAX_ROOM_TILES))
             {
                 foreach (var i in Js.Iter(region))
                 {
@@ -158,7 +158,7 @@ public static partial class Rooms
                 maxY = JsMath.max(maxY, y);
             }
             region.sort((a, b) => a - b);
-            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = i % width, y = JsMath.floor(((double)(i) / (width))) });
+            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             rooms.push(new() { index = index, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
         return new() { labels = labels, rooms = rooms };
@@ -166,18 +166,18 @@ public static partial class Rooms
 
     public static double labelAt(SimState state, int x, int y)
     {
-        if (x < 0 || y < 0 || x >= state.grid.width || y >= state.grid.height)
+        if ((x < 0) || (y < 0) || (x >= state.grid.width) || (y >= state.grid.height))
         {
             return NOT_FLOOR;
         }
-        return getRoomMap(state).labels[Js.Idx(y * state.grid.width + x)]!;
+        return getRoomMap(state).labels[Js.Idx((y * state.grid.width) + x)]!;
     }
 
     /// <summary>The enclosed room containing (x, y), or null for outdoors/walls/doors.</summary>
     public static Room? roomAt(SimState state, int x, int y)
     {
         var label = labelAt(state, x, y);
-        return label >= 0 ? getRoomMap(state).rooms[Js.Idx(label)]! : null;
+        return (label >= 0) ? getRoomMap(state).rooms[Js.Idx(label)]! : null;
     }
 
     public static bool isIndoors(SimState state, int x, int y)
@@ -200,11 +200,11 @@ public static partial class Rooms
             {
                 continue;
             }
-            var next = DIRS.map((/*TODO pattern*/_1) => new() { x = d.x + dx, y = d.y + dy }).find((p) => Grids.getTile(state.grid, p.x, p.y) == "floor");
+            var next = DIRS.map((/*TODO pattern*/_1) => new() { x = Js.I(d.x + dx), y = Js.I(d.y + dy) }).find((p) => Grids.getTile(state.grid, p.x, p.y) == "floor");
             if (Js.T(next))
             {
-                d.x = next.x;
-                d.y = next.y;
+                d.x = Js.I(next.x);
+                d.y = Js.I(next.y);
             }
         }
         var claimed = new JsSet<double>();
@@ -243,11 +243,11 @@ public static partial class Rooms
         }
         var beds = count("bed");
         var tables = count("table");
-        List<Requirement> requirements = [new() { label = "enclosed by walls", met = room != null }, new() { label = "has a door", met = room?.doors.length ?? 0 > 0 }];
-        if (purpose == "housing" || purpose == "barracks")
+        List<Requirement> requirements = [new() { label = "enclosed by walls", met = room != null }, new() { label = "has a door", met = (room?.doors.length ?? 0) > 0 }];
+        if ((purpose == "housing") || (purpose == "barracks"))
         {
             requirements.push(new() { label = "at least 1 bed", met = beds >= 1 });
-            requirements.push(new() { label = $"{Js.Str(TILES_PER_BED)} tiles per bed", met = beds == 0 || size >= beds * TILES_PER_BED });
+            requirements.push(new() { label = $"{Js.Str(TILES_PER_BED)} tiles per bed", met = (beds == 0) || (size >= (beds * TILES_PER_BED)) });
         }
         else if (purpose == "infirmary")
         {
@@ -298,7 +298,7 @@ public static partial class Rooms
         var storage = completeRooms(state, "storage");
         /*TODO return type*/object refusing(string c)
         {
-            return Js.Set(state.roomDesignations.filter((d) => d.purpose == "storage" && Js.T(d.refuses?.includes(c))).map((d) => labelAt(state, d.x, d.y)));
+            return Js.Set(state.roomDesignations.filter((d) => (d.purpose == "storage") && Js.T(d.refuses?.includes(c))).map((d) => labelAt(state, d.x, d.y)));
         }
         var storageFor = /*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
@@ -315,7 +315,7 @@ public static partial class Rooms
         {
             return rooms.graveyard;
         }
-        if (kind == "weapon" || kind == "gun" || kind == "ammo" && rooms.armory.size > 0)
+        if ((kind == "weapon") || (kind == "gun") || (kind == "ammo") && (rooms.armory.size > 0))
         {
             return rooms.armory;
         }
@@ -342,16 +342,16 @@ public static partial class Rooms
             {
                 var nx = x + dx;
                 var ny = y + dy;
-                if (nx >= 0 && ny >= 0 && nx < width && ny < height)
+                if ((nx >= 0) && (ny >= 0) && (nx < width) && (ny < height))
                 {
-                    @out.push(ny * width + nx);
+                    @out.push((ny * width) + nx);
                 }
             }
             return @out;
         }
         foreach (var c in Js.Iter(changed))
         {
-            if (c < 0 || c >= labels.length)
+            if ((c < 0) || (c >= labels.length))
             {
                 continue;
             }
@@ -373,7 +373,7 @@ public static partial class Rooms
         }
         foreach (var j in Js.Iter(seeds))
         {
-            labels[Js.Idx(j)] = tiles[Js.Idx(j)] == "floor" ? UNSEEN : NOT_FLOOR;
+            labels[Js.Idx(j)] = (tiles[Js.Idx(j)] == "floor") ? UNSEEN : NOT_FLOOR;
         }
         List<Room> fresh = [];
         foreach (var start in Js.Iter(seeds))
@@ -396,7 +396,7 @@ public static partial class Rooms
                 var i = region[Js.Idx(head)]!;
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
-                if (x == 0 || y == 0 || x == width - 1 || y == height - 1)
+                if ((x == 0) || (y == 0) || (x == (width - 1)) || (y == (height - 1)))
                 {
                     outdoors = true;
                 }
@@ -404,13 +404,13 @@ public static partial class Rooms
                 {
                     var nx = x + dx;
                     var ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
                     {
                         continue;
                     }
-                    var n = ny * width + nx;
+                    var n = (ny * width) + nx;
                     var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
-                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || Js.T(Grids.isWindow(edge)))
+                    if ((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
                     }
@@ -427,11 +427,11 @@ public static partial class Rooms
                     {
                         outdoors = true;
                     }
-                    if (tiles[Js.Idx(n)] != "floor" || inRegion.has(n))
+                    if ((tiles[Js.Idx(n)] != "floor") || inRegion.has(n))
                     {
                         continue;
                     }
-                    if (labels[Js.Idx(n)] != UNSEEN && labels[Js.Idx(n)] != OUTDOORS)
+                    if ((labels[Js.Idx(n)] != UNSEEN) && (labels[Js.Idx(n)] != OUTDOORS))
                     {
                         continue;
                     }
@@ -462,7 +462,7 @@ public static partial class Rooms
                 maxX = JsMath.max(maxX, x);
                 maxY = JsMath.max(maxY, y);
             }
-            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = i % width, y = JsMath.floor(((double)(i) / (width))) });
+            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
         var rooms = [.. old.rooms.filter((r) => !removed.has(r.index)), .. fresh].sort((a, b) => a.tiles[Js.Idx(0)]! - b.tiles[Js.Idx(0)]!);

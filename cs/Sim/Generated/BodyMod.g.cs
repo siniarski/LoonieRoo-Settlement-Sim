@@ -73,7 +73,7 @@ public static partial class BodyMod
         {
             return true;
         }
-        return s.wetness > DRENCHED && Js.T(Time.isNight(state.tick)) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)) && !Js.T(Power.isWarmed(state, s.pos));
+        return (s.wetness > DRENCHED) && Js.T(Time.isNight(state.tick)) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)) && !Js.T(Power.isWarmed(state, s.pos));
     }
 
     public static void updateBody(SimState state, Survivor s)
@@ -82,20 +82,20 @@ public static partial class BodyMod
         {
             return;
         }
-        if (s.endurance < BODY_MAX && state.tick % 4 == 0)
+        if ((s.endurance < BODY_MAX) && ((state.tick % 4) == 0))
         {
-            s.endurance = clamp(s.endurance + Js.T(Js.T(s.sleep?.asleep)) ? 2 : 1);
+            s.endurance = clamp(s.endurance + (Js.T(Js.T(s.sleep?.asleep)) ? 2 : 1));
         }
         var outdoors = !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y));
         var coat = Clothing.wearing(state, s, "coat") != null;
         if (Js.T(outdoors) && Js.T(Seasons.isWet(state.weather)))
         {
-            if (state.tick % Js.T(coat) ? 12 : 3 == 0)
+            if ((state.tick % (Js.T(coat) ? 12 : 3)) == 0)
             {
                 s.wetness = clamp(s.wetness + 1);
             }
         }
-        else if (s.wetness > 0 && state.tick % Js.T(Power.isWarmed(state, s.pos)) ? 2 : 5 == 0)
+        else if ((s.wetness > 0) && ((state.tick % (Js.T(Power.isWarmed(state, s.pos)) ? 2 : 5)) == 0))
         {
             s.wetness = clamp(s.wetness - 1);
         }
@@ -103,7 +103,7 @@ public static partial class BodyMod
         {
             s.bodyHeat = clamp(s.bodyHeat - 1);
         }
-        else if (s.bodyHeat < 70 && state.tick % 2 == 0)
+        else if ((s.bodyHeat < 70) && ((state.tick % 2) == 0))
         {
             s.bodyHeat = clamp(s.bodyHeat + 1);
         }
@@ -115,7 +115,7 @@ public static partial class BodyMod
         {
             Mood.addThought(state, s, "soaked");
         }
-        if (state.tick % PANIC_EVERY != 0)
+        if ((state.tick % PANIC_EVERY) != 0)
         {
             return;
         }
@@ -125,9 +125,9 @@ public static partial class BodyMod
             s.panic = clamp(s.panic - 4);
             return;
         }
-        var alone = !state.survivors.some((o) => o != s && JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= PANIC_RANGE);
-        var factor = Js.T(alone) ? 1.5 : 1 * Js.T(Resolve.isSteeled(s)) ? 0.5 : Js.T(Resolve.isBreaking(s)) ? 1.5 : 1;
-        s.panic = clamp(s.panic + JsMath.round(near * PANIC_PER_ZOMBIE * factor));
+        var alone = !state.survivors.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= PANIC_RANGE));
+        var factor = (Js.T(alone) ? 1.5 : 1) * (Js.T(Resolve.isSteeled(s)) ? 0.5 : (Js.T(Resolve.isBreaking(s)) ? 1.5 : 1));
+        s.panic = clamp(s.panic + JsMath.round((near * PANIC_PER_ZOMBIE) * factor));
     }
 
     public static bool isWinded(Survivor s)
@@ -154,7 +154,7 @@ public static partial class BodyMod
     /// <summary>Panicking: does this swing miss? (A hash, not the sim RNG.)</summary>
     public static bool panicMiss(SimState state, Survivor s)
     {
-        return Js.T(isPanicking(s)) && Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x9a1) < PANIC_MISS;
+        return Js.T(isPanicking(s)) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x9a1) < PANIC_MISS);
     }
 
     /// <summary>Mood factors from the body.</summary>

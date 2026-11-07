@@ -31,7 +31,7 @@ public static partial class Inventory
 
     public static bool fitsInPack(SimState state, Survivor s, Item item)
     {
-        return packWeight(state, s) + ITEM_WEIGHT[Js.Idx(item.kind)] <= PACK_MAX;
+        return (packWeight(state, s) + ITEM_WEIGHT[Js.Idx(item.kind)]) <= PACK_MAX;
     }
 
     /// <summary>What's inside a container (a crate, a car's boot), by its id.</summary>
@@ -49,7 +49,7 @@ public static partial class Inventory
         var f = FurnitureMod.getFurniture(state, id);
         if (Js.T(f))
         {
-            return f.kind == "crate" ? new() { at = new() { x = f.x, y = f.y }, max = CRATE_HOLD } : null;
+            return (f.kind == "crate") ? new() { at = new() { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
         }
         var v = Vehicles.vehiclesOf(state).find((x) => x.id == id);
         return Js.T(v) ? new() { at = v.pos, max = Vehicles.bootMax(v) } : null;
@@ -68,7 +68,7 @@ public static partial class Inventory
             return "not in your bag";
         }
         var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + ITEM_WEIGHT[Js.Idx(i.kind)], 0);
-        if (load + ITEM_WEIGHT[Js.Idx(item.kind)] > box.max)
+        if ((load + ITEM_WEIGHT[Js.Idx(item.kind)]) > box.max)
         {
             return "it won't fit";
         }
@@ -89,7 +89,7 @@ public static partial class Inventory
         }
         if (!Js.T(fitsInPack(state, s, item)))
         {
-            return ITEM_WEIGHT[Js.Idx(item.kind)] == double.PositiveInfinity ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
+            return (ITEM_WEIGHT[Js.Idx(item.kind)] == double.PositiveInfinity) ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
         }
         if (s.carrying == item.id)
         {
@@ -129,7 +129,7 @@ public static partial class Inventory
     /// <summary>Wields a weapon or wears clothing from the bag: whatever was in the slot goes into the bag in its place (or down at your feet if it won't fit). Returns what happened.</summary>
     public static string equipFromPack(SimState state, Survivor s, Item item, Point where)
     {
-        var slot = item.kind == "weapon" || item.kind == "gun" ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
+        var slot = (item.kind == "weapon") || (item.kind == "gun") ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
         unpack(s, item.id);
         var old = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, s[Js.Idx(slot)]!) : null;
         s[Js.Idx(slot)] = item.id;

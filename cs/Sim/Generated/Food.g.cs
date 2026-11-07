@@ -31,6 +31,6 @@ public static partial class Food
     /// <summary>Survivors start staggered by index (100%, 80%, 60%, 90%, then repeat), offset from rest.</summary>
     public static double initialSatiety(int index)
     {
-        return JsMath.floor(((double)(SATIETY_MAX * [100, 80, 60, 90][Js.Idx(index % 4)]!) / (100)));
+        return JsMath.floor(((double)((SATIETY_MAX * [100, 80, 60, 90][Js.Idx(index % 4)]!)) / (100)));
     }
 }

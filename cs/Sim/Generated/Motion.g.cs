@@ -29,30 +29,30 @@ public static partial class Motion
     public const int REACH = 282;
 
     /// <summary>Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door between their tiles (grid.ts) stops a blow or a bite (pathfinding.ts openBetween).</summary>
-    public static bool inReach(IHasAt a, IHasAt b, /*TODO param type*/object? reach = null, Grid? grid = default)
+    public static bool inReach(IHasAt a, IHasAt b, double? reach = null, Grid? grid = default)
     {
         reach ??= REACH;
-        return distance2(a.at, b.at) <= reach * reach && !Js.T(grid) || Js.T(Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at)));
+        return (distance2(a.at, b.at) <= (reach * reach)) && (!Js.T(grid) || Js.T(Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at))));
     }
 
     /// <summary>The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees of `facing` either way). Integer maths: dot &gt; 0 and 4 * dot^2 &gt;= |facing|^2 * |d|^2 (cos 60 = 1/2).</summary>
-    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, /*TODO param type*/object? reach = null, Grid? grid = default)
+    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, double? reach = null, Grid? grid = default) where T : class, IHasAt
     {
         reach ??= SWING_REACH;
-        var f2 = facing.x * facing.x + facing.y * facing.y;
+        var f2 = (facing.x * facing.x) + (facing.y * facing.y);
         T? best = null;
         var bestD2 = double.PositiveInfinity;
         foreach (var t in Js.Iter(things))
         {
             var dx = t.at.x - from.x;
             var dy = t.at.y - from.y;
-            var d2 = dx * dx + dy * dy;
-            if (d2 > reach * reach || d2 >= bestD2)
+            var d2 = (dx * dx) + (dy * dy);
+            if ((d2 > (reach * reach)) || (d2 >= bestD2))
             {
                 continue;
             }
-            var dot = dx * facing.x + dy * facing.y;
-            if (d2 > 0 && dot <= 0 || 4 * dot * dot < f2 * d2)
+            var dot = (dx * facing.x) + (dy * facing.y);
+            if ((d2 > 0) && (dot <= 0) || ((4 * dot) * dot) < (f2 * d2))
             {
                 continue;
             }
@@ -68,12 +68,12 @@ public static partial class Motion
 
     public static Point centre(Point p)
     {
-        return new() { x = p.x * SUB + HALF, y = p.y * SUB + HALF };
+        return new() { x = Js.I((p.x * SUB) + HALF), y = Js.I((p.y * SUB) + HALF) };
     }
 
     public static Point tileOf(Point at)
     {
-        return new() { x = JsMath.floor(((double)(at.x) / (SUB))), y = JsMath.floor(((double)(at.y) / (SUB))) };
+        return new() { x = Js.I(JsMath.floor(((double)(at.x) / (SUB)))), y = Js.I(JsMath.floor(((double)(at.y) / (SUB)))) };
     }
 
     /// <summary>A new mover's position fields, on a tile.</summary>
@@ -85,7 +85,7 @@ public static partial class Motion
     /// <summary>Put a mover on a tile now (teleports: spawning, evictions).</summary>
     public static void place(Body e, Point tile)
     {
-        e.pos = new() { x = tile.x, y = tile.y };
+        e.pos = new() { x = Js.I(tile.x), y = Js.I(tile.y) };
         e.move = null;
         e.at = centre(tile);
         e.was = centre(tile);
@@ -102,7 +102,7 @@ public static partial class Motion
         }
         var from = centre(m.from);
         var to = centre(m.to);
-        e.at = new() { x = from.x + JsMath.trunc(((double)(to.x - from.x * m.progress) / (m.duration))), y = from.y + JsMath.trunc(((double)(to.y - from.y * m.progress) / (m.duration))) };
+        e.at = new() { x = Js.I(from.x + JsMath.trunc(((double)(((to.x - from.x) * m.progress)) / (m.duration)))), y = Js.I(from.y + JsMath.trunc(((double)(((to.y - from.y) * m.progress)) / (m.duration)))) };
     }
 
     /// <summary>For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are allowed (a zombie keeps its old tile as pos until a step lands, so it can be a tile off).</summary>
@@ -119,17 +119,17 @@ public static partial class Motion
     {
         var dx = a.x - b.x;
         var dy = a.y - b.y;
-        return dx * dx + dy * dy;
+        return (dx * dx) + (dy * dy);
     }
 
     /// <summary>Can a body of BODY_RADIUS stand with its centre here (every tile it overlaps passable)?</summary>
-    public static bool fits(Grid grid, Point at, string mover, /*TODO param type*/object? r = null)
+    public static bool fits(Grid grid, Point at, string mover, double? r = null)
     {
         r ??= BODY_RADIUS;
-        var x0 = JsMath.floor(((double)(at.x - r) / (SUB)));
-        var x1 = JsMath.floor(((double)(at.x + r) / (SUB)));
-        var y0 = JsMath.floor(((double)(at.y - r) / (SUB)));
-        var y1 = JsMath.floor(((double)(at.y + r) / (SUB)));
+        var x0 = JsMath.floor(((double)((at.x - r)) / (SUB)));
+        var x1 = JsMath.floor(((double)((at.x + r)) / (SUB)));
+        var y0 = JsMath.floor(((double)((at.y - r)) / (SUB)));
+        var y1 = JsMath.floor(((double)((at.y + r)) / (SUB)));
         for (var y = y0; y <= y1; y++)
         {
             for (var x = x0; x <= x1; x++)
@@ -140,19 +140,19 @@ public static partial class Motion
                 }
             }
         }
-        for (var y = y0; y <= y1 + 1; y++)
+        for (var y = y0; y <= (y1 + 1); y++)
         {
-            for (var x = x0; x <= x1 + 1; x++)
+            for (var x = x0; x <= (x1 + 1); x++)
             {
                 if (!Js.T(Grids.inBounds(grid, x, y)))
                 {
                     continue;
                 }
-                if (y > 0 && !Js.T(Pathfinding.crossable(grid, x, y, x, y - 1, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, x + 1 * SUB, y * SUB)))
+                if ((y > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x, y - 1, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)))
                 {
                     return false;
                 }
-                if (x > 0 && !Js.T(Pathfinding.crossable(grid, x, y, x - 1, y, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, y + 1 * SUB)))
+                if ((x > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x - 1, y, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)))
                 {
                     return false;
                 }
@@ -166,11 +166,11 @@ public static partial class Motion
     {
         var px = JsMath.max(x0, JsMath.min(x1, c.x));
         var py = JsMath.max(y0, JsMath.min(y1, c.y));
-        return JsMath.pow(c.x - px, 2) + JsMath.pow(c.y - py, 2) < r * r;
+        return (JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2)) < (r * r);
     }
 
     /// <summary>Move a body by (dx, dy) SUB units, stopping at walls: each axis on its own, so it slides along a wall rather than sticking to it. Big moves go in steps no longer than a radius, so nothing tunnels through a wall. Returns the new centre.</summary>
-    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, /*TODO param type*/object? r = null)
+    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double? r = null)
     {
         r ??= BODY_RADIUS;
         var x = at.x;
@@ -178,53 +178,53 @@ public static partial class Motion
         var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.max(JsMath.abs(dx), JsMath.abs(dy))) / (r))));
         for (var i = 1; i <= steps; i++)
         {
-            var sx = JsMath.trunc(((double)(dx * i) / (steps))) - JsMath.trunc(((double)(dx * i - 1) / (steps)));
-            var sy = JsMath.trunc(((double)(dy * i) / (steps))) - JsMath.trunc(((double)(dy * i - 1) / (steps)));
-            if (sx != 0 && Js.T(fits(grid, new() { x = x + sx, y = y }, mover, r)))
+            var sx = JsMath.trunc(((double)((dx * i)) / (steps))) - JsMath.trunc(((double)((dx * (i - 1))) / (steps)));
+            var sy = JsMath.trunc(((double)((dy * i)) / (steps))) - JsMath.trunc(((double)((dy * (i - 1))) / (steps)));
+            if ((sx != 0) && Js.T(fits(grid, new() { x = Js.I(x + sx), y = Js.I(y) }, mover, r)))
             {
                 x += sx;
             }
-            if (sy != 0 && Js.T(fits(grid, new() { x = x, y = y + sy }, mover, r)))
+            if ((sy != 0) && Js.T(fits(grid, new() { x = Js.I(x), y = Js.I(y + sy) }, mover, r)))
             {
                 y += sy;
             }
         }
-        return new() { x = x, y = y };
+        return new() { x = Js.I(x), y = Js.I(y) };
     }
 
     /// <summary>A vector of length `len` (SUB units) towards (dx, dy), in integers. (0, 0) stays (0, 0).</summary>
     public static Point toward(int dx, int dy, double len)
     {
-        var d = JsMath.sqrt(dx * dx + dy * dy);
+        var d = JsMath.sqrt((dx * dx) + (dy * dy));
         if (d == 0)
         {
-            return new() { x = 0, y = 0 };
+            return new() { x = Js.I(0), y = Js.I(0) };
         }
-        return new() { x = JsMath.round(((double)(dx * len) / (d))), y = JsMath.round(((double)(dy * len) / (d))) };
+        return new() { x = Js.I(JsMath.round(((double)((dx * len)) / (d)))), y = Js.I(JsMath.round(((double)((dy * len)) / (d)))) };
     }
 
     /// <summary>Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (control.ts).</summary>
-    public static bool inWindowFrame(Grid grid, Point at, /*TODO param type*/object? r = null)
+    public static bool inWindowFrame(Grid grid, Point at, double? r = null)
     {
         r ??= BODY_RADIUS;
-        var x0 = JsMath.floor(((double)(at.x - r) / (SUB)));
-        var x1 = JsMath.floor(((double)(at.x + r) / (SUB)));
-        var y0 = JsMath.floor(((double)(at.y - r) / (SUB)));
-        var y1 = JsMath.floor(((double)(at.y + r) / (SUB)));
-        for (var y = y0; y <= y1 + 1; y++)
+        var x0 = JsMath.floor(((double)((at.x - r)) / (SUB)));
+        var x1 = JsMath.floor(((double)((at.x + r)) / (SUB)));
+        var y0 = JsMath.floor(((double)((at.y - r)) / (SUB)));
+        var y1 = JsMath.floor(((double)((at.y + r)) / (SUB)));
+        for (var y = y0; y <= (y1 + 1); y++)
         {
-            for (var x = x0; x <= x1 + 1; x++)
+            for (var x = x0; x <= (x1 + 1); x++)
             {
                 if (!Js.T(Grids.inBounds(grid, x, y)))
                 {
                     continue;
                 }
-                var i = y * grid.width + x * 2;
-                if (grid.edges[Js.Idx(i)] == Grids.EDGE_WINDOW_BROKEN && Js.T(touches(at, r, x * SUB, y * SUB, x + 1 * SUB, y * SUB)))
+                var i = ((y * grid.width) + x) * 2;
+                if ((grid.edges[Js.Idx(i)] == Grids.EDGE_WINDOW_BROKEN) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)))
                 {
                     return true;
                 }
-                if (grid.edges[Js.Idx(i + 1)] == Grids.EDGE_WINDOW_BROKEN && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, y + 1 * SUB)))
+                if ((grid.edges[Js.Idx(i + 1)] == Grids.EDGE_WINDOW_BROKEN) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)))
                 {
                     return true;
                 }

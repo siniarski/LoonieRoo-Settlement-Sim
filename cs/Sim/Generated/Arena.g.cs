@@ -20,12 +20,12 @@ public static partial class Arena
         var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.Clone(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
         state.settlements = [];
         var you = state.survivors[Js.Idx(0)]!.pos;
-        var count = kind == "one" ? 1 : CROWD_SIZE;
-        var radius = kind == "one" ? 5 : 8;
+        var count = (kind == "one") ? 1 : CROWD_SIZE;
+        var radius = (kind == "one") ? 5 : 8;
         for (var i = 0; i < count; i++)
         {
-            var a = ((double)(i) / (count)) * JsMath.PI * 2;
-            var spot = openNear(state, new() { x = JsMath.round(you.x + JsMath.cos(a) * radius), y = JsMath.round(you.y + JsMath.sin(a) * radius) });
+            var a = (((double)(i) / (count)) * JsMath.PI) * 2;
+            var spot = openNear(state, new() { x = Js.I(JsMath.round(you.x + (JsMath.cos(a) * radius))), y = Js.I(JsMath.round(you.y + (JsMath.sin(a) * radius))) });
             if (Js.T(spot))
             {
                 Zombies.addZombie(state, spot.x, spot.y, null, "static");
@@ -45,9 +45,9 @@ public static partial class Arena
                 {
                     var x = p.x + dx;
                     var y = p.y + dy;
-                    if (Grids.getTile(state.grid, x, y) == "floor" && Js.T(Grids.isWalkable(state.grid, x, y)))
+                    if ((Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y)))
                     {
-                        return new() { x = x, y = y };
+                        return new() { x = Js.I(x), y = Js.I(y) };
                     }
                 }
             }

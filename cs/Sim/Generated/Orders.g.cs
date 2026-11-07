@@ -47,10 +47,10 @@ public static partial class Orders
         }
         if (s.order.kind != "follow")
         {
-            return new() { x = s.order.x, y = s.order.y };
+            return new() { x = Js.I(s.order.x), y = Js.I(s.order.y) };
         }
         var leader = ControlMod.controlled(state);
-        return Js.T(leader) && leader.id != s.id ? leader.pos : null;
+        return (Js.T(leader) && (leader.id != s.id)) ? leader.pos : null;
     }
 
     /// <summary>Can this survivor take a job at (x, y) under their order?</summary>
@@ -61,7 +61,7 @@ public static partial class Orders
             return true;
         }
         var at = orderAnchor(state, s) ?? s.pos;
-        return JsMath.abs(p.x - at.x) + JsMath.abs(p.y - at.y) <= ORDER_REACH;
+        return (JsMath.abs(p.x - at.x) + JsMath.abs(p.y - at.y)) <= ORDER_REACH;
     }
 
     /// <summary>Runs when an ordered survivor is standing still with no need pressing: walk back into place if they've drifted. Returns true if that took the tick.</summary>
@@ -80,26 +80,26 @@ public static partial class Orders
         {
             return false;
         }
-        var gap = s.order.kind == "follow" ? FOLLOW_GAP : 0;
+        var gap = (s.order.kind == "follow") ? FOLLOW_GAP : 0;
         var far = JsMath.max(JsMath.abs(at.x - s.pos.x), JsMath.abs(at.y - s.pos.y));
         if (far <= gap)
         {
-            return s.order.kind == "follow" && Js.T(stepAside(state, s));
+            return (s.order.kind == "follow") && Js.T(stepAside(state, s));
         }
         var path = Pathfinding.findPath(state.grid, s.pos, at);
-        if (!Js.T(path) || path.length == 0)
+        if (!Js.T(path) || (path.length == 0))
         {
-            s.note = s.order.kind == "follow" ? "can't reach you" : "can't get back to their post";
+            s.note = (s.order.kind == "follow") ? "can't reach you" : "can't get back to their post";
             return false;
         }
-        Survivors.walk(s, s.order.kind == "follow" ? path.slice(0, -1) : path, state.walkabilityVersion);
-        s.note = s.order.kind == "follow" ? "following you" : "going back to their post";
+        Survivors.walk(s, (s.order.kind == "follow") ? path.slice(0, -1) : path, state.walkabilityVersion);
+        s.note = (s.order.kind == "follow") ? "following you" : "going back to their post";
         return true;
     }
 
     public static string describeOrder(Order? o)
     {
-        return !Js.T(o) ? "settled" : o.kind == "follow" ? "following" : o.kind == "loot" ? $"looting ({Js.Str(o.x)}, {Js.Str(o.y)})" : $"holding ({Js.Str(o.x)}, {Js.Str(o.y)})";
+        return !Js.T(o) ? "settled" : (o.kind == "follow") ? "following" : ((o.kind == "loot") ? $"looting ({Js.Str(o.x)}, {Js.Str(o.y)})" : $"holding ({Js.Str(o.x)}, {Js.Str(o.y)})");
     }
 
     /// <summary>A follower falling behind hurries (stepPace in survivors.ts).</summary>
@@ -110,7 +110,7 @@ public static partial class Orders
             return false;
         }
         var leader = ControlMod.controlled(state);
-        return leader != null && leader != s && JsMath.max(JsMath.abs(leader.pos.x - s.pos.x), JsMath.abs(leader.pos.y - s.pos.y)) > HURRY_GAP;
+        return (leader != null) && (leader != s) && (JsMath.max(JsMath.abs(leader.pos.x - s.pos.x), JsMath.abs(leader.pos.y - s.pos.y)) > HURRY_GAP);
     }
 
     /// <summary>Standing in your line of fire: step to a free tile beside it. Returns true if they moved.</summary>
@@ -126,7 +126,7 @@ public static partial class Orders
         {
             for (var k = 1; k <= FIRE_LANE; k++)
             {
-                if (p.x == leader.pos.x + c.facing.x * k && p.y == leader.pos.y + c.facing.y * k)
+                if ((p.x == (leader.pos.x + (c.facing.x * k))) && (p.y == (leader.pos.y + (c.facing.y * k))))
                 {
                     return true;
                 }
@@ -137,7 +137,7 @@ public static partial class Orders
         {
             return false;
         }
-        var side = [new() { x = -c.facing.y, y = c.facing.x }, new() { x = c.facing.y, y = -c.facing.x }].map((d) => new() { x = s.pos.x + JsMath.sign(d.x), y = s.pos.y + JsMath.sign(d.y) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
+        var side = [new() { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new() { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) }].map((d) => new() { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
         if (!Js.T(side))
         {
             return false;
@@ -151,7 +151,7 @@ public static partial class Orders
     public static List<Furniture> crates(SimState state, Point o)
     {
         var room = Rooms.roomAt(state, o.x, o.y);
-        return FurnitureMod.ofKind(state, "crate").filter((f) => f.loot > 0 && Js.T(Js.T(room) ? Rooms.roomAt(state, f.x, f.y)?.index == room.index : JsMath.max(JsMath.abs(f.x - o.x), JsMath.abs(f.y - o.y)) <= LOOT_RADIUS));
+        return FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && (Js.T(Js.T(room) ? (Rooms.roomAt(state, f.x, f.y)?.index == room.index) : (JsMath.max(JsMath.abs(f.x - o.x), JsMath.abs(f.y - o.y)) <= LOOT_RADIUS))));
     }
 
     /// <summary>One tick of a loot order: walk to the next crate and search it; with none left, follow again.</summary>
@@ -161,7 +161,7 @@ public static partial class Orders
         var crate = left.find((f) => f.id == o.crateId);
         if (!Js.T(crate))
         {
-            crate = left.sort((a, b) => JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y) - JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y))[Js.Idx(0)];
+            crate = left.sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y)))[Js.Idx(0)];
             o.crateId = crate?.id ?? null;
             o.progress = 0;
         }
@@ -171,10 +171,10 @@ public static partial class Orders
             s.note = "nothing left to loot, coming back";
             return false;
         }
-        if (JsMath.abs(crate.x - s.pos.x) + JsMath.abs(crate.y - s.pos.y) != 1)
+        if ((JsMath.abs(crate.x - s.pos.x) + JsMath.abs(crate.y - s.pos.y)) != 1)
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, Grids.neighbours4(state.grid, crate.x, crate.y));
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 s.order = new() { kind = "follow" };
                 s.note = "can't get to the crates";

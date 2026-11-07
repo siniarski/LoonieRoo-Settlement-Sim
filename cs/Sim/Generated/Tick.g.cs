@@ -14,7 +14,7 @@ public static partial class Tick
         Time.setDayScale(state.settings.dayScale);
         foreach (var e in Js.Iter(movers(state)))
         {
-            e.was = new() { x = e.at.x, y = e.at.y };
+            e.was = new() { x = Js.I(e.at.x), y = Js.I(e.at.y) };
         }
         Zombies.updateZombies(state);
         FireMod.updateFires(state);
@@ -47,7 +47,7 @@ public static partial class Tick
         Vehicles.updateVehicles(state);
         Relationships.updateRelationships(state);
         Wellbeing.updateSocial(state);
-        if (state.tick % Time.DAY_LENGTH == 0)
+        if ((state.tick % Time.DAY_LENGTH) == 0)
         {
             Handiwork.forgetForaging(state);
         }
@@ -60,7 +60,7 @@ public static partial class Tick
         Fog.reconcilePointsOfInterest(state);
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (Js.T(s.sleep) && s.hurtTick == state.tick)
+            if (Js.T(s.sleep) && (s.hurtTick == state.tick))
             {
                 Needs.wake(state, s, "woken by a zombie!");
             }
@@ -135,13 +135,13 @@ public static partial class Tick
         {
             return;
         }
-        var needs = Js.T(Needs.updateMeal(state, s)) || Js.T(Forage.updateForage(state, s, () => Needs.nearestFreeItem(state, s, "food") != null || Needs.nearestFreeItem(state, s, "meal") != null)) || Js.T(Water.updateDrink(state, s)) || Js.T(Needs.updateTreatment(state, s)) || Js.T(Weapons.updateArming(state, s)) || Js.T(Clothing.updateDressing(state, s)) || Js.T(Needs.updateSleep(state, s));
+        var needs = (Js.T(Needs.updateMeal(state, s)) || Js.T(Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null)))) || Js.T(Water.updateDrink(state, s)) || Js.T(Needs.updateTreatment(state, s)) || Js.T(Weapons.updateArming(state, s)) || Js.T(Clothing.updateDressing(state, s)) || Js.T(Needs.updateSleep(state, s));
         if (Js.T(needs))
         {
             s.leisure = null;
             Books.stopReading(state, s, s.note ?? "");
         }
-        else if (!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s)) && !Js.T(Leisure.updateLeisure(state, s)) && !Js.T(Books.updateReading(state, s)))
+        else if ((!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s))) && !Js.T(Leisure.updateLeisure(state, s)) && !Js.T(Books.updateReading(state, s)))
         {
             Jobs.updateWork(state, s);
         }
@@ -156,8 +156,8 @@ public static partial class Tick
     /// <summary>Moving under its own steering, not tile steps (motion.ts).</summary>
     public static bool isFree(SimState state, Body e)
     {
-        var id = e.id ?? "";
-        return id.startsWith("z") || state.control != null && id == state.control.survivorId;
+        var id = (e).id ?? "";
+        return id.startsWith("z") || (state.control != null) && (id == state.control.survivorId);
     }
 
     public static void step(SimState state, double ticks)

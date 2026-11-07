@@ -30,7 +30,7 @@ public static partial class Seasons
     /// <summary>Rain, snow, storms and blizzards wet things (crops, collectors, fires).</summary>
     public static bool isWet(string w)
     {
-        return w == "rain" || w == "snow" || w == "storm" || w == "blizzard";
+        return (w == "rain") || (w == "snow") || (w == "storm") || (w == "blizzard");
     }
 
     /// <summary>Out on a winter night, a survivor loses 1 health this often, and doesn't heal (about 160 over a night).</summary>
@@ -38,7 +38,7 @@ public static partial class Seasons
 
     public static string seasonOf(int tick)
     {
-        return SEASONS[Js.Idx(JsMath.floor(((double)(Time.dayOf(tick) - 1) / (SEASON_DAYS))) % SEASONS.length)]!;
+        return SEASONS[Js.Idx(JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length)]!;
     }
 
     /// <summary>Does a planted crop grow this tick? (Called once per plot per tick.)</summary>
@@ -49,12 +49,12 @@ public static partial class Seasons
         {
             return 0;
         }
-        if (Js.T(state.settings.winter) && state.tick % 2 == 1)
+        if (Js.T(state.settings.winter) && ((state.tick % 2) == 1))
         {
             return 0;
         }
-        var growth = season == "autumn" ? state.tick % 2 == 0 ? 1 : 0 : 1;
-        if (state.weather == "rain" || state.weather == "storm" && state.tick % 2 == 0)
+        var growth = (season == "autumn") ? (((state.tick % 2) == 0) ? 1 : 0) : 1;
+        if ((state.weather == "rain") || (state.weather == "storm") && ((state.tick % 2) == 0))
         {
             growth += 1;
         }
@@ -69,7 +69,7 @@ public static partial class Seasons
         {
             return;
         }
-        var targets = state.furniture.filter((f) => JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y) <= 20 && !Js.T(Rooms.isIndoors(state, f.x, f.y)));
+        var targets = state.furniture.filter((f) => ((JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y)) <= 20) && !Js.T(Rooms.isIndoors(state, f.x, f.y)));
         var t = targets[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 2) * targets.length))];
         if (Js.T(t) && Js.T(FireMod.ignite(state, t.x, t.y)))
         {
@@ -80,25 +80,25 @@ public static partial class Seasons
     /// <summary>A winter night (any night, in a nuclear winter), or a blizzard.</summary>
     public static bool coldOutside(SimState state)
     {
-        return seasonOf(state.tick) == "winter" || Js.T(state.settings.winter) && Js.T(Time.isNight(state.tick)) || state.weather == "blizzard";
+        return (seasonOf(state.tick) == "winter") || Js.T(state.settings.winter) && Js.T(Time.isNight(state.tick)) || (state.weather == "blizzard");
     }
 
     /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>
     public static bool isCold(SimState state, Survivor s)
     {
-        var cold = Js.T(state.world) ? Js.T(Climate.regionCold(state, s.pos.x, s.pos.y)) || state.weather == "blizzard" : coldOutside(state);
-        return Js.T(cold) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)) && !Js.T(Clothing.wearing(state, s, "coat")) && !Js.T(Power.isWarmed(state, s.pos));
+        var cold = Js.T(state.world) ? (Js.T(Climate.regionCold(state, s.pos.x, s.pos.y)) || (state.weather == "blizzard")) : coldOutside(state);
+        return (Js.T(cold) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Clothing.wearing(state, s, "coat")) && !Js.T(Power.isWarmed(state, s.pos));
     }
 
     /// <summary>Dawn's weather roll, and the weather's effect on people outdoors. Runs every tick.</summary>
     public static void updateWeather(SimState state)
     {
-        if (state.tick > 0 && state.tick % Time.DAY_LENGTH == 0)
+        if ((state.tick > 0) && ((state.tick % Time.DAY_LENGTH) == 0))
         {
             var season = seasonOf(state.tick);
             var winter = season == "winter";
             var roll = Rng.random(state);
-            state.weather = roll < Js.T(winter) ? SNOW_CHANCE : RAIN_CHANCE ? Js.T(winter) ? "snow" : "rain" : roll >= 1 - Difficulty.eventChance(state, EVENT_CHANCE) ? Js.T(winter) ? "blizzard" : season == "summer" ? "heatwave" : "storm" : "clear";
+            state.weather = (roll < (Js.T(winter) ? SNOW_CHANCE : RAIN_CHANCE)) ? (Js.T(winter) ? "snow" : "rain") : ((roll >= (1 - Difficulty.eventChance(state, EVENT_CHANCE))) ? (Js.T(winter) ? "blizzard" : ((season == "summer") ? "heatwave" : "storm")) : "clear");
             if (state.weather == "blizzard")
             {
                 Events.logEvent(state, "A blizzard: anyone outdoors without a coat or a heater will freeze, day or night");
@@ -112,7 +112,7 @@ public static partial class Seasons
                 Events.logEvent(state, "A storm: lightning may set things alight");
             }
         }
-        if (state.weather == "storm" && state.tick % Time.TICKS_PER_HOUR == 0 && Hash.hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE)
+        if ((state.weather == "storm") && ((state.tick % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE))
         {
             lightning(state);
         }
@@ -120,17 +120,17 @@ public static partial class Seasons
         var soaking = isWet(state.weather);
         foreach (var s in Js.Iter([.. state.survivors]))
         {
-            if (s.bodyHeat < BodyMod.FREEZING && state.tick % Difficulty.coldEvery(state) == 0)
+            if ((s.bodyHeat < BodyMod.FREEZING) && ((state.tick % Difficulty.coldEvery(state)) == 0))
             {
                 s.health = JsMath.max(0, s.health - 1);
                 s.lastHurtBy = "the cold";
             }
-            if (!Js.T(coldNight) && !Js.T(soaking) || Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)))
+            if ((!Js.T(coldNight) && !Js.T(soaking)) || Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)))
             {
                 continue;
             }
             var coat = Clothing.wearing(state, s, "coat");
-            if (Js.T(coat) && state.tick % Time.TICKS_PER_HOUR == 0)
+            if (Js.T(coat) && ((state.tick % Time.TICKS_PER_HOUR) == 0))
             {
                 Clothing.wearOut(state, s, coat);
             }

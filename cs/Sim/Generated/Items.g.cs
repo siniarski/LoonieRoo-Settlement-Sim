@@ -14,13 +14,13 @@ public static partial class Items
 
     public static Item? itemAt(SimState state, int x, int y)
     {
-        return state.items.find((i) => i.pos != null && i.pos.x == x && i.pos.y == y);
+        return state.items.find((i) => (i.pos != null) && (i.pos.x == x) && (i.pos.y == y));
     }
 
     /// <summary>A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or furniture.</summary>
     public static bool canHoldItem(SimState state, int x, int y)
     {
-        return Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(itemAt(state, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !state.blueprints.some((b) => b.x == x && b.y == y && b.target == "wall" || Js.T(Designations.isFurnitureTarget(b.target)));
+        return (Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(itemAt(state, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !state.blueprints.some((b) => (b.x == x) && (b.y == y) && (b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target)));
     }
 
     /// <summary>Creates an item on the nearest free tile to (x, y).</summary>
@@ -32,7 +32,7 @@ public static partial class Items
             item.tag = Books.bookSubject(item.id);
         }
         state.items.push(item);
-        placeNear(state, item, new() { x = x, y = y });
+        placeNear(state, item, new() { x = Js.I(x), y = Js.I(y) });
         return item;
     }
 
@@ -59,8 +59,8 @@ public static partial class Items
         var held = Js.Set(state.items.flatMap((i) => Js.T(i.pos) ? [$"{Js.Str(i.pos.x)},{Js.Str(i.pos.y)}"] : []));
         bool free(int x, int y)
         {
-            return Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !state.blueprints.some((b) => b.x == x && b.y == y && b.target == "wall" || Js.T(Designations.isFurnitureTarget(b.target)));
+            return (Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !state.blueprints.some((b) => (b.x == x) && (b.y == y) && (b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target)));
         }
-        item.pos = Space.nearestTile(state.grid, near, free) ?? new() { x = near.x, y = near.y };
+        item.pos = Space.nearestTile(state.grid, near, free) ?? new() { x = Js.I(near.x), y = Js.I(near.y) };
     }
 }

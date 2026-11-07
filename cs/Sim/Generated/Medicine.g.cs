@@ -21,13 +21,13 @@ public static partial class Medicine
 
     public static bool isPatient(Survivor s)
     {
-        return Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding) || s.infection != null || s.sick != null && s.sleep?.asleep == true && s.sleep.bedId != null && !Js.T(s.treatment);
+        return (Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding)) || (s.infection != null) || (s.sick != null) && (s.sleep?.asleep == true) && (s.sleep.bedId != null) && !Js.T(s.treatment);
     }
 
     /// <summary>What would help this survivor, best first: medicine for an infection, a bandage for wounds.</summary>
     public static List<string> remediesFor(Survivor s)
     {
-        return [.. s.infection != null || s.sick != null ? ["medicine"] : [], .. Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding) ? ["bandage"] : []];
+        return [.. (s.infection != null) || (s.sick != null) ? (["medicine"]) : [], .. (Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding)) ? (["bandage"]) : []];
     }
 
     /// <summary>Applying a remedy: medicine cures an infection (and heals a little); a bandage heals wounds.</summary>
@@ -67,7 +67,7 @@ public static partial class Medicine
     /// <summary>Is this survivor resting in an infirmary bed right now?</summary>
     public static bool inInfirmary(SimState state, Survivor s)
     {
-        var bed = Js.T(Js.T(s.sleep?.asleep)) && Js.T(s.sleep.bedId) ? FurnitureMod.getFurniture(state, s.sleep.bedId) : null;
-        return bed != null && Js.T(isInfirmaryBed(state, bed));
+        var bed = (Js.T(Js.T(s.sleep?.asleep)) && Js.T(s.sleep.bedId)) ? FurnitureMod.getFurniture(state, s.sleep.bedId) : null;
+        return (bed != null) && Js.T(isInfirmaryBed(state, bed));
     }
 }

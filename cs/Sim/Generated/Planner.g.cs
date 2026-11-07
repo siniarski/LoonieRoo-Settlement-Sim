@@ -72,7 +72,7 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => b.target == "bed" && Js.T(inRoom(b))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => (b.target == "bed") && Js.T(inRoom(b))).length;
         var bedsElsewhere = bedsInOtherHousing(state, room);
         var wanted = JsMath.min(capacity, JsMath.max(1, state.survivors.length - bedsElsewhere));
         var toAdd = wanted - bedsHere;
@@ -83,12 +83,12 @@ public static partial class Planner
         }
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str(bedsHere == 1 ? "" : "s")}: enough for the colony.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")}: enough for the colony.");
             return new() { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
-        List<Command> commands = spots.map((p) => new() { type = "designateBuild", x = p.x, y = p.y, structure = "bed" });
-        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str(spots.length == 1 ? "" : "s")} (room holds {Js.Str(capacity)}, colony of {Js.Str(state.survivors.length)}).");
+        List<Command> commands = spots.map((p) => new() { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "bed" });
+        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? "" : "s")} (room holds {Js.Str(capacity)}, colony of {Js.Str(state.survivors.length)}).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
@@ -98,7 +98,7 @@ public static partial class Planner
 
     public static double bedsInOtherHousing(SimState state, Room room)
     {
-        var housing = Js.Set(state.roomDesignations.filter((d) => d.purpose == "housing").map((d) => Rooms.labelAt(state, d.x, d.y)).filter((label) => label >= 0 && label != room.index));
+        var housing = Js.Set(state.roomDesignations.filter((d) => d.purpose == "housing").map((d) => Rooms.labelAt(state, d.x, d.y)).filter((label) => (label >= 0) && (label != room.index)));
         return FurnitureMod.ofKind(state, "bed").filter((f) => housing.has(Rooms.labelAt(state, f.x, f.y))).length;
     }
 
@@ -109,11 +109,11 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var tablesHere = FurnitureMod.ofKind(state, "table").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => b.target == "table" && Js.T(inRoom(b))).length;
+        var tablesHere = FurnitureMod.ofKind(state, "table").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => (b.target == "table") && Js.T(inRoom(b))).length;
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (SEATS_PER_TABLE)))) - tablesHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(tablesHere)} table{Js.Str(tablesHere == 1 ? "" : "s")}: enough seats for the colony.");
+            notes.push($"Already has {Js.Str(tablesHere)} table{Js.Str((tablesHere == 1) ? "" : "s")}: enough seats for the colony.");
             return new() { commands = [], notes = notes };
         }
         List<Point> spots = [];
@@ -123,14 +123,14 @@ public static partial class Planner
             {
                 break;
             }
-            if (spots.some((q) => JsMath.abs(q.x - p.x) + JsMath.abs(q.y - p.y) <= 2))
+            if (spots.some((q) => (JsMath.abs(q.x - p.x) + JsMath.abs(q.y - p.y)) <= 2))
             {
                 continue;
             }
             spots.push(p);
         }
-        List<Command> commands = spots.map((p) => new() { type = "designateBuild", x = p.x, y = p.y, structure = "table" });
-        notes.push($"Planned {Js.Str(spots.length)} table{Js.Str(spots.length == 1 ? "" : "s")} (seats for {Js.Str(SEATS_PER_TABLE)} each, colony of {Js.Str(state.survivors.length)}).");
+        List<Command> commands = spots.map((p) => new() { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "table" });
+        notes.push($"Planned {Js.Str(spots.length)} table{Js.Str((spots.length == 1) ? "" : "s")} (seats for {Js.Str(SEATS_PER_TABLE)} each, colony of {Js.Str(state.survivors.length)}).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
@@ -145,20 +145,20 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => b.target == "bed" && Js.T(inRoom(b))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => (b.target == "bed") && Js.T(inRoom(b))).length;
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (INFIRMARY_PATIENTS_PER_BED)))) - bedsHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str(bedsHere == 1 ? "" : "s")}: enough for the colony.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")}: enough for the colony.");
             return new() { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
-        notes.push($"Planned {Js.Str(spots.length)} infirmary bed{Js.Str(spots.length == 1 ? "" : "s")} (one per {Js.Str(INFIRMARY_PATIENTS_PER_BED)} survivors).");
+        notes.push($"Planned {Js.Str(spots.length)} infirmary bed{Js.Str((spots.length == 1) ? "" : "s")} (one per {Js.Str(INFIRMARY_PATIENTS_PER_BED)} survivors).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
         }
-        return new() { commands = spots.map((p) => new() { type = "designateBuild", x = p.x, y = p.y, structure = "bed" }), notes = notes };
+        return new() { commands = spots.map((p) => new() { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "bed" }), notes = notes };
     }
 
     /// <summary>A bed for every guard (guarding switched on), up to the room's capacity.</summary>
@@ -169,21 +169,21 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => b.target == "bed" && Js.T(inRoom(b))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => (b.target == "bed") && Js.T(inRoom(b))).length;
         var guards = state.survivors.filter((s) => s.priorities.guard > 0).length;
         var toAdd = JsMath.min(capacity, JsMath.max(1, guards)) - bedsHere;
         if (toAdd <= 0)
         {
-            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str(bedsHere == 1 ? "" : "s")} for {Js.Str(guards)} guard{Js.Str(guards == 1 ? "" : "s")}.");
+            notes.push($"Already has {Js.Str(bedsHere)} bed{Js.Str((bedsHere == 1) ? "" : "s")} for {Js.Str(guards)} guard{Js.Str((guards == 1) ? "" : "s")}.");
             return new() { commands = [], notes = notes };
         }
         var spots = bedSpots(state, room).slice(0, toAdd);
-        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str(spots.length == 1 ? "" : "s")} for the guards (room holds {Js.Str(capacity)}, {Js.Str(guards)} guarding).");
+        notes.push($"Planned {Js.Str(spots.length)} bed{Js.Str((spots.length == 1) ? "" : "s")} for the guards (room holds {Js.Str(capacity)}, {Js.Str(guards)} guarding).");
         if (spots.length < toAdd)
         {
             notes.push($"Only found room for {Js.Str(spots.length)}: clear some space.");
         }
-        return new() { commands = spots.map((p) => new() { type = "designateBuild", x = p.x, y = p.y, structure = "bed" }), notes = notes };
+        return new() { commands = spots.map((p) => new() { type = "designateBuild", x = Js.I(p.x), y = Js.I(p.y), structure = "bed" }), notes = notes };
     }
 
     public static List<Point> bedSpots(SimState state, Room room)
@@ -200,7 +200,7 @@ public static partial class Planner
         List<FreeSpotsCandidates> candidates = [];
         foreach (var i in Js.Iter(room.tiles))
         {
-            var p = new() { x = i % grid.width, y = JsMath.floor(((double)(i) / (grid.width))) };
+            var p = new() { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
             if (taken.has($"{Js.Str(p.x)},{Js.Str(p.y)}"))
             {
                 continue;

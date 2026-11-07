@@ -20,7 +20,7 @@ public static partial class Towers
 
     public static bool onTower(SimState state, Survivor s)
     {
-        return !Js.T(s.move) && FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y)?.kind == "tower";
+        return !Js.T(s.move) && (FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y)?.kind == "tower");
     }
 
     public static bool hasTower(SimState state)
@@ -31,7 +31,7 @@ public static partial class Towers
     /// <summary>Hourly, for every survivor: a night up a tower counts towards being vigilant.</summary>
     public static void countWatch(SimState state, Survivor s)
     {
-        if (state.tick % Time.TICKS_PER_HOUR != 0 || !Js.T(Time.isNight(state.tick)) || !Js.T(onTower(state, s)))
+        if (((state.tick % Time.TICKS_PER_HOUR) != 0) || !Js.T(Time.isNight(state.tick)) || !Js.T(onTower(state, s)))
         {
             return;
         }
@@ -45,7 +45,7 @@ public static partial class Towers
     /// <summary>An idle guard at night: stay up the tower, or head for the nearest free one. Returns true if that's what they're doing.</summary>
     public static bool keepWatch(SimState state, Survivor s)
     {
-        if (!Js.T(Time.isNight(state.tick)) || s.priorities.guard == 0)
+        if (!Js.T(Time.isNight(state.tick)) || (s.priorities.guard == 0))
         {
             return false;
         }
@@ -56,9 +56,9 @@ public static partial class Towers
         }
         bool taken(int x, int y)
         {
-            return state.survivors.some((o) => o != s && o.pos.x == x && o.pos.y == y || o.goal?.x == x && o.goal.y == y);
+            return state.survivors.some((o) => (o != s) && (o.pos.x == x) && (o.pos.y == y) || (o.goal?.x == x) && (o.goal.y == y));
         }
-        var towers = state.furniture.filter((f) => f.kind == "tower" && !Js.T(taken(f.x, f.y))).sort((a, b) => Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b));
+        var towers = state.furniture.filter((f) => (f.kind == "tower") && !Js.T(taken(f.x, f.y))).sort((a, b) => Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b));
         foreach (var t in Js.Iter(towers.slice(0, 4)))
         {
             if (Js.T(Space.samePoint(s.pos, t)))
@@ -66,7 +66,7 @@ public static partial class Towers
                 continue;
             }
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [t]);
-            if (!Js.T(path) || path.length == 0)
+            if (!Js.T(path) || (path.length == 0))
             {
                 continue;
             }

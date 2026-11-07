@@ -39,7 +39,7 @@ public static partial class Wishes
     /// <summary>Did they gain this thought since the wish began (that tick included)? (A thought's start is its end less its length.)</summary>
     public static bool gotThought(Survivor s, string kind, double since)
     {
-        return s.thoughts.some((t) => t.kind == kind && t.until - Mood.THOUGHTS[Js.Idx(kind)].duration >= since);
+        return s.thoughts.some((t) => (t.kind == kind) && ((t.until - Mood.THOUGHTS[Js.Idx(kind)].duration) >= since));
     }
 
     public static bool near(Survivor a, Survivor b)
@@ -59,26 +59,26 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "hotMeal", targetId = null });
         }
-        if (Js.T(has("sleptOnFloor")) || s.comfort < 50)
+        if (Js.T(has("sleptOnFloor")) || (s.comfort < 50))
         {
             @out.push(new() { kind = "bed", targetId = null });
         }
-        if (!Js.T(s.body) && Seasons.seasonOf(state.tick) == "autumn" || Seasons.seasonOf(state.tick) == "winter" || Js.T(state.settings.winter))
+        if (!Js.T(s.body) && (Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))
         {
             @out.push(new() { kind = "coat", targetId = null });
         }
-        if (!Js.T(s.weapon) && s.priorities.guard > 0)
+        if (!Js.T(s.weapon) && (s.priorities.guard > 0))
         {
             @out.push(new() { kind = "weapon", targetId = null });
         }
-        var friend = state.survivors.filter((o) => o != s && s.opinions[Js.Idx(o.id)] ?? 0 >= 10).sort((a, b) => Js.Or(s.opinions[Js.Idx(b.id)] ?? 0 - s.opinions[Js.Idx(a.id)] ?? 0, a.id.localeCompare(b.id)))[Js.Idx(0)];
+        var friend = state.survivors.filter((o) => (o != s) && ((s.opinions[Js.Idx(o.id)] ?? 0) >= 10)).sort((a, b) => Js.Or((s.opinions[Js.Idx(b.id)] ?? 0) - (s.opinions[Js.Idx(a.id)] ?? 0), a.id.localeCompare(b.id)))[Js.Idx(0)];
         var you = ControlMod.controlled(state);
-        var wanted = Js.T(you) && you != s && s.opinions[Js.Idx(you.id)] ?? 0 >= 0 ? you : friend;
+        var wanted = (Js.T(you) && (you != s)) && ((s.opinions[Js.Idx(you.id)] ?? 0) >= 0) ? you : friend;
         if (Js.T(wanted) && !Js.T(near(s, wanted)))
         {
             @out.push(new() { kind = "see", targetId = wanted.id });
         }
-        if (Js.T(has("lostFriend")) || Js.T(has("sawDeath")) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
+        if ((Js.T(has("lostFriend")) || Js.T(has("sawDeath"))) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
         {
             @out.push(new() { kind = "grave", targetId = null });
         }
@@ -86,7 +86,7 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "quiet", targetId = null });
         }
-        if (s.kills >= 3 || s.traits.includes("hardened"))
+        if ((s.kills >= 3) || s.traits.includes("hardened"))
         {
             @out.push(new() { kind = "kill", targetId = null });
         }
@@ -126,7 +126,7 @@ public static partial class Wishes
                 {
                     {
                     var o = state.survivors.find((x) => x.id == w.targetId);
-                    return o != null && !Js.T(Js.T(o.sleep?.asleep)) && !Js.T(Js.T(s.sleep?.asleep)) && Js.T(near(s, o));
+                    return (o != null) && !Js.T(Js.T(o.sleep?.asleep)) && !Js.T(Js.T(s.sleep?.asleep)) && Js.T(near(s, o));
                 }
                 }
             case "grave":
@@ -135,7 +135,7 @@ public static partial class Wishes
                 }
             case "quiet":
                 {
-                    return state.tick >= w.until && !Js.T(gotThought(s, "sawDeath", w.since)) && !Js.T(gotThought(s, "attacked", w.since)) && !Js.T(gotThought(s, "lostFriend", w.since));
+                    return (state.tick >= w.until) && !Js.T(gotThought(s, "sawDeath", w.since)) && !Js.T(gotThought(s, "attacked", w.since)) && !Js.T(gotThought(s, "lostFriend", w.since));
                 }
             case "kill":
                 {
@@ -155,13 +155,13 @@ public static partial class Wishes
     public static string describeWish(SimState state, Wish w)
     {
         var who = Js.T(w.targetId) ? state.survivors.find((x) => x.id == w.targetId) : null;
-        return new() { hotMeal = "a hot meal", bed = "a night in a real bed", coat = "a coat", weapon = "a weapon", see = Js.T(who) && state.control?.survivorId == who.id ? "a word with you" : $"to see {Js.Str(who?.name ?? "someone")}", grave = "to visit the graves", quiet = "a quiet day (no deaths, no attacks)", kill = "to put one of them down", company = "some company", comfort = "somewhere decent to sleep" }[Js.Idx(w.kind)];
+        return new() { hotMeal = "a hot meal", bed = "a night in a real bed", coat = "a coat", weapon = "a weapon", see = (Js.T(who) && (state.control?.survivorId == who.id)) ? "a word with you" : $"to see {Js.Str(who?.name ?? "someone")}", grave = "to visit the graves", quiet = "a quiet day (no deaths, no attacks)", kill = "to put one of them down", company = "some company", comfort = "somewhere decent to sleep" }[Js.Idx(w.kind)];
     }
 
     /// <summary>Every 10 ticks: check wishes; on the hour, maybe make new ones.</summary>
     public static void updateWishes(SimState state)
     {
-        if (state.tick % 10 != 0)
+        if ((state.tick % 10) != 0)
         {
             return;
         }
@@ -185,7 +185,7 @@ public static partial class Wishes
                 }
                 continue;
             }
-            if (state.tick % Time.TICKS_PER_HOUR != 0 || s.childUntil != null)
+            if (((state.tick % Time.TICKS_PER_HOUR) != 0) || (s.childUntil != null))
             {
                 continue;
             }
@@ -208,9 +208,9 @@ public static partial class Wishes
         Mood.addThought(state, s, Js.T(w.promised) ? "promiseKept" : "wishMet");
         Resolve.steel(s, Js.T(w.promised) ? PROMISE_RESOLVE : WISH_RESOLVE);
         var you = ControlMod.controlled(state);
-        if (Js.T(w.promised) && Js.T(you) && you != s)
+        if ((Js.T(w.promised) && Js.T(you)) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.min(100, s.opinions[Js.Idx(you.id)] ?? 0 + PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.min(100, (s.opinions[Js.Idx(you.id)] ?? 0) + PROMISE_OPINION);
         }
         if (Js.T(w.promised))
         {
@@ -228,9 +228,9 @@ public static partial class Wishes
         Mood.addThought(state, s, "promiseBroken");
         Resolve.steel(s, -BROKEN_RESOLVE);
         var you = ControlMod.controlled(state);
-        if (Js.T(you) && you != s)
+        if (Js.T(you) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, s.opinions[Js.Idx(you.id)] ?? 0 - PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, (s.opinions[Js.Idx(you.id)] ?? 0) - PROMISE_OPINION);
         }
         Events.logEvent(state, $"A promise broken: {Js.Str(s.name)} never got {Js.Str(describeWish(state, w))}");
     }

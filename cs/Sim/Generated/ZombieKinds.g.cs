@@ -35,7 +35,7 @@ public static partial class ZombieKinds
                 continue;
             }
             z.variant = v;
-            z.health = z.maxHealth = JsMath.max(1, JsMath.round(((double)(z.maxHealth * VARIANTS[Js.Idx(v)].healthPct) / (100))));
+            z.health = z.maxHealth = JsMath.max(1, JsMath.round(((double)((z.maxHealth * VARIANTS[Js.Idx(v)].healthPct)) / (100))));
             return;
         }
     }

@@ -27,7 +27,7 @@ public static partial class Forage
     /// <summary>Is it a time anyone can forage at all (by day, not in winter)?</summary>
     public static bool forageTime(SimState state)
     {
-        return !Js.T(Time.isNight(state.tick)) && Seasons.seasonOf(state.tick) != "winter";
+        return !Js.T(Time.isNight(state.tick)) && (Seasons.seasonOf(state.tick) != "winter");
     }
 
     /// <summary>Where this colonist can go to forage: the nearest open grass or field not picked over today, or null.</summary>
@@ -39,10 +39,10 @@ public static partial class Forage
         bool open(int x, int y)
         {
             var g = Grids.GROUNDS[Js.Idx(grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))]!)];
-            return g == "grass" || g == "field" && Js.T(Grids.isWalkable(grid, x, y)) && state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today && !Js.T(Rooms.isIndoors(state, x, y));
+            return (g == "grass") || (g == "field") && Js.T(Grids.isWalkable(grid, x, y)) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today) && !Js.T(Rooms.isIndoors(state, x, y));
         }
         var p = Space.nearestTile(grid, s.pos, open, FORAGE_SEARCH);
-        return Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p])) ? p : null;
+        return (Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p]))) ? p : null;
     }
 
     /// <summary>Runs with the other needs, while standing still. Returns true if foraging took this tick. `hasFood`: is there food they could go and eat (then they don't forage)?</summary>
@@ -63,7 +63,7 @@ public static partial class Forage
             if (!Js.T(Space.samePoint(s.pos, f)))
             {
                 var path = Pathfinding.findPathToAny(state.grid, s.pos, [f]);
-                if (!Js.T(path) || path.length == 0)
+                if (!Js.T(path) || (path.length == 0))
                 {
                     s.forage = null;
                     return false;
@@ -90,12 +90,12 @@ public static partial class Forage
             s.forage = null;
             return true;
         }
-        if (Js.T(s.jobId) || !Js.T(forageTime(state)) || state.tick < s.nextForageTick ?? 0)
+        if ((Js.T(s.jobId) || !Js.T(forageTime(state))) || (state.tick < (s.nextForageTick ?? 0)))
         {
             return false;
         }
-        var @short = Js.T(state.harsh) && state.items.filter((i) => i.kind == "food" || i.kind == "meal" && i.pos != null && i.reservedBy == null).length < state.survivors.length;
-        if (!Js.T(@short) && s.satiety >= Food.HUNGRY || Js.T(hasFood()))
+        var @short = Js.T(state.harsh) && (state.items.filter((i) => (i.kind == "food") || (i.kind == "meal") && (i.pos != null) && (i.reservedBy == null)).length < state.survivors.length);
+        if (!Js.T(@short) && (s.satiety >= Food.HUNGRY) || Js.T(hasFood()))
         {
             return false;
         }
@@ -105,7 +105,7 @@ public static partial class Forage
             s.nextForageTick = state.tick + FORAGE_RETRY_TICKS;
             return false;
         }
-        s.forage = new() { x = p.x, y = p.y, progress = 0 };
+        s.forage = new() { x = Js.I(p.x), y = Js.I(p.y), progress = 0 };
         s.note = $"going to forage at ({Js.Str(p.x)}, {Js.Str(p.y)})";
         return true;
     }

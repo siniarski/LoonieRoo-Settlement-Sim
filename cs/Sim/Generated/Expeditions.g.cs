@@ -55,12 +55,12 @@ public static partial class Expeditions
         var truckId = Outposts.truckVehicleId(state);
         var inTruck = Outposts.takeTruck(state);
         var id = $"x{Js.Str(state.nextId)}";
-        var v = Js.T(inTruck) && Js.T(truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
+        var v = (Js.T(inTruck) && Js.T(truckId)) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
         if (Js.T(v))
         {
             v.driverId = $"x:{Js.Str(id)}";
         }
-        state.expeditions.push(Js.With(Js.Clone(Js.T(v) ? new() { truckId = v.id, leftTick = state.tick } : new()), __s0 => { __s0.id = $"x{Js.Str(state.nextId++)}"; __s0.members = members; __s0.target = new() { x = poi.x, y = poi.y, label = poi.label }; __s0.home = home; __s0.returnTick = Js.T(outpost) ? Outposts.NEVER : state.tick + Js.T(inTruck) ? 1 : 2 * distance * Survivors.TICKS_PER_TILE + SEARCH_TICKS; __s0.truck = inTruck; __s0.outpost = outpost; }));
+        state.expeditions.push(Js.With(Js.Clone(Js.T(v) ? new() { truckId = v.id, leftTick = state.tick } : new()), __s0 => { __s0.id = $"x{Js.Str(state.nextId++)}"; __s0.members = members; __s0.target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }; __s0.home = home; __s0.returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((Js.T(inTruck) ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS); __s0.truck = inTruck; __s0.outpost = outpost; }));
         Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(Js.T(inTruck) ? " in the truck" : "")} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? " to hold it as an outpost" : "")}");
         return null;
     }
@@ -85,33 +85,33 @@ public static partial class Expeditions
     public static bool onTheRoad(SimState state, Expedition x)
     {
         var v = Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId);
-        if (!Js.T(v) || x.leftTick == null)
+        if (!Js.T(v) || (x.leftTick == null))
         {
             return false;
         }
-        var leg = JsMath.max(1, JsMath.floor(((double)(Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE) / (2))));
+        var leg = JsMath.max(1, JsMath.floor(((double)((Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE)) / (2))));
         var e = state.tick - x.leftTick;
-        var driving = e < leg || !Js.T(x.outpost) && e >= leg + SEARCH_TICKS;
-        var f = e < leg ? ((double)(e) / (leg)) : Js.T(x.outpost) || e < leg + SEARCH_TICKS ? 1 : JsMath.max(0, 1 - ((double)(e - leg - SEARCH_TICKS) / (leg)));
-        var p = new() { x = JsMath.round(x.home.x + x.target.x - x.home.x * f), y = JsMath.round(x.home.y + x.target.y - x.home.y * f) };
+        var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
+        var f = (e < leg) ? ((double)(e) / (leg)) : (Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg)));
+        var p = new() { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
-        if (Js.T(x.outpost) && e >= leg)
+        if (Js.T(x.outpost) && (e >= leg))
         {
             v.driverId = null;
             x.Remove("truckId");
             return false;
         }
-        if (!Js.T(driving) || state.tick % Time.TICKS_PER_HOUR != 0)
+        if (!Js.T(driving) || ((state.tick % Time.TICKS_PER_HOUR) != 0))
         {
             return false;
         }
-        if (Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0x70ad) >= ((double)(ROAD_AMBUSH * state.settings.zombies) / (100)))
+        if (Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0x70ad) >= ((double)((ROAD_AMBUSH * state.settings.zombies)) / (100)))
         {
             return false;
         }
         var s = x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]!;
-        if (s.health > Health.HEALTH_MAX - INJURY)
+        if (s.health > (Health.HEALTH_MAX - INJURY))
         {
             s.health -= INJURY;
             Events.logEvent(state, $"The dead caught the truck on the road near ({Js.Str(p.x)}, {Js.Str(p.y)}): {Js.Str(s.name)} was hurt");
@@ -136,7 +136,7 @@ public static partial class Expeditions
         var v = Js.T(x.truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId) : null;
         if (Js.T(v))
         {
-            var spot = Js.T(Vehicles.parkable(state, x.home)) ? x.home : Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new() { x = px, y = py }), 400) ?? x.home;
+            var spot = Js.T(Vehicles.parkable(state, x.home)) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new() { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
             v.pos = Js.Clone(spot);
             v.at = Motion.centre(spot);
             v.was = Js.Clone(v.at);
@@ -148,7 +148,7 @@ public static partial class Expeditions
         }
         var sleepers = state.dormant.filter(near);
         state.dormant = state.dormant.filter((d) => !Js.T(near(d)));
-        var deathChance = JsMath.min(0.5, 0.05 + ((double)(0.08 * sleepers.length) / (x.members.length)));
+        var deathChance = JsMath.min(0.5, 0.05 + ((double)((0.08 * sleepers.length)) / (x.members.length)));
         List<Survivor> back = [];
         List<Survivor> lost = [];
         List<Survivor> hurt = [];
@@ -167,7 +167,7 @@ public static partial class Expeditions
                 }
                 continue;
             }
-            if (sleepers.length > 0 && Rng.random(state) < INJURY_CHANCE)
+            if ((sleepers.length > 0) && (Rng.random(state) < INJURY_CHANCE))
             {
                 s.health = JsMath.max(1, s.health - INJURY);
                 hurt.push(s);
@@ -178,11 +178,11 @@ public static partial class Expeditions
             back.push(s);
         }
         state.survivors.push([.. back]);
-        var room = CARRY * back.length * Js.T(x.truck) ? 2 : 1;
+        var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
         var found = 0;
-        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => f.loot > 0 && Js.T(near(f)))))
+        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && Js.T(near(f)))))
         {
-            while (crate.loot > 0 && room > 0)
+            while ((crate.loot > 0) && (room > 0))
             {
                 crate.loot -= 1;
                 room -= 1;
@@ -194,12 +194,12 @@ public static partial class Expeditions
                 FurnitureMod.setScavenge(state, crate, false);
             }
         }
-        state.pointsOfInterest = state.pointsOfInterest.filter((p) => !p.x == x.target.x && p.y == x.target.y);
+        state.pointsOfInterest = state.pointsOfInterest.filter((p) => !(p.x == x.target.x) && (p.y == x.target.y));
         foreach (var s in Js.Iter(lost))
         {
             Mood.mournDeath(state, s);
         }
-        var parts = [$"brought back {Js.Str(found)} find{Js.Str(found == 1 ? "" : "s")}"];
+        var parts = [$"brought back {Js.Str(found)} find{Js.Str((found == 1) ? "" : "s")}"];
         if (Js.T(hurt.length))
         {
             parts.push($"{Js.Str(hurt.map((s) => s.name).join(", "))} hurt");
@@ -208,7 +208,7 @@ public static partial class Expeditions
         {
             parts.push($"{Js.Str(lost.map((s) => s.name).join(", "))} didn't come back");
         }
-        if (x.target.label == Radio.DISTRESS_LABEL && back.length > 0)
+        if ((x.target.label == Radio.DISTRESS_LABEL) && (back.length > 0))
         {
             var n = 1 + JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), 0xd15) * 2);
             List<string> names = [];
@@ -220,7 +220,7 @@ public static partial class Expeditions
             }
             parts.push($"and brought in {Js.Str(names.join(" and "))}");
         }
-        if (back.length > 0 && Hash.hashRoll(Hash.idNumber(x.id), 0xd09) < Dogs.EXPEDITION_DOG_CHANCE)
+        if ((back.length > 0) && (Hash.hashRoll(Hash.idNumber(x.id), 0xd09) < Dogs.EXPEDITION_DOG_CHANCE))
         {
             var dog = Dogs.addDog(state, x.home.x, x.home.y);
             parts.push($"and a dog, {Js.Str(dog.name)}, followed them home");

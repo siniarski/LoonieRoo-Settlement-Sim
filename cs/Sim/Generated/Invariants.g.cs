@@ -45,7 +45,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} carries {Js.Str(item.id)} but it says carriedBy {Js.Str(item.carriedBy)}");
                 }
-                if (!Js.T(s.jobId) && s.meal?.itemId != s.carrying && state.control?.survivorId != s.id)
+                if ((!Js.T(s.jobId) && (s.meal?.itemId != s.carrying)) && (state.control?.survivorId != s.id))
                 {
                     problems.push($"{Js.Str(s.name)} carries {Js.Str(s.carrying)} with no job or meal");
                 }
@@ -68,7 +68,7 @@ public static partial class Invariants
             }
             if (Js.T(job.blueprintId))
             {
-                perBlueprint.set(job.blueprintId, perBlueprint.get(job.blueprintId) ?? 0 + 1);
+                perBlueprint.set(job.blueprintId, (perBlueprint.get(job.blueprintId) ?? 0) + 1);
             }
         }
         foreach (var (bp, n) in Js.Iter(perBlueprint))
@@ -81,7 +81,7 @@ public static partial class Invariants
         var occupied = new JsSet<string>();
         foreach (var item in Js.Iter(state.items))
         {
-            if (Js.T(item.pos) ? 1 : 0 + Js.T(item.carriedBy) ? 1 : 0 + Js.T(item.inside) ? 1 : 0 != 1)
+            if ((Js.T(item.pos) ? 1 : 0) + (Js.T(item.carriedBy) ? 1 : 0) + (Js.T(item.inside) ? 1 : 0) != 1)
             {
                 problems.push($"{Js.Str(item.id)} must be either on the ground, carried, or in a container");
             }
@@ -99,7 +99,7 @@ public static partial class Invariants
                 }
             }
             var bearer = Js.T(item.carriedBy) ? survivors.get(item.carriedBy) : null;
-            if (Js.T(item.carriedBy) && bearer?.carrying != item.id && bearer?.weapon != item.id && bearer?.body != item.id && bearer?.feet != item.id && bearer?.cart != item.id && bearer?.tool != item.id && !Js.T(bearer?.cartLoad.includes(item.id)) && !Js.T(bearer?.pack.includes(item.id)))
+            if ((Js.T(item.carriedBy) && (bearer?.carrying != item.id)) && (bearer?.weapon != item.id) && (bearer?.body != item.id) && (bearer?.feet != item.id) && (bearer?.cart != item.id) && (bearer?.tool != item.id) && !Js.T(bearer?.cartLoad.includes(item.id)) && !Js.T(bearer?.pack.includes(item.id)))
             {
                 problems.push($"{Js.Str(item.id)} says carriedBy {Js.Str(item.carriedBy)}, who isn't carrying it");
             }
@@ -107,8 +107,8 @@ public static partial class Invariants
             {
                 var holder = survivors.get(item.reservedBy);
                 var job = Js.T(Js.T(holder?.jobId)) ? jobs.get(holder.jobId) : null;
-                var @using = holder?.meal?.itemId == item.id || holder?.treatment?.itemId == item.id || holder?.arming == item.id || holder?.dressing == item.id || holder?.reading?.itemId == item.id;
-                if (job?.itemId != item.id && !Js.T(@using))
+                var @using = (holder?.meal?.itemId == item.id) || (holder?.treatment?.itemId == item.id) || (holder?.arming == item.id) || (holder?.dressing == item.id) || (holder?.reading?.itemId == item.id);
+                if ((job?.itemId != item.id) && !Js.T(@using))
                 {
                     problems.push($"{Js.Str(item.id)} reserved by {Js.Str(item.reservedBy)} without a matching haul job, meal, treatment, or arming");
                 }
@@ -148,22 +148,22 @@ public static partial class Invariants
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (s.rest < 0 || s.rest > Rest.REST_MAX || !JsNumber.isInteger(s.rest))
+            if ((s.rest < 0) || (s.rest > Rest.REST_MAX) || !JsNumber.isInteger(s.rest))
             {
                 problems.push($"{Js.Str(s.name)} has rest {Js.Str(s.rest)}");
             }
-            if (s.satiety < 0 || s.satiety > Food.SATIETY_MAX || !JsNumber.isInteger(s.satiety))
+            if ((s.satiety < 0) || (s.satiety > Food.SATIETY_MAX) || !JsNumber.isInteger(s.satiety))
             {
                 problems.push($"{Js.Str(s.name)} has satiety {Js.Str(s.satiety)}");
             }
-            if (s.health <= 0 || s.health > Health.HEALTH_MAX || !JsNumber.isInteger(s.health))
+            if ((s.health <= 0) || (s.health > Health.HEALTH_MAX) || !JsNumber.isInteger(s.health))
             {
                 problems.push($"{Js.Str(s.name)} has health {Js.Str(s.health)}");
             }
             if (Js.T(s.treatment))
             {
                 var bandage = items.get(s.treatment.itemId);
-                if (!Js.T(bandage) || bandage.kind != "bandage" && bandage.kind != "medicine")
+                if (!Js.T(bandage) || (bandage.kind != "bandage") && (bandage.kind != "medicine"))
                 {
                     problems.push($"{Js.Str(s.name)} is treating with missing bandage {Js.Str(s.treatment.itemId)}");
                 }
@@ -183,7 +183,7 @@ public static partial class Invariants
             if (Js.T(s.weapon))
             {
                 var weapon = items.get(s.weapon);
-                if (!Js.T(weapon) || weapon.kind != "weapon" && weapon.kind != "gun")
+                if (!Js.T(weapon) || (weapon.kind != "weapon") && (weapon.kind != "gun"))
                 {
                     problems.push($"{Js.Str(s.name)} wields missing weapon {Js.Str(s.weapon)}");
                 }
@@ -195,15 +195,15 @@ public static partial class Invariants
             if (Js.T(s.arming))
             {
                 var weapon = items.get(s.arming);
-                if (!Js.T(weapon) || weapon.kind != "weapon" && weapon.kind != "gun" && weapon.kind != "ammo")
+                if (!Js.T(weapon) || (weapon.kind != "weapon") && (weapon.kind != "gun") && (weapon.kind != "ammo"))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching missing weapon {Js.Str(s.arming)}");
                 }
-                else if (weapon.reservedBy != s.id || !Js.T(weapon.pos))
+                else if ((weapon.reservedBy != s.id) || !Js.T(weapon.pos))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching {Js.Str(weapon.id)}, which isn't reserved on the ground");
                 }
-                if (Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.treatment))
+                if ((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.treatment))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching a weapon while busy with something else");
                 }
@@ -212,7 +212,7 @@ public static partial class Invariants
             {
                 var id = s[Js.Idx(slot)];
                 var worn = Js.T(id) ? items.get(id) : null;
-                if (Js.T(id) && !Js.T(worn) || worn.carriedBy != s.id || !Js.T(Clothing.isGarment(worn.kind)) || Clothing.SLOT_OF[Js.Idx(worn.kind)] != slot)
+                if (Js.T(id) && (!Js.T(worn) || (worn.carriedBy != s.id)) || !Js.T(Clothing.isGarment(worn.kind)) || (Clothing.SLOT_OF[Js.Idx(worn.kind)] != slot))
                 {
                     problems.push($"{Js.Str(s.name)} wears {Js.Str(id)} on {Js.Str(slot)}, which doesn't fit");
                 }
@@ -220,18 +220,18 @@ public static partial class Invariants
             if (Js.T(s.dressing))
             {
                 var item = items.get(s.dressing);
-                if (!Js.T(item) || item.reservedBy != s.id || !Js.T(item.pos))
+                if ((!Js.T(item) || (item.reservedBy != s.id)) || !Js.T(item.pos))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching {Js.Str(s.dressing)}, which isn't reserved on the ground");
                 }
-                if (Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming))
+                if ((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching clothing while busy with something else");
                 }
             }
             if (Js.T(s.leisure))
             {
-                if (Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.breakdown))
+                if ((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.breakdown))
                 {
                     problems.push($"{Js.Str(s.name)} is relaxing while busy with something else");
                 }
@@ -239,18 +239,18 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} relaxes on unwalkable ({Js.Str(s.leisure.x)}, {Js.Str(s.leisure.y)})");
                 }
-                if (state.survivors.some((o) => o != s && o.leisure?.x == s.leisure!.x && o.leisure.y == s.leisure!.y))
+                if (state.survivors.some((o) => (o != s) && (o.leisure?.x == s.leisure!.x) && (o.leisure.y == s.leisure!.y)))
                 {
                     problems.push($"{Js.Str(s.name)} shares a rec room spot");
                 }
             }
-            if (s.infection != null && s.infection < 0 || !JsNumber.isInteger(s.infection))
+            if ((s.infection != null) && (s.infection < 0) || !JsNumber.isInteger(s.infection))
             {
                 problems.push($"{Js.Str(s.name)} has infection {Js.Str(s.infection)}");
             }
             foreach (var (id, v) in Js.Iter(Js.ObjectEntries(s.opinions)))
             {
-                if (!survivors.has(id) || id == s.id || v < -100 || v > 100)
+                if ((!survivors.has(id) || (id == s.id)) || (v < -100) || (v > 100))
                 {
                     problems.push($"{Js.Str(s.name)} has an opinion {Js.Str(v)} of {Js.Str(id)}");
                 }
@@ -262,7 +262,7 @@ public static partial class Invariants
             if (Js.T(s.meal))
             {
                 var food = items.get(s.meal.itemId);
-                if (!Js.T(food) || food.kind != "food" && food.kind != "meal")
+                if (!Js.T(food) || (food.kind != "food") && (food.kind != "meal"))
                 {
                     problems.push($"{Js.Str(s.name)} is eating missing food {Js.Str(s.meal.itemId)}");
                 }
@@ -279,7 +279,7 @@ public static partial class Invariants
                     problems.push($"{Js.Str(s.name)} is eating and sleeping at once");
                 }
                 var seat = s.meal.seat;
-                if (Js.T(seat) && state.survivors.some((o) => o != s && Js.T(Js.T(o.meal?.seat)) && o.meal.seat.x == seat.x && o.meal.seat.y == seat.y))
+                if (Js.T(seat) && state.survivors.some((o) => (o != s) && Js.T(Js.T(o.meal?.seat)) && (o.meal.seat.x == seat.x) && (o.meal.seat.y == seat.y)))
                 {
                     problems.push($"{Js.Str(s.name)} shares mess hall seat ({Js.Str(seat.x)}, {Js.Str(seat.y)})");
                 }
@@ -314,36 +314,36 @@ public static partial class Invariants
         {
             if (Js.T(j.furnitureId))
             {
-                scavengeJobs.set(j.furnitureId, scavengeJobs.get(j.furnitureId) ?? 0 + 1);
+                scavengeJobs.set(j.furnitureId, (scavengeJobs.get(j.furnitureId) ?? 0) + 1);
             }
         }
         foreach (var f in Js.Iter(state.furniture))
         {
-            if (f.loot < 0 || !JsNumber.isInteger(f.loot))
+            if ((f.loot < 0) || !JsNumber.isInteger(f.loot))
             {
                 problems.push($"{Js.Str(f.id)} has loot {Js.Str(f.loot)}");
             }
-            if (Js.T(f.scavenge) && !f.kind == "tree" || f.kind == "crate" && f.loot > 0)
+            if (Js.T(f.scavenge) && !(f.kind == "tree") || (f.kind == "crate") && (f.loot > 0))
             {
                 problems.push($"{Js.Str(f.id)} marked for scavenging with nothing to find");
             }
-            if (scavengeJobs.get(f.id) ?? 0 > 1)
+            if ((scavengeJobs.get(f.id) ?? 0) > 1)
             {
                 problems.push($"{Js.Str(f.id)} has {Js.Str(scavengeJobs.get(f.id))} scavenge jobs");
             }
-            if (Js.T(f.occupant) && f.kind != "bed")
+            if (Js.T(f.occupant) && (f.kind != "bed"))
             {
                 problems.push($"{Js.Str(f.kind)} {Js.Str(f.id)} has an occupant");
             }
-            if (Js.T(f.owner) && f.kind != "bed" || !survivors.has(f.owner))
+            if (Js.T(f.owner) && (f.kind != "bed") || !survivors.has(f.owner))
             {
                 problems.push($"{Js.Str(f.kind)} {Js.Str(f.id)} owned by {Js.Str(f.owner)}, who isn't here");
             }
-            if (Js.T(f.owner) && Js.T(f.occupant) && f.occupant != f.owner)
+            if ((Js.T(f.owner) && Js.T(f.occupant)) && (f.occupant != f.owner))
             {
                 problems.push($"{Js.Str(f.owner)}'s bed {Js.Str(f.id)} is used by {Js.Str(f.occupant)}");
             }
-            if (Js.T(f.owner) && state.furniture.some((g) => g != f && g.owner == f.owner))
+            if (Js.T(f.owner) && state.furniture.some((g) => (g != f) && (g.owner == f.owner)))
             {
                 problems.push($"{Js.Str(f.owner)} owns more than one bed");
             }
@@ -380,7 +380,7 @@ public static partial class Invariants
             {
                 problems.push($"zombie {Js.Str(z.id)} stepping off floor");
             }
-            if (z.health <= 0 || z.health > z.maxHealth)
+            if ((z.health <= 0) || (z.health > z.maxHealth))
             {
                 problems.push($"zombie {Js.Str(z.id)} has health {Js.Str(z.health)}");
             }
@@ -398,7 +398,7 @@ public static partial class Invariants
             }
             else
             {
-                guarded.set(j.zombieId, guarded.get(j.zombieId) ?? 0 + 1);
+                guarded.set(j.zombieId, (guarded.get(j.zombieId) ?? 0) + 1);
             }
         }
         foreach (var (id, n) in Js.Iter(guarded))
@@ -414,7 +414,7 @@ public static partial class Invariants
         {
             if (Js.T(j.plotId))
             {
-                tendedPlots.set(j.plotId, tendedPlots.get(j.plotId) ?? 0 + 1);
+                tendedPlots.set(j.plotId, (tendedPlots.get(j.plotId) ?? 0) + 1);
             }
         }
         foreach (var plot in Js.Iter(state.farm))
@@ -429,11 +429,11 @@ public static partial class Invariants
             {
                 problems.push($"farm plot {Js.Str(plot.id)} on non-floor ({Js.Str(key)})");
             }
-            if (plot.growth < 0 || plot.growth > Farming.growTicks(plot) || !Js.T(plot.planted) && plot.growth != 0)
+            if ((plot.growth < 0) || (plot.growth > Farming.growTicks(plot)) || (!Js.T(plot.planted) && (plot.growth != 0)))
             {
                 problems.push($"farm plot {Js.Str(plot.id)} has growth {Js.Str(plot.growth)}");
             }
-            if (tendedPlots.get(plot.id) ?? 0 > 1)
+            if ((tendedPlots.get(plot.id) ?? 0) > 1)
             {
                 problems.push($"farm plot {Js.Str(plot.id)} has {Js.Str(tendedPlots.get(plot.id))} jobs");
             }
@@ -447,9 +447,9 @@ public static partial class Invariants
         }
         void listed(List<double> arr, List<double> list, string name)
         {
-            var want = arr.flatMap((v, i) => v != 0 ? [i] : []);
+            var want = arr.flatMap((v, i) => (v != 0) ? [i] : []);
             var have = [.. list].sort((a, b) => a - b);
-            if (want.length != have.length || want.some((v, k) => v != have[Js.Idx(k)]))
+            if ((want.length != have.length) || want.some((v, k) => v != have[Js.Idx(k)]))
             {
                 problems.push($"{Js.Str(name)} list out of step with the map");
             }
@@ -465,11 +465,11 @@ public static partial class Invariants
             }
             var tile = grid.tiles[Js.Idx(i)]!;
             var at = $"({Js.Str(i % grid.width)}, {Js.Str(JsMath.floor(((double)(i) / (grid.width))))})";
-            if (tile != "wall" && tile != "door" && tile != "barricade")
+            if ((tile != "wall") && (tile != "door") && (tile != "barricade"))
             {
                 problems.push($"damage {Js.Str(d)} on {Js.Str(tile)} {Js.Str(at)}");
             }
-            else if (d < 0 || d >= Breach.structureHealth(grid, i) || !JsNumber.isInteger(d))
+            else if ((d < 0) || (d >= Breach.structureHealth(grid, i)) || !JsNumber.isInteger(d))
             {
                 problems.push($"{Js.Str(tile)} at {Js.Str(at)} has damage {Js.Str(d)}");
             }
@@ -478,7 +478,7 @@ public static partial class Invariants
         foreach (var f in Js.Iter(state.fires))
         {
             var key = $"{Js.Str(f.x)},{Js.Str(f.y)}";
-            if (fireTiles.has(key) || !Js.T(Grids.inBounds(grid, f.x, f.y)) || f.left <= 0)
+            if ((fireTiles.has(key) || !Js.T(Grids.inBounds(grid, f.x, f.y))) || (f.left <= 0))
             {
                 problems.push($"fire at ({Js.Str(key)}) is doubled, off the map or out");
             }
@@ -486,11 +486,11 @@ public static partial class Invariants
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (s.hydration < 0 || s.hydration > Water.HYDRATION_MAX || !JsNumber.isInteger(s.hydration))
+            if ((s.hydration < 0) || (s.hydration > Water.HYDRATION_MAX) || !JsNumber.isInteger(s.hydration))
             {
                 problems.push($"{Js.Str(s.name)} has hydration {Js.Str(s.hydration)}");
             }
-            if (Js.T(s.drink) && Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.dressing))
+            if (Js.T(s.drink) && (Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.dressing))
             {
                 problems.push($"{Js.Str(s.name)} is drinking while busy with something else");
             }
@@ -500,28 +500,28 @@ public static partial class Invariants
             if (Js.T(s.reading))
             {
                 var book = items.get(s.reading.itemId);
-                if (!Js.T(book) || book.kind != "book" || book.reservedBy != s.id || !Js.T(book.pos))
+                if ((!Js.T(book) || (book.kind != "book")) || (book.reservedBy != s.id) || !Js.T(book.pos))
                 {
                     problems.push($"{Js.Str(s.name)} is reading {Js.Str(s.reading.itemId)}, which isn't a reserved book on the ground");
                 }
-                if (Js.T(s.jobId) || Js.T(s.sleep) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.dressing) || Js.T(s.drink) || Js.T(s.leisure))
+                if ((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.treatment) || Js.T(s.arming) || Js.T(s.dressing) || Js.T(s.drink) || Js.T(s.leisure))
                 {
                     problems.push($"{Js.Str(s.name)} is reading while busy with something else");
                 }
             }
-            if (s.bitten != null && s.infection == null)
+            if ((s.bitten != null) && (s.infection == null))
             {
                 problems.push($"{Js.Str(s.name)} has a bite with no infection");
             }
-            if (s.childUntil != null && Js.T(s.jobId))
+            if ((s.childUntil != null) && Js.T(s.jobId))
             {
                 problems.push($"{Js.Str(s.name)} is a child with job {Js.Str(s.jobId)}");
             }
-            if (s.cartLoad.length > 0 && !Js.T(s.jobId) || !Js.T(s.cart) || !Js.T(s.carrying))
+            if ((s.cartLoad.length > 0) && (!Js.T(s.jobId) || !Js.T(s.cart)) || !Js.T(s.carrying))
             {
                 problems.push($"{Js.Str(s.name)} has a loaded cart with no haul on");
             }
-            if (Js.T(s.cart) && items.get(s.cart)?.kind != "cart" || items.get(s.cart)?.carriedBy != s.id)
+            if (Js.T(s.cart) && (items.get(s.cart)?.kind != "cart") || (items.get(s.cart)?.carriedBy != s.id))
             {
                 problems.push($"{Js.Str(s.name)} pushes {Js.Str(s.cart)}, which isn't their cart");
             }
@@ -542,21 +542,21 @@ public static partial class Invariants
         }
         foreach (var d in Js.Iter(state.dogs))
         {
-            if (!Js.T(Grids.isWalkable(grid, d.pos.x, d.pos.y)) || d.health <= 0)
+            if (!Js.T(Grids.isWalkable(grid, d.pos.x, d.pos.y)) || (d.health <= 0))
             {
                 problems.push($"dog {Js.Str(d.id)} is in a wall or dead");
             }
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (s.sick != null && s.sick <= 0 || !JsNumber.isInteger(s.sick))
+            if ((s.sick != null) && (s.sick <= 0) || !JsNumber.isInteger(s.sick))
             {
                 problems.push($"{Js.Str(s.name)} has sickness {Js.Str(s.sick)}");
             }
         }
         foreach (var i in Js.Iter(grid.reinforced))
         {
-            if (grid.tiles[Js.Idx(i)] != "wall" && grid.tiles[Js.Idx(i)] != "door" && grid.tiles[Js.Idx(i)] != "barricade")
+            if ((grid.tiles[Js.Idx(i)] != "wall") && (grid.tiles[Js.Idx(i)] != "door") && (grid.tiles[Js.Idx(i)] != "barricade"))
             {
                 problems.push($"reinforcement on a {Js.Str(grid.tiles[Js.Idx(i)])} at {Js.Str(i)}");
             }
@@ -577,14 +577,14 @@ public static partial class Invariants
         }
         foreach (var h in Js.Iter(state.herds))
         {
-            if (!Js.T(Grids.inBounds(grid, h.x, h.y)) || !Js.T(Grids.inBounds(grid, h.to.x, h.to.y)) || h.size <= 0)
+            if ((!Js.T(Grids.inBounds(grid, h.x, h.y)) || !Js.T(Grids.inBounds(grid, h.to.x, h.to.y))) || (h.size <= 0))
             {
                 problems.push($"herd {Js.Str(h.id)} is off the map or empty");
             }
         }
         foreach (var a in Js.Iter(state.exploreAreas))
         {
-            if (a.x0 > a.x1 || a.y0 > a.y1 || a.x0 < 0 || a.y0 < 0 || a.x1 >= grid.width || a.y1 >= grid.height)
+            if ((a.x0 > a.x1) || (a.y0 > a.y1) || (a.x0 < 0) || (a.y0 < 0) || (a.x1 >= grid.width) || (a.y1 >= grid.height))
             {
                 problems.push($"explore area {Js.Str(a.id)} is not a box on the map");
             }
@@ -597,7 +597,7 @@ public static partial class Invariants
                 problems.push($"room designation {Js.Str(d.id)} anchored on non-floor");
             }
             var label = Rooms.labelAt(state, d.x, d.y);
-            if (label >= 0 && roomsClaimed.has(label))
+            if ((label >= 0) && roomsClaimed.has(label))
             {
                 problems.push($"room {Js.Str(label)} has two designations");
             }
@@ -605,7 +605,7 @@ public static partial class Invariants
         }
         grid.dirt.forEach((d, i) =>
         {
-            if (d == 1 && Grids.getTile(grid, i % grid.width, JsMath.floor(((double)(i) / (grid.width)))) != "floor")
+            if ((d == 1) && (Grids.getTile(grid, i % grid.width, JsMath.floor(((double)(i) / (grid.width)))) != "floor"))
             {
                 problems.push($"dirt on non-floor tile {Js.Str(i)}");
             }

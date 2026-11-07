@@ -25,12 +25,12 @@ public static partial class Mess
         {
             return false;
         }
-        return FurnitureMod.ofKind(state, "table").some((f) => Space.manhattan(f, p) == 1 && Rooms.labelAt(state, f.x, f.y) == room);
+        return FurnitureMod.ofKind(state, "table").some((f) => (Space.manhattan(f, p) == 1) && (Rooms.labelAt(state, f.x, f.y) == room));
     }
 
     public static bool seatTaken(SimState state, Survivor s, Point p)
     {
-        return state.survivors.some((o) => o != s && o.meal?.seat != null && Js.T(Space.samePoint(o.meal.seat, p)));
+        return state.survivors.some((o) => (o != s) && (o.meal?.seat != null) && Js.T(Space.samePoint(o.meal.seat, p)));
     }
 
     /// <summary>Nearest free seat reachable from `from` (where the food is), or null if there is none.</summary>
@@ -52,14 +52,14 @@ public static partial class Mess
                 }
                 foreach (var p in Js.Iter(Grids.neighbours4(state.grid, table.x, table.y)))
                 {
-                    if (!seats.some((q) => Js.T(Space.samePoint(q, p))) && Js.T(isSeat(state, p, halls)) && !Js.T(seatTaken(state, s, p)))
+                    if ((!seats.some((q) => Js.T(Space.samePoint(q, p))) && Js.T(isSeat(state, p, halls))) && !Js.T(seatTaken(state, s, p)))
                     {
                         seats.push(p);
                     }
                 }
             }
         }
-        seats.sort((a, b) => Js.T(Space.manhattan(from, a) - Space.manhattan(from, b)) || Js.T(a.y - b.y) || Js.T(a.x - b.x));
+        seats.sort((a, b) => (Js.T(Space.manhattan(from, a) - Space.manhattan(from, b))) || (Js.T(a.y - b.y)) || (Js.T(a.x - b.x)));
         return seats.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p]))) ?? null;
     }
 }

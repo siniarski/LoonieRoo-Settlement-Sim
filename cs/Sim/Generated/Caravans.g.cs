@@ -41,7 +41,7 @@ public static partial class Caravans
             return null;
         }
         state.caravans ??= [];
-        Caravan c = new() { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = from.x, y = from.y, dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = [.. goods], nextStepTick = state.tick + CARAVAN_STEP };
+        Caravan c = new() { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = Js.I(from.x), y = Js.I(from.y), dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = [.. goods], nextStepTick = state.tick + CARAVAN_STEP };
         state.caravans.push(c);
         return c;
     }
@@ -56,7 +56,7 @@ public static partial class Caravans
         }
         foreach (var c in Js.Iter([.. list]))
         {
-            if (state.tick % Time.TICKS_PER_HOUR == 0 && Js.T(ambushed(state, c)))
+            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(ambushed(state, c)))
             {
                 continue;
             }
@@ -67,7 +67,7 @@ public static partial class Caravans
             c.nextStepTick = state.tick + CARAVAN_STEP;
             c.x += JsMath.sign(c.dest.x - c.x);
             c.y += JsMath.sign(c.dest.y - c.y);
-            if (c.x == c.dest.x && c.y == c.dest.y)
+            if ((c.x == c.dest.x) && (c.y == c.dest.y))
             {
                 arrive(state, c);
             }
@@ -77,21 +77,21 @@ public static partial class Caravans
     /// <summary>The dead catch up with it: a person and a share of the load lost; all of them, and it's gone.</summary>
     public static bool ambushed(SimState state, Caravan c)
     {
-        var chance = ((double)(AMBUSH_CHANCE * 1 + ((double)(Time.dayOf(state.tick)) / (20)) * state.settings.zombies) / (100));
+        var chance = ((double)(((AMBUSH_CHANCE * (1 + ((double)(Time.dayOf(state.tick)) / (20)))) * state.settings.zombies)) / (100));
         if (Hash.hashRoll(Hash.idNumber(c.id), state.tick, 0xca2) >= chance)
         {
             return false;
         }
         var share = ((double)(1) / (c.people));
         c.people -= 1;
-        c.food = JsMath.floor(c.food * 1 - share);
-        c.goods = c.goods.slice(0, JsMath.floor(c.goods.length * 1 - share));
+        c.food = JsMath.floor(c.food * (1 - share));
+        c.goods = c.goods.slice(0, JsMath.floor(c.goods.length * (1 - share)));
         var from = Settlements.getSettlement(state, c.from);
         if (Js.T(from))
         {
             from.people = JsMath.max(0, from.people - 1);
         }
-        var heard = c.to == "you" || Js.T(from) && !Js.T(Settlements.isHostile(from));
+        var heard = (c.to == "you") || (Js.T(from) && !Js.T(Settlements.isHostile(from)));
         if (c.people > 0)
         {
             if (Js.T(heard))
@@ -135,7 +135,7 @@ public static partial class Caravans
             {
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
-            var what = Js.Or([.. c.food > 0 ? [$"{Js.Str(c.food)} food"] : [], .. c.goods].join(", "), "nothing left");
+            var what = Js.Or([.. (c.food > 0) ? [$"{Js.Str(c.food)} food"] : [], .. c.goods].join(", "), "nothing left");
             Events.logEvent(state, $"A caravan from {Js.Str(from?.name ?? "the neighbours")} reached you: {Js.Str(what)}");
             return;
         }
