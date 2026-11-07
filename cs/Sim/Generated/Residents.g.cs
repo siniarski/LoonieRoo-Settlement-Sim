@@ -60,7 +60,7 @@ public static partial class Residents
             var id = $"r{Js.Str(state.nextId++)}";
             Point spot = new Point { x = Js.I((box.x0 + 1) + (i % JsMath.max(1, (box.x1 - box.x0) - 1))), y = Js.I((box.y1 - 1) - (JsMath.floor(((double)(i) / (JsMath.max(1, (box.x1 - box.x0) - 1)))) % 3)) };
             var where = Js.T(Grids.inBounds(state.grid, spot.x, spot.y)) ? spot : new Point { x = Js.I(n.x), y = Js.I(n.y) };
-            state.residents.push(/*TODO object spread*/Js.Spread(Motion.placedAt(where), new() { id = id, settlementId = n.id, name = NAMES[Js.Idx(Hash.idNumber(id) % NAMES.length)]!, pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0 }));
+            state.residents.push(new() { id = id, settlementId = n.id, name = Js.NN(NAMES[Js.Idx(Hash.idNumber(id) % NAMES.length)]), pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0, at = Motion.placedAt(where).at, was = Motion.placedAt(where).was });
         }
     }
 

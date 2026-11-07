@@ -38,7 +38,7 @@ public static partial class NatureMod
         var gy = JsMath.floor(((double)(y) / (scale)));
         var fx = smooth(((double)(x) / (scale)) - gx);
         var fy = smooth(((double)(y) / (scale)) - gy);
-        double c(int i, int j)
+        double c(double i, double j)
         {
             return roll(seed, gx + i, gy + j, salt);
         }

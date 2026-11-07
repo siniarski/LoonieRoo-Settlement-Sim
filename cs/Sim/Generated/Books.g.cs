@@ -26,9 +26,9 @@ public static partial class Books
         var roll = Hash.hashRoll(Hash.idNumber(id), 0xb00c);
         if (roll < ((double)(1) / (KNOWLEDGE_BOOK_ONE_IN)))
         {
-            return (Js.ObjectKeys(KNOWLEDGE))[Js.Idx(JsMath.floor((roll * KNOWLEDGE_BOOK_ONE_IN) * 2) % 2)]!;
+            return Js.NN((Js.ObjectKeys(KNOWLEDGE))[Js.Idx(JsMath.floor((roll * KNOWLEDGE_BOOK_ONE_IN) * 2) % 2)]);
         }
-        return SKILL_BOOKS[Js.Idx(JsMath.floor(roll * 1000) % SKILL_BOOKS.length)]!;
+        return Js.NN(SKILL_BOOKS[Js.Idx(JsMath.floor(roll * 1000) % SKILL_BOOKS.length)]);
     }
 
     public static bool knows(SimState state, string k)

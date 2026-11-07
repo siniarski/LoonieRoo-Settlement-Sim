@@ -136,8 +136,7 @@ public static partial class Animals
 
     public static Animal addDeer(SimState state, int x, int y)
     {
-        var placed = Motion.placedAt(new Point { x = x, y = y });
-        Animal a = new Animal { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new Point { x = x, y = y }, at = placed.at, was = placed.was, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS };
+        Animal a = new() { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.animals.push(a);
         return a;
     }
@@ -260,7 +259,7 @@ public static partial class Animals
             return null;
         }
         options.sort((p, q) => Js.T(toward) ? (Space.manhattan(p, from) - Space.manhattan(q, from)) : (Space.manhattan(q, from) - Space.manhattan(p, from)));
-        return options[Js.Idx(0)]!;
+        return Js.NN(options[Js.Idx(0)]);
     }
 
     public static void wander(SimState state, Animal a, double every)
@@ -272,7 +271,7 @@ public static partial class Animals
         var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => Js.T(canStep(state, a.pos, p)));
         if (options.length > 0)
         {
-            step(a, options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]!);
+            step(a, Js.NN(options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]));
         }
     }
 
@@ -288,7 +287,7 @@ public static partial class Animals
             return;
         }
         var near = state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= DEER_WARY);
-        var to = Js.T(near) ? options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos))[Js.Idx(0)]! : options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]!;
+        var to = Js.T(near) ? Js.NN(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos))[Js.Idx(0)]) : Js.NN(options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]);
         step(a, to);
     }
 
@@ -558,7 +557,7 @@ public static partial class Animals
         var width = __d0.width;
         var height = __d0.height;
         Point want = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
-        bool clear(int x, int y)
+        bool clear(double x, double y)
         {
             return state.survivors.every((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);
         }

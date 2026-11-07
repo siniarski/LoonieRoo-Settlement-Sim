@@ -38,7 +38,7 @@ public static partial class Dogs
     public static Dog addDog(SimState state, int x, int y)
     {
         var n = state.nextId++;
-        Dog dog = /*TODO object spread*/Js.Spread(Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }), new() { id = $"g{Js.Str(n)}", name = DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]!, pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false });
+        Dog dog = new() { id = $"g{Js.Str(n)}", name = Js.NN(DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.dogs.push(dog);
         return dog;
     }
@@ -49,7 +49,7 @@ public static partial class Dogs
         var day = Time.dayOf(state.tick);
         if ((((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR))) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE)) && (state.survivors.length > 0))
         {
-            var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]!.pos;
+            var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? Js.NN(state.survivors[Js.Idx(0)]).pos;
             var dog = addDog(state, spot.x, spot.y);
             Events.logEvent(state, $"A stray dog, {Js.Str(dog.name)}, has wandered in at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
         }

@@ -220,7 +220,7 @@ public static partial class Talk
         else if (kind == "pet")
         {
             var dog = Dogs.addDog(state, spot.x, spot.y);
-            dog.name = pet!;
+            dog.name = Js.NN(pet);
             dog.waiting = true;
             task.targetId = dog.id;
             Events.logEvent(state, $"{Js.Str(s.name)} asks: \"Find {Js.Str(pet)}. If {Js.Str(pet)}'s anywhere, it's at the house, {Js.Str(where)}.\"");
@@ -231,7 +231,7 @@ public static partial class Talk
         }
         else if (kind == "medicine")
         {
-            var friend = friendFor(state, s)!;
+            var friend = Js.NN(friendFor(state, s));
             task.targetId = friend.id;
             Events.logEvent(state, $"{Js.Str(s.name)} asks: \"A friend of mine is at {Js.Str(friend.name)}, {Js.Str(where)}, and sick. Take them some medicine.\"");
         }
@@ -357,7 +357,7 @@ public static partial class Talk
                     {
                         return null;
                     }
-                    var medicine = Items.getItem(state, bearer.carrying!)!;
+                    var medicine = Js.NN(Items.getItem(state, Js.NN(bearer.carrying)));
                     bearer.carrying = null;
                     Items.removeItem(state, medicine);
                     Settlements.adjustReputation(state, friend, 15);

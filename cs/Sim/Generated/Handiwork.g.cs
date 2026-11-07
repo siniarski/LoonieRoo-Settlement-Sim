@@ -129,7 +129,7 @@ public static partial class Handiwork
         {
             return "it changed while you worked";
         }
-        var wood = carryingWood(state, s)!;
+        var wood = Js.NN(carryingWood(state, s));
         if (s.carrying == wood.id)
         {
             s.carrying = null;
@@ -147,7 +147,7 @@ public static partial class Handiwork
         var __d0 = s.pos;
         var x = __d0.x;
         var y = __d0.y;
-        var g = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]!)];
+        var g = Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]))];
         if (Js.T(Rooms.isIndoors(state, x, y)) || ((g != "grass") && (g != "field")))
         {
             return "nothing to forage here: find open grass, or a field";
@@ -172,7 +172,7 @@ public static partial class Handiwork
     {
         var i = Grids.tileIndex(state.grid, s.pos.x, s.pos.y);
         state.foraged[Js.Idx(Js.Str(i))] = Time.dayOf(state.tick);
-        var field = (Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(i)]!)] == "field") ? 2 : 1;
+        var field = (Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx(i)]))] == "field") ? 2 : 1;
         var chance = (FORAGE_CHANCE * field) * (Js.T(state.settings.winter) ? 0.5 : 1);
         if (Hash.hashRoll(Hash.idNumber(s.id), i, state.tick) >= chance)
         {

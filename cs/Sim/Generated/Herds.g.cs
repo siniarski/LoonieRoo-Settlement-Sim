@@ -148,7 +148,7 @@ public static partial class Herds
         var __d1 = state.grid;
         var width = __d1.width;
         var taken = Js.Set(state.zombies.map((z) => (z.pos.y * width) + z.pos.x));
-        bool free(int x, int y)
+        bool free(double x, double y)
         {
             return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has((y * width) + x);
         }
@@ -179,7 +179,7 @@ public static partial class Herds
         var woke = 0;
         Point? where = null;
         var cells = new JsMap<double, List<Point>>();
-        double cell(int x, int y)
+        double cell(double x, double y)
         {
             return (JsMath.floor(((double)(y) / (WAKE_RADIUS))) * 100003) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
         }

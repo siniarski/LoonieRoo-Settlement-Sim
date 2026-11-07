@@ -867,7 +867,7 @@ public static partial class Work
         List<Point> candidates = [];
         foreach (var index in Js.Iter((storage).ToList().sort((a, b) => a - b)))
         {
-            foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
+            foreach (var i in Js.Iter(Js.NN(rooms[Js.Idx(index)]).tiles))
             {
                 Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(storageTileFree(state, job, p, storage)))
@@ -947,7 +947,7 @@ public static partial class Work
     /// <summary>A step of a line from one tile to the next (side by side or diagonal) isn't blocked by an edge wall or door: for a diagonal, either way round the corner will do.</summary>
     public static bool seesAcross(Grid grid, int ax, int ay, int bx, int by)
     {
-        bool clear(int px, int py, int qx, int qy)
+        bool clear(double px, double py, double qx, double qy)
         {
             return Js.T(Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy)));
         }

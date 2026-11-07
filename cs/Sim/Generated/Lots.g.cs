@@ -137,7 +137,7 @@ public static partial class Lots
         var D = __d0.D;
         LotLayout @out = new() { buildings = [], yard = () => "grass", trees = [], decor = [] };
         var mirror = r(81) < 0.5;
-        double along(int w, double margin)
+        double along(double w, double margin)
         {
             return margin + JsMath.floor(r(80) * JsMath.max(1, ((F - w) - (2 * margin)) + 1));
         }
@@ -186,7 +186,7 @@ public static partial class Lots
                 {
                     {
                     List<string> kinds = ["police", "clinic", "school", "church", "office"];
-                    var kind = kinds[Js.Idx(JsMath.floor(r(0) * kinds.length))]!;
+                    var kind = Js.NN(kinds[Js.Idx(JsMath.floor(r(0) * kinds.length))]);
                     var plan = (kind == "church") ? Buildings.churchPlan(r, F - 4, D - 3) : Buildings.civicPlan(r, kind, F - 4, D - 3);
                     @out.buildings.push(setIn(lot, plan, along(plan.w, 2), 2, mirror));
                     @out.yard = () => "paving";
@@ -293,7 +293,7 @@ public static partial class Lots
             @out.buildings.push(setIn(lot, house, JsMath.max(1, JsMath.floor(((double)((F - house.w)) / (2)))), 1, r(13) < 0.5));
         }
         var mid = JsMath.floor(((double)(F) / (2)));
-        foreach (var (du, dv) in Js.Iter((List<List<int>>)[[0, 0], [1, 0], [0, 1], [1, 1]]))
+        foreach (var (du, dv) in new (double, double)[] { (0, 0), (1, 0), (0, 1), (1, 1) })
         {
             @out.decor.push(Js.With(Js.Clone(lotToMap(lot, (mid - 1) + du, 2 + dv)), __s3 => { __s3.look = "silo"; }));
         }
@@ -308,7 +308,7 @@ public static partial class Lots
     public static void drawLot(SimState state, LotContext ctx, Lot lot, int x0, int y0, int x1, int y1)
     {
         var layout = layoutLot(ctx.seed, lot);
-        bool inside(int x, int y)
+        bool inside(double x, double y)
         {
             return (((x >= x0) && (y >= y0)) && (x <= x1)) && (y <= y1);
         }
@@ -352,7 +352,7 @@ public static partial class Lots
         {
             return;
         }
-        double r(int k)
+        double r(double k)
         {
             return Hash.hashRoll(ctx.seed, lot.x, lot.y, 0xca5 + k);
         }
@@ -377,12 +377,12 @@ public static partial class Lots
     {
         var __d8 = b;
         var plan = __d8.plan;
-        double r(int k)
+        double r(double k)
         {
             return Hash.hashRoll(ctx.seed, lot.x, lot.y, (0x9300 + (bi * 1000)) + k);
         }
         var decay = Difficulty.ruinDecay(state);
-        Point at(int x, int y)
+        Point at(double x, double y)
         {
             var t = transform(plan, x, y, b.facing, b.mirror);
             return new Point { x = Js.I(b.ox + t.x), y = Js.I(b.oy + t.y) };
@@ -503,7 +503,7 @@ public static partial class Lots
         var sleepers = Difficulty.zombieScale(state, JsMath.floor(r(300) * ((plan.sleepers + 1) + JsMath.floor(((double)(d) / (60))))));
         for (var k = 0; k < sleepers; k++)
         {
-            var p = floors[Js.Idx(JsMath.floor(r(310 + k) * floors.length))]!;
+            var p = Js.NN(floors[Js.Idx(JsMath.floor(r(310 + k) * floors.length))]);
             if (Js.T(inside(p.x, p.y)))
             {
                 state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });

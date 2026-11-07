@@ -154,7 +154,7 @@ public static partial class Needs
         {
             return false;
         }
-        var meal = s.meal!;
+        var meal = Js.NN(s.meal);
         var item = Items.getItem(state, meal.itemId);
         if ((!Js.T(item) || (item.reservedBy != s.id)) || (!Js.T(item.pos) && (item.carriedBy != s.id)))
         {
@@ -297,7 +297,7 @@ public static partial class Needs
         {
             return false;
         }
-        var treatment = s.treatment!;
+        var treatment = Js.NN(s.treatment);
         var item = Items.getItem(state, treatment.itemId);
         if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {

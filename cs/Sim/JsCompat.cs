@@ -9,6 +9,13 @@ namespace LoonieRoo.Sim;
 
 public static class JsListExtensions
 {
+    extension(List<int> a)
+    {
+        /// <summary>indexOf/includes with a JS number, on a list of whole numbers.</summary>
+        public int indexOf(double x) => x == Math.Floor(x) && x >= int.MinValue && x <= int.MaxValue ? a.IndexOf((int)x) : -1;
+        public bool includes(double x) => a.indexOf(x) >= 0;
+    }
+
     extension<T>(List<T> a)
     {
         public int length
@@ -190,6 +197,9 @@ public static class JsListExtensions
             foreach (var x in a) acc = f(acc, x);
             return acc;
         }
+
+        /// <summary>slice with JS numbers (whole, or a fraction truncated as JS does).</summary>
+        public List<T> slice(double start, double? end = null) => a.slice((int)Math.Truncate(start), end is double ev ? (int)Math.Truncate(ev) : null);
 
         /// <summary>slice(start, end): negative indices count from the end, as in JS.</summary>
         public List<T> slice(int start = 0, int? end = null)
@@ -373,6 +383,11 @@ public static class JsDeconstruct
 public static class JsMath
 {
     public const double PI = Math.PI;
+    public const double SQRT2 = 1.4142135623730951;
+    public const double SQRT1_2 = 0.7071067811865476;
+    public const double E = Math.E;
+    public const double LN2 = 0.6931471805599453;
+    public const double LN10 = 2.302585092994046;
     public static double floor(double x) => Math.Floor(x);
     public static int floor(int x) => x;
     public static double ceil(double x) => Math.Ceiling(x);
@@ -565,6 +580,9 @@ public static partial class Js
     /// <summary>x! in TypeScript: for a nullable value type, its value.</summary>
     public static V NN<V>(V? x) where V : struct => x!.Value;
     public static V NN<V>(V? x) where V : class => x!;
+    public static double NN(double x) => x;
+    public static int NN(int x) => x;
+    public static bool NN(bool x) => x;
 
     // --- Numbers as strings (String(x), template literals): JS's formatting. ---
     public static string Str(double d)

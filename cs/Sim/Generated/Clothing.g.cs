@@ -133,7 +133,7 @@ public static partial class Clothing
         {
             return false;
         }
-        var item = Items.getItem(state, s.dressing!);
+        var item = Items.getItem(state, Js.NN(s.dressing));
         if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {
             cancelDressing(state, s, "clothing gone");
@@ -217,7 +217,7 @@ public static partial class Clothing
     {
         foreach (var slot in Js.Iter((List<string>)["body", "feet", "cart", "tool"]))
         {
-            var item = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, s[Js.Idx(slot)]!) : null;
+            var item = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, Js.NN(s[Js.Idx(slot)])) : null;
             s[Js.Idx(slot)] = null;
             if (Js.T(item))
             {

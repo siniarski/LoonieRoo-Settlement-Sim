@@ -26,13 +26,13 @@ public static partial class Survivors
     /// <summary>Hands out names in order (its own counter, so ids of other entities don't shift names).</summary>
     public static string nextSurvivorName(SimState state)
     {
-        return NAMES[Js.Idx(state.namesGiven++ % NAMES.length)]!;
+        return Js.NN(NAMES[Js.Idx(state.namesGiven++ % NAMES.length)]);
     }
 
     public static Survivor addSurvivor(SimState state, int x, int y, string? name = default)
     {
         var n = state.nextId++;
-        Survivor survivor = /*TODO object spread*/Js.Spread(Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }), new() { id = $"s{Js.Str(n)}", name = name ?? nextSurvivorName(state), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, goal = null, path = [], pathVersion = -1, note = null, priorities = new() { [Js.TODO_SPREAD] = default! }, jobId = null, carrying = null, nextSeekTick = 0, rest = Rest.initialRest(state.survivors.length), sleep = null, satiety = Food.initialSatiety(state.survivors.length), meal = null, nextMealTick = 0, health = Health.HEALTH_MAX, lastHurtBy = null, hurtTick = -1, treatment = null, nextTreatTick = 0, weapon = null, arming = null, nextArmTick = 0, thoughts = [], leisure = null, breakdown = null, xp = new() {  }, traits = [], infection = null, opinions = new() {  }, body = null, feet = null, dressing = null, nextDressTick = 0, sick = null, hydration = Water.HYDRATION_MAX, drink = null, nextDrinkTick = 0, reading = null, age = Family.startingAge($"s{Js.Str(n)}"), childUntil = null, cart = null, cartLoad = [], pack = [], tool = null, shift = "day", kills = 0, watchHours = 0, wound = null, bleeding = false, bleedUntil = 0, bitten = null, order = null, story = StoryMod.makeStory($"s{Js.Str(n)}"), resolve = Resolve.startingResolve($"s{Js.Str(n)}"), social = 60, comfort = 50, wish = null, endurance = 100, panic = 0, bodyHeat = 70, wetness = 0 });
+        Survivor survivor = new() { id = $"s{Js.Str(n)}", name = name ?? nextSurvivorName(state), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, goal = null, path = [], pathVersion = -1, note = null, priorities = new() { [Js.TODO_SPREAD] = default! }, jobId = null, carrying = null, nextSeekTick = 0, rest = Rest.initialRest(state.survivors.length), sleep = null, satiety = Food.initialSatiety(state.survivors.length), meal = null, nextMealTick = 0, health = Health.HEALTH_MAX, lastHurtBy = null, hurtTick = -1, treatment = null, nextTreatTick = 0, weapon = null, arming = null, nextArmTick = 0, thoughts = [], leisure = null, breakdown = null, xp = new() {  }, traits = [], infection = null, opinions = new() {  }, body = null, feet = null, dressing = null, nextDressTick = 0, sick = null, hydration = Water.HYDRATION_MAX, drink = null, nextDrinkTick = 0, reading = null, age = Family.startingAge($"s{Js.Str(n)}"), childUntil = null, cart = null, cartLoad = [], pack = [], tool = null, shift = "day", kills = 0, watchHours = 0, wound = null, bleeding = false, bleedUntil = 0, bitten = null, order = null, story = StoryMod.makeStory($"s{Js.Str(n)}"), resolve = Resolve.startingResolve($"s{Js.Str(n)}"), social = 60, comfort = 50, wish = null, endurance = 100, panic = 0, bodyHeat = 70, wetness = 0, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.survivors.push(survivor);
         return survivor;
     }
@@ -105,7 +105,7 @@ public static partial class Survivors
         {
             s.path = Pathfinding.straightenAhead(state.grid, s.pos, s.path);
         }
-        var next = s.path.shift()!;
+        var next = Js.NN(s.path.shift());
         var diagonal = (next.x != s.pos.x) && (next.y != s.pos.y);
         Doors.passThrough(state, next.x, next.y, true, s.pos);
         var pace = stepPace(state, s, next);
@@ -140,7 +140,7 @@ public static partial class Survivors
     /// <summary>Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.</summary>
     public static double stepPace(SimState state, Survivor s, Point next)
     {
-        var road = ROAD_GROUNDS.includes(state.grid.ground[Js.Idx((next.y * state.grid.width) + next.x)]!);
+        var road = ROAD_GROUNDS.includes(Js.NN(state.grid.ground[Js.Idx((next.y * state.grid.width) + next.x)]));
         return JsMath.max(2, (((((Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Js.T(Wounds.legSlowed(s)) ? 1 : 0)) - (Js.T(Orders.hurries(state, s)) ? 1 : 0)) + (Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0));
     }
 

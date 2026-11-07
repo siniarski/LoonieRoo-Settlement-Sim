@@ -84,8 +84,8 @@ public static partial class Family
         {
             for (var j = i + 1; j < adults.length; j++)
             {
-                var a = adults[Js.Idx(i)]!;
-                var b = adults[Js.Idx(j)]!;
+                var a = Js.NN(adults[Js.Idx(i)]);
+                var b = Js.NN(adults[Js.Idx(j)]);
                 if ((Relationships.opinion(a, b) < LOVERS) || (Relationships.opinion(b, a) < LOVERS))
                 {
                     continue;
@@ -114,8 +114,8 @@ public static partial class Family
         s.age = JsMath.max(s.age, GROWN_AGE);
         s.priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES);
         var n = Hash.idNumber(s.id);
-        var a = HEAD_START[Js.Idx(n % HEAD_START.length)]!;
-        var b = HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]!;
+        var a = Js.NN(HEAD_START[Js.Idx(n % HEAD_START.length)]);
+        var b = Js.NN(HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]);
         foreach (var t in Js.Iter((List<int>)[a, b]))
         {
             s.xp[Js.Idx(t)] = (Js.Q(s.xp[Js.Idx(t)], 0)) + (2 * Skills.XP_PER_LEVEL);

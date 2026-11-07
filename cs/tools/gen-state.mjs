@@ -152,6 +152,8 @@ function objectParts(t) {
 
 /** The C# type for a TS type node, naming inline object types after `hint`. */
 function csType(t, hint, intField) {
+  const field = memberOf(t);
+  if (field) return csType(field.type, field.hint, intField);
   const q = nullable(t) ? '?' : '';
   let core = t;
   if (t.type === 'TSUnionType') {
@@ -186,15 +188,33 @@ function csType(t, hint, intField) {
       }
       return classFor(core, hint) + q;
     }
-    case 'typed': return { Int32Array: 'int[]', Uint32Array: 'uint[]', Float64Array: 'double[]', Uint8Array: 'byte[]', Int8Array: 'sbyte[]', Uint16Array: 'ushort[]', Float32Array: 'float[]' }[refName(core)] + q;
+    case 'typed': return refName(core) + q; // TypedArrays.cs: JS's typed arrays, by the same names
     case 'map': return `JsMap<${csType(core.typeArguments.params[0], hint + 'Key', false).replace(/\?$/, '')}, ${csType(core.typeArguments.params[1], hint + 'Value', false)}>` + q;
     case 'set': return `JsSet<${csType(core.typeArguments.params[0], hint + 'Item', false).replace(/\?$/, '')}>` + q;
+    case 'function': {
+      // A function-typed field (never in saved state): Func or Action.
+      const ps = core.params.map((x, i) => csType(x.typeAnnotation.typeAnnotation, hint + 'Arg' + i, false));
+      const r = core.returnType?.typeAnnotation;
+      if (!r || r.type === 'TSVoidKeyword') return (ps.length ? `Action<${ps.join(', ')}>` : 'Action') + q;
+      return `Func<${[...ps, csType(r, hint + 'Result', false)].join(', ')}>` + q;
+    }
     case 'mixed': return 'System.Text.Json.Nodes.JsonNode' + q;
     default: return 'System.Text.Json.Nodes.JsonNode' + q;
   }
 }
 
 /** Follows type aliases (not interfaces or Record/Array) to what they stand for. */
+/** X['field'] for an interface X: the field's type, and the name its class has (X + Field). */
+function memberOf(t) {
+  if (t?.type !== 'TSIndexedAccessType' || t.objectType.type !== 'TSTypeReference' || t.indexType.type !== 'TSLiteralType' || typeof t.indexType.literal.value !== 'string') return null;
+  const name = refName(t.objectType);
+  const d = lookup(name, currentFile);
+  if (!d || d.node.type !== 'TSInterfaceDeclaration') return null;
+  const m = d.node.body.body.find((x) => x.type === 'TSPropertySignature' && (x.key.name ?? x.key.value) === t.indexType.literal.value);
+  if (!m?.typeAnnotation) return null;
+  return { type: m.typeAnnotation.typeAnnotation, hint: name + pascal(t.indexType.literal.value) };
+}
+
 function deref(t) {
   for (let k = 0; k < 20 && t.type === 'TSTypeReference'; k++) {
     const name = refName(t);
@@ -319,7 +339,7 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
     if (f.doc) lines.push(`    /// <summary>${esc(f.doc)}</summary>`);
     const id = kw.has(field) ? '@' + field : field;
     const t = f.type;
-    const init = t.endsWith('?') || ['double', 'int', 'bool'].includes(t) || t.includes('JsonNode') || t.endsWith('[]') ? (t.includes('JsonNode') || t.endsWith('[]')) && !t.endsWith('?') ? ' = null!;' : ';' : t === 'string' ? ' = "";' : ' = new();';
+    const init = /^(Func|Action)\b|^\w+Array\??$/.test(t) ? ' = null!;' : t.endsWith('?') || ['double', 'int', 'bool'].includes(t) || t.includes('JsonNode') || t.endsWith('[]') ? (t.includes('JsonNode') || t.endsWith('[]')) && !t.endsWith('?') ? ' = null!;' : ';' : t === 'string' ? ' = "";' : ' = new();';
     lines.push(`    public ${t} ${id} { get; set; }${init === ';' ? '' : init}`);
   }
   lines.push('}', '');

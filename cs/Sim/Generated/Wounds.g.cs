@@ -88,7 +88,7 @@ public static partial class Wounds
         {
             return (s.infection == null) ? $"{Js.Str(s.name)} isn't infected" : "too late: it has spread";
         }
-        var limb = s.bitten!;
+        var limb = Js.NN(s.bitten);
         s.infection = null;
         s.bitten = null;
         s.bleeding = true;

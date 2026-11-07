@@ -101,7 +101,7 @@ public static partial class Corpses
         var rotting = state.items.filter((i) => Js.T(isRotting(state, i, graves)));
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (!rotting.some((c) => Space.manhattan(c.pos!, s.pos) <= STENCH_RADIUS))
+            if (!rotting.some((c) => Space.manhattan(Js.NN(c.pos), s.pos) <= STENCH_RADIUS))
             {
                 continue;
             }
@@ -140,7 +140,7 @@ public static partial class Corpses
             {
                 continue;
             }
-            var room = rooms[Js.Idx(label)]!;
+            var room = Js.NN(rooms[Js.Idx(label)]);
             var heads = state.survivors.filter((o) => Rooms.labelAt(state, o.pos.x, o.pos.y) == label).length;
             var chance = CONTAGION * ((((double)(room.tiles.length) / (heads)) < CRAMPED_TILES) ? 2 : 1);
             foreach (var o in Js.Iter(state.survivors))

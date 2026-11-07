@@ -37,10 +37,10 @@ public static partial class Towns
     }
 
     /// <summary>A coarse map of the land (every 4 tiles): 0 open, 1 forest, 2 water.</summary>
-    public static byte[] landGrid(Nature n)
+    public static Uint8Array landGrid(Nature n)
     {
         var N = JsMath.ceil(((double)(n.size) / (4)));
-        var g = new byte[N * N];
+        var g = new Uint8Array(N * N);
         for (var j = 0; j < N; j++)
         {
             for (var i = 0; i < N; i++)
@@ -53,7 +53,7 @@ public static partial class Towns
         return g;
     }
 
-    public static List<Town> siteTowns(Nature n, byte[] land)
+    public static List<Town> siteTowns(Nature n, Uint8Array land)
     {
         var N = JsMath.ceil(((double)(n.size) / (4)));
         List<Town> towns = [];
@@ -87,7 +87,7 @@ public static partial class Towns
                         for (var k = JsMath.max(0, JsMath.floor(((double)((x - reach)) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)((x + reach)) / (4)))); k++)
                         {
                             var d = JsMath.sqrt((JsMath.pow((((k * 4) + 2) - x), 2)) + (JsMath.pow((((j * 4) + 2) - y), 2)));
-                            var c = land[Js.Idx((j * N) + k)]!;
+                            var c = Js.NN(land[Js.Idx((j * N) + k)]);
                             if (d <= radius)
                             {
                                 inside++;
@@ -135,27 +135,27 @@ public static partial class Towns
     public static List<Street> growStreets(Nature n, Town t, double ti)
     {
         List<Street> streets = [];
-        double r(int k)
+        double r(double k)
         {
             return NatureMod.roll(n.seed, t.x, t.y, 0x7200 + k);
         }
-        bool blocked(int x, int y)
+        bool blocked(double x, double y)
         {
             return ((((((x < 3) || (y < 3)) || (x >= (n.size - 4))) || (y >= (n.size - 4))) || Js.T(NatureMod.isWater(n, x, y))) || Js.T(NatureMod.isWater(n, x + 1, y + 1))) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
         }
         var laid = new JsSet<double>();
-        bool isStreet(int x, int y)
+        bool isStreet(double x, double y)
         {
             return laid.has((y * n.size) + x);
         }
-        double run(int x, int y, int dx, int dy, double len, bool main)
+        double run(double x, double y, double dx, double dy, double len, bool main)
         {
             if (Js.T(blocked(x, y)) || Js.T(isStreet(x, y)))
             {
                 return 0;
             }
             var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
-            bool crowded(int sx, int sy)
+            bool crowded(double sx, double sy)
             {
                 for (var o = 2; o <= 9; o++)
                 {
@@ -206,7 +206,7 @@ public static partial class Towns
         var levels = (t.kind == "village") ? 1 : 2;
         var odds = (t.kind == "village") ? 0.55 : 0.75;
         var k = 10;
-        void grow(int x, int y, int dx, int dy, double len, double level)
+        void grow(double x, double y, double dx, double dy, double len, double level)
         {
             var steps = run(x, y, dx, dy, len, level == 0);
             if ((steps == 0) || (level >= levels))
@@ -219,7 +219,7 @@ public static partial class Towns
             {
                 var bx = x + (dx * off);
                 var by = y + (dy * off);
-                foreach (var side in Js.Iter((List<int>)[1, -1]))
+                foreach (var side in Js.Iter((List<double>)[1, -1]))
                 {
                     if (r(k++) > odds)
                     {
@@ -231,8 +231,8 @@ public static partial class Towns
                 off += STREET_GAP + JsMath.floor(r(k++) * 6);
             }
         }
-        var (ax, ay) = Js.T(t.eastWest) ? (1, 0) : (0, 1);
-        var (cx, cy) = Js.T(t.eastWest) ? (0, 1) : (1, 0);
+        var __c0 = Js.T(t.eastWest); var ax = __c0 ? 1 : 0; var ay = __c0 ? 0 : 1;
+        var __c1 = Js.T(t.eastWest); var cx = __c1 ? 0 : 1; var cy = __c1 ? 1 : 0;
         grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * (0.9 + (r(1) * 0.2))), 0);
         grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * (0.9 + (r(2) * 0.2))), 0);
         grow(t.x + (cx * 2), t.y + (cy * 2), cx, cy, JsMath.floor(t.radius * (0.6 + (r(3) * 0.4))), 0);

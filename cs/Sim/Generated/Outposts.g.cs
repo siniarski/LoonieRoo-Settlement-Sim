@@ -100,7 +100,7 @@ public static partial class Outposts
             {
                 continue;
             }
-            var s = x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]!;
+            var s = Js.NN(x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]);
             if (s.health > (Health.HEALTH_MAX - OUTPOST_HURT))
             {
                 s.health -= OUTPOST_HURT;

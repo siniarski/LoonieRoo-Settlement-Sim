@@ -29,6 +29,6 @@ public static partial class Loot
                 return kind;
             }
         }
-        return table.at(-1)![Js.Idx(0)];
+        return Js.NN(table.at(-1))[Js.Idx(0)];
     }
 }

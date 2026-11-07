@@ -60,7 +60,7 @@ public static partial class TimelineMod
     /// <summary>Sets the days the mains go off and the helicopter comes (generated worlds).</summary>
     public static void rollTimeline(SimState state, double seed)
     {
-        var w = WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]!;
+        var w = Js.NN(WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]);
         var roll = (__p0, key) =>
         {
             var (lo, hi) = __p0;
@@ -100,7 +100,7 @@ public static partial class TimelineMod
     /// <summary>Who the world's happenings come looking for: the one you control, else the first survivor.</summary>
     public static Point? focus(SimState state)
     {
-        var you = Js.T(state.control) ? state.survivors.find((s) => s.id == state.control!.survivorId) : null;
+        var you = Js.T(state.control) ? state.survivors.find((s) => s.id == Js.NN(state.control).survivorId) : null;
         return (you ?? state.survivors[Js.Idx(0)])?.pos ?? null;
     }
 

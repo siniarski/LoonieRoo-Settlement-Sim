@@ -88,12 +88,6 @@ public partial class FreeSpotsResult
     public double walls { get; set; }
 }
 
-public partial class FreeSpotsCandidates
-{
-    public Point p { get; set; }
-    public double walls { get; set; }
-}
-
 public partial class CacheEntry
 {
     public double version { get; set; }
@@ -105,16 +99,11 @@ public partial class PackFurnitureResult
     public List<object> rows { get; set; }
 }
 
-public partial class UnpackFurniturePacked
-{
-    public List<object> rows { get; set; }
-}
-
 public partial class SeenEntry
 {
     public int tick { get; set; }
     public string who { get; set; }
-    public byte[] mask { get; set; }
+    public Uint8Array mask { get; set; }
     public List<double> set { get; set; }
 }
 
@@ -158,10 +147,22 @@ public partial class CandidatesResult
     public string? targetId { get; set; }
 }
 
-public partial class CandidatesOut
+public partial class FarmLotsLot
 {
-    public string kind { get; set; }
-    public string? targetId { get; set; }
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public object facing { get; set; }
+}
+
+public partial class FarmLotsLotShape23
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public object facing { get; set; }
 }
 
 public partial class BucketsEntry
@@ -172,18 +173,6 @@ public partial class BucketsEntry
 }
 
 public partial class PushApartOthers
-{
-    public Body s { get; set; }
-    public double order { get; set; }
-}
-
-public partial class PushApartEntry
-{
-    public object s { get; set; }
-    public object order { get; set; }
-}
-
-public partial class PushApartNear
 {
     public Body s { get; set; }
     public double order { get; set; }

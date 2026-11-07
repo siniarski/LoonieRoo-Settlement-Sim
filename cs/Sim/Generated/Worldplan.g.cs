@@ -30,7 +30,7 @@ public static partial class Worldplan
         var plan = makePlan(NatureMod.natureFor(seed, size, map));
         if (cache.size > 6)
         {
-            cache.delete(cache.keys().next().value!);
+            cache.delete(Js.NN(cache.keys().next().value));
         }
         cache.set(key, plan);
         return plan;
@@ -41,7 +41,7 @@ public static partial class Worldplan
         var size = n.size;
         var land = Towns.landGrid(n);
         var towns = Towns.siteTowns(n, land);
-        var roadMask = new byte[size * size];
+        var roadMask = new Uint8Array(size * size);
         var streets = towns.flatMap((t, i) => Towns.growStreets(n, t, i));
         foreach (var s in Js.Iter(streets))
         {
@@ -58,7 +58,7 @@ public static partial class Worldplan
         }
         var roads = layRoads(n, towns, streets, roadMask);
         List<Lot> lots = [];
-        var lotMask = new int[size * size];
+        var lotMask = new Int32Array(size * size);
         bool add(Lot lot)
         {
             for (var y = lot.y; y < (lot.y + lot.h); y++)
@@ -99,7 +99,7 @@ public static partial class Worldplan
             {
                 for (var cx = JsMath.floor(((double)(l.x) / (PLAN_CHUNK))); cx <= JsMath.floor(((double)(((l.x + l.w) - 1)) / (PLAN_CHUNK))); cx++)
                 {
-                    lotsByChunk[Js.Idx((cy * chunks) + cx)]!.push(l.id);
+                    Js.NN(lotsByChunk[Js.Idx((cy * chunks) + cx)]).push(l.id);
                 }
             }
         }
@@ -113,7 +113,7 @@ public static partial class Worldplan
     public static double dist(double ax, double ay, double bx, double by) => dist((int)ax, (int)ay, (int)bx, (int)by);
 
     /// <summary>Roads between towns (and the start), and a few out to the map's edge.</summary>
-    public static List<List<Point>> layRoads(Nature n, List<Town> towns, List<Street> streets, byte[] mask)
+    public static List<List<Point>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask)
     {
         var size = n.size;
         List<Point> ends(double ti)
@@ -125,19 +125,19 @@ public static partial class Worldplan
         {
             if (node >= towns.length)
             {
-                return nodes[Js.Idx(node)]!;
+                return Js.NN(nodes[Js.Idx(node)]);
             }
             var options = ends(node);
             if (options.length == 0)
             {
-                return nodes[Js.Idx(node)]!;
+                return Js.NN(nodes[Js.Idx(node)]);
             }
             return options.reduce((a, b) => (dist(b.x, b.y, toward.x, toward.y) < dist(a.x, a.y, toward.x, toward.y)) ? b : a);
         }
         List<List<object>> links = Roads.network(n.seed, nodes).map((__p0) =>
         {
             var (a, b) = __p0;
-            return [nearestEnd(a, nodes[Js.Idx(b)]!), nearestEnd(b, nodes[Js.Idx(a)]!)];
+            return [nearestEnd(a, Js.NN(nodes[Js.Idx(b)])), nearestEnd(b, Js.NN(nodes[Js.Idx(a)]))];
         });
         towns.forEach((t, i) =>
         {
@@ -175,23 +175,23 @@ public static partial class Worldplan
         var ordered = (streets).ToList().sort((a, b) => Js.Num(b.main) - Js.Num(a.main));
         ordered.forEach((s, si) =>
         {
-            var t = towns[Js.Idx(s.town)]!;
-            foreach (var side in Js.Iter((List<int>)[-1, 1]))
+            var t = Js.NN(towns[Js.Idx(s.town)]);
+            foreach (var side in Js.Iter((List<double>)[-1, 1]))
             {
                 var p = Js.T(s.eastWest) ? s.x0 : s.y0;
                 var end = Js.T(s.eastWest) ? (s.x1 + 1) : (s.y1 + 1);
                 var k = 0;
                 while (p < (end - 8))
                 {
-                    double r(int j)
+                    double r(double j)
                     {
                         return NatureMod.roll(n.seed, (si * 31) + side, p, (0x7400 + j) + (k * 7));
                     }
                     var mid = p + 9;
-                    var (mx, my) = Js.T(s.eastWest) ? (mid, s.y0 + (side * 9)) : (s.x0 + (side * 9), mid);
+                    var __c1 = Js.T(s.eastWest); var mx = __c1 ? mid : (s.x0 + (side * 9)); var my = __c1 ? (s.y0 + (side * 9)) : mid;
                     var share = ((double)(dist(mx, my, t.x, t.y)) / (t.radius));
                     object zone = "residential";
-                    if ((((share < 0.45) && Js.T(s.main)) && (civic[Js.Idx(s.town)]! < CIVIC_MAX[Js.Idx(t.kind)])) && (r(4) < 0.6))
+                    if ((((share < 0.45) && Js.T(s.main)) && (Js.NN(civic[Js.Idx(s.town)]) < CIVIC_MAX[Js.Idx(t.kind)])) && (r(4) < 0.6))
                     {
                         zone = "civic";
                     }
@@ -211,16 +211,16 @@ public static partial class Worldplan
                     {
                         break;
                     }
-                    /*TODO return type*/object lotAt(int w, double d)
+                    /*TODO return type*/object lotAt(double w, double d)
                     {
                         return Js.T(s.eastWest) ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - 1) - d) : ((s.y0 + Towns.STREET) + 1)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - 1) - d) : ((s.x0 + Towns.STREET) + 1)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
                     }
-                    var placed = Js.T(add(Js.With(Js.Clone(lotAt(front2, deep)), __s1 => { __s1.zone = zone; __s1.town = s.town; }))) ? front2 : ((((zone != "civic") && (zone != "industrial")) && Js.T(add(Js.With(Js.Clone(lotAt(12, 12)), __s2 => { __s2.zone = zone; __s2.town = s.town; })))) ? 12 : 0);
+                    var placed = Js.T(add(Js.With(Js.Clone(lotAt(front2, deep)), __s2 => { __s2.zone = zone; __s2.town = s.town; }))) ? front2 : ((((zone != "civic") && (zone != "industrial")) && Js.T(add(Js.With(Js.Clone(lotAt(12, 12)), __s3 => { __s3.zone = zone; __s3.town = s.town; })))) ? 12 : 0);
                     if (placed > 0)
                     {
                         if ((zone == "civic") && (placed == front2))
                         {
-                            civic[Js.Idx(s.town)]!++;
+                            Js.NN(civic[Js.Idx(s.town)])++;
                         }
                         p += placed + ((r(3) < 0.5) ? 1 : 0);
                     }
@@ -242,8 +242,8 @@ public static partial class Worldplan
             var since = 99;
             for (var i = 1; i < line.length; i++)
             {
-                var a = line[Js.Idx(i - 1)]!;
-                var b = line[Js.Idx(i)]!;
+                var a = Js.NN(line[Js.Idx(i - 1)]);
+                var b = Js.NN(line[Js.Idx(i)]);
                 since += dist(a.x, a.y, b.x, b.y);
                 var edge = towns.find((t) =>
         {
@@ -252,14 +252,14 @@ public static partial class Worldplan
         });
                 if (Js.T(edge) && (since >= 15))
                 {
-                    double r_1(int j)
+                    double r_1(double j)
                     {
                         return NatureMod.roll(n.seed, ri, i, 0x7480 + j);
                     }
                     var along_2 = JsMath.abs(b.x - a.x) >= JsMath.abs(b.y - a.y);
                     var cx_3 = JsMath.round(b.x);
                     var cy_4 = JsMath.round(b.y);
-                    foreach (var side_5 in Js.Iter((List<int>)[-1, 1]))
+                    foreach (var side_5 in Js.Iter((List<double>)[-1, 1]))
                     {
                         if (r_1(side_5 + 2) > 0.7)
                         {
@@ -267,8 +267,8 @@ public static partial class Worldplan
                         }
                         var front_6 = 12 + JsMath.floor(r_1(5 + side_5) * 3);
                         var deep_7 = 13 + JsMath.floor(r_1(8 + side_5) * 3);
-                        var lot_8 = Js.T(along_2) ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
-                        if (Js.T(add(Js.With(Js.Clone(lot_8), __s3 => { __s3.zone = "residential"; __s3.town = towns.indexOf(edge); }))))
+                        FarmLotsLot lot_8 = Js.T(along_2) ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
+                        if (Js.T(add(Js.With(Js.Clone(lot_8), __s4 => { __s4.zone = "residential"; __s4.town = towns.indexOf(edge); }))))
                         {
                             since = 0;
                         }
@@ -288,7 +288,7 @@ public static partial class Worldplan
                 {
                     continue;
                 }
-                double r(int j)
+                double r(double j)
                 {
                     return NatureMod.roll(n.seed, ri, i, 0x7500 + j);
                 }
@@ -303,8 +303,8 @@ public static partial class Worldplan
                 string zone = (r(4) < 0.6) ? "farm" : "field";
                 var cx = JsMath.round(b.x);
                 var cy = JsMath.round(b.y);
-                var lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
-                if (Js.T(add(Js.With(Js.Clone(lot), __s4 => { __s4.zone = zone; __s4.town = null; }))))
+                FarmLotsLotShape23 lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
+                if (Js.T(add(Js.With(Js.Clone(lot), __s5 => { __s5.zone = zone; __s5.town = null; }))))
                 {
                     since = 0;
                 }
@@ -320,7 +320,7 @@ public static partial class Worldplan
             var tries = JsMath.round(((double)(t.radius) / (2)));
             for (var i = 0; i < tries; i++)
             {
-                double r(int j)
+                double r(double j)
                 {
                     return NatureMod.roll(n.seed, ti, i, 0x7700 + j);
                 }
@@ -345,7 +345,7 @@ public static partial class Worldplan
         {
             for (var gx = 0; gx < size; gx += 48)
             {
-                double r(int j)
+                double r(double j)
                 {
                     return NatureMod.roll(n.seed, gx, gy, 0x7600 + j);
                 }
@@ -356,7 +356,7 @@ public static partial class Worldplan
                 var x = (gx + 4) + JsMath.floor(r(1) * 30);
                 var y = (gy + 4) + JsMath.floor(r(2) * 30);
                 List<string> facings = ["north", "south", "east", "west"];
-                add(new() { x = Js.I(x), y = Js.I(y), w = Js.I(13), h = Js.I(13), facing = facings[Js.Idx(JsMath.floor(r(3) * 4))]!, zone = "cabin", town = null });
+                add(new() { x = Js.I(x), y = Js.I(y), w = Js.I(13), h = Js.I(13), facing = Js.NN(facings[Js.Idx(JsMath.floor(r(3) * 4))]), zone = "cabin", town = null });
             }
         }
         null;

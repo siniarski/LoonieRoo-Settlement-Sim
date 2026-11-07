@@ -89,7 +89,7 @@ public static partial class Skills
         var h = JsMath.imul(Js.Num(id.replace(/*TODO regex /\D/g*/null, "")) ^ 1540483477.0, 0x2c1b3c6d);
         h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x297a2d39);
         h = Js.Ushr((h ^ (Js.Ushr(h, 13))), 0);
-        return ((h % 4) == 0) ? [] : [TRAITS[Js.Idx(h % TRAITS.length)]!];
+        return ((h % 4) == 0) ? [] : [Js.NN(TRAITS[Js.Idx(h % TRAITS.length)])];
     }
 
     /// <summary>"tough; build 3, farm 1" for panels.</summary>

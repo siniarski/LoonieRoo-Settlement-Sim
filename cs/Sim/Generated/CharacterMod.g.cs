@@ -85,7 +85,7 @@ public static partial class CharacterMod
     /// <summary>Makes a survivor this character: name, past, skills, traits, and their kit (bagged if you control them).</summary>
     public static void applyCharacter(SimState state, Survivor s, Character c)
     {
-        var p = professionOf(c.job)!;
+        var p = Js.NN(professionOf(c.job));
         s.name = cleanName(c.name);
         s.story.job = c.job;
         s.traits = (c.traits).ToList();

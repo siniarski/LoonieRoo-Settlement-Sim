@@ -48,7 +48,7 @@ public static partial class Buildings
 
     public static double cellAt(BuildingsPlan p, int x, int y)
     {
-        return ((((x < 0) || (y < 0)) || (x >= p.w)) || (y >= p.h)) ? OUTSIDE : p.cells[Js.Idx((y * p.w) + x)]!;
+        return ((((x < 0) || (y < 0)) || (x >= p.w)) || (y >= p.h)) ? OUTSIDE : Js.NN(p.cells[Js.Idx((y * p.w) + x)]);
     }
     public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, (int)x, (int)y);
 
@@ -168,7 +168,7 @@ public static partial class Buildings
         var start = JsMath.floor(roll * spots.length);
         for (var i = 0; i < spots.length; i++)
         {
-            var (x, y) = spots[Js.Idx((start + i) % spots.length)]!;
+            var (x, y) = Js.NN(spots[Js.Idx((start + i) % spots.length)]);
             if (Js.T(put(p, x, y, look, table)))
             {
                 return true;
@@ -183,7 +183,7 @@ public static partial class Buildings
     {
         var cx = JsMath.floor(((double)((x0 + x1)) / (2)));
         var cy = JsMath.floor(((double)((y0 + y1)) / (2)));
-        foreach (var (dx, dy) in Js.Iter((List<List<int>>)[[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]))
+        foreach (var (dx, dy) in new (double, double)[] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
         {
             var x = cx + dx;
             var y = cy + dy;
@@ -384,7 +384,7 @@ public static partial class Buildings
         floorAs(p, c0, 1, c0 + 1, H - 2, (kind == "clinic") ? "tiles" : "concrete");
         var roles = ROLES[Js.Idx(kind)];
         var n = 0;
-        foreach (var (x0, x1, doorX) in Js.Iter((List<List<int>>)[[1, c0 - 2, c0 - 1], [c0 + 3, W - 2, c0 + 2]]))
+        foreach (var (x0, x1, doorX) in new [] { (1, c0 - 2, c0 - 1), (c0 + 3, W - 2, c0 + 2) })
         {
             var y = 1;
             while (y <= (H - 2))
@@ -400,7 +400,7 @@ public static partial class Buildings
                     hwall(p, y1 + 1, x0 - 1, x1 + 1);
                 }
                 door(p, doorX, y + JsMath.floor(((double)(depth) / (2))));
-                fitOut(p, roles[Js.Idx(n % roles.length)]!, x0, y, x1, y1, r, 60 + (n * 5));
+                fitOut(p, Js.NN(roles[Js.Idx(n % roles.length)]), x0, y, x1, y1, r, 60 + (n * 5));
                 n++;
                 y = y1 + 2;
             }
@@ -591,7 +591,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static readonly List<List<int>> DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    public static readonly List<List<double>> DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
 
     /// <summary>Turns a plan drawn with wall cells into one with edge walls (grid.ts): walls on the borders between cells, so rooms get the floor the walls stood on. - Wall cells on the outside (next to the outside or the plan's edge) become outside: the building's outer walls are edges round its floor. An outer door becomes a door edge there. - Inside, each wall cell becomes floor of a room beside it (south, else east, north, west of it, whichever is a room's floor first; a cell with none takes a neighbour's), so a wall line goes to the room below or right of it. - Then an edge wall wherever two cells side by side are in different rooms, or a room meets the outside; an edge door where a door cell stood (between the door's two sides).</summary>
     public static BuildingsPlan toEdges(BuildingsPlan p)
@@ -599,15 +599,15 @@ public static partial class Buildings
         var __d0 = p;
         var w = __d0.w;
         var h = __d0.h;
-        /*TODO return type*/object at(int x, int y)
+        /*TODO return type*/object at(double x, double y)
         {
-            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : p.cells[Js.Idx((y * w) + x)]!;
+            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : Js.NN(p.cells[Js.Idx((y * w) + x)]);
         }
         bool solid(double c)
         {
             return (c == WALL) || (c == DOOR);
         }
-        var room = new int[w * h].fill(-1);
+        var room = new Int32Array(w * h).fill(-1);
         var rooms = 0;
         for (var i = 0; i < (w * h); i++)
         {
@@ -619,7 +619,7 @@ public static partial class Buildings
             room[Js.Idx(i)] = rooms;
             while (Js.T(queue.length))
             {
-                var j = queue.pop()!;
+                var j = Js.NN(queue.pop());
                 var x = j % w;
                 var y = JsMath.floor(((double)(j) / (w)));
                 foreach (var (dx, dy) in Js.Iter(DIR4))
@@ -636,7 +636,7 @@ public static partial class Buildings
             }
             rooms++;
         }
-        bool outer(int x, int y)
+        bool outer(double x, double y)
         {
             return DIR4.some((__p1) =>
         {
@@ -648,7 +648,7 @@ public static partial class Buildings
         List<double> pending = [];
         for (var i = 0; i < (w * h); i++)
         {
-            if (!Js.T(solid(p.cells[Js.Idx(i)]!)))
+            if (!Js.T(solid(Js.NN(p.cells[Js.Idx(i)]))))
             {
                 continue;
             }
@@ -680,8 +680,8 @@ public static partial class Buildings
                     {
                         continue;
                     }
-                    var r = room[Js.Idx((ny * w) + nx)]!;
-                    if ((r == -1) || ((pass == 0) && Js.T(solid(p.cells[Js.Idx((ny * w) + nx)]!))))
+                    var r = Js.NN(room[Js.Idx((ny * w) + nx)]);
+                    if ((r == -1) || ((pass == 0) && Js.T(solid(Js.NN(p.cells[Js.Idx((ny * w) + nx)])))))
                     {
                         continue;
                     }
@@ -704,13 +704,13 @@ public static partial class Buildings
                 var j = (((y + dy) * w) + x) + dx;
                 if (((((((x + dx) >= 0) && ((y + dy) >= 0)) && ((x + dx) < w)) && ((y + dy) < h)) && (room[Js.Idx(j)] == room[Js.Idx(i)])) && Js.T(p.ground[Js.Idx(j)]))
                 {
-                    ground[Js.Idx(i)] = p.ground[Js.Idx(j)]!;
+                    ground[Js.Idx(i)] = Js.NN(p.ground[Js.Idx(j)]);
                     break;
                 }
             }
         }
         var doorPairs = new JsSet<string>();
-        /*TODO return type*/object pairKey(int ax, int ay, int bx, int by)
+        /*TODO return type*/object pairKey(double ax, double ay, double bx, double by)
         {
             return ((ay < by) || ((ay == by) && (ax < bx))) ? $"{Js.Str(ax)},{Js.Str(ay)},{Js.Str(bx)},{Js.Str(by)}" : $"{Js.Str(bx)},{Js.Str(by)},{Js.Str(ax)},{Js.Str(ay)}";
         }
@@ -723,29 +723,29 @@ public static partial class Buildings
             var x = i % w;
             var y = JsMath.floor(((double)(i) / (w)));
             var vertical = Js.Or(solid(at(x, y - 1)), solid(at(x, y + 1)));
-            var (ax, ay, bx, by) = Js.T(vertical) ? (x - 1, y, x + 1, y) : (x, y - 1, x, y + 1);
+            var __c2 = Js.T(vertical); var ax = __c2 ? (x - 1) : x; var ay = __c2 ? y : (y - 1); var bx = __c2 ? (x + 1) : x; var by = __c2 ? y : (y + 1);
             if (cells[Js.Idx(i)] == OUTSIDE)
             {
                 var inside = (((((cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? [ax, ay] : [bx, by];
-                doorPairs.add(pairKey(x, y, inside[Js.Idx(0)]!, inside[Js.Idx(1)]!));
+                doorPairs.add(pairKey(x, y, Js.NN(inside[Js.Idx(0)]), Js.NN(inside[Js.Idx(1)])));
             }
             else
             {
                 var aRoom = ((((ax >= 0) && (ay >= 0)) && (ax < w)) && (ay < h)) ? room[Js.Idx((ay * w) + ax)] : -2;
                 var other = (aRoom == room[Js.Idx(i)]) ? [bx, by] : [ax, ay];
-                doorPairs.add(pairKey(x, y, other[Js.Idx(0)]!, other[Js.Idx(1)]!));
+                doorPairs.add(pairKey(x, y, Js.NN(other[Js.Idx(0)]), Js.NN(other[Js.Idx(1)])));
             }
         }
         List<PlanEdge> edges = [];
-        /*TODO return type*/object cellOf(int x, int y)
+        /*TODO return type*/object cellOf(double x, double y)
         {
-            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : cells[Js.Idx((y * w) + x)]!;
+            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : Js.NN(cells[Js.Idx((y * w) + x)]);
         }
         for (var y = 0; y < h; y++)
         {
             for (var x = 0; x < w; x++)
             {
-                foreach (var (dx, dy) in Js.Iter((List<List<int>>)[[0, -1], [-1, 0], [0, 1], [1, 0]]))
+                foreach (var (dx, dy) in new (double, double)[] { (0, -1), (-1, 0), (0, 1), (1, 0) })
                 {
                     var nx = x + dx;
                     var ny = y + dy;
@@ -782,13 +782,13 @@ public static partial class Buildings
             foreach (var e in Js.Iter(outerWall.values()))
             {
                 var (dx, dy) = (e.bx - e.ax, e.by - e.ay);
-                var (sx, sy) = (dy != 0) ? (1, 0) : (0, 1);
+                var __c3 = dy != 0; var sx = __c3 ? 1 : 0; var sy = __c3 ? 0 : 1;
                 var along = (dy != 0) ? e.ax : e.ay;
                 if ((along % 3) != 1)
                 {
                     continue;
                 }
-                bool beside(int k)
+                bool beside(double k)
                 {
                     return outerWall.has($"{Js.Str(e.ax + (sx * k))},{Js.Str(e.ay + (sy * k))},{Js.Str(e.bx + (sx * k))},{Js.Str(e.by + (sy * k))}");
                 }
@@ -799,6 +799,6 @@ public static partial class Buildings
                 null;
             }
         }
-        return Js.With(Js.Clone(p), __s2 => { __s2.cells = cells; __s2.ground = ground; __s2.edges = edges; });
+        return Js.With(Js.Clone(p), __s4 => { __s4.cells = cells; __s4.ground = ground; __s4.edges = edges; });
     }
 }

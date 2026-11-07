@@ -95,7 +95,7 @@ public static partial class ControlMod
     /// <summary>Called once a tick for the controlled survivor, in place of their own behaviour.</summary>
     public static void updateControlled(SimState state, Survivor s)
     {
-        var c = state.control!;
+        var c = Js.NN(state.control);
         if (Js.T(Vehicles.vehicleOf(state, s)))
         {
             c.busy = null;
@@ -137,7 +137,7 @@ public static partial class ControlMod
 
     public static void updateBusy(SimState state, Survivor s, Control c)
     {
-        var busy = c.busy!;
+        var busy = Js.NN(c.busy);
         if (busy.what == "sleep")
         {
             { sleepTick(state, s, c, busy); return; }
@@ -303,7 +303,7 @@ public static partial class ControlMod
     /// <summary>Swing (or shoot) towards a tile. Returns what happened, or null if nothing could be done.</summary>
     public static string? swing(SimState state, Survivor s, Point target)
     {
-        var c = state.control!;
+        var c = Js.NN(state.control);
         if (((state.tick < c.nextSwing) || Js.T(s.move)) || Js.T(Vehicles.vehicleOf(state, s)))
         {
             return null;
@@ -365,7 +365,7 @@ public static partial class ControlMod
             c.nextSwing = state.tick + (Js.T(shot) ? Weapons.GUN_EVERY : Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY));
             if (Js.T(shot))
             {
-                Weapons.loadedGun(state, s)!.wear -= 1;
+                Js.NN(Weapons.loadedGun(state, s)).wear -= 1;
                 Noise.makeNoise(state, s.pos, "gunfire");
             }
             return Handiwork.hitAnimal(state, s, deer.id, Js.T(shot) ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))));
@@ -469,7 +469,7 @@ public static partial class ControlMod
     /// <summary>Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do.</summary>
     public static string? use(SimState state, Survivor s, Point target)
     {
-        var c = state.control!;
+        var c = Js.NN(state.control);
         if (Js.T(Vehicles.vehicleOf(state, s)))
         {
             return Vehicles.leaveVehicle(state, s);
@@ -592,7 +592,7 @@ public static partial class ControlMod
     /// <summary>Work the tile in front: repair, barricade, reinforce or build (handiwork.ts). Returns what happened, or why not (null: no).</summary>
     public static string work(SimState state, Survivor s, Point target)
     {
-        var c = state.control!;
+        var c = Js.NN(state.control);
         if (Js.T(s.move))
         {
             return "not while moving";
@@ -640,7 +640,7 @@ public static partial class ControlMod
             return $"put the {Js.Str(item.kind)} in your bag";
         }
         var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.GetProp<string?>(s, slot)!) : null;
-        var where = item.pos!;
+        var where = Js.NN(item.pos);
         item.pos = null;
         item.carriedBy = s.id;
         Js.SetProp(s, slot, item.id);

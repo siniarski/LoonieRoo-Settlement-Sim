@@ -38,7 +38,7 @@ public static partial class Seasons
 
     public static string seasonOf(int tick)
     {
-        return SEASONS[Js.Idx(JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length)]!;
+        return Js.NN(SEASONS[Js.Idx(JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length)]);
     }
     public static string seasonOf(double tick) => seasonOf((int)tick);
 

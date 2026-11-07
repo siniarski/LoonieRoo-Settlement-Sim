@@ -110,7 +110,7 @@ public static partial class Jobs
                 addJob(state, "build", i % width, JsMath.floor(((double)(i) / (width))), null, null);
             }
         }
-        var mending = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge != null)).map((j) => j.edge!));
+        var mending = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge != null)).map((j) => Js.NN(j.edge)));
         foreach (var e in Js.Iter(Js.ObjectKeys(state.grid.edgeDamage).map((__v) => Js.Num(__v)).sort((a, b) => a - b)))
         {
             if (mending.has(e))
@@ -414,7 +414,7 @@ public static partial class Jobs
                     }
                     if (Js.T(isFuelJob(job)))
                     {
-                        var g = FurnitureMod.getFurniture(state, job.furnitureId!);
+                        var g = FurnitureMod.getFurniture(state, Js.NN(job.furnitureId));
                         if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, FUEL)))
                         {
                             return "generator gone";

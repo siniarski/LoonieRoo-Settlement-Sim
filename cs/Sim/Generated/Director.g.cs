@@ -60,7 +60,7 @@ public static partial class Director
         {
             return;
         }
-        var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]!.pos;
+        var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? Js.NN(state.survivors[Js.Idx(0)]).pos;
         for (var n = 0; n < 6; n++)
         {
             Items.spawnItem(state, "food", spot.x, spot.y);

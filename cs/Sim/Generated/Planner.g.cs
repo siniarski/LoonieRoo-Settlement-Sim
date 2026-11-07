@@ -197,8 +197,8 @@ public static partial class Planner
     {
         var __d0 = state;
         var grid = __d0.grid;
-        var taken = new JsSet<string>([.. state.items.filter((i) => Js.T(i.pos)).map((i) => $"{Js.Str(i.pos!.x)},{Js.Str(i.pos!.y)}"), .. state.furniture.map((f) => $"{Js.Str(f.x)},{Js.Str(f.y)}"), .. state.blueprints.map((b) => $"{Js.Str(b.x)},{Js.Str(b.y)}"), .. state.farm.map((p) => $"{Js.Str(p.x)},{Js.Str(p.y)}")]);
-        List<FreeSpotsCandidates> candidates = [];
+        var taken = new JsSet<string>([.. state.items.filter((i) => Js.T(i.pos)).map((i) => $"{Js.Str(Js.NN(i.pos).x)},{Js.Str(Js.NN(i.pos).y)}"), .. state.furniture.map((f) => $"{Js.Str(f.x)},{Js.Str(f.y)}"), .. state.blueprints.map((b) => $"{Js.Str(b.x)},{Js.Str(b.y)}"), .. state.farm.map((p) => $"{Js.Str(p.x)},{Js.Str(p.y)}")]);
+        List<FreeSpotsResult> candidates = [];
         foreach (var i in Js.Iter(room.tiles))
         {
             Point p = new Point { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };

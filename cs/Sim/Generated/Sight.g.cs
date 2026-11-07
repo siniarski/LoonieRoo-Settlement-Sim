@@ -51,7 +51,7 @@ public static partial class Sight
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
     public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
     {
-        bool clear(int px, int py, int qx, int qy)
+        bool clear(double px, double py, double qx, double qy)
         {
             return Js.T(Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy)));
         }
@@ -164,7 +164,7 @@ public static partial class Sight
     public static readonly JsMap<SimState, SeenEntry> seen = new JsMap<SimState, SeenEntry>();
 
     /// <summary>What can be seen now: by the survivor you control, or by any survivor when nobody is controlled. Per tile 1 or 0. Derived, cached per state and tick (for the renderer).</summary>
-    public static byte[] visibleNow(SimState state)
+    public static Uint8Array visibleNow(SimState state)
     {
         var you = ControlMod.controlled(state);
         var lookers = Js.T(you) ? [you] : state.survivors;
@@ -175,7 +175,7 @@ public static partial class Sight
             return hit.mask;
         }
         var size = state.grid.width * state.grid.height;
-        var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new byte[size];
+        var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new Uint8Array(size);
         if (Js.T(hit) && (hit.mask == mask))
         {
             foreach (var i in Js.Iter(hit.set))

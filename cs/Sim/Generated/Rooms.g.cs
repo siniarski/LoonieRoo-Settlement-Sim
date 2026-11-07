@@ -70,7 +70,7 @@ public static partial class Rooms
         var width = __d0.width;
         var height = __d0.height;
         var tiles = __d0.tiles;
-        var labels = new int[width * height].fill(NOT_FLOOR);
+        var labels = new Int32Array(width * height).fill(NOT_FLOOR);
         var UNSEEN = -3;
         for (var i = 0; i < tiles.length; i++)
         {
@@ -92,7 +92,7 @@ public static partial class Rooms
             var touchesEdge = false;
             for (var head = 0; head < region.length; head++)
             {
-                var i = region[Js.Idx(head)]!;
+                var i = Js.NN(region[Js.Idx(head)]);
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
                 if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
@@ -170,7 +170,7 @@ public static partial class Rooms
         {
             return NOT_FLOOR;
         }
-        return getRoomMap(state).labels[Js.Idx((y * state.grid.width) + x)]!;
+        return Js.NN(getRoomMap(state).labels[Js.Idx((y * state.grid.width) + x)]);
     }
     public static double labelAt(SimState state, double x, double y) => labelAt(state, (int)x, (int)y);
 
@@ -178,7 +178,7 @@ public static partial class Rooms
     public static Room? roomAt(SimState state, int x, int y)
     {
         var label = labelAt(state, x, y);
-        return (label >= 0) ? getRoomMap(state).rooms[Js.Idx(label)]! : null;
+        return (label >= 0) ? Js.NN(getRoomMap(state).rooms[Js.Idx(label)]) : null;
     }
     public static Room? roomAt(SimState state, double x, double y) => roomAt(state, (int)x, (int)y);
 
@@ -340,7 +340,7 @@ public static partial class Rooms
         var UNSEEN = -3;
         var removed = new JsSet<double>();
         List<double> seeds = [];
-        /*TODO return type*/object near(int i)
+        /*TODO return type*/object near(double i)
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
@@ -364,16 +364,16 @@ public static partial class Rooms
             }
             foreach (var j in Js.Iter(near(c)))
             {
-                if (labels[Js.Idx(j)]! >= 0)
+                if (Js.NN(labels[Js.Idx(j)]) >= 0)
                 {
-                    removed.add(labels[Js.Idx(j)]!);
+                    removed.add(Js.NN(labels[Js.Idx(j)]));
                 }
                 seeds.push(j);
             }
         }
         foreach (var r in Js.Iter(removed))
         {
-            foreach (var t in Js.Iter(old.rooms[Js.Idx(r)]!.tiles))
+            foreach (var t in Js.Iter(Js.NN(old.rooms[Js.Idx(r)]).tiles))
             {
                 seeds.push(t);
             }
@@ -400,7 +400,7 @@ public static partial class Rooms
                     outdoors = true;
                     break;
                 }
-                var i = region[Js.Idx(head)]!;
+                var i = Js.NN(region[Js.Idx(head)]);
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
                 if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
@@ -472,7 +472,7 @@ public static partial class Rooms
             var doors = (doorSet).ToList().sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
-        var rooms = [.. old.rooms.filter((r) => !removed.has(r.index)), .. fresh].sort((a, b) => a.tiles[Js.Idx(0)]! - b.tiles[Js.Idx(0)]!);
+        var rooms = [.. old.rooms.filter((r) => !removed.has(r.index)), .. fresh].sort((a, b) => Js.NN(a.tiles[Js.Idx(0)]) - Js.NN(b.tiles[Js.Idx(0)]));
         List<Room> @out = rooms.map((r, index) => Js.With(Js.Clone(r), __s3 => { __s3.index = index; }));
         foreach (var r in Js.Iter(@out))
         {

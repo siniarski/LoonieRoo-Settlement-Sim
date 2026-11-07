@@ -50,7 +50,7 @@ public static partial class Wishes
     /// <summary>The wishes that fit this survivor right now, in a fixed order.</summary>
     public static List<CandidatesResult> candidates(SimState state, Survivor s)
     {
-        List<CandidatesOut> @out = [];
+        List<CandidatesResult> @out = [];
         bool has(string kind)
         {
             return s.thoughts.some((t) => t.kind == kind);

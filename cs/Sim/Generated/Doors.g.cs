@@ -50,7 +50,7 @@ public static partial class Doors
             return;
         }
         var occupied = new JsSet<double>();
-        /*TODO return type*/object mark(int x, int y)
+        /*TODO return type*/object mark(double x, double y)
         {
             return occupied.add((y * grid.width) + x);
         }
@@ -132,7 +132,7 @@ public static partial class Doors
             var tile = JsMath.floor(((double)(e) / (2)));
             var x = (tile % grid.width) * Motion.SUB;
             var y = JsMath.floor(((double)(tile) / (grid.width))) * Motion.SUB;
-            var (x1, y1) = ((e % 2) == 0) ? (x + Motion.SUB, y) : (x, y + Motion.SUB);
+            var __c2 = (e % 2) == 0; var x1 = __c2 ? (x + Motion.SUB) : x; var y1 = __c2 ? y : (y + Motion.SUB);
             var r = Motion.BODY_RADIUS + ((double)(Motion.SUB) / (8));
             var inDoorway = bodies.some((c) =>
         {
@@ -156,8 +156,8 @@ public static partial class Doors
     /// <summary>Opens or shuts the edge door between two tiles side by side. Returns what happened, or why not (null: no door there).</summary>
     public static string? toggleEdgeDoor(SimState state, Point a, Point b)
     {
-        var __d2 = state;
-        var grid = __d2.grid;
+        var __d3 = state;
+        var grid = __d3.grid;
         var e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
         if ((e < 0) || (grid.edges[Js.Idx(e)] != Grids.EDGE_DOOR))
         {

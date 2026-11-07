@@ -20,7 +20,7 @@ public static partial class Breach
     /// <summary>What it takes to break this structure (reinforced ones take more; defences.ts).</summary>
     public static double structureHealth(Grid grid, int i)
     {
-        var tile = grid.tiles[Js.Idx(i)]!;
+        var tile = Js.NN(grid.tiles[Js.Idx(i)]);
         if (!Js.T(isStructure(tile)))
         {
             return 0;
@@ -36,7 +36,7 @@ public static partial class Breach
 
     public static double structureDamage(SimState state, int x, int y)
     {
-        return Js.T(isStructure(Grids.getTile(state.grid, x, y))) ? state.grid.damage[Js.Idx(Grids.tileIndex(state.grid, x, y))]! : 0;
+        return Js.T(isStructure(Grids.getTile(state.grid, x, y))) ? Js.NN(state.grid.damage[Js.Idx(Grids.tileIndex(state.grid, x, y))]) : 0;
     }
     public static double structureDamage(SimState state, double x, double y) => structureDamage(state, (int)x, (int)y);
 
@@ -49,8 +49,8 @@ public static partial class Breach
             return false;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, state.grid.damage[Js.Idx(i)]! + amount);
-        if (state.grid.damage[Js.Idx(i)]! < structureHealth(state.grid, i))
+        Grids.setDamage(state.grid, i, Js.NN(state.grid.damage[Js.Idx(i)]) + amount);
+        if (Js.NN(state.grid.damage[Js.Idx(i)]) < structureHealth(state.grid, i))
         {
             return false;
         }
@@ -75,8 +75,8 @@ public static partial class Breach
             return 0;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, JsMath.max(0, state.grid.damage[Js.Idx(i)]! - amount));
-        return state.grid.damage[Js.Idx(i)]!;
+        Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(state.grid.damage[Js.Idx(i)]) - amount));
+        return Js.NN(state.grid.damage[Js.Idx(i)]);
     }
     public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, (int)x, (int)y, amount);
 

@@ -34,7 +34,7 @@ public static partial class Savefile
             {
                 j++;
             }
-            @out.push(values[Js.Idx(i)]!, j - i);
+            @out.push(Js.NN(values[Js.Idx(i)]), j - i);
             i = j;
         }
         return @out;
@@ -79,7 +79,7 @@ public static partial class Savefile
         return new() { rows = rows };
     }
 
-    public static List<Furniture> unpackFurniture(UnpackFurniturePacked packed)
+    public static List<Furniture> unpackFurniture(PackFurnitureResult packed)
     {
         return packed.rows.map((r) =>
         {

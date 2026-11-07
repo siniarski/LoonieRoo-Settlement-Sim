@@ -78,7 +78,7 @@ public static partial class Crafting
     /// <summary>Craftables for this station below their target, in CRAFTABLES order.</summary>
     public static List<string> wantedCrafts(SimState state, string station = "workbench", bool inWorkshop = false)
     {
-        return CRAFTABLES.filter((k) => (((RECIPES[Js.Idx(k)].station == station) && (Js.T(inWorkshop) || !Js.T(RECIPES[Js.Idx(k)].workshopOnly))) && (!Js.T(RECIPES[Js.Idx(k)].needs) || state.knowledge.includes(RECIPES[Js.Idx(k)].needs!))) && (craftStock(state, k) < target(state, k)));
+        return CRAFTABLES.filter((k) => (((RECIPES[Js.Idx(k)].station == station) && (Js.T(inWorkshop) || !Js.T(RECIPES[Js.Idx(k)].workshopOnly))) && (!Js.T(RECIPES[Js.Idx(k)].needs) || state.knowledge.includes(Js.NN(RECIPES[Js.Idx(k)].needs)))) && (craftStock(state, k) < target(state, k)));
     }
 
     /// <summary>The first craftable for this station below its target, or null when stocks are full.</summary>

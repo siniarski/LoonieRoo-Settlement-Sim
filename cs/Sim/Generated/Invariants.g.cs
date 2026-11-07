@@ -239,7 +239,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} relaxes on unwalkable ({Js.Str(s.leisure.x)}, {Js.Str(s.leisure.y)})");
                 }
-                if (state.survivors.some((o) => ((o != s) && (o.leisure?.x == s.leisure!.x)) && (o.leisure.y == s.leisure!.y)))
+                if (state.survivors.some((o) => ((o != s) && (o.leisure?.x == Js.NN(s.leisure).x)) && (o.leisure.y == Js.NN(s.leisure).y)))
                 {
                     problems.push($"{Js.Str(s.name)} shares a rec room spot");
                 }
@@ -298,7 +298,7 @@ public static partial class Invariants
             }
             if (Js.T(s.sleep.bedId))
             {
-                var bed = state.furniture.find((f) => f.id == s.sleep!.bedId);
+                var bed = state.furniture.find((f) => f.id == Js.NN(s.sleep).bedId);
                 if (!Js.T(bed))
                 {
                     problems.push($"{Js.Str(s.name)} sleeps in missing bed {Js.Str(s.sleep.bedId)}");
@@ -368,7 +368,7 @@ public static partial class Invariants
                 problems.push($"duplicate zombie id {Js.Str(z.id)}");
             }
             zombieIds.add(z.id);
-            bool standable(int x, int y)
+            bool standable(double x, double y)
             {
                 return Js.T(Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z)));
             }
@@ -458,12 +458,12 @@ public static partial class Invariants
         listed(grid.damage, grid.damageList, "damage");
         for (var i = 0; i < grid.damage.length; i++)
         {
-            var d = grid.damage[Js.Idx(i)]!;
+            var d = Js.NN(grid.damage[Js.Idx(i)]);
             if (d == 0)
             {
                 continue;
             }
-            var tile = grid.tiles[Js.Idx(i)]!;
+            var tile = Js.NN(grid.tiles[Js.Idx(i)]);
             var at = $"({Js.Str(i % grid.width)}, {Js.Str(JsMath.floor(((double)(i) / (grid.width))))})";
             if (((tile != "wall") && (tile != "door")) && (tile != "barricade"))
             {

@@ -79,7 +79,7 @@ public partial class Blueprint : IHasId
 public partial class Budget
 {
     public double plans { get; set; }
-    public System.Text.Json.Nodes.JsonNode near { get; set; } = null!;
+    public Func<Point, List<Survivor>> near { get; set; } = null!;
 }
 
 public partial class BugReport
@@ -333,8 +333,8 @@ public partial class FarmPlot : IHasId
 public partial class Field
 {
     public string key { get; set; } = "";
-    public int[] dist { get; set; } = null!;
-    public string box { get; set; } = "";
+    public Int32Array dist { get; set; } = null!;
+    public HordeBox box { get; set; } = new();
 }
 
 public partial class Fire
@@ -518,7 +518,7 @@ public partial class LotContext
 public partial class LotLayout
 {
     public List<Placement> buildings { get; set; } = new();
-    public System.Text.Json.Nodes.JsonNode yard { get; set; } = null!;
+    public Func<double, double, string> yard { get; set; } = null!;
     public List<Point> trees { get; set; } = new();
     public List<LotLayoutDecorItem> decor { get; set; } = new();
 }
@@ -675,15 +675,15 @@ public partial class Reach
     public double cursor { get; set; }
     public double cw { get; set; }
     public double ch { get; set; }
-    public int[] local { get; set; } = null!;
-    public int[] counts { get; set; } = null!;
-    public int[] offsets { get; set; } = null!;
+    public Int32Array local { get; set; } = null!;
+    public Int32Array counts { get; set; } = null!;
+    public Int32Array offsets { get; set; } = null!;
     public List<List<double>> east { get; set; } = new();
     public List<List<double>> south { get; set; } = new();
-    public int[] baseRoot { get; set; } = null!;
+    public Int32Array baseRoot { get; set; } = null!;
     public double count { get; set; }
     public string doors { get; set; } = "";
-    public int[] root { get; set; } = null!;
+    public Int32Array root { get; set; } = null!;
     public JsMap<double, double> doorIds { get; set; } = new();
 }
 
@@ -756,7 +756,7 @@ public partial class RoomDesignation : IHasId
 
 public partial class RoomMap
 {
-    public int[] labels { get; set; } = null!;
+    public Int32Array labels { get; set; } = null!;
     public List<Room> rooms { get; set; } = new();
 }
 
@@ -1226,9 +1226,9 @@ public partial class WorldPlan
     public List<Town> towns { get; set; } = new();
     public List<Street> streets { get; set; } = new();
     public List<List<Point>> roads { get; set; } = new();
-    public byte[] roadMask { get; set; } = null!;
+    public Uint8Array roadMask { get; set; } = null!;
     public List<Lot> lots { get; set; } = new();
-    public int[] lotMask { get; set; } = null!;
+    public Int32Array lotMask { get; set; } = null!;
     public List<List<double>> lotsByChunk { get; set; } = new();
 }
 

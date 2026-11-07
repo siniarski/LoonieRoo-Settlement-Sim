@@ -118,7 +118,7 @@ public static partial class Worldgen
         var ctx = lotContext(l);
         foreach (var id in Js.Iter(l.plan.lotsByChunk[Js.Idx((cy * chunks) + cx)] ?? []))
         {
-            Lots.drawLot(state, ctx, l.plan.lots[Js.Idx(id)]!, x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
+            Lots.drawLot(state, ctx, Js.NN(l.plan.lots[Js.Idx(id)]), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
         for (var y = y0; y < (y0 + CHUNK); y++)
         {
@@ -181,7 +181,7 @@ public static partial class Worldgen
         }
         if (Js.T(solo))
         {
-            var you = state.survivors[Js.Idx(0)]!;
+            var you = Js.NN(state.survivors[Js.Idx(0)]);
             state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
             var weapon = Items.spawnItem(state, "weapon", you.pos.x, you.pos.y);
             weapon.pos = null;
@@ -243,11 +243,11 @@ public static partial class Worldgen
         {
             return (JsMath.floor(((double)(q.x) / (CHUNK))) == cx) && (JsMath.floor(((double)(q.y) / (CHUNK))) == cy);
         }
-        bool open(int x, int y)
+        bool open(double x, double y)
         {
             return Js.T(Grids.isWalkable(state.grid, x, y));
         }
-        bool floorOnly(int x, int y)
+        bool floorOnly(double x, double y)
         {
             return state.grid.tiles[Js.Idx(Grids.tileIndex(state.grid, x, y))] == "floor";
         }
@@ -317,7 +317,7 @@ public static partial class Worldgen
         startCamp(state, l);
         if (Js.T(you) && (CharacterMod.characterProblem(you) == null))
         {
-            CharacterMod.applyCharacter(state, state.survivors[Js.Idx(0)]!, you);
+            CharacterMod.applyCharacter(state, Js.NN(state.survivors[Js.Idx(0)]), you);
         }
         state.harsh = true;
         TimelineMod.rollTimeline(state, seed);

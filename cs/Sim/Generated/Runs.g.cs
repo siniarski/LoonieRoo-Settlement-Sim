@@ -121,7 +121,7 @@ public static partial class Runs
             {
                 continue;
             }
-            double roll(int k)
+            double roll(double k)
             {
                 return Hash.hashRoll(Hash.idNumber(n.id), day, 0x5ca, k);
             }
@@ -181,7 +181,7 @@ public static partial class Runs
         {
             Events.logEvent(state, $"{Js.Str(n.name)}'s scavengers never came home: the dead got them near ({Js.Str(at.x)}, {Js.Str(at.y)})");
         }
-        state.runs!.splice(state.runs!.indexOf(r), 1);
+        Js.NN(state.runs).splice(Js.NN(state.runs).indexOf(r), 1);
         return true;
     }
 
@@ -209,7 +209,7 @@ public static partial class Runs
 
     public static void home(SimState state, ScavRun r)
     {
-        state.runs!.splice(state.runs!.indexOf(r), 1);
+        Js.NN(state.runs).splice(Js.NN(state.runs).indexOf(r), 1);
         var n = Settlements.getSettlement(state, r.from);
         if (!Js.T(n))
         {

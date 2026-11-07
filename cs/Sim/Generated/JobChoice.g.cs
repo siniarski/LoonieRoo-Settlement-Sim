@@ -50,10 +50,10 @@ public static partial class JobChoice
     public static List<Job> openJobsByDistance(SimState state, string type, Point from)
     {
         var open = state.jobs.filter((j) => (j.type == type) && (j.reservedBy == null));
-        var keys = new double[open.length];
+        var keys = new Float64Array(open.length);
         for (var i = 0; i < open.length; i++)
         {
-            keys[Js.Idx(i)] = (Space.manhattan(from, open[Js.Idx(i)]!) * 1048576) + i;
+            keys[Js.Idx(i)] = (Space.manhattan(from, Js.NN(open[Js.Idx(i)])) * 1048576) + i;
         }
         keys.sort();
         return (keys).ToList();

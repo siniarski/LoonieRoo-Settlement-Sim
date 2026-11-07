@@ -49,22 +49,22 @@ public static partial class Difficulty
 
     public static double eventChance(SimState state, double @base)
     {
-        return JsMath.min(0.6, @base * EVENT_SCALE[Js.Idx(state.settings.weather)]!);
+        return JsMath.min(0.6, @base * Js.NN(EVENT_SCALE[Js.Idx(state.settings.weather)]));
     }
 
     public static double coldEvery(SimState state)
     {
-        return COLD_EVERY[Js.Idx(state.settings.weather)]!;
+        return Js.NN(COLD_EVERY[Js.Idx(state.settings.weather)]);
     }
 
     public static double crateLoot(SimState state, double loot)
     {
-        return JsMath.max(1, JsMath.round(loot * LOOT_SCALE[Js.Idx(state.settings.progression)]!));
+        return JsMath.max(1, JsMath.round(loot * Js.NN(LOOT_SCALE[Js.Idx(state.settings.progression)])));
     }
 
     public static double ruinDecay(SimState state)
     {
-        return RUIN_DECAY[Js.Idx(state.settings.progression)]!;
+        return Js.NN(RUIN_DECAY[Js.Idx(state.settings.progression)]);
     }
 
     /// <summary>Something found while scavenging: weapons and clothing come worn, the later it is since the outbreak.</summary>
@@ -72,7 +72,7 @@ public static partial class Difficulty
     {
         var item = Items.spawnItem(state, kind, x, y);
         var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Js.T(Clothing.isGarment(kind)) ? Clothing.GARMENT_LIFE[Js.Idx(kind)] : 0);
-        item.wear = JsMath.floor(life * FOUND_WEAR[Js.Idx(state.settings.progression)]!);
+        item.wear = JsMath.floor(life * Js.NN(FOUND_WEAR[Js.Idx(state.settings.progression)]));
         return item;
     }
     public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, (int)x, (int)y);

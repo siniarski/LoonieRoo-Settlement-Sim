@@ -117,7 +117,7 @@ public static partial class Wanderers
         {
             var s = Rng.pick(state, state.survivors);
             Point near = new Point { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))) };
-            bool ok(int x, int y)
+            bool ok(double x, double y)
             {
                 return (((Js.T(Fog.isExplored(state, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has($"{Js.Str(x)},{Js.Str(y)}")) && Pathfinding.DIRS.some((d) => Js.T(Grids.inBounds(state.grid, x + d.x, y + d.y)) && !Js.T(Fog.isExplored(state, x + d.x, y + d.y)));
             }

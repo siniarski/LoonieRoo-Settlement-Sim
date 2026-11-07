@@ -60,7 +60,7 @@ public static partial class Settlements
                 }
             }
             var people = 5 + JsMath.floor(Hash.hashRoll(seed, i, 3) * 8);
-            newSettlement(state, NAMES[Js.Idx((seed + i) % NAMES.length)]!, p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
+            newSettlement(state, Js.NN(NAMES[Js.Idx((seed + i) % NAMES.length)]), p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
         }
     }
 
@@ -122,7 +122,7 @@ public static partial class Settlements
     public static string? tieSettlements(Settlement a, Settlement b, int by)
     {
         var before = relation(a, b);
-        foreach (var (x, y) in Js.Iter((List<List<int>>)[[a, b], [b, a]]))
+        foreach (var (x, y) in new (int, int)[] { (a, b), (b, a) })
         {
             x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(x.ties[Js.Idx(y.id)], 0)) + by));
         }
@@ -134,7 +134,7 @@ public static partial class Settlements
     public static Settlement? traderFrom(SimState state)
     {
         var open = state.settlements.filter((s) => !Js.T(isHostile(s)));
-        return (open.length > 0) ? open[Js.Idx(Time.dayOf(state.tick) % open.length)]! : null;
+        return (open.length > 0) ? Js.NN(open[Js.Idx(Time.dayOf(state.tick) % open.length)]) : null;
     }
 
     /// <summary>Friendly settlements send someone to join, every FRIENDLY_SEND_DAYS at noon.</summary>

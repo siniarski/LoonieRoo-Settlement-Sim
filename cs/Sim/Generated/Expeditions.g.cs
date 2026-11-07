@@ -46,7 +46,7 @@ public static partial class Expeditions
         {
             return "nobody to send";
         }
-        var home = Js.Clone(members[Js.Idx(0)]!.pos);
+        var home = Js.Clone(Js.NN(members[Js.Idx(0)]).pos);
         var distance = Space.manhattan(home, poi);
         foreach (var s in Js.Iter(members))
         {
@@ -110,7 +110,7 @@ public static partial class Expeditions
         {
             return false;
         }
-        var s = x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]!;
+        var s = Js.NN(x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]);
         if (s.health > (Health.HEALTH_MAX - INJURY))
         {
             s.health -= INJURY;

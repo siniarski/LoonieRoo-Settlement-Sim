@@ -50,7 +50,7 @@ public static partial class Errands
         {
             return null;
         }
-        double roll(int k)
+        double roll(double k)
         {
             return Hash.hashRoll(Hash.idNumber(n.id), Time.dayOf(state.tick), salt, k);
         }
@@ -72,7 +72,7 @@ public static partial class Errands
         }
         state.errands ??= [];
         var kind = (roll(3) < 0.5) ? "nest" : "missing";
-        Errand e = new() { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = MISSING[Js.Idx(JsMath.floor(roll(4) * MISSING.length))]!, until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
+        Errand e = new() { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(MISSING[Js.Idx(JsMath.floor(roll(4) * MISSING.length))]), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
         if (kind == "nest")
         {
             for (var k = 0; k < NEST_SIZE; k++)
@@ -136,11 +136,11 @@ public static partial class Errands
         {
             n.people += 1;
         }
-        double roll(int k)
+        double roll(double k)
         {
             return Hash.hashRoll(Hash.idNumber(e.id), k);
         }
-        List<string> goods = [THANKS[Js.Idx(JsMath.floor(roll(1) * THANKS.length))]!, THANKS[Js.Idx(JsMath.floor(roll(2) * THANKS.length))]!];
+        List<string> goods = [Js.NN(THANKS[Js.Idx(JsMath.floor(roll(1) * THANKS.length))]), Js.NN(THANKS[Js.Idx(JsMath.floor(roll(2) * THANKS.length))])];
         Point home = state.survivors[Js.Idx(0)]?.pos ?? new Point { x = Js.I(n.x), y = Js.I(n.y) };
         Caravans.sendCaravan(state, n.id, "you", home, 3, goods);
         Events.logEvent(state, (e.kind == "nest") ? $"The dead near {Js.Str(n.name)} are gone. They're sending thanks by caravan" : $"You found {Js.Str(e.who)}, and sent them home to {Js.Str(n.name)}. They're sending thanks by caravan");

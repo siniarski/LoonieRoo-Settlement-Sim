@@ -135,7 +135,7 @@ public static partial class Hordes
         var xs = zs.map((z) => z.pos.x).sort((a, b) => a - b);
         var ys = zs.map((z) => z.pos.y).sort((a, b) => a - b);
         var k = (zs.length - 1) >> 1;
-        return new Point { x = Js.I(xs[Js.Idx(k)]!), y = Js.I(ys[Js.Idx(k)]!) };
+        return new Point { x = Js.I(Js.NN(xs[Js.Idx(k)])), y = Js.I(Js.NN(ys[Js.Idx(k)])) };
     }
 
     /// <summary>Members dropped, goals and the box worked out again.</summary>
@@ -158,7 +158,7 @@ public static partial class Hordes
             var goals = prey.map((s) => new Point { x = Js.I(s.pos.x), y = Js.I(s.pos.y) });
             var ids = prey.map((s) => s.id);
             var samePeople = ((wasMode == "hunt") && (ids.length == wasIds.length)) && ids.every((id, i) => id == wasIds[Js.Idx(i)]);
-            var barely = Js.T(samePeople) && ids.every((_, i) => Space.manhattan(goals[Js.Idx(i)]!, was[Js.Idx(i)]!) <= GOAL_SLACK);
+            var barely = Js.T(samePeople) && ids.every((_, i) => Space.manhattan(Js.NN(goals[Js.Idx(i)]), Js.NN(was[Js.Idx(i)])) <= GOAL_SLACK);
             if (!Js.T(samePeople) || (!Js.T(barely) && ((state.tick - (h.goalTick ?? -GOAL_EVERY)) >= GOAL_EVERY)))
             {
                 h.goals = goals;
@@ -170,7 +170,7 @@ public static partial class Hordes
         {
             if (((h.mode == "hunt") && !Js.T(h.heading)) && (h.goals.length > 0))
             {
-                h.heading = Js.Clone(h.goals[Js.Idx(0)]!);
+                h.heading = Js.Clone(Js.NN(h.goals[Js.Idx(0)]));
             }
             h.mode = "roam";
             h.goals = Js.T(h.heading) ? [Js.Clone(h.heading)] : [];
@@ -192,7 +192,7 @@ public static partial class Hordes
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        /*TODO return type*/object clampBox(double lo, double hi, double centre, double size)
+        (double, double) clampBox(double lo, double hi, double centre, double size)
         {
             lo -= BOX_MARGIN;
             hi += BOX_MARGIN;
@@ -201,10 +201,10 @@ public static partial class Hordes
                 lo = centre - (BOX_MAX >> 1);
                 hi = (lo + BOX_MAX) - 1;
             }
-            return [JsMath.max(0, lo), JsMath.min(size - 1, hi)];
+            return (JsMath.max(0, lo), JsMath.min(size - 1, hi));
         }
-        /*TODO destructuring assignment*/;
-        /*TODO destructuring assignment*/;
+        var __bx = clampBox(x0, x1, mid.x, width); x0 = (int)__bx.Item1; x1 = (int)__bx.Item2;
+        var __by = clampBox(y0, y1, mid.y, height); y0 = (int)__by.Item1; y1 = (int)__by.Item2;
         var b = h.box;
         bool inside(Point q)
         {
@@ -226,7 +226,7 @@ public static partial class Hordes
             if (d < best)
             {
                 best = d;
-                z.targetId = h.goalIds[Js.Idx(i)]!;
+                z.targetId = Js.NN(h.goalIds[Js.Idx(i)]);
             }
         });
             }
@@ -303,31 +303,31 @@ public static partial class Hordes
         var y1 = __d3.y1;
         var w = (x1 - x0) + 1;
         var ht = (y1 - y0) + 1;
-        var dist = new int[w * ht].fill(UNREACHED);
-        var hc = new double[1024];
-        var hi = new int[1024];
+        var dist = new Int32Array(w * ht).fill(UNREACHED);
+        var hc = new Float64Array(1024);
+        var hi = new Int32Array(1024);
         var size = 0;
         bool less(double a, double b)
         {
-            return (hc[Js.Idx(a)]! < hc[Js.Idx(b)]!) || ((hc[Js.Idx(a)] == hc[Js.Idx(b)]) && (hi[Js.Idx(a)]! < hi[Js.Idx(b)]!));
+            return (Js.NN(hc[Js.Idx(a)]) < Js.NN(hc[Js.Idx(b)])) || ((hc[Js.Idx(a)] == hc[Js.Idx(b)]) && (Js.NN(hi[Js.Idx(a)]) < Js.NN(hi[Js.Idx(b)])));
         }
         void swap(double a, double b)
         {
-            var c = hc[Js.Idx(a)]!;
-            hc[Js.Idx(a)] = hc[Js.Idx(b)]!;
+            var c = Js.NN(hc[Js.Idx(a)]);
+            hc[Js.Idx(a)] = Js.NN(hc[Js.Idx(b)]);
             hc[Js.Idx(b)] = c;
-            var i = hi[Js.Idx(a)]!;
-            hi[Js.Idx(a)] = hi[Js.Idx(b)]!;
+            var i = Js.NN(hi[Js.Idx(a)]);
+            hi[Js.Idx(a)] = Js.NN(hi[Js.Idx(b)]);
             hi[Js.Idx(b)] = i;
         }
-        void push(double c, int i)
+        void push(double c, double i)
         {
             if (size == hc.length)
             {
-                var nc = new double[size * 2];
+                var nc = new Float64Array(size * 2);
                 nc.set(hc);
                 hc = nc;
-                var ni = new int[size * 2];
+                var ni = new Int32Array(size * 2);
                 ni.set(hi);
                 hi = ni;
             }
@@ -347,12 +347,12 @@ public static partial class Hordes
         }
         List<double> pop()
         {
-            List<double> top = [hc[Js.Idx(0)]!, hi[Js.Idx(0)]!];
+            List<double> top = [Js.NN(hc[Js.Idx(0)]), Js.NN(hi[Js.Idx(0)])];
             size--;
             if (size > 0)
             {
-                hc[Js.Idx(0)] = hc[Js.Idx(size)]!;
-                hi[Js.Idx(0)] = hi[Js.Idx(size)]!;
+                hc[Js.Idx(0)] = Js.NN(hc[Js.Idx(size)]);
+                hi[Js.Idx(0)] = Js.NN(hi[Js.Idx(size)]);
                 var k = 0;
                 for (; ; )
                 {
@@ -377,7 +377,7 @@ public static partial class Hordes
             }
             return top;
         }
-        bool inBox(int x, int y)
+        bool inBox(double x, double y)
         {
             return (((x >= x0) && (x <= x1)) && (y >= y0)) && (y <= y1);
         }
@@ -412,14 +412,14 @@ public static partial class Hordes
                 }
             }
         }
-        var enter = new double[w * ht].fill(-1);
-        /*TODO return type*/object stepIn(int ax, int ay, int bx, int by, double bi)
+        var enter = new Float64Array(w * ht).fill(-1);
+        double stepIn(double ax, double ay, double bx, double by, double bi)
         {
             if (enter[Js.Idx(bi)] == -1)
             {
                 enter[Js.Idx(bi)] = enterCost(state, bx, by, true);
             }
-            var @base = enter[Js.Idx(bi)]!;
+            var @base = Js.NN(enter[Js.Idx(bi)]);
             if (@base == double.PositiveInfinity)
             {
                 return double.PositiveInfinity;
@@ -429,7 +429,7 @@ public static partial class Hordes
         while (size > 0)
         {
             var (c, i) = pop();
-            if (c >= dist[Js.Idx(i)]!)
+            if (c >= Js.NN(dist[Js.Idx(i)]))
             {
                 continue;
             }
@@ -491,7 +491,7 @@ public static partial class Hordes
             {
                 continue;
             }
-            var rest = f.dist[Js.Idx(((ny - y0) * w) + (nx - x0))]!;
+            var rest = Js.NN(f.dist[Js.Idx(((ny - y0) * w) + (nx - x0))]);
             if (rest == UNREACHED)
             {
                 continue;
@@ -545,7 +545,7 @@ public static partial class Hordes
                 z.heading = Js.Clone(h.heading);
             }
         }
-        state.hordes!.splice(state.hordes!.indexOf(h), 1);
+        Js.NN(state.hordes).splice(Js.NN(state.hordes).indexOf(h), 1);
     }
 
     public static void social(SimState state)
@@ -558,8 +558,8 @@ public static partial class Hordes
             {
                 for (var j = i + 1; (j < list.length) && !Js.T(merged); j++)
                 {
-                    var a = list[Js.Idx(i)]!;
-                    var b = list[Js.Idx(j)]!;
+                    var a = Js.NN(list[Js.Idx(i)]);
+                    var b = Js.NN(list[Js.Idx(j)]);
                     if ((a.mode != b.mode) || (a.night != b.night))
                     {
                         continue;
@@ -570,7 +570,7 @@ public static partial class Hordes
                     {
                         continue;
                     }
-                    var (big, small, smallZs) = (za.length >= zb.length) ? (a, b, zb) : (b, a, za);
+                    var __c5 = za.length >= zb.length; var big = __c5 ? a : b; var small = __c5 ? b : a; var smallZs = __c5 ? zb : za;
                     foreach (var z in Js.Iter(smallZs))
                     {
                         z.hordeId = big.id;
@@ -633,7 +633,7 @@ public static partial class Hordes
         {
             return;
         }
-        double roll(int k)
+        double roll(double k)
         {
             return Hash.hashRoll(Hash.idNumber(h.id), state.tick, 1517.0, k);
         }
@@ -649,9 +649,9 @@ public static partial class Hordes
         var dx = goal.x - mid.x;
         var dy = goal.y - mid.y;
         var side = (roll(2) < 0.5) ? 1 : -1;
-        var __d5 = state.grid;
-        var width = __d5.width;
-        var height = __d5.height;
+        var __d6 = state.grid;
+        var width = __d6.width;
+        var height = __d6.height;
         Point heading = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
         foreach (var z in Js.Iter(back))
         {
@@ -685,15 +685,15 @@ public static partial class Hordes
         {
             return;
         }
-        var __d6 = state.grid;
-        var width = __d6.width;
-        var height = __d6.height;
+        var __d7 = state.grid;
+        var width = __d7.width;
+        var height = __d7.height;
         var to = h.heading ?? new Point { x = Js.I((width - 1) - mid.x), y = Js.I((height - 1) - mid.y) };
         foreach (var z in Js.Iter(zs))
         {
             Zombies.removeZombie(state, z);
         }
-        state.hordes!.splice(state.hordes!.indexOf(h), 1);
+        Js.NN(state.hordes).splice(Js.NN(state.hordes).indexOf(h), 1);
         state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(mid.x), y = Js.I(mid.y), to = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, to.x))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, to.y))) }, size = zs.length, nextStepTick = state.tick, heard = false });
     }
 

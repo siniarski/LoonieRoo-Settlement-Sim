@@ -47,7 +47,7 @@ public static partial class Weapons
         {
             return false;
         }
-        var item = Items.getItem(state, s.arming!);
+        var item = Items.getItem(state, Js.NN(s.arming));
         if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
         {
             cancelArming(state, s, "weapon gone");

@@ -54,7 +54,7 @@ public static partial class Towers
             s.note = "keeping watch";
             return true;
         }
-        bool taken(int x, int y)
+        bool taken(double x, double y)
         {
             return state.survivors.some((o) => (o != s) && (((o.pos.x == x) && (o.pos.y == y)) || ((o.goal?.x == x) && (o.goal.y == y))));
         }

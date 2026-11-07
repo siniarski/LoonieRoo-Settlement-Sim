@@ -47,7 +47,7 @@ public static partial class Water
     {
         if ((source == "collector") || (source == "tank"))
         {
-            FurnitureMod.furnitureAt(state, x, y)!.loot -= 1;
+            Js.NN(FurnitureMod.furnitureAt(state, x, y)).loot -= 1;
         }
     }
     public static void drankFrom(SimState state, string source, double x, double y) => drankFrom(state, source, (int)x, (int)y);
@@ -191,7 +191,7 @@ public static partial class Water
         {
             return false;
         }
-        var d = s.drink!;
+        var d = Js.NN(s.drink);
         if (!Js.T(Space.samePoint(s.pos, d)))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [d]);

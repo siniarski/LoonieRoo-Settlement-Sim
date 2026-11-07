@@ -52,8 +52,8 @@ public static partial class Relationships
         {
             for (var j = i + 1; j < awake.length; j++)
             {
-                var a = awake[Js.Idx(i)]!;
-                var b = awake[Js.Idx(j)]!;
+                var a = Js.NN(awake[Js.Idx(i)]);
+                var b = Js.NN(awake[Js.Idx(j)]);
                 if (Space.manhattan(a.pos, b.pos) > NEAR)
                 {
                     continue;

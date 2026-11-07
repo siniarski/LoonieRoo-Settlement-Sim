@@ -50,11 +50,11 @@ public static partial class Alerts
         var raiders = near.filter((z) => z.kind == "raider");
         if (raiders.length > 0)
         {
-            add("danger", $"Raiders at the colony: {Js.Str(raiders.length)}", raiders[Js.Idx(0)]!.pos);
+            add("danger", $"Raiders at the colony: {Js.Str(raiders.length)}", Js.NN(raiders[Js.Idx(0)]).pos);
         }
         if (near.length > raiders.length)
         {
-            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(((near.length - raiders.length) == 1) ? "" : "s")} near the colony", near.find((z) => z.kind != "raider")!.pos);
+            add("danger", $"{Js.Str(near.length - raiders.length)} zombie{Js.Str(((near.length - raiders.length) == 1) ? "" : "s")} near the colony", Js.NN(near.find((z) => z.kind != "raider")).pos);
         }
         if (state.fires.length > 0)
         {
@@ -160,7 +160,7 @@ public static partial class Alerts
             var rotting = state.items.filter((i) => Js.T(Corpses.isRotting(state, i, graves)));
             if (rotting.length > 0)
             {
-                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", rotting[Js.Idx(0)]!.pos!);
+                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", Js.NN(Js.NN(rotting[Js.Idx(0)]).pos));
             }
         }
         foreach (var g in Js.Iter(FurnitureMod.ofKind(state, "generator")))

@@ -130,7 +130,7 @@ public static partial class Leisure
         List<Point> spots = [];
         foreach (var index in Js.Iter((rooms).ToList().sort((a, b) => a - b)))
         {
-            foreach (var i in Js.Iter(all[Js.Idx(index)]!.tiles))
+            foreach (var i in Js.Iter(Js.NN(all[Js.Idx(index)]).tiles))
             {
                 Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(spotFree(state, s, p, at)))

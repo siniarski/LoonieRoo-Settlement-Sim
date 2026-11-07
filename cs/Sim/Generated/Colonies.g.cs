@@ -185,7 +185,7 @@ public static partial class Colonies
             n.food -= took;
             var killed = 1 + ((roll > 0.8) ? 1 : 0);
             n.people = JsMath.max(0, n.people - killed);
-            var home = armed[Js.Idx(0)]!.pos;
+            var home = Js.NN(armed[Js.Idx(0)]).pos;
             for (var i = 0; i < JsMath.min(10, took); i++)
             {
                 Items.spawnItem(state, "food", home.x, home.y);
@@ -194,7 +194,7 @@ public static partial class Colonies
         }
         else
         {
-            var hurt = armed[Js.Idx(JsMath.floor(roll * armed.length))]!;
+            var hurt = Js.NN(armed[Js.Idx(JsMath.floor(roll * armed.length))]);
             hurt.health = JsMath.max(1, hurt.health - 150);
             hurt.lastHurtBy = "a raid gone wrong";
             hurt.hurtTick = state.tick;
@@ -305,7 +305,7 @@ public static partial class Colonies
         var height = __d0.height;
         var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + (JsMath.cos(angle) * 30))));
         var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + (JsMath.sin(angle) * 30))));
-        var name = SPLIT_NAMES[Js.Idx(state.settlements.length % SPLIT_NAMES.length)]!;
+        var name = Js.NN(SPLIT_NAMES[Js.Idx(state.settlements.length % SPLIT_NAMES.length)]);
         n.people -= SPLIT_PEOPLE;
         var food = JsMath.floor(((double)(n.food) / (3)));
         n.food -= food;

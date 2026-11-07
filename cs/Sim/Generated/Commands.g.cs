@@ -41,7 +41,7 @@ public static partial class Commands
             }
             var done = ControlMod.work(state, s, command);
             s.note = done;
-            return Js.T(state.control!.busy) ? changed() : reject(done);
+            return Js.T(Js.NN(state.control).busy) ? changed() : reject(done);
         }
         if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash"))
         {
@@ -64,11 +64,11 @@ public static partial class Commands
             {
                 return reject("nobody is under control");
             }
-            if ((state.control!.sneaking == true) == command.on)
+            if ((Js.NN(state.control).sneaking == true) == command.on)
             {
                 return unchanged();
             }
-            state.control!.sneaking = command.on;
+            Js.NN(state.control).sneaking = command.on;
             return changed();
         }
         if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim"))
@@ -80,7 +80,7 @@ public static partial class Commands
             }
             if (command.type == "aim")
             {
-                var why = ControlMod.aim(state.control!, command.x, command.y);
+                var why = ControlMod.aim(Js.NN(state.control), command.x, command.y);
                 return (why == null) ? changed() : ((why == "same") ? unchanged() : reject(why));
             }
             if (command.type == "steer")
@@ -93,13 +93,13 @@ public static partial class Commands
                     return reject("steer takes -1, 0 or 1");
                 }
                 var run = command.run == true;
-                if (((state.control!.dx == dx) && (state.control!.dy == dy)) && ((state.control!.running == true) == run))
+                if (((Js.NN(state.control).dx == dx) && (Js.NN(state.control).dy == dy)) && ((Js.NN(state.control).running == true) == run))
                 {
                     return unchanged();
                 }
-                state.control!.dx = dx;
-                state.control!.dy = dy;
-                state.control!.running = run;
+                Js.NN(state.control).dx = dx;
+                Js.NN(state.control).dy = dy;
+                Js.NN(state.control).running = run;
                 return changed();
             }
             if (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y))
@@ -192,7 +192,7 @@ public static partial class Commands
             }
             foreach (var s in Js.Iter(heard))
             {
-                any = Js.Or(giveOrder(state, s, command.order, (command.order == "loot") ? new Point { x = Js.I(command.x!), y = Js.I(command.y!) } : s.pos), any);
+                any = Js.Or(giveOrder(state, s, command.order, (command.order == "loot") ? new Point { x = Js.I(Js.NN(command.x)), y = Js.I(Js.NN(command.y)) } : s.pos), any);
             }
             return Js.T(any) ? changed() : unchanged();
         }
@@ -848,7 +848,7 @@ public static partial class Commands
         var emx = JsMath.floor(((double)((ex0 + ex1)) / (2)));
         var emy = JsMath.floor(((double)((ey0 + ey1)) / (2)));
         var edgesPlanned = 0;
-        void plan(int x, int y, string side, bool door)
+        void plan(double x, double y, string side, bool door)
         {
             if (!Js.T(Grids.inBounds(state.grid, x, y)) || !Js.T(Fog.isExplored(state, x, y)))
             {
@@ -1276,7 +1276,7 @@ public static partial class Commands
             }
             return Inventory.stash(state, s, item, command.containerId);
         }
-        var c = state.control!;
+        var c = Js.NN(state.control);
         if ((item.kind == "food") || (item.kind == "meal"))
         {
             c.busy = new() { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };

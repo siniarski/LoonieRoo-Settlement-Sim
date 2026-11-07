@@ -116,13 +116,13 @@ public static partial class Caravans
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
         }
-        state.caravans!.splice(state.caravans!.indexOf(c), 1);
+        Js.NN(state.caravans).splice(Js.NN(state.caravans).indexOf(c), 1);
         return true;
     }
 
     public static void arrive(SimState state, Caravan c)
     {
-        state.caravans!.splice(state.caravans!.indexOf(c), 1);
+        Js.NN(state.caravans).splice(Js.NN(state.caravans).indexOf(c), 1);
         var from = Settlements.getSettlement(state, c.from);
         if (c.to == "you")
         {
