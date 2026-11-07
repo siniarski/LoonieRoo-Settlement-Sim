@@ -60,7 +60,7 @@ public static partial class Wanderers
     public static void updateWanderers(SimState state)
     {
         reconcileWanderers(state);
-        foreach (var w in Js.Iter([.. state.wanderers]))
+        foreach (var w in Js.Iter((state.wanderers).ToList()))
         {
             if ((state.tick >= w.leavesTick) || Js.T(Time.isNight(state.tick)))
             {
@@ -86,13 +86,13 @@ public static partial class Wanderers
     /// <summary>A wall built where a wanderer waits moves them to a free neighbour; with none, they leave.</summary>
     public static void reconcileWanderers(SimState state)
     {
-        foreach (var w in Js.Iter([.. state.wanderers]))
+        foreach (var w in Js.Iter((state.wanderers).ToList()))
         {
             if (Js.T(Grids.isWalkable(state.grid, w.x, w.y)))
             {
                 continue;
             }
-            var to = Pathfinding.DIRS.map((d) => new() { x = Js.I(w.x + d.x), y = Js.I(w.y + d.y) }).find((p) => Js.T(Grids.isWalkable(state.grid, p.x, p.y)));
+            var to = Pathfinding.DIRS.map((d) => new Point { x = Js.I(w.x + d.x), y = Js.I(w.y + d.y) }).find((p) => Js.T(Grids.isWalkable(state.grid, p.x, p.y)));
             if (Js.T(to))
             {
                 w.x = Js.I(to.x);
@@ -116,7 +116,7 @@ public static partial class Wanderers
         for (var attempt = 0; attempt < 8; attempt++)
         {
             var s = Rng.pick(state, state.survivors);
-            Point near = new() { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))) };
+            Point near = new Point { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))) };
             bool ok(int x, int y)
             {
                 return (Js.T(Fog.isExplored(state, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !taken.has($"{Js.Str(x)},{Js.Str(y)}") && Pathfinding.DIRS.some((d) => Js.T(Grids.inBounds(state.grid, x + d.x, y + d.y)) && !Js.T(Fog.isExplored(state, x + d.x, y + d.y)));
@@ -146,11 +146,11 @@ public static partial class Wanderers
         List<Point> edge = [];
         for (var x = 0; x < width; x++)
         {
-            edge.push(new() { x = Js.I(x), y = Js.I(0) }, new() { x = Js.I(x), y = Js.I(height - 1) });
+            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
         }
         for (var y = 1; y < (height - 1); y++)
         {
-            edge.push(new() { x = Js.I(0), y = Js.I(y) }, new() { x = Js.I(width - 1), y = Js.I(y) });
+            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
         }
         var taken = Js.Set(state.wanderers.map((w) => $"{Js.Str(w.x)},{Js.Str(w.y)}"));
         var candidates = edge.filter((p) => (Grids.getTile(state.grid, p.x, p.y) == "floor") && !taken.has($"{Js.Str(p.x)},{Js.Str(p.y)}"));

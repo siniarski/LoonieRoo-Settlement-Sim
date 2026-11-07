@@ -13,9 +13,9 @@ public static partial class Invariants
         List<string> problems = [];
         var __d0 = state;
         var grid = __d0.grid;
-        var survivors = /*TODO Map type*/new JsMap<object, object>(Expeditions.everyone(state).map((s) => [s.id, s]));
-        var jobs = /*TODO Map type*/new JsMap<object, object>(state.jobs.map((j) => [j.id, j]));
-        var items = /*TODO Map type*/new JsMap<object, object>(state.items.map((i) => [i.id, i]));
+        var survivors = Js.MapOf(Expeditions.everyone(state), (s) => s.id, (s) => s);
+        var jobs = Js.MapOf(state.jobs, (j) => j.id, (j) => j);
+        var items = Js.MapOf(state.items, (i) => i.id, (i) => i);
         foreach (var s in Js.Iter(state.survivors))
         {
             if (!Js.T(Grids.isWalkable(grid, s.pos.x, s.pos.y)))
@@ -368,9 +368,9 @@ public static partial class Invariants
                 problems.push($"duplicate zombie id {Js.Str(z.id)}");
             }
             zombieIds.add(z.id);
-            /*TODO return type*/object standable(int x, int y)
+            bool standable(int x, int y)
             {
-                return Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z));
+                return Js.T(Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z)));
             }
             if (!Js.T(standable(z.pos.x, z.pos.y)))
             {
@@ -448,7 +448,7 @@ public static partial class Invariants
         void listed(List<double> arr, List<double> list, string name)
         {
             var want = arr.flatMap((v, i) => (v != 0) ? [i] : []);
-            var have = [.. list].sort((a, b) => a - b);
+            var have = (list).ToList().sort((a, b) => a - b);
             if ((want.length != have.length) || want.some((v, k) => v != have[Js.Idx(k)]))
             {
                 problems.push($"{Js.Str(name)} list out of step with the map");

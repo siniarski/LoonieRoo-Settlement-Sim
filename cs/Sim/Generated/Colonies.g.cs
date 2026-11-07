@@ -88,14 +88,14 @@ public static partial class Colonies
     {
         var day = Time.dayOf(state.tick);
         var season = Seasons.seasonOf(state.tick);
-        foreach (var n in Js.Iter([.. state.settlements]))
+        foreach (var n in Js.Iter((state.settlements).ToList()))
         {
             if (Js.T(isFallen(n)))
             {
                 continue;
             }
             var id = Hash.idNumber(n.id);
-            /*TODO return type*/object roll(double salt)
+            double roll(double salt)
             {
                 return Hash.hashRoll(id, day, salt);
             }
@@ -217,7 +217,7 @@ public static partial class Colonies
         {
             var sent = JsMath.floor(((double)(giver.food) / (3)));
             giver.food -= sent;
-            Caravans.sendCaravan(state, giver.id, n.id, new() { x = Js.I(n.x), y = Js.I(n.y) }, sent);
+            Caravans.sendCaravan(state, giver.id, n.id, new Point { x = Js.I(n.x), y = Js.I(n.y) }, sent);
             tie(state, giver, n, 10);
             news(state, n, $"{Js.Str(giver.name)} sent a caravan of food to a starving {Js.Str(n.name)}");
             return;
@@ -250,7 +250,7 @@ public static partial class Colonies
         }
         var sent = JsMath.floor(((double)(ally.food) / (4)));
         ally.food -= sent;
-        Caravans.sendCaravan(state, ally.id, n.id, new() { x = Js.I(n.x), y = Js.I(n.y) }, sent);
+        Caravans.sendCaravan(state, ally.id, n.id, new Point { x = Js.I(n.x), y = Js.I(n.y) }, sent);
         news(state, n, $"{Js.Str(ally.name)} sent a caravan to its ally {Js.Str(n.name)}");
     }
 
@@ -340,12 +340,12 @@ public static partial class Colonies
     public static void unfold(SimState state, Settlement n)
     {
         n.unfolded = true;
-        Worldgen.ensureGeneratedAround(state, new() { x = Js.I(n.x), y = Js.I(n.y) });
+        Worldgen.ensureGeneratedAround(state, new Point { x = Js.I(n.x), y = Js.I(n.y) });
         var box = compound(n);
         var __d1 = state;
         var grid = __d1.grid;
         var fallen = isFallen(n);
-        Point door = new() { x = Js.I(n.x), y = Js.I(box.y1) };
+        Point door = new Point { x = Js.I(n.x), y = Js.I(box.y1) };
         for (var y = box.y0; y <= box.y1; y++)
         {
             for (var x = box.x0; x <= box.x1; x++)
@@ -366,7 +366,7 @@ public static partial class Colonies
                 Grids.setTile(grid, x, y, (Js.T(edge) && !Js.T(broken)) ? ((x == door.x) && (y == door.y) ? "door" : "wall") : "floor");
                 if (Js.T(edge))
                 {
-                    Zombies.evictZombies(state, new() { x = Js.I(x), y = Js.I(y) });
+                    Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }
@@ -378,7 +378,7 @@ public static partial class Colonies
             {
                 if (Js.T(Grids.inBounds(grid, x, y)))
                 {
-                    inside.push(new() { x = Js.I(x), y = Js.I(y) });
+                    inside.push(new Point { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }

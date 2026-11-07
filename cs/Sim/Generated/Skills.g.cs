@@ -96,7 +96,15 @@ public static partial class Skills
     public static string describeSkills(Survivor s)
     {
         var traits = s.traits.map((t) => TRAIT_INFO[Js.Idx(t)].label);
-        var skills = Js.ObjectKeys(s.xp).map((k) => [k, skillLevel(s, k)]).filter((/*TODO pattern*/_0) => level > 0).map((/*TODO pattern*/_1) => $"{Js.Str(k)} {Js.Str(level)}");
+        var skills = Js.ObjectKeys(s.xp).map((k) => [k, skillLevel(s, k)]).filter((__p0) =>
+        {
+            var (_, level) = __p0;
+            return level > 0;
+        }).map((__p1) =>
+        {
+            var (k, level) = __p1;
+            return $"{Js.Str(k)} {Js.Str(level)}";
+        });
         return Js.Or([traits.join(", "), skills.join(", ")].filter(Boolean).join("; "), "no skills yet");
     }
 }

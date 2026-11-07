@@ -50,7 +50,7 @@ public static partial class Errands
         {
             return null;
         }
-        /*TODO return type*/object roll(int k)
+        double roll(int k)
         {
             return Hash.hashRoll(Hash.idNumber(n.id), Time.dayOf(state.tick), salt, k);
         }
@@ -63,7 +63,7 @@ public static partial class Errands
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        Point want = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, want);
         var spot = Space.nearestTile(state.grid, want, (x, y) => Grids.getTile(state.grid, x, y) == "floor", 400);
         if (!Js.T(spot))
@@ -77,7 +77,7 @@ public static partial class Errands
         {
             for (var k = 0; k < NEST_SIZE; k++)
             {
-                var p = Space.nearestTile(state.grid, new() { x = Js.I(spot.x + (k % 2)), y = Js.I(spot.y + JsMath.floor(((double)(k) / (2)))) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !state.zombies.some((z) => (z.pos.x == x) && (z.pos.y == y)), 100);
+                var p = Space.nearestTile(state.grid, new Point { x = Js.I(spot.x + (k % 2)), y = Js.I(spot.y + JsMath.floor(((double)(k) / (2)))) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !state.zombies.some((z) => (z.pos.x == x) && (z.pos.y == y)), 100);
                 if (Js.T(p))
                 {
                     e.zombieIds.push(Zombies.addZombie(state, p.x, p.y, null, "static").id);
@@ -98,7 +98,7 @@ public static partial class Errands
         {
             return;
         }
-        foreach (var e in Js.Iter([.. list]))
+        foreach (var e in Js.Iter((list).ToList()))
         {
             var n = Settlements.getSettlement(state, e.settlementId);
             if (!Js.T(n) || (n.people <= 0))
@@ -136,12 +136,12 @@ public static partial class Errands
         {
             n.people += 1;
         }
-        /*TODO return type*/object roll(int k)
+        double roll(int k)
         {
             return Hash.hashRoll(Hash.idNumber(e.id), k);
         }
         List<string> goods = [THANKS[Js.Idx(JsMath.floor(roll(1) * THANKS.length))]!, THANKS[Js.Idx(JsMath.floor(roll(2) * THANKS.length))]!];
-        Point home = state.survivors[Js.Idx(0)]?.pos ?? new() { x = Js.I(n.x), y = Js.I(n.y) };
+        Point home = state.survivors[Js.Idx(0)]?.pos ?? new Point { x = Js.I(n.x), y = Js.I(n.y) };
         Caravans.sendCaravan(state, n.id, "you", home, 3, goods);
         Events.logEvent(state, (e.kind == "nest") ? $"The dead near {Js.Str(n.name)} are gone. They're sending thanks by caravan" : $"You found {Js.Str(e.who)}, and sent them home to {Js.Str(n.name)}. They're sending thanks by caravan");
     }

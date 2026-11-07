@@ -136,7 +136,7 @@ public static partial class Animals
 
     public static Animal addDeer(SimState state, int x, int y)
     {
-        Animal a = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = Js.I(x), y = Js.I(y) }), new() { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new() { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS });
+        Animal a = /*TODO object spread*/Js.Spread(Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }), new() { id = $"d{Js.Str(state.nextId++)}", kind = "deer", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = state.tick + DEER_STAYS });
         state.animals.push(a);
         return a;
     }
@@ -145,7 +145,7 @@ public static partial class Animals
     /// <summary>A rabbit, wolf or bear at a tile.</summary>
     public static Animal addAnimal(SimState state, string kind, int x, int y, string? packId = default)
     {
-        Animal a = /*TODO object spread*/Js.Spread(Js.T(packId) ? new() { packId = packId } : new(), new() { id = $"w{Js.Str(state.wildId = (state.wildId ?? 0) + 1)}", kind = kind, pos = new() { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = JsNumber.MAX_SAFE_INTEGER, health = HEALTH[Js.Idx(kind)], hunger = 0, targetId = null, nextBite = 0 });
+        Animal a = /*TODO object spread*/Js.Spread(Js.T(packId) ? new() { packId = packId } : new(), new() { id = $"w{Js.Str(state.wildId = (state.wildId ?? 0) + 1)}", kind = kind, pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = JsNumber.MAX_SAFE_INTEGER, health = HEALTH[Js.Idx(kind)], hunger = 0, targetId = null, nextBite = 0 });
         if ((kind == "wolf") && !Js.T(packId))
         {
             a.packId = a.id;
@@ -184,7 +184,7 @@ public static partial class Animals
         {
             hourly(state);
         }
-        foreach (var a in Js.Iter([.. state.animals]))
+        foreach (var a in Js.Iter((state.animals).ToList()))
         {
             if (!state.animals.includes(a))
             {
@@ -479,7 +479,7 @@ public static partial class Animals
         state.animals = state.animals.filter((a) => (a.kind == "deer") || state.survivors.some((s) => Space.manhattan(s.pos, a.pos) <= WILD_RADIUS));
         state.survivors.forEach((s, k) =>
         {
-            /*TODO return type*/object roll(double salt)
+            double roll(double salt)
             {
                 return Hash.hashRoll(hour, Hash.idNumber(s.id), salt);
             }
@@ -526,7 +526,7 @@ public static partial class Animals
                 }
             }
         });
-        foreach (var a in Js.Iter([.. state.animals]))
+        foreach (var a in Js.Iter((state.animals).ToList()))
         {
             if ((a.kind != "rabbit") || Js.T(winter))
             {
@@ -554,10 +554,10 @@ public static partial class Animals
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        Point want = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
         bool clear(int x, int y)
         {
-            return state.survivors.every((s) => Space.manhattan(s.pos, new() { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);
+            return state.survivors.every((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);
         }
         var p = Space.nearestTile(state.grid, want, (x, y) => (Js.T(ground(state, x, y)) && Js.T(clear(x, y))) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.animals.some((o) => (o.pos.x == x) && (o.pos.y == y)), 200);
         return Js.T(p) ? addAnimal(state, kind, p.x, p.y) : null;

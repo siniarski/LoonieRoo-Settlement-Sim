@@ -49,7 +49,7 @@ public static partial class Inventory
         var f = FurnitureMod.getFurniture(state, id);
         if (Js.T(f))
         {
-            return (f.kind == "crate") ? new() { at = new() { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
+            return (f.kind == "crate") ? new() { at = new Point { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
         }
         var v = Vehicles.vehiclesOf(state).find((x) => x.id == id);
         return Js.T(v) ? new() { at = v.pos, max = Vehicles.bootMax(v) } : null;
@@ -147,7 +147,7 @@ public static partial class Inventory
     /// <summary>Everything in the bag falls where you fall (death, or leaving).</summary>
     public static void dropPack(SimState state, Survivor s)
     {
-        foreach (var id in Js.Iter([.. s.pack]))
+        foreach (var id in Js.Iter((s.pack).ToList()))
         {
             var item = Items.getItem(state, id);
             unpack(s, id);

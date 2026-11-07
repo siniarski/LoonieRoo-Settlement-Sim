@@ -103,8 +103,8 @@ public static partial class Vehicles
         fuel ??= FUEL_MAX;
         health ??= VEHICLE_HEALTH;
         state.vehicles ??= [];
-        var at = Motion.centre(new() { x = Js.I(x), y = Js.I(y) });
-        Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new() { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
+        var at = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
+        Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new Point { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
         state.vehicles.push(v);
         return v;
     }
@@ -163,7 +163,7 @@ public static partial class Vehicles
         }
         v.driverId = null;
         v.speed = 0;
-        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => (x != v.pos.x) || (y != v.pos.y) && Js.T(Motion.fits(state.grid, Motion.centre(new() { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
+        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => (x != v.pos.x) || (y != v.pos.y) && Js.T(Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
         s.at = Motion.centre(spot);
         s.pos = spot;
         return "got out";
@@ -230,11 +230,11 @@ public static partial class Vehicles
     public static void move(SimState state, Survivor s, Vehicle v)
     {
         var (cx, cy) = HEADING_DIRS[Js.Idx(v.heading)]!;
-        Point want = new() { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
+        Point want = new Point { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
         var to = (into.x != v.pos.x) || (into.y != v.pos.y) && Js.T(blocked(state, into)) ? v.at : slid;
-        Point got = new() { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
+        Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
         var lost = (Motion.distance2(want, got) * 9) > (want.x * want.x) + (want.y * want.y);
@@ -254,7 +254,7 @@ public static partial class Vehicles
             return;
         }
         var reach = VEHICLE_RADIUS + Motion.BODY_RADIUS;
-        foreach (var z in Js.Iter([.. state.zombies]))
+        foreach (var z in Js.Iter((state.zombies).ToList()))
         {
             if (Motion.distance2(z.at, v.at) > (reach * reach))
             {

@@ -163,6 +163,15 @@ public static class JsListExtensions
             for (int i = 0; i < copy.Count; i++) f(copy[i], i);
         }
 
+        /// <summary>reduce with no initial value: the first item starts it (as JS; an empty list throws).</summary>
+        public T reduce(Func<T, T, T> f)
+        {
+            if (a.Count == 0) throw new InvalidOperationException("Reduce of empty array with no initial value");
+            var acc = a[0];
+            for (int i = 1; i < a.Count; i++) acc = f(acc, a[i]);
+            return acc;
+        }
+
         public U reduce<U>(Func<U, T, U> f, U init)
         {
             var acc = init;
@@ -594,6 +603,14 @@ public static partial class Js
     {
         set(x);
         return x;
+    }
+
+    /// <summary>new Map(list.map((x) => [key, value])).</summary>
+    public static JsMap<K, V> MapOf<T, K, V>(IEnumerable<T> list, Func<T, K> key, Func<T, V> value) where K : notnull
+    {
+        var m = new JsMap<K, V>();
+        foreach (var x in list) m.set(key(x), value(x));
+        return m;
     }
 
     /// <summary>typeof x.</summary>

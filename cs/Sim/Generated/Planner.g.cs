@@ -118,7 +118,7 @@ public static partial class Planner
             return new() { commands = [], notes = notes };
         }
         List<Point> spots = [];
-        foreach (var p in Js.Iter([.. freeSpots(state, room)].sort((a, b) => a.walls - b.walls).map((c) => c.p)))
+        foreach (var p in Js.Iter((freeSpots(state, room)).ToList().sort((a, b) => a.walls - b.walls).map((c) => c.p)))
         {
             if (spots.length == toAdd)
             {
@@ -201,7 +201,7 @@ public static partial class Planner
         List<FreeSpotsCandidates> candidates = [];
         foreach (var i in Js.Iter(room.tiles))
         {
-            Point p = new() { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
+            Point p = new Point { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
             if (taken.has($"{Js.Str(p.x)},{Js.Str(p.y)}"))
             {
                 continue;

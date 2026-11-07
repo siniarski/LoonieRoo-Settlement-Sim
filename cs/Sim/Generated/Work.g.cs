@@ -485,12 +485,12 @@ public static partial class Work
         s.note = "heading home before dark";
         var bed = FurnitureMod.ofKind(state, "bed").find((f) => f.owner == s.id);
         var others = state.survivors.filter((o) => o != s);
-        var home = bed ?? ((others.length > 0) ? new() { x = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0)) / (others.length)))), y = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0)) / (others.length)))) } : null);
+        var home = bed ?? ((others.length > 0) ? new Point { x = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.x, 0)) / (others.length)))), y = Js.I(JsMath.round(((double)(others.reduce((a, o) => a + o.pos.y, 0)) / (others.length)))) } : null);
         if (!Js.T(home))
         {
             return;
         }
-        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [new() { x = Js.I(x), y = Js.I(y) }])));
+        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [new Point { x = Js.I(x), y = Js.I(y) }])));
         if (Js.T(spot) && !Js.T(Space.samePoint(spot, s.pos)))
         {
             Survivors.setGoal(s, spot);
@@ -508,7 +508,7 @@ public static partial class Work
         {
             { headHome(state, s); return; }
         }
-        var target = Js.T(Fog.isExplored(state, job.x, job.y)) ? Fog.scoutTarget(state, area, s.pos) : new() { x = Js.I(job.x), y = Js.I(job.y) };
+        var target = Js.T(Fog.isExplored(state, job.x, job.y)) ? Fog.scoutTarget(state, area, s.pos) : new Point { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(target))
         {
             { finishJob(state, s, job, $"scouted ({Js.Str(area.x0)}, {Js.Str(area.y0)})-({Js.Str(area.x1)}, {Js.Str(area.y1)}) as far as it goes"); return; }
@@ -588,7 +588,7 @@ public static partial class Work
 
     public static void workClean(SimState state, Survivor s, Job job)
     {
-        Point target = new() { x = Js.I(job.x), y = Js.I(job.y) };
+        Point target = new Point { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(Space.samePoint(s.pos, target)))
         {
             { goTo(state, s, job, [target]); return; }
@@ -620,7 +620,7 @@ public static partial class Work
         }
         if (Js.T(bp.side))
         {
-            var sides = [new() { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new() { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new() { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
+            var sides = [new Point { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new Point { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new Point { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
             if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
             {
                 { goTo(state, s, job, sides); return; }
@@ -672,7 +672,7 @@ public static partial class Work
     /// <summary>Mends an edge wall or door, standing on either side of it.</summary>
     public static void workRepairEdge(SimState state, Survivor s, Job job, int e)
     {
-        var sides = [new() { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new() { x = Js.I(job.x), y = Js.I(job.y - 1) } : new() { x = Js.I(job.x - 1), y = Js.I(job.y) }];
+        var sides = [new Point { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new Point { x = Js.I(job.x), y = Js.I(job.y - 1) } : new Point { x = Js.I(job.x - 1), y = Js.I(job.y) }];
         if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
         {
             { goTo(state, s, job, sides); return; }
@@ -865,11 +865,11 @@ public static partial class Work
         var __d2 = state.grid;
         var width = __d2.width;
         List<Point> candidates = [];
-        foreach (var index in Js.Iter([.. storage].sort((a, b) => a - b)))
+        foreach (var index in Js.Iter((storage).ToList().sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
             {
-                Point p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(storageTileFree(state, job, p, storage)))
                 {
                     candidates.push(p);
@@ -947,9 +947,9 @@ public static partial class Work
     /// <summary>A step of a line from one tile to the next (side by side or diagonal) isn't blocked by an edge wall or door: for a diagonal, either way round the corner will do.</summary>
     public static bool seesAcross(Grid grid, int ax, int ay, int bx, int by)
     {
-        /*TODO return type*/object clear(int px, int py, int qx, int qy)
+        bool clear(int px, int py, int qx, int qy)
         {
-            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+            return Js.T(Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy)));
         }
         if ((ax == bx) || (ay == by))
         {

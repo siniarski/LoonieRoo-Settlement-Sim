@@ -70,7 +70,7 @@ public static partial class JobChoice
             case "farm":
                 {
                     {
-                    var goal = [new() { x = Js.I(job.x), y = Js.I(job.y) }];
+                    var goal = [new Point { x = Js.I(job.x), y = Js.I(job.y) }];
                     if (!Js.T(Pathfinding.canReach(grid, v, s.pos, goal)))
                     {
                         return null;

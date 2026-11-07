@@ -135,7 +135,7 @@ public static partial class Hordes
         var xs = zs.map((z) => z.pos.x).sort((a, b) => a - b);
         var ys = zs.map((z) => z.pos.y).sort((a, b) => a - b);
         var k = (zs.length - 1) >> 1;
-        return new() { x = Js.I(xs[Js.Idx(k)]!), y = Js.I(ys[Js.Idx(k)]!) };
+        return new Point { x = Js.I(xs[Js.Idx(k)]!), y = Js.I(ys[Js.Idx(k)]!) };
     }
 
     /// <summary>Members dropped, goals and the box worked out again.</summary>
@@ -148,14 +148,14 @@ public static partial class Hordes
         {
             return;
         }
-        List<Survivor> prey = Js.T(h.night) ? [.. state.survivors] : state.survivors.filter((s) => zs.some((z) => Js.T(Zombies.noticesSurvivor(state, z, s))));
+        List<Survivor> prey = Js.T(h.night) ? (state.survivors).ToList() : state.survivors.filter((s) => zs.some((z) => Js.T(Zombies.noticesSurvivor(state, z, s))));
         var wasMode = h.mode;
         var was = h.goals;
         var wasIds = h.goalIds;
         if (prey.length > 0)
         {
             h.mode = "hunt";
-            var goals = prey.map((s) => new() { x = Js.I(s.pos.x), y = Js.I(s.pos.y) });
+            var goals = prey.map((s) => new Point { x = Js.I(s.pos.x), y = Js.I(s.pos.y) });
             var ids = prey.map((s) => s.id);
             var samePeople = (wasMode == "hunt") && (ids.length == wasIds.length) && ids.every((id, i) => id == wasIds[Js.Idx(i)]);
             var barely = Js.T(samePeople) && ids.every((_, i) => Space.manhattan(goals[Js.Idx(i)]!, was[Js.Idx(i)]!) <= GOAL_SLACK);
@@ -406,7 +406,7 @@ public static partial class Hordes
                     var best = double.PositiveInfinity;
                     foreach (var g in Js.Iter(outside))
                     {
-                        best = JsMath.min(best, Space.manhattan(g, new() { x = Js.I(x), y = Js.I(y) }));
+                        best = JsMath.min(best, Space.manhattan(g, new Point { x = Js.I(x), y = Js.I(y) }));
                     }
                     push(best * STEP, ((y - y0) * w) + (x - x0));
                 }
@@ -500,7 +500,7 @@ public static partial class Hordes
             if (c < bestCost)
             {
                 bestCost = c;
-                best = new() { x = Js.I(nx), y = Js.I(ny) };
+                best = new Point { x = Js.I(nx), y = Js.I(ny) };
             }
         }
         return best;
@@ -514,7 +514,7 @@ public static partial class Hordes
         {
             return;
         }
-        foreach (var h in Js.Iter([.. list]))
+        foreach (var h in Js.Iter((list).ToList()))
         {
             if ((state.tick - h.refreshTick) >= REFRESH_EVERY)
             {
@@ -525,7 +525,7 @@ public static partial class Hordes
         {
             social(state);
         }
-        foreach (var h in Js.Iter([.. hordesOf(state)]))
+        foreach (var h in Js.Iter((hordesOf(state)).ToList()))
         {
             var zs = membersOf(state, h);
             if (zs.length < HORDE_MIN)
@@ -582,7 +582,7 @@ public static partial class Hordes
                 }
             }
         }
-        foreach (var h in Js.Iter([.. list]))
+        foreach (var h in Js.Iter((list).ToList()))
         {
             var zs = membersOf(state, h);
             if (zs.length == 0)
@@ -633,7 +633,7 @@ public static partial class Hordes
         {
             return;
         }
-        /*TODO return type*/object roll(int k)
+        double roll(int k)
         {
             return Hash.hashRoll(Hash.idNumber(h.id), state.tick, 1517.0, k);
         }
@@ -644,7 +644,7 @@ public static partial class Hordes
         var share = SHED_SHARE_MIN + (roll(1) * (SHED_SHARE_MAX - SHED_SHARE_MIN));
         var n = JsMath.max(1, JsMath.floor(zs.length * share));
         var goal = h.goals[Js.Idx(0)] ?? middle(zs);
-        var back = [.. zs].sort((a, b) => Js.Or(Space.manhattan(b.pos, goal) - Space.manhattan(a.pos, goal), (a.id < b.id) ? -1 : 1)).slice(0, n);
+        var back = (zs).ToList().sort((a, b) => Js.Or(Space.manhattan(b.pos, goal) - Space.manhattan(a.pos, goal), (a.id < b.id) ? -1 : 1)).slice(0, n);
         var mid = middle(back);
         var dx = goal.x - mid.x;
         var dy = goal.y - mid.y;
@@ -652,7 +652,7 @@ public static partial class Hordes
         var __d5 = state.grid;
         var width = __d5.width;
         var height = __d5.height;
-        Point heading = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
+        Point heading = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
         foreach (var z in Js.Iter(back))
         {
             z.hordeId = null;
@@ -688,19 +688,19 @@ public static partial class Hordes
         var __d6 = state.grid;
         var width = __d6.width;
         var height = __d6.height;
-        var to = h.heading ?? new() { x = Js.I((width - 1) - mid.x), y = Js.I((height - 1) - mid.y) };
+        var to = h.heading ?? new Point { x = Js.I((width - 1) - mid.x), y = Js.I((height - 1) - mid.y) };
         foreach (var z in Js.Iter(zs))
         {
             Zombies.removeZombie(state, z);
         }
         state.hordes!.splice(state.hordes!.indexOf(h), 1);
-        state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(mid.x), y = Js.I(mid.y), to = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, to.x))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, to.y))) }, size = zs.length, nextStepTick = state.tick, heard = false });
+        state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(mid.x), y = Js.I(mid.y), to = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, to.x))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, to.y))) }, size = zs.length, nextStepTick = state.tick, heard = false });
     }
 
     /// <summary>A noise (noise.ts): a roaming horde mostly in earshot turns to it; if only part is, that part splits off.</summary>
     public static void hordesHear(SimState state, Point p, double r, Func<Point, Point> toward)
     {
-        foreach (var h in Js.Iter([.. hordesOf(state)]))
+        foreach (var h in Js.Iter((hordesOf(state)).ToList()))
         {
             if (h.mode != "roam")
             {

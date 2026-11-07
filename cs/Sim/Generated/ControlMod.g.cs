@@ -69,9 +69,9 @@ public static partial class ControlMod
         {
             return "same";
         }
-        c.aim = new() { x = Js.I(x), y = Js.I(y) };
+        c.aim = new Point { x = Js.I(x), y = Js.I(y) };
         var big = JsMath.max(JsMath.abs(x), JsMath.abs(y));
-        c.facing = new() { x = Js.I((12 * JsMath.abs(x)) >= (5 * big) ? JsMath.sign(x) : 0), y = Js.I((12 * JsMath.abs(y)) >= (5 * big) ? JsMath.sign(y) : 0) };
+        c.facing = new Point { x = Js.I((12 * JsMath.abs(x)) >= (5 * big) ? JsMath.sign(x) : 0), y = Js.I((12 * JsMath.abs(y)) >= (5 * big) ? JsMath.sign(y) : 0) };
         return null;
     }
     public static string? aim(Control c, double x, double y) => aim(c, (int)x, (int)y);
@@ -109,7 +109,7 @@ public static partial class ControlMod
             c.busy = null;
             if (!Js.T(c.aim))
             {
-                c.facing = new() { x = Js.I(c.dx), y = Js.I(c.dy) };
+                c.facing = new Point { x = Js.I(c.dx), y = Js.I(c.dy) };
             }
             var run = (c.running == true) && !Js.T(c.sneaking) && !Js.T(BodyMod.isWinded(s));
             if (Js.T(run))
@@ -297,7 +297,7 @@ public static partial class ControlMod
     {
         var dx = JsMath.sign(to.x - from.x);
         var dy = JsMath.sign(to.y - from.y);
-        return (dx == 0) && (dy == 0) ? null : new() { x = Js.I(dx), y = Js.I(dy) };
+        return (dx == 0) && (dy == 0) ? null : new Point { x = Js.I(dx), y = Js.I(dy) };
     }
 
     /// <summary>Swing (or shoot) towards a tile. Returns what happened, or null if nothing could be done.</summary>
@@ -405,10 +405,10 @@ public static partial class ControlMod
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
         var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
-        var steps = (face.x != 0) && (face.y != 0) ? [new() { x = Js.I(face.x), y = Js.I(0) }, new() { x = Js.I(0), y = Js.I(face.y) }] : [face];
+        var steps = (face.x != 0) && (face.y != 0) ? [new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) }] : [face];
         foreach (var d in Js.Iter(steps))
         {
-            Point to = new() { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
+            Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
             var e = Grids.edgeBetween(state.grid, from.x, from.y, to.x, to.y);
             if ((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_WINDOW) && !state.grid.edgeBoarded.includes(e))
             {
@@ -561,7 +561,7 @@ public static partial class ControlMod
         }
         if (Js.T(bed) && Js.T(sleepable))
         {
-            s.pos = new() { x = Js.I(bed.x), y = Js.I(bed.y) };
+            s.pos = new Point { x = Js.I(bed.x), y = Js.I(bed.y) };
             s.at = Motion.centre(s.pos);
             return "getting into bed";
         }

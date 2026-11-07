@@ -253,7 +253,7 @@ public static partial class Talk
         if (kind == "medicine")
         {
             var friend = friendFor(state, s);
-            return Js.T(friend) ? new() { x = Js.I(friend.x), y = Js.I(friend.y) } : null;
+            return Js.T(friend) ? new Point { x = Js.I(friend.x), y = Js.I(friend.y) } : null;
         }
         var n = Hash.idNumber(s.id);
         var k = TASK_ORDER.indexOf(kind);
@@ -262,7 +262,7 @@ public static partial class Talk
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        Point p = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
+        Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, p);
         return Space.nearestTile(state.grid, p, (x, y) => (Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
     }
@@ -280,7 +280,7 @@ public static partial class Talk
             return;
         }
         var graves = state.tasks.some((t) => t.kind == "bury") ? Rooms.completeRooms(state, "graveyard") : new JsSet<double>();
-        foreach (var task in Js.Iter([.. state.tasks]))
+        foreach (var task in Js.Iter((state.tasks).ToList()))
         {
             var giver = state.survivors.find((s) => s.id == task.giverId);
             if (!Js.T(giver))
@@ -304,7 +304,7 @@ public static partial class Talk
     /// <summary>True: done. False: can't be done any more. Null: still open.</summary>
     public static bool? check(SimState state, Task task, Survivor giver, JsSet<double> graves)
     {
-        Point spot = new() { x = Js.I(task.x), y = Js.I(task.y) };
+        Point spot = new Point { x = Js.I(task.x), y = Js.I(task.y) };
         switch (task.kind)
         {
             case "home":

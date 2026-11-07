@@ -18,7 +18,11 @@ public static partial class ScenarioMod
 
     public static readonly List<string> SIMPLE_ITEMS = ["cloth", "coat", "armour", "boots", "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "medkit", "sample", "scrap", "fuel"];
 
-    public static readonly JsRecord<string> CHAR_TILES = /*TODO Object.fromEntries*/Js.Object_fromEntries(Js.ObjectEntries(TILE_CHARS).map((/*TODO pattern*/_0) => [@char, tile]));
+    public static readonly JsRecord<string> CHAR_TILES = /*TODO Object.fromEntries*/Js.Object_fromEntries(Js.ObjectEntries(TILE_CHARS).map((__p0) =>
+        {
+            var (tile, @char) = __p0;
+            return [@char, tile];
+        }));
 
     /// <summary>Floor plus something on it. Returns false if `char` isn't an entity char.</summary>
     public static bool placeEntity(SimState state, string @char, int x, int y)
@@ -215,7 +219,7 @@ public static partial class ScenarioMod
             {
                 throw new Exception($"loadScenario: row {Js.Str(y)} has length {Js.Str(row.length)}, expected {Js.Str(width)}");
             }
-            [.. row].forEach((@char, x) =>
+            (row).ToList().forEach((@char, x) =>
         {
             if (Js.T(placeEntity(state, @char, x, y)))
             {

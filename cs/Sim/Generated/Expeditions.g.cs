@@ -68,7 +68,7 @@ public static partial class Expeditions
     /// <summary>Brings back any expedition that's due.</summary>
     public static void updateExpeditions(SimState state)
     {
-        foreach (var x in Js.Iter([.. state.expeditions]))
+        foreach (var x in Js.Iter((state.expeditions).ToList()))
         {
             if (Js.T(x.truckId) && Js.T(onTheRoad(state, x)))
             {
@@ -93,7 +93,7 @@ public static partial class Expeditions
         var e = state.tick - x.leftTick;
         var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
         var f = (e < leg) ? ((double)(e) / (leg)) : (Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg)));
-        Point p = new() { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
+        Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
         if (Js.T(x.outpost) && (e >= leg))
@@ -136,7 +136,7 @@ public static partial class Expeditions
         var v = Js.T(x.truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId) : null;
         if (Js.T(v))
         {
-            var spot = Js.T(Vehicles.parkable(state, x.home)) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new() { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
+            var spot = Js.T(Vehicles.parkable(state, x.home)) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
             v.pos = Js.Clone(spot);
             v.at = Motion.centre(spot);
             v.was = Js.Clone(v.at);

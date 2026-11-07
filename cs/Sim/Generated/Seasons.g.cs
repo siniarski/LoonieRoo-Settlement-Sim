@@ -119,7 +119,7 @@ public static partial class Seasons
         }
         var coldNight = coldOutside(state);
         var soaking = isWet(state.weather);
-        foreach (var s in Js.Iter([.. state.survivors]))
+        foreach (var s in Js.Iter((state.survivors).ToList()))
         {
             if ((s.bodyHeat < BodyMod.FREEZING) && ((state.tick % Difficulty.coldEvery(state)) == 0))
             {

@@ -61,7 +61,11 @@ public static partial class TimelineMod
     public static void rollTimeline(SimState state, double seed)
     {
         var w = WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]!;
-        var roll = (/*TODO pattern*/_0, key) => (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));
+        var roll = (__p0, key) =>
+        {
+            var (lo, hi) = __p0;
+            return (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));
+        };
         state.timeline = new() { waterOffDay = roll(w.water, 31358.0), powerOffDay = roll(w.power, 0x9077), helicopterDay = roll(w.heli, 19985.0), heli = null, alarms = [] };
     }
 
@@ -106,7 +110,7 @@ public static partial class TimelineMod
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        return new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + (JsMath.cos(a) * r))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + (JsMath.sin(a) * r))))) };
+        return new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(p.x + (JsMath.cos(a) * r))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(p.y + (JsMath.sin(a) * r))))) };
     }
 
     /// <summary>Which way, in words, from a to b.</summary>

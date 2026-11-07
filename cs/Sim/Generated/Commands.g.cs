@@ -170,7 +170,7 @@ public static partial class Commands
             {
                 return reject($"no survivor {Js.Str(command.survivorId)}");
             }
-            var at = (command.x != null) && (command.y != null) ? new() { x = Js.I(command.x), y = Js.I(command.y) } : s.pos;
+            var at = (command.x != null) && (command.y != null) ? new Point { x = Js.I(command.x), y = Js.I(command.y) } : s.pos;
             if ((command.order == "hold") || (command.order == "loot") && !Js.T(Grids.isWalkable(state.grid, at.x, at.y)))
             {
                 return reject($"({Js.Str(at.x)}, {Js.Str(at.y)}) is not walkable");
@@ -192,7 +192,7 @@ public static partial class Commands
             }
             foreach (var s in Js.Iter(heard))
             {
-                any = Js.Or(giveOrder(state, s, command.order, (command.order == "loot") ? new() { x = Js.I(command.x!), y = Js.I(command.y!) } : s.pos), any);
+                any = Js.Or(giveOrder(state, s, command.order, (command.order == "loot") ? new Point { x = Js.I(command.x!), y = Js.I(command.y!) } : s.pos), any);
             }
             return Js.T(any) ? changed() : unchanged();
         }
@@ -456,7 +456,7 @@ public static partial class Commands
             else
             {
                 state.grid.locked.push(i);
-                Zombies.evictZombies(state, new() { x = Js.I(x), y = Js.I(y) });
+                Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
             }
             Grids.noteChange(state.grid, i);
             state.walkabilityVersion += 1;
@@ -510,7 +510,7 @@ public static partial class Commands
             if (command.type == "acceptWanderer")
             {
                 var s = Survivors.addSurvivor(state, w.x, w.y, w.name);
-                s.traits = [.. w.traits];
+                s.traits = (w.traits).ToList();
                 if (Js.T(state.control))
                 {
                     s.order = new() { kind = "follow" };
@@ -671,7 +671,7 @@ public static partial class Commands
                 }
             case "spawnVehicle":
                 {
-                    if (!Js.T(Vehicles.parkable(state, new() { x = Js.I(x), y = Js.I(y) })))
+                    if (!Js.T(Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) })))
                     {
                     return reject($"a car won't fit at ({Js.Str(x)}, {Js.Str(y)})");
                 }
@@ -731,12 +731,12 @@ public static partial class Commands
         }
         if (tile == "wall")
         {
-            Designations.evictFrom(state, new() { x = Js.I(x), y = Js.I(y) });
+            Designations.evictFrom(state, new Point { x = Js.I(x), y = Js.I(y) });
         }
         if (tile != "floor")
         {
-            Zombies.evictZombies(state, new() { x = Js.I(x), y = Js.I(y) });
-            Farming.clearPlot(state, new() { x = Js.I(x), y = Js.I(y) });
+            Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
+            Farming.clearPlot(state, new Point { x = Js.I(x), y = Js.I(y) });
         }
         return changed();
     }
@@ -1028,7 +1028,7 @@ public static partial class Commands
             return reject($"{Js.Str(survivor.name)} is under your control");
         }
         dropEverything(state, survivor, "an order");
-        Survivors.setGoal(survivor, new() { x = Js.I(x), y = Js.I(y) });
+        Survivors.setGoal(survivor, new Point { x = Js.I(x), y = Js.I(y) });
         return changed();
     }
     public static CommandResult moveSurvivor(SimState state, string id, double x, double y) => moveSurvivor(state, id, (int)x, (int)y);
@@ -1155,7 +1155,7 @@ public static partial class Commands
         survivor.path = [];
         survivor.pathVersion = -1;
         survivor.note = "under your control";
-        state.control = new() { survivorId = id, dx = 0, dy = 0, facing = new() { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+        state.control = new() { survivorId = id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         return changed();
     }
 

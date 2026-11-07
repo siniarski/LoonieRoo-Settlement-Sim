@@ -74,7 +74,7 @@ public static partial class Leisure
             }
             s.leisure = was;
         }
-        Point spot = new() { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
+        Point spot = new Point { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
         if (!Js.T(spotFree(state, s, spot, s.leisure.at)))
         {
             s.leisure = null;
@@ -128,11 +128,11 @@ public static partial class Leisure
         var __d1 = state.grid;
         var width = __d1.width;
         List<Point> spots = [];
-        foreach (var index in Js.Iter([.. rooms].sort((a, b) => a - b)))
+        foreach (var index in Js.Iter((rooms).ToList().sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(all[Js.Idx(index)]!.tiles))
             {
-                Point p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(spotFree(state, s, p, at)))
                 {
                     spots.push(p);

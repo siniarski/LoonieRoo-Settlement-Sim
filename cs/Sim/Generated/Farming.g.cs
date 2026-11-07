@@ -109,7 +109,7 @@ public static partial class Farming
         FurnitureMod.regrowTrees(state);
         var outdoors = Seasons.cropGrows(state);
         var greenhouses = (state.farm.length > 0) ? Rooms.completeRooms(state, "greenhouse") : new JsSet<double>();
-        foreach (var plot in Js.Iter([.. state.farm]))
+        foreach (var plot in Js.Iter((state.farm).ToList()))
         {
             if (Grids.getTile(state.grid, plot.x, plot.y) != "floor")
             {
@@ -134,6 +134,6 @@ public static partial class Farming
 
     public static Point plotPoint(FarmPlot plot)
     {
-        return new() { x = Js.I(plot.x), y = Js.I(plot.y) };
+        return new Point { x = Js.I(plot.x), y = Js.I(plot.y) };
     }
 }

@@ -62,7 +62,7 @@ public static partial class Fog
         {
             return;
         }
-        if (state.pointsOfInterest.some((p) => Space.manhattan(p, new() { x = Js.I(x), y = Js.I(y) }) <= POI_SPACING))
+        if (state.pointsOfInterest.some((p) => Space.manhattan(p, new Point { x = Js.I(x), y = Js.I(y) }) <= POI_SPACING))
         {
             return;
         }
@@ -134,7 +134,7 @@ public static partial class Fog
             {
                 if (!Js.T(isExplored(state, x, y)) && Js.T(Grids.isWalkable(state.grid, x, y)))
                 {
-                    @out.push(new() { x = Js.I(x), y = Js.I(y) });
+                    @out.push(new Point { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }

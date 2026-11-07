@@ -185,7 +185,7 @@ public static partial class Alerts
         {
             add("info", $"A trader is waiting at ({Js.Str(t.x)}, {Js.Str(t.y)})", t);
         }
-        JsRecord<double> rank = new() { danger = 0, warn = 1, info = 2 };
+        JsRecord<double> rank = new() { ["danger"] = 0, ["warn"] = 1, ["info"] = 2 };
         return @out.sort((a, b) => rank[Js.Idx(a.level)] - rank[Js.Idx(b.level)]);
     }
 
@@ -200,6 +200,6 @@ public static partial class Alerts
                 counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
             }
         }
-        return [.. counts.entries()].sort((a, b) => Js.Or(b[Js.Idx(1)] - a[Js.Idx(1)], a[Js.Idx(0)].localeCompare(b[Js.Idx(0)])));
+        return (counts.entries()).ToList().sort((a, b) => Js.Or(b[Js.Idx(1)] - a[Js.Idx(1)], a[Js.Idx(0)].localeCompare(b[Js.Idx(0)])));
     }
 }

@@ -83,7 +83,7 @@ public static partial class Radio
             Settlements.adjustReputation(state, n, REQUEST_REP);
         }
         var thanks = THANKS[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 6) * THANKS.length))]!;
-        var at = state.survivors[Js.Idx(0)]?.pos ?? new() { x = Js.I(0), y = Js.I(0) };
+        var at = state.survivors[Js.Idx(0)]?.pos ?? new Point { x = Js.I(0), y = Js.I(0) };
         if ((!Js.T(n) || (n.people <= 0)) || !Js.T(Caravans.sendCaravan(state, n.id, "you", at, 0, [thanks, thanks])))
         {
             for (var k = 0; k < 2; k++)

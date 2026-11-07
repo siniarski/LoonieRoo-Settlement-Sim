@@ -192,7 +192,7 @@ public static partial class Breach
         Grids.noteEdgeChange(grid, e);
         state.walkabilityVersion += 1;
         var tile = JsMath.floor(((double)(e) / (2)));
-        Noise.makeNoise(state, new() { x = Js.I(tile % grid.width), y = Js.I(JsMath.floor(((double)(tile) / (grid.width)))) }, "glass");
+        Noise.makeNoise(state, new Point { x = Js.I(tile % grid.width), y = Js.I(JsMath.floor(((double)(tile) / (grid.width)))) }, "glass");
     }
     public static void smashGlass(SimState state, double e) => smashGlass(state, (int)e);
 }

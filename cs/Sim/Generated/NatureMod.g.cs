@@ -38,7 +38,7 @@ public static partial class NatureMod
         var gy = JsMath.floor(((double)(y) / (scale)));
         var fx = smooth(((double)(x) / (scale)) - gx);
         var fy = smooth(((double)(y) / (scale)) - gy);
-        /*TODO return type*/object c(int i, int j)
+        double c(int i, int j)
         {
             return roll(seed, gx + i, gy + j, salt);
         }
@@ -50,7 +50,7 @@ public static partial class NatureMod
 
     public static Nature natureFor(double seed, double size, string map)
     {
-        Point start = new() { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
+        Point start = new Point { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
         var side = ((hash(seed, 0, 0, 3) % 2) == 0) ? -1 : 1;
         var riverBase = start.y + (side * (48 + (hash(seed, 0, 0, 4) % 24)));
         return new() { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };

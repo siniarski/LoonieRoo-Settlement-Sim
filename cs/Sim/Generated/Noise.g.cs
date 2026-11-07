@@ -34,17 +34,17 @@ public static partial class Noise
             {
                 continue;
             }
-            z.heading = (z.kind == "static") ? new() { x = Js.I(p.x), y = Js.I(p.y) } : new() { x = Js.I(clamp((2 * p.x) - z.pos.x, width)), y = Js.I(clamp((2 * p.y) - z.pos.y, height)) };
+            z.heading = (z.kind == "static") ? new Point { x = Js.I(p.x), y = Js.I(p.y) } : new Point { x = Js.I(clamp((2 * p.x) - z.pos.x, width)), y = Js.I(clamp((2 * p.y) - z.pos.y, height)) };
             z.path = [];
         }
-        Hordes.hordesHear(state, p, r, (from) => new() { x = Js.I(clamp((2 * p.x) - from.x, width)), y = Js.I(clamp((2 * p.y) - from.y, height)) });
+        Hordes.hordesHear(state, p, r, (from) => new Point { x = Js.I(clamp((2 * p.x) - from.x, width)), y = Js.I(clamp((2 * p.y) - from.y, height)) });
         foreach (var h in Js.Iter(state.herds))
         {
             if (Space.manhattan(h, p) > (r * HERD_HEARING))
             {
                 continue;
             }
-            Point to = new() { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
+            Point to = new Point { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
             if ((to.x == h.to.x) && (to.y == h.to.y))
             {
                 continue;
@@ -63,7 +63,7 @@ public static partial class Noise
     public static double wakeDormantNear(SimState state, Func<Point, bool> near)
     {
         var woke = 0;
-        foreach (var d in Js.Iter([.. state.dormant]))
+        foreach (var d in Js.Iter((state.dormant).ToList()))
         {
             if (!Js.T(near(d)))
             {

@@ -67,7 +67,7 @@ public static partial class SuccessionMod
 
     public static void take(SimState state, Survivor s)
     {
-        state.control = new() { survivorId = s.id, dx = 0, dy = 0, facing = new() { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+        state.control = new() { survivorId = s.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         s.order = null;
         s.goal = null;
         s.path = [];
@@ -82,7 +82,7 @@ public static partial class SuccessionMod
         var height = __d0.height;
         var angle = (Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI) * 2;
         var dist = ANEW_MIN + (Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD);
-        Point aim = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
+        Point aim = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, aim);
         Point? spot = null;
         for (var r = 0; (r <= 20) && !Js.T(spot); r++)
@@ -99,7 +99,7 @@ public static partial class SuccessionMod
                     var y = aim.y + dy;
                     if ((x >= 0) && (y >= 0) && (x < width) && (y < height) && (Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y)))
                     {
-                        spot = new() { x = Js.I(x), y = Js.I(y) };
+                        spot = new Point { x = Js.I(x), y = Js.I(y) };
                     }
                 }
             }

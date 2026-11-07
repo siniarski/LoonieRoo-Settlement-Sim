@@ -47,7 +47,7 @@ public static partial class Orders
         }
         if (s.order.kind != "follow")
         {
-            return new() { x = Js.I(s.order.x), y = Js.I(s.order.y) };
+            return new Point { x = Js.I(s.order.x), y = Js.I(s.order.y) };
         }
         var leader = ControlMod.controlled(state);
         return (Js.T(leader) && (leader.id != s.id)) ? leader.pos : null;
@@ -137,7 +137,7 @@ public static partial class Orders
         {
             return false;
         }
-        var side = [new() { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new() { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) }].map((d) => new() { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
+        var side = [new Point { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new Point { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) }].map((d) => new Point { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
         if (!Js.T(side))
         {
             return false;

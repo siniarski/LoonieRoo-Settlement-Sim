@@ -14,7 +14,7 @@ public static partial class Tick
         Time.setDayScale(state.settings.dayScale);
         foreach (var e in Js.Iter(movers(state)))
         {
-            e.was = new() { x = Js.I(e.at.x), y = Js.I(e.at.y) };
+            e.was = new Point { x = Js.I(e.at.x), y = Js.I(e.at.y) };
         }
         Zombies.updateZombies(state);
         FireMod.updateFires(state);

@@ -41,7 +41,7 @@ public static partial class Caravans
             return null;
         }
         state.caravans ??= [];
-        Caravan c = new() { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = Js.I(from.x), y = Js.I(from.y), dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = [.. goods], nextStepTick = state.tick + CARAVAN_STEP };
+        Caravan c = new() { id = $"c{Js.Str(state.nextId++)}", from = fromId, to = to, x = Js.I(from.x), y = Js.I(from.y), dest = Js.Clone(dest), people = CARAVAN_PEOPLE, food = food, goods = (goods).ToList(), nextStepTick = state.tick + CARAVAN_STEP };
         state.caravans.push(c);
         return c;
     }
@@ -54,7 +54,7 @@ public static partial class Caravans
         {
             return;
         }
-        foreach (var c in Js.Iter([.. list]))
+        foreach (var c in Js.Iter((list).ToList()))
         {
             if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(ambushed(state, c)))
             {

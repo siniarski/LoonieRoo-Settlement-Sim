@@ -51,9 +51,9 @@ public static partial class Sight
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
     public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
     {
-        /*TODO return type*/object clear(int px, int py, int qx, int qy)
+        bool clear(int px, int py, int qx, int qy)
         {
-            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+            return Js.T(Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy)));
         }
         if ((ax == bx) || (ay == by))
         {
@@ -114,7 +114,7 @@ public static partial class Sight
                 {
                     continue;
                 }
-                if (Js.T(overWalls) || Js.T(sightLine(grid, p, new() { x = Js.I(x), y = Js.I(y) })))
+                if (Js.T(overWalls) || Js.T(sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) })))
                 {
                     @out.push((y * grid.width) + x);
                 }

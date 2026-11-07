@@ -48,10 +48,22 @@ public static partial class Roads
         }
         nodes.forEach((_, a) =>
         {
-            var linked = edges.filter((/*TODO pattern*/_0) => (p == a) || (q == a)).map((/*TODO pattern*/_1) => (p == a) ? q : p);
+            var linked = edges.filter((__p0) =>
+        {
+            var (p, q) = __p0;
+            return (p == a) || (q == a);
+        }).map((__p1) =>
+        {
+            var (p, q) = __p1;
+            return (p == a) ? q : p;
+        });
             var longest = JsMath.max(linked.map((b) => d(a, b)));
             var near = nodes.map((_, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
-            if ((near != null) && (d(a, near) < (longest * 1.4)) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5) && !edges.some((/*TODO pattern*/_2) => (p == near) && (q == a)))
+            if ((near != null) && (d(a, near) < (longest * 1.4)) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5) && !edges.some((__p2) =>
+        {
+            var (p, q) = __p2;
+            return (p == near) && (q == a);
+        }))
             {
                 edges.push([a, near]);
             }
@@ -173,7 +185,7 @@ public static partial class Roads
         List<Point> cells = [];
         for (var c = goal; c != -1; c = came[Js.Idx(c)]!)
         {
-            cells.push(new() { x = Js.I(((c % N) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))), y = Js.I((JsMath.floor(((double)(c) / (N))) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))) });
+            cells.push(new Point { x = Js.I(((c % N) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))), y = Js.I((JsMath.floor(((double)(c) / (N))) * ROAD_CELL) + ((double)(ROAD_CELL) / (2))) });
         }
         cells.reverse();
         List<Point> line = [from, .. cells.slice(1, -1), to];
@@ -184,7 +196,7 @@ public static partial class Roads
             {
                 var a = line[Js.Idx(i)]!;
                 var b = line[Js.Idx(i + 1)]!;
-                next.push(new() { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new() { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) });
+                next.push(new Point { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new Point { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) });
             }
             next.push(line.at(-1)!);
             line = next;

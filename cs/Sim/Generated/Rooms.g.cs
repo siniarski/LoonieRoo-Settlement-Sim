@@ -158,7 +158,7 @@ public static partial class Rooms
                 maxY = JsMath.max(maxY, y);
             }
             region.sort((a, b) => a - b);
-            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
+            var doors = (doorSet).ToList().sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             rooms.push(new() { index = index, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
         return new() { labels = labels, rooms = rooms };
@@ -203,7 +203,11 @@ public static partial class Rooms
             {
                 continue;
             }
-            var next = DIRS.map((/*TODO pattern*/_1) => new() { x = Js.I(d.x + dx), y = Js.I(d.y + dy) }).find((p) => Grids.getTile(state.grid, p.x, p.y) == "floor");
+            var next = DIRS.map((__p1) =>
+        {
+            var (dx, dy) = __p1;
+            return new Point { x = Js.I(d.x + dx), y = Js.I(d.y + dy) };
+        }).find((p) => Grids.getTile(state.grid, p.x, p.y) == "floor");
             if (Js.T(next))
             {
                 d.x = Js.I(next.x);
@@ -306,7 +310,7 @@ public static partial class Rooms
         var storageFor = /*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
             var no = refusing(c);
-            return [c, Js.Set([.. storage].filter((r) => !no.has(r)))];
+            return [c, Js.Set((storage).ToList().filter((r) => !no.has(r)))];
         }));
         return new() { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
     }
@@ -465,7 +469,7 @@ public static partial class Rooms
                 maxX = JsMath.max(maxX, x);
                 maxY = JsMath.max(maxY, y);
             }
-            var doors = [.. doorSet].sort((a, b) => a - b).map((i) => new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
+            var doors = (doorSet).ToList().sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
         var rooms = [.. old.rooms.filter((r) => !removed.has(r.index)), .. fresh].sort((a, b) => a.tiles[Js.Idx(0)]! - b.tiles[Js.Idx(0)]!);

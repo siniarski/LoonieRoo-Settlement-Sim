@@ -27,11 +27,11 @@ public static partial class Prisoners
         var rooms = __d0.rooms;
         var __d1 = state.grid;
         var width = __d1.width;
-        foreach (var index in Js.Iter([.. cells].sort((a, b) => a - b)))
+        foreach (var index in Js.Iter((cells).ToList().sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
             {
-                Point p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if ((Js.T(Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.prisoners.some((q) => (q.x == p.x) && (q.y == p.y)))
                 {
                     return p;
@@ -68,7 +68,7 @@ public static partial class Prisoners
             return;
         }
         var cells = Rooms.completeRooms(state, "cell");
-        foreach (var p in Js.Iter([.. state.prisoners]))
+        foreach (var p in Js.Iter((state.prisoners).ToList()))
         {
             var food = state.items.find((i) => (i.kind == "food") && (i.pos != null) && (i.reservedBy == null));
             if (!cells.has(Rooms.labelAt(state, p.x, p.y)) || !Js.T(food))

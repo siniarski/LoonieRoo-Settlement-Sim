@@ -118,9 +118,9 @@ public static partial class Worldplan
         var size = n.size;
         List<Point> ends(double ti)
         {
-            return streets.filter((s) => (s.town == ti) && Js.T(s.main)).flatMap((s) => Js.T(s.eastWest) ? [new() { x = Js.I(s.x0), y = Js.I(s.y0) }, new() { x = Js.I(s.x1), y = Js.I(s.y0) }] : [new() { x = Js.I(s.x0), y = Js.I(s.y0) }, new() { x = Js.I(s.x0), y = Js.I(s.y1) }]);
+            return streets.filter((s) => (s.town == ti) && Js.T(s.main)).flatMap((s) => Js.T(s.eastWest) ? [new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) }] : [new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) }]);
         }
-        List<Point> nodes = [.. towns.map((t) => new() { x = Js.I(t.x), y = Js.I(t.y) }), new() { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) }];
+        List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) }), new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) }];
         Point nearestEnd(double node, Point toward)
         {
             if (node >= towns.length)
@@ -134,14 +134,18 @@ public static partial class Worldplan
             }
             return options.reduce((a, b) => (dist(b.x, b.y, toward.x, toward.y) < dist(a.x, a.y, toward.x, toward.y)) ? b : a);
         }
-        List<List<object>> links = Roads.network(n.seed, nodes).map((/*TODO pattern*/_0) => [nearestEnd(a, nodes[Js.Idx(b)]!), nearestEnd(b, nodes[Js.Idx(a)]!)]);
+        List<List<object>> links = Roads.network(n.seed, nodes).map((__p0) =>
+        {
+            var (a, b) = __p0;
+            return [nearestEnd(a, nodes[Js.Idx(b)]!), nearestEnd(b, nodes[Js.Idx(a)]!)];
+        });
         towns.forEach((t, i) =>
         {
             if (!(n.map == "quarantine") && (i == 0) && (NatureMod.roll(n.seed, t.x, t.y, 0x7301) > ((n.map == "quarantine") ? 0.8 : 0.45)))
             {
                 return;
             }
-            List<Point> edges = [new() { x = Js.I(0), y = Js.I(t.y) }, new() { x = Js.I(size - 1), y = Js.I(t.y) }, new() { x = Js.I(t.x), y = Js.I(0) }, new() { x = Js.I(t.x), y = Js.I(size - 1) }];
+            List<Point> edges = [new Point { x = Js.I(0), y = Js.I(t.y) }, new Point { x = Js.I(size - 1), y = Js.I(t.y) }, new Point { x = Js.I(t.x), y = Js.I(0) }, new Point { x = Js.I(t.x), y = Js.I(size - 1) }];
             var edge = edges.reduce((a, b) => (dist(b.x, b.y, t.x, t.y) < dist(a.x, a.y, t.x, t.y)) ? b : a);
             links.push([nearestEnd(i, edge), edge]);
         });
@@ -167,8 +171,8 @@ public static partial class Worldplan
     public static void townLots(Nature n, List<Town> towns, List<Street> streets, Func<Lot, bool> add)
     {
         var civic = towns.map(() => 0);
-        var CIVIC_MAX = new() { village = 1, town = 2, city = 4 };
-        var ordered = [.. streets].sort((a, b) => Js.Num(b.main) - Js.Num(a.main));
+        JsRecord<double> CIVIC_MAX = new() { ["village"] = 1, ["town"] = 2, ["city"] = 4 };
+        var ordered = (streets).ToList().sort((a, b) => Js.Num(b.main) - Js.Num(a.main));
         ordered.forEach((s, si) =>
         {
             var t = towns[Js.Idx(s.town)]!;
@@ -179,7 +183,7 @@ public static partial class Worldplan
                 var k = 0;
                 while (p < (end - 8))
                 {
-                    /*TODO return type*/object r(int j)
+                    double r(int j)
                     {
                         return NatureMod.roll(n.seed, (si * 31) + side, p, (0x7400 + j) + (k * 7));
                     }
@@ -248,7 +252,7 @@ public static partial class Worldplan
         });
                 if (Js.T(edge) && (since >= 15))
                 {
-                    /*TODO return type*/object r(int j)
+                    double r(int j)
                     {
                         return NatureMod.roll(n.seed, ri, i, 0x7480 + j);
                     }
@@ -284,7 +288,7 @@ public static partial class Worldplan
                 {
                     continue;
                 }
-                /*TODO return type*/object r(int j)
+                double r(int j)
                 {
                     return NatureMod.roll(n.seed, ri, i, 0x7500 + j);
                 }
@@ -316,7 +320,7 @@ public static partial class Worldplan
             var tries = JsMath.round(((double)(t.radius) / (2)));
             for (var i = 0; i < tries; i++)
             {
-                /*TODO return type*/object r(int j)
+                double r(int j)
                 {
                     return NatureMod.roll(n.seed, ti, i, 0x7700 + j);
                 }
@@ -341,7 +345,7 @@ public static partial class Worldplan
         {
             for (var gx = 0; gx < size; gx += 48)
             {
-                /*TODO return type*/object r(int j)
+                double r(int j)
                 {
                     return NatureMod.roll(n.seed, gx, gy, 0x7600 + j);
                 }

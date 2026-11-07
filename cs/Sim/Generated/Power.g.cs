@@ -134,7 +134,7 @@ public static partial class Power
         {
             return;
         }
-        foreach (var h in Js.Iter([.. FurnitureMod.ofKind(state, "heater")]))
+        foreach (var h in Js.Iter((FurnitureMod.ofKind(state, "heater")).ToList()))
         {
             if (h.stored == 0)
             {
@@ -174,7 +174,7 @@ public static partial class Power
         var stores = Rooms.completeRooms(state, "storage");
         var fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
         var rotted = 0;
-        foreach (var item in Js.Iter([.. state.items]))
+        foreach (var item in Js.Iter((state.items).ToList()))
         {
             if ((item.kind != "food") && (item.kind != "meal") || !Js.T(item.pos) || Js.T(item.reservedBy))
             {

@@ -44,7 +44,7 @@ public static partial class Herds
             startHerd(state);
         }
         var warnRadius = Js.T(Towers.hasTower(state)) ? (WARN_RADIUS * Towers.TOWER_WARN_FACTOR) : WARN_RADIUS;
-        foreach (var h in Js.Iter([.. state.herds]))
+        foreach (var h in Js.Iter((state.herds).ToList()))
         {
             if (!Js.T(h.heard) && state.survivors.some((s) => Space.manhattan(s.pos, h) <= warnRadius))
             {
@@ -90,11 +90,11 @@ public static partial class Herds
         List<Point> edge = [];
         for (var x = 0; x < width; x += 4)
         {
-            edge.push(new() { x = Js.I(x), y = Js.I(0) }, new() { x = Js.I(x), y = Js.I(height - 1) });
+            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
         }
         for (var y = 4; y < (height - 1); y += 4)
         {
-            edge.push(new() { x = Js.I(0), y = Js.I(y) }, new() { x = Js.I(width - 1), y = Js.I(y) });
+            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
         }
         var from = Rng.pick(state, edge);
         Point to = default!;
@@ -102,11 +102,11 @@ public static partial class Herds
         {
             var cx = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.x, 0)) / (state.survivors.length)));
             var cy = JsMath.round(((double)(state.survivors.reduce((a, s) => a + s.pos.y, 0)) / (state.survivors.length)));
-            to = new() { x = Js.I(clamp((2 * cx) - from.x, width)), y = Js.I(clamp((2 * cy) - from.y, height)) };
+            to = new Point { x = Js.I(clamp((2 * cx) - from.x, width)), y = Js.I(clamp((2 * cy) - from.y, height)) };
         }
         else
         {
-            to = new() { x = Js.I((width - 1) - from.x), y = Js.I((height - 1) - from.y) };
+            to = new Point { x = Js.I((width - 1) - from.x), y = Js.I((height - 1) - from.y) };
         }
         var size = herdSize(Time.dayOf(state.tick));
         state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(from.x), y = Js.I(from.y), to = to, size = size, nextStepTick = state.tick, heard = false });
@@ -155,7 +155,7 @@ public static partial class Herds
         List<Zombie> made = [];
         for (var i = 0; i < n; i++)
         {
-            var p = Space.nearestTile(state.grid, new() { x = Js.I(h.x), y = Js.I(h.y) }, free);
+            var p = Space.nearestTile(state.grid, new Point { x = Js.I(h.x), y = Js.I(h.y) }, free);
             if (!Js.T(p))
             {
                 break;
@@ -213,7 +213,7 @@ public static partial class Herds
             }
             return false;
         }
-        foreach (var d in Js.Iter([.. state.dormant]))
+        foreach (var d in Js.Iter((state.dormant).ToList()))
         {
             if (!Js.T(near(d)))
             {
@@ -231,7 +231,7 @@ public static partial class Herds
             }
             ZombieKinds.giveVariant(Zombies.addZombie(state, p.x, p.y, Zombies.zombieHealthForNight(Time.dayOf(state.tick)), "static"), Time.dayOf(state.tick));
             woke += 1;
-            where ??= new() { x = Js.I(p.x), y = Js.I(p.y) };
+            where ??= new Point { x = Js.I(p.x), y = Js.I(p.y) };
         }
         if (Js.T(where))
         {

@@ -77,7 +77,7 @@ public static partial class Defences
     {
         if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(Time.isNight(state.tick)))
         {
-            foreach (var f in Js.Iter([.. FurnitureMod.ofKind(state, "lure")]))
+            foreach (var f in Js.Iter((FurnitureMod.ofKind(state, "lure")).ToList()))
             {
                 Noise.makeNoise(state, f, "lure");
             }
@@ -86,7 +86,7 @@ public static partial class Defences
         {
             return;
         }
-        foreach (var t in Js.Iter([.. FurnitureMod.ofKind(state, "turret")]))
+        foreach (var t in Js.Iter((FurnitureMod.ofKind(state, "turret")).ToList()))
         {
             if ((t.loot == 0) && (t.stored == 0))
             {

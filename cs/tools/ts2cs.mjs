@@ -14,6 +14,7 @@
 import { parseAst } from 'rolldown/parseAst';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { FIXUPS } from './fixups.mjs';
 
 const SIM = 'src/sim';
 const OUT = 'cs/Sim/Generated';
@@ -72,6 +73,9 @@ function inlineType(lit, mod) {
 }
 
 /** Fields that are whole numbers in every class (gen-state.mjs INT_FIELDS). */
+/** Return types of functions, by "Class.name" and by bare name (filled as modules are translated; two passes). */
+const fnRet = new Map(Object.entries({ "Hash.hashRoll": "double", "Hash.idNumber": "double", "Rng.random": "double", "Rng.randomInt": "int", "Grids.inBounds": "bool", "Grids.getTile": "string?", "Grids.isWalkable": "bool", "Grids.tileIndex": "int", "Grids.edgeBetween": "int", "Grids.edgeIndex": "int", "Grids.isOpen": "bool", "Grids.isLocked": "bool", "Space.manhattan": "int", "Space.samePoint": "bool", "Space.nearestTile": "Point?", "Pathfinding.findPathToAny": "List<Point>?", "Pathfinding.findPath": "List<Point>?", "Pathfinding.canReach": "bool", "Pathfinding.isPassable": "bool", "Pathfinding.crossable": "bool", "Pathfinding.openBetween": "bool", "Pathfinding.seesThrough": "bool", "Time.dayOf": "int", "Time.tickOfDay": "int", "Time.hourOf": "double", "Time.isNight": "bool", "Time.slowTick": "bool" }));
+
 /** Re-exports, module -> name -> the module it really lives in. */
 const reexports = new Map();
 for (const m of files) {
@@ -308,6 +312,13 @@ function translate(mod) {
     return n;
   }
 
+  /** var (a, b) = x; or, for one name, var a = x[0]; */
+  function destructure(elements, value) {
+    const names = elements.map((x) => (x ? id(x.name) : '_'));
+    if (names.length === 1) return `var ${names[0]} = (${value})[0];`;
+    return `var (${names.join(', ')}) = ${value};`;
+  }
+
   function num(v, raw) {
     if (Number.isInteger(v) && Math.abs(v) <= 2147483647 && !/[.eE]/.test(raw ?? '')) return raw?.startsWith('0x') ? raw : String(v);
     if (Number.isInteger(v)) return `${v}.0`;
@@ -416,6 +427,7 @@ function translate(mod) {
       case 'CallExpression': return call(e);
       case 'NewExpression': return newEx(e);
       case 'ArrayExpression': {
+        if (e.elements.length === 1 && e.elements[0]?.type === 'SpreadElement') return `(${ex(e.elements[0].argument)}).ToList()`;
         const items = e.elements.map((x) => (x === null ? 'default' : x.type === 'SpreadElement' ? `.. ${ex(x.argument)}` : ex(x)));
         return `[${items.join(', ')}]`;
       }
@@ -490,6 +502,14 @@ function translate(mod) {
       return `/*TODO typed array from*/new ${typed[c]}[] { }`;
     }
     if (c === 'Map' || c === 'WeakMap') {
+      // new Map(list.map((x) => [key, value])): typed from the list.
+      const src = e.arguments[0];
+      if (targs.length !== 2 && src?.type === 'CallExpression' && src.callee.type === 'MemberExpression' && src.callee.property.name === 'map' && src.arguments[0]?.type === 'ArrowFunctionExpression' && src.arguments[0].body.type === 'ArrayExpression' && src.arguments[0].body.elements.length === 2 && src.arguments[0].params[0]?.type === 'Identifier') {
+        const fn = src.arguments[0];
+        const pn = id(fn.params[0].name);
+        const [k, v] = fn.body.elements;
+        return `Js.MapOf(${operand(src.callee.object)}, (${pn}) => ${ex(k)}, (${pn}) => ${ex(v)})`;
+      }
       if (targs.length === 2) return `new JsMap<${ty(targs[0], mod).replace(/\?$/, '')}, ${ty(targs[1], mod)}>(${args})`;
       return `/*TODO Map type*/new JsMap<object, object>(${args})`;
     }
@@ -528,6 +548,8 @@ function translate(mod) {
       }
       return `/*TODO object spread*/Js.Spread(${ex(spread)}, new() { ${parts.join(', ')} })`;
     }
+    const keys = e.properties.map((p) => String(p.key?.name ?? p.key?.value)).sort().join(',');
+    if (keys === 'x,y') return `new Point { ${parts.join(', ')} }`;
     return parts.length ? `new() { ${parts.join(', ')} }` : 'new()';
   }
 
@@ -563,8 +585,21 @@ function translate(mod) {
   function lambda(fn) {
     const defaults = [];
     const typed = fn.params.every((p) => p.type === 'Identifier' && p.typeAnnotation);
-    const ps = fn.params.map((p) => (typed ? param(p, defaults) : p.type === 'Identifier' ? id(p.name) : p.type === 'AssignmentPattern' ? id(p.left.name) : `/*TODO pattern*/_${tmp++}`));
+    const unpack = [];
+    const ps = fn.params.map((p) => {
+      if (typed) return param(p, defaults);
+      if (p.type === 'Identifier') return id(p.name);
+      if (p.type === 'AssignmentPattern') return id(p.left.name);
+      const v = `__p${tmp++}`;
+      if (p.type === 'ArrayPattern') unpack.push(destructure(p.elements, v));
+      else if (p.type === 'ObjectPattern') for (const q of p.properties) unpack.push(`var ${id(q.value?.name ?? q.key.name)} = ${v}.${id(q.key.name)};`);
+      return v;
+    });
     const head = `(${ps.join(', ')})`;
+    if (unpack.length) {
+      const inner = fn.body.type === 'BlockStatement' ? block(fn.body, '            ', { fnRet: null }).split('\n').slice(1, -1).join('\n') : `            return ${ex(fn.body, !!fn.__pred)};`;
+      return `${head} =>\n        {\n${unpack.map((u) => '            ' + u).join('\n')}\n${inner}\n        }`;
+    }
     // A predicate's body is a condition.
     if (fn.body.type !== 'BlockStatement') {
       const parent = fn.__pred;
@@ -595,6 +630,13 @@ function translate(mod) {
     if (init.type === 'Literal' && init.value === null) return '/*TODO null-initialised*/object';
     if (init.type === 'ArrayExpression' && init.elements.length === 0) return '/*TODO empty array*/List<object>';
     if (literalType(init)) return literalType(init);
+    let lit = init;
+    while (lit.type === 'TSAsExpression') lit = lit.expression;
+    if (lit.type === 'ObjectExpression' && lit.properties.length && lit.properties.every((p) => p.type === 'Property' && p.value.type === 'Literal' && typeof p.value.value === 'number')) {
+      recordConsts.add(name);
+      d.__record = true;
+      return 'JsRecord<double>';
+    }
     if (init.type === 'ObjectExpression' && init.properties.length && init.properties.every((p) => p.type === 'Property' && !p.computed)) {
       const keys = init.properties.map((p) => String(p.key.name ?? p.key.value));
       if (keys.slice().sort().join(',') === 'x,y') return 'Point';
@@ -626,8 +668,7 @@ function translate(mod) {
             continue;
           }
           if (d.id.type === 'ArrayPattern') {
-            const names = d.id.elements.map((x) => (x ? id(x.name) : '_'));
-            lines.push(`${ind}var (${names.join(', ')}) = ${ex(d.init)};`);
+            lines.push(ind + destructure(d.id.elements, ex(d.init)));
             continue;
           }
           const t = declType(d, s.kind);
@@ -644,7 +685,11 @@ function translate(mod) {
               continue;
             }
           }
-          const init = d.init ? ` = ${ex(d.init, t === 'bool')}` : t.endsWith('?') ? ' = null' : ' = default!';
+          let lit = d.init;
+          while (lit?.type === 'TSAsExpression') lit = lit.expression;
+          const init = d.__record || (t.startsWith('JsRecord') && lit?.type === 'ObjectExpression')
+            ? ` = new() { ${lit.properties.map((p) => (p.type === 'Property' ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`
+            : d.init ? ` = ${ex(d.init, t === 'bool')}` : t.endsWith('?') ? ' = null' : ' = default!';
           lines.push(`${ind}${t} ${id(d.id.name)}${init};`);
         }
         return lines;
@@ -772,7 +817,19 @@ function translate(mod) {
     const isNull = (r) => r.type === 'Literal' && r.value === null || (r.type === 'Identifier' && r.name === 'undefined');
     const numeric = (r) => (r.type === 'Literal' && typeof r.value === 'number') || (r.type === 'BinaryExpression' && ['+', '-', '*', '/', '%'].includes(r.operator) && !(r.left.type === 'Literal' && typeof r.left.value === 'string') && !(r.right.type === 'TemplateLiteral') && !(r.left.type === 'TemplateLiteral')) || (r.type === 'CallExpression' && r.callee.type === 'MemberExpression' && r.callee.object.name === 'Math') || (r.type === 'UnaryExpression' && r.operator === '-') || r.type === 'UpdateExpression';
     const real = rets.filter((r) => r && !isNull(r));
+    // A call to a function whose return type is known.
+    const callType = (r) => {
+      if (r.type !== 'CallExpression') return null;
+      if (r.callee.type === 'Identifier') {
+        const q = imports.get(r.callee.name);
+        return fnRet.get(q ?? `${modClass(mod)}.${r.callee.name}`) ?? fnRet.get(r.callee.name) ?? null;
+      }
+      if (r.callee.type === 'MemberExpression' && r.callee.object.name === 'Math') return 'double';
+      return null;
+    };
     const nul = rets.some((r) => !r || isNull(r));
+    const cts = real.map(callType);
+    if (real.length && cts.every((c) => c && c === cts[0] && !c.includes('TODO'))) return cts[0].replace(/\?$/, '') + (nul || cts[0].endsWith('?') ? '?' : '');
     if (real.length && real.every(numeric)) return 'double' + (nul ? '?' : '');
     const objs = real.filter((r) => r.type === 'ObjectExpression' && r.properties.every((p) => p.type === 'Property' && !p.computed));
     if (real.length && objs.length === real.length) {
@@ -799,6 +856,10 @@ function translate(mod) {
     const ps = f.params.map((p) => param(p, defaults));
     hint = pascal(name) + 'Result';
     const ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
+    if (ret && !ret.includes('TODO')) {
+      fnRet.set(top ? `${modClass(mod)}.${name}` : name, ret);
+      if (!top) fnRet.set(name, ret);
+    }
     const head = `${ind}${top ? 'public static ' : ''}${ret} ${id(name)}${tparams}(${ps.join(', ')})${where}`;
     const b = block(f.body, ind + '    ', { fnRet: ret }).split('\n');
     b[0] = ind + b[0].trimStart();
@@ -868,7 +929,7 @@ function translate(mod) {
           else t = '/*TODO const type*/object';
         } else if (t.startsWith('JsRecord') && init?.type === 'ObjectExpression') {
           recordConsts.add(name);
-          initText = `new() { ${init.properties.map((p) => (p.type === 'Property' ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '/*TODO spread*/')).join(', ')} }`;
+          initText = `new() { ${init.properties.map((p) => (p.type === 'Property' ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`;
         }
         if (t === 'var') t = '/*TODO const type*/object';
         const isConst = d.kind === 'const' && ['int', 'double', 'string', 'bool'].includes(t) && init && (init.type === 'Literal' || init.type === 'TemplateLiteral' && init.expressions.length === 0 || (init.type === 'UnaryExpression' && init.argument.type === 'Literal'));
@@ -918,6 +979,9 @@ const PREDICATE_METHODS = new Set(['filter', 'some', 'every', 'find', 'findIndex
 const origParse = parseAst;
 
 const only = process.argv.slice(2);
+// A first pass to learn every function's return type (for calls to functions in modules translated later).
+for (const m of files) if (!HAND[m]) translate(m);
+inline.clear();
 mkdirSync(OUT, { recursive: true });
 let todos = 0;
 for (const m of files) {
@@ -941,4 +1005,17 @@ for (const [name, [members, mod]] of inline) {
   inl.push('}', '');
 }
 writeFileSync(join(OUT, 'Inline.g.cs'), inl.join('\n'));
+// Hand fixes (fixups.mjs), applied to the files just written.
+let applied = 0;
+for (const [file, from, to] of FIXUPS) {
+  const path = join(OUT, file + '.g.cs');
+  const text = readFileSync(path, 'utf8');
+  if (!text.includes(from)) {
+    console.log(`fixup not found in ${file}: ${from.slice(0, 80)}`);
+    continue;
+  }
+  writeFileSync(path, text.split(from).join(to));
+  applied++;
+}
+if (FIXUPS.length) console.log(`${applied} of ${FIXUPS.length} hand fixes applied`);
 console.log(`translated ${only.length || files.length - Object.keys(HAND).length} modules; ${todos} TODO markers`);

@@ -32,7 +32,7 @@ public static partial class Towns
             var r = NatureMod.roll(seed, i, 1, 0x7101);
             kinds.push((size >= 384) && (r < 0.2) ? "city" : ((r < 0.6) ? "town" : "village"));
         }
-        JsRecord<double> order = new() { city = 0, town = 1, village = 2 };
+        JsRecord<double> order = new() { ["city"] = 0, ["town"] = 1, ["village"] = 2 };
         return kinds.sort((a, b) => order[Js.Idx(a)] - order[Js.Idx(b)]);
     }
 
@@ -135,7 +135,7 @@ public static partial class Towns
     public static List<Street> growStreets(Nature n, Town t, double ti)
     {
         List<Street> streets = [];
-        /*TODO return type*/object r(int k)
+        double r(int k)
         {
             return NatureMod.roll(n.seed, t.x, t.y, 0x7200 + k);
         }

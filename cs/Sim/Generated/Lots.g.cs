@@ -32,19 +32,19 @@ public static partial class Lots
         {
             case "south":
                 {
-                    return new() { x = Js.I(mx), y = Js.I(y) };
+                    return new Point { x = Js.I(mx), y = Js.I(y) };
                 }
             case "north":
                 {
-                    return new() { x = Js.I((p.w - 1) - mx), y = Js.I((p.h - 1) - y) };
+                    return new Point { x = Js.I((p.w - 1) - mx), y = Js.I((p.h - 1) - y) };
                 }
             case "east":
                 {
-                    return new() { x = Js.I(y), y = Js.I((p.w - 1) - mx) };
+                    return new Point { x = Js.I(y), y = Js.I((p.w - 1) - mx) };
                 }
             case "west":
                 {
-                    return new() { x = Js.I((p.h - 1) - y), y = Js.I(mx) };
+                    return new Point { x = Js.I((p.h - 1) - y), y = Js.I(mx) };
                 }
         }
     }
@@ -64,19 +64,19 @@ public static partial class Lots
         {
             case "north":
                 {
-                    return new() { x = Js.I(lot.x + u), y = Js.I(lot.y + v) };
+                    return new Point { x = Js.I(lot.x + u), y = Js.I(lot.y + v) };
                 }
             case "south":
                 {
-                    return new() { x = Js.I(lot.x + u), y = Js.I(((lot.y + lot.h) - 1) - v) };
+                    return new Point { x = Js.I(lot.x + u), y = Js.I(((lot.y + lot.h) - 1) - v) };
                 }
             case "west":
                 {
-                    return new() { x = Js.I(lot.x + v), y = Js.I(lot.y + u) };
+                    return new Point { x = Js.I(lot.x + v), y = Js.I(lot.y + u) };
                 }
             case "east":
                 {
-                    return new() { x = Js.I(((lot.x + lot.w) - 1) - v), y = Js.I(lot.y + u) };
+                    return new Point { x = Js.I(((lot.x + lot.w) - 1) - v), y = Js.I(lot.y + u) };
                 }
         }
     }
@@ -352,7 +352,7 @@ public static partial class Lots
         {
             return;
         }
-        /*TODO return type*/object r(int k)
+        double r(int k)
         {
             return Hash.hashRoll(ctx.seed, lot.x, lot.y, 0xca5 + k);
         }
@@ -377,7 +377,7 @@ public static partial class Lots
     {
         var __d8 = b;
         var plan = __d8.plan;
-        /*TODO return type*/object r(int k)
+        double r(int k)
         {
             return Hash.hashRoll(ctx.seed, lot.x, lot.y, (0x9300 + (bi * 1000)) + k);
         }
@@ -385,7 +385,7 @@ public static partial class Lots
         Point at(int x, int y)
         {
             var t = transform(plan, x, y, b.facing, b.mirror);
-            return new() { x = Js.I(b.ox + t.x), y = Js.I(b.oy + t.y) };
+            return new Point { x = Js.I(b.ox + t.x), y = Js.I(b.oy + t.y) };
         }
         List<Point> floors = [];
         for (var y = 0; y < plan.h; y++)

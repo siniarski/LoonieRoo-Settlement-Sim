@@ -87,7 +87,7 @@ public static partial class Savefile
             {
                 return ((Furniture)(r));
             }
-            JsRecord<object> f = new();
+            JsRecord<object> f = new() {  };
             FURNITURE_FIELDS.forEach((k, i) => f[Js.Idx(k)] = (i < r.length) ? r[Js.Idx(i)] : FURNITURE_DEFAULTS[Js.Idx(i)]);
             return ((Furniture)(f));
         });
@@ -96,37 +96,37 @@ public static partial class Savefile
     /// <summary>A copy of the state with the grid's layers run-length encoded (marked `rle: true`) and the furniture as rows.</summary>
     public static object pack(SimState state)
     {
-        JsRecord<object> grid = Js.With(Js.Clone(state.grid), __s0 => { __s0.rle = true; });
+        JsRecord<object> grid = new() { [Js.TODO_SPREAD] = default!, ["rle"] = true };
         foreach (var layer in Js.Iter(LAYERS))
         {
             grid[Js.Idx(layer)] = runLengthEncode(state.grid[Js.Idx(layer)]);
         }
-        return Js.With(Js.Clone(state), __s1 => { __s1.grid = grid; __s1.furniture = packFurniture(state.furniture); });
+        return Js.With(Js.Clone(state), __s0 => { __s0.grid = grid; __s0.furniture = packFurniture(state.furniture); });
     }
 
     /// <summary>A save: the state as it is, without the history of how it got there.</summary>
     public static object snapshot(SimState state)
     {
-        return Js.With(Js.Clone(pack(state)), __s2 => { __s2.commandLog = []; });
+        return Js.With(Js.Clone(pack(state)), __s1 => { __s1.commandLog = []; });
     }
 
     /// <summary>Undoes pack (and passes unpacked states through).</summary>
     public static SimState unpack(SimState packed)
     {
         var rows = packed.furniture;
-        var state = (Js.T(rows) && !Js.T((rows is System.Collections.IList))) ? Js.With(Js.Clone(packed), __s3 => { __s3.furniture = unpackFurniture(rows); }) : packed;
+        var state = (Js.T(rows) && !Js.T((rows is System.Collections.IList))) ? Js.With(Js.Clone(packed), __s2 => { __s2.furniture = unpackFurniture(rows); }) : packed;
         var grid = state.grid;
         if (grid.rle != true)
         {
             return state;
         }
-        JsRecord<object> @out = Js.Clone(grid);
+        JsRecord<object> @out = new() { [Js.TODO_SPREAD] = default! };
         @out.Remove("rle");
         foreach (var layer in Js.Iter(LAYERS))
         {
             @out[Js.Idx(layer)] = runLengthDecode(grid[Js.Idx(layer)]);
         }
-        return Js.With(Js.Clone(state), __s4 => { __s4.grid = @out; });
+        return Js.With(Js.Clone(state), __s3 => { __s3.grid = @out; });
     }
 
     public static string toSaveFile(SimState state)

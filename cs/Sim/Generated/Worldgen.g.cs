@@ -182,7 +182,7 @@ public static partial class Worldgen
         if (Js.T(solo))
         {
             var you = state.survivors[Js.Idx(0)]!;
-            state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new() { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+            state.control = new() { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
             var weapon = Items.spawnItem(state, "weapon", you.pos.x, you.pos.y);
             weapon.pos = null;
             weapon.carriedBy = you.id;
@@ -197,7 +197,7 @@ public static partial class Worldgen
         {
             Items.spawnItem(state, "food", (sx + 3) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
-        var c = Space.nearestTile(state.grid, new() { x = Js.I(sx + 5), y = Js.I(sy + 1) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        var c = Space.nearestTile(state.grid, new Point { x = Js.I(sx + 5), y = Js.I(sy + 1) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
         if (Js.T(c))
         {
             FurnitureMod.addFurniture(state, "collector", c.x, c.y).loot = START_WATER;
@@ -243,9 +243,9 @@ public static partial class Worldgen
         {
             return (JsMath.floor(((double)(q.x) / (CHUNK))) == cx) && (JsMath.floor(((double)(q.y) / (CHUNK))) == cy);
         }
-        /*TODO return type*/object open(int x, int y)
+        bool open(int x, int y)
         {
-            return Grids.isWalkable(state.grid, x, y);
+            return Js.T(Grids.isWalkable(state.grid, x, y));
         }
         bool floorOnly(int x, int y)
         {
@@ -296,7 +296,7 @@ public static partial class Worldgen
                 {
                     if ((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y)))
                     {
-                        return new() { x = Js.I(x), y = Js.I(y) };
+                        return new Point { x = Js.I(x), y = Js.I(y) };
                     }
                 }
             }
@@ -324,10 +324,10 @@ public static partial class Worldgen
         TimelineMod.rollTimeline(state, seed);
         Settlements.placeSettlements(state, l.start, seed);
         var angle = (Hash.hashRoll(seed, 0x7a0c) * JsMath.PI) * 2;
-        Point near = new() { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
-        Point clamped = new() { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
+        Point near = new Point { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
+        Point clamped = new Point { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
         var spot = Space.nearestTile(state.grid, clamped, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
-        var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new() { x = Js.I(x), y = Js.I(y) }))));
+        var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))));
         if (Js.T(park))
         {
             Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(Hash.hashRoll(seed, 0x7a0d) * 32), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");

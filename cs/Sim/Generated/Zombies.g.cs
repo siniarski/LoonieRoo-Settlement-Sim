@@ -77,7 +77,7 @@ public static partial class Zombies
     public static Zombie addZombie(SimState state, int x, int y, double? health = null, string kind = "night")
     {
         health ??= ZOMBIE_HEALTH;
-        Zombie z = /*TODO object spread*/Js.Spread(Motion.placedAt(new() { x = Js.I(x), y = Js.I(y) }), new() { id = $"z{Js.Str(state.nextId++)}", pos = new() { x = Js.I(x), y = Js.I(y) }, move = null, path = [], targetId = null, health = health, maxHealth = health, cooldown = 0, nextThinkTick = 0, kind = kind, heading = null, variant = "walker", screamed = false, stuckUntil = 0, windup = 0, staggerUntil = 0, hurtTick = -1 });
+        Zombie z = /*TODO object spread*/Js.Spread(Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }), new() { id = $"z{Js.Str(state.nextId++)}", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], targetId = null, health = health, maxHealth = health, cooldown = 0, nextThinkTick = 0, kind = kind, heading = null, variant = "walker", screamed = false, stuckUntil = 0, windup = 0, staggerUntil = 0, hurtTick = -1 });
         state.zombies.push(z);
         edited(state.zombies);
         return z;
@@ -294,7 +294,7 @@ public static partial class Zombies
         var lamps = Power.litLamps(state);
         bool open(int x, int y)
         {
-            return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.survivors.some((s) => Space.manhattan(s.pos, new() { x = Js.I(x), y = Js.I(y) }) < SPAWN_MIN_DISTANCE) && !lamps.some((l) => Space.manhattan(l, new() { x = Js.I(x), y = Js.I(y) }) < Power.LAMP_DETER);
+            return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.survivors.some((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) < SPAWN_MIN_DISTANCE) && !lamps.some((l) => Space.manhattan(l, new Point { x = Js.I(x), y = Js.I(y) }) < Power.LAMP_DETER);
         }
         if ((state.survivors.length > 0) && state.grid.explored.includes(0))
         {
@@ -307,7 +307,7 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                Point near = new() { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + dx))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + dy))) };
+                Point near = new Point { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + dx))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + dy))) };
                 var p = Space.nearestTile(state.grid, near, (x, y) => !Js.T(Fog.isExplored(state, x, y)) && Js.T(open(x, y)));
                 if (Js.T(p) && (Space.manhattan(p, near) <= FRONTIER_MAX))
                 {
@@ -321,11 +321,11 @@ public static partial class Zombies
         List<Point> edge = [];
         for (var x = 0; x < width; x++)
         {
-            edge.push(new() { x = Js.I(x), y = Js.I(0) }, new() { x = Js.I(x), y = Js.I(height - 1) });
+            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
         }
         for (var y = 1; y < (height - 1); y++)
         {
-            edge.push(new() { x = Js.I(0), y = Js.I(y) }, new() { x = Js.I(width - 1), y = Js.I(y) });
+            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
         }
         var candidates = edge.filter((p) => Js.T(open(p.x, p.y)));
         return (candidates.length > 0) ? Rng.pick(state, candidates) : null;
@@ -495,7 +495,7 @@ public static partial class Zombies
             {
                 z.path.shift();
             }
-            z.pos = new() { x = Js.I(goal.x), y = Js.I(goal.y) };
+            z.pos = new Point { x = Js.I(goal.x), y = Js.I(goal.y) };
             if (Js.T(springTrap(state, z)))
             {
                 return;
@@ -567,11 +567,11 @@ public static partial class Zombies
         var dy = to.y - z.at.y;
         if ((dx * dx) + (dy * dy) <= (speed * speed))
         {
-            z.at = new() { x = Js.I(to.x), y = Js.I(to.y) };
+            z.at = new Point { x = Js.I(to.x), y = Js.I(to.y) };
             return true;
         }
         var v = Motion.toward(dx, dy, speed);
-        z.at = new() { x = Js.I(z.at.x + v.x), y = Js.I(z.at.y + v.y) };
+        z.at = new Point { x = Js.I(z.at.x + v.x), y = Js.I(z.at.y + v.y) };
         return false;
     }
 
@@ -644,7 +644,7 @@ public static partial class Zombies
                 err += dx;
                 y += sy;
             }
-            if (!Js.T(Pathfinding.walksAcross(state.grid, new() { x = Js.I(px), y = Js.I(py) }, new() { x = Js.I(x), y = Js.I(y) }, "zombie")))
+            if (!Js.T(Pathfinding.walksAcross(state.grid, new Point { x = Js.I(px), y = Js.I(py) }, new Point { x = Js.I(x), y = Js.I(y) }, "zombie")))
             {
                 return false;
             }

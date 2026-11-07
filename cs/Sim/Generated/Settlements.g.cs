@@ -50,10 +50,10 @@ public static partial class Settlements
         var size = state.grid.width;
         for (var i = 0; i < 3; i++)
         {
-            Point p = new() { x = Js.I(0), y = Js.I(0) };
+            Point p = new Point { x = Js.I(0), y = Js.I(0) };
             for (var attempt = 0; attempt < 20; attempt++)
             {
-                p = new() { x = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 1) * size)), y = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 2) * size)) };
+                p = new Point { x = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 1) * size)), y = Js.I(JsMath.floor(Hash.hashRoll(seed, i, attempt, 2) * size)) };
                 if ((JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y)) >= ((double)(size) / (3)))
                 {
                     break;

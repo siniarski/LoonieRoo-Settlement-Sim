@@ -87,7 +87,7 @@ public static partial class FireMod
             return;
         }
         var wet = Seasons.isWet(state.weather);
-        foreach (var f in Js.Iter([.. state.fires]))
+        foreach (var f in Js.Iter((state.fires).ToList()))
         {
             foreach (var s in Js.Iter(state.survivors))
             {
@@ -99,7 +99,7 @@ public static partial class FireMod
                 s.lastHurtBy = "burns";
                 s.hurtTick = state.tick;
             }
-            foreach (var z in Js.Iter([.. state.zombies]))
+            foreach (var z in Js.Iter((state.zombies).ToList()))
             {
                 if ((z.pos.x != f.x) || (z.pos.y != f.y))
                 {

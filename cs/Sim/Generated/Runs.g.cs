@@ -66,7 +66,7 @@ public static partial class Runs
         {
             return;
         }
-        foreach (var r in Js.Iter([.. list]))
+        foreach (var r in Js.Iter((list).ToList()))
         {
             if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(caught(state, r)))
             {
@@ -121,7 +121,7 @@ public static partial class Runs
             {
                 continue;
             }
-            /*TODO return type*/object roll(int k)
+            double roll(int k)
             {
                 return Hash.hashRoll(Hash.idNumber(n.id), day, 0x5ca, k);
             }
@@ -132,11 +132,11 @@ public static partial class Runs
             }
             var angle = (roll(1) * JsMath.PI) * 2;
             var dist = RUN_MIN + JsMath.floor(roll(2) * (RUN_MAX - RUN_MIN));
-            Point ruin = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+            Point ruin = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
             var people = JsMath.min(RUN_PARTY, (n.people - RUN_MIN_HOME) + RUN_PARTY);
             n.people -= people;
             state.runs ??= [];
-            state.runs.push(new() { id = $"sr{Js.Str(day)}x{Js.Str(Hash.idNumber(n.id))}", from = n.id, x = Js.I(n.x), y = Js.I(n.y), home = new() { x = Js.I(n.x), y = Js.I(n.y) }, ruin = ruin, people = people, phase = "out", untilTick = 0, nextStepTick = state.tick + RUN_STEP, food = 0, met = false });
+            state.runs.push(new() { id = $"sr{Js.Str(day)}x{Js.Str(Hash.idNumber(n.id))}", from = n.id, x = Js.I(n.x), y = Js.I(n.y), home = new Point { x = Js.I(n.x), y = Js.I(n.y) }, ruin = ruin, people = people, phase = "out", untilTick = 0, nextStepTick = state.tick + RUN_STEP, food = 0, met = false });
             if (!Js.T(Settlements.isHostile(n)))
             {
                 Events.logEvent(state, $"{Js.Str(people)} from {Js.Str(n.name)} went out scavenging towards ({Js.Str(ruin.x)}, {Js.Str(ruin.y)})");
@@ -175,7 +175,7 @@ public static partial class Runs
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
         }
-        var at = spot ?? new() { x = Js.I(r.x), y = Js.I(r.y) };
+        var at = spot ?? new Point { x = Js.I(r.x), y = Js.I(r.y) };
         state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(at.x), y = Js.I(at.y), label = DEAD_LABEL });
         if (Js.T(heard))
         {

@@ -44,7 +44,7 @@ public static partial class Visitors
 
     public static void updateVisitors(SimState state)
     {
-        foreach (var t in Js.Iter([.. state.traders]))
+        foreach (var t in Js.Iter((state.traders).ToList()))
         {
             if ((state.tick >= t.leavesTick) || Js.T(Time.isNight(state.tick)))
             {
@@ -77,7 +77,7 @@ public static partial class Visitors
             return;
         }
         List<Offer> offers = [];
-        var left = [.. OFFERS];
+        var left = (OFFERS).ToList();
         for (var i = 0; i < 3; i++)
         {
             var o = Rng.pick(state, left);
@@ -131,7 +131,7 @@ public static partial class Visitors
         var size = 2 + JsMath.floor(((double)(day) / (6)));
         for (var n = 0; n < size; n++)
         {
-            Point p = new() { x = Js.I(spot.x + (n % 2)), y = Js.I(spot.y + JsMath.floor(((double)(n) / (2)))) };
+            Point p = new Point { x = Js.I(spot.x + (n % 2)), y = Js.I(spot.y + JsMath.floor(((double)(n) / (2)))) };
             var at = (Grids.getTile(state.grid, p.x, p.y) == "floor") ? p : spot;
             Zombies.addZombie(state, at.x, at.y, RAIDER_HEALTH, "raider");
         }

@@ -48,7 +48,7 @@ public static partial class Jobs
     public static void reconcileJobs(SimState state)
     {
         Rooms.reconcileRoomDesignations(state);
-        foreach (var bp in Js.Iter([.. state.blueprints]))
+        foreach (var bp in Js.Iter((state.blueprints).ToList()))
         {
             if (!Js.T(Designations.preconditionHolds(state, bp)))
             {
@@ -56,7 +56,7 @@ public static partial class Jobs
             }
         }
         var stores = Rooms.completeStoreRooms(state);
-        foreach (var job in Js.Iter([.. state.jobs]))
+        foreach (var job in Js.Iter((state.jobs).ToList()))
         {
             var reason = invalidReason(state, job, stores);
             if (Js.T(reason))
@@ -75,7 +75,7 @@ public static partial class Jobs
         var __d0 = state.grid;
         var width = __d0.width;
         var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => (j.y * width) + j.x));
-        foreach (var i in Js.Iter([.. state.grid.dirtList].sort((a, b) => a - b)))
+        foreach (var i in Js.Iter((state.grid.dirtList).ToList().sort((a, b) => a - b)))
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
@@ -103,7 +103,7 @@ public static partial class Jobs
             }
         }
         var repairing = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge == null)).map((j) => (j.y * width) + j.x));
-        foreach (var i in Js.Iter([.. state.grid.damageList].sort((a, b) => a - b)))
+        foreach (var i in Js.Iter((state.grid.damageList).ToList().sort((a, b) => a - b)))
         {
             if (!repairing.has(i))
             {

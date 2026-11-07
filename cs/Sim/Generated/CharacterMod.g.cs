@@ -88,7 +88,7 @@ public static partial class CharacterMod
         var p = professionOf(c.job)!;
         s.name = cleanName(c.name);
         s.story.job = c.job;
-        s.traits = [.. c.traits];
+        s.traits = (c.traits).ToList();
         foreach (var (type, level) in Js.Iter(Js.ObjectEntries(p.skills)))
         {
             s.xp[Js.Idx(type)] = level * Skills.XP_PER_LEVEL;

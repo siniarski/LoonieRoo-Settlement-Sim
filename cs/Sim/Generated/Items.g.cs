@@ -34,7 +34,7 @@ public static partial class Items
             item.tag = Books.bookSubject(item.id);
         }
         state.items.push(item);
-        placeNear(state, item, new() { x = Js.I(x), y = Js.I(y) });
+        placeNear(state, item, new Point { x = Js.I(x), y = Js.I(y) });
         return item;
     }
     public static Item spawnItem(SimState state, string kind, double x, double y) => spawnItem(state, kind, (int)x, (int)y);
@@ -64,6 +64,6 @@ public static partial class Items
         {
             return (Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !state.blueprints.some((b) => (b.x == x) && (b.y == y) && (b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target)));
         }
-        item.pos = Space.nearestTile(state.grid, near, free) ?? new() { x = Js.I(near.x), y = Js.I(near.y) };
+        item.pos = Space.nearestTile(state.grid, near, free) ?? new Point { x = Js.I(near.x), y = Js.I(near.y) };
     }
 }

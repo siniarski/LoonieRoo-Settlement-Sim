@@ -638,7 +638,11 @@ public static partial class Buildings
         }
         bool outer(int x, int y)
         {
-            return DIR4.some((/*TODO pattern*/_1) => at(x + dx, y + dy) == OUTSIDE);
+            return DIR4.some((__p1) =>
+        {
+            var (dx, dy) = __p1;
+            return at(x + dx, y + dy) == OUTSIDE;
+        });
         }
         var cells = p.cells.slice();
         List<double> pending = [];
@@ -774,7 +778,7 @@ public static partial class Buildings
             {
                 return $"{Js.Str(e.ax)},{Js.Str(e.ay)},{Js.Str(e.bx)},{Js.Str(e.by)}";
             }
-            var outerWall = /*TODO Map type*/new JsMap<object, object>(edges.filter((e) => !Js.T(e.door) && (cellOf(e.bx, e.by) != FLOOR)).map((e) => [key(e), e]));
+            var outerWall = Js.MapOf(edges.filter((e) => !Js.T(e.door) && (cellOf(e.bx, e.by) != FLOOR)), (e) => key(e), (e) => e);
             foreach (var e in Js.Iter(outerWall.values()))
             {
                 var (dx, dy) = [e.bx - e.ax, e.by - e.ay];

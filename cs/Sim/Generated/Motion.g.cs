@@ -68,12 +68,12 @@ public static partial class Motion
 
     public static Point centre(Point p)
     {
-        return new() { x = Js.I((p.x * SUB) + HALF), y = Js.I((p.y * SUB) + HALF) };
+        return new Point { x = Js.I((p.x * SUB) + HALF), y = Js.I((p.y * SUB) + HALF) };
     }
 
     public static Point tileOf(Point at)
     {
-        return new() { x = Js.I(JsMath.floor(((double)(at.x) / (SUB)))), y = Js.I(JsMath.floor(((double)(at.y) / (SUB)))) };
+        return new Point { x = Js.I(JsMath.floor(((double)(at.x) / (SUB)))), y = Js.I(JsMath.floor(((double)(at.y) / (SUB)))) };
     }
 
     /// <summary>A new mover's position fields, on a tile.</summary>
@@ -85,7 +85,7 @@ public static partial class Motion
     /// <summary>Put a mover on a tile now (teleports: spawning, evictions).</summary>
     public static void place(Body e, Point tile)
     {
-        e.pos = new() { x = Js.I(tile.x), y = Js.I(tile.y) };
+        e.pos = new Point { x = Js.I(tile.x), y = Js.I(tile.y) };
         e.move = null;
         e.at = centre(tile);
         e.was = centre(tile);
@@ -102,7 +102,7 @@ public static partial class Motion
         }
         var from = centre(m.from);
         var to = centre(m.to);
-        e.at = new() { x = Js.I(from.x + JsMath.trunc(((double)(((to.x - from.x) * m.progress)) / (m.duration)))), y = Js.I(from.y + JsMath.trunc(((double)(((to.y - from.y) * m.progress)) / (m.duration)))) };
+        e.at = new Point { x = Js.I(from.x + JsMath.trunc(((double)(((to.x - from.x) * m.progress)) / (m.duration)))), y = Js.I(from.y + JsMath.trunc(((double)(((to.y - from.y) * m.progress)) / (m.duration)))) };
     }
 
     /// <summary>For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are allowed (a zombie keeps its old tile as pos until a step lands, so it can be a tile off).</summary>
@@ -181,16 +181,16 @@ public static partial class Motion
         {
             var sx = JsMath.trunc(((double)((dx * i)) / (steps))) - JsMath.trunc(((double)((dx * (i - 1))) / (steps)));
             var sy = JsMath.trunc(((double)((dy * i)) / (steps))) - JsMath.trunc(((double)((dy * (i - 1))) / (steps)));
-            if ((sx != 0) && Js.T(fits(grid, new() { x = Js.I(x + sx), y = Js.I(y) }, mover, r)))
+            if ((sx != 0) && Js.T(fits(grid, new Point { x = Js.I(x + sx), y = Js.I(y) }, mover, r)))
             {
                 x += sx;
             }
-            if ((sy != 0) && Js.T(fits(grid, new() { x = Js.I(x), y = Js.I(y + sy) }, mover, r)))
+            if ((sy != 0) && Js.T(fits(grid, new Point { x = Js.I(x), y = Js.I(y + sy) }, mover, r)))
             {
                 y += sy;
             }
         }
-        return new() { x = Js.I(x), y = Js.I(y) };
+        return new Point { x = Js.I(x), y = Js.I(y) };
     }
     public static Point slide(Grid grid, Point at, double dx, double dy, string mover, double? r = null) => slide(grid, at, (int)dx, (int)dy, mover, r);
 
@@ -200,9 +200,9 @@ public static partial class Motion
         var d = JsMath.sqrt((dx * dx) + (dy * dy));
         if (d == 0)
         {
-            return new() { x = Js.I(0), y = Js.I(0) };
+            return new Point { x = Js.I(0), y = Js.I(0) };
         }
-        return new() { x = Js.I(JsMath.round(((double)((dx * len)) / (d)))), y = Js.I(JsMath.round(((double)((dy * len)) / (d)))) };
+        return new Point { x = Js.I(JsMath.round(((double)((dx * len)) / (d)))), y = Js.I(JsMath.round(((double)((dy * len)) / (d)))) };
     }
     public static Point toward(double dx, double dy, double len) => toward((int)dx, (int)dy, len);
 
