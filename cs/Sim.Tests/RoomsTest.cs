@@ -1,0 +1,153 @@
+// Ported from tests/rooms.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class RoomsTest
+{
+
+    public static readonly List<string> HOUSE = ["..........", ".#####.##.", ".#...#.#..", ".#...D.##.", ".#####....", ".........."];
+
+    /// <summary>room flood fill</summary>
+    public class D001_room_flood_fill
+    {
+
+        [Fact(DisplayName = "room flood fill > finds enclosed rooms; regions touching the edge are outdoors")]
+        public void T002_finds_enclosed_rooms_regions_touching_the_edge_are_outdoors()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE });
+            expect(DebugText.dumpRooms(state)).toBe(new List<string> { "..........", ".#####.##.", ".#aaa#.#..", ".#aaaD.##.", ".#####....", ".........." }.join("\n"));
+            var room = Js.NN(Rooms.roomAt(state, 3, 2));
+            expect(room.tiles).toHaveLength(6);
+            expect(room.doors).toEqual(Js.Arr([Js.Obj(("x", (object?)(5)), ("y", (object?)(3)))]));
+            expect(Js.Arr([room.minX, room.minY, room.maxX, room.maxY])).toEqual(Js.Arr([2, 2, 4, 3]));
+        }
+
+        [Fact(DisplayName = "room flood fill > doors split rooms")]
+        public void T003_doors_split_rooms()
+        {
+            List<string> map = ["#######", "#..D..#", "#######"];
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = map });
+            expect(DebugText.dumpRooms(state)).toBe(new List<string> { "#######", "#aaDbb#", "#######" }.join("\n"));
+        }
+
+        [Fact(DisplayName = "room flood fill > a room on the map edge counts as outdoors")]
+        public void T004_a_room_on_the_map_edge_counts_as_outdoors()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = ["...#", "...#", "####"] });
+            expect(Rooms.getRoomMap(state).rooms).toHaveLength(0);
+        }
+
+        [Fact(DisplayName = "room flood fill > recomputes only when walls or doors change")]
+        public void T005_recomputes_only_when_walls_or_doors_change()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE });
+            var before = Rooms.getRoomMap(state);
+            Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(3), y = Js.I(2), structure = "bed" });
+            expect(Rooms.getRoomMap(state)).toBe(before);
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(3), y = Js.I(2) });
+            var after = Rooms.getRoomMap(state);
+            expect(after).not.toBe(before);
+            expect(Js.NN(Js.Get(after.rooms, 0)).tiles).toHaveLength(5);
+        }
+
+        [Fact(DisplayName = "room flood fill > closing a gap creates a room, opening one removes it")]
+        public void T006_closing_a_gap_creates_a_room_opening_one_removes_it()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE });
+            expect(Rooms.getRoomMap(state).rooms).toHaveLength(1);
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(9), y = Js.I(2) });
+            expect(Rooms.getRoomMap(state).rooms).toHaveLength(2);
+            Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(1), y = Js.I(3) });
+            expect(Rooms.getRoomMap(state).rooms).toHaveLength(1);
+        }
+    }
+
+    /// <summary>room designations and requirements</summary>
+    public class D007_room_designations_and_requirements
+    {
+
+        public static Scenario scenario(List<string> map, List<ScenarioRoomsItem> rooms)
+        {
+            return new Scenario { seed = 0, map = map, rooms = rooms };
+        }
+
+        [Fact(DisplayName = "room designations and requirements > housing needs a door and a bed, with 4 tiles per bed")]
+        public void T008_housing_needs_a_door_and_a_bed_with_4_tiles_per_bed()
+        {
+            List<string> map = ["#######", "#.....#", "#.....#", "#######"];
+            var state = ScenarioMod.loadScenario(scenario([".......", .. map, "......."], [new() { x = Js.I(2), y = Js.I(2), purpose = "housing" }]));
+            /*TODO return type*/object unmet()
+            {
+                return Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements.filter((r) => !r.met).map((r) => r.label);
+            }
+            expect(unmet()).toEqual(Js.Arr(["has a door", "at least 1 bed"]));
+            Commands.applyCommand(state, new Command { type = "placeDoor", x = Js.I(3), y = Js.I(1) });
+            Commands.applyCommand(state, new Command { type = "placeBed", x = Js.I(2), y = Js.I(2) });
+            expect(unmet()).toEqual(Js.Arr([]));
+            expect(Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)))).toMatchObject(Js.Obj(("complete", (object?)(true)), ("beds", (object?)(1)), ("size", (object?)(10))));
+            foreach (var x in Js.Iter((List<double>)[3, 4]))
+            {
+                Commands.applyCommand(state, new Command { type = "placeBed", x = Js.I(x), y = Js.I(2) });
+            }
+            expect(unmet()).toEqual(Js.Arr(["4 tiles per bed"]));
+        }
+
+        [Fact(DisplayName = "room designations and requirements > storage needs a door and 4 tiles")]
+        public void T009_storage_needs_a_door_and_4_tiles()
+        {
+            var state = ScenarioMod.loadScenario(scenario([".....", ".#D#.", ".#.#.", ".###.", "....."], [new() { x = Js.I(2), y = Js.I(2), purpose = "storage" }]));
+            var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
+            expect(status.requirements.filter((r) => !r.met).map((r) => r.label)).toEqual(Js.Arr(["at least 4 tiles"]));
+            expect(Rooms.completeRooms(state, "storage").size).toBe(0);
+        }
+
+        [Fact(DisplayName = "room designations and requirements > a designation outdoors is kept but reports not enclosed")]
+        public void T010_a_designation_outdoors_is_kept_but_reports_not_enclosed()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE, rooms = [new() { x = Js.I(3), y = Js.I(2), purpose = "storage" }] });
+            Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(1), y = Js.I(3) });
+            Rooms.reconcileRoomDesignations(state);
+            expect(state.roomDesignations).toHaveLength(1);
+            var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
+            expect(status.complete).toBe(false);
+            expect(Js.Missing(status.requirements, 0) ? null : (object?)(Js.Get(status.requirements, 0))).toEqual(Js.Obj(("label", (object?)("enclosed by walls")), ("met", (object?)(false))));
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(1), y = Js.I(3) });
+            expect(Js.NN(Js.Get(Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements, 0)).met).toBe(true);
+        }
+
+        [Fact(DisplayName = "room designations and requirements > when rooms merge, the older designation wins")]
+        public void T011_when_rooms_merge_the_older_designation_wins()
+        {
+            List<string> map = [".........", ".#######.", ".#..#..#.", ".###D###.", "........."];
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = map, rooms = [new() { x = Js.I(2), y = Js.I(2), purpose = "housing" }, new() { x = Js.I(5), y = Js.I(2), purpose = "storage" }] });
+            Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(4), y = Js.I(2) });
+            Rooms.reconcileRoomDesignations(state);
+            expect(state.roomDesignations.map((d) => d.purpose)).toEqual(Js.Arr(["housing"]));
+        }
+
+        [Fact(DisplayName = "room designations and requirements > an anchor that gets built over slides to a neighbouring floor tile")]
+        public void T012_an_anchor_that_gets_built_over_slides_to_a_neighbouring_floo()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE, rooms = [new() { x = Js.I(3), y = Js.I(2), purpose = "housing" }] });
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(3), y = Js.I(2) });
+            Rooms.reconcileRoomDesignations(state);
+            expect(Js.Missing(state.roomDesignations, 0) ? null : (object?)(Js.Get(state.roomDesignations, 0))).toMatchObject(Js.Obj(("x", (object?)(4)), ("y", (object?)(2)), ("purpose", (object?)("housing"))));
+        }
+
+        [Fact(DisplayName = "room designations and requirements > designateRoom works inside rooms only, and re-designating changes the purpose")]
+        public void T013_designateRoom_works_inside_rooms_only_and_re_designating_cha()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE });
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(0), y = Js.I(0), purpose = "housing" }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(1), y = Js.I(1), purpose = "housing" }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(2), y = Js.I(2), purpose = "housing" })).toEqual(Js.Obj(("ok", (object?)(true)), ("changed", (object?)(true))));
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(4), y = Js.I(3), purpose = "housing" })).toEqual(Js.Obj(("ok", (object?)(true)), ("changed", (object?)(false))));
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(4), y = Js.I(3), purpose = "storage" })).toEqual(Js.Obj(("ok", (object?)(true)), ("changed", (object?)(true))));
+            expect(state.roomDesignations.map((d) => d.purpose)).toEqual(Js.Arr(["storage"]));
+            expect(Commands.applyCommand(state, new Command { type = "cancelDesignation", x = Js.I(3), y = Js.I(3) })).toEqual(Js.Obj(("ok", (object?)(true)), ("changed", (object?)(true))));
+            expect(state.roomDesignations).toEqual(Js.Arr([]));
+        }
+    }
+}

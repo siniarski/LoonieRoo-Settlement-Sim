@@ -1,0 +1,186 @@
+// Ported from src/sim/settlements.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Other settlements: neighbours out in a generated world, each with a
+// reputation for you, -100..100.
+//
+// Traders come from them in turn. Trading with one warms it to you; sending
+// its trader away empty-handed cools it; a gift of food warms it a lot. At
+// HOSTILE or worse it counts you an enemy, and raids come more often. At
+// FRIENDLY or better it sends someone to join you every FRIENDLY_SEND_DAYS.
+//
+// Between themselves (ties, -100..100): at ALLY or better two settlements are allies (they
+// send each other food by caravan when one runs short: colonies.ts); at FEUD or worse they
+// feud (they raid each other now and then, starving or not). How you're seen spills over:
+// what you do for or to one, its allies feel half as much, and those feuding with it a
+// quarter as much the other way.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Settlements
+{
+
+    public const int TRADE_REP = 5;
+
+    public const double SNUB_REP = -5;
+
+    public const int GIFT_REP = 10;
+
+    public const int GIFT_FOOD = 3;
+
+    public const double HOSTILE = -30;
+
+    public const int FRIENDLY = 40;
+
+    public const int FRIENDLY_SEND_DAYS = 5;
+
+    public static readonly List<string> NAMES = ["Rivermouth", "Hollow Creek", "Saint Agnes", "The Quarry", "Fort Ember", "Greyfield"];
+
+    public static bool isHostile(Settlement s)
+    {
+        return s.reputation <= HOSTILE;
+    }
+
+    public static Settlement? getSettlement(SimState state, string? id)
+    {
+        return Js.T(id) ? state.settlements.find((s) => s.id == id) : null;
+    }
+
+    /// <summary>Three neighbours far from the start, at hashed spots (worldgen).</summary>
+    public static void placeSettlements(SimState state, Point start, double seed)
+    {
+        var size = state.grid.width;
+        for (var i = 0; i < 3; i++)
+        {
+            Point p = new Point { x = Js.I(0), y = Js.I(0) };
+            for (var attempt = 0; attempt < 20; attempt++)
+            {
+                p = new Point { x = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 1)) * (size)))), y = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 2)) * (size)))) };
+                if ((JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y)) >= ((double)(size) / (3)))
+                {
+                    break;
+                }
+            }
+            var people = 5 + JsMath.floor(((double)(Hash.hashRoll(seed, i, 3)) * (8)));
+            newSettlement(state, Js.NN(Js.Get(NAMES, (seed + i) % NAMES.length)), p.x, p.y, people, ((double)(people) * (3)), JsMath.floor(((double)(Hash.hashRoll(seed, i, 4)) * (3))));
+        }
+    }
+
+    public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)
+    {
+        Settlement n = new Settlement { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new() {  }, unfolded = false, lastTalk = -1, lastRaid = -1 };
+        state.settlements.push(n);
+        return n;
+    }
+    public static Settlement newSettlement(SimState state, string name, double x, double y, double people, double food, double defence) => newSettlement(state, name, Js.I(x), Js.I(y), people, food, defence);
+
+    public static void adjustReputation(SimState state, Settlement s, int by, bool spill = true)
+    {
+        var was = isHostile(s);
+        s.reputation = JsMath.max(-100, JsMath.min(100, s.reputation + by));
+        if (!was && isHostile(s))
+        {
+            Events.logEvent(state, $"{Js.Str(s.name)} now counts you an enemy: expect more raids");
+        }
+        if (was && !isHostile(s))
+        {
+            Events.logEvent(state, $"{Js.Str(s.name)} no longer counts you an enemy");
+        }
+        if (!Js.T(spill))
+        {
+            return;
+        }
+        foreach (var o in Js.Iter(state.settlements))
+        {
+            if ((o == s) || (o.people <= 0))
+            {
+                continue;
+            }
+            var t = Js.Q(Js.Get(s.ties, o.id), 0);
+            if (t >= ALLY)
+            {
+                adjustReputation(state, o, JsMath.trunc(((double)(by) / (2))), false);
+            }
+            else if (t <= FEUD)
+            {
+                adjustReputation(state, o, -JsMath.trunc(((double)(by) / (4))), false);
+            }
+        }
+    }
+    public static void adjustReputation(SimState state, Settlement s, double by, bool spill = true) => adjustReputation(state, s, Js.I(by), spill);
+
+    public const int ALLY = 40;
+
+    public const double FEUD = -40;
+
+    /// <summary>How two settlements stand: allies, feuding, or neither.</summary>
+    public static string? relation(Settlement a, Settlement b)
+    {
+        var t = Js.Q(Js.Get(a.ties, b.id), 0);
+        return (t >= ALLY) ? "allies" : ((t <= FEUD) ? "feud" : null);
+    }
+
+    /// <summary>Warms (or cools) two settlements to each other, both ways. Returns how they stood before.</summary>
+    public static string? tieSettlements(Settlement a, Settlement b, int by)
+    {
+        var before = relation(a, b);
+        foreach (var (x, y) in new (Settlement, Settlement)[] { (a, b), (b, a) })
+        {
+            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(Js.Get(x.ties, y.id), 0)) + by));
+        }
+        return before;
+    }
+    public static string? tieSettlements(Settlement a, Settlement b, double by) => tieSettlements(a, b, Js.I(by));
+
+    /// <summary>Whose turn it is to send a trader: friendly-ish settlements in turn, or none.</summary>
+    public static Settlement? traderFrom(SimState state)
+    {
+        var open = state.settlements.filter((s) => !isHostile(s));
+        return (open.length > 0) ? Js.NN(Js.Get(open, Time.dayOf(state.tick) % open.length)) : null;
+    }
+
+    /// <summary>Friendly settlements send someone to join, every FRIENDLY_SEND_DAYS at noon.</summary>
+    public static void updateSettlements(SimState state)
+    {
+        if ((Time.tickOfDay(state.tick) != ((double)(12) * (Time.TICKS_PER_HOUR))) || ((Time.dayOf(state.tick) % FRIENDLY_SEND_DAYS) != 0))
+        {
+            return;
+        }
+        foreach (var s in Js.Iter(state.settlements))
+        {
+            if ((s.reputation < FRIENDLY) || (s.people <= 3))
+            {
+                continue;
+            }
+            s.people -= 1;
+            var spot = Wanderers.frontierSpot(state, new JsSet<string>());
+            if (!Js.T(spot))
+            {
+                return;
+            }
+            var w = Wanderers.addWanderer(state, spot.x, spot.y);
+            Events.logEvent(state, $"{Js.Str(s.name)} sent {Js.Str(w.name)} to join you; they're waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
+        }
+    }
+
+    /// <summary>A gift of food. Returns an error, or null when given.</summary>
+    public static string? giveGift(SimState state, string id)
+    {
+        var s = getSettlement(state, id);
+        if (!Js.T(s))
+        {
+            return "no such settlement";
+        }
+        var food = state.items.filter((i) => ((i.kind == "food") && (i.pos != null)) && (i.reservedBy == null));
+        if (food.length < GIFT_FOOD)
+        {
+            return $"need {Js.Str(GIFT_FOOD)} free food";
+        }
+        foreach (var f in Js.Iter(food.slice(0, GIFT_FOOD)))
+        {
+            state.items.splice(state.items.indexOf(f), 1);
+        }
+        adjustReputation(state, s, (s.food <= 0) ? ((double)(GIFT_REP) * (2)) : GIFT_REP);
+        s.food += GIFT_FOOD;
+        Events.logEvent(state, $"Sent {Js.Str(GIFT_FOOD)} food to {Js.Str(s.name)} (they think better of you)");
+        return null;
+    }
+}

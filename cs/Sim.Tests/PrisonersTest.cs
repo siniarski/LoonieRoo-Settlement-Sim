@@ -1,0 +1,119 @@
+// Ported from tests/prisoners.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class PrisonersTest
+{
+
+    public static readonly List<string> CELLS = ["s.......", "###D####", "#......#", "#......#", "########"];
+
+    public static SimState setup(List<string> map, List<ScenarioRoomsItem>? rooms = null)
+    {
+        rooms ??= new();
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 2, map = map, rooms = rooms });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = new(JobTypes.NO_JOBS) {  };
+        }
+        return state;
+    }
+
+    /// <summary>A raider whose hash says "taken alive".</summary>
+    public static Zombie catchableRaider(SimState state)
+    {
+        while (Hash.hashRoll(state.nextId, 0xca9) >= Prisoners.CAPTURE_CHANCE)
+        {
+            state.nextId = Js.I(state.nextId + 1);
+        }
+        return Zombies.addZombie(state, 5, 0, 10, "raider");
+    }
+
+    /// <summary>prisoners</summary>
+    public class D001_prisoners
+    {
+
+        [Fact(DisplayName = "prisoners > a raider brought down may be taken alive, into a free cell")]
+        public void T002_a_raider_brought_down_may_be_taken_alive_into_a_free_cell()
+        {
+            var state = setup(CELLS, [new() { x = Js.I(1), y = Js.I(2), purpose = "cell" }]);
+            var z = catchableRaider(state);
+            expect(Hash.idNumber(z.id)).toBeGreaterThan(0);
+            Zombies.damageZombie(state, z, 100, Js.NN(Js.Get(state.survivors, 0)));
+            expect(state.zombies).toEqual(Js.Arr([]));
+            expect(state.prisoners).toHaveLength(1);
+            expect(Js.NN(Js.Get(state.prisoners, 0)).y).toBeGreaterThanOrEqual(2);
+            expect(state.items.filter((i) => i.kind == "corpse")).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "prisoners > no cells, no prisoners")]
+        public void T003_no_cells_no_prisoners()
+        {
+            var state = setup(CELLS);
+            Zombies.damageZombie(state, catchableRaider(state), 100, Js.NN(Js.Get(state.survivors, 0)));
+            expect(state.prisoners).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "prisoners > they eat a food each dawn, get away with none, and can be recruited after a while")]
+        public void T004_they_eat_a_food_each_dawn_get_away_with_none_and_can_be_recr()
+        {
+            var state = setup(["s.ff....", "###D####", "#......#", "#......#", "########"], [new() { x = Js.I(1), y = Js.I(2), purpose = "cell" }]);
+            state.prisoners.push(new() { id = "q1", name = "Rook", x = Js.I(2), y = Js.I(2), from = null, since = 0 });
+            state.prisoners.push(new() { id = "q2", name = "Vex", x = Js.I(3), y = Js.I(2), from = null, since = 0 });
+            expect(Commands.applyCommand(state, new Command { type = "recruitPrisoner", prisonerId = "q1" }).ok).toBe(false);
+            state.tick = Js.I(Time.DAY_LENGTH);
+            Tick.tick(state);
+            expect(state.items.filter((i) => i.kind == "food")).toHaveLength(0);
+            expect(state.prisoners).toHaveLength(2);
+            state.tick = Js.I(((double)(Prisoners.RECRUIT_DAYS) * (Time.DAY_LENGTH)) + 1);
+            expect(Commands.applyCommand(state, new Command { type = "recruitPrisoner", prisonerId = "q1" }).ok).toBe(true);
+            expect(state.survivors.map((s) => s.name)).toContain("Rook");
+            state.tick = Js.I(((double)(3) * (Time.DAY_LENGTH)));
+            Tick.tick(state);
+            expect(state.prisoners).toEqual(Js.Arr([]));
+        }
+    }
+
+    /// <summary>shifts</summary>
+    public class D005_shifts
+    {
+
+        [Fact(DisplayName = "shifts > the night shift turns in by day instead of at night")]
+        public void T006_the_night_shift_turns_in_by_day_instead_of_at_night()
+        {
+            var state = setup(["ss"]);
+            var (day, night) = state.survivors;
+            Js.NN(night).shift = "night";
+            foreach (var s in Js.Iter(state.survivors))
+            {
+                s.rest = ((double)((Rest.TIRED + Rest.NIGHT_TIRED)) / (2));
+            }
+            state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
+            expect(Js.Arr([Needs.isTired(state, Js.NN(day)), Needs.isTired(state, Js.NN(night))])).toEqual(Js.Arr([false, true]));
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)));
+            expect(Js.Arr([Needs.isTired(state, Js.NN(day)), Needs.isTired(state, Js.NN(night))])).toEqual(Js.Arr([true, false]));
+            expect(Commands.applyCommand(state, new Command { type = "setShift", survivorId = Js.NN(day).id, shift = "night" }).ok).toBe(true);
+        }
+    }
+
+    /// <summary>earned traits</summary>
+    public class D007_earned_traits
+    {
+
+        [Fact(DisplayName = "earned traits > enough kills harden a guard; losing a friend haunts someone")]
+        public void T008_enough_kills_harden_a_guard_losing_a_friend_haunts_someone()
+        {
+            var state = setup(["ss."]);
+            var (a, b) = state.survivors;
+            for (var i = 0; i < Skills.HARDENED_KILLS; i++)
+            {
+                Zombies.damageZombie(state, Zombies.addZombie(state, 2, 0, 1, "static"), 10, Js.NN(a));
+            }
+            expect(Skills.hasTrait(Js.NN(a), "hardened")).toBe(true);
+            Js.NN(b).opinions[Js.Idx(Js.NN(a).id)] = 50;
+            Needs.killSurvivor(state, Js.NN(a), "testing");
+            expect(Skills.hasTrait(Js.NN(b), "haunted")).toBe(true);
+        }
+    }
+}

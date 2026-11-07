@@ -1,0 +1,167 @@
+// Ported from tests/injuries.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class InjuriesTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map, JsRecord<double>? jobs = null)
+    {
+        jobs ??= new() {  };
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 6, map = map });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
+        }
+        return state;
+    }
+
+    public static CommandResult hurt(SimState state, Survivor s, double health)
+    {
+        return Commands.applyCommand(state, new Command { type = "setHealth", survivorId = s.id, health = health });
+    }
+
+    /// <summary>injuries</summary>
+    public class D001_injuries
+    {
+
+        [Fact(DisplayName = "injuries > hurt survivors walk 25% slower")]
+        public void T002_hurt_survivors_walk_25_slower()
+        {
+            var state = setup(["s.....", "......"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(5), y = Js.I(0) });
+            Tick.tick(state);
+            expect(s.move?.duration).toBe(Survivors.TICKS_PER_TILE);
+            hurt(state, s, 450);
+            runUntil(state, (_) => (s.move?.progress == 0) && (s.move.from.x > 0));
+            expect(s.move?.duration).toBe(Health.HURT_STEP_TICKS);
+        }
+
+        [Fact(DisplayName = "injuries > hurt survivors work at 3/4 speed")]
+        public void T003_hurt_survivors_work_at_3_4_speed()
+        {
+            double timeToRemove(double health)
+            {
+                var state = setup(["s#"], new() { ["build"] = 3 });
+                hurt(state, Js.NN(Js.Get(state.survivors, 0)), health);
+                Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(1), y = Js.I(0) });
+                return runUntil(state, (st) => Js.Get(st.grid.tiles, 1) == "floor");
+            }
+            var healthy = timeToRemove(1000);
+            var injured = timeToRemove(450);
+            expect(injured).toBeGreaterThan(healthy);
+            expect(injured).toBeLessThanOrEqual(JsMath.ceil(((double)(((double)(healthy) * (4))) / (3))) + 2);
+        }
+
+        [Fact(DisplayName = "injuries > a critically hurt survivor drops work, rests in bed, and gets up once recovered")]
+        public void T004_a_critically_hurt_survivor_drops_work_rests_in_bed_and_gets_()
+        {
+            var state = setup(["s.b..", "..#.."], new() { ["build"] = 3 });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(2), y = Js.I(1) });
+            runUntil(state, (_) => s.jobId != null);
+            hurt(state, s, Health.HEALTH_CRITICAL - 1);
+            Tick.tick(state);
+            expect(s.jobId).toBeNull();
+            expect(s.sleep?.bedId).toBe(Js.NN(Js.Get(state.furniture, 0)).id);
+            runUntil(state, (_) => s.sleep?.asleep == true);
+            runUntil(state, (_) => s.sleep == null, 1500);
+            expect(s.health).toBeGreaterThanOrEqual(Health.HEALTH_HURT);
+            expect(s.note).toBe("woke up rested");
+        }
+
+        [Fact(DisplayName = "injuries > a critically hurt guard falls back to bed instead of fighting on")]
+        public void T005_a_critically_hurt_guard_falls_back_to_bed_instead_of_fightin()
+        {
+            var state = setup(["z..........s.b"], new() { ["guard"] = 3 });
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Tick.tick(state);
+            expect(s.note).toMatch(new JsRegExp("^took guard job", ""));
+            hurt(state, s, Health.HEALTH_CRITICAL - 1);
+            Tick.tick(state);
+            expect(s.jobId).toBeNull();
+            expect(s.sleep).not.toBeNull();
+        }
+
+        [Fact(DisplayName = "injuries > a hurt survivor fetches a bandage and applies it")]
+        public void T006_a_hurt_survivor_fetches_a_bandage_and_applies_it()
+        {
+            var state = setup(["s....m"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            hurt(state, s, 400);
+            Tick.tick(state);
+            expect(s.note).toBe("going for a bandage at (5, 0)");
+            runUntil(state, (_) => s.note == "treated wounds with a bandage");
+            expect(state.items).toEqual(Js.Arr([]));
+            expect(s.health).toBeGreaterThanOrEqual(400 + Health.BANDAGE_HEAL);
+        }
+
+        [Fact(DisplayName = "injuries > healthy survivors leave bandages alone")]
+        public void T007_healthy_survivors_leave_bandages_alone()
+        {
+            var state = setup(["s....m"]);
+            hurt(state, Js.NN(Js.Get(state.survivors, 0)), Health.HEALTH_HURT);
+            for (var i = 0; i < 50; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(state.items).toHaveLength(1);
+            expect(Js.NN(Js.Get(state.items, 0)).reservedBy).toBeNull();
+        }
+
+        [Fact(DisplayName = "injuries > two hurt survivors never go for the same bandage")]
+        public void T008_two_hurt_survivors_never_go_for_the_same_bandage()
+        {
+            var state = setup(["s.m.s.....m"]);
+            foreach (var s in Js.Iter(state.survivors))
+            {
+                hurt(state, s, 400);
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+            expect(Js.Set(state.survivors.map((s) => s.treatment?.itemId)).size).toBe(2);
+        }
+
+        [Fact(DisplayName = "injuries > a hurt sleeper still wakes to eat instead of starving in bed")]
+        public void T009_a_hurt_sleeper_still_wakes_to_eat_instead_of_starving_in_bed()
+        {
+            var state = setup(["s.b.f"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            hurt(state, s, Health.HEALTH_CRITICAL - 1);
+            runUntil(state, (_) => s.sleep?.asleep == true);
+            Commands.applyCommand(state, new Command { type = "setSatiety", survivorId = s.id, satiety = Food.HUNGRY - 1 });
+            runUntil(state, (_) => s.note == "ate a meal", 1500);
+            expect(state.survivors).toEqual(Js.Arr([s]));
+        }
+
+        [Fact(DisplayName = "injuries > a direct order interrupts treatment and frees the bandage")]
+        public void T010_a_direct_order_interrupts_treatment_and_frees_the_bandage()
+        {
+            var state = setup(["s....m", "......"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            hurt(state, s, 400);
+            Tick.tick(state);
+            Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(0), y = Js.I(1) });
+            expect(s.treatment).toBeNull();
+            expect(Js.NN(Js.Get(state.items, 0)).reservedBy).toBeNull();
+        }
+    }
+}

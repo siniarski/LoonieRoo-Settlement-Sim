@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The sim's tests (xUnit), ported from tests/*.test.ts. Run: dotnet test cs/LoonieRoo.slnx -->
+  <!-- The sim's tests (xUnit; Vitest.cs keeps the ported tests' expect()). Run: dotnet test cs/LoonieRoo.slnx -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -7,7 +7,7 @@
     <IsPackable>false</IsPackable>
     <RootNamespace>LoonieRoo.Sim.Tests</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <!-- Translated tests: nullable annotations outside a nullable context, and JS null checks C# knows are moot. -->
+    <!-- Ported tests: nullable annotations outside a nullable context, and JS null checks C# knows are moot. -->
     <NoWarn>$(NoWarn);CS8669;CS0472;CS8632</NoWarn>
   </PropertyGroup>
   <ItemGroup>

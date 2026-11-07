@@ -16,6 +16,18 @@ public sealed class Point
     public override string ToString() => $"({x}, {y})";
 }
 
+/// <summary>
+/// A point with fractional coordinates: a road's centre line (roads.ts RoadPoint), where the smoothed curve
+/// falls between tiles. TypeScript has one number type, so its Point carries these too; here they'd truncate.
+/// </summary>
+public sealed class PointD
+{
+    public double x { get; set; }
+    public double y { get; set; }
+    public static implicit operator PointD(Point p) => p is null ? null! : new PointD { x = p.x, y = p.y };
+    public override string ToString() => $"({x}, {y})";
+}
+
 /// <summary>Things with an at (a precise position: motion.ts), a pos (the tile under them), or an id.</summary>
 public interface IHasAt
 {

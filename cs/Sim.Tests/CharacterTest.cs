@@ -1,0 +1,88 @@
+// Ported from tests/character.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class CharacterTest
+{
+
+    public static int job(string name)
+    {
+        return StoryMod.STORY_JOBS.indexOf(name);
+    }
+
+    public static Character you(Character? c = null)
+    {
+        c ??= new();
+        return Js.With(new Character { name = "Rook", job = job("a student"), traits = [] }, __s0 => Js.AssignSet(__s0, c));
+    }
+
+    /// <summary>character creation</summary>
+    public class D001_character_creation
+    {
+
+        [Fact(DisplayName = "character creation > every past is a profession")]
+        public void T002_every_past_is_a_profession()
+        {
+            foreach (var j in Js.Iter(StoryMod.STORY_JOBS))
+            {
+                expect(Js.Missing(CharacterMod.PROFESSIONS, j) ? null : (object?)(Js.Get(CharacterMod.PROFESSIONS, j)), j).toBeDefined();
+            }
+        }
+
+        [Fact(DisplayName = "character creation > traits cost points, bad ones give them back, and you cannot overspend")]
+        public void T003_traits_cost_points_bad_ones_give_them_back_and_you_cannot_ov()
+        {
+            expect(CharacterMod.pointsLeft(you())).toBe(8);
+            expect(CharacterMod.pointsLeft(you(new Character { traits = ["tough"] }))).toBe(4);
+            expect(CharacterMod.characterProblem(you(new Character { traits = ["tough", "quick", "graceful"] }))).toBe("not enough points");
+            expect(CharacterMod.characterProblem(you(new Character { traits = ["tough", "quick", "graceful", "lazy"] }))).toBeNull();
+            expect(CharacterMod.characterProblem(you(new Character { job = job("a soldier"), traits = ["tough"] }))).toBe("not enough points");
+            expect(CharacterMod.characterProblem(you(new Character { traits = ["graceful", "clumsy"] }))).toMatch(new JsRegExp("both", ""));
+            expect(CharacterMod.characterProblem(you(new Character { traits = ["hardened"] }))).toMatch(new JsRegExp("can't choose", ""));
+            expect(CharacterMod.characterProblem(you(new Character { name = "  " }))).toBe("needs a name");
+            expect(CharacterMod.characterProblem(you(new Character { job = 99 }))).toBe("no such profession");
+            expect(CharacterMod.cleanName("  Mary-Jo  <script>  ")).toBe("Mary-Jo script");
+        }
+
+        [Fact(DisplayName = "character creation > you start as who you made: name, past, skills, traits and kit in your bag")]
+        public void T004_you_start_as_who_you_made_name_past_skills_traits_and_kit_in()
+        {
+            var state = Worldgen.createWorld(4, 64, Js.CopyAs<Settings>(Difficulty.PRESETS["apocalypse"].settings), new Character { name = "Rook", job = job("a nurse"), traits = ["graceful", "gloomy"] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            expect(state.control?.survivorId).toBe(s.id);
+            expect(s.name).toBe("Rook");
+            expect(Js.Missing(StoryMod.STORY_JOBS, s.story.job) ? null : (object?)(Js.Get(StoryMod.STORY_JOBS, s.story.job))).toBe("a nurse");
+            expect(s.traits).toEqual(Js.Arr(["graceful", "gloomy"]));
+            expect(Skills.skillLevel(s, "doctor")).toBe(3);
+            var bag = s.pack.map((id) => Js.NN(state.items.find((i) => i.id == id)).kind);
+            expect(bag).toEqual(Vitest.arrayContaining(Js.Arr(["medicine", "bandage"])));
+        }
+
+        [Fact(DisplayName = "character creation > a character that breaks the rules is ignored")]
+        public void T005_a_character_that_breaks_the_rules_is_ignored()
+        {
+            var state = Worldgen.createWorld(4, 64, Js.CopyAs<Settings>(Difficulty.PRESETS["apocalypse"].settings), you(new Character { traits = ["tough", "quick", "graceful"] }));
+            expect(Js.NN(Js.Get(state.survivors, 0)).name).not.toBe("Rook");
+        }
+
+        [Fact(DisplayName = "character creation > graceful people are heard half as far, clumsy ones half as far again")]
+        public void T006_graceful_people_are_heard_half_as_far_clumsy_ones_half_as_fa()
+        {
+            double heard(List<string> traits)
+            {
+                var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s...."] });
+                var s = Js.NN(Js.Get(state.survivors, 0));
+                s.traits = traits;
+                Commands.applyCommand(state, new Command { type = "takeControl", survivorId = s.id });
+                Commands.applyCommand(state, new Command { type = "steer", dx = 1, dy = 0, run = true });
+                return Sight.heardFrom(state, s);
+            }
+            expect(heard([])).toBe(Sight.RUN_HEARD);
+            expect(heard(["graceful"])).toBe(((double)(Sight.RUN_HEARD) / (2)));
+            expect(heard(["clumsy"])).toBe(((double)(((double)(Sight.RUN_HEARD) * (3))) / (2)));
+            expect(Sight.WALK_HEARD).toBeGreaterThan(0);
+        }
+    }
+}

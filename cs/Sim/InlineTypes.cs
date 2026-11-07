@@ -1,0 +1,263 @@
+// Classes for object types the TypeScript wrote inline (from the port (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.)
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public partial class HousePlanRest
+{
+    public int x0 { get; set; }
+    public int x1 { get; set; }
+}
+
+public partial class PaneInFrontResult
+{
+    public double edge { get; set; }
+    public Point to { get; set; }
+}
+
+public partial class PresetsEntry
+{
+    public string label { get; set; }
+    public Settings settings { get; set; }
+}
+
+public partial class CROPS
+{
+    public double grow { get; set; }
+    public double yield { get; set; }
+    public string item { get; set; }
+    public string label { get; set; }
+}
+
+public partial class IndexesEntry
+{
+    public JsMap<string, Furniture> byTile { get; set; }
+    public JsMap<string, Furniture> byId { get; set; }
+    public JsMap<string, List<Furniture>> byKind { get; set; }
+    public List<Furniture>? marked { get; set; }
+}
+
+public partial class ContainerOfResult
+{
+    public Point at { get; set; }
+    public double max { get; set; }
+}
+
+public partial class ChooseJobResult
+{
+    public Job job { get; set; }
+    public JobChoicePlan plan { get; set; }
+    public string why { get; set; }
+}
+
+public partial class FrameResult
+{
+    public double F { get; set; }
+    public double D { get; set; }
+}
+
+public partial class MapToLotResult
+{
+    public double u { get; set; }
+    public double v { get; set; }
+}
+
+public partial class THOUGHTS
+{
+    public string label { get; set; }
+    public double effect { get; set; }
+    public double duration { get; set; }
+}
+
+public partial class PlacedAtResult
+{
+    public Point at { get; set; }
+    public Point was { get; set; }
+}
+
+public partial class FreeSpotsResult
+{
+    public Point p { get; set; }
+    public double walls { get; set; }
+}
+
+public partial class CacheEntry
+{
+    public double version { get; set; }
+    public RoomMap map { get; set; }
+}
+
+public partial class SeenEntry
+{
+    public int tick { get; set; }
+    public string who { get; set; }
+    public Uint8Array mask { get; set; }
+    public List<double> set { get; set; }
+}
+
+public partial class TRAITINFO
+{
+    public string label { get; set; }
+    public string about { get; set; }
+    public double mood { get; set; }
+}
+
+public partial class TickDying
+{
+    public Survivor s { get; set; }
+    public string cause { get; set; }
+}
+
+public partial class WINDOWS
+{
+    public List<double> water { get; set; }
+    public List<double> power { get; set; }
+    public List<double> heli { get; set; }
+}
+
+public partial class SiteTownsBest
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public double score { get; set; }
+}
+
+public partial class IsTankF
+{
+    public string kind { get; set; }
+    public string? look { get; set; }
+    public double loot { get; set; }
+}
+
+public partial class CandidatesResult
+{
+    public string kind { get; set; }
+    public string? targetId { get; set; }
+}
+
+public partial class TownLotsResult
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public string facing { get; set; }
+}
+
+public partial class FarmLotsLot
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public string facing { get; set; }
+}
+
+public partial class FarmLotsLotShape22
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public string facing { get; set; }
+}
+
+public partial class BucketsEntry
+{
+    public int tick { get; set; }
+    public double edit { get; set; }
+    public JsMap<double, List<Zombie>> cells { get; set; }
+}
+
+public partial class PushApartOthers
+{
+    public Body s { get; set; }
+    public double order { get; set; }
+}
+
+public partial class WalkToResult
+{
+    public double ticks { get; set; }
+    public List<string> tiles { get; set; }
+}
+
+public partial class HungryResult
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+}
+
+public partial class TestBefore
+{
+    public string pos { get; set; }
+    public bool moving { get; set; }
+    public string needs { get; set; }
+    public string? jobId { get; set; }
+}
+
+public partial class TestOnJob
+{
+    public string id { get; set; }
+    public double since { get; set; }
+}
+
+public partial class WorldResult
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+    public Settlement a { get; set; }
+    public Settlement b { get; set; }
+}
+
+public partial class SetupResult
+{
+    public Grid grid { get; set; }
+    public Point start { get; set; }
+    public Point goal { get; set; }
+    public List<string> rows { get; set; }
+}
+
+public partial class TownResult
+{
+    public SimState state { get; set; }
+    public Survivor you { get; set; }
+    public Settlement n { get; set; }
+}
+
+public partial class WithTruckResult
+{
+    public SimState state { get; set; }
+    public Vehicle v { get; set; }
+}
+
+public partial class PlayedResult
+{
+    public SimState initial { get; set; }
+    public SimState state { get; set; }
+}
+
+public partial class RemoveWallResult
+{
+    public double ticks { get; set; }
+    public Survivor s { get; set; }
+}
+
+public partial class OnlyResult
+{
+    public SimState state { get; set; }
+    public Func<Survivor> survivor { get; set; }
+    public string id { get; set; }
+}
+
+public partial class FieldResult
+{
+    public SimState state { get; set; }
+    public Survivor you { get; set; }
+    public Survivor them { get; set; }
+}
+
+public partial class FieldResultShape37
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+    public Vehicle car { get; set; }
+}

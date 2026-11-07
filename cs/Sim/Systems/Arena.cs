@@ -1,0 +1,57 @@
+// Ported from src/sim/arena.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Debug arenas, from the New game screen: a small solo world with zombies already near you,
+// static ones (they don't leave at dawn) so a fight is there to be had from the first tick.
+//   one     a single zombie a few tiles off
+//   crowd   CROWD_SIZE of them in a ring around the camp
+// A plain world otherwise (settings: NORMAL, alone, normal days), so what you test is the game;
+// but no neighbours (on a map this small their compound would unfold right beside you).
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Arena
+{
+
+    public const int CROWD_SIZE = 30;
+
+    public const int ARENA_SIZE = 64;
+
+    public static SimState createArena(double seed, string kind)
+    {
+        var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.CopyAs<Settings>(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
+        state.settlements = [];
+        var you = Js.NN(Js.Get(state.survivors, 0)).pos;
+        var count = (kind == "one") ? 1 : CROWD_SIZE;
+        var radius = (kind == "one") ? 5 : 8;
+        for (var i = 0; i < count; i++)
+        {
+            var a = ((double)(((double)(((double)(i) / (count))) * (JsMath.PI))) * (2));
+            var spot = openNear(state, new Point { x = Js.I(JsMath.round(you.x + ((double)(JsMath.cos(a)) * (radius)))), y = Js.I(JsMath.round(you.y + ((double)(JsMath.sin(a)) * (radius)))) });
+            if (Js.T(spot))
+            {
+                Zombies.addZombie(state, spot.x, spot.y, kind: "static");
+            }
+        }
+        return state;
+    }
+
+    /// <summary>The nearest open floor tile to a point, looking outward a few rings.</summary>
+    public static Point? openNear(SimState state, Point p)
+    {
+        for (var r = 0; r <= 4; r++)
+        {
+            for (var dy = -r; dy <= r; dy++)
+            {
+                for (var dx = -r; dx <= r; dx++)
+                {
+                    var x = p.x + dx;
+                    var y = p.y + dy;
+                    if ((Grids.getTile(state.grid, x, y) == "floor") && Grids.isWalkable(state.grid, x, y))
+                    {
+                        return new Point { x = Js.I(x), y = Js.I(y) };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}

@@ -1,0 +1,139 @@
+// Ported from tests/medicine.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class MedicineTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map, List<ScenarioRoomsItem>? rooms = null)
+    {
+        rooms ??= new();
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 4, map = map, rooms = rooms });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = new(JobTypes.NO_JOBS) {  };
+        }
+        return state;
+    }
+
+    public static CommandResult wound(SimState state, Survivor s, double health)
+    {
+        return Commands.applyCommand(state, new Command { type = "setHealth", survivorId = s.id, health = health });
+    }
+
+    /// <summary>doctor</summary>
+    public class D001_doctor
+    {
+
+        [Fact(DisplayName = "doctor > brings a bandage to a bedridden patient and treats them")]
+        public void T002_brings_a_bandage_to_a_bedridden_patient_and_treats_them()
+        {
+            var state = setup(["s.b...", "......", "s....."]);
+            var (ash, bea) = state.survivors;
+            bea.priorities = new(JobTypes.NO_JOBS) { ["doctor"] = 3 };
+            Commands.applyCommand(state, new Command { type = "setRest", survivorId = bea.id, rest = 2000 });
+            wound(state, ash, Health.HEALTH_CRITICAL - 50);
+            runUntil(state, (_) => ash.sleep?.asleep == true);
+            state.items.push(new() { id = "i900", kind = "bandage", pos = new Point { x = Js.I(5), y = Js.I(2) }, carriedBy = null, reservedBy = null, wear = 0, tag = null });
+            var before = ash.health;
+            runUntil(state, (_) => bea.note == $"treated {Js.Str(ash.name)}'s wounds");
+            expect(ash.health).toBeGreaterThanOrEqual(before + Health.BANDAGE_HEAL);
+            expect(state.items).toEqual(Js.Arr([]));
+            expect(ash.sleep?.asleep).toBe(true);
+        }
+
+        [Fact(DisplayName = "doctor > no bandages, no doctor job claimed (and nobody stuck)")]
+        public void T003_no_bandages_no_doctor_job_claimed_and_nobody_stuck()
+        {
+            var state = setup(["s.b...", "s....."]);
+            var (ash, bea) = state.survivors;
+            bea.priorities = new(JobTypes.NO_JOBS) { ["doctor"] = 3 };
+            wound(state, ash, Health.HEALTH_CRITICAL - 50);
+            runUntil(state, (_) => ash.sleep?.asleep == true);
+            for (var i = 0; i < 50; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(state.jobs).toMatchObject(Js.Arr([Js.Obj(("type", (object?)("doctor")), ("patientId", (object?)(ash.id)), ("reservedBy", (object?)(null)))]));
+        }
+
+        [Fact(DisplayName = "doctor > the job goes once the patient is up")]
+        public void T004_the_job_goes_once_the_patient_is_up()
+        {
+            var state = setup(["s.b...", "s....."]);
+            var ash = (state.survivors)[0];
+            wound(state, ash, Health.HEALTH_CRITICAL - 50);
+            runUntil(state, (_) => state.jobs.some((j) => j.type == "doctor"));
+            Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = ash.id, x = Js.I(5), y = Js.I(1) });
+            Tick.tick(state);
+            expect(state.jobs).toEqual(Js.Arr([]));
+        }
+    }
+
+    /// <summary>infirmary</summary>
+    public class D005_infirmary
+    {
+
+        public static readonly List<string> MAP = ["####....", "#b.#....", "#..#..b.", "##D#....", "...s...."];
+
+        public static readonly ScenarioRoomsItem INF = new ScenarioRoomsItem { x = Js.I(1), y = Js.I(2), purpose = "infirmary" };
+
+        [Fact(DisplayName = "infirmary > the hurt choose its bed; the healthy leave it for them")]
+        public void T006_the_hurt_choose_its_bed_the_healthy_leave_it_for_them()
+        {
+            var hurt = setup(MAP, [INF]);
+            wound(hurt, Js.NN(Js.Get(hurt.survivors, 0)), Health.HEALTH_CRITICAL - 50);
+            runUntil(hurt, (_) => Js.NN(Js.Get(hurt.survivors, 0)).sleep != null);
+            expect(Js.NN(Js.NN(Js.Get(hurt.survivors, 0)).sleep).bedId).toBe(Js.NN(Js.Get(hurt.furniture, 0)).id);
+            var tired = setup(MAP, [INF]);
+            Commands.applyCommand(tired, new Command { type = "setRest", survivorId = Js.NN(Js.Get(tired.survivors, 0)).id, rest = 0 });
+            runUntil(tired, (_) => Js.NN(Js.Get(tired.survivors, 0)).sleep != null);
+            expect(Js.NN(Js.NN(Js.Get(tired.survivors, 0)).sleep).bedId).toBe(Js.NN(Js.Get(tired.furniture, 1)).id);
+        }
+
+        [Fact(DisplayName = "infirmary > heals twice as fast as an ordinary bed")]
+        public void T007_heals_twice_as_fast_as_an_ordinary_bed()
+        {
+            double healed(List<ScenarioRoomsItem> rooms)
+            {
+                var state = setup(["####", "#b.#", "#..#", "##D#", "..s."], rooms);
+                var s = Js.NN(Js.Get(state.survivors, 0));
+                wound(state, s, Health.HEALTH_CRITICAL - 50);
+                runUntil(state, (_) => s.sleep?.asleep == true);
+                var start = s.health;
+                for (var i = 0; i < 100; i++)
+                {
+                    Tick.tick(state);
+                }
+                return s.health - start;
+            }
+            var plain = healed([]);
+            expect(healed([new() { x = Js.I(1), y = Js.I(2), purpose = "infirmary" }])).toBe(((double)(2) * (plain)));
+        }
+
+        [Fact(DisplayName = "infirmary > needs a bed; the planner furnishes one per 4 survivors")]
+        public void T008_needs_a_bed_the_planner_furnishes_one_per_4_survivors()
+        {
+            var state = setup(["#####", "#...#", "#...#", "##D##", ".s.s."], [new() { x = Js.I(1), y = Js.I(1), purpose = "infirmary" }]);
+            var plan = Planner.planFurnish(state, 1, 1);
+            expect(plan.commands).toHaveLength(1);
+            expect(Js.Missing(plan.notes, 0) ? null : (object?)(Js.Get(plan.notes, 0))).toBe("Planned 1 infirmary bed (one per 4 survivors).");
+        }
+    }
+}

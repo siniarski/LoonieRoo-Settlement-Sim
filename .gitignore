@@ -1,6 +1,4 @@
-node_modules/
-dist/
-coverage/
 *.log
 .DS_Store
-harness/out/
+# The C# harness's reports (cs/Harness).
+cs/Harness/out/

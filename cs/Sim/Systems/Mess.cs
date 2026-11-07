@@ -1,0 +1,65 @@
+// Ported from src/sim/mess.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// The mess hall: a room with tables. A seat is a free floor tile next to a
+// table in a complete mess hall. Hungry survivors carry their food to the
+// nearest free seat and eat there (a mood boost; see mood.ts). One eater per seat.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Mess
+{
+
+    /// <summary>Is this tile a seat that `s` may use (nobody else is headed for or sitting at it)?</summary>
+    public static bool seatUsable(SimState state, Survivor s, Point p)
+    {
+        return isSeat(state, p, Rooms.completeRooms(state, "messhall")) && !seatTaken(state, s, p);
+    }
+
+    public static bool isSeat(SimState state, Point p, JsSet<double> halls)
+    {
+        var room = Rooms.labelAt(state, p.x, p.y);
+        if (!halls.has(room) || !Grids.isWalkable(state.grid, p.x, p.y))
+        {
+            return false;
+        }
+        if (Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)))
+        {
+            return false;
+        }
+        return FurnitureMod.ofKind(state, "table").some((f) => (Space.manhattan(f, p) == 1) && (Rooms.labelAt(state, f.x, f.y) == room));
+    }
+
+    public static bool seatTaken(SimState state, Survivor s, Point p)
+    {
+        return state.survivors.some((o) => ((o != s) && (o.meal?.seat != null)) && Space.samePoint(o.meal.seat, p));
+    }
+
+    /// <summary>Nearest free seat reachable from `from` (where the food is), or null if there is none.</summary>
+    public static Point? pickSeat(SimState state, Survivor s, Point from)
+    {
+        var halls = Rooms.completeRooms(state, "messhall");
+        if (halls.size == 0)
+        {
+            return null;
+        }
+        List<Point> seats = [];
+        foreach (var index in Js.Iter(Js.ListOf(halls).sort((a, b) => a - b)))
+        {
+            foreach (var table in Js.Iter(FurnitureMod.ofKind(state, "table")))
+            {
+                if (Rooms.labelAt(state, table.x, table.y) != index)
+                {
+                    continue;
+                }
+                foreach (var p in Js.Iter(Grids.neighbours4(state.grid, table.x, table.y)))
+                {
+                    if ((!seats.some((q) => Space.samePoint(q, p)) && isSeat(state, p, halls)) && !seatTaken(state, s, p))
+                    {
+                        seats.push(p);
+                    }
+                }
+            }
+        }
+        seats.sort((a, b) => (((Space.manhattan(from, a) - Space.manhattan(from, b)) is var __or1 && Js.T(__or1) ? __or1 : (a.y - b.y)) is var __or0 && Js.T(__or0) ? __or0 : (a.x - b.x)));
+        return seats.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
+    }
+}

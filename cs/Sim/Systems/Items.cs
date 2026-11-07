@@ -1,0 +1,69 @@
+// Ported from src/sim/items.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Items: one per tile, one carried at a time, no stacks (hauling v1).
+// An item is either on the ground (`pos`) or carried (`carriedBy`), never both.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Items
+{
+
+    public static Item? getItem(SimState state, string id)
+    {
+        return Lookup.findById(state.items, id);
+    }
+
+    public static Item? itemAt(SimState state, int x, int y)
+    {
+        return state.items.find((i) => ((i.pos != null) && (i.pos.x == x)) && (i.pos.y == y));
+    }
+    public static Item? itemAt(SimState state, double x, double y) => itemAt(state, Js.I(x), Js.I(y));
+
+    /// <summary>A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or furniture.</summary>
+    public static bool canHoldItem(SimState state, int x, int y)
+    {
+        return ((Grids.isWalkable(state.grid, x, y) && !Js.T(itemAt(state, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Designations.isFurnitureTarget(b.target)));
+    }
+    public static bool canHoldItem(SimState state, double x, double y) => canHoldItem(state, Js.I(x), Js.I(y));
+
+    /// <summary>Creates an item on the nearest free tile to (x, y).</summary>
+    public static Item spawnItem(SimState state, string kind, int x, int y)
+    {
+        Item item = new Item { id = $"i{Js.Str(state.nextId++)}", kind = kind, pos = null, carriedBy = null, reservedBy = null, wear = 0, tag = null };
+        if (kind == "book")
+        {
+            item.tag = Books.bookSubject(item.id);
+        }
+        state.items.push(item);
+        placeNear(state, item, new Point { x = Js.I(x), y = Js.I(y) });
+        return item;
+    }
+    public static Item spawnItem(SimState state, string kind, double x, double y) => spawnItem(state, kind, Js.I(x), Js.I(y));
+
+    /// <summary>Puts an item on the ground at the nearest free tile and clears carry/reservation.</summary>
+    public static void dropItem(SimState state, Item item, Point near)
+    {
+        item.carriedBy = null;
+        item.reservedBy = null;
+        placeNear(state, item, near);
+    }
+
+    public static void removeItem(SimState state, Item item)
+    {
+        var i = state.items.indexOf(item);
+        if (i >= 0)
+        {
+            state.items.splice(i, 1);
+        }
+    }
+
+    public static void placeNear(SimState state, Item item, Point near)
+    {
+        item.pos = null;
+        var held = Js.Set(state.items.flatMap((i) => Js.T(i.pos) ? ((List<string>)[$"{Js.Str(i.pos.x)},{Js.Str(i.pos.y)}"]) : ((List<string>)[])));
+        bool free(double x, double y)
+        {
+            return ((Grids.isWalkable(state.grid, x, y) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Designations.isFurnitureTarget(b.target)));
+        }
+        item.pos = Space.nearestTile(state.grid, near, (__f0, __f1) => free(__f0, __f1)) ?? new Point { x = Js.I(near.x), y = Js.I(near.y) };
+    }
+}

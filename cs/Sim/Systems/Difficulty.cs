@@ -1,0 +1,97 @@
+// Ported from src/sim/difficulty.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Difficulty: a few named presets over sandbox settings, chosen when a world is made.
+//
+// Every setting has a "normal" value at which the game plays exactly as it did
+// before settings existed (hand-made maps and older tests use NORMAL).
+//   start        a group of three in a hut, or one person alone, under your control
+//   zombies      percent of the usual zombies: each night's, and those asleep in ruins
+//   weather      mild, normal, harsh, extreme: how often weather events come, and how hard the cold bites
+//   progression  how long since the outbreak: weeks, months, a year, years. Later means
+//                less left in the crates, worn-out finds, and more fallen-in walls
+//   winter       nuclear winter: crops grow at half speed, and every night is cold outdoors
+//   dayScale     day length, 1-3 times the usual (time.ts)
+//   map          mainland, an island, an island chain, or a fenced quarantine zone (worldgen.ts)
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Difficulty
+{
+
+    public static readonly List<string> WEATHER_LEVELS = ["mild", "normal", "harsh", "extreme"];
+
+    public static readonly List<string> PROGRESSION_LEVELS = ["weeks", "months", "a year", "years"];
+
+    public static readonly List<List<string>> MAP_TYPES = [["mainland", "Mainland"], ["island", "An island"], ["islands", "An island chain"], ["quarantine", "A fenced quarantine zone"]];
+
+    public static readonly Settings NORMAL = new() { start = "group", zombies = 100, weather = 1, progression = 1, winter = false, dayScale = 1, map = "mainland" };
+
+    public static readonly JsRecord<PresetsEntry> PRESETS = new() { ["settler"] = new() { label = "Settler: a group, a gentle start", settings = new() { start = "group", zombies = 60, weather = 0, progression = 0, winter = false, dayScale = 1, map = "mainland" } }, ["survivor"] = new() { label = "Survivor: the usual game", settings = NORMAL }, ["apocalypse"] = new() { label = "Apocalypse: alone, a year on", settings = new() { start = "solo", zombies = 150, weather = 2, progression = 2, winter = false, dayScale = 2, map = "mainland" } }, ["winter"] = new() { label = "Nuclear winter: alone, years on, no summer", settings = new() { start = "solo", zombies = 125, weather = 3, progression = 3, winter = true, dayScale = 2, map = "islands" } } };
+
+    /// <summary>Weather events (blizzards, heatwaves, storms) come this many times as often.</summary>
+    public static readonly List<double> EVENT_SCALE = [0.5, 1, 1.5, 2];
+
+    /// <summary>Ticks between each point of cold damage.</summary>
+    public static readonly List<double> COLD_EVERY = [20, 10, 7, 5];
+
+    /// <summary>Crates hold this share of the usual loot (at least one).</summary>
+    public static readonly List<double> LOOT_SCALE = [1.5, 1, 0.6, 0.35];
+
+    /// <summary>Found weapons and clothing are this worn already (a share of their life).</summary>
+    public static readonly List<double> FOUND_WEAR = [0, 0, 0.3, 0.5];
+
+    /// <summary>Extra share of ruin walls that have fallen in.</summary>
+    public static readonly List<double> RUIN_DECAY = [0, 0, 0.1, 0.2];
+
+    public static double zombieScale(SimState state, double count)
+    {
+        return JsMath.round(((double)(((double)(count) * (state.settings.zombies))) / (100)));
+    }
+
+    public static double eventChance(SimState state, double @base)
+    {
+        return JsMath.min(0.6, ((double)(@base) * (Js.NN(Js.Get(EVENT_SCALE, state.settings.weather)))));
+    }
+
+    public static double coldEvery(SimState state)
+    {
+        return Js.NN(Js.Get(COLD_EVERY, state.settings.weather));
+    }
+
+    public static double crateLoot(SimState state, double loot)
+    {
+        return JsMath.max(1, JsMath.round(((double)(loot) * (Js.NN(Js.Get(LOOT_SCALE, state.settings.progression))))));
+    }
+
+    public static double ruinDecay(SimState state)
+    {
+        return Js.NN(Js.Get(RUIN_DECAY, state.settings.progression));
+    }
+
+    /// <summary>Something found while scavenging: weapons and clothing come worn, the later it is since the outbreak.</summary>
+    public static Item spawnFind(SimState state, string kind, int x, int y)
+    {
+        var item = Items.spawnItem(state, kind, x, y);
+        var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Clothing.isGarment(kind) ? Js.Get(Clothing.GARMENT_LIFE, kind) : 0);
+        item.wear = JsMath.floor(((double)(life) * (Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)))));
+        return item;
+    }
+    public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, Js.I(x), Js.I(y));
+
+    public static bool isSettings(object v)
+    {
+        if ((/*TODO typeof*/Js.TypeOf(v) != "object") || (Js.Eq(v, null)))
+        {
+            return false;
+        }
+        var s = Js.AsRecord(v);
+        bool level(object n, double max)
+        {
+            return (JsNumber.isInteger(n) && ((Js.Num(n)) >= 0)) && ((Js.Num(n)) < max);
+        }
+        return (((((((((Js.Eq(s["start"], "group")) || (Js.Eq(s["start"], "solo"))) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && level(s["weather"], WEATHER_LEVELS.length)) && level(s["progression"], PROGRESSION_LEVELS.length)) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((Js.Eq(s["dayScale"], 1)) || (Js.Eq(s["dayScale"], 2))) || (Js.Eq(s["dayScale"], 3)))) && MAP_TYPES.some((__p0) =>
+        {
+            var m = (__p0)[0];
+            return Js.Eq(m, s["map"]);
+        });
+    }
+}

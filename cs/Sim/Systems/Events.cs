@@ -1,0 +1,21 @@
+// Ported from src/sim/events.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Event log: notable things that happened (deaths now; attacks later),
+// for the HUD feed and for tests. Plain data in state, capped so it doesn't
+// grow without bound.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Events
+{
+
+    public const int MAX_EVENTS = 50;
+
+    public static void logEvent(SimState state, string message)
+    {
+        state.events.push(new() { tick = state.tick, message = message });
+        if (state.events.length > MAX_EVENTS)
+        {
+            state.events.splice(0, state.events.length - MAX_EVENTS);
+        }
+    }
+}
