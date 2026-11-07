@@ -18,10 +18,10 @@ public static partial class ScenarioMod
 
     public static readonly List<string> SIMPLE_ITEMS = ["cloth", "coat", "armour", "boots", "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "medkit", "sample", "scrap", "fuel"];
 
-    public static readonly JsRecord<string> CHAR_TILES = /*TODO Object.fromEntries*/Js.Object_fromEntries(Js.ObjectEntries(TILE_CHARS).map((__p0) =>
+    public static readonly JsRecord<string> CHAR_TILES = Js.Object_fromEntries(Js.ObjectEntries(TILE_CHARS).map((__p0) =>
         {
             var (tile, @char) = __p0;
-            return [@char, tile];
+            return (@char, tile);
         }));
 
     /// <summary>Floor plus something on it. Returns false if `char` isn't an entity char.</summary>

@@ -103,7 +103,7 @@ public static partial class Residents
         var next = r.path.shift();
         if (Js.T(next))
         {
-            r.move = new() { from = Js.CopyAs<Resident>(r.pos), to = next, progress = 0, duration = RESIDENT_TICKS_PER_TILE };
+            r.move = new() { from = Js.Clone(r.pos), to = next, progress = 0, duration = RESIDENT_TICKS_PER_TILE };
         }
     }
 

@@ -18,7 +18,7 @@ public static partial class StoryMod
     public static readonly List<string> REGRETS = ["I locked the shelter door with the neighbours still outside", "I ran when the clinic was overrun, and the patients didn't", "I took a family's food the second winter. They had kids", "I didn't go back for my father. I heard him calling", "I shot a man at a petrol station who only wanted water", "I left the school unlocked. They got in that night"];
 
     /// <summary>Each relation with names that fit it.</summary>
-    public static readonly List<List<object>> RELATIONS = [["wife", ["Anna", "Marta", "Lena", "Clara"]], ["husband", ["Tom", "Josef", "Owen", "Hugh"]], ["sister", ["Iris", "Nadia", "Clara", "Ruth"]], ["brother", ["Pete", "Ben", "Owen", "Karl"]], ["son", ["Ben", "Leo", "Sam", "Danny"]], ["daughter", ["Lily", "Ella", "Rosie", "Mia"]], ["mother", ["Margaret", "Helen", "Agnes", "Vera"]], ["father", ["Frank", "George", "Walter", "Stan"]], ["best friend", ["Robin", "Alex", "Jo", "Charlie"]]];
+    public static readonly List<(string, List<string>)> RELATIONS = [("wife", ["Anna", "Marta", "Lena", "Clara"]), ("husband", ["Tom", "Josef", "Owen", "Hugh"]), ("sister", ["Iris", "Nadia", "Clara", "Ruth"]), ("brother", ["Pete", "Ben", "Owen", "Karl"]), ("son", ["Ben", "Leo", "Sam", "Danny"]), ("daughter", ["Lily", "Ella", "Rosie", "Mia"]), ("mother", ["Margaret", "Helen", "Agnes", "Vera"]), ("father", ["Frank", "George", "Walter", "Stan"]), ("best friend", ["Robin", "Alex", "Jo", "Charlie"])];
 
     public static readonly List<string> PET_NAMES = ["Bruno", "Daisy", "Pepper", "Max", "Luna", "Rocky", "Bella", "Duke"];
 

@@ -159,8 +159,8 @@ public static partial class BodyMod
     }
 
     /// <summary>Mood factors from the body.</summary>
-    public static List<List<object>> bodyFactors(Survivor s)
+    public static List<(string, double)> bodyFactors(Survivor s)
     {
-        return Js.T(isPanicking(s)) ? [["panicking", PANIC_MOOD]] : [];
+        return Js.T(isPanicking(s)) ? [("panicking", PANIC_MOOD)] : [];
     }
 }

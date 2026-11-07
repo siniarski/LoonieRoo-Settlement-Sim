@@ -293,7 +293,8 @@ function ty(t, mod, intName) {
         // [Point, Point] and the like: a list of that type.
         const els = c.elementTypes.map((e) => (ty(e, mod) ?? 'object').replace(/\?$/, ''));
         if (els.every((x) => x === els[0] && !x.includes('TODO'))) return `List<${els[0]}>` + q;
-        return 'List<object>' + q;
+        // [string, number] and the like: a C# tuple (a [key, value] literal is written as one).
+        return (els.length === 2 && els[0] === 'string' && els[1] !== 'object' ? `(${els.join(', ')})` : 'List<object>') + q;
       }
       const el = c.type === 'TSArrayType' ? c.elementType : c.typeArguments?.params[0];
       return `List<${(ty(el, mod) ?? 'object').replace(/\?$/, '')}>` + q;
@@ -883,6 +884,11 @@ function translate(mod) {
       case 'NewExpression': return newEx(e);
       case 'ArrayExpression': {
         if (e.__tuple) return `(${e.elements.map((x) => ex(x)).join(', ')})`;
+        if (e.elements.length >= 2 && e.elements.length <= 4 && e.elements.every((x) => x && x.type !== 'SpreadElement')) {
+          const num = (x) => (['int', 'double'].includes(x) ? 'double' : x);
+          const ts = e.elements.map((x) => (x.type === 'Literal' && typeof x.value === 'number' ? 'double' : x.type === 'Literal' && typeof x.value === 'string' ? 'string' : strip(exprType(x))));
+          if (ts.length === 2 && ts[0] === 'string' && ts[1] && ts[1] !== 'string') return `(${e.elements.map((x) => ex(x)).join(', ')})`;
+        }
         if (e.elements.length === 1 && e.elements[0]?.type === 'SpreadElement') return `(${ex(e.elements[0].argument)}).ToList()`;
         const spreadOf = (a) => {
           while (a.type === 'ParenthesizedExpression') a = a.expression;
@@ -982,6 +988,18 @@ function translate(mod) {
         if (o.name === 'Number') return `JsNumber.${name}(${args()})`;
         if (o.name === 'Object') {
           if (name === 'keys') return `Js.ObjectKeys(${args()})`;
+          if (name === 'fromEntries') {
+            const a0 = e.arguments[0];
+            if (a0?.type === 'CallExpression' && a0.callee.type === 'MemberExpression' && a0.callee.property?.name === 'map') {
+              const fn = a0.arguments[0];
+              const pair = (x) => { if (x?.type === 'ArrayExpression' && x.elements.length === 2) x.__tuple = true; };
+              if (fn?.type === 'ArrowFunctionExpression') {
+                if (fn.body.type === 'ArrayExpression') pair(fn.body);
+                else if (fn.body.type === 'BlockStatement') for (const s of fn.body.body) if (s.type === 'ReturnStatement') pair(s.argument);
+              }
+            }
+            return `Js.Object_fromEntries(${args()})`;
+          }
           if (name === 'values') return `Js.ObjectValues(${args()})`;
           if (name === 'entries') return `Js.ObjectEntries(${args()})`;
           // Object.assign(target, { a, b }): the target, with those set.
@@ -1091,6 +1109,8 @@ function translate(mod) {
   }
 
   function obj(e) {
+    e.__spreadAs = spreadAs;
+    spreadAs = null;
     const r = obj0(e);
     return e.__class && r.startsWith('new() ') ? `new ${e.__class} ${r.slice(6)}` : r;
   }
@@ -1129,8 +1149,7 @@ function translate(mod) {
       // { ...s, a } and { a, ...s }: a copy of s with a set. (For { a, ...s } that assumes s has no `a` of its
       // own, as with an Omit<T, 'a'>: a field s did carry would win in JS.)
       if (spreads === 1 && (first.type === 'SpreadElement' || e.properties.at(-1).type === 'SpreadElement')) {
-        const as = spreadAs;
-        spreadAs = null;
+        const as = e.__spreadAs;
         const copy = as ? `Js.CopyAs<${as}>(${ex(spread)})` : `Js.Clone(${ex(spread)})`;
         if (!parts.length) return copy;
         const v = `__s${tmp++}`;

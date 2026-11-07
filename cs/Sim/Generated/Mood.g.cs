@@ -24,10 +24,10 @@ public static partial class Mood
     public static readonly JsRecord<THOUGHTS> THOUGHTS = new() { ["ateAtTable"] = new() { label = "ate at a table", effect = 10, duration = Time.DAY_LENGTH }, ["ateWithoutTable"] = new() { label = "ate without a table", effect = -5, duration = Time.DAY_LENGTH }, ["sleptInBed"] = new() { label = "slept in a bed", effect = 5, duration = Time.DAY_LENGTH }, ["sleptOnFloor"] = new() { label = "slept on the floor", effect = -10, duration = Time.DAY_LENGTH }, ["sawDeath"] = new() { label = "someone died", effect = -15, duration = 2 * Time.DAY_LENGTH }, ["attacked"] = new() { label = "attacked by a zombie", effect = -10, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["relaxed"] = new() { label = "relaxed in the rec room", effect = 10, duration = Time.DAY_LENGTH }, ["vented"] = new() { label = "got it out of their system", effect = 15, duration = Time.DAY_LENGTH }, ["hotMeal"] = new() { label = "had a hot meal", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["soaked"] = new() { label = "got soaked", effect = -3, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["cold"] = new() { label = "out in the cold (walks slower)", effect = -10, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["lostFriend"] = new() { label = "lost a friend", effect = -25, duration = 3 * Time.DAY_LENGTH }, ["stench"] = new() { label = "the stench of the dead", effect = -8, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["paidRespects"] = new() { label = "paid their respects", effect = 15, duration = 2 * Time.DAY_LENGTH }, ["dog"] = new() { label = "spent time with a dog", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["lostLeader"] = new() { label = "lost our leader", effect = -20, duration = 2 * Time.DAY_LENGTH }, ["wentHome"] = new() { label = "saw to their old home", effect = 10, duration = 3 * Time.DAY_LENGTH }, ["laidToRest"] = new() { label = "laid their dead to rest", effect = 20, duration = 4 * Time.DAY_LENGTH }, ["petFound"] = new() { label = "their dog was found", effect = 15, duration = 3 * Time.DAY_LENGTH }, ["burnedThePast"] = new() { label = "burned the past", effect = 15, duration = 3 * Time.DAY_LENGTH }, ["confessed"] = new() { label = "told the others what they did", effect = 10, duration = 2 * Time.DAY_LENGTH }, ["reunited"] = new() { label = "found someone they lost", effect = 30, duration = 5 * Time.DAY_LENGTH }, ["lostHope"] = new() { label = "nobody answered the radio", effect = -10, duration = 3 * Time.DAY_LENGTH }, ["oldFriend"] = new() { label = "met someone from home", effect = 10, duration = 2 * Time.DAY_LENGTH }, ["wellRested"] = new() { label = "well rested (works and swings faster)", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["bloodUp"] = new() { label = "blood up (hits harder)", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (24)) }, ["shaken"] = new() { label = "shaken (swings slower)", effect = -5, duration = ((double)(Time.DAY_LENGTH) / (24)) }, ["wishMet"] = new() { label = "got what they wanted", effect = 5, duration = Time.DAY_LENGTH }, ["promiseKept"] = new() { label = "a promise kept", effect = 15, duration = 2 * Time.DAY_LENGTH }, ["promiseBroken"] = new() { label = "a promise broken", effect = -10, duration = 2 * Time.DAY_LENGTH }, ["irradiated"] = new() { label = "in the hot zone", effect = -10, duration = Time.DAY_LENGTH } };
 
     /// <summary>Thought lengths at day scale 1; THOUGHTS follows the clock (time.ts).</summary>
-    public static readonly /*TODO const type*/object BASE_DURATION = Js.AsRecord(/*TODO Object.fromEntries*/Js.Object_fromEntries(Js.ObjectEntries(THOUGHTS).map((__p0) =>
+    public static readonly /*TODO const type*/object BASE_DURATION = Js.AsRecord(Js.Object_fromEntries(Js.ObjectEntries(THOUGHTS).map((__p0) =>
         {
             var (k, v) = __p0;
-            return [k, v.duration];
+            return (k, v.duration);
         })));
 
     public const int MOOD_BASE = 50;
@@ -72,36 +72,36 @@ public static partial class Mood
     }
 
     /// <summary>What moves this survivor's mood right now, as [label, effect] pairs.</summary>
-    public static List<List<object>> moodFactors(SimState state, Survivor s)
+    public static List<(string, double)> moodFactors(SimState state, Survivor s)
     {
-        List<List<object>> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => (List<object>)[THOUGHTS[Js.Idx(t.kind)].label, THOUGHTS[Js.Idx(t.kind)].effect]);
+        List<(string, double)> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => ((string, double))(THOUGHTS[Js.Idx(t.kind)].label, THOUGHTS[Js.Idx(t.kind)].effect));
         if (Js.T(Health.isHurt(s.health)))
         {
-            factors.push(["hurt", HURT_MOOD]);
+            factors.push(("hurt", HURT_MOOD));
         }
         if (s.satiety < Food.HUNGRY)
         {
-            factors.push(["hungry", HUNGRY_MOOD]);
+            factors.push(("hungry", HUNGRY_MOOD));
         }
         if (s.infection != null)
         {
-            factors.push(["infected", Infection.INFECTED_MOOD]);
+            factors.push(("infected", Infection.INFECTED_MOOD));
         }
         if (s.sick != null)
         {
-            factors.push(["sick", Corpses.SICK_MOOD]);
+            factors.push(("sick", Corpses.SICK_MOOD));
         }
         if (Js.T(Water.isThirsty(s)))
         {
-            factors.push(["thirsty", Water.THIRSTY_MOOD]);
+            factors.push(("thirsty", Water.THIRSTY_MOOD));
         }
         if (Js.T(Policies.policyOn(state, "rationing")))
         {
-            factors.push(["on rations", Policies.RATIONED_MOOD]);
+            factors.push(("on rations", Policies.RATIONED_MOOD));
         }
         if ((Js.T(state.leaderId) && (state.leaderId != s.id)) && state.survivors.some((o) => o.id == state.leaderId))
         {
-            factors.push(["a good leader", Policies.LEADER_MOOD]);
+            factors.push(("a good leader", Policies.LEADER_MOOD));
         }
         foreach (var t in Js.Iter(s.traits))
         {

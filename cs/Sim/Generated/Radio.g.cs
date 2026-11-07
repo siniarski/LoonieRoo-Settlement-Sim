@@ -20,7 +20,7 @@ public static partial class Radio
 
     public const string DISTRESS_LABEL = "distress call";
 
-    public static readonly List<List<object>> ASKS = [["food", 5], ["wood", 8], ["bandage", 2], ["cloth", 3]];
+    public static readonly List<(string, double)> ASKS = [("food", 5), ("wood", 8), ("bandage", 2), ("cloth", 3)];
 
     public static readonly List<string> THANKS = ["medicine", "ammo", "coat", "book"];
 

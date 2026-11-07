@@ -85,24 +85,24 @@ public static partial class Wellbeing
     }
 
     /// <summary>Mood factors from the higher needs, as [label, effect] pairs.</summary>
-    public static List<List<object>> wellbeingFactors(Survivor s)
+    public static List<(string, double)> wellbeingFactors(Survivor s)
     {
-        List<List<object>> @out = [];
+        List<(string, double)> @out = [];
         if (s.social < LOW)
         {
-            @out.push(["lonely", LONELY_MOOD]);
+            @out.push(("lonely", LONELY_MOOD));
         }
         else if (s.social > HIGH)
         {
-            @out.push(["good company", COMPANY_MOOD]);
+            @out.push(("good company", COMPANY_MOOD));
         }
         if (s.comfort < LOW)
         {
-            @out.push(["uncomfortable", UNCOMFORTABLE_MOOD]);
+            @out.push(("uncomfortable", UNCOMFORTABLE_MOOD));
         }
         else if (s.comfort > HIGH)
         {
-            @out.push(["comfortable", COMFORTABLE_MOOD]);
+            @out.push(("comfortable", COMFORTABLE_MOOD));
         }
         return @out;
     }

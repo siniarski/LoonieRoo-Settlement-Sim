@@ -307,10 +307,10 @@ public static partial class Rooms
         {
             return Js.Set(state.roomDesignations.filter((d) => Js.T((d.purpose == "storage") && Js.T(d.refuses?.includes(c)))).map((d) => labelAt(state, d.x, d.y)));
         }
-        var storageFor = Js.AsRecord(/*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
+        var storageFor = Js.AsRecord(Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
             var no = refusing(c);
-            return [c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r)))];
+            return (c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r))));
         })));
         return new StoreRooms { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
     }

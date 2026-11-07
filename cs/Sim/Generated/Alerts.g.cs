@@ -190,7 +190,7 @@ public static partial class Alerts
     }
 
     /// <summary>Counts of every item kind the colony has (on the ground, carried, worn), for the overview.</summary>
-    public static List<List<object>> stockCounts(SimState state)
+    public static List<(string, double)> stockCounts(SimState state)
     {
         var counts = new JsMap<string, double>();
         foreach (var i in Js.Iter(state.items))
