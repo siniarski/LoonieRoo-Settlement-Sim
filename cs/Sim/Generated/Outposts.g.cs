@@ -37,13 +37,13 @@ public static partial class Outposts
         {
             return v.pos;
         }
-        return FurnitureMod.ofKind(state, "truck").find((f) => Js.T(Fog.isExplored(state, f.x, f.y)));
+        return FurnitureMod.ofKind(state, "truck").find((f) => Fog.isExplored(state, f.x, f.y));
     }
 
     /// <summary>The truck as a vehicle, seen and parked (nobody driving it).</summary>
     public static Vehicle? truckVehicle(SimState state)
     {
-        return Vehicles.vehiclesOf(state).find((v) => Js.T((((v.kind == "truck") && (v.health > 0)) && (v.driverId == null)) && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y))));
+        return Vehicles.vehiclesOf(state).find((v) => (((v.kind == "truck") && (v.health > 0)) && (v.driverId == null)) && Fog.isExplored(state, v.pos.x, v.pos.y));
     }
 
     /// <summary>The truck vehicle a trip would take now (seen, parked), if there is one.</summary>
@@ -100,7 +100,7 @@ public static partial class Outposts
             {
                 continue;
             }
-            var s = Js.NN(x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]);
+            var s = Js.NN(Js.Get(x.members, JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length)));
             if (s.health > (Health.HEALTH_MAX - OUTPOST_HURT))
             {
                 s.health -= OUTPOST_HURT;

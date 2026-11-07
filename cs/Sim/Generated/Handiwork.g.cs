@@ -47,7 +47,7 @@ public static partial class Handiwork
     public static object plan(SimState state, Survivor s, Point p)
     {
         var tile = Grids.getTile(state.grid, p.x, p.y);
-        if (Js.T(Breach.isStructure(tile)) && (Breach.structureDamage(state, p.x, p.y) > 0))
+        if (Breach.isStructure(tile) && (Breach.structureDamage(state, p.x, p.y) > 0))
         {
             return new WorkPlan { what = "repair" };
         }
@@ -58,7 +58,7 @@ public static partial class Handiwork
         }
         if ((tile == "wall") || (tile == "barricade"))
         {
-            if (Js.T(Defences.isReinforced(state, p.x, p.y)))
+            if (Defences.isReinforced(state, p.x, p.y))
             {
                 return "already as strong as you can make it";
             }
@@ -100,14 +100,14 @@ public static partial class Handiwork
         {
             return new WorkStart { what = "repair", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)}", duration = JsMath.ceil(((double)(Breach.structureDamage(state, p.x, p.y)) / (Breach.REPAIR_PER_TICK))) };
         }
-        return new WorkStart { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Designations.BUILD_WORK[Js.Idx(job.target)] };
+        return new WorkStart { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Js.Get(Designations.BUILD_WORK, job.target) };
     }
 
     /// <summary>A tick of repairing. Returns true when done (or no longer needed).</summary>
     public static bool repairTick(SimState state, string targetId)
     {
         var (x, y) = targetId.split(",").map((__v) => Js.Num(__v));
-        if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x, y))))
+        if (!Breach.isStructure(Grids.getTile(state.grid, x, y)))
         {
             return true;
         }
@@ -147,12 +147,12 @@ public static partial class Handiwork
         var __d0 = s.pos;
         var x = __d0.x;
         var y = __d0.y;
-        var g = Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]))];
-        if (Js.T(Js.T(Rooms.isIndoors(state, x, y)) || ((g != "grass") && (g != "field"))))
+        var g = Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, Grids.tileIndex(state.grid, x, y))));
+        if (Rooms.isIndoors(state, x, y) || ((g != "grass") && (g != "field")))
         {
             return "nothing to forage here: find open grass, or a field";
         }
-        if (Js.T(Time.isNight(state.tick)))
+        if (Time.isNight(state.tick))
         {
             return "too dark to forage";
         }
@@ -160,7 +160,7 @@ public static partial class Handiwork
         {
             return "nothing grows in winter";
         }
-        if (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(state.grid, x, y)))] == Time.dayOf(state.tick))
+        if (Js.Get(state.foraged, Js.Str(Grids.tileIndex(state.grid, x, y))) == Time.dayOf(state.tick))
         {
             return "already picked over today";
         }
@@ -172,7 +172,7 @@ public static partial class Handiwork
     {
         var i = Grids.tileIndex(state.grid, s.pos.x, s.pos.y);
         state.foraged[Js.Idx(Js.Str(i))] = Time.dayOf(state.tick);
-        var field = (Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx(i)]))] == "field") ? 2 : 1;
+        var field = (Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, i))) == "field") ? 2 : 1;
         var chance = (FORAGE_CHANCE * field) * (Js.T(state.settings.winter) ? 0.5 : 1);
         if (Hash.hashRoll(Hash.idNumber(s.id), i, state.tick) >= chance)
         {
@@ -188,7 +188,7 @@ public static partial class Handiwork
         var today = Time.dayOf(state.tick);
         foreach (var k in Js.Iter(Js.ObjectKeys(state.foraged)))
         {
-            if (state.foraged[Js.Idx(k)] != today)
+            if (Js.Get(state.foraged, k) != today)
             {
                 state.foraged.Remove(Js.Str(k));
             }
@@ -221,7 +221,7 @@ public static partial class Handiwork
             }
         }
         state.animals.splice(state.animals.indexOf(a), 1);
-        for (var i = 0; i < Animals.MEAT[Js.Idx(a.kind)]; i++)
+        for (var i = 0; i < Js.Get(Animals.MEAT, a.kind); i++)
         {
             Items.spawnItem(state, "food", a.pos.x, a.pos.y);
         }

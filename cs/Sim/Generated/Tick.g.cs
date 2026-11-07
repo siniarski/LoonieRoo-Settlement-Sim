@@ -75,7 +75,7 @@ public static partial class Tick
         List<TickDying> dying = [];
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (Js.T(ControlMod.isControlled(state, s)))
+            if (ControlMod.isControlled(state, s))
             {
                 ControlMod.updateControlled(state, s);
             }
@@ -114,7 +114,7 @@ public static partial class Tick
         Doors.closeBehind(state);
         foreach (var e in Js.Iter(movers(state)))
         {
-            if (!Js.T(isFree(state, e)))
+            if (!isFree(state, e))
             {
                 Motion.syncStep(e);
             }
@@ -135,13 +135,13 @@ public static partial class Tick
         {
             return;
         }
-        var needs = Js.Or(Js.Or(Js.Or(Js.Or(Js.Or(Js.Or(Needs.updateMeal(state, s), Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null))), Water.updateDrink(state, s)), Needs.updateTreatment(state, s)), Weapons.updateArming(state, s)), Clothing.updateDressing(state, s)), Needs.updateSleep(state, s));
+        var needs = (((((Needs.updateMeal(state, s) || Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null))) || Water.updateDrink(state, s)) || Needs.updateTreatment(state, s)) || Weapons.updateArming(state, s)) || Clothing.updateDressing(state, s)) || Needs.updateSleep(state, s);
         if (Js.T(needs))
         {
             s.leisure = null;
             Books.stopReading(state, s, s.note ?? "");
         }
-        else if (((!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s))) && !Js.T(Leisure.updateLeisure(state, s))) && !Js.T(Books.updateReading(state, s)))
+        else if (((!Js.T(s.breakdown) && !Orders.keepOrder(state, s)) && !Leisure.updateLeisure(state, s)) && !Books.updateReading(state, s))
         {
             Work.updateWork(state, s);
         }

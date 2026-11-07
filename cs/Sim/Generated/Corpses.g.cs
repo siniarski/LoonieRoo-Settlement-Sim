@@ -98,7 +98,7 @@ public static partial class Corpses
             }
         }
         var graves = Rooms.completeRooms(state, "graveyard");
-        var rotting = state.items.filter((i) => Js.T(isRotting(state, i, graves)));
+        var rotting = state.items.filter((i) => isRotting(state, i, graves));
         foreach (var s in Js.Iter(state.survivors))
         {
             if (!rotting.some((c) => Space.manhattan(Js.NN(c.pos), s.pos) <= STENCH_RADIUS))
@@ -120,7 +120,7 @@ public static partial class Corpses
         var season = Seasons.seasonOf(state.tick);
         if ((((state.tick % Time.DAY_LENGTH) == 0) && ((season == "autumn") || (season == "winter"))) && (Hash.hashRoll(Time.dayOf(state.tick), 3870.0) < FLU_CHANCE))
         {
-            var s = state.survivors[Js.Idx(JsMath.floor(Hash.hashRoll(Time.dayOf(state.tick), 1) * state.survivors.length))];
+            var s = Js.Get(state.survivors, JsMath.floor(Hash.hashRoll(Time.dayOf(state.tick), 1) * state.survivors.length));
             if (Js.T(s) && (s.sick == null))
             {
                 s.sick = SICK_TICKS;
@@ -131,7 +131,7 @@ public static partial class Corpses
         var rooms = __d0.rooms;
         foreach (var carrier in Js.Iter(state.survivors))
         {
-            if (Js.T((Js.T((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep)))) || Js.T(Policies.policyOn(state, "quarantine"))))
+            if (Js.T((Js.T((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep)))) || Policies.policyOn(state, "quarantine")))
             {
                 continue;
             }
@@ -140,7 +140,7 @@ public static partial class Corpses
             {
                 continue;
             }
-            var room = Js.NN(rooms[Js.Idx(label)]);
+            var room = Js.NN(Js.Get(rooms, label));
             var heads = state.survivors.filter((o) => Rooms.labelAt(state, o.pos.x, o.pos.y) == label).length;
             var chance = CONTAGION * ((((double)(room.tiles.length) / (heads)) < CRAMPED_TILES) ? 2 : 1);
             foreach (var o in Js.Iter(state.survivors))

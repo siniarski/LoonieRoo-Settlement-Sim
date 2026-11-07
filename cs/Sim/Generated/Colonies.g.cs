@@ -76,7 +76,7 @@ public static partial class Colonies
         {
             foreach (var n in Js.Iter(state.settlements))
             {
-                if (Js.T(!Js.T(n.unfolded) && Js.T(someoneNear(state, n))))
+                if (!Js.T(n.unfolded) && someoneNear(state, n))
                 {
                     unfold(state, n);
                 }
@@ -90,7 +90,7 @@ public static partial class Colonies
         var season = Seasons.seasonOf(state.tick);
         foreach (var n in Js.Iter((state.settlements).ToList()))
         {
-            if (Js.T(isFallen(n)))
+            if (isFallen(n))
             {
                 continue;
             }
@@ -99,7 +99,7 @@ public static partial class Colonies
             {
                 return Hash.hashRoll(id, day, salt);
             }
-            var grown = GROWN[Js.Idx(season)] * (Js.T(state.settings.winter) ? 0.5 : 1);
+            var grown = Js.Get(GROWN, season) * (Js.T(state.settings.winter) ? 0.5 : 1);
             n.food = ((double)(JsMath.round((((n.food * (1 - SPOIL_SHARE)) + (n.people * grown)) - n.people) * 10)) / (10));
             if (n.food < 0)
             {
@@ -107,7 +107,7 @@ public static partial class Colonies
                 var lost = JsMath.max(1, JsMath.round(n.people * STARVE_SHARE));
                 n.people -= lost;
                 news(state, n, $"{Js.Str(lost)} starved at {Js.Str(n.name)}");
-                if (!Js.T(Settlements.isHostile(n)))
+                if (!Settlements.isHostile(n))
                 {
                     Settlements.adjustReputation(state, n, DESPERATE_REP);
                 }
@@ -126,7 +126,7 @@ public static partial class Colonies
                 n.people -= dead;
                 news(state, n, $"The dead got into {Js.Str(n.name)} in the night: {Js.Str(dead)} lost");
             }
-            if (Js.T(isFallen(n)))
+            if (isFallen(n))
             {
                 n.people = 0;
                 Events.logEvent(state, $"{Js.Str(n.name)} has fallen. Nobody is left.");
@@ -160,7 +160,7 @@ public static partial class Colonies
         {
             return "no such settlement";
         }
-        if (Js.T(isFallen(n)))
+        if (isFallen(n))
         {
             return "nobody is left there";
         }
@@ -185,7 +185,7 @@ public static partial class Colonies
             n.food -= took;
             var killed = 1 + ((roll > 0.8) ? 1 : 0);
             n.people = JsMath.max(0, n.people - killed);
-            var home = Js.NN(armed[Js.Idx(0)]).pos;
+            var home = Js.NN(Js.Get(armed, 0)).pos;
             for (var i = 0; i < JsMath.min(10, took); i++)
             {
                 Items.spawnItem(state, "food", home.x, home.y);
@@ -194,13 +194,13 @@ public static partial class Colonies
         }
         else
         {
-            var hurt = Js.NN(armed[Js.Idx(JsMath.floor(roll * armed.length))]);
+            var hurt = Js.NN(Js.Get(armed, JsMath.floor(roll * armed.length)));
             hurt.health = JsMath.max(1, hurt.health - 150);
             hurt.lastHurtBy = "a raid gone wrong";
             hurt.hurtTick = state.tick;
             Events.logEvent(state, $"Your raid on {Js.Str(n.name)} failed. {Js.Str(hurt.name)} came back badly hurt");
         }
-        if (Js.T(isFallen(n)))
+        if (isFallen(n))
         {
             Events.logEvent(state, $"{Js.Str(n.name)} has fallen. Nobody is left.");
         }
@@ -211,8 +211,8 @@ public static partial class Colonies
     /// <summary>A starving settlement: a fed neighbour may help; otherwise it may raid the nearest one with food.</summary>
     public static void raidOrBeg(SimState state, Settlement n, Func<double, double> roll)
     {
-        var others = state.settlements.filter((o) => ((o != n) && !Js.T(isFallen(o))) && (o.food > 0)).sort((a, b) => (JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y)) - (JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y)));
-        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((Js.Q(o.ties[Js.Idx(n.id)], 0)) >= 0));
+        var others = state.settlements.filter((o) => ((o != n) && !isFallen(o)) && (o.food > 0)).sort((a, b) => (JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y)) - (JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y)));
+        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((Js.Q(Js.Get(o.ties, n.id), 0)) >= 0));
         if ((Js.T(giver) && (roll(5) < 0.5)) && !Caravans.caravansOf(state).some((c) => c.to == n.id))
         {
             var sent = JsMath.floor(((double)(giver.food) / (3)));
@@ -222,7 +222,7 @@ public static partial class Colonies
             news(state, n, $"{Js.Str(giver.name)} sent a caravan of food to a starving {Js.Str(n.name)}");
             return;
         }
-        var target = others[Js.Idx(0)];
+        var target = Js.Get(others, 0);
         if (!Js.T(target) || (roll(6) > 0.4))
         {
             return;
@@ -243,7 +243,7 @@ public static partial class Colonies
         {
             return;
         }
-        var ally = state.settlements.find((o) => (((o != n) && !Js.T(isFallen(o))) && (Settlements.relation(o, n) == "allies")) && (o.food >= (o.people * WELL_FED_DAYS)));
+        var ally = state.settlements.find((o) => (((o != n) && !isFallen(o)) && (Settlements.relation(o, n) == "allies")) && (o.food >= (o.people * WELL_FED_DAYS)));
         if (!Js.T(ally))
         {
             return;
@@ -259,7 +259,7 @@ public static partial class Colonies
 
     public static void feud(SimState state, Settlement n, Func<double, double> roll)
     {
-        var foe = state.settlements.find((o) => ((o != n) && !Js.T(isFallen(o))) && (Settlements.relation(n, o) == "feud"));
+        var foe = state.settlements.find((o) => ((o != n) && !isFallen(o)) && (Settlements.relation(n, o) == "feud"));
         if (!Js.T(foe) || (roll(11) >= FEUD_RAID_CHANCE))
         {
             return;
@@ -305,7 +305,7 @@ public static partial class Colonies
         var height = __d0.height;
         var x = JsMath.max(8, JsMath.min(width - 9, JsMath.round(n.x + (JsMath.cos(angle) * 30))));
         var y = JsMath.max(8, JsMath.min(height - 9, JsMath.round(n.y + (JsMath.sin(angle) * 30))));
-        var name = Js.NN(SPLIT_NAMES[Js.Idx(state.settlements.length % SPLIT_NAMES.length)]);
+        var name = Js.NN(Js.Get(SPLIT_NAMES, state.settlements.length % SPLIT_NAMES.length));
         n.people -= SPLIT_PEOPLE;
         var food = JsMath.floor(((double)(n.food) / (3)));
         n.food -= food;
@@ -318,7 +318,7 @@ public static partial class Colonies
     /// <summary>Only news you'd hear: from a neighbour that isn't hostile to you.</summary>
     public static void news(SimState state, Settlement n, string text)
     {
-        if (!Js.T(Settlements.isHostile(n)))
+        if (!Settlements.isHostile(n))
         {
             Events.logEvent(state, text);
         }
@@ -350,7 +350,7 @@ public static partial class Colonies
         {
             for (var x = box.x0; x <= box.x1; x++)
             {
-                if (!Js.T(Grids.inBounds(grid, x, y)))
+                if (!Grids.inBounds(grid, x, y))
                 {
                     continue;
                 }
@@ -362,7 +362,7 @@ public static partial class Colonies
                 state.items = state.items.filter((i) => (!Js.T(i.pos) || (i.pos.x != x)) || (i.pos.y != y));
                 grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))] = Grids.GROUNDS.indexOf("dirt");
                 var edge = (((x == box.x0) || (x == box.x1)) || (y == box.y0)) || (y == box.y1);
-                var broken = Js.T(fallen) && (Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25);
+                var broken = fallen && (Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25);
                 Grids.setTile(grid, x, y, (Js.T(edge) && !Js.T(broken)) ? (((x == door.x) && (y == door.y)) ? "door" : "wall") : "floor");
                 if (Js.T(edge))
                 {
@@ -376,20 +376,20 @@ public static partial class Colonies
         {
             for (var x = box.x0 + 1; x < box.x1; x++)
             {
-                if (Js.T(Grids.inBounds(grid, x, y)))
+                if (Grids.inBounds(grid, x, y))
                 {
                     inside.push(new Point { x = Js.I(x), y = Js.I(y) });
                 }
             }
         }
         var top = inside.filter((p) => p.y == (box.y0 + 1));
-        var beds = JsMath.min(top.length, JsMath.max(n.people, Js.T(fallen) ? 3 : 1));
+        var beds = JsMath.min(top.length, JsMath.max(n.people, fallen ? 3 : 1));
         foreach (var p in Js.Iter(top.slice(0, beds)))
         {
             FurnitureMod.addFurniture(state, "bed", p.x, p.y);
         }
         var rest = inside.filter((p) => p.y > (box.y0 + 1));
-        if (Js.T(fallen))
+        if (fallen)
         {
             foreach (var p in Js.Iter(rest.slice(0, 2)))
             {

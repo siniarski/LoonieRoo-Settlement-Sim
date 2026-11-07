@@ -46,7 +46,7 @@ public static partial class Expeditions
         {
             return "nobody to send";
         }
-        var home = Js.Clone(Js.NN(members[Js.Idx(0)]).pos);
+        var home = Js.Clone(Js.NN(Js.Get(members, 0)).pos);
         var distance = Space.manhattan(home, poi);
         foreach (var s in Js.Iter(members))
         {
@@ -55,13 +55,13 @@ public static partial class Expeditions
         var truckId = Outposts.truckVehicleId(state);
         var inTruck = Outposts.takeTruck(state);
         var id = $"x{Js.Str(state.nextId)}";
-        var v = (Js.T(Js.T(inTruck) && Js.T(truckId))) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
+        var v = (Js.T(inTruck && Js.T(truckId))) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
         if (Js.T(v))
         {
             v.driverId = $"x:{Js.Str(id)}";
         }
-        state.expeditions.push(Js.With(new Expedition { id = $"x{Js.Str(state.nextId++)}", members = members, target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }, home = home, returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((Js.T(inTruck) ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS), truck = inTruck, outpost = outpost }, __s0 => { if (Js.T(v)) { __s0.truckId = v.id; __s0.leftTick = state.tick; } else {  } }));
-        Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(Js.T(inTruck) ? " in the truck" : "")} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? " to hold it as an outpost" : "")}");
+        state.expeditions.push(Js.With(new Expedition { id = $"x{Js.Str(state.nextId++)}", members = members, target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }, home = home, returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((inTruck ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS), truck = inTruck, outpost = outpost }, __s0 => { if (Js.T(v)) { __s0.truckId = v.id; __s0.leftTick = state.tick; } else {  } }));
+        Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(inTruck ? " in the truck" : "")} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? " to hold it as an outpost" : "")}");
         return null;
     }
 
@@ -70,7 +70,7 @@ public static partial class Expeditions
     {
         foreach (var x in Js.Iter((state.expeditions).ToList()))
         {
-            if (Js.T(Js.T(x.truckId) && Js.T(onTheRoad(state, x))))
+            if (Js.T(x.truckId) && onTheRoad(state, x))
             {
                 continue;
             }
@@ -110,7 +110,7 @@ public static partial class Expeditions
         {
             return false;
         }
-        var s = Js.NN(x.members[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length))]);
+        var s = Js.NN(Js.Get(x.members, JsMath.floor(Hash.hashRoll(Hash.idNumber(x.id), state.tick, 1) * x.members.length)));
         if (s.health > (Health.HEALTH_MAX - INJURY))
         {
             s.health -= INJURY;
@@ -136,7 +136,7 @@ public static partial class Expeditions
         var v = Js.T(x.truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId) : null;
         if (Js.T(v))
         {
-            var spot = Js.T(Vehicles.parkable(state, x.home)) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
+            var spot = Vehicles.parkable(state, x.home) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
             v.pos = Js.Clone(spot);
             v.at = Motion.centre(spot);
             v.was = Js.Clone(v.at);
@@ -147,7 +147,7 @@ public static partial class Expeditions
             return Space.manhattan(p, x.target) <= RUIN_RADIUS;
         }
         var sleepers = state.dormant.filter((__f0) => near(__f0));
-        state.dormant = state.dormant.filter((d) => !Js.T(near(d)));
+        state.dormant = state.dormant.filter((d) => !near(d));
         var deathChance = JsMath.min(0.5, 0.05 + ((double)((0.08 * sleepers.length)) / (x.members.length)));
         List<Survivor> back = [];
         List<Survivor> lost = [];
@@ -180,7 +180,7 @@ public static partial class Expeditions
         state.survivors.pushAll(back);
         var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
         double found = 0;
-        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => Js.T((f.loot > 0) && Js.T(near(f))))))
+        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && near(f))))
         {
             while ((crate.loot > 0) && (room > 0))
             {

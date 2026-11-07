@@ -26,13 +26,13 @@ public static partial class Radio
 
     public static bool hasRadio(SimState state)
     {
-        return FurnitureMod.ofKind(state, "radio").some((f) => Js.T(Power.isPowered(state, f)));
+        return FurnitureMod.ofKind(state, "radio").some((f) => Power.isPowered(state, f));
     }
 
     public static void updateRadio(SimState state)
     {
         state.requests = state.requests.filter((r) => r.until > state.tick);
-        if (((Time.tickOfDay(state.tick) != (RADIO_HOUR * Time.TICKS_PER_HOUR)) || !Js.T(hasRadio(state))) || (state.survivors.length == 0))
+        if (((Time.tickOfDay(state.tick) != (RADIO_HOUR * Time.TICKS_PER_HOUR)) || !hasRadio(state)) || (state.survivors.length == 0))
         {
             return;
         }
@@ -44,13 +44,13 @@ public static partial class Radio
         var open = state.settlements.filter((s) => s.reputation > -30);
         if ((open.length > 0) && (Hash.hashRoll(day, 2) < 0.5))
         {
-            var n = Js.NN(open[Js.Idx(day % open.length)]);
-            var (kind, count) = Js.NN(ASKS[Js.Idx(JsMath.floor(Hash.hashRoll(day, 3) * ASKS.length))]);
+            var n = Js.NN(Js.Get(open, day % open.length));
+            var (kind, count) = Js.NN(Js.Get(ASKS, JsMath.floor(Hash.hashRoll(day, 3) * ASKS.length)));
             state.requests.push(new() { id = $"r{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, count = count, until = state.tick + (REQUEST_DAYS * Time.DAY_LENGTH) });
             Events.logEvent(state, $"On the radio: {Js.Str(n.name)} asks for {Js.Str(count)} {Js.Str(kind)} within {Js.Str(REQUEST_DAYS)} days");
             return;
         }
-        var home = Js.NN(state.survivors[Js.Idx(0)]).pos;
+        var home = Js.NN(Js.Get(state.survivors, 0)).pos;
         var angle = (Hash.hashRoll(day, 4) * JsMath.PI) * 2;
         var dist = 30 + JsMath.floor(Hash.hashRoll(day, 5) * 30);
         var x = JsMath.max(0, JsMath.min(state.grid.width - 1, JsMath.round(home.x + (JsMath.cos(angle) * dist))));
@@ -82,8 +82,8 @@ public static partial class Radio
         {
             Settlements.adjustReputation(state, n, REQUEST_REP);
         }
-        var thanks = Js.NN(THANKS[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 6) * THANKS.length))]);
-        var at = state.survivors[Js.Idx(0)]?.pos ?? new Point { x = Js.I(0), y = Js.I(0) };
+        var thanks = Js.NN(Js.Get(THANKS, JsMath.floor(Hash.hashRoll(state.tick, 6) * THANKS.length)));
+        var at = Js.Get(state.survivors, 0)?.pos ?? new Point { x = Js.I(0), y = Js.I(0) };
         if ((!Js.T(n) || (n.people <= 0)) || !Js.T(Caravans.sendCaravan(state, n.id, "you", at, 0, [thanks, thanks])))
         {
             for (var k = 0; k < 2; k++)

@@ -38,12 +38,12 @@ public static partial class Skills
     /// <summary>Experience leaves its mark (once).</summary>
     public static void earnTrait(SimState state, Survivor s, string t, string why)
     {
-        if (Js.T(hasTrait(s, t)))
+        if (hasTrait(s, t))
         {
             return;
         }
         s.traits.push(t);
-        Events.logEvent(state, $"{Js.Str(s.name)} is {Js.Str(TRAIT_INFO[Js.Idx(t)].label)} now ({Js.Str(why)})");
+        Events.logEvent(state, $"{Js.Str(s.name)} is {Js.Str(Js.Get(TRAIT_INFO, t).label)} now ({Js.Str(why)})");
     }
 
     public static bool hasTrait(Survivor s, string t)
@@ -53,8 +53,8 @@ public static partial class Skills
 
     public static double skillLevel(Survivor s, string type)
     {
-        var @base = JsMath.floor(((double)((Js.Q(s.xp[Js.Idx(type)], 0))) / (XP_PER_LEVEL)));
-        return JsMath.min(MAX_LEVEL, @base + ((Js.T((type == "farm") && Js.T(hasTrait(s, "greenThumb")))) ? 5 : 0));
+        var @base = JsMath.floor(((double)((Js.Q(Js.Get(s.xp, type), 0))) / (XP_PER_LEVEL)));
+        return JsMath.min(MAX_LEVEL, @base + (((type == "farm") && hasTrait(s, "greenThumb")) ? 5 : 0));
     }
 
     /// <summary>Tools and the work they help with: a tool adds a step every TOOL_EVERY ticks of it.</summary>
@@ -69,33 +69,33 @@ public static partial class Skills
             return 0;
         }
         var kind = state.items.find((i) => i.id == s.tool)?.kind;
-        return ((Js.T(kind) && (/*TODO in*/Js.In(kind, TOOL_FOR))) && (TOOL_FOR[Js.Idx(kind)] == type)) ? 1 : 0;
+        return ((Js.T(kind) && (/*TODO in*/Js.In(kind, TOOL_FOR))) && (Js.Get(TOOL_FOR, kind) == type)) ? 1 : 0;
     }
 
     public static double workStep(SimState state, Survivor s, string type)
     {
-        var slowed = Js.Or((Js.T((Js.T((Js.T(Js.T(Health.isHurt(s.health)) || Js.T(Mood.isMiserable(state, s)))) || Js.T(hasTrait(s, "lazy")))) || (s.sick != null))) || (s.age >= Family.ELDER), Wounds.armSlowed(s));
-        if (!Js.T(Time.slowTick(state.tick)) || !Js.T(Health.worksThisTick(((double)(state.tick) / (Time.dayScale())), slowed)))
+        var slowed = ((((Health.isHurt(s.health) || Mood.isMiserable(state, s)) || hasTrait(s, "lazy")) || (s.sick != null)) || (s.age >= Family.ELDER)) || Wounds.armSlowed(s);
+        if (!Time.slowTick(state.tick) || !Health.worksThisTick(((double)(state.tick) / (Time.dayScale())), slowed))
         {
             return 0;
         }
-        s.xp[Js.Idx(type)] = (Js.Q(s.xp[Js.Idx(type)], 0)) + 1;
-        return ((1 + (((state.tick % 20) < skillLevel(s, type)) ? 1 : 0)) + toolBonus(state, s, type)) + ((Js.T(Moodlets.boosted(s, "faster")) && ((state.tick % 4) == 0)) ? 1 : 0);
+        s.xp[Js.Idx(type)] = (Js.Q(Js.Get(s.xp, type), 0)) + 1;
+        return ((1 + (((state.tick % 20) < skillLevel(s, type)) ? 1 : 0)) + toolBonus(state, s, type)) + ((Moodlets.boosted(s, "faster") && ((state.tick % 4) == 0)) ? 1 : 0);
     }
 
     /// <summary>A trait for a new arrival, from their id: three in four get one.</summary>
     public static List<string> rollTraits(string id)
     {
-        var h = JsMath.imul(Js.Xor(Js.Num(id.replace(/*TODO regex /\D/g*/null, "")), 1540483477.0), 0x2c1b3c6d);
+        double h = JsMath.imul(Js.Xor(Js.Num(id.replace(new JsRegExp("\\D", "g"), "")), 1540483477.0), 0x2c1b3c6d);
         h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x297a2d39);
         h = Js.Ushr((Js.Xor(h, Js.Ushr(h, 13))), 0);
-        return ((h % 4) == 0) ? [] : [Js.NN(TRAITS[Js.Idx(h % TRAITS.length)])];
+        return ((h % 4) == 0) ? [] : [Js.NN(Js.Get(TRAITS, h % TRAITS.length))];
     }
 
     /// <summary>"tough; build 3, farm 1" for panels.</summary>
     public static string describeSkills(Survivor s)
     {
-        var traits = s.traits.map((t) => TRAIT_INFO[Js.Idx(t)].label);
+        var traits = s.traits.map((t) => Js.Get(TRAIT_INFO, t).label);
         var skills = Js.ObjectKeys(s.xp).map((k) => (k, skillLevel(s, k))).filter((__p0) =>
         {
             var (_, level) = __p0;
@@ -105,6 +105,6 @@ public static partial class Skills
             var (k, level) = __p1;
             return $"{Js.Str(k)} {Js.Str(level)}";
         });
-        return Js.Or(new[] { traits.join(", "), skills.join(", ") }.ToList().filter((__v) => Js.T(__v)).join("; "), "no skills yet");
+        return (new[] { traits.join(", "), skills.join(", ") }.ToList().filter((__v) => Js.T(__v)).join("; ") is var __or2 && Js.T(__or2) ? __or2 : "no skills yet");
     }
 }

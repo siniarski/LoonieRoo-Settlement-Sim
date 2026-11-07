@@ -49,13 +49,13 @@ public static partial class Defences
     /// <summary>Can someone see this point? Always by day.</summary>
     public static bool seen(SimState state, Point p)
     {
-        if (!Js.T(state.harsh) || !Js.T(Time.isNight(state.tick)))
+        if (!Js.T(state.harsh) || !Time.isNight(state.tick))
         {
             return true;
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            var sight = (Js.T(Towers.onTower(state, s)) ? TOWER_NIGHT_SIGHT : NIGHT_SIGHT) + (Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0);
+            var sight = (Towers.onTower(state, s) ? TOWER_NIGHT_SIGHT : NIGHT_SIGHT) + (Skills.hasTrait(s, "vigilant") ? Skills.VIGILANT_SIGHT : 0);
             if (Space.manhattan(s.pos, p) <= sight)
             {
                 return true;
@@ -75,7 +75,7 @@ public static partial class Defences
     /// <summary>Turrets shoot; lures rattle. Every tick.</summary>
     public static void updateDefences(SimState state)
     {
-        if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(Time.isNight(state.tick))))
+        if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Time.isNight(state.tick))
         {
             foreach (var f in Js.Iter((FurnitureMod.ofKind(state, "lure")).ToList()))
             {
@@ -92,7 +92,7 @@ public static partial class Defences
             {
                 continue;
             }
-            var z = state.zombies.filter((q) => Js.T((Js.T((Space.manhattan(q.pos, t) <= TURRET_RANGE) && Js.T(seen(state, q.pos)))) && Js.T(Work.clearShot(state.grid, t, q.pos)))).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t))[Js.Idx(0)];
+            var z = Js.Get(state.zombies.filter((q) => ((Space.manhattan(q.pos, t) <= TURRET_RANGE) && seen(state, q.pos)) && Work.clearShot(state.grid, t, q.pos)).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t)), 0);
             if (!Js.T(z))
             {
                 continue;

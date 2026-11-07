@@ -60,7 +60,7 @@ public static partial class TimelineMod
     /// <summary>Sets the days the mains go off and the helicopter comes (generated worlds).</summary>
     public static void rollTimeline(SimState state, double seed)
     {
-        var w = Js.NN(WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]);
+        var w = Js.NN(Js.Get(WINDOWS, JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression))));
         double roll(List<double> __p0, double key)
         {
             var (lo, hi) = __p0;
@@ -82,26 +82,26 @@ public static partial class TimelineMod
     /// <summary>Is this a tap with water coming out of it?</summary>
     public static bool isTap(SimState state, Furniture f)
     {
-        return Js.T(((f.look != null) && TAP_LOOKS.includes(f.look)) && Js.T(waterOn(state)));
+        return ((f.look != null) && TAP_LOOKS.includes(f.look)) && waterOn(state);
     }
 
     /// <summary>Does this keep food cold (an icebox with the power on)?</summary>
     public static bool isMainsFridge(SimState state, Furniture f)
     {
-        return Js.T((f.look == "icebox") && Js.T(powerOn(state)));
+        return (f.look == "icebox") && powerOn(state);
     }
 
     /// <summary>Indoors at night with the power on: the lights are on.</summary>
     public static bool mainsLit(SimState state, Point p)
     {
-        return (Js.T((Js.T(Js.T(Time.isNight(state.tick)) && Js.T(powerOn(state)))) && Js.T(Grids.inBounds(state.grid, p.x, p.y)))) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
+        return ((Time.isNight(state.tick) && powerOn(state)) && Grids.inBounds(state.grid, p.x, p.y)) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
     }
 
     /// <summary>Who the world's happenings come looking for: the one you control, else the first survivor.</summary>
     public static Point? focus(SimState state)
     {
         var you = Js.T(state.control) ? state.survivors.find((s) => s.id == Js.NN(state.control).survivorId) : null;
-        return (you ?? state.survivors[Js.Idx(0)])?.pos ?? null;
+        return (you ?? Js.Get(state.survivors, 0))?.pos ?? null;
     }
 
     /// <summary>A point `r` tiles from `p` in the direction `a` (radians), on the map.</summary>
@@ -120,14 +120,14 @@ public static partial class TimelineMod
         var dy = b.y - a.y;
         var ns = ((JsMath.abs(dy) * 2) > JsMath.abs(dx)) ? ((dy < 0) ? "north" : "south") : "";
         var ew = ((JsMath.abs(dx) * 2) > JsMath.abs(dy)) ? ((dx < 0) ? "west" : "east") : "";
-        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(Js.Or(ns, ew), "nearby"));
+        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : ((ns is var __or3 && Js.T(__or3) ? __or3 : ew) is var __or2 && Js.T(__or2) ? __or2 : "nearby");
     }
 
     /// <summary>Ring an alarm (a window smashed into a building while the power's on, maybe).</summary>
     public static void maybeAlarm(SimState state, Point p, double key)
     {
         var t = state.timeline;
-        if ((!Js.T(t) || !Js.T(powerOn(state))) || (Hash.hashRoll(key, state.tick, 0xa1a) >= ALARM_CHANCE))
+        if ((!Js.T(t) || !powerOn(state)) || (Hash.hashRoll(key, state.tick, 0xa1a) >= ALARM_CHANCE))
         {
             return;
         }

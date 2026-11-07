@@ -26,12 +26,12 @@ public static partial class Inventory
 
     public static double packWeight(SimState state, Survivor s)
     {
-        return s.pack.reduce((sum, id) => sum + ITEM_WEIGHT[Js.Idx(Items.getItem(state, id)?.kind ?? "sample")], 0.0);
+        return s.pack.reduce((sum, id) => sum + Js.Get(ITEM_WEIGHT, Items.getItem(state, id)?.kind ?? "sample"), 0.0);
     }
 
     public static bool fitsInPack(SimState state, Survivor s, Item item)
     {
-        return (packWeight(state, s) + ITEM_WEIGHT[Js.Idx(item.kind)]) <= PACK_MAX;
+        return (packWeight(state, s) + Js.Get(ITEM_WEIGHT, item.kind)) <= PACK_MAX;
     }
 
     /// <summary>What's inside a container (a crate, a car's boot), by its id.</summary>
@@ -67,8 +67,8 @@ public static partial class Inventory
         {
             return "not in your bag";
         }
-        var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + ITEM_WEIGHT[Js.Idx(i.kind)], 0.0);
-        if ((load + ITEM_WEIGHT[Js.Idx(item.kind)]) > box.max)
+        var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + Js.Get(ITEM_WEIGHT, i.kind), 0.0);
+        if ((load + Js.Get(ITEM_WEIGHT, item.kind)) > box.max)
         {
             return "it won't fit";
         }
@@ -87,9 +87,9 @@ public static partial class Inventory
         {
             return "already in your bag";
         }
-        if (!Js.T(fitsInPack(state, s, item)))
+        if (!fitsInPack(state, s, item))
         {
-            return (ITEM_WEIGHT[Js.Idx(item.kind)] == double.PositiveInfinity) ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
+            return (Js.Get(ITEM_WEIGHT, item.kind) == double.PositiveInfinity) ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
         }
         if (s.carrying == item.id)
         {
@@ -129,7 +129,7 @@ public static partial class Inventory
     /// <summary>Wields a weapon or wears clothing from the bag: whatever was in the slot goes into the bag in its place (or down at your feet if it won't fit). Returns what happened.</summary>
     public static string equipFromPack(SimState state, Survivor s, Item item, Point where)
     {
-        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
+        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : Js.Get(Clothing.SLOT_OF, item.kind);
         unpack(s, item.id);
         var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.NN(Js.GetProp<string?>(s, slot))) : null;
         Js.SetProp(s, slot, item.id);
@@ -141,7 +141,7 @@ public static partial class Inventory
                 Items.dropItem(state, old, where);
             }
         }
-        return Js.T(Clothing.isGarment(item.kind)) ? $"put on the {Js.Str(item.kind)}" : $"took up the {Js.Str(item.kind)}";
+        return Clothing.isGarment(item.kind) ? $"put on the {Js.Str(item.kind)}" : $"took up the {Js.Str(item.kind)}";
     }
 
     /// <summary>Everything in the bag falls where you fall (death, or leaving).</summary>

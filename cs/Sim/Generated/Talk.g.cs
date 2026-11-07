@@ -96,7 +96,7 @@ public static partial class Talk
         var lines = StoryMod.storyLines(s.story);
         if (s.story.told < lines.length)
         {
-            Events.logEvent(state, $"{Js.Str(s.name)}: \"{Js.Str(lines[Js.Idx(s.story.told)])}\"");
+            Events.logEvent(state, $"{Js.Str(s.name)}: \"{Js.Str(Js.Get(lines, s.story.told))}\"");
             s.story.told += 1;
             if (s.story.told == 1)
             {
@@ -113,7 +113,7 @@ public static partial class Talk
         }
         if (!state.tasks.some((t) => t.giverId == s.id))
         {
-            var kind = TASK_ORDER.find((k) => Js.T((!s.story.asked.includes(k) && (s.story.told >= TOLD_BEFORE[Js.Idx(k)])) && Js.T(wants(state, s, k))));
+            var kind = TASK_ORDER.find((k) => (!s.story.asked.includes(k) && (s.story.told >= Js.Get(TOLD_BEFORE, k))) && wants(state, s, k));
             if (Js.T(kind))
             {
                 offerTask(state, s, kind);
@@ -147,7 +147,7 @@ public static partial class Talk
     /// <summary>The neighbouring settlement their friend is at: the nearest one still standing.</summary>
     public static Settlement friendFor(SimState state, Survivor s)
     {
-        return state.settlements.filter((n) => n.people > 0).sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y)))[Js.Idx(0)];
+        return Js.Get(state.settlements.filter((n) => n.people > 0).sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y))), 0);
     }
 
     /// <summary>Having said where they're from: anyone here from the same town who has said so too knew them.</summary>
@@ -165,7 +165,7 @@ public static partial class Talk
             warm(o, s, KNEW_OPINION);
             Mood.addThought(state, s, "oldFriend");
             Mood.addThought(state, o, "oldFriend");
-            Events.logEvent(state, $"{Js.Str(s.name)} and {Js.Str(o.name)} knew each other, back in {Js.Str(StoryMod.TOWNS[Js.Idx(s.story.town)])}");
+            Events.logEvent(state, $"{Js.Str(s.name)} and {Js.Str(o.name)} knew each other, back in {Js.Str(Js.Get(StoryMod.TOWNS, s.story.town))}");
         }
     }
 
@@ -179,15 +179,15 @@ public static partial class Talk
         {
             if (o != s)
             {
-                warm(o, s, Js.T(Skills.hasTrait(o, "cheerful")) ? ((double)(-CONFESS_OPINION) / (2)) : CONFESS_OPINION);
+                warm(o, s, Skills.hasTrait(o, "cheerful") ? ((double)(-CONFESS_OPINION) / (2)) : CONFESS_OPINION);
             }
         }
-        Events.logEvent(state, $"{Js.Str(s.name)} told everyone: \"{Js.Str(StoryMod.REGRETS[Js.Idx(s.story.regret)])}.\" Some look at them differently now.");
+        Events.logEvent(state, $"{Js.Str(s.name)} told everyone: \"{Js.Str(Js.Get(StoryMod.REGRETS, s.story.regret))}.\" Some look at them differently now.");
     }
 
     public static void warm(Survivor of, Survivor about, int by)
     {
-        of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(of.opinions[Js.Idx(about.id)], 0)) + by));
+        of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(Js.Get(of.opinions, about.id), 0)) + by));
     }
     public static void warm(Survivor of, Survivor about, double by) => warm(of, about, (int)by);
 
@@ -264,7 +264,7 @@ public static partial class Talk
         var height = __d1.height;
         Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, p);
-        return Space.nearestTile(state.grid, p, (x, y) => ((Js.T((Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
+        return Space.nearestTile(state.grid, p, (x, y) => (((Grids.inBounds(state.grid, x, y) && (Grids.getTile(state.grid, x, y) == "floor")) && Grids.isWalkable(state.grid, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
     }
 
     public static bool near(Point a, Point b, double r)
@@ -311,7 +311,7 @@ public static partial class Talk
                 {
                     {
                     var you = ControlMod.controlled(state);
-                    return (Js.T(Js.T(near(giver.pos, spot, 2)) || (Js.T((you != null) && Js.T(near(you.pos, spot, 2)))))) ? true : null;
+                    return (near(giver.pos, spot, 2) || ((you != null) && near(you.pos, spot, 2))) ? true : null;
                 }
                 }
             case "bury":
@@ -338,11 +338,11 @@ public static partial class Talk
                 }
             case "burn":
                 {
-                    return state.fires.some((f) => Js.T(near(f, spot, 1))) ? true : null;
+                    return state.fires.some((f) => near(f, spot, 1)) ? true : null;
                 }
             case "radio":
                 {
-                    return (Js.T((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Js.T(Radio.hasRadio(state)))) ? callOut(state, task, giver) : null;
+                    return ((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Radio.hasRadio(state)) ? callOut(state, task, giver) : null;
                 }
             case "medicine":
                 {
@@ -352,7 +352,7 @@ public static partial class Talk
                     {
                         return fail(state, giver, "nobody is left there to help.");
                     }
-                    var bearer = state.survivors.find((s) => Js.T((Js.T(s.carrying) && (Items.getItem(state, s.carrying)?.kind == "medicine")) && Js.T(near(s.pos, spot, MEDICINE_REACH))));
+                    var bearer = state.survivors.find((s) => (Js.T(s.carrying) && (Items.getItem(state, s.carrying)?.kind == "medicine")) && near(s.pos, spot, MEDICINE_REACH));
                     if (!Js.T(bearer))
                     {
                         return null;
@@ -405,7 +405,7 @@ public static partial class Talk
 
     public static void reward(SimState state, Task task, Survivor giver)
     {
-        Mood.addThought(state, giver, REWARD[Js.Idx(task.kind)]);
+        Mood.addThought(state, giver, Js.Get(REWARD, task.kind));
         Resolve.steel(giver, (task.kind == "radio") ? REUNITED_RESOLVE : TASK_RESOLVE);
         var you = ControlMod.controlled(state);
         if (Js.T(you) && (you != giver))

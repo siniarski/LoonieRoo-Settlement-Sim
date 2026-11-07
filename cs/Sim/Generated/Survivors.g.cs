@@ -26,7 +26,7 @@ public static partial class Survivors
     /// <summary>Hands out names in order (its own counter, so ids of other entities don't shift names).</summary>
     public static string nextSurvivorName(SimState state)
     {
-        return Js.NN(NAMES[Js.Idx(state.namesGiven++ % NAMES.length)]);
+        return Js.NN(Js.Get(NAMES, state.namesGiven++ % NAMES.length));
     }
 
     public static Survivor addSurvivor(SimState state, int x, int y, string? name = default)
@@ -74,7 +74,7 @@ public static partial class Survivors
     /// <summary>Advances movement by one tick. Afterwards the survivor is mid-step, walking, or standing still.</summary>
     public static void updateMovement(SimState state, Survivor s)
     {
-        if (Js.T(s.move) && !Js.T(advanceStep(state, s)))
+        if (Js.T(s.move) && !advanceStep(state, s))
         {
             return;
         }
@@ -140,8 +140,8 @@ public static partial class Survivors
     /// <summary>Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.</summary>
     public static double stepPace(SimState state, Survivor s, Point next)
     {
-        var road = ROAD_GROUNDS.includes(Js.NN(state.grid.ground[Js.Idx((next.y * state.grid.width) + next.x)]));
-        return JsMath.max(2, (((((Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Js.T(Wounds.legSlowed(s)) ? 1 : 0)) - (Js.T(Orders.hurries(state, s)) ? 1 : 0)) + (Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0));
+        var road = ROAD_GROUNDS.includes(Js.NN(Js.Get(state.grid.ground, (next.y * state.grid.width) + next.x)));
+        return JsMath.max(2, (((((Health.isHurt(s.health) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Skills.hasTrait(s, "quick") ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Wounds.legSlowed(s) ? 1 : 0)) - (Orders.hurries(state, s) ? 1 : 0)) + (Moodlets.boosted(s, "slowWalk") ? 1 : 0));
     }
 
     public static void trackDirt(SimState state, Point p)
@@ -150,7 +150,7 @@ public static partial class Survivors
         {
             return;
         }
-        if (Js.T((Rng.random(state) < DIRT_CHANCE) && Js.T(Rooms.isIndoors(state, p.x, p.y))))
+        if ((Rng.random(state) < DIRT_CHANCE) && Rooms.isIndoors(state, p.x, p.y))
         {
             Grids.setDirty(state.grid, p.x, p.y, true);
         }

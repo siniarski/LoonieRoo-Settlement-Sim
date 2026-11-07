@@ -73,7 +73,7 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => Js.T((b.target == "bed") && Js.T(inRoom(b)))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => inRoom(f)).length + state.blueprints.filter((b) => (b.target == "bed") && inRoom(b)).length;
         var bedsElsewhere = bedsInOtherHousing(state, room);
         var wanted = JsMath.min(capacity, JsMath.max(1, state.survivors.length - bedsElsewhere));
         var toAdd = wanted - bedsHere;
@@ -110,7 +110,7 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var tablesHere = FurnitureMod.ofKind(state, "table").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => Js.T((b.target == "table") && Js.T(inRoom(b)))).length;
+        var tablesHere = FurnitureMod.ofKind(state, "table").filter((f) => inRoom(f)).length + state.blueprints.filter((b) => (b.target == "table") && inRoom(b)).length;
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (SEATS_PER_TABLE)))) - tablesHere;
         if (toAdd <= 0)
         {
@@ -146,7 +146,7 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => Js.T((b.target == "bed") && Js.T(inRoom(b)))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => inRoom(f)).length + state.blueprints.filter((b) => (b.target == "bed") && inRoom(b)).length;
         var toAdd = JsMath.max(1, JsMath.ceil(((double)(state.survivors.length) / (INFIRMARY_PATIENTS_PER_BED)))) - bedsHere;
         if (toAdd <= 0)
         {
@@ -170,7 +170,7 @@ public static partial class Planner
         {
             return Rooms.labelAt(state, p.x, p.y) == room.index;
         }
-        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => Js.T(inRoom(f))).length + state.blueprints.filter((b) => Js.T((b.target == "bed") && Js.T(inRoom(b)))).length;
+        var bedsHere = FurnitureMod.ofKind(state, "bed").filter((f) => inRoom(f)).length + state.blueprints.filter((b) => (b.target == "bed") && inRoom(b)).length;
         var guards = state.survivors.filter((s) => s.priorities["guard"] > 0).length;
         var toAdd = JsMath.min(capacity, JsMath.max(1, guards)) - bedsHere;
         if (toAdd <= 0)

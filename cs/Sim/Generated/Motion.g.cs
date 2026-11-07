@@ -31,7 +31,7 @@ public static partial class Motion
     /// <summary>Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door between their tiles (grid.ts) stops a blow or a bite (pathfinding.ts openBetween).</summary>
     public static bool inReach(IHasAt a, IHasAt b, double reach = REACH, Grid? grid = default)
     {
-        return Js.T((distance2(a.at, b.at) <= (reach * reach)) && (Js.T(!Js.T(grid) || Js.T(Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at))))));
+        return (distance2(a.at, b.at) <= (reach * reach)) && (!Js.T(grid) || Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at)));
     }
 
     /// <summary>The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees of `facing` either way). Integer maths: dot &gt; 0 and 4 * dot^2 &gt;= |facing|^2 * |d|^2 (cos 60 = 1/2).</summary>
@@ -54,7 +54,7 @@ public static partial class Motion
             {
                 continue;
             }
-            if (Js.T(grid) && !Js.T(Pathfinding.openBetween(grid, tileOf(from), tileOf(t.at))))
+            if (Js.T(grid) && !Pathfinding.openBetween(grid, tileOf(from), tileOf(t.at)))
             {
                 continue;
             }
@@ -131,7 +131,7 @@ public static partial class Motion
         {
             for (var x = x0; x <= x1; x++)
             {
-                if (!Js.T(Grids.inBounds(grid, x, y)) || !Js.T(Pathfinding.isPassable(grid, x, y, mover)))
+                if (!Grids.inBounds(grid, x, y) || !Pathfinding.isPassable(grid, x, y, mover))
                 {
                     return false;
                 }
@@ -141,15 +141,15 @@ public static partial class Motion
         {
             for (var x = x0; x <= (x1 + 1); x++)
             {
-                if (!Js.T(Grids.inBounds(grid, x, y)))
+                if (!Grids.inBounds(grid, x, y))
                 {
                     continue;
                 }
-                if (Js.T(((y > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x, y - 1, mover))) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB))))
+                if (((y > 0) && !Pathfinding.crossable(grid, x, y, x, y - 1, mover)) && touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB))
                 {
                     return false;
                 }
-                if (Js.T(((x > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x - 1, y, mover))) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB))))
+                if (((x > 0) && !Pathfinding.crossable(grid, x, y, x - 1, y, mover)) && touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB))
                 {
                     return false;
                 }
@@ -177,11 +177,11 @@ public static partial class Motion
         {
             var sx = JsMath.trunc(((double)((dx * i)) / (steps))) - JsMath.trunc(((double)((dx * (i - 1))) / (steps)));
             var sy = JsMath.trunc(((double)((dy * i)) / (steps))) - JsMath.trunc(((double)((dy * (i - 1))) / (steps)));
-            if (Js.T((sx != 0) && Js.T(fits(grid, new Point { x = Js.I(x + sx), y = Js.I(y) }, mover, r))))
+            if ((sx != 0) && fits(grid, new Point { x = Js.I(x + sx), y = Js.I(y) }, mover, r))
             {
                 x += sx;
             }
-            if (Js.T((sy != 0) && Js.T(fits(grid, new Point { x = Js.I(x), y = Js.I(y + sy) }, mover, r))))
+            if ((sy != 0) && fits(grid, new Point { x = Js.I(x), y = Js.I(y + sy) }, mover, r))
             {
                 y += sy;
             }
@@ -213,16 +213,16 @@ public static partial class Motion
         {
             for (var x = x0; x <= (x1 + 1); x++)
             {
-                if (!Js.T(Grids.inBounds(grid, x, y)))
+                if (!Grids.inBounds(grid, x, y))
                 {
                     continue;
                 }
                 var i = ((y * grid.width) + x) * 2;
-                if (Js.T((grid.edges[Js.Idx(i)] == Grids.EDGE_WINDOW_BROKEN) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB))))
+                if ((Js.Get(grid.edges, i) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB))
                 {
                     return true;
                 }
-                if (Js.T((grid.edges[Js.Idx(i + 1)] == Grids.EDGE_WINDOW_BROKEN) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB))))
+                if ((Js.Get(grid.edges, i + 1) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB))
                 {
                     return true;
                 }

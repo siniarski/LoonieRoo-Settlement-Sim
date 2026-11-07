@@ -75,17 +75,17 @@ public static partial class Family
     public static void births(SimState state)
     {
         var spareBed = FurnitureMod.ofKind(state, "bed").some((f) => f.owner == null);
-        if (!Js.T(spareBed))
+        if (!spareBed)
         {
             return;
         }
-        var adults = state.survivors.filter((s) => !Js.T(isChild(s)) && (s.age <= MAX_PARENT_AGE));
+        var adults = state.survivors.filter((s) => !isChild(s) && (s.age <= MAX_PARENT_AGE));
         for (var i = 0; i < adults.length; i++)
         {
             for (var j = i + 1; j < adults.length; j++)
             {
-                var a = Js.NN(adults[Js.Idx(i)]);
-                var b = Js.NN(adults[Js.Idx(j)]);
+                var a = Js.NN(Js.Get(adults, i));
+                var b = Js.NN(Js.Get(adults, j));
                 if ((Relationships.opinion(a, b) < LOVERS) || (Relationships.opinion(b, a) < LOVERS))
                 {
                     continue;
@@ -114,11 +114,11 @@ public static partial class Family
         s.age = JsMath.max(s.age, GROWN_AGE);
         s.priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES);
         var n = Hash.idNumber(s.id);
-        var a = Js.NN(HEAD_START[Js.Idx(n % HEAD_START.length)]);
-        var b = Js.NN(HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]);
+        var a = Js.NN(Js.Get(HEAD_START, n % HEAD_START.length));
+        var b = Js.NN(Js.Get(HEAD_START, (n + 3) % HEAD_START.length));
         foreach (var t in Js.Iter((List<string>)[a, b]))
         {
-            s.xp[Js.Idx(t)] = (Js.Q(s.xp[Js.Idx(t)], 0)) + (2 * Skills.XP_PER_LEVEL);
+            s.xp[Js.Idx(t)] = (Js.Q(Js.Get(s.xp, t), 0)) + (2 * Skills.XP_PER_LEVEL);
         }
         Events.logEvent(state, $"{Js.Str(s.name)} has grown up (good at {Js.Str(a)} and {Js.Str(b)})");
     }

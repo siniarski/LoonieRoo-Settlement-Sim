@@ -155,7 +155,7 @@ public static partial class Commands
                     return Js.T(why_2) ? reject(why_2) : changed();
                 }
             }
-            var s = Js.T(command.survivorId) ? Survivors.getSurvivor(state, command.survivorId) : (Js.T(you) ? state.survivors.filter((o) => o != you).sort((a, b) => (JsMath.abs(a.pos.x - you.pos.x) + JsMath.abs(a.pos.y - you.pos.y)) - (JsMath.abs(b.pos.x - you.pos.x) + JsMath.abs(b.pos.y - you.pos.y)))[Js.Idx(0)] : null);
+            var s = Js.T(command.survivorId) ? Survivors.getSurvivor(state, command.survivorId) : (Js.T(you) ? Js.Get(state.survivors.filter((o) => o != you).sort((a, b) => (JsMath.abs(a.pos.x - you.pos.x) + JsMath.abs(a.pos.y - you.pos.y)) - (JsMath.abs(b.pos.x - you.pos.x) + JsMath.abs(b.pos.y - you.pos.y))), 0) : null);
             if (!Js.T(s))
             {
                 return reject(Js.T(command.survivorId) ? $"no survivor {Js.Str(command.survivorId)}" : "nobody to talk to");
@@ -171,11 +171,11 @@ public static partial class Commands
                 return reject($"no survivor {Js.Str(command.survivorId)}");
             }
             var at = ((command.x != null) && (command.y != null)) ? new Point { x = Js.I(command.x), y = Js.I(command.y) } : s.pos;
-            if (((command.order == "hold") || (command.order == "loot")) && !Js.T(Grids.isWalkable(state.grid, at.x, at.y)))
+            if (((command.order == "hold") || (command.order == "loot")) && !Grids.isWalkable(state.grid, at.x, at.y))
             {
                 return reject($"({Js.Str(at.x)}, {Js.Str(at.y)}) is not walkable");
             }
-            return Js.T(giveOrder(state, s, command.order, at)) ? changed() : unchanged();
+            return giveOrder(state, s, command.order, at) ? changed() : unchanged();
         }
         if (command.type == "shout")
         {
@@ -186,15 +186,15 @@ public static partial class Commands
             }
             var heard = state.survivors.filter((s) => (s != you) && ((JsMath.abs(s.pos.x - you.pos.x) + JsMath.abs(s.pos.y - you.pos.y)) <= Orders.SHOUT_RANGE));
             var any = false;
-            if ((command.order == "loot") && (((command.x == null) || (command.y == null)) || !Js.T(Grids.inBounds(state.grid, command.x, command.y))))
+            if ((command.order == "loot") && (((command.x == null) || (command.y == null)) || !Grids.inBounds(state.grid, command.x, command.y)))
             {
                 return reject("loot where?");
             }
             foreach (var s in Js.Iter(heard))
             {
-                any = Js.Or(giveOrder(state, s, command.order, (command.order == "loot") ? new Point { x = Js.I(Js.NN(command.x)), y = Js.I(Js.NN(command.y)) } : s.pos), any);
+                any = giveOrder(state, s, command.order, (command.order == "loot") ? new Point { x = Js.I(Js.NN(command.x)), y = Js.I(Js.NN(command.y)) } : s.pos) || any;
             }
-            return Js.T(any) ? changed() : unchanged();
+            return any ? changed() : unchanged();
         }
         if (command.type == "setPriority")
         {
@@ -211,14 +211,14 @@ public static partial class Commands
                 return reject("not a box on the map");
             }
             var dark = false;
-            for (var y_3 = y0; (y_3 <= y1) && !Js.T(dark); y_3++)
+            for (var y_3 = y0; (y_3 <= y1) && !dark; y_3++)
             {
-                for (var x_4 = x0; (x_4 <= x1) && !Js.T(dark); x_4++)
+                for (var x_4 = x0; (x_4 <= x1) && !dark; x_4++)
                 {
-                    dark = !Js.T(Fog.isExplored(state, x_4, y_3));
+                    dark = !Fog.isExplored(state, x_4, y_3);
                 }
             }
-            if (!Js.T(dark))
+            if (!dark)
             {
                 return reject("already explored");
             }
@@ -277,7 +277,7 @@ public static partial class Commands
             var x_5 = __d1.x;
             var y_6 = __d1.y;
             var amount = __d1.amount;
-            if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x_5, y_6))))
+            if (!Breach.isStructure(Grids.getTile(state.grid, x_5, y_6)))
             {
                 return reject($"({Js.Str(x_5)}, {Js.Str(y_6)}) is not a wall or door");
             }
@@ -293,7 +293,7 @@ public static partial class Commands
             var __d2 = command;
             var kind = __d2.kind;
             var count = __d2.count;
-            if (!Js.T(Crafting.isCraftKind(kind)))
+            if (!Crafting.isCraftKind(kind))
             {
                 return reject($"can't craft {Js.Str(Js.Str(kind))}");
             }
@@ -301,7 +301,7 @@ public static partial class Commands
             {
                 return reject($"target must be 0-{Js.Str(Crafting.MAX_CRAFT_TARGET)}");
             }
-            if (state.craftTargets[Js.Idx(kind)] == count)
+            if (Js.Get(state.craftTargets, kind) == count)
             {
                 return unchanged();
             }
@@ -370,7 +370,7 @@ public static partial class Commands
         }
         if (command.type == "setPolicy")
         {
-            if (!Js.T(Policies.isPolicy(command.policy)))
+            if (!Policies.isPolicy(command.policy))
             {
                 return reject($"unknown policy {Js.Str(Js.Str(command.policy))}");
             }
@@ -417,7 +417,7 @@ public static partial class Commands
             var __d3 = command;
             var x_7 = __d3.x;
             var y_8 = __d3.y;
-            if ((Js.T((command.side != null) && Js.T(Grids.inBounds(state.grid, x_7, y_8)))) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x_7, y_8, command.side))] == Grids.EDGE_DOOR))
+            if (((command.side != null) && Grids.inBounds(state.grid, x_7, y_8)) && (Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, x_7, y_8, command.side)) == Grids.EDGE_DOOR))
             {
                 var e = Grids.edgeIndex(state.grid, x_7, y_8, command.side);
                 var open_9 = state.grid.edgeOpen.indexOf(e);
@@ -538,11 +538,11 @@ public static partial class Commands
         var __d4 = command;
         var x = __d4.x;
         var y = __d4.y;
-        if (!Js.T(Grids.inBounds(state.grid, x, y)))
+        if (!Grids.inBounds(state.grid, x, y))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is out of bounds");
         }
-        if (DESIGNATIONS.has(command.type) && !Js.T(Fog.isExplored(state, x, y)))
+        if (DESIGNATIONS.has(command.type) && !Fog.isExplored(state, x, y))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is unexplored");
         }
@@ -614,7 +614,7 @@ public static partial class Commands
             case "designateFarm":
                 {
                     {
-                    if ((command.crop != null) && !Js.T(Farming.isCrop(command.crop)))
+                    if ((command.crop != null) && !Farming.isCrop(command.crop))
                     {
                         return reject($"unknown crop {Js.Str(Js.Str(command.crop))}");
                     }
@@ -654,7 +654,7 @@ public static partial class Commands
                 }
             case "ignite":
                 {
-                    return Js.T(FireMod.ignite(state, x, y)) ? changed() : unchanged();
+                    return FireMod.ignite(state, x, y) ? changed() : unchanged();
                 }
             case "spawnSurvivor":
                 {
@@ -671,7 +671,7 @@ public static partial class Commands
                 }
             case "spawnVehicle":
                 {
-                    if (!Js.T(Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) })))
+                    if (!Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))
                     {
                     return reject($"a car won't fit at ({Js.Str(x)}, {Js.Str(y)})");
                 }
@@ -681,7 +681,7 @@ public static partial class Commands
             case "spawnFood":
             case "spawnWeapon":
                 {
-                    if (!Js.T(Grids.isWalkable(state.grid, x, y)))
+                    if (!Grids.isWalkable(state.grid, x, y))
                     {
                     return reject($"({Js.Str(x)}, {Js.Str(y)}) is not walkable");
                 }
@@ -717,7 +717,7 @@ public static partial class Commands
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is water");
         }
-        if (!Js.T(Grids.setTile(state.grid, x, y, tile)))
+        if (!Grids.setTile(state.grid, x, y, tile))
         {
             return unchanged();
         }
@@ -770,8 +770,8 @@ public static partial class Commands
         {
             return reject(why);
         }
-        var here = state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x, y, side))];
-        var boarding = (Js.T((structure == "barricade") && Js.T(Grids.isWindow(here)))) && !state.grid.edgeBoarded.includes(Grids.edgeIndex(state.grid, x, y, side));
+        var here = Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, x, y, side));
+        var boarding = ((structure == "barricade") && Grids.isWindow(here)) && !state.grid.edgeBoarded.includes(Grids.edgeIndex(state.grid, x, y, side));
         if ((here != Grids.EDGE_NONE) && !Js.T(boarding))
         {
             return unchanged();
@@ -793,7 +793,7 @@ public static partial class Commands
         {
             return reject(why);
         }
-        if (!Js.T(Grids.setEdge(state.grid, x, y, side, kind)))
+        if (!Grids.setEdge(state.grid, x, y, side, kind))
         {
             return unchanged();
         }
@@ -811,7 +811,7 @@ public static partial class Commands
         }
         if (structure == "reinforce")
         {
-            if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x, y))) || state.grid.reinforced.includes((y * state.grid.width) + x))
+            if (!Breach.isStructure(Grids.getTile(state.grid, x, y)) || state.grid.reinforced.includes((y * state.grid.width) + x))
             {
                 return unchanged();
             }
@@ -851,11 +851,11 @@ public static partial class Commands
         double edgesPlanned = 0;
         void plan(double x, double y, string side, bool door)
         {
-            if (!Js.T(Grids.inBounds(state.grid, x, y)) || !Js.T(Fog.isExplored(state, x, y)))
+            if (!Grids.inBounds(state.grid, x, y) || !Fog.isExplored(state, x, y))
             {
                 return;
             }
-            var r = designateEdge(state, x, y, side, Js.T(door) ? "door" : "wall");
+            var r = designateEdge(state, x, y, side, door ? "door" : "wall");
             if (Js.T(Js.T(r.ok) && Js.T(r.changed)))
             {
                 edgesPlanned += 1;
@@ -897,12 +897,12 @@ public static partial class Commands
                 {
                     continue;
                 }
-                if (Js.T((Js.T((!Js.T(Fog.isExplored(state, x, y)) || (Grids.getTile(state.grid, x, y) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, y)))) || Js.T(Designations.blueprintAt(state, x, y))))
+                if (Js.T((Js.T((!Fog.isExplored(state, x, y) || (Grids.getTile(state.grid, x, y) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, y)))) || Js.T(Designations.blueprintAt(state, x, y))))
                 {
                     continue;
                 }
                 var door = ((x == mx) && ((y == y0) || (y == y1))) || ((y == my) && ((x == x0) || (x == x1)));
-                Designations.addBlueprint(state, x, y, Js.T(door) ? "door" : "wall");
+                Designations.addBlueprint(state, x, y, door ? "door" : "wall");
                 planned += 1;
             }
         }
@@ -922,7 +922,7 @@ public static partial class Commands
             Designations.cancelBlueprint(state, existing);
             return changed();
         }
-        if (!Js.T(Designations.hasRemovable(state, x, y)))
+        if (!Designations.hasRemovable(state, x, y))
         {
             return unchanged();
         }
@@ -996,7 +996,7 @@ public static partial class Commands
 
     public static CommandResult spawnSurvivor(SimState state, int x, int y)
     {
-        if (!Js.T(Grids.isWalkable(state.grid, x, y)))
+        if (!Grids.isWalkable(state.grid, x, y))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is not walkable");
         }
@@ -1016,7 +1016,7 @@ public static partial class Commands
         {
             return reject($"no survivor {Js.Str(id)}");
         }
-        if (!Js.T(Grids.isWalkable(state.grid, x, y)))
+        if (!Grids.isWalkable(state.grid, x, y))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is not walkable");
         }
@@ -1024,7 +1024,7 @@ public static partial class Commands
         {
             return unchanged();
         }
-        if (Js.T(ControlMod.isControlled(state, survivor)))
+        if (ControlMod.isControlled(state, survivor))
         {
             return reject($"{Js.Str(survivor.name)} is under your control");
         }
@@ -1054,7 +1054,7 @@ public static partial class Commands
     /// <summary>Gives one survivor an order. Returns false if it changed nothing.</summary>
     public static bool giveOrder(SimState state, Survivor s, string kind, Point at)
     {
-        if (Js.T(Js.T(ControlMod.isControlled(state, s)) || (s.childUntil != null)))
+        if (ControlMod.isControlled(state, s) || (s.childUntil != null))
         {
             return false;
         }
@@ -1065,7 +1065,7 @@ public static partial class Commands
         }
         s.order = order;
         var job = Js.T(s.jobId) ? state.jobs.find((j) => j.id == s.jobId) : null;
-        if ((Js.T(Js.T(order) && Js.T(job))) && !(Js.T(Orders.ORDER_JOBS.includes(job.type) && Js.T(Orders.withinOrder(state, s, job)))))
+        if ((Js.T(Js.T(order) && Js.T(job))) && !(Orders.ORDER_JOBS.includes(job.type) && Orders.withinOrder(state, s, job)))
         {
             Jobs.releaseSurvivor(state, s, Orders.describeOrder(order));
         }
@@ -1190,11 +1190,11 @@ public static partial class Commands
         {
             return reject($"no survivor {Js.Str(id)}");
         }
-        if (!Js.T(JobTypes.isJobType(jobType)))
+        if (!JobTypes.isJobType(jobType))
         {
             return reject($"unknown job type {Js.Str(Js.Str(jobType))}");
         }
-        if (!Js.T(JobTypes.isPriority(priority)))
+        if (!JobTypes.isPriority(priority))
         {
             return reject($"priority must be 0-4, got {Js.Str(Js.Str(priority))}");
         }
@@ -1223,7 +1223,7 @@ public static partial class Commands
         if (command.type == "takeAll")
         {
             var box = Inventory.containerOf(state, command.containerId);
-            if (!Js.T(box) || !Js.T(besideYou(s, box.at)))
+            if (!Js.T(box) || !besideYou(s, box.at))
             {
                 return "not beside you";
             }
@@ -1250,7 +1250,7 @@ public static partial class Commands
         if (command.type == "take")
         {
             var where = item.pos ?? (Js.T(item.inside) ? Inventory.containerOf(state, item.inside)?.at : null);
-            if ((item.carriedBy != s.id) && (!Js.T(where) || !Js.T(besideYou(s, where))))
+            if ((item.carriedBy != s.id) && (!Js.T(where) || !besideYou(s, where)))
             {
                 return "not beside you";
             }
@@ -1271,7 +1271,7 @@ public static partial class Commands
         if (command.type == "stash")
         {
             var box = Inventory.containerOf(state, command.containerId);
-            if (!Js.T(box) || !Js.T(besideYou(s, box.at)))
+            if (!Js.T(box) || !besideYou(s, box.at))
             {
                 return "not beside you";
             }
@@ -1294,7 +1294,7 @@ public static partial class Commands
             s.note = (item.kind == "medicine") ? "taking medicine" : "bandaging";
             return null;
         }
-        if (Js.T(((item.kind == "weapon") || (item.kind == "gun")) || Js.T(Clothing.isGarment(item.kind))))
+        if (((item.kind == "weapon") || (item.kind == "gun")) || Clothing.isGarment(item.kind))
         {
             s.note = Inventory.equipFromPack(state, s, item, s.pos);
             return null;

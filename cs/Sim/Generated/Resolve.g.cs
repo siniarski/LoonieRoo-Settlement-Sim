@@ -54,7 +54,7 @@ public static partial class Resolve
 
     public static string describeResolve(Survivor s)
     {
-        return Js.T(isBreaking(s)) ? "breaking" : (Js.T(isSteeled(s)) ? "steeled" : ((s.resolve < 40) ? "wavering" : "steady"));
+        return isBreaking(s) ? "breaking" : (isSteeled(s) ? "steeled" : ((s.resolve < 40) ? "wavering" : "steady"));
     }
 
     /// <summary>Dawn: drift with mood. Returns those who walk away (the caller removes them).</summary>
@@ -69,7 +69,7 @@ public static partial class Resolve
         {
             var drift = JsMath.round(((double)((Mood.mood(state, s) - Mood.MOOD_BASE)) / (MOOD_PER_POINT)));
             steel(s, JsMath.max(-DAWN_LIMIT, JsMath.min(DAWN_LIMIT, drift)));
-            if ((!Js.T(isBreaking(s)) || (state.control?.survivorId == s.id)) || (s.childUntil != null))
+            if ((!isBreaking(s) || (state.control?.survivorId == s.id)) || (s.childUntil != null))
             {
                 continue;
             }
@@ -88,6 +88,6 @@ public static partial class Resolve
     /// <summary>Breaking, and you're in control: a swing may freeze.</summary>
     public static bool freezes(SimState state, Survivor s)
     {
-        return Js.T(isBreaking(s)) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0xf2) < FREEZE_CHANCE);
+        return isBreaking(s) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0xf2) < FREEZE_CHANCE);
     }
 }

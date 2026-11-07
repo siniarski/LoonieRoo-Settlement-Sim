@@ -42,7 +42,7 @@ public static partial class Clothing
     /// <summary>The garment of this kind the survivor has on, if any.</summary>
     public static Item? wearing(SimState state, Survivor s, string kind)
     {
-        var id = Js.GetProp<string?>(s, SLOT_OF[Js.Idx(kind)]);
+        var id = Js.GetProp<string?>(s, Js.Get(SLOT_OF, kind));
         var item = Js.T(id) ? Items.getItem(state, id) : null;
         return (item?.kind == kind) ? item : null;
     }
@@ -50,17 +50,17 @@ public static partial class Clothing
     /// <summary>Wears a garment; it falls apart at GARMENT_LIFE.</summary>
     public static void wearOut(SimState state, Survivor s, Item item, double amount = 1)
     {
-        if (!Js.T(isGarment(item.kind)))
+        if (!isGarment(item.kind))
         {
             return;
         }
         item.wear += amount;
-        if (item.wear < GARMENT_LIFE[Js.Idx(item.kind)])
+        if (item.wear < Js.Get(GARMENT_LIFE, item.kind))
         {
             return;
         }
         Items.removeItem(state, item);
-        Js.SetProp(s, SLOT_OF[Js.Idx(item.kind)], null);
+        Js.SetProp(s, Js.Get(SLOT_OF, item.kind), null);
         Events.logEvent(state, $"{Js.Str(s.name)}'s {Js.Str((item.kind == "boots") ? "boots" : item.kind)} fell apart");
     }
 
@@ -97,23 +97,23 @@ public static partial class Clothing
 
     public static bool free(SimState state, Survivor s)
     {
-        return (((((((!Js.T(s.jobId) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.arming)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Js.T(Needs.wantsSleep(state, s))) && (state.tick >= s.nextDressTick);
+        return (((((((!Js.T(s.jobId) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.arming)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Needs.wantsSleep(state, s)) && (state.tick >= s.nextDressTick);
     }
 
     /// <summary>A garment that's half worn, if any.</summary>
     public static Item? needsMending(SimState state, Survivor s)
     {
-        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(Js.T(i) && Js.T(isGarment(i.kind)))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
+        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && isGarment(i.kind)) && ((i.wear * 2) >= Js.Get(GARMENT_LIFE, i.kind)));
     }
 
     public static bool startDressing(SimState state, Survivor s)
     {
-        if (!Js.T(free(state, s)))
+        if (!free(state, s))
         {
             return false;
         }
         List<string> body = (s.priorities["guard"] > 0) ? ((List<string>)["armour", "coat"]) : ((List<string>)["coat", "armour"]);
-        List<string> wants = [.. (Js.T(s.body) ? ((List<string>)[]) : body), .. (Js.T(s.feet) ? ((List<string>)[]) : ((List<string>)["boots"])), .. (Js.T(Js.T(s.cart) || (s.priorities["haul"] == 0)) ? ((List<string>)[]) : ((List<string>)["cart"])), .. (Js.T(s.tool) ? ((List<string>)[]) : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])])), .. (Js.T(needsMending(state, s)) ? ((List<string>)["cloth"]) : ((List<string>)[]))];
+        List<string> wants = [.. (Js.T(s.body) ? ((List<string>)[]) : body), .. (Js.T(s.feet) ? ((List<string>)[]) : ((List<string>)["boots"])), .. (Js.T(Js.T(s.cart) || (s.priorities["haul"] == 0)) ? ((List<string>)[]) : ((List<string>)["cart"])), .. (Js.T(s.tool) ? ((List<string>)[]) : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => Js.Get(s.priorities, Js.Get(Skills.TOOL_FOR, k)) > 0).sort((a, b) => Js.Get(s.priorities, Js.Get(Skills.TOOL_FOR, a)) - Js.Get(s.priorities, Js.Get(Skills.TOOL_FOR, b)))), .. (Js.T(needsMending(state, s)) ? ((List<string>)["cloth"]) : ((List<string>)[]))];
         var item = wants.map((k) => Needs.nearestFreeItem(state, s, k)).find((i) => Js.T(Js.T(i?.pos)));
         if (!Js.T(Js.T(item?.pos)))
         {
@@ -129,7 +129,7 @@ public static partial class Clothing
     /// <summary>Runs when standing still, after arming and before sleep. Returns true if dressing handled this tick.</summary>
     public static bool updateDressing(SimState state, Survivor s)
     {
-        if (!Js.T(s.dressing) && !Js.T(startDressing(state, s)))
+        if (!Js.T(s.dressing) && !startDressing(state, s))
         {
             return false;
         }
@@ -139,7 +139,7 @@ public static partial class Clothing
             cancelDressing(state, s, "clothing gone");
             return false;
         }
-        if (!Js.T(Space.samePoint(s.pos, item.pos)))
+        if (!Space.samePoint(s.pos, item.pos))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
             if (!Js.T(path) || (path.length == 0))
@@ -165,7 +165,7 @@ public static partial class Clothing
             s.note = $"mended their {Js.Str(worn.kind)}";
             return true;
         }
-        var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
+        var slot = isGarment(item.kind) ? Js.Get(SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
         if (Js.T(!Js.T(slot) || Js.T(Js.GetProp<string?>(s, slot))))
         {
             item.reservedBy = null;
@@ -229,6 +229,6 @@ public static partial class Clothing
     /// <summary>"coat, boots" for panels.</summary>
     public static string describeClothing(SimState state, Survivor s)
     {
-        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => Js.T((i != null) && Js.T(isGarment(i.kind)))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
+        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && isGarment(i.kind)).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= Js.Get(GARMENT_LIFE, i.kind)) ? " (worn)" : "")}").join(", ");
     }
 }

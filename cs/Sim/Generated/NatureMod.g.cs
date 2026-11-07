@@ -69,7 +69,7 @@ public static partial class NatureMod
         {
             return false;
         }
-        if (Js.T(nearStart(n, x, y, START_CLEAR_RADIUS + 8)))
+        if (nearStart(n, x, y, START_CLEAR_RADIUS + 8))
         {
             return false;
         }
@@ -98,11 +98,11 @@ public static partial class NatureMod
 
     public static bool isWater(Nature n, int x, int y)
     {
-        if (Js.T(nearStart(n, x, y, START_CLEAR_RADIUS + 8)))
+        if (nearStart(n, x, y, START_CLEAR_RADIUS + 8))
         {
             return false;
         }
-        if (Js.T(Js.T(isSea(n, x, y)) || Js.T(isChannel(n, x, y))))
+        if (isSea(n, x, y) || isChannel(n, x, y))
         {
             return true;
         }

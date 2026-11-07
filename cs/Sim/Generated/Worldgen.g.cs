@@ -40,25 +40,25 @@ public static partial class Worldgen
     /// <summary>A country road or town street on this tile.</summary>
     public static bool isRoad(Layout l, int x, int y)
     {
-        return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && (l.plan.roadMask[Js.Idx((y * l.size) + x)] != 0);
+        return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && (Js.Get(l.plan.roadMask, (y * l.size) + x) != 0);
     }
     public static bool isRoad(Layout l, double x, double y) => isRoad(l, (int)x, (int)y);
 
     /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
-        return l.plan.lotMask[Js.Idx((y * l.size) + x)] != 0;
+        return Js.Get(l.plan.lotMask, (y * l.size) + x) != 0;
     }
     public static bool onLot(Layout l, double x, double y) => onLot(l, (int)x, (int)y);
 
     /// <summary>A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it.</summary>
     public static string? fenceAt(Layout l, int x, int y)
     {
-        if (!Js.T(NatureMod.onFenceLine(l, x, y)))
+        if (!NatureMod.onFenceLine(l, x, y))
         {
             return null;
         }
-        return Js.T(isRoad(l, x, y)) ? "door" : "wall";
+        return isRoad(l, x, y) ? "door" : "wall";
     }
     public static string? fenceAt(Layout l, double x, double y) => fenceAt(l, (int)x, (int)y);
 
@@ -79,7 +79,7 @@ public static partial class Worldgen
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if (!Js.T(Grids.inBounds(state.grid, x, y)))
+                if (!Grids.inBounds(state.grid, x, y))
                 {
                     continue;
                 }
@@ -88,23 +88,23 @@ public static partial class Worldgen
                 {
                     Grids.setTile(state.grid, x, y, fence);
                 }
-                else if (Js.T(NatureMod.isSea(l, x, y)) && !Js.T(isRoad(l, x, y)))
+                else if (NatureMod.isSea(l, x, y) && !isRoad(l, x, y))
                 {
                     Grids.setTile(state.grid, x, y, "water");
                 }
-                else if (Js.T(isRoad(l, x, y)))
+                else if (isRoad(l, x, y))
                 {
-                    ground(state, x, y, Js.T(NatureMod.isWater(l, x, y)) ? "bridge" : "road");
+                    ground(state, x, y, NatureMod.isWater(l, x, y) ? "bridge" : "road");
                 }
-                else if (Js.T(NatureMod.isWater(l, x, y)))
+                else if (NatureMod.isWater(l, x, y))
                 {
                     Grids.setTile(state.grid, x, y, "water");
                 }
-                else if (Js.T(onLot(l, x, y)))
+                else if (onLot(l, x, y))
                 {
                     continue;
                 }
-                else if (Js.T(NatureMod.isForest(l, x, y)))
+                else if (NatureMod.isForest(l, x, y))
                 {
                     ground(state, x, y, "forest");
                 }
@@ -118,18 +118,18 @@ public static partial class Worldgen
         var ctx = lotContext(l);
         foreach (var id in Js.Iter(Js.At(l.plan.lotsByChunk, (cy * chunks) + cx, [])))
         {
-            Lots.drawLot(state, ctx, Js.NN(l.plan.lots[Js.Idx(id)]), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
+            Lots.drawLot(state, ctx, Js.NN(Js.Get(l.plan.lots, id)), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
         for (var y = y0; y < (y0 + CHUNK); y++)
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if (Js.T((Js.T((Js.T(!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y)))) || Js.T(onLot(l, x, y)))) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS))))
+                if (((!Grids.inBounds(state.grid, x, y) || isRoad(l, x, y)) || onLot(l, x, y)) || NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS))
                 {
                     continue;
                 }
                 var i = Grids.tileIndex(state.grid, x, y);
-                if (((state.grid.tiles[Js.Idx(i)] == "floor") && (state.grid.ground[Js.Idx(i)] == FOREST)) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
+                if (((Js.Get(state.grid.tiles, i) == "floor") && (Js.Get(state.grid.ground, i) == FOREST)) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
                 {
                     FurnitureMod.addFurniture(state, "tree", x, y);
                 }
@@ -181,7 +181,7 @@ public static partial class Worldgen
         }
         if (Js.T(solo))
         {
-            var you = Js.NN(state.survivors[Js.Idx(0)]);
+            var you = Js.NN(Js.Get(state.survivors, 0));
             state.control = new Control { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
             var weapon = Items.spawnItem(state, "weapon", you.pos.x, you.pos.y);
             weapon.pos = null;
@@ -223,7 +223,7 @@ public static partial class Worldgen
             for (var cx = JsMath.max(0, pcx - GENERATE_RADIUS); cx <= JsMath.min(world.chunks - 1, pcx + GENERATE_RADIUS); cx++)
             {
                 var i = (cy * world.chunks) + cx;
-                if (world.generated[Js.Idx(i)] == 1)
+                if (Js.Get(world.generated, i) == 1)
                 {
                     continue;
                 }
@@ -245,15 +245,15 @@ public static partial class Worldgen
         }
         bool open(double x, double y)
         {
-            return Js.T(Grids.isWalkable(state.grid, x, y));
+            return Grids.isWalkable(state.grid, x, y);
         }
         bool floorOnly(double x, double y)
         {
-            return state.grid.tiles[Js.Idx(Grids.tileIndex(state.grid, x, y))] == "floor";
+            return Js.Get(state.grid.tiles, Grids.tileIndex(state.grid, x, y)) == "floor";
         }
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (Js.T(!Js.T(inChunk(z.pos)) || Js.T(floorOnly(z.pos.x, z.pos.y))))
+            if (!inChunk(z.pos) || floorOnly(z.pos.x, z.pos.y))
             {
                 continue;
             }
@@ -263,7 +263,7 @@ public static partial class Worldgen
         }
         foreach (var a in Js.Iter(state.animals))
         {
-            if (Js.T(!Js.T(inChunk(a.pos)) || Js.T(floorOnly(a.pos.x, a.pos.y))))
+            if (!inChunk(a.pos) || floorOnly(a.pos.x, a.pos.y))
             {
                 continue;
             }
@@ -273,7 +273,7 @@ public static partial class Worldgen
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (Js.T(!Js.T(inChunk(s.pos)) || Js.T(open(s.pos.x, s.pos.y))))
+            if (!inChunk(s.pos) || open(s.pos.x, s.pos.y))
             {
                 continue;
             }
@@ -294,7 +294,7 @@ public static partial class Worldgen
             {
                 for (var x = p.x - r; x <= (p.x + r); x++)
                 {
-                    if (Js.T((Js.T((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y)))) && Js.T(accept(x, y))))
+                    if (Js.T(((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y))))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }
@@ -317,7 +317,7 @@ public static partial class Worldgen
         startCamp(state, l);
         if (Js.T(you) && (CharacterMod.characterProblem(you) == null))
         {
-            CharacterMod.applyCharacter(state, Js.NN(state.survivors[Js.Idx(0)]), you);
+            CharacterMod.applyCharacter(state, Js.NN(Js.Get(state.survivors, 0)), you);
         }
         state.harsh = true;
         TimelineMod.rollTimeline(state, seed);
@@ -326,7 +326,7 @@ public static partial class Worldgen
         Point near = new Point { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
         Point clamped = new Point { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
         var spot = Space.nearestTile(state.grid, clamped, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
-        var park = (Js.T(spot) ? (Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))) : null);
+        var park = (Js.T(spot) ? (Vehicles.parkable(state, spot) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))) : null);
         if (Js.T(park))
         {
             Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(Hash.hashRoll(seed, 0x7a0d) * 32), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");
@@ -336,7 +336,7 @@ public static partial class Worldgen
         {
             for (var x = l.start.x - START_REVEAL_RADIUS; x <= (l.start.x + START_REVEAL_RADIUS); x++)
             {
-                if (Js.T(Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1))))
+                if (Grids.inBounds(state.grid, x, y) && NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1))
                 {
                     state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] = 1;
                 }

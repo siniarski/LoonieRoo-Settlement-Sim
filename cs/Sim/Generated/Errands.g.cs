@@ -46,7 +46,7 @@ public static partial class Errands
     /// <summary>When you talk with one of their people: maybe they ask you for something. Returns what they said, or null.</summary>
     public static string? maybeAsk(SimState state, Settlement n, double salt)
     {
-        if (Js.T(Js.T(Settlements.isHostile(n)) || errandsOf(state).some((e_1) => e_1.settlementId == n.id)))
+        if (Settlements.isHostile(n) || errandsOf(state).some((e_1) => e_1.settlementId == n.id))
         {
             return null;
         }
@@ -72,7 +72,7 @@ public static partial class Errands
         }
         state.errands ??= [];
         var kind = (roll(3) < 0.5) ? "nest" : "missing";
-        Errand e = new Errand { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(MISSING[Js.Idx(JsMath.floor(roll(4) * MISSING.length))]), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
+        Errand e = new Errand { id = $"e{Js.Str(state.nextId++)}", settlementId = n.id, kind = kind, x = Js.I(spot.x), y = Js.I(spot.y), zombieIds = [], who = Js.NN(Js.Get(MISSING, JsMath.floor(roll(4) * MISSING.length))), until = state.tick + (ERRAND_DAYS * Time.DAY_LENGTH) };
         if (kind == "nest")
         {
             for (var k = 0; k < NEST_SIZE; k++)
@@ -106,7 +106,7 @@ public static partial class Errands
                 list.splice(list.indexOf(e), 1);
                 continue;
             }
-            if (Js.T(done(state, e)))
+            if (done(state, e))
             {
                 list.splice(list.indexOf(e), 1);
                 reward(state, e, n);
@@ -140,8 +140,8 @@ public static partial class Errands
         {
             return Hash.hashRoll(Hash.idNumber(e.id), k);
         }
-        List<string> goods = [Js.NN(THANKS[Js.Idx(JsMath.floor(roll(1) * THANKS.length))]), Js.NN(THANKS[Js.Idx(JsMath.floor(roll(2) * THANKS.length))])];
-        Point home = state.survivors[Js.Idx(0)]?.pos ?? new Point { x = Js.I(n.x), y = Js.I(n.y) };
+        List<string> goods = [Js.NN(Js.Get(THANKS, JsMath.floor(roll(1) * THANKS.length))), Js.NN(Js.Get(THANKS, JsMath.floor(roll(2) * THANKS.length)))];
+        Point home = Js.Get(state.survivors, 0)?.pos ?? new Point { x = Js.I(n.x), y = Js.I(n.y) };
         Caravans.sendCaravan(state, n.id, "you", home, 3, goods);
         Events.logEvent(state, (e.kind == "nest") ? $"The dead near {Js.Str(n.name)} are gone. They're sending thanks by caravan" : $"You found {Js.Str(e.who)}, and sent them home to {Js.Str(n.name)}. They're sending thanks by caravan");
     }

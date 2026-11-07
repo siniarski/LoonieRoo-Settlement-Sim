@@ -74,7 +74,7 @@ public static partial class Rooms
         var UNSEEN = -3;
         for (var i = 0; i < tiles.length; i++)
         {
-            if (tiles[Js.Idx(i)] == "floor")
+            if (Js.Get(tiles, i) == "floor")
             {
                 labels[Js.Idx(i)] = UNSEEN;
             }
@@ -82,7 +82,7 @@ public static partial class Rooms
         List<Room> rooms = [];
         for (var start = 0; start < labels.length; start++)
         {
-            if (labels[Js.Idx(start)] != UNSEEN)
+            if (Js.Get(labels, start) != UNSEEN)
             {
                 continue;
             }
@@ -92,7 +92,7 @@ public static partial class Rooms
             var touchesEdge = false;
             for (var head = 0; head < region.length; head++)
             {
-                var i = Js.NN(region[Js.Idx(head)]);
+                var i = Js.NN(Js.Get(region, head));
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
                 if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
@@ -109,7 +109,7 @@ public static partial class Rooms
                     }
                     var n = (ny * width) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
-                    if (Js.T(((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge))))
+                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;
                     }
@@ -118,15 +118,15 @@ public static partial class Rooms
                         doorSet.add(n);
                         continue;
                     }
-                    if (tiles[Js.Idx(n)] == "door")
+                    if (Js.Get(tiles, n) == "door")
                     {
                         doorSet.add(n);
                     }
-                    if (tiles[Js.Idx(n)] == "water")
+                    if (Js.Get(tiles, n) == "water")
                     {
                         touchesEdge = true;
                     }
-                    if (labels[Js.Idx(n)] != UNSEEN)
+                    if (Js.Get(labels, n) != UNSEEN)
                     {
                         continue;
                     }
@@ -134,7 +134,7 @@ public static partial class Rooms
                     region.push(n);
                 }
             }
-            if (Js.T(Js.T(touchesEdge) || (region.length > MAX_ROOM_TILES)))
+            if (touchesEdge || (region.length > MAX_ROOM_TILES))
             {
                 foreach (var i in Js.Iter(region))
                 {
@@ -170,7 +170,7 @@ public static partial class Rooms
         {
             return NOT_FLOOR;
         }
-        return Js.NN(getRoomMap(state).labels[Js.Idx((y * state.grid.width) + x)]);
+        return Js.NN(Js.Get(getRoomMap(state).labels, (y * state.grid.width) + x));
     }
     public static double labelAt(SimState state, double x, double y) => labelAt(state, (int)x, (int)y);
 
@@ -178,7 +178,7 @@ public static partial class Rooms
     public static Room? roomAt(SimState state, int x, int y)
     {
         var label = labelAt(state, x, y);
-        return (label >= 0) ? Js.NN(getRoomMap(state).rooms[Js.Idx(label)]) : null;
+        return (label >= 0) ? Js.NN(Js.Get(getRoomMap(state).rooms, label)) : null;
     }
     public static Room? roomAt(SimState state, double x, double y) => roomAt(state, (int)x, (int)y);
 
@@ -326,7 +326,7 @@ public static partial class Rooms
         {
             return rooms.armory;
         }
-        return rooms.storageFor[Js.Idx(categoryOf(kind) ?? "gear")];
+        return Js.Get(rooms.storageFor, categoryOf(kind) ?? "gear");
     }
 
     /// <summary>Rooms after some tiles changed: the rooms touching a changed tile (or its neighbours) are taken apart, and their tiles and the changed ones flooded again; a flood may run into outdoor tiles (a new wall can close off part of the outdoors), and stops as outdoors once it's bigger than a room can be or reaches the map's edge or water. Rooms are then ordered as computeRooms orders them (by their first tile), so the result is the same as working it all out again.</summary>
@@ -364,28 +364,28 @@ public static partial class Rooms
             }
             foreach (var j in Js.Iter(near(c)))
             {
-                if (Js.NN(labels[Js.Idx(j)]) >= 0)
+                if (Js.NN(Js.Get(labels, j)) >= 0)
                 {
-                    removed.add(Js.NN(labels[Js.Idx(j)]));
+                    removed.add(Js.NN(Js.Get(labels, j)));
                 }
                 seeds.push(j);
             }
         }
         foreach (var r in Js.Iter(removed))
         {
-            foreach (var t in Js.Iter(Js.NN(old.rooms[Js.Idx(r)]).tiles))
+            foreach (var t in Js.Iter(Js.NN(Js.Get(old.rooms, r)).tiles))
             {
                 seeds.push(t);
             }
         }
         foreach (var j in Js.Iter(seeds))
         {
-            labels[Js.Idx(j)] = (tiles[Js.Idx(j)] == "floor") ? UNSEEN : NOT_FLOOR;
+            labels[Js.Idx(j)] = (Js.Get(tiles, j) == "floor") ? UNSEEN : NOT_FLOOR;
         }
         List<Room> fresh = [];
         foreach (var start in Js.Iter(seeds))
         {
-            if (labels[Js.Idx(start)] != UNSEEN)
+            if (Js.Get(labels, start) != UNSEEN)
             {
                 continue;
             }
@@ -400,7 +400,7 @@ public static partial class Rooms
                     outdoors = true;
                     break;
                 }
-                var i = Js.NN(region[Js.Idx(head)]);
+                var i = Js.NN(Js.Get(region, head));
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
                 if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
@@ -417,7 +417,7 @@ public static partial class Rooms
                     }
                     var n = (ny * width) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
-                    if (Js.T(((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge))))
+                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;
                     }
@@ -426,19 +426,19 @@ public static partial class Rooms
                         doorSet.add(n);
                         continue;
                     }
-                    if (tiles[Js.Idx(n)] == "door")
+                    if (Js.Get(tiles, n) == "door")
                     {
                         doorSet.add(n);
                     }
-                    if (tiles[Js.Idx(n)] == "water")
+                    if (Js.Get(tiles, n) == "water")
                     {
                         outdoors = true;
                     }
-                    if ((tiles[Js.Idx(n)] != "floor") || inRegion.has(n))
+                    if ((Js.Get(tiles, n) != "floor") || inRegion.has(n))
                     {
                         continue;
                     }
-                    if ((labels[Js.Idx(n)] != UNSEEN) && (labels[Js.Idx(n)] != OUTDOORS))
+                    if ((Js.Get(labels, n) != UNSEEN) && (Js.Get(labels, n) != OUTDOORS))
                     {
                         continue;
                     }
@@ -446,7 +446,7 @@ public static partial class Rooms
                     region.push(n);
                 }
             }
-            if (Js.T(outdoors))
+            if (outdoors)
             {
                 foreach (var i in Js.Iter(region))
                 {
@@ -472,7 +472,7 @@ public static partial class Rooms
             var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
-        var rooms = Js.ListOf(old.rooms.filter((r) => !removed.has(r.index)), fresh).sort((a, b) => Js.NN(a.tiles[Js.Idx(0)]) - Js.NN(b.tiles[Js.Idx(0)]));
+        var rooms = Js.ListOf(old.rooms.filter((r) => !removed.has(r.index)), fresh).sort((a, b) => Js.NN(Js.Get(a.tiles, 0)) - Js.NN(Js.Get(b.tiles, 0)));
         List<Room> @out = rooms.map((r, index) => Js.With(Js.Clone(r), __s3 => { __s3.index = index; }));
         foreach (var r in Js.Iter(@out))
         {

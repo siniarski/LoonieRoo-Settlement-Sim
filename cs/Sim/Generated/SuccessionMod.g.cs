@@ -20,7 +20,7 @@ public static partial class SuccessionMod
     /// <summary>Who could take over now, most resolved first.</summary>
     public static List<Survivor> heirs(SimState state)
     {
-        return state.survivors.filter((s) => (s.childUntil == null) && (s.resolve >= STEP_UP)).sort((a, b) => Js.Or(b.resolve - a.resolve, a.id.localeCompare(b.id)));
+        return state.survivors.filter((s) => (s.childUntil == null) && (s.resolve >= STEP_UP)).sort((a, b) => ((b.resolve - a.resolve) is var __or0 && Js.T(__or0) ? __or0 : a.id.localeCompare(b.id)));
     }
 
     /// <summary>Called as the survivor you control dies.</summary>
@@ -77,9 +77,9 @@ public static partial class SuccessionMod
     /// <summary>A new survivor far off, with something to swing and a bandage.</summary>
     public static Survivor? startAnew(SimState state, Point near)
     {
-        var __d0 = state.grid;
-        var width = __d0.width;
-        var height = __d0.height;
+        var __d1 = state.grid;
+        var width = __d1.width;
+        var height = __d1.height;
         var angle = (Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI) * 2;
         var dist = ANEW_MIN + (Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD);
         Point aim = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
@@ -97,7 +97,7 @@ public static partial class SuccessionMod
                     }
                     var x = aim.x + dx;
                     var y = aim.y + dy;
-                    if (Js.T((((((x >= 0) && (y >= 0)) && (x < width)) && (y < height)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y))))
+                    if ((((((x >= 0) && (y >= 0)) && (x < width)) && (y < height)) && (Grids.getTile(state.grid, x, y) == "floor")) && Grids.isWalkable(state.grid, x, y))
                     {
                         spot = new Point { x = Js.I(x), y = Js.I(y) };
                     }

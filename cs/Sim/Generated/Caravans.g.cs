@@ -56,7 +56,7 @@ public static partial class Caravans
         }
         foreach (var c in Js.Iter((list).ToList()))
         {
-            if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(ambushed(state, c))))
+            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && ambushed(state, c))
             {
                 continue;
             }
@@ -91,7 +91,7 @@ public static partial class Caravans
         {
             from.people = JsMath.max(0, from.people - 1);
         }
-        var heard = (c.to == "you") || (Js.T(from) && !Js.T(Settlements.isHostile(from)));
+        var heard = (c.to == "you") || (Js.T(from) && !Settlements.isHostile(from));
         if (c.people > 0)
         {
             if (Js.T(heard))
@@ -104,7 +104,7 @@ public static partial class Caravans
         {
             Events.logEvent(state, $"{Js.Str(from?.name ?? "A")} caravan never made it: the dead got them all near ({Js.Str(c.x)}, {Js.Str(c.y)})");
         }
-        var spot = Js.T(Grids.inBounds(state.grid, c.x, c.y)) ? Space.nearestTile(state.grid, c, (x, y) => Grids.isWalkable(state.grid, x, y), 50) : null;
+        var spot = Grids.inBounds(state.grid, c.x, c.y) ? Space.nearestTile(state.grid, c, (x, y) => Grids.isWalkable(state.grid, x, y), 50) : null;
         if (Js.T(spot))
         {
             foreach (var kind in Js.Iter(c.goods))
@@ -135,7 +135,7 @@ public static partial class Caravans
             {
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
-            var what = Js.Or(Js.ListOf((c.food > 0) ? ((List<string>)[$"{Js.Str(c.food)} food"]) : ((List<string>)[]), c.goods).join(", "), "nothing left");
+            var what = (Js.ListOf((c.food > 0) ? ((List<string>)[$"{Js.Str(c.food)} food"]) : ((List<string>)[]), c.goods).join(", ") is var __or0 && Js.T(__or0) ? __or0 : "nothing left");
             Events.logEvent(state, $"A caravan from {Js.Str(from?.name ?? "the neighbours")} reached you: {Js.Str(what)}");
             return;
         }
@@ -149,7 +149,7 @@ public static partial class Caravans
         {
             Settlements.tieSettlements(from, to, 10);
         }
-        if (!Js.T(Settlements.isHostile(to)))
+        if (!Settlements.isHostile(to))
         {
             Events.logEvent(state, $"A caravan from {Js.Str(from?.name ?? "somewhere")} reached {Js.Str(to.name)} with {Js.Str(c.food)} food");
         }

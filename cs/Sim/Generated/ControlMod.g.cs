@@ -47,7 +47,7 @@ public static partial class ControlMod
         double n = 0;
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (Js.T(((z.kind != "raider") && (state.tick >= z.staggerUntil)) && Js.T(Motion.inReach(s, z, Motion.REACH, state.grid))))
+            if (((z.kind != "raider") && (state.tick >= z.staggerUntil)) && Motion.inReach(s, z, Motion.REACH, state.grid))
             {
                 n++;
             }
@@ -111,16 +111,16 @@ public static partial class ControlMod
             {
                 c.facing = new Point { x = Js.I(c.dx), y = Js.I(c.dy) };
             }
-            var run = ((c.running == true) && !Js.T(c.sneaking)) && !Js.T(BodyMod.isWinded(s));
+            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s);
             if (Js.T(run))
             {
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
             var climb = Motion.inWindowFrame(state.grid, s.at);
-            var pct = ((double)((((double)(((JsMath.max(CLUTCHED_MIN, 100 - (CLUTCH_PCT * clutchedBy(state, s))) * ((Js.T(run) && !Js.T(climb)) ? BodyMod.RUN_PCT : 100)) * (Js.T(climb) ? 2 : 5))) / (5)) * (Js.T(c.sneaking) ? SNEAK_PCT : 100))) / (100));
+            var pct = ((double)((((double)(((JsMath.max(CLUTCHED_MIN, 100 - (CLUTCH_PCT * clutchedBy(state, s))) * ((Js.T(run) && !climb) ? BodyMod.RUN_PCT : 100)) * (climb ? 2 : 5))) / (5)) * (Js.T(c.sneaking) ? SNEAK_PCT : 100))) / (100));
             var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(state, s, s.pos))));
             var v = Motion.toward(c.dx, c.dy, JsMath.round(((double)((walk * pct)) / (10000))));
-            s.at = Motion.slide(state.grid, s.at, v.x, v.y, Js.T(Motion.fits(state.grid, s.at, "free")) ? "free" : "survivor");
+            s.at = Motion.slide(state.grid, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))
             {
@@ -142,14 +142,14 @@ public static partial class ControlMod
         {
             { sleepTick(state, s, c, busy); return; }
         }
-        if (!Js.T(Time.slowTick(state.tick)))
+        if (!Time.slowTick(state.tick))
         {
             return;
         }
         busy.progress += 1;
         if (busy.what == "repair")
         {
-            if (!Js.T(Handiwork.repairTick(state, busy.targetId)))
+            if (!Handiwork.repairTick(state, busy.targetId))
             {
                 return;
             }
@@ -232,7 +232,7 @@ public static partial class ControlMod
             return;
         }
         var crate = FurnitureMod.getFurniture(state, busy.targetId);
-        if ((!Js.T(crate) || (crate.loot <= 0)) || !Js.T(nextTo(s.pos, crate)))
+        if ((!Js.T(crate) || (crate.loot <= 0)) || !nextTo(s.pos, crate))
         {
             return;
         }
@@ -265,7 +265,7 @@ public static partial class ControlMod
             s.note = "woken by an attack!";
             return;
         }
-        if (!Js.T(Time.slowTick(state.tick)))
+        if (!Time.slowTick(state.tick))
         {
             return;
         }
@@ -315,13 +315,13 @@ public static partial class ControlMod
         }
         c.busy = null;
         var near = zombieToHit(state, s.at, swingDir(c));
-        var wait = Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY) + (Js.T(BodyMod.isWinded(s)) ? BodyMod.WINDED_WAIT : 0);
-        if (Js.T(Js.T(near) && Js.T(Resolve.freezes(state, s))))
+        var wait = Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY) + (BodyMod.isWinded(s) ? BodyMod.WINDED_WAIT : 0);
+        if (Js.T(near) && Resolve.freezes(state, s))
         {
             c.nextSwing = state.tick + wait;
             return "froze";
         }
-        if (Js.T(Js.T(near) && Js.T(BodyMod.panicMiss(state, s))))
+        if (Js.T(near) && BodyMod.panicMiss(state, s))
         {
             c.nextSwing = state.tick + wait;
             c.swungTick = state.tick;
@@ -334,12 +334,12 @@ public static partial class ControlMod
             c.swungTick = state.tick;
             BodyMod.exert(s, BodyMod.SWING_COST);
             Noise.makeNoise(state, s.pos, "fighting");
-            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0));
-            var winded = Js.T(BodyMod.isWinded(s)) ? JsMath.round(((double)((full * BodyMod.WINDED_DAMAGE_PCT)) / (100))) : full;
+            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            var winded = BodyMod.isWinded(s) ? JsMath.round(((double)((full * BodyMod.WINDED_DAMAGE_PCT)) / (100))) : full;
             var unaware = (near.kind != "raider") && (near.targetId != s.id);
             var blow = Js.T(unaware) ? JsMath.round(((double)((winded * SNEAK_ATTACK_PCT)) / (100))) : winded;
-            var killed = Zombies.damageZombie(state, near, Js.T(Power.inLight(state, s.pos)) ? JsMath.round(((double)((blow * Power.LIGHT_DAMAGE_PCT)) / (100))) : blow, s);
-            if (Js.T(killed))
+            var killed = Zombies.damageZombie(state, near, Power.inLight(state, s.pos) ? JsMath.round(((double)((blow * Power.LIGHT_DAMAGE_PCT)) / (100))) : blow, s);
+            if (killed)
             {
                 Weapons.wearWeapon(state, s);
             }
@@ -347,7 +347,7 @@ public static partial class ControlMod
             {
                 Zombies.knockBack(state, near, s.at);
             }
-            return Js.T(killed) ? (Js.T(unaware) ? "killed it before it knew you were there" : "killed it") : (Js.T(unaware) ? "hit it from behind" : "hit it");
+            return killed ? (Js.T(unaware) ? "killed it before it knew you were there" : "killed it") : (Js.T(unaware) ? "hit it from behind" : "hit it");
         }
         var person = residentToHit(state, s.at, swingDir(c));
         if (Js.T(person))
@@ -356,12 +356,12 @@ public static partial class ControlMod
             c.swungTick = state.tick;
             Noise.makeNoise(state, s.pos, "fighting");
             var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
-            return Js.T(Residents.hitResident(state, person, blow, s)) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
+            return Residents.hitResident(state, person, blow, s) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
-        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => Js.T((((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, a.pos)))) : null);
+        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, a.pos)) : null);
         if (Js.T(deer))
         {
-            var shot = !Js.T(Motion.inReach(deer, s, Motion.SWING_REACH));
+            var shot = !Motion.inReach(deer, s, Motion.SWING_REACH);
             c.nextSwing = state.tick + (Js.T(shot) ? Weapons.GUN_EVERY : Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY));
             if (Js.T(shot))
             {
@@ -372,7 +372,7 @@ public static partial class ControlMod
         }
         var gun = Weapons.loadedGun(state, s);
         var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
-        if (Js.T(((Js.T(Js.T(gun) && Js.T(shotAt))) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, shotAt.pos))))
+        if (((Js.T(Js.T(gun) && Js.T(shotAt))) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, shotAt.pos))
         {
             var blocking = inTheWay(state, s, shotAt.pos);
             if (Js.T(blocking))
@@ -382,8 +382,8 @@ public static partial class ControlMod
             c.nextSwing = state.tick + Weapons.GUN_EVERY;
             gun.wear -= 1;
             Noise.makeNoise(state, s.pos, "gunfire");
-            var dmg = Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Js.T(Skills.hasTrait(s, "hardened")) ? Skills.HARDENED_DAMAGE : 0));
-            return Js.T(Zombies.damageZombie(state, shotAt, dmg, s)) ? "shot it dead" : "shot it";
+            var dmg = Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            return Zombies.damageZombie(state, shotAt, dmg, s) ? "shot it dead" : "shot it";
         }
         var pane = paneInFront(state, s.pos, target, c.facing);
         if (Js.T(pane))
@@ -404,13 +404,13 @@ public static partial class ControlMod
     /// <summary>An unboarded window on the edge between you and the tile you swung at (if it's next to you), else the tile you face; facing a corner, either side of it.</summary>
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
-        var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
+        var face = nextTo(from, target) ? (towards(from, target) ?? facing) : facing;
         List<Point> steps = ((face.x != 0) && (face.y != 0)) ? ((List<Point>)new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } }) : ((List<Point>)[face]);
         foreach (var d in Js.Iter(steps))
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
             var e = Grids.edgeBetween(state.grid, from.x, from.y, to.x, to.y);
-            if (((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(e))
+            if (((e >= 0) && (Js.Get(state.grid.edges, e) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(e))
             {
                 return new PaneInFrontResult { edge = e, to = to };
             }
@@ -474,7 +474,7 @@ public static partial class ControlMod
         {
             return Vehicles.leaveVehicle(state, s);
         }
-        if (Js.T(Js.T(s.move) || !Js.T(nextTo(s.pos, target))))
+        if (Js.T(Js.T(s.move) || !nextTo(s.pos, target)))
         {
             return null;
         }
@@ -500,7 +500,7 @@ public static partial class ControlMod
             return edgeDoor;
         }
         var pane = Grids.edgeBetween(state.grid, s.pos.x, s.pos.y, target.x, target.y);
-        if (((pane >= 0) && (state.grid.edges[Js.Idx(pane)] == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(pane))
+        if (((pane >= 0) && (Js.Get(state.grid.edges, pane) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(pane))
         {
             Breach.smashGlass(state, pane);
             TimelineMod.maybeAlarm(state, target, pane);
@@ -509,10 +509,10 @@ public static partial class ControlMod
         if (Grids.getTile(state.grid, target.x, target.y) == "door")
         {
             var was = Grids.isOpen(state.grid, target.x, target.y);
-            return Commands.toggleDoor(state, target.x, target.y) ?? (Js.T(was) ? "closed the door" : "opened the door");
+            return Commands.toggleDoor(state, target.x, target.y) ?? (was ? "closed the door" : "opened the door");
         }
         var item = Items.itemAt(state, target.x, target.y);
-        var carriedRemedy = (Js.T(Js.T(s.carrying) && Js.T(Space.samePoint(target, s.pos)))) ? Items.getItem(state, s.carrying) : null;
+        var carriedRemedy = (Js.T(s.carrying) && Space.samePoint(target, s.pos)) ? Items.getItem(state, s.carrying) : null;
         var remedy = new[] { item, carriedRemedy }.ToList().find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
         if (Js.T(remedy))
         {
@@ -542,7 +542,7 @@ public static partial class ControlMod
         var bed = FurnitureMod.furnitureAt(state, target.x, target.y);
         if ((bed?.kind == "decor") && (bed.look == "oven"))
         {
-            if (!Js.T(TimelineMod.powerOn(state)))
+            if (!TimelineMod.powerOn(state))
             {
                 return "the oven's dead: no power";
             }
@@ -555,7 +555,7 @@ public static partial class ControlMod
             return "cooking";
         }
         var sleepable = (bed?.kind == "bed") || ((bed?.kind == "decor") && (((bed.look == "bed") || (bed.look == "cot")) || (bed.look == "sofa")));
-        if (Js.T((Js.T(Js.T(bed) && Js.T(sleepable))) && Js.T(Space.samePoint(bed, s.pos))))
+        if ((Js.T(Js.T(bed) && Js.T(sleepable))) && Space.samePoint(bed, s.pos))
         {
             return lieDown(s, c, bed.id);
         }
@@ -572,10 +572,10 @@ public static partial class ControlMod
             Items.dropItem(state, carried, target);
             return $"put down the {Js.Str(carried.kind)}";
         }
-        if (Js.T(Space.samePoint(target, s.pos)))
+        if (Space.samePoint(target, s.pos))
         {
             var why = Handiwork.canForage(state, s);
-            if (Js.T(Js.T(Time.isNight(state.tick)) || ((s.rest < Rest.TIRED) && ((why != null) || (s.satiety >= Food.HUNGRY)))))
+            if (Time.isNight(state.tick) || ((s.rest < Rest.TIRED) && ((why != null) || (s.satiety >= Food.HUNGRY))))
             {
                 return lieDown(s, c, "floor");
             }
@@ -597,7 +597,7 @@ public static partial class ControlMod
         {
             return "not while moving";
         }
-        if (!Js.T(nextTo(s.pos, target)))
+        if (!nextTo(s.pos, target))
         {
             return "too far to reach";
         }
@@ -633,8 +633,8 @@ public static partial class ControlMod
             c.busy = new ControlBusy { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
             return "eating";
         }
-        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Js.T(Clothing.isGarment(item.kind)) ? Clothing.SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
-        if (Js.T((slot == "carrying") && Js.T(Inventory.fitsInPack(state, s, item))))
+        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
+        if ((slot == "carrying") && Inventory.fitsInPack(state, s, item))
         {
             Inventory.stow(state, s, item);
             return $"put the {Js.Str(item.kind)} in your bag";

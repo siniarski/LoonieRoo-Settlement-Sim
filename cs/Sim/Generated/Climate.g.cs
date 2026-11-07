@@ -45,16 +45,16 @@ public static partial class Climate
         var night = Time.isNight(state.tick);
         if (climate == "cold")
         {
-            return Js.T(((season == "winter") || (Js.T(night) && (season == "autumn"))) || (Js.T(Js.T(night) && Js.T(state.settings.winter))));
+            return Js.T(((season == "winter") || (night && (season == "autumn"))) || (Js.T(night && Js.T(state.settings.winter))));
         }
-        return Js.T(Js.T(night) && (Js.T((season == "winter") || Js.T(state.settings.winter))));
+        return Js.T(night && (Js.T((season == "winter") || Js.T(state.settings.winter))));
     }
     public static bool regionCold(SimState state, double x, double y) => regionCold(state, (int)x, (int)y);
 
     /// <summary>Summer days in the hot south: thirst comes twice as fast.</summary>
     public static bool scorching(SimState state, int x, int y)
     {
-        return ((Seasons.seasonOf(state.tick) == "summer") && !Js.T(Time.isNight(state.tick))) && (climateAt(state, x, y) == "hot");
+        return ((Seasons.seasonOf(state.tick) == "summer") && !Time.isNight(state.tick)) && (climateAt(state, x, y) == "hot");
     }
     public static bool scorching(SimState state, double x, double y) => scorching(state, (int)x, (int)y);
 
@@ -77,7 +77,7 @@ public static partial class Climate
     /// <summary>Every RAD_EVERY ticks in a hot spot: health, and the thought of it.</summary>
     public static void updateRadiation(SimState state, Survivor s)
     {
-        if (((state.tick % RAD_EVERY) != 0) || !Js.T(isRadioactive(state, s.pos.x, s.pos.y)))
+        if (((state.tick % RAD_EVERY) != 0) || !isRadioactive(state, s.pos.x, s.pos.y))
         {
             return;
         }

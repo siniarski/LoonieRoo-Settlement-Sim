@@ -51,7 +51,7 @@ public static partial class FireMod
     public static bool burnable(SimState state, int x, int y)
     {
         var t = Grids.getTile(state.grid, x, y);
-        if (Js.T(Defences.isReinforced(state, x, y)))
+        if (Defences.isReinforced(state, x, y))
         {
             return false;
         }
@@ -62,11 +62,11 @@ public static partial class FireMod
     /// <summary>Sets a tile alight. Returns false if it can't burn (water, already alight, too many fires).</summary>
     public static bool ignite(SimState state, int x, int y)
     {
-        if (Js.T((Js.T((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y)))) || (state.fires.length >= MAX_FIRES)))
+        if (Js.T((Js.T((!Grids.inBounds(state.grid, x, y) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y)))) || (state.fires.length >= MAX_FIRES)))
         {
             return false;
         }
-        state.fires.push(new() { x = Js.I(x), y = Js.I(y), left = Js.T(burnable(state, x, y)) ? FIRE_BURN : GROUND_BURN });
+        state.fires.push(new() { x = Js.I(x), y = Js.I(y), left = burnable(state, x, y) ? FIRE_BURN : GROUND_BURN });
         return true;
     }
     public static bool ignite(SimState state, double x, double y) => ignite(state, (int)x, (int)y);
@@ -113,18 +113,18 @@ public static partial class FireMod
                 Zombies.removeZombie(state, z);
                 Corpses.leaveCorpse(state, z.pos, null);
             }
-            if (Js.T(((state.tick % SPREAD_EVERY) == 0) && Js.T(burnable(state, f.x, f.y))))
+            if (((state.tick % SPREAD_EVERY) == 0) && burnable(state, f.x, f.y))
             {
                 foreach (var n in Js.Iter(Grids.neighbours4(state.grid, f.x, f.y)))
                 {
                     var chance = (state.weather == "heatwave") ? (2 * SPREAD_CHANCE) : SPREAD_CHANCE;
-                    if ((Js.T(burnable(state, n.x, n.y)) && !Js.T(fireAt(state, n.x, n.y))) && (Hash.hashRoll(n.x, n.y, state.tick) < chance))
+                    if ((burnable(state, n.x, n.y) && !Js.T(fireAt(state, n.x, n.y))) && (Hash.hashRoll(n.x, n.y, state.tick) < chance))
                     {
                         ignite(state, n.x, n.y);
                     }
                 }
             }
-            f.left -= Js.T(wet) ? 2 : 1;
+            f.left -= wet ? 2 : 1;
             if (f.left <= 0)
             {
                 burnOut(state, f);

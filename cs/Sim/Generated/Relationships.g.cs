@@ -31,7 +31,7 @@ public static partial class Relationships
 
     public static double opinion(Survivor of, Survivor about)
     {
-        return Js.Q(of.opinions[Js.Idx(about.id)], 0);
+        return Js.Q(Js.Get(of.opinions, about.id), 0);
     }
 
     public static void adjust(Survivor of, Survivor about, int by)
@@ -52,8 +52,8 @@ public static partial class Relationships
         {
             for (var j = i + 1; j < awake.length; j++)
             {
-                var a = Js.NN(awake[Js.Idx(i)]);
-                var b = Js.NN(awake[Js.Idx(j)]);
+                var a = Js.NN(Js.Get(awake, i));
+                var b = Js.NN(Js.Get(awake, j));
                 if (Space.manhattan(a.pos, b.pos) > NEAR)
                 {
                     continue;
@@ -67,7 +67,7 @@ public static partial class Relationships
     /// <summary>A breakdown begins: lash out at the nearest awake survivor; a rival hits back.</summary>
     public static void lashOut(SimState state, Survivor s)
     {
-        var target = state.survivors.filter((o) => ((o != s) && !Js.T(Js.T(o.sleep?.asleep))) && (Space.manhattan(o.pos, s.pos) <= 5)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos))[Js.Idx(0)];
+        var target = Js.Get(state.survivors.filter((o) => ((o != s) && !Js.T(Js.T(o.sleep?.asleep))) && (Space.manhattan(o.pos, s.pos) <= 5)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)), 0);
         if (!Js.T(target))
         {
             return;

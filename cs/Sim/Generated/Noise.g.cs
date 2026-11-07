@@ -19,7 +19,7 @@ public static partial class Noise
 
     public static void makeNoise(SimState state, Point p, string kind)
     {
-        var r = NOISE[Js.Idx(kind)];
+        var r = Js.Get(NOISE, kind);
         var woke = wakeDormantNear(state, (d) => Space.manhattan(d, p) <= r);
         if (woke > 0)
         {
@@ -65,7 +65,7 @@ public static partial class Noise
         double woke = 0;
         foreach (var d in Js.Iter((state.dormant).ToList()))
         {
-            if (!Js.T(near(d)))
+            if (!near(d))
             {
                 continue;
             }
@@ -75,7 +75,7 @@ public static partial class Noise
             }
             state.dormant.splice(state.dormant.indexOf(d), 1);
             var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
-            if (!Js.T(p) || !Js.T(Grids.inBounds(state.grid, p.x, p.y)))
+            if (!Js.T(p) || !Grids.inBounds(state.grid, p.x, p.y))
             {
                 continue;
             }

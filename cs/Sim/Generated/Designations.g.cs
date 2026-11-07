@@ -50,26 +50,26 @@ public static partial class Designations
         if (Js.T(bp.side))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
-            if (Js.T((bp.target == "barricade") && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(e)]))))
+            if ((bp.target == "barricade") && Grids.isWindow(Js.Get(state.grid.edges, e)))
             {
                 return !state.grid.edgeBoarded.includes(e);
             }
-            return state.grid.edges[Js.Idx(e)] == Grids.EDGE_NONE;
+            return Js.Get(state.grid.edges, e) == Grids.EDGE_NONE;
         }
         if (bp.target == "floor")
         {
-            return Js.T(hasRemovable(state, bp.x, bp.y));
+            return hasRemovable(state, bp.x, bp.y);
         }
         if (bp.target == "reinforce")
         {
-            return Js.T(Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y))) && !state.grid.reinforced.includes((bp.y * state.grid.width) + bp.x);
+            return Breach.isStructure(Grids.getTile(state.grid, bp.x, bp.y)) && !state.grid.reinforced.includes((bp.y * state.grid.width) + bp.x);
         }
         return (Grids.getTile(state.grid, bp.x, bp.y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, bp.x, bp.y));
     }
 
     public static Blueprint addBlueprint(SimState state, int x, int y, string target, string? side = default)
     {
-        Blueprint bp = new Blueprint { id = $"b{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = BUILD_WORK[Js.Idx(target)] };
+        Blueprint bp = new Blueprint { id = $"b{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), target = target, needsMaterial = target != "floor", delivered = false, workDone = 0, workRequired = Js.Get(BUILD_WORK, target) };
         if (Js.T(side))
         {
             bp.side = side;
@@ -101,7 +101,7 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if (Js.T((Js.T(bp.side) && (bp.target == "barricade")) && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))]))))
+        if ((Js.T(bp.side) && (bp.target == "barricade")) && Grids.isWindow(Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
             if (!state.grid.edgeBoarded.includes(e))
@@ -114,7 +114,7 @@ public static partial class Designations
         }
         if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade")))
         {
-            if (Js.T(Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE))))
+            if (Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE)))
             {
                 state.walkabilityVersion += 1;
             }
@@ -126,7 +126,7 @@ public static partial class Designations
             case "door":
             case "barricade":
                 {
-                    if (Js.T(Grids.setTile(state.grid, bp.x, bp.y, bp.target)))
+                    if (Grids.setTile(state.grid, bp.x, bp.y, bp.target))
                     {
                     state.walkabilityVersion += 1;
                 }
@@ -187,7 +187,7 @@ public static partial class Designations
                     {
                         FurnitureMod.removeFurniture(state, f);
                     }
-                    else if (Js.T(Grids.setTile(state.grid, bp.x, bp.y, "floor")))
+                    else if (Grids.setTile(state.grid, bp.x, bp.y, "floor"))
                     {
                         state.walkabilityVersion += 1;
                     }
@@ -203,7 +203,7 @@ public static partial class Designations
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            var onIt = Js.Or(Space.samePoint(s.pos, tile), (s.move != null) && Js.T(Space.samePoint(s.move.to, tile)));
+            var onIt = Space.samePoint(s.pos, tile) || ((s.move != null) && Space.samePoint(s.move.to, tile));
             if (!Js.T(onIt))
             {
                 continue;

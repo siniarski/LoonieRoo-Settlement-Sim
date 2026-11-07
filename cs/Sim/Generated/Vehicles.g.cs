@@ -160,7 +160,7 @@ public static partial class Vehicles
         }
         v.driverId = null;
         v.speed = 0;
-        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => ((x != v.pos.x) || (y != v.pos.y)) && Js.T(Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
+        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => ((x != v.pos.x) || (y != v.pos.y)) && Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free")) ?? v.pos;
         s.at = Motion.centre(spot);
         s.pos = spot;
         return "got out";
@@ -226,11 +226,11 @@ public static partial class Vehicles
 
     public static void move(SimState state, Survivor s, Vehicle v)
     {
-        var (cx, cy) = Js.NN(HEADING_DIRS[Js.Idx(v.heading)]);
+        var (cx, cy) = Js.NN(Js.Get(HEADING_DIRS, v.heading));
         Point want = new Point { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
-        var to = (Js.T(((into.x != v.pos.x) || (into.y != v.pos.y)) && Js.T(blocked(state, into)))) ? v.at : slid;
+        var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && blocked(state, into)) ? v.at : slid;
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
@@ -258,7 +258,7 @@ public static partial class Vehicles
                 continue;
             }
             var killed = Zombies.damageZombie(state, z, JsMath.abs(v.speed) * RAM_DAMAGE, s);
-            if (!Js.T(killed))
+            if (!killed)
             {
                 Zombies.knockBack(state, z, v.at);
             }
@@ -274,7 +274,7 @@ public static partial class Vehicles
     /// <summary>Top speed here: the truck is slower; off the road, slower still.</summary>
     public static double topSpeed(SimState state, Vehicle v)
     {
-        var ground = Js.At(Grids.GROUNDS, Js.NN(state.grid.ground[Js.Idx((v.pos.y * state.grid.width) + v.pos.x)]), "grass");
+        var ground = Js.At(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, (v.pos.y * state.grid.width) + v.pos.x)), "grass");
         var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
     }
@@ -347,6 +347,6 @@ public static partial class Vehicles
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)
     {
-        return Js.T(((Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p))) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS)));
+        return ((Grids.getTile(state.grid, p.x, p.y) == "floor") && !blocked(state, p)) && Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS);
     }
 }

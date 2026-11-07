@@ -490,9 +490,12 @@ public class JsRecord<V> : Dictionary<string, V>
 }
 
 /// <summary>JavaScript's Map: insertion-ordered.</summary>
+/// <summary>A JS Map/Set key: any value, null too (C# dictionaries take no null key).</summary>
+readonly record struct JsKey<K>(K? Value);
+
 public class JsMap<K, V> where K : notnull
 {
-    readonly Dictionary<K, LinkedListNode<(K key, V value)>> index = new();
+    readonly Dictionary<JsKey<K>, LinkedListNode<(K key, V value)>> index = new();
     readonly LinkedList<(K key, V value)> order = new();
 
     public JsMap() { }
@@ -502,17 +505,17 @@ public class JsMap<K, V> where K : notnull
     }
 
     public int size => index.Count;
-    public bool has(K k) => index.ContainsKey(k);
-    public V get(K k) => index.TryGetValue(k, out var n) ? n.Value.value : default!;
+    public bool has(K k) => index.ContainsKey(new(k));
+    public V get(K k) => index.TryGetValue(new(k), out var n) ? n.Value.value : default!;
     public JsMap<K, V> set(K k, V v)
     {
-        if (index.TryGetValue(k, out var n)) n.Value = (k, v);
-        else index[k] = order.AddLast((k, v));
+        if (index.TryGetValue(new(k), out var n)) n.Value = (k, v);
+        else index[new(k)] = order.AddLast((k, v));
         return this;
     }
     public bool delete(K k)
     {
-        if (!index.Remove(k, out var n)) return false;
+        if (!index.Remove(new(k), out var n)) return false;
         order.Remove(n);
         return true;
     }
@@ -533,7 +536,7 @@ public class JsMap<K, V> where K : notnull
 /// <summary>JavaScript's Set: insertion-ordered.</summary>
 public class JsSet<T> : IEnumerable<T> where T : notnull
 {
-    readonly Dictionary<T, LinkedListNode<T>> index = new();
+    readonly Dictionary<JsKey<T>, LinkedListNode<T>> index = new();
     readonly LinkedList<T> order = new();
 
     public JsSet() { }
@@ -543,15 +546,15 @@ public class JsSet<T> : IEnumerable<T> where T : notnull
     }
 
     public int size => index.Count;
-    public bool has(T x) => index.ContainsKey(x);
+    public bool has(T x) => index.ContainsKey(new(x));
     public JsSet<T> add(T x)
     {
-        if (!index.ContainsKey(x)) index[x] = order.AddLast(x);
+        if (!index.ContainsKey(new(x))) index[new(x)] = order.AddLast(x);
         return this;
     }
     public bool delete(T x)
     {
-        if (!index.Remove(x, out var n)) return false;
+        if (!index.Remove(new(x), out var n)) return false;
         order.Remove(n);
         return true;
     }
@@ -648,8 +651,8 @@ public static partial class Js
     public static string ToFixed(double x, int digits) => Math.Round(x, digits, MidpointRounding.AwayFromZero).ToString("F" + digits, CultureInfo.InvariantCulture);
 
     /// <summary>x >>> n</summary>
-    public static int Ushr(int x, int n) => (int)((uint)x >> n);
-    public static double Ushr(double x, int n) => (double)(ToUint32(x) >> n);
+    public static double Ushr(int x, int n) => (double)((uint)x >> (n & 31));
+    public static double Ushr(double x, double n) => (double)(ToUint32(x) >> (ToInt32(n) & 31));
     // The bitwise operators: on whole numbers as they are; on JS numbers through ToInt32, as JS does.
     public static int Shr(int x, int n) => x >> n;
     public static int Shr(double x, double n) => ToInt32(x) >> ToInt32(n);
@@ -790,6 +793,16 @@ public static partial class Js
     public static int? I(double? d) => d is double v ? (int)v : null;
 
     /// <summary>A computed index (list[i], record[key]): a whole number for lists, as JS arrays read them.</summary>
+    /// <summary>a[i] read: what's there, or the default (JS's undefined) for an index outside the list or not whole.</summary>
+    public static T Get<T>(List<T> a, double i) => i >= 0 && i < a.Count && i == Math.Floor(i) ? a[(int)i] : default!;
+    public static T Get<T>(List<T> a, int i) => (uint)i < (uint)a.Count ? a[i] : default!;
+    public static T Get<T>(T[] a, double i) => i >= 0 && i < a.Length && i == Math.Floor(i) ? a[(int)i] : default!;
+    public static T Get<T>(IReadOnlyList<T> a, double i) => i >= 0 && i < a.Count && i == Math.Floor(i) ? a[(int)i] : default!;
+    public static double Get<T>(TypedArray<T> a, double i) where T : struct => a[i];
+    public static V Get<V>(Dictionary<string, V> r, string k) => r.TryGetValue(k, out var v) ? v : default!;
+    public static V Get<V>(Dictionary<string, V> r, double k) => Get(r, Str(k));
+    public static string? Get(string s, double i) => i >= 0 && i < s.Length && i == Math.Floor(i) ? s[(int)i].ToString() : null;
+
     public static int Idx(int i) => i;
     public static int Idx(double d) => (int)d;
     public static string Idx(string s) => s;
@@ -860,4 +873,33 @@ public static partial class Js
     public static List<string> ObjectKeys<V>(Dictionary<string, V> r) => r.Keys.ToList();
     public static List<V> ObjectValues<V>(Dictionary<string, V> r) => r.Values.ToList();
     public static List<(string, V)> ObjectEntries<V>(Dictionary<string, V> r) => r.Select(kv => (kv.Key, kv.Value)).ToList();
+}
+
+/// <summary>A JS regular expression literal, on .NET's Regex: ECMAScript behaviour (ASCII \d, \w, \s) unless the
+/// u flag asks for Unicode (\p{L}); g replaces every match, else only the first.</summary>
+public sealed class JsRegExp
+{
+    public readonly System.Text.RegularExpressions.Regex re;
+    public readonly bool global;
+
+    public JsRegExp(string pattern, string flags)
+    {
+        global = flags.Contains('g');
+        var opts = System.Text.RegularExpressions.RegexOptions.CultureInvariant;
+        if (flags.Contains('i')) opts |= System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+        if (flags.Contains('m')) opts |= System.Text.RegularExpressions.RegexOptions.Multiline;
+        if (!flags.Contains('u') && !flags.Contains('i')) opts |= System.Text.RegularExpressions.RegexOptions.ECMAScript;
+        re = new System.Text.RegularExpressions.Regex(pattern, opts);
+    }
+
+    public bool test(string s) => re.IsMatch(s);
+}
+
+public static class JsRegExpExtensions
+{
+    extension(string s)
+    {
+        public string replace(JsRegExp r, string to) => r.global ? r.re.Replace(s, to) : r.re.Replace(s, to, 1);
+        public string replaceAll(JsRegExp r, string to) => r.re.Replace(s, to);
+    }
 }

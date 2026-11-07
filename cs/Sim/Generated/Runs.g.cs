@@ -68,7 +68,7 @@ public static partial class Runs
         }
         foreach (var r in Js.Iter((list).ToList()))
         {
-            if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(caught(state, r))))
+            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && caught(state, r))
             {
                 continue;
             }
@@ -117,7 +117,7 @@ public static partial class Runs
         var height = __d0.height;
         foreach (var n in Js.Iter(state.settlements))
         {
-            if (Js.T((Js.T(Js.T(Colonies.isFallen(n)) || (n.people < RUN_MIN_HOME))) || runsOf(state).some((r) => r.from == n.id)))
+            if ((Colonies.isFallen(n) || (n.people < RUN_MIN_HOME)) || runsOf(state).some((r) => r.from == n.id))
             {
                 continue;
             }
@@ -137,7 +137,7 @@ public static partial class Runs
             n.people -= people;
             state.runs ??= [];
             state.runs.push(new() { id = $"sr{Js.Str(day)}x{Js.Str(Hash.idNumber(n.id))}", from = n.id, x = Js.I(n.x), y = Js.I(n.y), home = new Point { x = Js.I(n.x), y = Js.I(n.y) }, ruin = ruin, people = people, phase = "out", untilTick = 0, nextStepTick = state.tick + RUN_STEP, food = 0, met = false });
-            if (!Js.T(Settlements.isHostile(n)))
+            if (!Settlements.isHostile(n))
             {
                 Events.logEvent(state, $"{Js.Str(people)} from {Js.Str(n.name)} went out scavenging towards ({Js.Str(ruin.x)}, {Js.Str(ruin.y)})");
             }
@@ -154,8 +154,8 @@ public static partial class Runs
         }
         r.people -= 1;
         var n = Settlements.getSettlement(state, r.from);
-        var heard = Js.T(n) && !Js.T(Settlements.isHostile(n));
-        var spot = Js.T(Grids.inBounds(state.grid, r.x, r.y)) ? Space.nearestTile(state.grid, r, (x, y) => Grids.isWalkable(state.grid, x, y), 60) : null;
+        var heard = Js.T(n) && !Settlements.isHostile(n);
+        var spot = Grids.inBounds(state.grid, r.x, r.y) ? Space.nearestTile(state.grid, r, (x, y) => Grids.isWalkable(state.grid, x, y), 60) : null;
         if (Js.T(spot))
         {
             Corpses.leaveCorpse(state, spot, $"a scavenger from {Js.Str(n?.name ?? "somewhere")}");
@@ -195,7 +195,7 @@ public static partial class Runs
         }
         r.met = true;
         var n = Settlements.getSettlement(state, r.from);
-        if (Js.T(!Js.T(n) || Js.T(Settlements.isHostile(n))))
+        if (!Js.T(n) || Settlements.isHostile(n))
         {
             return;
         }
@@ -217,7 +217,7 @@ public static partial class Runs
         }
         n.people += r.people;
         n.food += r.food;
-        if (!Js.T(Settlements.isHostile(n)))
+        if (!Settlements.isHostile(n))
         {
             Events.logEvent(state, $"{Js.Str(n.name)}'s scavengers came home with {Js.Str(r.food)} food");
         }

@@ -43,8 +43,8 @@ public static partial class Sight
     /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
     public static bool opaque(Grid grid, int x, int y)
     {
-        var t = grid.tiles[Js.Idx(Grids.tileIndex(grid, x, y))];
-        return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Js.T(Grids.isOpen(grid, x, y)));
+        var t = Js.Get(grid.tiles, Grids.tileIndex(grid, x, y));
+        return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Grids.isOpen(grid, x, y));
     }
     public static bool opaque(Grid grid, double x, double y) => opaque(grid, (int)x, (int)y);
 
@@ -53,14 +53,14 @@ public static partial class Sight
     {
         bool clear(double px, double py, double qx, double qy)
         {
-            return Js.T(Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy)));
+            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
         }
         if ((ax == bx) || (ay == by))
         {
-            return Js.T(clear(ax, ay, bx, by));
+            return clear(ax, ay, bx, by);
         }
-        var viaX = (Js.T(Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by)))) && !Js.T(opaque(grid, bx, ay));
-        var viaY = (Js.T(Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)))) && !Js.T(opaque(grid, ax, by));
+        var viaX = (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) && !opaque(grid, bx, ay);
+        var viaY = (clear(ax, ay, ax, by) && clear(ax, by, bx, by)) && !opaque(grid, ax, by);
         return Js.T(Js.T(viaX) || Js.T(viaY));
     }
     public static bool stepSeen(Grid grid, double ax, double ay, double bx, double by) => stepSeen(grid, (int)ax, (int)ay, (int)bx, (int)by);
@@ -68,8 +68,8 @@ public static partial class Sight
     /// <summary>Can someone at `a` see `b`? (The far end may be a wall: you see the wall.)</summary>
     public static bool sightLine(Grid grid, Point a, Point b)
     {
-        var x = a.x;
-        var y = a.y;
+        double x = a.x;
+        double y = a.y;
         var dx = JsMath.abs(b.x - a.x);
         var dy = -JsMath.abs(b.y - a.y);
         var sx = (a.x < b.x) ? 1 : -1;
@@ -90,11 +90,11 @@ public static partial class Sight
                 err += dx;
                 y += sy;
             }
-            if (!Js.T(stepSeen(grid, px, py, x, y)))
+            if (!stepSeen(grid, px, py, x, y))
             {
                 return false;
             }
-            if (Js.T(((x != b.x) || (y != b.y)) && Js.T(opaque(grid, x, y))))
+            if (((x != b.x) || (y != b.y)) && opaque(grid, x, y))
             {
                 return false;
             }
@@ -114,7 +114,7 @@ public static partial class Sight
                 {
                     continue;
                 }
-                if (Js.T(Js.T(overWalls) || Js.T(sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) }))))
+                if (Js.T(Js.T(overWalls) || sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) })))
                 {
                     @out.push((y * grid.width) + x);
                 }
@@ -126,8 +126,8 @@ public static partial class Sight
     /// <summary>How far a survivor sees: less at night (unless the lights are on indoors: timeline.ts); more from a tower, or with the vigilant trait.</summary>
     public static double sightRadius(SimState state, Survivor s)
     {
-        var @base = Js.T(Towers.onTower(state, s)) ? Towers.TOWER_SIGHT : ((Js.T(Time.isNight(state.tick)) && !Js.T(TimelineMod.mainsLit(state, s.pos))) ? NIGHT_SIGHT : SIGHT_RADIUS);
-        return @base + (Js.T(Skills.hasTrait(s, "vigilant")) ? Skills.VIGILANT_SIGHT : 0);
+        var @base = Towers.onTower(state, s) ? Towers.TOWER_SIGHT : ((Time.isNight(state.tick) && !TimelineMod.mainsLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS);
+        return @base + (Skills.hasTrait(s, "vigilant") ? Skills.VIGILANT_SIGHT : 0);
     }
 
     /// <summary>What a survivor sees now (tile indices): from a tower, everything in range.</summary>
@@ -147,18 +147,18 @@ public static partial class Sight
     {
         var c = (state.control?.survivorId == s.id) ? state.control : null;
         var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (((c.dx == 0) && (c.dy == 0)) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD)));
-        return Js.T(Skills.hasTrait(s, "graceful")) ? JsMath.floor(((double)(@base) / (2))) : (Js.T(Skills.hasTrait(s, "clumsy")) ? JsMath.round(((double)((@base * 3)) / (2))) : @base);
+        return Skills.hasTrait(s, "graceful") ? JsMath.floor(((double)(@base) / (2))) : (Skills.hasTrait(s, "clumsy") ? JsMath.round(((double)((@base * 3)) / (2))) : @base);
     }
 
     /// <summary>Can a zombie at `z` see a survivor at `s` (`sneaking`: half as far)?</summary>
     public static bool zombieSees(SimState state, Point z, Point s, bool sneaking = false)
     {
-        var r = ((double)((Js.T(Time.isNight(state.tick)) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
+        var r = ((double)((Time.isNight(state.tick) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
         if (((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2))) > (r * r))
         {
             return false;
         }
-        return Js.T(Js.T(Grids.inBounds(state.grid, s.x, s.y)) && Js.T(sightLine(state.grid, z, s)));
+        return Grids.inBounds(state.grid, s.x, s.y) && sightLine(state.grid, z, s);
     }
 
     public static readonly JsMap<SimState, SeenEntry> seen = new JsMap<SimState, SeenEntry>();
@@ -188,7 +188,7 @@ public static partial class Sight
         {
             foreach (var i in Js.Iter(sightOf(state, s)))
             {
-                if (mask[Js.Idx(i)] == 0)
+                if (Js.Get(mask, i) == 0)
                 {
                     mask[Js.Idx(i)] = 1;
                     set.push(i);

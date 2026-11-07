@@ -167,7 +167,7 @@ public static partial class Animals
     /// <summary>A step from one tile to the next that an animal can take (no walls between).</summary>
     public static bool canStep(SimState state, Point a, Point b)
     {
-        return Js.T(Js.T(ground(state, b.x, b.y)) && Js.T(Pathfinding.crossable(state.grid, a.x, a.y, b.x, b.y, "zombie")));
+        return ground(state, b.x, b.y) && Pathfinding.crossable(state.grid, a.x, a.y, b.x, b.y, "zombie");
     }
 
     public static void updateAnimals(SimState state)
@@ -197,7 +197,7 @@ public static partial class Animals
                 state.animals.splice(state.animals.indexOf(a), 1);
                 continue;
             }
-            if (Js.T((a.hunger != null) && Js.T(Time.slowTick(state.tick))))
+            if ((a.hunger != null) && Time.slowTick(state.tick))
             {
                 a.hunger += 1;
             }
@@ -211,7 +211,7 @@ public static partial class Animals
                 a.pos = a.move.to;
                 a.move = null;
             }
-            if (!Js.T(ground(state, a.pos.x, a.pos.y)) && !Js.T(offGround(state, a)))
+            if (!ground(state, a.pos.x, a.pos.y) && !offGround(state, a))
             {
                 continue;
             }
@@ -246,20 +246,20 @@ public static partial class Animals
 
     public static void step(Animal a, Point to, /*TODO param type*/object? pace = null)
     {
-        pace ??= PACE[Js.Idx(a.kind)];
+        pace ??= Js.Get(PACE, a.kind);
         a.move = new Movement { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = (double)pace };
     }
 
     /// <summary>The neighbour that's furthest from (or nearest to) a point, of those an animal can step to.</summary>
     public static Point? stepAway(SimState state, Animal a, Point from, bool toward = false)
     {
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => Js.T(canStep(state, a.pos, p)));
+        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => canStep(state, a.pos, p));
         if (options.length == 0)
         {
             return null;
         }
         options.sort((p, q) => Js.T(toward) ? (Space.manhattan(p, from) - Space.manhattan(q, from)) : (Space.manhattan(q, from) - Space.manhattan(p, from)));
-        return Js.NN(options[Js.Idx(0)]);
+        return Js.NN(Js.Get(options, 0));
     }
 
     public static void wander(SimState state, Animal a, double every)
@@ -268,10 +268,10 @@ public static partial class Animals
         {
             return;
         }
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => Js.T(canStep(state, a.pos, p)));
+        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => canStep(state, a.pos, p));
         if (options.length > 0)
         {
-            step(a, Js.NN(options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]));
+            step(a, Js.NN(Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))));
         }
     }
 
@@ -281,13 +281,13 @@ public static partial class Animals
         {
             return;
         }
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => Js.T(ground(state, p.x, p.y)));
+        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => ground(state, p.x, p.y));
         if (options.length == 0)
         {
             return;
         }
         var near = state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= DEER_WARY);
-        var to = Js.T(near) ? Js.NN(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos))[Js.Idx(0)]) : Js.NN(options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length))]);
+        var to = Js.T(near) ? Js.NN(Js.Get(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos)), 0)) : Js.NN(Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(a.id), state.tick) * options.length)));
         step(a, to);
     }
 
@@ -309,7 +309,7 @@ public static partial class Animals
     public static void predator(SimState state, Animal a)
     {
         var hp = Js.Q(a.health, 0);
-        var hurt = hp < (HEALTH[Js.Idx(a.kind)] * 0.3);
+        var hurt = hp < (Js.Get(HEALTH, a.kind) * 0.3);
         var nearest = closestSurvivor(state, a.pos);
         if ((Js.T(Js.T(hurt) && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
@@ -363,7 +363,7 @@ public static partial class Animals
         var to = stepAway(state, a, target.pos, true);
         if (Js.T(to))
         {
-            step(a, to, (a.kind == "wolf") ? WOLF_SPRINT : PACE[Js.Idx(a.kind)]);
+            step(a, to, (a.kind == "wolf") ? WOLF_SPRINT : Js.Get(PACE, a.kind));
         }
     }
 
@@ -493,7 +493,7 @@ public static partial class Animals
             {
                 spawnNear(state, s.pos, "rabbit", roll(2), roll(3));
             }
-            var wolfChance = (WOLF_CHANCE * (Js.T(Time.isNight(state.tick)) ? 2 : 1)) * (Js.T(winter) ? 2 : 1);
+            var wolfChance = (WOLF_CHANCE * (Time.isNight(state.tick) ? 2 : 1)) * (Js.T(winter) ? 2 : 1);
             if (((k == 0) && (near("wolf", 60).length == 0)) && (roll(4) < wolfChance))
             {
                 var lead = spawnNear(state, s.pos, "wolf", roll(5), roll(6));
@@ -501,7 +501,7 @@ public static partial class Animals
                 {
                     for (var n = 1; n < WOLF_PACK; n++)
                     {
-                        var p = Space.nearestTile(state.grid, lead.pos, (x, y) => Js.T(ground(state, x, y)) && !state.animals.some((o) => (o.pos.x == x) && (o.pos.y == y)), 50);
+                        var p = Space.nearestTile(state.grid, lead.pos, (x, y) => ground(state, x, y) && !state.animals.some((o) => (o.pos.x == x) && (o.pos.y == y)), 50);
                         if (Js.T(p))
                         {
                             addAnimal(state, "wolf", p.x, p.y, lead.id);
@@ -540,7 +540,7 @@ public static partial class Animals
             {
                 continue;
             }
-            var p = Space.nearestTile(state.grid, a.pos, (x, y) => Js.T(ground(state, x, y)) && !((x == a.pos.x) && (y == a.pos.y)), 30);
+            var p = Space.nearestTile(state.grid, a.pos, (x, y) => ground(state, x, y) && !((x == a.pos.x) && (y == a.pos.y)), 30);
             if (Js.T(p))
             {
                 addAnimal(state, "rabbit", p.x, p.y);
@@ -561,7 +561,7 @@ public static partial class Animals
         {
             return state.survivors.every((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);
         }
-        var p = Space.nearestTile(state.grid, want, (x, y) => ((Js.T(Js.T(ground(state, x, y)) && Js.T(clear(x, y)))) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.animals.some((o) => (o.pos.x == x) && (o.pos.y == y)), 200);
+        var p = Space.nearestTile(state.grid, want, (x, y) => ((ground(state, x, y) && clear(x, y)) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.animals.some((o) => (o.pos.x == x) && (o.pos.y == y)), 200);
         return Js.T(p) ? addAnimal(state, kind, p.x, p.y) : null;
     }
 }

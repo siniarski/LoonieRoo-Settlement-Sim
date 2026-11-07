@@ -43,7 +43,7 @@ public static partial class Herds
         {
             startHerd(state);
         }
-        var warnRadius = Js.T(Towers.hasTower(state)) ? (WARN_RADIUS * Towers.TOWER_WARN_FACTOR) : WARN_RADIUS;
+        var warnRadius = Towers.hasTower(state) ? (WARN_RADIUS * Towers.TOWER_WARN_FACTOR) : WARN_RADIUS;
         foreach (var h in Js.Iter((state.herds).ToList()))
         {
             if (!Js.T(h.heard) && state.survivors.some((s) => Space.manhattan(s.pos, h) <= warnRadius))
@@ -131,7 +131,7 @@ public static partial class Herds
         }
         var ns = ((JsMath.abs(dy) * 2) < JsMath.abs(dx)) ? "" : ((dy < 0) ? "north" : "south");
         var ew = ((JsMath.abs(dx) * 2) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
-        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
+        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (ns is var __or1 && Js.T(__or1) ? __or1 : ew);
     }
     public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
 
@@ -145,8 +145,8 @@ public static partial class Herds
     {
         state.herds.splice(state.herds.indexOf(h), 1);
         var n = JsMath.min(h.size, Zombies.MAX_ZOMBIES - state.zombies.length);
-        var __d1 = state.grid;
-        var width = __d1.width;
+        var __d2 = state.grid;
+        var width = __d2.width;
         var taken = Js.Set(state.zombies.map((z) => (z.pos.y * width) + z.pos.x));
         bool free(double x, double y)
         {
@@ -215,7 +215,7 @@ public static partial class Herds
         }
         foreach (var d in Js.Iter((state.dormant).ToList()))
         {
-            if (!Js.T(near(d)))
+            if (!near(d))
             {
                 continue;
             }
@@ -225,7 +225,7 @@ public static partial class Herds
             }
             state.dormant.splice(state.dormant.indexOf(d), 1);
             var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
-            if (!Js.T(p) || !Js.T(Grids.inBounds(state.grid, p.x, p.y)))
+            if (!Js.T(p) || !Grids.inBounds(state.grid, p.x, p.y))
             {
                 continue;
             }

@@ -41,7 +41,7 @@ public static partial class Farming
 
     public static double growTicks(FarmPlot plot)
     {
-        return CROPS[Js.Idx(plot.crop)].grow;
+        return Js.Get(CROPS, plot.crop).grow;
     }
 
     public static bool isRipe(FarmPlot plot)
@@ -52,7 +52,7 @@ public static partial class Farming
     /// <summary>Does this plot need a survivor right now (to sow, or to harvest)?</summary>
     public static bool needsWork(FarmPlot plot)
     {
-        return Js.T(!Js.T(plot.planted) || Js.T(isRipe(plot)));
+        return !Js.T(plot.planted) || isRipe(plot);
     }
 
     public static FarmPlot addPlot(SimState state, int x, int y, string crop = "potato")
@@ -90,7 +90,7 @@ public static partial class Farming
     /// <summary>The harvest: the crop's yield on the plot.</summary>
     public static void harvest(SimState state, FarmPlot plot)
     {
-        var crop = CROPS[Js.Idx(plot.crop)];
+        var crop = Js.Get(CROPS, plot.crop);
         for (var n = 0; n < crop.yield; n++)
         {
             Items.spawnItem(state, crop.item, plot.x, plot.y);
@@ -102,7 +102,7 @@ public static partial class Farming
     /// <summary>Crops grow every tick (as the season allows, or always in a greenhouse); plots whose tile stopped being floor are lost. Coops lay.</summary>
     public static void updateFarm(SimState state)
     {
-        if (!Js.T(Time.slowTick(state.tick)))
+        if (!Time.slowTick(state.tick))
         {
             return;
         }

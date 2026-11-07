@@ -46,7 +46,7 @@ public static partial class Escape
     public static void updateHelicopter(SimState state)
     {
         var eg = state.endgame;
-        if (!Js.T(eg.helicopter) || !Js.T(Time.isNight(state.tick)))
+        if (!Js.T(eg.helicopter) || !Time.isNight(state.tick))
         {
             return;
         }
@@ -64,13 +64,13 @@ public static partial class Escape
     /// <summary>Everyone aboard: a fresh world (same settings, solo start, a new seed), and you in it with what you carried. Pure: makes a new state from the old one.</summary>
     public static SimState newGamePlus(SimState old, double seed)
     {
-        var you = old.survivors.find((s) => s.id == old.control?.survivorId) ?? old.survivors[Js.Idx(0)];
+        var you = old.survivors.find((s) => s.id == old.control?.survivorId) ?? Js.Get(old.survivors, 0);
         var state = Worldgen.createWorld(seed, old.world?.size ?? Worldgen.WORLD_SIZE, Js.With(Js.Clone(old.settings), __s0 => { __s0.start = "solo"; }));
         if (!Js.T(you))
         {
             return state;
         }
-        var fresh = Js.NN(state.survivors[Js.Idx(0)]);
+        var fresh = Js.NN(Js.Get(state.survivors, 0));
         state.items = state.items.filter((i) => i.carriedBy != fresh.id);
         var ids = new JsMap<string, string>();
         foreach (var id in Js.Iter(carried(you)))

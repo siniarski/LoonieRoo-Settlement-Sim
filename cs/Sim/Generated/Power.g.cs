@@ -75,16 +75,16 @@ public static partial class Power
     /// <summary>Lamps that are lit right now.</summary>
     public static List<Furniture> litLamps(SimState state)
     {
-        if (!Js.T(Time.isNight(state.tick)))
+        if (!Time.isNight(state.tick))
         {
             return (List<Furniture>)[];
         }
-        return FurnitureMod.ofKind(state, "lamp").filter((f) => Js.T(isPowered(state, f)));
+        return FurnitureMod.ofKind(state, "lamp").filter((f) => isPowered(state, f));
     }
 
     public static bool inLight(SimState state, Point p)
     {
-        return Js.T(Js.T(TimelineMod.mainsLit(state, p)) || litLamps(state).some((l) => Space.manhattan(l, p) <= LAMP_LIGHT));
+        return TimelineMod.mainsLit(state, p) || litLamps(state).some((l) => Space.manhattan(l, p) <= LAMP_LIGHT);
     }
 
     /// <summary>Generators burn fuel while they have something to power. Every tick.</summary>
@@ -96,7 +96,7 @@ public static partial class Power
             {
                 continue;
             }
-            var load = CONSUMERS.some((kind) => (Js.T((kind != "lamp") || Js.T(Time.isNight(state.tick)))) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
+            var load = CONSUMERS.some((kind) => ((kind != "lamp") || Time.isNight(state.tick)) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
             if (!Js.T(load))
             {
                 continue;
@@ -129,7 +129,7 @@ public static partial class Power
     /// <summary>Heaters burn on cold nights (winter, or a blizzard).</summary>
     public static void updateHeaters(SimState state)
     {
-        var cold = Js.T(Time.isNight(state.tick)) && ((Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard"));
+        var cold = Time.isNight(state.tick) && ((Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard"));
         if (!Js.T(cold))
         {
             return;
@@ -141,7 +141,7 @@ public static partial class Power
                 continue;
             }
             h.loot += 1;
-            if (Js.T((((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, h.x, h.y))))
+            if ((((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE)) && FireMod.ignite(state, h.x, h.y))
             {
                 Events.logEvent(state, $"The heater at ({Js.Str(h.x)}, {Js.Str(h.y)}) set something alight!");
             }
@@ -172,7 +172,7 @@ public static partial class Power
         }
         var rate = ((season == "summer") ? 2 : 1) + ((state.weather == "heatwave") ? 1 : 0);
         var stores = Rooms.completeRooms(state, "storage");
-        List<Furniture> fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
+        List<Furniture> fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => isPowered(state, f)), .. FurnitureMod.ofKind(state, "crate").filter((f) => TimelineMod.isMainsFridge(state, f))];
         double rotted = 0;
         foreach (var item in Js.Iter((state.items).ToList()))
         {

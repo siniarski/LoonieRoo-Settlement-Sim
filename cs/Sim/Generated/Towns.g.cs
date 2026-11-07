@@ -33,7 +33,7 @@ public static partial class Towns
             kinds.push(((size >= 384) && (r < 0.2)) ? "city" : ((r < 0.6) ? "town" : "village"));
         }
         JsRecord<double> order = new() { ["city"] = 0, ["town"] = 1, ["village"] = 2 };
-        return kinds.sort((a, b) => order[Js.Idx(a)] - order[Js.Idx(b)]);
+        return kinds.sort((a, b) => Js.Get(order, a) - Js.Get(order, b));
     }
 
     /// <summary>A coarse map of the land (every 4 tiles): 0 open, 1 forest, 2 water.</summary>
@@ -47,7 +47,7 @@ public static partial class Towns
             {
                 var x = (i * 4) + 2;
                 var y = (j * 4) + 2;
-                g[Js.Idx((j * N) + i)] = Js.T(NatureMod.isWater(n, x, y)) ? 2 : (Js.T(NatureMod.isForest(n, x, y)) ? 1 : 0);
+                g[Js.Idx((j * N) + i)] = NatureMod.isWater(n, x, y) ? 2 : (NatureMod.isForest(n, x, y) ? 1 : 0);
             }
         }
         return g;
@@ -60,7 +60,7 @@ public static partial class Towns
         var kinds = townKinds(n.seed, n.size);
         kinds.forEach((kind, i) =>
         {
-            var (lo, hi) = RADII[Js.Idx(kind)];
+            var (lo, hi) = Js.Get(RADII, kind);
             var radius = JsMath.min(JsMath.floor(n.size * 0.19), lo + JsMath.floor(NatureMod.roll(n.seed, i, 2, 0x7102) * ((hi - lo) + 1)));
             SiteTownsBest? best = null;
             var margin = radius + 3;
@@ -87,7 +87,7 @@ public static partial class Towns
                         for (var k = JsMath.max(0, JsMath.floor(((double)((x - reach)) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)((x + reach)) / (4)))); k++)
                         {
                             var d = JsMath.sqrt((JsMath.pow((((k * 4) + 2) - x), 2)) + (JsMath.pow((((j * 4) + 2) - y), 2)));
-                            var c = Js.NN(land[Js.Idx((j * N) + k)]);
+                            var c = Js.NN(Js.Get(land, (j * N) + k));
                             if (d <= radius)
                             {
                                 inside++;
@@ -139,9 +139,9 @@ public static partial class Towns
         {
             return NatureMod.roll(n.seed, t.x, t.y, 0x7200 + k);
         }
-        /*TODO return type*/object blocked(double x, double y)
+        bool blocked(double x, double y)
         {
-            return Js.Or(Js.Or(((((x < 3) || (y < 3)) || (x >= (n.size - 4))) || (y >= (n.size - 4))) || Js.T(NatureMod.isWater(n, x, y)), NatureMod.isWater(n, x + 1, y + 1)), NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
+            return ((((((x < 3) || (y < 3)) || (x >= (n.size - 4))) || (y >= (n.size - 4))) || NatureMod.isWater(n, x, y)) || NatureMod.isWater(n, x + 1, y + 1)) || NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3);
         }
         var laid = new JsSet<double>();
         bool isStreet(double x, double y)
@@ -150,7 +150,7 @@ public static partial class Towns
         }
         double run(double x, double y, double dx, double dy, double len, bool main)
         {
-            if (Js.T(Js.T(blocked(x, y)) || Js.T(isStreet(x, y))))
+            if (blocked(x, y) || isStreet(x, y))
             {
                 return 0;
             }
@@ -159,7 +159,7 @@ public static partial class Towns
             {
                 for (var o = 2; o <= 9; o++)
                 {
-                    if (Js.T(Js.T(isStreet(sx + (px * o), sy + (py * o))) || Js.T(isStreet(sx - (px * (o - 1)), sy - (py * (o - 1))))))
+                    if (isStreet(sx + (px * o), sy + (py * o)) || isStreet(sx - (px * (o - 1)), sy - (py * (o - 1))))
                     {
                         return true;
                     }
@@ -171,16 +171,16 @@ public static partial class Towns
             {
                 var nx = x + (dx * (steps + 1));
                 var ny = y + (dy * (steps + 1));
-                if (Js.T(Js.T(blocked(nx, ny)) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > (t.radius * 1.05))))
+                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > (t.radius * 1.05)))
                 {
                     break;
                 }
-                if (Js.T(Js.T(isStreet(nx, ny)) || Js.T(isStreet(nx + px, ny + py))))
+                if (isStreet(nx, ny) || isStreet(nx + px, ny + py))
                 {
                     steps++;
                     break;
                 }
-                if (Js.T((steps >= 2) && Js.T(crowded(nx, ny))))
+                if ((steps >= 2) && crowded(nx, ny))
                 {
                     break;
                 }

@@ -111,7 +111,7 @@ public static partial class EndgameMod
         }
         if (eg.evacuation == null)
         {
-            if (((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Js.T(Radio.hasRadio(state))) || !FurnitureMod.ofKind(state, "beacon").some((f) => Js.T(Power.isPowered(state, f))))
+            if (((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Radio.hasRadio(state)) || !FurnitureMod.ofKind(state, "beacon").some((f) => Power.isPowered(state, f)))
             {
                 return;
             }

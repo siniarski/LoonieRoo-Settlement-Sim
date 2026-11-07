@@ -19,7 +19,7 @@ public static partial class Arena
     {
         var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.Clone(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
         state.settlements = [];
-        var you = Js.NN(state.survivors[Js.Idx(0)]).pos;
+        var you = Js.NN(Js.Get(state.survivors, 0)).pos;
         var count = (kind == "one") ? 1 : CROWD_SIZE;
         var radius = (kind == "one") ? 5 : 8;
         for (var i = 0; i < count; i++)
@@ -45,7 +45,7 @@ public static partial class Arena
                 {
                     var x = p.x + dx;
                     var y = p.y + dy;
-                    if (Js.T((Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y))))
+                    if ((Grids.getTile(state.grid, x, y) == "floor") && Grids.isWalkable(state.grid, x, y))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }

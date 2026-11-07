@@ -434,6 +434,8 @@ function translate(mod) {
     if (e.type === 'UnaryExpression') return e.operator === '!';
     if (e.type === 'Literal') return typeof e.value === 'boolean';
     if (e.type === 'ParenthesizedExpression') return isBoolish(e.expression);
+    if (e.type === 'CallExpression' && exprType(e) === 'bool') return true;
+    if (e.type === 'Identifier' && exprType(e) === 'bool') return true;
     if (e.type === 'CallExpression' && e.callee.type === 'MemberExpression' && !e.callee.computed) return ['some', 'every', 'includes', 'has', 'startsWith', 'endsWith', 'isInteger', 'isFinite', 'isNaN', 'delete'].includes(e.callee.property.name);
     return false;
   }
@@ -772,7 +774,7 @@ function translate(mod) {
         if (typeof e.value === 'number' && e.__double && Number.isInteger(e.value)) return `${e.value}.0`;
         if (typeof e.value === 'number') return num(e.value, e.raw);
         if (typeof e.value === 'boolean') return String(e.value);
-        if (e.regex) return `/*TODO regex ${e.raw}*/null`;
+        if (e.regex) return `new JsRegExp(${str(e.regex.pattern)}, ${str(e.regex.flags)})`;
         return `/*TODO literal*/null`;
       case 'Identifier': {
         const n = e.name;
@@ -835,7 +837,7 @@ function translate(mod) {
         if (e.operator === '~') return `Js.BitNot(${ex(e.argument)})`;
         return `/*TODO unary ${e.operator}*/`;
       }
-      case 'UpdateExpression': { const a = e.argument.type === 'TSNonNullExpression' ? e.argument.expression : e.argument; return e.prefix ? `${e.operator}${ex(a)}` : `${ex(a)}${e.operator}`; }
+      case 'UpdateExpression': { const a = e.argument.type === 'TSNonNullExpression' ? e.argument.expression : e.argument; a.__lhs = true; return e.prefix ? `${e.operator}${ex(a)}` : `${ex(a)}${e.operator}`; }
       case 'BinaryExpression': {
         const op = e.operator;
         const l = operand(e.left);
@@ -862,7 +864,10 @@ function translate(mod) {
         if (e.operator === '??' && e.left.type === 'MemberExpression' && e.left.computed) return `Js.At(${ex(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
         if (e.operator === '??') return `${operand(e.left)} ?? ${operand(e.right)}`;
         if (!bool && e.operator === '&&' && !isBoolish(e.right) && !isBoolish(e.left) && !['int', 'double', 'string', 'bool'].includes(strip(exprType(e.left)) ?? 'x')) return `(${ex(e.left, true)} ? ${operand(e.right)} : null)`;
-        if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) return `Js.Or(${ex(e.left)}, ${ex(e.right)})`;
+        if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) {
+          const v = `__or${tmp++}`;
+          return `(${operand(e.left)} is var ${v} && Js.T(${v}) ? ${v} : ${operand(e.right)})`;
+        }
         return `${operand(e.left, true)} ${e.operator} ${operand(e.right, true)}`;
       }
       case 'ConditionalExpression': {
@@ -871,6 +876,8 @@ function translate(mod) {
         return `${operand(e.test, true)} ? ${operand(e.consequent)} : ${operand(e.alternate)}`;
       }
       case 'AssignmentExpression': {
+        e.left.__lhs = true;
+        if (e.left.type === 'TSNonNullExpression') e.left.expression.__lhs = true;
         if (e.left.type === 'TSNonNullExpression') return ex({ ...e, left: e.left.expression }, bool);
         if (e.operator === '=' && e.right.type === 'ObjectExpression' && e.left.type === 'Identifier' && classFields.has(strip(typeOf(e.left.name)) ?? '')) e.right.__class = strip(typeOf(e.left.name));
         if (e.operator === '=' && e.right.type === 'ObjectExpression' && e.left.type === 'MemberExpression' && !e.left.computed) {
@@ -882,12 +889,13 @@ function translate(mod) {
         }
         if (e.operator === '=' && e.left.type === 'MemberExpression' && e.left.computed && fieldByKey(e.left)) return `Js.SetProp(${operand(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
         if (e.right.type === 'ArrowFunctionExpression' && e.left.type === 'MemberExpression' && !e.left.computed) e.right.__arity = fieldArity(e.left.property.name);
+        if (e.left.type === 'ArrayPattern') for (const x of e.left.elements) if (x) x.__lhs = true;
         if (e.left.type === 'ArrayPattern' && e.left.elements.every((x) => x && x.type !== 'RestElement')) {
           const l = `(${e.left.elements.map((x) => ex(x)).join(', ')})`;
           return e.right.type === 'ArrayExpression' ? `${l} = (${e.right.elements.map((x) => ex(x)).join(', ')})` : `${l} = ${ex(e.right)}`;
         }
         if (e.left.type === 'ObjectPattern' || e.left.type === 'ArrayPattern') return `/*TODO destructuring assignment*/`;
-        if (e.operator === '||=') return `${ex(e.left)} = Js.Or(${ex(e.left)}, ${ex(e.right)})`;
+        if (e.operator === '||=') return `${ex(e.left)} = (Js.T(${ex(e.left)}) ? ${ex(e.left)} : ${operand(e.right)})`;
         if (e.operator === '&&=') return `/*TODO &&=*/`;
         if (e.operator === '/=') return `${ex(e.left)} = ((double)(${ex(e.left)}) / (${ex(e.right)}))`;
         if (e.operator === '>>>=') return `${ex(e.left)} = Js.Ushr(${ex(e.left)}, ${ex(e.right)})`;
@@ -903,7 +911,8 @@ function translate(mod) {
         if (e.computed && e.property.type === 'Literal' && typeof e.property.value === 'number' && /^\(/.test(strip(exprType(e.object)) ?? '')) return `${obj}${q}.Item${e.property.value + 1}`;
         if (e.computed && e.object.type === 'ArrayExpression' && literalType(e.object)) return `new ${literalType(e.object)} { ${e.object.elements.map((x) => ex(x)).join(', ')} }[Js.Idx(${ex(e.property)})]`;
         if (e.computed && e.object.type === 'ObjectExpression' && e.object.properties.every((x) => x.type === 'Property' && !x.computed && (strip(exprType(x.value)) === 'string' || (x.value.type === 'ConditionalExpression' && strip(exprType(x.value.consequent)) === 'string')))) return `new JsRecord<string> { ${e.object.properties.map((x) => `[${str(String(x.key.name ?? x.key.value))}] = ${ex(x.value)}`).join(', ')} }[Js.Str(${ex(e.property)})]`;
-        if (e.computed) return `${obj}${q}[Js.Idx(${ex(e.property)})]`;
+        // A read by index: JS's undefined past the end (C# would throw). Writes use the indexer.
+        if (e.computed) return e.__lhs || q ? `${obj}${q}[Js.Idx(${ex(e.property)})]` : `Js.Get(${obj}, ${ex(e.property)})`;
         const name = e.property.name;
         // Math.PI and friends.
         if (e.object.type === 'Identifier' && !imports.has(e.object.name)) {
@@ -1302,6 +1311,21 @@ function translate(mod) {
   // Statements.
   function block(b, ind, ctx) {
     pushScope(namesIn(b.body));
+    if (!b.__assigns) {
+      const assigns = new Map();
+      const walk = (n) => {
+        if (!n || typeof n !== 'object') return;
+        if (Array.isArray(n)) return n.forEach(walk);
+        if (n.type === 'AssignmentExpression' && n.left.type === 'Identifier') {
+          if (!assigns.has(n.left.name)) assigns.set(n.left.name, []);
+          assigns.get(n.left.name).push(n);
+        }
+        for (const k in n) if (k !== 'type' && !k.startsWith('__') && typeof n[k] === 'object') walk(n[k]);
+      };
+      walk(b.body);
+      b.__assigns = assigns;
+    }
+    scopes[scopes.length - 1].assigns = b.__assigns;
     const lines = [`${ind.slice(4)}{`];
     for (const s of b.body) lines.push(...stmt(s, ind, ctx));
     lines.push(`${ind.slice(4)}}`);
@@ -1361,6 +1385,13 @@ function translate(mod) {
     // A let that starts as a whole number from a field (x, w...) and isn't named like an index: a JS number, which may not stay whole.
     const intish = (x) => (x.type === 'Identifier' && exprType(x) === 'int') || (x.type === 'Literal' && Number.isInteger(x.value)) || (x.type === 'MemberExpression' && !x.computed && INT_FIELDS.has(x.property.name)) || (x.type === 'ConditionalExpression' && intish(x.consequent) && intish(x.alternate)) || (x.type === 'BinaryExpression' && ['+', '-', '*'].includes(x.operator) && intish(x.left) && intish(x.right));
     if (kind === 'let' && !INT_NAMES.has(name) && intish(init)) return 'double';
+    if (kind === 'let' && !INT_NAMES.has(name) && ['int', 'double'].includes(exprType(init) ?? '')) return 'double';
+    // A whole-number let (a counter, say) later given something that may not be whole: a JS number.
+    if (kind === 'let' && (exprType(init) === 'int' || (init.type === 'Literal' && Number.isInteger(init.value)) || (init.type === 'CallExpression' && init.callee.type === 'MemberExpression' && init.callee.object.name === 'Math'))) {
+      const later = scopes[scopes.length - 1]?.assigns?.get(name) ?? [];
+      const whole = (x) => x.type === 'Literal' ? Number.isInteger(x.value) : exprType(x) === 'int' || (x.type === 'BinaryExpression' && ['+', '-', '*', '%'].includes(x.operator) && whole(x.left) && whole(x.right)) || (x.type === 'Identifier' && x.name === name);
+      if (later.some((a) => !['+=', '-=', '='].includes(a.operator) ? true : !whole(a.right))) return 'double';
+    }
     return 'var';
   }
 

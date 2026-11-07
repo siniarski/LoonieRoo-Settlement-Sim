@@ -38,7 +38,7 @@ public static partial class Seasons
 
     public static string seasonOf(int tick)
     {
-        return Js.NN(SEASONS[Js.Idx(JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length)]);
+        return Js.NN(Js.Get(SEASONS, JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length));
     }
     public static string seasonOf(double tick) => seasonOf((int)tick);
 
@@ -65,14 +65,14 @@ public static partial class Seasons
     /// <summary>Lightning strikes something that burns near a survivor (a hash picks what).</summary>
     public static void lightning(SimState state)
     {
-        var s = state.survivors[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 1) * state.survivors.length))];
+        var s = Js.Get(state.survivors, JsMath.floor(Hash.hashRoll(state.tick, 1) * state.survivors.length));
         if (!Js.T(s))
         {
             return;
         }
-        var targets = state.furniture.filter((f) => ((JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y)) <= 20) && !Js.T(Rooms.isIndoors(state, f.x, f.y)));
-        var t = targets[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 2) * targets.length))];
-        if (Js.T(Js.T(t) && Js.T(FireMod.ignite(state, t.x, t.y))))
+        var targets = state.furniture.filter((f) => ((JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y)) <= 20) && !Rooms.isIndoors(state, f.x, f.y));
+        var t = Js.Get(targets, JsMath.floor(Hash.hashRoll(state.tick, 2) * targets.length));
+        if (Js.T(t) && FireMod.ignite(state, t.x, t.y))
         {
             Events.logEvent(state, $"Lightning struck a {Js.Str(t.kind)} at ({Js.Str(t.x)}, {Js.Str(t.y)})!");
         }
@@ -81,14 +81,14 @@ public static partial class Seasons
     /// <summary>A winter night (any night, in a nuclear winter), or a blizzard.</summary>
     public static bool coldOutside(SimState state)
     {
-        return Js.T((Js.T((Js.T((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))) && Js.T(Time.isNight(state.tick)))) || (state.weather == "blizzard"));
+        return ((Js.T((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))) && Time.isNight(state.tick)) || (state.weather == "blizzard");
     }
 
     /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>
     public static bool isCold(SimState state, Survivor s)
     {
-        var cold = Js.T(state.world) ? (Js.T(Climate.regionCold(state, s.pos.x, s.pos.y)) || (state.weather == "blizzard")) : coldOutside(state);
-        return ((Js.T(cold) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Clothing.wearing(state, s, "coat"))) && !Js.T(Power.isWarmed(state, s.pos));
+        var cold = Js.T(state.world) ? (Climate.regionCold(state, s.pos.x, s.pos.y) || (state.weather == "blizzard")) : coldOutside(state);
+        return ((Js.T(cold) && !Rooms.isIndoors(state, s.pos.x, s.pos.y)) && !Js.T(Clothing.wearing(state, s, "coat"))) && !Power.isWarmed(state, s.pos);
     }
 
     /// <summary>Dawn's weather roll, and the weather's effect on people outdoors. Runs every tick.</summary>
@@ -126,7 +126,7 @@ public static partial class Seasons
                 s.health = JsMath.max(0, s.health - 1);
                 s.lastHurtBy = "the cold";
             }
-            if (Js.T((!Js.T(coldNight) && !Js.T(soaking)) || Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))))
+            if ((!coldNight && !soaking) || Rooms.isIndoors(state, s.pos.x, s.pos.y))
             {
                 continue;
             }

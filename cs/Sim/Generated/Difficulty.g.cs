@@ -49,30 +49,30 @@ public static partial class Difficulty
 
     public static double eventChance(SimState state, double @base)
     {
-        return JsMath.min(0.6, @base * Js.NN(EVENT_SCALE[Js.Idx(state.settings.weather)]));
+        return JsMath.min(0.6, @base * Js.NN(Js.Get(EVENT_SCALE, state.settings.weather)));
     }
 
     public static double coldEvery(SimState state)
     {
-        return Js.NN(COLD_EVERY[Js.Idx(state.settings.weather)]);
+        return Js.NN(Js.Get(COLD_EVERY, state.settings.weather));
     }
 
     public static double crateLoot(SimState state, double loot)
     {
-        return JsMath.max(1, JsMath.round(loot * Js.NN(LOOT_SCALE[Js.Idx(state.settings.progression)])));
+        return JsMath.max(1, JsMath.round(loot * Js.NN(Js.Get(LOOT_SCALE, state.settings.progression))));
     }
 
     public static double ruinDecay(SimState state)
     {
-        return Js.NN(RUIN_DECAY[Js.Idx(state.settings.progression)]);
+        return Js.NN(Js.Get(RUIN_DECAY, state.settings.progression));
     }
 
     /// <summary>Something found while scavenging: weapons and clothing come worn, the later it is since the outbreak.</summary>
     public static Item spawnFind(SimState state, string kind, int x, int y)
     {
         var item = Items.spawnItem(state, kind, x, y);
-        var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Js.T(Clothing.isGarment(kind)) ? Clothing.GARMENT_LIFE[Js.Idx(kind)] : 0);
-        item.wear = JsMath.floor(life * Js.NN(FOUND_WEAR[Js.Idx(state.settings.progression)]));
+        var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Clothing.isGarment(kind) ? Js.Get(Clothing.GARMENT_LIFE, kind) : 0);
+        item.wear = JsMath.floor(life * Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)));
         return item;
     }
     public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, (int)x, (int)y);
@@ -88,7 +88,7 @@ public static partial class Difficulty
         {
             return (JsNumber.isInteger(n) && ((Js.Num(n)) >= 0)) && ((Js.Num(n)) < max);
         }
-        return (((Js.T((Js.T((((((Js.Eq(s["start"], "group")) || (Js.Eq(s["start"], "solo"))) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length)))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length)))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((Js.Eq(s["dayScale"], 1)) || (Js.Eq(s["dayScale"], 2))) || (Js.Eq(s["dayScale"], 3)))) && MAP_TYPES.some((__p0) =>
+        return (((((((((Js.Eq(s["start"], "group")) || (Js.Eq(s["start"], "solo"))) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && level(s["weather"], WEATHER_LEVELS.length)) && level(s["progression"], PROGRESSION_LEVELS.length)) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((Js.Eq(s["dayScale"], 1)) || (Js.Eq(s["dayScale"], 2))) || (Js.Eq(s["dayScale"], 3)))) && MAP_TYPES.some((__p0) =>
         {
             var m = (__p0)[0];
             return Js.Eq(m, s["map"]);

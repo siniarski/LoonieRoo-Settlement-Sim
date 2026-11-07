@@ -50,7 +50,7 @@ public static partial class Alerts
         var raiders = near.filter((z) => z.kind == "raider");
         if (raiders.length > 0)
         {
-            add("danger", $"Raiders at the colony: {Js.Str(raiders.length)}", Js.NN(raiders[Js.Idx(0)]).pos);
+            add("danger", $"Raiders at the colony: {Js.Str(raiders.length)}", Js.NN(Js.Get(raiders, 0)).pos);
         }
         if (near.length > raiders.length)
         {
@@ -58,7 +58,7 @@ public static partial class Alerts
         }
         if (state.fires.length > 0)
         {
-            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str((state.fires.length == 1) ? "" : "s")} burning", state.fires[Js.Idx(0)]);
+            add("danger", $"Fire! {Js.Str(state.fires.length)} tile{Js.Str((state.fires.length == 1) ? "" : "s")} burning", Js.Get(state.fires, 0));
         }
         foreach (var h in Js.Iter(state.herds))
         {
@@ -68,7 +68,7 @@ public static partial class Alerts
             }
         }
         var hour = Time.hourOf(state.tick);
-        if (!Js.T(Time.isNight(state.tick)) && (hour >= (Time.NIGHT_START - 3)))
+        if (!Time.isNight(state.tick) && (hour >= (Time.NIGHT_START - 3)))
         {
             var night = Time.dayOf(state.tick);
             add("info", $"Night in {Js.Str(Time.NIGHT_START - hour)}h: about {Js.Str(Zombies.zombiesForNight(night, people.length))} zombies expected");
@@ -93,7 +93,7 @@ public static partial class Alerts
             {
                 add("danger", $"{Js.Str(s.name)} is infected: about {Js.Str(JsMath.ceil(((double)((Infection.INFECTION_TURN - s.infection)) / (Time.TICKS_PER_HOUR))))}h to cure them (medicine)", s.pos);
             }
-            else if (Js.T(Health.isCritical(s.health)))
+            else if (Health.isCritical(s.health))
             {
                 add("danger", $"{Js.Str(s.name)} is badly hurt", s.pos);
             }
@@ -121,7 +121,7 @@ public static partial class Alerts
             {
                 add("warn", $"{Js.Str(s.name)} is bleeding (a bandage stops it)", s.pos);
             }
-            if (Js.T(Wounds.canAmputate(s)))
+            if (Wounds.canAmputate(s))
             {
                 add("danger", $"{Js.Str(s.name)}'s bitten {Js.Str(s.bitten)} could come off and save them (overview: amputate)", s.pos);
             }
@@ -157,10 +157,10 @@ public static partial class Alerts
                 add("info", "No clean water: build a well or a rain collector");
             }
             var graves = Rooms.completeRooms(state, "graveyard");
-            var rotting = state.items.filter((i) => Js.T(Corpses.isRotting(state, i, graves)));
+            var rotting = state.items.filter((i) => Corpses.isRotting(state, i, graves));
             if (rotting.length > 0)
             {
-                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", Js.NN(Js.NN(rotting[Js.Idx(0)]).pos));
+                add("warn", $"{Js.Str(rotting.length)} bod{Js.Str((rotting.length == 1) ? "y" : "ies")} rotting: make a graveyard and haulers will bury them", Js.NN(Js.NN(Js.Get(rotting, 0)).pos));
             }
         }
         foreach (var g in Js.Iter(FurnitureMod.ofKind(state, "generator")))
@@ -172,21 +172,21 @@ public static partial class Alerts
         }
         foreach (var n in Js.Iter(state.settlements))
         {
-            if (Js.T(Settlements.isHostile(n)))
+            if (Settlements.isHostile(n))
             {
                 add("warn", $"{Js.Str(n.name)} is hostile: more raids");
             }
         }
         if (state.wanderers.length > 0)
         {
-            add("info", $"{Js.Str(state.wanderers.length)} waiting to be taken in", state.wanderers[Js.Idx(0)]);
+            add("info", $"{Js.Str(state.wanderers.length)} waiting to be taken in", Js.Get(state.wanderers, 0));
         }
         foreach (var t in Js.Iter(state.traders))
         {
             add("info", $"A trader is waiting at ({Js.Str(t.x)}, {Js.Str(t.y)})", t);
         }
         JsRecord<double> rank = new() { ["danger"] = 0, ["warn"] = 1, ["info"] = 2 };
-        return @out.sort((a, b) => rank[Js.Idx(a.level)] - rank[Js.Idx(b.level)]);
+        return @out.sort((a, b) => Js.Get(rank, a.level) - Js.Get(rank, b.level));
     }
 
     /// <summary>Counts of every item kind the colony has (on the ground, carried, worn), for the overview.</summary>
@@ -200,6 +200,6 @@ public static partial class Alerts
                 counts.set(i.kind, (Js.Q(counts.get(i.kind), 0)) + 1);
             }
         }
-        return Js.ListOf(counts.entries()).sort((a, b) => Js.Or(b.Item2 - a.Item2, a.Item1.localeCompare(b.Item1)));
+        return Js.ListOf(counts.entries()).sort((a, b) => ((b.Item2 - a.Item2) is var __or1 && Js.T(__or1) ? __or1 : a.Item1.localeCompare(b.Item1)));
     }
 }

@@ -29,10 +29,10 @@ public static partial class Prisoners
         var width = __d1.width;
         foreach (var index in Js.Iter(Js.ListOf(cells).sort((a, b) => a - b)))
         {
-            foreach (var i in Js.Iter(Js.NN(rooms[Js.Idx(index)]).tiles))
+            foreach (var i in Js.Iter(Js.NN(Js.Get(rooms, index)).tiles))
             {
                 Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
-                if ((Js.T(Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.prisoners.some((q) => (q.x == p.x) && (q.y == p.y)))
+                if ((Grids.isWalkable(state.grid, p.x, p.y) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.prisoners.some((q) => (q.x == p.x) && (q.y == p.y)))
                 {
                     return p;
                 }
@@ -89,13 +89,13 @@ public static partial class Prisoners
         {
             return "no such prisoner";
         }
-        if (Js.T(recruit) && ((state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH)))
+        if (recruit && ((state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH)))
         {
             return $"{Js.Str(p.name)} isn't ready to join yet";
         }
         state.prisoners.splice(state.prisoners.indexOf(p), 1);
         var home = Settlements.getSettlement(state, p.from);
-        if (Js.T(recruit))
+        if (recruit)
         {
             Survivors.addSurvivor(state, p.x, p.y, p.name);
             if (Js.T(home))

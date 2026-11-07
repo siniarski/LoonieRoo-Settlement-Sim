@@ -39,7 +39,7 @@ public static partial class Water
     /// <summary>Water standing in a fitting with the mains off.</summary>
     public static bool isTank(SimState state, Furniture f)
     {
-        return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !Js.T(TimelineMod.waterOn(state));
+        return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !TimelineMod.waterOn(state);
     }
 
     /// <summary>A drink taken from a source: collectors and tanks run down.</summary>
@@ -64,9 +64,9 @@ public static partial class Water
         {
             return;
         }
-        if (Js.T(Time.slowTick(state.tick)))
+        if (Time.slowTick(state.tick))
         {
-            s.hydration = JsMath.max(0, s.hydration - ((Js.T((state.weather == "heatwave") || Js.T(Climate.scorching(state, s.pos.x, s.pos.y)))) ? 2 : 1));
+            s.hydration = JsMath.max(0, s.hydration - (((state.weather == "heatwave") || Climate.scorching(state, s.pos.x, s.pos.y)) ? 2 : 1));
         }
         if ((s.hydration == 0) && ((state.tick % DEHYDRATION_DAMAGE_EVERY) == 0))
         {
@@ -78,7 +78,7 @@ public static partial class Water
     /// <summary>Rain collectors fill in the wet.</summary>
     public static void updateCollectors(SimState state)
     {
-        if (!Js.T(Seasons.isWet(state.weather)) || ((state.tick % COLLECTOR_FILL_EVERY) != 0))
+        if (!Seasons.isWet(state.weather) || ((state.tick % COLLECTOR_FILL_EVERY) != 0))
         {
             return;
         }
@@ -103,11 +103,11 @@ public static partial class Water
         {
             return "collector";
         }
-        if (Js.T(Js.T(f) && Js.T(TimelineMod.isTap(state, f))))
+        if (Js.T(f) && TimelineMod.isTap(state, f))
         {
             return "tap";
         }
-        if (Js.T(Js.T(f) && Js.T(isTank(state, f))))
+        if (Js.T(f) && isTank(state, f))
         {
             return "tank";
         }
@@ -125,7 +125,7 @@ public static partial class Water
         var grid = __d0.grid;
         var clean = new JsMap<double, string>();
         var tapsOn = TimelineMod.waterOn(state);
-        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.T(tapsOn) ? ((List<string>)["well", "collector", "crate", "decor"]) : ((List<string>)["well", "collector", "decor"]))))
+        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, tapsOn ? ((List<string>)["well", "collector", "crate", "decor"]) : ((List<string>)["well", "collector", "decor"]))))
         {
             if (f.kind == "well")
             {
@@ -135,11 +135,11 @@ public static partial class Water
             {
                 clean.set((f.y * grid.width) + f.x, "collector");
             }
-            else if (Js.T(Js.T(tapsOn) && Js.T(TimelineMod.isTap(state, f))))
+            else if (tapsOn && TimelineMod.isTap(state, f))
             {
                 clean.set((f.y * grid.width) + f.x, "tap");
             }
-            else if (Js.T(isTank(state, f)))
+            else if (isTank(state, f))
             {
                 clean.set((f.y * grid.width) + f.x, "tank");
             }
@@ -177,7 +177,7 @@ public static partial class Water
     /// <summary>Interrupt work for a drink (before movement), if there's water to go to.</summary>
     public static bool thirstInterrupts(SimState state, Survivor s)
     {
-        return ((Js.T(Js.T(state.harsh) && Js.T(isThirsty(s)))) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
+        return ((Js.T(state.harsh) && isThirsty(s)) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
     }
 
     /// <summary>Runs when standing still, after eating and before treatment. Returns true if drinking handled this tick.</summary>
@@ -187,12 +187,12 @@ public static partial class Water
         {
             return false;
         }
-        if (!Js.T(s.drink) && !Js.T(startDrink(state, s)))
+        if (!Js.T(s.drink) && !startDrink(state, s))
         {
             return false;
         }
         var d = Js.NN(s.drink);
-        if (!Js.T(Space.samePoint(s.pos, d)))
+        if (!Space.samePoint(s.pos, d))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [d]);
             if (!Js.T(path) || (path.length == 0))
@@ -233,7 +233,7 @@ public static partial class Water
 
     public static bool startDrink(SimState state, Survivor s)
     {
-        if (!Js.T(isThirsty(s)) || (state.tick < s.nextDrinkTick))
+        if (!isThirsty(s) || (state.tick < s.nextDrinkTick))
         {
             return false;
         }

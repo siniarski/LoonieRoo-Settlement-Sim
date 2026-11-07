@@ -27,15 +27,15 @@ public static partial class StoryMod
         var n = Hash.idNumber(id);
         T pick<T>(List<T> list, double salt)
         {
-            return Js.NN(list[Js.Idx(JsMath.floor(Hash.hashRoll(n, salt) * list.length))]);
+            return Js.NN(Js.Get(list, JsMath.floor(Hash.hashRoll(n, salt) * list.length)));
         }
         return new Story { job = JsMath.floor(Hash.hashRoll(n, 0x51) * STORY_JOBS.length), pride = JsMath.floor(Hash.hashRoll(n, 0x52) * PRIDES.length), regret = JsMath.floor(Hash.hashRoll(n, 0x53) * REGRETS.length), lost = lostOne(n), pet = (Hash.hashRoll(n, 0x57) < 0.5) ? pick(PET_NAMES, 0x58) : null, told = 0, nextTalk = 0, asked = [], town = JsMath.floor(Hash.hashRoll(n, 0x59) * TOWNS.length), knew = [], confessed = false };
     }
 
     public static StoryLost lostOne(double n)
     {
-        var (relation, names) = Js.NN(RELATIONS[Js.Idx(JsMath.floor(Hash.hashRoll(n, 0x55) * RELATIONS.length))]);
-        return new StoryLost { name = Js.NN(names[Js.Idx(JsMath.floor(Hash.hashRoll(n, 0x54) * names.length))]), relation = relation, dead = Hash.hashRoll(n, 0x56) < 0.6 };
+        var (relation, names) = Js.NN(Js.Get(RELATIONS, JsMath.floor(Hash.hashRoll(n, 0x55) * RELATIONS.length)));
+        return new StoryLost { name = Js.NN(Js.Get(names, JsMath.floor(Hash.hashRoll(n, 0x54) * names.length))), relation = relation, dead = Hash.hashRoll(n, 0x56) < 0.6 };
     }
 
     /// <summary>The lines of a story, in the order they're told.</summary>
@@ -43,6 +43,6 @@ public static partial class StoryMod
     {
         var __d0 = story;
         var lost = __d0.lost;
-        return (List<string>)[$"I was {Js.Str(STORY_JOBS[Js.Idx(story.job)])} in {Js.Str(TOWNS[Js.Idx(story.town)])}. {Js.Str(PRIDES[Js.Idx(story.pride)])}.", Js.T(lost.dead) ? $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. They didn't make it, and I left them where they fell. They deserve a grave." : $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. I don't know where they are. I tell myself that's better.", Js.T(story.pet) ? $"I had a dog, {Js.Str(story.pet)}. I left {Js.Str(story.pet)} shut in at home. I think about that a lot." : "I still think about home. What's left of it.", $"{Js.Str(REGRETS[Js.Idx(story.regret)])}. I can't stop seeing that place."];
+        return (List<string>)[$"I was {Js.Str(Js.Get(STORY_JOBS, story.job))} in {Js.Str(Js.Get(TOWNS, story.town))}. {Js.Str(Js.Get(PRIDES, story.pride))}.", Js.T(lost.dead) ? $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. They didn't make it, and I left them where they fell. They deserve a grave." : $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. I don't know where they are. I tell myself that's better.", Js.T(story.pet) ? $"I had a dog, {Js.Str(story.pet)}. I left {Js.Str(story.pet)} shut in at home. I think about that a lot." : "I still think about home. What's left of it.", $"{Js.Str(Js.Get(REGRETS, story.regret))}. I can't stop seeing that place."];
     }
 }

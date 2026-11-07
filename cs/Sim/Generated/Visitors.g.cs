@@ -46,7 +46,7 @@ public static partial class Visitors
     {
         foreach (var t in Js.Iter((state.traders).ToList()))
         {
-            if (Js.T((state.tick >= t.leavesTick) || Js.T(Time.isNight(state.tick))))
+            if ((state.tick >= t.leavesTick) || Time.isNight(state.tick))
             {
                 state.traders.splice(state.traders.indexOf(t), 1);
                 var home = Settlements.getSettlement(state, t.from);
@@ -63,7 +63,7 @@ public static partial class Visitors
             arrive(state);
         }
         var enemy = state.settlements.find(Settlements.isHostile);
-        if ((Js.T((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick)))) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
+        if (((day >= RAID_FIRST_DAY) && Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
         {
             raid(state, day, enemy?.name);
         }
@@ -71,7 +71,7 @@ public static partial class Visitors
 
     public static void arrive(SimState state)
     {
-        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? state.survivors[Js.Idx(0)]?.pos;
+        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? Js.Get(state.survivors, 0)?.pos;
         if (!Js.T(spot))
         {
             return;
@@ -93,7 +93,7 @@ public static partial class Visitors
     public static string? trade(SimState state, string traderId, double offer)
     {
         var t = state.traders.find((x) => x.id == traderId);
-        var o = t?.offers[Js.Idx(offer)];
+        var o = Js.Get(t?.offers, offer);
         if (!Js.T(t) || !Js.T(o))
         {
             return "no such offer";
@@ -123,7 +123,7 @@ public static partial class Visitors
 
     public static void raid(SimState state, double day, string? from = default)
     {
-        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? state.survivors[Js.Idx(0)]?.pos;
+        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? Js.Get(state.survivors, 0)?.pos;
         if (!Js.T(spot))
         {
             return;

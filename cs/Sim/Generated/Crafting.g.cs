@@ -72,13 +72,13 @@ public static partial class Crafting
 
     public static double target(SimState state, string kind)
     {
-        return (kind == "meal") ? (MEALS_PER_SURVIVOR * state.survivors.length) : state.craftTargets[Js.Idx(kind)];
+        return (kind == "meal") ? (MEALS_PER_SURVIVOR * state.survivors.length) : Js.Get(state.craftTargets, kind);
     }
 
     /// <summary>Craftables for this station below their target, in CRAFTABLES order.</summary>
     public static List<string> wantedCrafts(SimState state, string station = "workbench", bool inWorkshop = false)
     {
-        return CRAFTABLES.filter((k) => ((Js.T((RECIPES[Js.Idx(k)].station == station) && (Js.T(Js.T(inWorkshop) || !Js.T(RECIPES[Js.Idx(k)].workshopOnly))))) && (!Js.T(RECIPES[Js.Idx(k)].needs) || state.knowledge.includes(Js.NN(RECIPES[Js.Idx(k)].needs)))) && (craftStock(state, k) < target(state, k)));
+        return CRAFTABLES.filter((k) => ((Js.T((Js.Get(RECIPES, k).station == station) && (Js.T(Js.T(inWorkshop) || !Js.T(Js.Get(RECIPES, k).workshopOnly))))) && (!Js.T(Js.Get(RECIPES, k).needs) || state.knowledge.includes(Js.NN(Js.Get(RECIPES, k).needs)))) && (craftStock(state, k) < target(state, k)));
     }
 
     /// <summary>The first craftable for this station below its target, or null when stocks are full.</summary>
@@ -90,20 +90,20 @@ public static partial class Crafting
     /// <summary>What this station should make next: something that uses what's already in it if possible, else the first wanted thing. Null when stocks are full.</summary>
     public static string? stationCraft(SimState state, Furniture f)
     {
-        if (!Js.T(isStation(f.kind)))
+        if (!isStation(f.kind))
         {
             return null;
         }
         var wanted = wantedCrafts(state, f.kind, inWorkshop(state, f));
         bool holds(string k)
         {
-            return (f.stored > 0) && (RECIPES[Js.Idx(k)].input == f.storedKind);
+            return (f.stored > 0) && (Js.Get(RECIPES, k).input == f.storedKind);
         }
         bool has(string k)
         {
-            return craftStock(state, RECIPES[Js.Idx(k)].input) > 0;
+            return craftStock(state, Js.Get(RECIPES, k).input) > 0;
         }
-        return ((wanted.find((k) => Js.T(Js.T(holds(k)) && (Js.T((f.stored >= RECIPES[Js.Idx(k)].count) || Js.T(has(k)))))) ?? wanted.find((__f0) => has(__f0))) ?? wanted[Js.Idx(0)]) ?? null;
+        return ((wanted.find((k) => holds(k) && ((f.stored >= Js.Get(RECIPES, k).count) || has(k))) ?? wanted.find((__f0) => has(__f0))) ?? Js.Get(wanted, 0)) ?? null;
     }
 
     /// <summary>Is this station in a complete workshop?</summary>

@@ -39,7 +39,7 @@ public static partial class Wishes
     /// <summary>Did they gain this thought since the wish began (that tick included)? (A thought's start is its end less its length.)</summary>
     public static bool gotThought(Survivor s, string kind, double since)
     {
-        return s.thoughts.some((t) => (t.kind == kind) && ((t.until - Mood.THOUGHTS[Js.Idx(kind)].duration) >= since));
+        return s.thoughts.some((t) => (t.kind == kind) && ((t.until - Js.Get(Mood.THOUGHTS, kind).duration) >= since));
     }
 
     public static bool near(Survivor a, Survivor b)
@@ -59,7 +59,7 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "hotMeal", targetId = null });
         }
-        if (Js.T(Js.T(has("sleptOnFloor")) || (s.comfort < 50)))
+        if (has("sleptOnFloor") || (s.comfort < 50))
         {
             @out.push(new() { kind = "bed", targetId = null });
         }
@@ -71,18 +71,18 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "weapon", targetId = null });
         }
-        var friend = state.survivors.filter((o) => (o != s) && ((Js.Q(s.opinions[Js.Idx(o.id)], 0)) >= 10)).sort((a, b) => Js.Or((Js.Q(s.opinions[Js.Idx(b.id)], 0)) - (Js.Q(s.opinions[Js.Idx(a.id)], 0)), a.id.localeCompare(b.id)))[Js.Idx(0)];
+        var friend = Js.Get(state.survivors.filter((o) => (o != s) && ((Js.Q(Js.Get(s.opinions, o.id), 0)) >= 10)).sort((a, b) => (((Js.Q(Js.Get(s.opinions, b.id), 0)) - (Js.Q(Js.Get(s.opinions, a.id), 0))) is var __or0 && Js.T(__or0) ? __or0 : a.id.localeCompare(b.id))), 0);
         var you = ControlMod.controlled(state);
-        var wanted = ((Js.T(you) && (you != s)) && ((Js.Q(s.opinions[Js.Idx(you.id)], 0)) >= 0)) ? you : friend;
-        if (Js.T(wanted) && !Js.T(near(s, wanted)))
+        var wanted = ((Js.T(you) && (you != s)) && ((Js.Q(Js.Get(s.opinions, you.id), 0)) >= 0)) ? you : friend;
+        if (Js.T(wanted) && !near(s, wanted))
         {
             @out.push(new() { kind = "see", targetId = wanted.id });
         }
-        if ((Js.T(Js.T(has("lostFriend")) || Js.T(has("sawDeath")))) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
+        if ((has("lostFriend") || has("sawDeath")) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
         {
             @out.push(new() { kind = "grave", targetId = null });
         }
-        if (Js.T(Js.T(has("sawDeath")) || Js.T(has("attacked"))))
+        if (has("sawDeath") || has("attacked"))
         {
             @out.push(new() { kind = "quiet", targetId = null });
         }
@@ -108,11 +108,11 @@ public static partial class Wishes
         {
             case "hotMeal":
                 {
-                    return Js.T(gotThought(s, "hotMeal", w.since));
+                    return gotThought(s, "hotMeal", w.since);
                 }
             case "bed":
                 {
-                    return Js.T(gotThought(s, "sleptInBed", w.since));
+                    return gotThought(s, "sleptInBed", w.since);
                 }
             case "coat":
                 {
@@ -126,20 +126,20 @@ public static partial class Wishes
                 {
                     {
                     var o = state.survivors.find((x) => x.id == w.targetId);
-                    return Js.T((((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && Js.T(near(s, o)));
+                    return (((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && near(s, o);
                 }
                 }
             case "grave":
                 {
-                    return Js.T(gotThought(s, "paidRespects", w.since));
+                    return gotThought(s, "paidRespects", w.since);
                 }
             case "quiet":
                 {
-                    return (((state.tick >= w.until) && !Js.T(gotThought(s, "sawDeath", w.since))) && !Js.T(gotThought(s, "attacked", w.since))) && !Js.T(gotThought(s, "lostFriend", w.since));
+                    return (((state.tick >= w.until) && !gotThought(s, "sawDeath", w.since)) && !gotThought(s, "attacked", w.since)) && !gotThought(s, "lostFriend", w.since);
                 }
             case "kill":
                 {
-                    return Js.T(gotThought(s, "bloodUp", w.since));
+                    return gotThought(s, "bloodUp", w.since);
                 }
             case "company":
                 {
@@ -176,7 +176,7 @@ public static partial class Wishes
             var w = s.wish;
             if (Js.T(w))
             {
-                if (Js.T(met(state, s, w)))
+                if (met(state, s, w))
                 {
                     grant(state, s, w);
                 }
@@ -195,10 +195,10 @@ public static partial class Wishes
                 continue;
             }
             var options = candidates(state, s);
-            var pick = options[Js.Idx(JsMath.floor(Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x3a6) * options.length))];
+            var pick = Js.Get(options, JsMath.floor(Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x3a6) * options.length));
             if (Js.T(pick))
             {
-                s.wish = Js.With(Js.CopyAs<Wish>(pick), __s0 => { __s0.since = state.tick; __s0.until = state.tick + WISH_TICKS; __s0.promised = false; });
+                s.wish = Js.With(Js.CopyAs<Wish>(pick), __s1 => { __s1.since = state.tick; __s1.until = state.tick + WISH_TICKS; __s1.promised = false; });
             }
         }
     }
@@ -211,7 +211,7 @@ public static partial class Wishes
         var you = ControlMod.controlled(state);
         if ((Js.T(Js.T(w.promised) && Js.T(you))) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.min(100, (Js.Q(s.opinions[Js.Idx(you.id)], 0)) + PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.min(100, (Js.Q(Js.Get(s.opinions, you.id), 0)) + PROMISE_OPINION);
         }
         if (Js.T(w.promised))
         {
@@ -231,7 +231,7 @@ public static partial class Wishes
         var you = ControlMod.controlled(state);
         if (Js.T(you) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, (Js.Q(s.opinions[Js.Idx(you.id)], 0)) - PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, (Js.Q(Js.Get(s.opinions, you.id), 0)) - PROMISE_OPINION);
         }
         Events.logEvent(state, $"A promise broken: {Js.Str(s.name)} never got {Js.Str(describeWish(state, w))}");
     }

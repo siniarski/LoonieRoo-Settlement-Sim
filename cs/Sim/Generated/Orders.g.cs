@@ -73,7 +73,7 @@ public static partial class Orders
         }
         if (s.order.kind == "loot")
         {
-            return Js.T(loot(state, s, s.order));
+            return loot(state, s, s.order);
         }
         var at = orderAnchor(state, s);
         if (!Js.T(at))
@@ -84,7 +84,7 @@ public static partial class Orders
         var far = JsMath.max(JsMath.abs(at.x - s.pos.x), JsMath.abs(at.y - s.pos.y));
         if (far <= gap)
         {
-            return Js.T((s.order.kind == "follow") && Js.T(stepAside(state, s)));
+            return (s.order.kind == "follow") && stepAside(state, s);
         }
         var path = Pathfinding.findPath(state.grid, s.pos, at);
         if (!Js.T(path) || (path.length == 0))
@@ -133,11 +133,11 @@ public static partial class Orders
             }
             return false;
         }
-        if (!Js.T(lane(s.pos)))
+        if (!lane(s.pos))
         {
             return false;
         }
-        var side = new List<Point> { new Point { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new Point { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) } }.map((d) => new Point { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
+        var side = new List<Point> { new Point { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new Point { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) } }.map((d) => new Point { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Pathfinding.isPassable(state.grid, p.x, p.y, "survivor") && !lane(p));
         if (!Js.T(side))
         {
             return false;
@@ -161,7 +161,7 @@ public static partial class Orders
         var crate = left.find((f) => f.id == o.crateId);
         if (!Js.T(crate))
         {
-            crate = left.sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y)))[Js.Idx(0)];
+            crate = Js.Get(left.sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y))), 0);
             o.crateId = crate?.id ?? null;
             o.progress = 0;
         }

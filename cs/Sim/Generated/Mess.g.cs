@@ -11,13 +11,13 @@ public static partial class Mess
     /// <summary>Is this tile a seat that `s` may use (nobody else is headed for or sitting at it)?</summary>
     public static bool seatUsable(SimState state, Survivor s, Point p)
     {
-        return Js.T(isSeat(state, p, Rooms.completeRooms(state, "messhall"))) && !Js.T(seatTaken(state, s, p));
+        return isSeat(state, p, Rooms.completeRooms(state, "messhall")) && !seatTaken(state, s, p);
     }
 
     public static bool isSeat(SimState state, Point p, JsSet<double> halls)
     {
         var room = Rooms.labelAt(state, p.x, p.y);
-        if (!halls.has(room) || !Js.T(Grids.isWalkable(state.grid, p.x, p.y)))
+        if (!halls.has(room) || !Grids.isWalkable(state.grid, p.x, p.y))
         {
             return false;
         }
@@ -30,7 +30,7 @@ public static partial class Mess
 
     public static bool seatTaken(SimState state, Survivor s, Point p)
     {
-        return state.survivors.some((o) => Js.T(((o != s) && (o.meal?.seat != null)) && Js.T(Space.samePoint(o.meal.seat, p))));
+        return state.survivors.some((o) => ((o != s) && (o.meal?.seat != null)) && Space.samePoint(o.meal.seat, p));
     }
 
     /// <summary>Nearest free seat reachable from `from` (where the food is), or null if there is none.</summary>
@@ -52,14 +52,14 @@ public static partial class Mess
                 }
                 foreach (var p in Js.Iter(Grids.neighbours4(state.grid, table.x, table.y)))
                 {
-                    if ((Js.T(!seats.some((q) => Js.T(Space.samePoint(q, p))) && Js.T(isSeat(state, p, halls)))) && !Js.T(seatTaken(state, s, p)))
+                    if ((!seats.some((q) => Space.samePoint(q, p)) && isSeat(state, p, halls)) && !seatTaken(state, s, p))
                     {
                         seats.push(p);
                     }
                 }
             }
         }
-        seats.sort((a, b) => Js.Or(Js.Or(Space.manhattan(from, a) - Space.manhattan(from, b), a.y - b.y), a.x - b.x));
-        return seats.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p]))) ?? null;
+        seats.sort((a, b) => (((Space.manhattan(from, a) - Space.manhattan(from, b)) is var __or1 && Js.T(__or1) ? __or1 : (a.y - b.y)) is var __or0 && Js.T(__or0) ? __or0 : (a.x - b.x)));
+        return seats.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
     }
 }

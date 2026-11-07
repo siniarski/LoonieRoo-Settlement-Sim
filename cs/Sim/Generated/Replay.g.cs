@@ -14,7 +14,7 @@ public static partial class Replay
         double next = 0;
         for (; ; )
         {
-            for (var entry = log[Js.Idx(next)]; (entry != null) && (entry.tick <= state.tick); entry = log[Js.Idx(++next)])
+            for (var entry = Js.Get(log, next); (entry != null) && (entry.tick <= state.tick); entry = Js.Get(log, ++next))
             {
                 if (entry.tick < state.tick)
                 {

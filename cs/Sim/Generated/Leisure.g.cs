@@ -40,8 +40,8 @@ public static partial class Leisure
         {
             return s.thoughts.some((t) => t.kind == kind);
         }
-        var grieving = (Js.T(Js.T(has("lostFriend")) || Js.T(has("sawDeath")))) && !Js.T(has("paidRespects"));
-        string? at = (Js.T(grieving) && (Rooms.completeRooms(state, "graveyard").size > 0)) ? "graveyard" : (Js.T(has("relaxed")) ? null : "recroom");
+        var grieving = (has("lostFriend") || has("sawDeath")) && !has("paidRespects");
+        string? at = (Js.T(grieving) && (Rooms.completeRooms(state, "graveyard").size > 0)) ? "graveyard" : (has("relaxed") ? null : "recroom");
         if (!Js.T(at))
         {
             return false;
@@ -68,20 +68,20 @@ public static partial class Leisure
             s.nextSeekTick = state.tick + Jobs.IDLE_RETRY_TICKS;
             var was = s.leisure;
             s.leisure = null;
-            if (Js.T(JobChoice.seekJob(state, s)))
+            if (JobChoice.seekJob(state, s))
             {
                 return true;
             }
             s.leisure = was;
         }
         Point spot = new Point { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
-        if (!Js.T(spotFree(state, s, spot, s.leisure.at)))
+        if (!spotFree(state, s, spot, s.leisure.at))
         {
             s.leisure = null;
             s.note = "rec room spot gone";
             return false;
         }
-        if (!Js.T(Space.samePoint(s.pos, spot)))
+        if (!Space.samePoint(s.pos, spot))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [spot]);
             if (!Js.T(path) || (path.length == 0))
@@ -113,7 +113,7 @@ public static partial class Leisure
     public static bool spotFree(SimState state, Survivor s, Point p, string at)
     {
         var rooms = Rooms.completeRooms(state, at);
-        return ((Js.T(rooms.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Grids.isWalkable(state.grid, p.x, p.y)))) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.survivors.some((o) => ((Js.T((o != s) && Js.T(o.leisure))) && (o.leisure.x == p.x)) && (o.leisure.y == p.y));
+        return ((rooms.has(Rooms.labelAt(state, p.x, p.y)) && Grids.isWalkable(state.grid, p.x, p.y)) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.survivors.some((o) => ((Js.T((o != s) && Js.T(o.leisure))) && (o.leisure.x == p.x)) && (o.leisure.y == p.y));
     }
 
     public static Point? pickSpot(SimState state, Survivor s, string at)
@@ -130,17 +130,17 @@ public static partial class Leisure
         List<Point> spots = [];
         foreach (var index in Js.Iter(Js.ListOf(rooms).sort((a, b) => a - b)))
         {
-            foreach (var i in Js.Iter(Js.NN(all[Js.Idx(index)]).tiles))
+            foreach (var i in Js.Iter(Js.NN(Js.Get(all, index)).tiles))
             {
                 Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
-                if (Js.T(spotFree(state, s, p, at)))
+                if (spotFree(state, s, p, at))
                 {
                     spots.push(p);
                 }
             }
         }
         spots.sort((a, b) => Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b));
-        return spots.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [p]))) ?? null;
+        return spots.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [p])) ?? null;
     }
 
     /// <summary>Every tick, for every survivor: maybe start a breakdown, or end one.</summary>
@@ -157,7 +157,7 @@ public static partial class Leisure
             s.note = "pulled themselves together";
             return;
         }
-        if (Js.T((Js.T((((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Js.T(Mood.isMiserable(state, s))) || Js.T(Resolve.isSteeled(s)))) || Js.T(s.sleep)))
+        if (Js.T(((((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Mood.isMiserable(state, s)) || Resolve.isSteeled(s)) || Js.T(s.sleep)))
         {
             return;
         }

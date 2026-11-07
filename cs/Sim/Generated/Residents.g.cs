@@ -49,7 +49,7 @@ public static partial class Residents
     public static void syncResidents(SimState state, Settlement n)
     {
         var here = residentsOf(state, n);
-        var want = (Js.T(n.unfolded) && !Js.T(Colonies.isFallen(n))) ? n.people : 0;
+        var want = (Js.T(n.unfolded) && !Colonies.isFallen(n)) ? n.people : 0;
         foreach (var r in Js.Iter(here.slice(want)))
         {
             state.residents.splice(state.residents.indexOf(r), 1);
@@ -59,8 +59,8 @@ public static partial class Residents
         {
             var id = $"r{Js.Str(state.nextId++)}";
             Point spot = new Point { x = Js.I((box.x0 + 1) + (i % JsMath.max(1, (box.x1 - box.x0) - 1))), y = Js.I((box.y1 - 1) - (JsMath.floor(((double)(i) / (JsMath.max(1, (box.x1 - box.x0) - 1)))) % 3)) };
-            var where = Js.T(Grids.inBounds(state.grid, spot.x, spot.y)) ? spot : new Point { x = Js.I(n.x), y = Js.I(n.y) };
-            state.residents.push(new() { id = id, settlementId = n.id, name = Js.NN(NAMES[Js.Idx(Hash.idNumber(id) % NAMES.length)]), pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0, at = Motion.placedAt(where).at, was = Motion.placedAt(where).was });
+            var where = Grids.inBounds(state.grid, spot.x, spot.y) ? spot : new Point { x = Js.I(n.x), y = Js.I(n.y) };
+            state.residents.push(new() { id = id, settlementId = n.id, name = Js.NN(Js.Get(NAMES, Hash.idNumber(id) % NAMES.length)), pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0, at = Motion.placedAt(where).at, was = Motion.placedAt(where).was });
         }
     }
 
@@ -85,7 +85,7 @@ public static partial class Residents
                 r.pos = r.move.to;
                 r.move = null;
             }
-            if (Js.T(Js.T(Settlements.isHostile(n)) && Js.T(attack(state, r, n))))
+            if (Settlements.isHostile(n) && attack(state, r, n))
             {
                 continue;
             }
@@ -130,12 +130,12 @@ public static partial class Residents
         {
             return JsMath.max(JsMath.abs(s.pos.x - r.pos.x), JsMath.abs(s.pos.y - r.pos.y));
         }
-        var target = state.survivors.filter((s) => near(s) <= HOSTILE_SIGHT).sort((a, b) => near(a) - near(b))[Js.Idx(0)];
+        var target = Js.Get(state.survivors.filter((s) => near(s) <= HOSTILE_SIGHT).sort((a, b) => near(a) - near(b)), 0);
         if (!Js.T(target))
         {
             return false;
         }
-        if (Js.T(Motion.inReach(target, r, Motion.REACH, state.grid)))
+        if (Motion.inReach(target, r, Motion.REACH, state.grid))
         {
             if (r.cooldown > 0)
             {
@@ -160,7 +160,7 @@ public static partial class Residents
     public static bool hitResident(SimState state, Resident r, double damage, Survivor by)
     {
         var n = Settlements.getSettlement(state, r.settlementId);
-        if (Js.T(n) && !Js.T(Settlements.isHostile(n)))
+        if (Js.T(n) && !Settlements.isHostile(n))
         {
             Settlements.adjustReputation(state, n, (Settlements.HOSTILE - ATTACKED_BELOW_HOSTILE) - n.reputation);
             Events.logEvent(state, $"{Js.Str(by.name)} attacked {Js.Str(r.name)} of {Js.Str(n.name)}. They'll fight back now.");
@@ -188,12 +188,12 @@ public static partial class Residents
         {
             return "they have nowhere to be from";
         }
-        if (Js.T(Settlements.isHostile(n)))
+        if (Settlements.isHostile(n))
         {
             return $"{Js.Str(r.name)} won't talk to you";
         }
         var carried = Js.T(you.carrying) ? Items.getItem(state, you.carrying) : null;
-        var worth = Js.T(carried) ? (Js.Q(TRADE_FOOD[Js.Idx(carried.kind)], 0)) : 0;
+        var worth = Js.T(carried) ? (Js.Q(Js.Get(TRADE_FOOD, carried.kind), 0)) : 0;
         if (Js.T(carried) && (worth > 0))
         {
             if (n.food < worth)

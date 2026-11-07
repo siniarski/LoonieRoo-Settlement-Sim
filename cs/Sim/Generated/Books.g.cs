@@ -26,9 +26,9 @@ public static partial class Books
         var roll = Hash.hashRoll(Hash.idNumber(id), 0xb00c);
         if (roll < ((double)(1) / (KNOWLEDGE_BOOK_ONE_IN)))
         {
-            return Js.NN((Js.ObjectKeys(KNOWLEDGE))[Js.Idx(JsMath.floor((roll * KNOWLEDGE_BOOK_ONE_IN) * 2) % 2)]);
+            return Js.NN(Js.Get((Js.ObjectKeys(KNOWLEDGE)), JsMath.floor((roll * KNOWLEDGE_BOOK_ONE_IN) * 2) % 2));
         }
-        return Js.NN(SKILL_BOOKS[Js.Idx(JsMath.floor(roll * 1000) % SKILL_BOOKS.length)]);
+        return Js.NN(Js.Get(SKILL_BOOKS, JsMath.floor(roll * 1000) % SKILL_BOOKS.length));
     }
 
     public static bool knows(SimState state, string k)
@@ -72,7 +72,7 @@ public static partial class Books
             s.nextSeekTick = state.tick + Jobs.IDLE_RETRY_TICKS;
             var was = s.reading;
             stopReading(state, s, "put the book down for work");
-            if (Js.T(JobChoice.seekJob(state, s)))
+            if (JobChoice.seekJob(state, s))
             {
                 return true;
             }
@@ -93,7 +93,7 @@ public static partial class Books
             stopReading(state, s, "book gone");
             return false;
         }
-        if (!Js.T(Space.samePoint(s.pos, book.pos)))
+        if (!Space.samePoint(s.pos, book.pos))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [book.pos]);
             if (!Js.T(path) || (path.length == 0))
@@ -124,16 +124,16 @@ public static partial class Books
         if (/*TODO in*/Js.In(subject, KNOWLEDGE))
         {
             var k = subject;
-            if (!Js.T(knows(state, k)))
+            if (!knows(state, k))
             {
                 state.knowledge.push(k);
             }
             s.note = $"learned {Js.Str(k)}";
-            Events.logEvent(state, $"{Js.Str(s.name)} read up on {Js.Str(k)}: the colony can now get on with {Js.Str(KNOWLEDGE[Js.Idx(k)])}");
+            Events.logEvent(state, $"{Js.Str(s.name)} read up on {Js.Str(k)}: the colony can now get on with {Js.Str(Js.Get(KNOWLEDGE, k))}");
             return;
         }
         var type = subject;
-        s.xp[Js.Idx(type)] = (Js.Q(s.xp[Js.Idx(type)], 0)) + Skills.XP_PER_LEVEL;
+        s.xp[Js.Idx(type)] = (Js.Q(Js.Get(s.xp, type), 0)) + Skills.XP_PER_LEVEL;
         s.note = $"read a book on {Js.Str(type)}";
     }
 

@@ -20,12 +20,12 @@ public static partial class Breach
     /// <summary>What it takes to break this structure (reinforced ones take more; defences.ts).</summary>
     public static double structureHealth(Grid grid, int i)
     {
-        var tile = Js.NN(grid.tiles[Js.Idx(i)]);
-        if (!Js.T(isStructure(tile)))
+        var tile = Js.NN(Js.Get(grid.tiles, i));
+        if (!isStructure(tile))
         {
             return 0;
         }
-        return grid.reinforced.includes(i) ? (STRUCTURE_HEALTH[Js.Idx(tile)] * 2.5) : STRUCTURE_HEALTH[Js.Idx(tile)];
+        return grid.reinforced.includes(i) ? (Js.Get(STRUCTURE_HEALTH, tile) * 2.5) : Js.Get(STRUCTURE_HEALTH, tile);
     }
     public static double structureHealth(Grid grid, double i) => structureHealth(grid, (int)i);
 
@@ -36,7 +36,7 @@ public static partial class Breach
 
     public static double structureDamage(SimState state, int x, int y)
     {
-        return Js.T(isStructure(Grids.getTile(state.grid, x, y))) ? Js.NN(state.grid.damage[Js.Idx(Grids.tileIndex(state.grid, x, y))]) : 0;
+        return isStructure(Grids.getTile(state.grid, x, y)) ? Js.NN(Js.Get(state.grid.damage, Grids.tileIndex(state.grid, x, y))) : 0;
     }
     public static double structureDamage(SimState state, double x, double y) => structureDamage(state, (int)x, (int)y);
 
@@ -44,13 +44,13 @@ public static partial class Breach
     public static bool damageStructure(SimState state, int x, int y, double amount)
     {
         var tile = Grids.getTile(state.grid, x, y);
-        if (!Js.T(isStructure(tile)))
+        if (!isStructure(tile))
         {
             return false;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, Js.NN(state.grid.damage[Js.Idx(i)]) + amount);
-        if (Js.NN(state.grid.damage[Js.Idx(i)]) < structureHealth(state.grid, i))
+        Grids.setDamage(state.grid, i, Js.NN(Js.Get(state.grid.damage, i)) + amount);
+        if (Js.NN(Js.Get(state.grid.damage, i)) < structureHealth(state.grid, i))
         {
             return false;
         }
@@ -70,20 +70,20 @@ public static partial class Breach
     /// <summary>Undoes up to `amount` damage. Returns the damage left.</summary>
     public static double repairStructure(SimState state, int x, int y, double amount)
     {
-        if (!Js.T(isStructure(Grids.getTile(state.grid, x, y))))
+        if (!isStructure(Grids.getTile(state.grid, x, y)))
         {
             return 0;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(state.grid.damage[Js.Idx(i)]) - amount));
-        return Js.NN(state.grid.damage[Js.Idx(i)]);
+        Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(Js.Get(state.grid.damage, i)) - amount));
+        return Js.NN(Js.Get(state.grid.damage, i));
     }
     public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, (int)x, (int)y, amount);
 
     /// <summary>What it takes to break an edge wall or door: the same as the tile kinds.</summary>
     public static double edgeHealth(Grid grid, int e)
     {
-        var kind = grid.edges[Js.Idx(e)];
+        var kind = Js.Get(grid.edges, e);
         if (grid.edgeBoarded.includes(e))
         {
             return BOARDS_HEALTH;
@@ -98,7 +98,7 @@ public static partial class Breach
 
     public static double edgeDamage(Grid grid, int e)
     {
-        return Js.Q(grid.edgeDamage[Js.Idx(Js.Str(e))], 0);
+        return Js.Q(Js.Get(grid.edgeDamage, Js.Str(e)), 0);
     }
     public static double edgeDamage(Grid grid, double e) => edgeDamage(grid, (int)e);
 
@@ -107,9 +107,9 @@ public static partial class Breach
     {
         var __d0 = state;
         var grid = __d0.grid;
-        var kind = grid.edges[Js.Idx(e)];
+        var kind = Js.Get(grid.edges, e);
         var boarded = grid.edgeBoarded.includes(e);
-        if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && !Js.T(boarded))
+        if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && !boarded)
         {
             return false;
         }
@@ -119,13 +119,13 @@ public static partial class Breach
             grid.edgeDamage[Js.Idx(Js.Str(e))] = damage;
             return false;
         }
-        if (Js.T(Js.T(boarded) || (kind == Grids.EDGE_WINDOW)))
+        if (boarded || (kind == Grids.EDGE_WINDOW))
         {
             grid.edgeDamage.Remove(Js.Str(Js.Str(e)));
             var tile_1 = JsMath.floor(((double)(e) / (2)));
             var x = tile_1 % grid.width;
             var y = JsMath.floor(((double)(tile_1) / (grid.width)));
-            if (Js.T(boarded))
+            if (boarded)
             {
                 grid.edgeBoarded.splice(grid.edgeBoarded.indexOf(e), 1);
             }
@@ -135,7 +135,7 @@ public static partial class Breach
             }
             Grids.noteEdgeChange(grid, e);
             state.walkabilityVersion += 1;
-            Events.logEvent(state, ((((("Zombies " + (Js.T(boarded) ? "tore the boards off" : "smashed")) + " the window at (") + x) + ", ") + y) + ")");
+            Events.logEvent(state, ((((("Zombies " + (boarded ? "tore the boards off" : "smashed")) + " the window at (") + x) + ", ") + y) + ")");
             return true;
         }
         grid.edges[Js.Idx(e)] = Grids.EDGE_NONE;
@@ -184,7 +184,7 @@ public static partial class Breach
     {
         var __d1 = state;
         var grid = __d1.grid;
-        if (grid.edges[Js.Idx(e)] != Grids.EDGE_WINDOW)
+        if (Js.Get(grid.edges, e) != Grids.EDGE_WINDOW)
         {
             return;
         }

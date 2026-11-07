@@ -27,19 +27,19 @@ public static partial class ScenarioMod
     /// <summary>Floor plus something on it. Returns false if `char` isn't an entity char.</summary>
     public static bool placeEntity(SimState state, string @char, int x, int y)
     {
-        var simple = SIMPLE_ITEMS.find((k) => ENTITY_CHARS[Js.Idx(k)] == @char);
+        var simple = SIMPLE_ITEMS.find((k) => Js.Get(ENTITY_CHARS, k) == @char);
         if (Js.T(simple))
         {
             Items.spawnItem(state, simple, x, y);
             return true;
         }
-        var furniture = SIMPLE_FURNITURE.find((k) => ENTITY_CHARS[Js.Idx(k)] == @char);
+        var furniture = SIMPLE_FURNITURE.find((k) => Js.Get(ENTITY_CHARS, k) == @char);
         if (Js.T(furniture))
         {
             FurnitureMod.addFurniture(state, furniture, x, y);
             return true;
         }
-        var planned = SIMPLE_FURNITURE.filter((k) => k != "truck").find((k) => ENTITY_CHARS[Js.Idx($"{Js.Str(k)}Blueprint")] == @char);
+        var planned = SIMPLE_FURNITURE.filter((k) => k != "truck").find((k) => Js.Get(ENTITY_CHARS, $"{Js.Str(k)}Blueprint") == @char);
         if (Js.T(planned))
         {
             Designations.addBlueprint(state, x, y, planned);
@@ -207,7 +207,7 @@ public static partial class ScenarioMod
     public static SimState loadScenario(Scenario scenario)
     {
         var height = scenario.map.length;
-        var width = Js.Q(scenario.map[Js.Idx(0)]?.length, 0);
+        var width = Js.Q(Js.Get(scenario.map, 0)?.length, 0);
         if ((height == 0) || (width == 0))
         {
             throw new Exception("loadScenario: map is empty");
@@ -221,11 +221,11 @@ public static partial class ScenarioMod
             }
             Js.ListOf(Js.Chars(row)).forEach((@char, x) =>
         {
-            if (Js.T(placeEntity(state, @char, x, y)))
+            if (placeEntity(state, @char, x, y))
             {
                 return;
             }
-            var tile = CHAR_TILES[Js.Idx(@char)];
+            var tile = Js.Get(CHAR_TILES, @char);
             if (tile == null)
             {
                 throw new Exception($"loadScenario: unknown char '{Js.Str(@char)}' at ({Js.Str(x)}, {Js.Str(y)})");
@@ -236,7 +236,7 @@ public static partial class ScenarioMod
         JsRecord<double> EDGE_KINDS = new() { ["wall"] = Grids.EDGE_WALL, ["door"] = Grids.EDGE_DOOR, ["barricade"] = 3, ["window"] = 4, ["brokenWindow"] = 5 };
         foreach (var e in Js.Iter(scenario.edges ?? []))
         {
-            Grids.setEdge(state.grid, e.x, e.y, e.side, EDGE_KINDS[Js.Idx(e.kind)]);
+            Grids.setEdge(state.grid, e.x, e.y, e.side, Js.Get(EDGE_KINDS, e.kind));
         }
         foreach (var room in Js.Iter(scenario.rooms ?? []))
         {

@@ -33,20 +33,20 @@ public static partial class CharacterMod
 
     public static Profession? professionOf(double job)
     {
-        var name = StoryMod.STORY_JOBS[Js.Idx(job)];
-        return (name == null) ? null : PROFESSIONS[Js.Idx(name)];
+        var name = Js.Get(StoryMod.STORY_JOBS, job);
+        return (name == null) ? null : Js.Get(PROFESSIONS, name);
     }
 
     /// <summary>Points left with this profession and these traits.</summary>
     public static double pointsLeft(Character c)
     {
-        return (START_POINTS + (Js.Q(professionOf(c.job)?.points, 0))) - c.traits.reduce((sum, t) => sum + (Js.Q(TRAIT_COST[Js.Idx(t)], 0)), 0.0);
+        return (START_POINTS + (Js.Q(professionOf(c.job)?.points, 0))) - c.traits.reduce((sum, t) => sum + (Js.Q(Js.Get(TRAIT_COST, t), 0)), 0.0);
     }
 
     /// <summary>Tidies a typed name: letters, spaces, hyphens, apostrophes; at most NAME_MAX.</summary>
     public static string cleanName(string name)
     {
-        return name.replace(/*TODO regex /[^\p{L} '-]/gu*/null, "").replace(/*TODO regex /\s+/g*/null, " ").trim().slice(0, NAME_MAX).trim();
+        return name.replace(new JsRegExp("[^\\p{L} '-]", "gu"), "").replace(new JsRegExp("\\s+", "g"), " ").trim().slice(0, NAME_MAX).trim();
     }
 
     /// <summary>What's wrong with a character, or null if it's fine.</summary>
@@ -64,7 +64,7 @@ public static partial class CharacterMod
         {
             return "a trait twice";
         }
-        if (c.traits.some((t) => TRAIT_COST[Js.Idx(t)] == null))
+        if (c.traits.some((t) => Js.Get(TRAIT_COST, t) == null))
         {
             return "a trait you can't choose";
         }

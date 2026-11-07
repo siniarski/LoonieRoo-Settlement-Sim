@@ -67,13 +67,13 @@ public static partial class Wounds
     /// <summary>Slowed at work: a wounded or lost arm.</summary>
     public static bool armSlowed(Survivor s)
     {
-        return Js.T((s.wound?.limb == "arm") || Js.T(Skills.hasTrait(s, "lostArm")));
+        return (s.wound?.limb == "arm") || Skills.hasTrait(s, "lostArm");
     }
 
     /// <summary>Slowed walking: a wounded or lost leg.</summary>
     public static bool legSlowed(Survivor s)
     {
-        return Js.T((s.wound?.limb == "leg") || Js.T(Skills.hasTrait(s, "lostLeg")));
+        return (s.wound?.limb == "leg") || Skills.hasTrait(s, "lostLeg");
     }
 
     public static bool canAmputate(Survivor s)
@@ -84,7 +84,7 @@ public static partial class Wounds
     /// <summary>Takes the bitten limb off. Returns an error, or null when done.</summary>
     public static string? amputate(SimState state, Survivor s)
     {
-        if (!Js.T(canAmputate(s)))
+        if (!canAmputate(s))
         {
             return (s.infection == null) ? $"{Js.Str(s.name)} isn't infected" : "too late: it has spread";
         }

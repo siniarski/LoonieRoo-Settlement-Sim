@@ -55,7 +55,7 @@ public static partial class Wellbeing
                 continue;
             }
             var company = awake.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= COMPANY));
-            s.social = clamp(s.social + (Js.T(company) ? 1 : -1));
+            s.social = clamp(s.social + (company ? 1 : -1));
         }
     }
 
@@ -73,8 +73,8 @@ public static partial class Wellbeing
         var room = Rooms.roomAt(state, s.pos.x, s.pos.y);
         var purpose = Js.T(room) ? Rooms.designationOf(state, room)?.purpose : null;
         var bedroom = (Js.T(room) && ((purpose == "housing") || (purpose == "barracks"))) && Js.T(Rooms.evaluateRoom(state, room, purpose).complete);
-        var warm = Js.T(Power.isWarmed(state, s.pos)) || ((Seasons.seasonOf(state.tick) != "winter") && !Js.T(state.settings.winter));
-        var dirty = Js.T(room) ? room.tiles.filter((i) => Js.T(Grids.isDirty(state.grid, i % state.grid.width, JsMath.floor(((double)(i) / (state.grid.width)))))).length : 0;
+        var warm = Power.isWarmed(state, s.pos) || ((Seasons.seasonOf(state.tick) != "winter") && !Js.T(state.settings.winter));
+        var dirty = Js.T(room) ? room.tiles.filter((i) => Grids.isDirty(state.grid, i % state.grid.width, JsMath.floor(((double)(i) / (state.grid.width))))).length : 0;
         return clamp(((((15 + (Js.T(inBed) ? 30 : 0)) + (Js.T(room) ? 20 : 0)) + (Js.T(bedroom) ? 15 : 0)) + (Js.T(warm) ? 15 : 0)) - JsMath.min(15, dirty * 5));
     }
 

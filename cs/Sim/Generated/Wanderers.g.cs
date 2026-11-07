@@ -62,7 +62,7 @@ public static partial class Wanderers
         reconcileWanderers(state);
         foreach (var w in Js.Iter((state.wanderers).ToList()))
         {
-            if (Js.T((state.tick >= w.leavesTick) || Js.T(Time.isNight(state.tick))))
+            if ((state.tick >= w.leavesTick) || Time.isNight(state.tick))
             {
                 removeWanderer(state, w);
                 Events.logEvent(state, $"{Js.Str(w.name)} gave up waiting and left");
@@ -88,11 +88,11 @@ public static partial class Wanderers
     {
         foreach (var w in Js.Iter((state.wanderers).ToList()))
         {
-            if (Js.T(Grids.isWalkable(state.grid, w.x, w.y)))
+            if (Grids.isWalkable(state.grid, w.x, w.y))
             {
                 continue;
             }
-            var to = Pathfinding.DIRS.map((d) => new Point { x = Js.I(w.x + d.x), y = Js.I(w.y + d.y) }).find((p) => Js.T(Grids.isWalkable(state.grid, p.x, p.y)));
+            var to = Pathfinding.DIRS.map((d) => new Point { x = Js.I(w.x + d.x), y = Js.I(w.y + d.y) }).find((p) => Grids.isWalkable(state.grid, p.x, p.y));
             if (Js.T(to))
             {
                 w.x = Js.I(to.x);
@@ -119,7 +119,7 @@ public static partial class Wanderers
             Point near = new Point { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + Rng.randomInt(state, -ARRIVAL_DISTANCE, ARRIVAL_DISTANCE + 1)))) };
             bool ok(double x, double y)
             {
-                return (((Js.T(Fog.isExplored(state, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has($"{Js.Str(x)},{Js.Str(y)}")) && Pathfinding.DIRS.some((d) => Js.T(Grids.inBounds(state.grid, x + d.x, y + d.y)) && !Js.T(Fog.isExplored(state, x + d.x, y + d.y)));
+                return (((Fog.isExplored(state, x, y) && (Grids.getTile(state.grid, x, y) == "floor")) && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has($"{Js.Str(x)},{Js.Str(y)}")) && Pathfinding.DIRS.some((d) => Grids.inBounds(state.grid, x + d.x, y + d.y) && !Fog.isExplored(state, x + d.x, y + d.y));
             }
             var p = Space.nearestTile(state.grid, near, (__f0, __f1) => ok(__f0, __f1));
             if (Js.T(p))

@@ -38,7 +38,7 @@ public static partial class Dogs
     public static Dog addDog(SimState state, int x, int y)
     {
         var n = state.nextId++;
-        Dog dog = new Dog { id = $"g{Js.Str(n)}", name = Js.NN(DOG_NAMES[Js.Idx(n % DOG_NAMES.length)]), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
+        Dog dog = new Dog { id = $"g{Js.Str(n)}", name = Js.NN(Js.Get(DOG_NAMES, n % DOG_NAMES.length)), pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], health = DOG_HEALTH, cooldown = 0, nextThinkTick = 0, barkedTick = -BARK_EVERY, waiting = false, at = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).at, was = Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }).was };
         state.dogs.push(dog);
         return dog;
     }
@@ -49,7 +49,7 @@ public static partial class Dogs
         var day = Time.dayOf(state.tick);
         if ((((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR))) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE)) && (state.survivors.length > 0))
         {
-            var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? Js.NN(state.survivors[Js.Idx(0)]).pos;
+            var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? Js.NN(Js.Get(state.survivors, 0)).pos;
             var dog = addDog(state, spot.x, spot.y);
             Events.logEvent(state, $"A stray dog, {Js.Str(dog.name)}, has wandered in at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
         }
@@ -97,12 +97,12 @@ public static partial class Dogs
             dog.pos = dog.move.to;
             dog.move = null;
         }
-        var zombie = state.zombies.filter((z) => Space.manhattan(z.pos, dog.pos) <= DOG_SENSE).sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos))[Js.Idx(0)];
+        var zombie = Js.Get(state.zombies.filter((z) => Space.manhattan(z.pos, dog.pos) <= DOG_SENSE).sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos)), 0);
         if (Js.T(zombie) && ((state.tick - dog.barkedTick) >= BARK_EVERY))
         {
             bark(state, dog, zombie);
         }
-        if (Js.T(Js.T(zombie) && Js.T(Motion.inReach(zombie, dog, Motion.REACH, state.grid))))
+        if (Js.T(zombie) && Motion.inReach(zombie, dog, Motion.REACH, state.grid))
         {
             if (dog.cooldown == 0)
             {
@@ -129,7 +129,7 @@ public static partial class Dogs
         {
             return Pathfinding.findPathToAny(state.grid, dog.pos, Grids.neighbours4(state.grid, zombie.pos.x, zombie.pos.y)) ?? [];
         }
-        var owner = state.survivors.slice().sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos))[Js.Idx(0)];
+        var owner = Js.Get(state.survivors.slice().sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos)), 0);
         if (!Js.T(owner) || (Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW))
         {
             return (List<Point>)[];
@@ -144,7 +144,7 @@ public static partial class Dogs
         double woke = 0;
         foreach (var s in Js.Iter(state.survivors))
         {
-            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(Medicine.isGuard(s))) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))
+            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Medicine.isGuard(s)) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))
             {
                 continue;
             }
@@ -182,6 +182,6 @@ public static partial class Dogs
 
     public static Dog? dogAt(SimState state, Point p)
     {
-        return state.dogs.find((d) => Js.T(Space.samePoint(d.pos, p)));
+        return state.dogs.find((d) => Space.samePoint(d.pos, p));
     }
 }

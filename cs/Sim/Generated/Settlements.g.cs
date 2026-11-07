@@ -60,7 +60,7 @@ public static partial class Settlements
                 }
             }
             var people = 5 + JsMath.floor(Hash.hashRoll(seed, i, 3) * 8);
-            newSettlement(state, Js.NN(NAMES[Js.Idx((seed + i) % NAMES.length)]), p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
+            newSettlement(state, Js.NN(Js.Get(NAMES, (seed + i) % NAMES.length)), p.x, p.y, people, people * 3, JsMath.floor(Hash.hashRoll(seed, i, 4) * 3));
         }
     }
 
@@ -76,11 +76,11 @@ public static partial class Settlements
     {
         var was = isHostile(s);
         s.reputation = JsMath.max(-100, JsMath.min(100, s.reputation + by));
-        if (Js.T(!Js.T(was) && Js.T(isHostile(s))))
+        if (!was && isHostile(s))
         {
             Events.logEvent(state, $"{Js.Str(s.name)} now counts you an enemy: expect more raids");
         }
-        if (Js.T(was) && !Js.T(isHostile(s)))
+        if (was && !isHostile(s))
         {
             Events.logEvent(state, $"{Js.Str(s.name)} no longer counts you an enemy");
         }
@@ -94,7 +94,7 @@ public static partial class Settlements
             {
                 continue;
             }
-            var t = Js.Q(s.ties[Js.Idx(o.id)], 0);
+            var t = Js.Q(Js.Get(s.ties, o.id), 0);
             if (t >= ALLY)
             {
                 adjustReputation(state, o, JsMath.trunc(((double)(by) / (2))), false);
@@ -114,7 +114,7 @@ public static partial class Settlements
     /// <summary>How two settlements stand: allies, feuding, or neither.</summary>
     public static string? relation(Settlement a, Settlement b)
     {
-        var t = Js.Q(a.ties[Js.Idx(b.id)], 0);
+        var t = Js.Q(Js.Get(a.ties, b.id), 0);
         return (t >= ALLY) ? "allies" : ((t <= FEUD) ? "feud" : null);
     }
 
@@ -124,7 +124,7 @@ public static partial class Settlements
         var before = relation(a, b);
         foreach (var (x, y) in new (Settlement, Settlement)[] { (a, b), (b, a) })
         {
-            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(x.ties[Js.Idx(y.id)], 0)) + by));
+            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(Js.Get(x.ties, y.id), 0)) + by));
         }
         return before;
     }
@@ -133,8 +133,8 @@ public static partial class Settlements
     /// <summary>Whose turn it is to send a trader: friendly-ish settlements in turn, or none.</summary>
     public static Settlement? traderFrom(SimState state)
     {
-        var open = state.settlements.filter((s) => !Js.T(isHostile(s)));
-        return (open.length > 0) ? Js.NN(open[Js.Idx(Time.dayOf(state.tick) % open.length)]) : null;
+        var open = state.settlements.filter((s) => !isHostile(s));
+        return (open.length > 0) ? Js.NN(Js.Get(open, Time.dayOf(state.tick) % open.length)) : null;
     }
 
     /// <summary>Friendly settlements send someone to join, every FRIENDLY_SEND_DAYS at noon.</summary>

@@ -68,7 +68,7 @@ public static partial class FurnitureMod
         {
             return "rubbish bin";
         }
-        return LOOK_NAMES[Js.Idx(look)];
+        return Js.Get(LOOK_NAMES, look);
     }
 
     /// <summary>Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never moves, and only addFurniture/removeFurniture change the list, so they drop the cache. (A generated world has thousands of trees: scanning the list per tile was the cost.)</summary>

@@ -16,7 +16,7 @@ public static partial class Mood
         {
             foreach (var k in Js.Iter(Js.ObjectKeys(THOUGHTS)))
             {
-                THOUGHTS[Js.Idx(k)].duration = BASE_DURATION[Js.Idx(k)] * Time.dayScale();
+                Js.Get(THOUGHTS, k).duration = Js.Get(BASE_DURATION, k) * Time.dayScale();
             }
         });
     }
@@ -50,7 +50,7 @@ public static partial class Mood
 
     public static void addThought(SimState state, Survivor s, string kind)
     {
-        var until = state.tick + THOUGHTS[Js.Idx(kind)].duration;
+        var until = state.tick + Js.Get(THOUGHTS, kind).duration;
         var existing = s.thoughts.find((t) => t.kind == kind);
         if (Js.T(existing))
         {
@@ -74,8 +74,8 @@ public static partial class Mood
     /// <summary>What moves this survivor's mood right now, as [label, effect] pairs.</summary>
     public static List<(string, double)> moodFactors(SimState state, Survivor s)
     {
-        List<(string, double)> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => ((string, double))(THOUGHTS[Js.Idx(t.kind)].label, THOUGHTS[Js.Idx(t.kind)].effect));
-        if (Js.T(Health.isHurt(s.health)))
+        List<(string, double)> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => ((string, double))(Js.Get(THOUGHTS, t.kind).label, Js.Get(THOUGHTS, t.kind).effect));
+        if (Health.isHurt(s.health))
         {
             factors.push(("hurt", HURT_MOOD));
         }
@@ -91,11 +91,11 @@ public static partial class Mood
         {
             factors.push(("sick", Corpses.SICK_MOOD));
         }
-        if (Js.T(Water.isThirsty(s)))
+        if (Water.isThirsty(s))
         {
             factors.push(("thirsty", Water.THIRSTY_MOOD));
         }
-        if (Js.T(Policies.policyOn(state, "rationing")))
+        if (Policies.policyOn(state, "rationing"))
         {
             factors.push(("on rations", Policies.RATIONED_MOOD));
         }
@@ -105,9 +105,9 @@ public static partial class Mood
         }
         foreach (var t in Js.Iter(s.traits))
         {
-            if (Skills.TRAIT_INFO[Js.Idx(t)].mood != 0)
+            if (Js.Get(Skills.TRAIT_INFO, t).mood != 0)
             {
-                factors.push((Skills.TRAIT_INFO[Js.Idx(t)].label, Skills.TRAIT_INFO[Js.Idx(t)].mood));
+                factors.push((Js.Get(Skills.TRAIT_INFO, t).label, Js.Get(Skills.TRAIT_INFO, t).mood));
             }
         }
         factors.pushAll(Wellbeing.wellbeingFactors(s)); factors.pushAll(BodyMod.bodyFactors(s));

@@ -29,7 +29,7 @@ public static partial class Fog
 
     public static bool isExplored(SimState state, int x, int y)
     {
-        return Js.T(Grids.inBounds(state.grid, x, y)) && (state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] == 1);
+        return Grids.inBounds(state.grid, x, y) && (Js.Get(state.grid.explored, Grids.tileIndex(state.grid, x, y)) == 1);
     }
     public static bool isExplored(SimState state, double x, double y) => isExplored(state, (int)x, (int)y);
 
@@ -43,7 +43,7 @@ public static partial class Fog
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
                 var i = (y * grid.width) + x;
-                if ((grid.explored[Js.Idx(i)] == 1) || (((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)))
+                if ((Js.Get(grid.explored, i) == 1) || (((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)))
                 {
                     continue;
                 }
@@ -84,7 +84,7 @@ public static partial class Fog
     /// <summary>Late in the day: scouts stop exploring until morning.</summary>
     public static bool scoutingOver(int tick)
     {
-        return Js.T(Js.T(Time.isNight(tick)) || (Time.hourOf(tick) >= SCOUT_HOME_HOUR));
+        return Time.isNight(tick) || (Time.hourOf(tick) >= SCOUT_HOME_HOUR);
     }
     public static bool scoutingOver(double tick) => scoutingOver((int)tick);
 
@@ -105,12 +105,12 @@ public static partial class Fog
             var r = Sight.sightRadius(state, s);
             doors ??= (grid.open.join(",") + "|") + grid.edgeOpen.join(",");
             var key = $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)},{Js.Str(r)},{Js.Str(Towers.onTower(state, s))},{Js.Str(state.walkabilityVersion)},{Js.Str(doors)}";
-            if (last[Js.Idx(s.id)] == key)
+            if (Js.Get(last, s.id) == key)
             {
                 continue;
             }
             last[Js.Idx(s.id)] = key;
-            foreach (var i in Js.Iter(Sight.sightOf(state, s, (j) => grid.explored[Js.Idx(j)] == 1)))
+            foreach (var i in Js.Iter(Sight.sightOf(state, s, (j) => Js.Get(grid.explored, j) == 1)))
             {
                 grid.explored[Js.Idx(i)] = 1;
                 noteFind(state, i % grid.width, JsMath.floor(((double)(i) / (grid.width))));
@@ -131,7 +131,7 @@ public static partial class Fog
         {
             for (var x = a.x0; x <= a.x1; x++)
             {
-                if (Js.T(!Js.T(isExplored(state, x, y)) && Js.T(Grids.isWalkable(state.grid, x, y))))
+                if (!isExplored(state, x, y) && Grids.isWalkable(state.grid, x, y))
                 {
                     @out.push(new Point { x = Js.I(x), y = Js.I(y) });
                 }
@@ -143,8 +143,8 @@ public static partial class Fog
     /// <summary>The nearest unexplored tile in the area that `from` can walk to, or null when the area is done.</summary>
     public static Point? scoutTarget(SimState state, ExploreArea a, Point from)
     {
-        var targets = unexploredIn(state, a).sort((p, q) => Js.Or(Js.Or(Space.manhattan(from, p) - Space.manhattan(from, q), p.y - q.y), p.x - q.x));
-        return targets.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p]))) ?? null;
+        var targets = unexploredIn(state, a).sort((p, q) => (((Space.manhattan(from, p) - Space.manhattan(from, q)) is var __or3 && Js.T(__or3) ? __or3 : (p.y - q.y)) is var __or2 && Js.T(__or2) ? __or2 : (p.x - q.x)));
+        return targets.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
     }
 
     /// <summary>Drops areas with nothing left to see.</summary>

@@ -83,3 +83,33 @@ it('writes whole states for the C# port', () => {
   for (let k = 0; k < 600; k++) tick(colony);
   writeFileSync('cs/Parity/data/states/colony-512.json', JSON.stringify(colony));
 }, 600000);
+
+// Whole runs: a start state and the state after each checkpoint's ticks, for the C# sim to replay from the start
+// and match at every checkpoint (the first one that differs says where to look).
+export const RUN_CHECKPOINTS = [1, 2, 5, 10, 30, 100, 300];
+
+it('writes whole runs for the C# port', () => {
+  const runs: [string, () => ReturnType<typeof createWorld>][] = [
+    ['world-64', () => {
+      const s = createWorld(5, 64);
+      for (let k = 0; k < 400; k++) tick(s);
+      return s;
+    }],
+    ['colony-512', () => {
+      const s = SCENARIOS.find((x) => x.name === 'colony-512')!.build();
+      for (let k = 0; k < 50; k++) tick(s);
+      return s;
+    }],
+  ];
+  for (const [name, build] of runs) {
+    const dir = `cs/Parity/data/runs/${name}`;
+    mkdirSync(dir, { recursive: true });
+    const s = build();
+    writeFileSync(`${dir}/start.json`, JSON.stringify(s));
+    let done = 0;
+    for (const at of RUN_CHECKPOINTS) {
+      for (; done < at; done++) tick(s);
+      writeFileSync(`${dir}/t${at}.json`, JSON.stringify(s));
+    }
+  }
+}, 600000);

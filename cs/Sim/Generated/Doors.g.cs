@@ -19,17 +19,17 @@ public static partial class Doors
         if (Js.T(from))
         {
             var e = Grids.edgeBetween(state.grid, from.x, from.y, x, y);
-            if (Js.T((((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && !Js.T(Grids.edgeIsOpen(state.grid, e))) && (Js.T(Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))))
+            if ((((e >= 0) && (Js.Get(state.grid.edges, e) == Grids.EDGE_DOOR)) && !Grids.edgeIsOpen(state.grid, e)) && (hasKey || !state.grid.edgeLocked.includes(e)))
             {
                 state.grid.edgeOpen.push(e);
                 state.grid.edgePassing.push(e);
             }
         }
-        if (Js.T((Grids.getTile(state.grid, x, y) != "door") || Js.T(Grids.isOpen(state.grid, x, y))))
+        if ((Grids.getTile(state.grid, x, y) != "door") || Grids.isOpen(state.grid, x, y))
         {
             return;
         }
-        if (Js.T(Grids.isLocked(state.grid, x, y)) && !Js.T(hasKey))
+        if (Grids.isLocked(state.grid, x, y) && !hasKey)
         {
             return;
         }
@@ -65,9 +65,9 @@ public static partial class Doors
         foreach (var z in Js.Iter(state.zombies))
         {
             mark(z.pos.x, z.pos.y);
-            if (Js.T(z.path[Js.Idx(0)]))
+            if (Js.T(Js.Get(z.path, 0)))
             {
-                mark(z.path[Js.Idx(0)].x, z.path[Js.Idx(0)].y);
+                mark(Js.Get(z.path, 0).x, Js.Get(z.path, 0).y);
             }
         }
         foreach (var r in Js.Iter(state.residents))
@@ -120,7 +120,7 @@ public static partial class Doors
         }
         foreach (var z in Js.Iter(state.zombies))
         {
-            across(z.pos, z.path[Js.Idx(0)]);
+            across(z.pos, Js.Get(z.path, 0));
         }
         var bodies = Js.ListOf<IBody>(state.survivors, state.zombies, state.residents).map((b) => b.at);
         foreach (var e in Js.Iter((grid.edgePassing).ToList()))
@@ -159,7 +159,7 @@ public static partial class Doors
         var __d3 = state;
         var grid = __d3.grid;
         var e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
-        if ((e < 0) || (grid.edges[Js.Idx(e)] != Grids.EDGE_DOOR))
+        if ((e < 0) || (Js.Get(grid.edges, e) != Grids.EDGE_DOOR))
         {
             return null;
         }

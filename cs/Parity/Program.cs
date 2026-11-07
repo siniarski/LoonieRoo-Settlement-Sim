@@ -108,5 +108,38 @@ foreach (var file in Directory.GetFiles(Path.Combine(dir, "states"), "*.json"))
     Check("state round trip", diffs.Count == 0, $"{Path.GetFileName(file)}:\n  " + string.Join("\n  ", diffs));
 }
 
+// Whole runs: from the TypeScript's start state, tick to each checkpoint and compare the whole state.
+// Stops a run at its first differing checkpoint (later ones only repeat the difference).
+int[] checkpoints = [1, 2, 5, 10, 30, 100, 300];
+var runsDir = Path.Combine(dir, "runs");
+if (Directory.Exists(runsDir))
+{
+    foreach (var run in Directory.GetDirectories(runsDir).OrderBy(d => d, StringComparer.Ordinal))
+    {
+        string name = Path.GetFileName(run);
+        SimState state;
+        try { state = StateJson.Read(File.ReadAllText(Path.Combine(run, "start.json"))); }
+        catch (Exception e) { Check("run start", false, $"{name}: {e.Message}"); continue; }
+        int done = 0;
+        foreach (int at in checkpoints)
+        {
+            try
+            {
+                for (; done < at; done++) Tick.tick(state);
+            }
+            catch (Exception e)
+            {
+                Check("run tick", false, $"{name}: tick {state.tick} (step {done + 1}) threw {e.GetType().Name}: {e.Message}\n{e.StackTrace?.Split('\n').Take(8).Aggregate((a, b) => a + "\n" + b)}");
+                break;
+            }
+            var want = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(run, $"t{at}.json")));
+            var diffs = StateJson.Diff(want, System.Text.Json.Nodes.JsonNode.Parse(StateJson.Write(state)));
+            Check("run", diffs.Count == 0, $"{name} after {at} ticks:\n  " + string.Join("\n  ", diffs));
+            if (diffs.Count > 0) break;
+        }
+    }
+}
+Time.setDayScale(1);
+
 Console.WriteLine(failures == 0 ? $"parity: all {checks} checks match" : $"parity: {failures} of {checks} checks differ");
 return failures == 0 ? 0 : 1;

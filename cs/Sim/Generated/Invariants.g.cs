@@ -18,7 +18,7 @@ public static partial class Invariants
         var items = Js.MapOf(state.items, (i) => i.id, (i) => i);
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (!Js.T(Grids.isWalkable(grid, s.pos.x, s.pos.y)))
+            if (!Grids.isWalkable(grid, s.pos.x, s.pos.y))
             {
                 problems.push($"{Js.Str(s.name)} stands on unwalkable ({Js.Str(s.pos.x)}, {Js.Str(s.pos.y)})");
             }
@@ -93,7 +93,7 @@ public static partial class Invariants
                     problems.push($"two items on ({Js.Str(key)})");
                 }
                 occupied.add(key);
-                if (!Js.T(Grids.isWalkable(grid, item.pos.x, item.pos.y)))
+                if (!Grids.isWalkable(grid, item.pos.x, item.pos.y))
                 {
                     problems.push($"{Js.Str(item.id)} inside a wall at ({Js.Str(key)})");
                 }
@@ -212,7 +212,7 @@ public static partial class Invariants
             {
                 var id = Js.GetProp<string?>(s, slot);
                 var worn = Js.T(id) ? items.get(id) : null;
-                if (Js.T(id) && (((!Js.T(worn) || (worn.carriedBy != s.id)) || !Js.T(Clothing.isGarment(worn.kind))) || (Clothing.SLOT_OF[Js.Idx(worn.kind)] != slot)))
+                if (Js.T(id) && (((!Js.T(worn) || (worn.carriedBy != s.id)) || !Clothing.isGarment(worn.kind)) || (Js.Get(Clothing.SLOT_OF, worn.kind) != slot)))
                 {
                     problems.push($"{Js.Str(s.name)} wears {Js.Str(id)} on {Js.Str(slot)}, which doesn't fit");
                 }
@@ -235,7 +235,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} is relaxing while busy with something else");
                 }
-                if (!Js.T(Grids.isWalkable(grid, s.leisure.x, s.leisure.y)))
+                if (!Grids.isWalkable(grid, s.leisure.x, s.leisure.y))
                 {
                     problems.push($"{Js.Str(s.name)} relaxes on unwalkable ({Js.Str(s.leisure.x)}, {Js.Str(s.leisure.y)})");
                 }
@@ -370,13 +370,13 @@ public static partial class Invariants
             zombieIds.add(z.id);
             bool standable(double x, double y)
             {
-                return Js.T(Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z)));
+                return Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z));
             }
-            if (!Js.T(standable(z.pos.x, z.pos.y)))
+            if (!standable(z.pos.x, z.pos.y))
             {
                 problems.push($"zombie {Js.Str(z.id)} on non-floor ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})");
             }
-            if (Js.T(z.move) && !Js.T(standable(z.move.to.x, z.move.to.y)))
+            if (Js.T(z.move) && !standable(z.move.to.x, z.move.to.y))
             {
                 problems.push($"zombie {Js.Str(z.id)} stepping off floor");
             }
@@ -440,7 +440,7 @@ public static partial class Invariants
         }
         foreach (var w in Js.Iter(state.wanderers))
         {
-            if (!Js.T(Grids.isWalkable(grid, w.x, w.y)))
+            if (!Grids.isWalkable(grid, w.x, w.y))
             {
                 problems.push($"wanderer {Js.Str(w.name)} on unwalkable ({Js.Str(w.x)}, {Js.Str(w.y)})");
             }
@@ -449,7 +449,7 @@ public static partial class Invariants
         {
             var want = arr.flatMap((v, i) => (v != 0) ? ((List<double>)[i]) : ((List<double>)[]));
             var have = Js.ListOf(list).sort((a, b) => a - b);
-            if ((want.length != have.length) || want.some((v, k) => v != have[Js.Idx(k)]))
+            if ((want.length != have.length) || want.some((v, k) => v != Js.Get(have, k)))
             {
                 problems.push($"{Js.Str(name)} list out of step with the map");
             }
@@ -458,12 +458,12 @@ public static partial class Invariants
         listed(grid.damage, grid.damageList.Select(v => (double)v).ToList(), "damage");
         for (var i = 0; i < grid.damage.length; i++)
         {
-            var d = Js.NN(grid.damage[Js.Idx(i)]);
+            var d = Js.NN(Js.Get(grid.damage, i));
             if (d == 0)
             {
                 continue;
             }
-            var tile = Js.NN(grid.tiles[Js.Idx(i)]);
+            var tile = Js.NN(Js.Get(grid.tiles, i));
             var at = $"({Js.Str(i % grid.width)}, {Js.Str(JsMath.floor(((double)(i) / (grid.width))))})";
             if (((tile != "wall") && (tile != "door")) && (tile != "barricade"))
             {
@@ -478,7 +478,7 @@ public static partial class Invariants
         foreach (var f in Js.Iter(state.fires))
         {
             var key = $"{Js.Str(f.x)},{Js.Str(f.y)}";
-            if ((fireTiles.has(key) || !Js.T(Grids.inBounds(grid, f.x, f.y))) || (f.left <= 0))
+            if ((fireTiles.has(key) || !Grids.inBounds(grid, f.x, f.y)) || (f.left <= 0))
             {
                 problems.push($"fire at ({Js.Str(key)}) is doubled, off the map or out");
             }
@@ -535,14 +535,14 @@ public static partial class Invariants
         }
         foreach (var p in Js.Iter(state.prisoners))
         {
-            if (!Js.T(Grids.isWalkable(grid, p.x, p.y)))
+            if (!Grids.isWalkable(grid, p.x, p.y))
             {
                 problems.push($"prisoner {Js.Str(p.id)} in a wall");
             }
         }
         foreach (var d in Js.Iter(state.dogs))
         {
-            if (!Js.T(Grids.isWalkable(grid, d.pos.x, d.pos.y)) || (d.health <= 0))
+            if (!Grids.isWalkable(grid, d.pos.x, d.pos.y) || (d.health <= 0))
             {
                 problems.push($"dog {Js.Str(d.id)} is in a wall or dead");
             }
@@ -556,28 +556,28 @@ public static partial class Invariants
         }
         foreach (var i in Js.Iter(grid.reinforced))
         {
-            if (((grid.tiles[Js.Idx(i)] != "wall") && (grid.tiles[Js.Idx(i)] != "door")) && (grid.tiles[Js.Idx(i)] != "barricade"))
+            if (((Js.Get(grid.tiles, i) != "wall") && (Js.Get(grid.tiles, i) != "door")) && (Js.Get(grid.tiles, i) != "barricade"))
             {
-                problems.push($"reinforcement on a {Js.Str(grid.tiles[Js.Idx(i)])} at {Js.Str(i)}");
+                problems.push($"reinforcement on a {Js.Str(Js.Get(grid.tiles, i))} at {Js.Str(i)}");
             }
         }
         foreach (var i in Js.Iter(grid.locked))
         {
-            if (grid.tiles[Js.Idx(i)] != "door")
+            if (Js.Get(grid.tiles, i) != "door")
             {
-                problems.push($"lock on a {Js.Str(grid.tiles[Js.Idx(i)])} at {Js.Str(i)}");
+                problems.push($"lock on a {Js.Str(Js.Get(grid.tiles, i))} at {Js.Str(i)}");
             }
         }
         foreach (var d in Js.Iter(state.dormant))
         {
-            if (!Js.T(Grids.inBounds(grid, d.x, d.y)))
+            if (!Grids.inBounds(grid, d.x, d.y))
             {
                 problems.push($"dormant zombie {Js.Str(d.id)} off the map");
             }
         }
         foreach (var h in Js.Iter(state.herds))
         {
-            if ((!Js.T(Grids.inBounds(grid, h.x, h.y)) || !Js.T(Grids.inBounds(grid, h.to.x, h.to.y))) || (h.size <= 0))
+            if ((!Grids.inBounds(grid, h.x, h.y) || !Grids.inBounds(grid, h.to.x, h.to.y)) || (h.size <= 0))
             {
                 problems.push($"herd {Js.Str(h.id)} is off the map or empty");
             }

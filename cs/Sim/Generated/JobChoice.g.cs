@@ -25,13 +25,13 @@ public static partial class JobChoice
         foreach (var type in Js.Iter(typesByPriority(s)))
         {
             var open = openJobsByDistance(state, type, s.pos);
-            var curfew = (((Js.T(Js.T(Policies.policyOn(state, "curfew")) && Js.T(Time.isNight(state.tick)))) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
-            foreach (var job in Js.Iter(open.filter((j) => Js.T((Js.T(!Js.T(curfew) || Js.T(Rooms.isIndoors(state, j.x, j.y)))) && Js.T(Orders.withinOrder(state, s, j)))).slice(0, Jobs.MAX_CANDIDATES)))
+            var curfew = (((Policies.policyOn(state, "curfew") && Time.isNight(state.tick)) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
+            foreach (var job in Js.Iter(open.filter((j) => (!Js.T(curfew) || Rooms.isIndoors(state, j.x, j.y)) && Orders.withinOrder(state, s, j)).slice(0, Jobs.MAX_CANDIDATES)))
             {
                 var plan = planJob(state, s, job);
                 if (Js.T(plan))
                 {
-                    return new ChooseJobResult { job = job, plan = plan, why = $"priority {Js.Str(s.priorities[Js.Idx(type)])}, nearest of {Js.Str(open.length)} open" };
+                    return new ChooseJobResult { job = job, plan = plan, why = $"priority {Js.Str(Js.Get(s.priorities, type))}, nearest of {Js.Str(open.length)} open" };
                 }
             }
         }
@@ -44,7 +44,7 @@ public static partial class JobChoice
         {
             return (List<string>)[];
         }
-        return JobTypes.JOB_TYPES.filter((t) => (s.priorities[Js.Idx(t)] > 0) && (!Js.T(s.order) || Orders.ORDER_JOBS.includes(t))).sort((a, b) => Js.Or(s.priorities[Js.Idx(a)] - s.priorities[Js.Idx(b)], JobTypes.JOB_TYPES.indexOf(a) - JobTypes.JOB_TYPES.indexOf(b)));
+        return JobTypes.JOB_TYPES.filter((t) => (Js.Get(s.priorities, t) > 0) && (!Js.T(s.order) || Orders.ORDER_JOBS.includes(t))).sort((a, b) => ((Js.Get(s.priorities, a) - Js.Get(s.priorities, b)) is var __or0 && Js.T(__or0) ? __or0 : (JobTypes.JOB_TYPES.indexOf(a) - JobTypes.JOB_TYPES.indexOf(b))));
     }
 
     public static List<Job> openJobsByDistance(SimState state, string type, Point from)
@@ -53,17 +53,17 @@ public static partial class JobChoice
         var keys = new Float64Array(open.length);
         for (var i = 0; i < open.length; i++)
         {
-            keys[Js.Idx(i)] = (Space.manhattan(from, Js.NN(open[Js.Idx(i)])) * 1048576) + i;
+            keys[Js.Idx(i)] = (Space.manhattan(from, Js.NN(Js.Get(open, i))) * 1048576) + i;
         }
         keys.sort();
-        return Js.ArrayFromMap(keys, (k) => Js.NN(open[Js.Idx(k % 1048576)]));
+        return Js.ArrayFromMap(keys, (k) => Js.NN(Js.Get(open, k % 1048576)));
     }
 
     public static JobChoicePlan? planJob(SimState state, Survivor s, Job job)
     {
-        var __d0 = state;
-        var grid = __d0.grid;
-        var v = __d0.walkabilityVersion;
+        var __d1 = state;
+        var grid = __d1.grid;
+        var v = __d1.walkabilityVersion;
         switch (job.type)
         {
             case "clean":
@@ -71,7 +71,7 @@ public static partial class JobChoice
                 {
                     {
                     List<Point> goal = new List<Point> { new Point { x = Js.I(job.x), y = Js.I(job.y) } };
-                    if (!Js.T(Pathfinding.canReach(grid, v, s.pos, goal)))
+                    if (!Pathfinding.canReach(grid, v, s.pos, goal))
                     {
                         return null;
                     }
@@ -85,12 +85,12 @@ public static partial class JobChoice
             case "guard":
                 {
                     {
-                    if ((job.type == "guard") && !Js.T(Defences.seen(state, job)))
+                    if ((job.type == "guard") && !Defences.seen(state, job))
                     {
                         return null;
                     }
                     var goals = Grids.neighbours4(grid, job.x, job.y);
-                    if (!Js.T(Pathfinding.canReach(grid, v, s.pos, goals)))
+                    if (!Pathfinding.canReach(grid, v, s.pos, goals))
                     {
                         return null;
                     }
@@ -100,7 +100,7 @@ public static partial class JobChoice
             case "scout":
                 {
                     {
-                    if (Js.T(Fog.scoutingOver(state.tick)))
+                    if (Fog.scoutingOver(state.tick))
                     {
                         return null;
                     }
@@ -123,7 +123,7 @@ public static partial class JobChoice
                     {
                         return null;
                     }
-                    var site = Grids.neighbours4(grid, patient.pos.x, patient.pos.y).filter((p) => Js.T(Grids.isWalkable(grid, p.x, p.y)));
+                    var site = Grids.neighbours4(grid, patient.pos.x, patient.pos.y).filter((p) => Grids.isWalkable(grid, p.x, p.y));
                     var remedy = Medicine.remediesFor(patient).map((k) => Work.freeItemFor(state, k, s.pos, site)).find((i) => i != null);
                     return Js.T(remedy) ? pathPlan(state, s.pos, [remedy.pos], remedy.id) : null;
                 }
@@ -136,10 +136,10 @@ public static partial class JobChoice
                     {
                         return null;
                     }
-                    var site = Grids.neighbours4(grid, lab.x, lab.y).filter((p) => Js.T(Grids.isWalkable(grid, p.x, p.y)));
+                    var site = Grids.neighbours4(grid, lab.x, lab.y).filter((p) => Grids.isWalkable(grid, p.x, p.y));
                     if (lab.stored > 0)
                     {
-                        return Js.T(Pathfinding.canReach(grid, v, s.pos, site)) ? pathPlan(state, s.pos, site, null) : null;
+                        return Pathfinding.canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
                     }
                     var sample = Work.freeItemFor(state, "sample", s.pos, site);
                     return Js.T(sample) ? pathPlan(state, s.pos, [sample.pos], sample.id) : null;
@@ -150,7 +150,7 @@ public static partial class JobChoice
                 {
                     {
                     var bench = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-                    if (!Js.T(bench) || !Js.T(Crafting.isStation(bench.kind)))
+                    if (!Js.T(bench) || !Crafting.isStation(bench.kind))
                     {
                         return null;
                     }
@@ -159,37 +159,37 @@ public static partial class JobChoice
                     {
                         return null;
                     }
-                    var site = Grids.neighbours4(grid, bench.x, bench.y).filter((p) => Js.T(Grids.isWalkable(grid, p.x, p.y)));
-                    if ((bench.stored >= Crafting.RECIPES[Js.Idx(kind)].count) && (bench.storedKind == Crafting.RECIPES[Js.Idx(kind)].input))
+                    var site = Grids.neighbours4(grid, bench.x, bench.y).filter((p) => Grids.isWalkable(grid, p.x, p.y));
+                    if ((bench.stored >= Js.Get(Crafting.RECIPES, kind).count) && (bench.storedKind == Js.Get(Crafting.RECIPES, kind).input))
                     {
-                        return Js.T(Pathfinding.canReach(grid, v, s.pos, site)) ? pathPlan(state, s.pos, site, null) : null;
+                        return Pathfinding.canReach(grid, v, s.pos, site) ? pathPlan(state, s.pos, site, null) : null;
                     }
-                    var input = Work.freeItemFor(state, Crafting.RECIPES[Js.Idx(kind)].input, s.pos, site);
+                    var input = Work.freeItemFor(state, Js.Get(Crafting.RECIPES, kind).input, s.pos, site);
                     return Js.T(input) ? pathPlan(state, s.pos, [input.pos], input.id) : null;
                 }
                 }
             case "haul":
                 {
                     {
-                    if (Js.T(Jobs.isStoreJob(job)))
+                    if (Jobs.isStoreJob(job))
                     {
                         var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
-                        if ((!Js.T(Js.T(item?.pos)) || (item.reservedBy != null)) || !Js.T(Pathfinding.canReach(grid, v, s.pos, [item.pos])))
+                        if ((!Js.T(Js.T(item?.pos)) || (item.reservedBy != null)) || !Pathfinding.canReach(grid, v, s.pos, [item.pos]))
                         {
                             return null;
                         }
                         var dest = Work.pickStorageTile(state, item.pos, job, Rooms.homeFor(Rooms.completeStoreRooms(state), item.kind));
                         return Js.T(dest) ? pathPlan(state, s.pos, [item.pos], item.id, dest) : null;
                     }
-                    var site = Grids.neighbours4(grid, job.x, job.y).filter((p) => Js.T(Grids.isWalkable(grid, p.x, p.y)));
+                    var site = Grids.neighbours4(grid, job.x, job.y).filter((p) => Grids.isWalkable(grid, p.x, p.y));
                     if (site.length == 0)
                     {
                         return null;
                     }
-                    if (Js.T(Jobs.isFuelJob(job)))
+                    if (Jobs.isFuelJob(job))
                     {
                         var f = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-                        var fuel = (Js.T(f) && (/*TODO in*/Js.In(f.kind, Jobs.FUEL))) ? Jobs.FUEL[Js.Idx(f.kind)] : "wood";
+                        var fuel = (Js.T(f) && (/*TODO in*/Js.In(f.kind, Jobs.FUEL))) ? Js.Get(Jobs.FUEL, f.kind) : "wood";
                         var item = Work.freeItemFor(state, fuel, s.pos, site);
                         return Js.T(item) ? pathPlan(state, s.pos, [item.pos], item.id) : null;
                     }
@@ -198,7 +198,7 @@ public static partial class JobChoice
                     var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == material)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos));
                     foreach (var item in Js.Iter(free.slice(0, Jobs.MAX_CANDIDATES)))
                     {
-                        if (!Js.T(Pathfinding.canReach(grid, v, s.pos, [item.pos])) || !Js.T(Pathfinding.canReach(grid, v, item.pos, site)))
+                        if (!Pathfinding.canReach(grid, v, s.pos, [item.pos]) || !Pathfinding.canReach(grid, v, item.pos, site))
                         {
                             continue;
                         }
@@ -253,7 +253,7 @@ public static partial class JobChoice
         }
         var haulOnly = open.every((j) => j.type == "haul");
         var freeWood = state.items.some((i) => ((i.kind == "wood") && (i.pos != null)) && (i.reservedBy == null));
-        if (Js.T(haulOnly) && !Js.T(freeWood))
+        if (haulOnly && !freeWood)
         {
             return $"{Js.Str(open.length)} haul job(s) waiting for wood";
         }

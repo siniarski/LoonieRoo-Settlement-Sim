@@ -25,17 +25,17 @@ public static partial class ZombieKinds
         double at = 0;
         foreach (var v in Js.Iter(ORDER))
         {
-            if (night < VARIANTS[Js.Idx(v)].from)
+            if (night < Js.Get(VARIANTS, v).from)
             {
                 continue;
             }
-            at += VARIANTS[Js.Idx(v)].chance;
+            at += Js.Get(VARIANTS, v).chance;
             if (roll >= at)
             {
                 continue;
             }
             z.variant = v;
-            z.health = z.maxHealth = JsMath.max(1, JsMath.round(((double)((z.maxHealth * VARIANTS[Js.Idx(v)].healthPct)) / (100))));
+            z.health = z.maxHealth = JsMath.max(1, JsMath.round(((double)((z.maxHealth * Js.Get(VARIANTS, v).healthPct)) / (100))));
             return;
         }
     }

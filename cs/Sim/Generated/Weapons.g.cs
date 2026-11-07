@@ -37,13 +37,13 @@ public static partial class Weapons
 
     public static bool wantsWeapon(SimState state, Survivor s)
     {
-        return ((((((((!Js.T(s.dressing) && (s.priorities["guard"] > 0)) && !Js.T(s.jobId)) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Js.T(Needs.wantsSleep(state, s))) && (state.tick >= s.nextArmTick);
+        return ((((((((!Js.T(s.dressing) && (s.priorities["guard"] > 0)) && !Js.T(s.jobId)) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Needs.wantsSleep(state, s)) && (state.tick >= s.nextArmTick);
     }
 
     /// <summary>Runs when standing still, after treatment and before sleep: walk to the reserved weapon and pick it up. Returns true if arming handled this tick.</summary>
     public static bool updateArming(SimState state, Survivor s)
     {
-        if (!Js.T(s.arming) && !Js.T(startArming(state, s)))
+        if (!Js.T(s.arming) && !startArming(state, s))
         {
             return false;
         }
@@ -53,7 +53,7 @@ public static partial class Weapons
             cancelArming(state, s, "weapon gone");
             return false;
         }
-        if (!Js.T(Space.samePoint(s.pos, item.pos)))
+        if (!Space.samePoint(s.pos, item.pos))
         {
             var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
             if (!Js.T(path) || (path.length == 0))
@@ -96,7 +96,7 @@ public static partial class Weapons
 
     public static bool startArming(SimState state, Survivor s)
     {
-        if (!Js.T(wantsWeapon(state, s)))
+        if (!wantsWeapon(state, s))
         {
             return false;
         }

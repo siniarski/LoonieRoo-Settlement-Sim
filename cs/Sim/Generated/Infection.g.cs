@@ -38,7 +38,7 @@ public static partial class Infection
         {
             return;
         }
-        if (roll(Js.Num(zombieId.replace(/*TODO regex /\D/g*/null, "")), state.tick) >= chance)
+        if (roll(Js.Num(zombieId.replace(new JsRegExp("\\D", "g"), "")), state.tick) >= chance)
         {
             return;
         }
@@ -53,7 +53,7 @@ public static partial class Infection
         {
             return null;
         }
-        if (!Js.T(Medicine.inInfirmary(state, s)) || ((state.tick % 2) == 0))
+        if (!Medicine.inInfirmary(state, s) || ((state.tick % 2) == 0))
         {
             s.infection += 1;
         }

@@ -39,13 +39,13 @@ public static partial class Policies
     /// <summary>Rationing: satiety drains three ticks in four.</summary>
     public static bool satietyDrains(SimState state)
     {
-        return !Js.T(policyOn(state, "rationing")) || ((state.tick % 4) != 0);
+        return !policyOn(state, "rationing") || ((state.tick % 4) != 0);
     }
 
     /// <summary>Quarantine: the infected and sick stay in bed.</summary>
     public static bool quarantined(SimState state, Survivor s)
     {
-        return Js.T(policyOn(state, "quarantine")) && ((s.infection != null) || (s.sick != null));
+        return policyOn(state, "quarantine") && ((s.infection != null) || (s.sick != null));
     }
 
     /// <summary>The best-thought-of survivor, if anyone is thought well enough of.</summary>

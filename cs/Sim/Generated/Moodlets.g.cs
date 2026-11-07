@@ -23,18 +23,18 @@ public static partial class Moodlets
     /// <summary>Does one of this survivor's current thoughts give this boost? (Thoughts past their time are dropped each tick.)</summary>
     public static bool boosted(Survivor s, string boost)
     {
-        return s.thoughts.some((t) => BOOSTS[Js.Idx(t.kind)] == boost);
+        return s.thoughts.some((t) => Js.Get(BOOSTS, t.kind) == boost);
     }
 
     /// <summary>A blow's damage after moodlets.</summary>
     public static double boostDamage(Survivor s, double damage)
     {
-        return Js.T(boosted(s, "harder")) ? JsMath.round(((double)((damage * HARDER_PCT)) / (100))) : damage;
+        return boosted(s, "harder") ? JsMath.round(((double)((damage * HARDER_PCT)) / (100))) : damage;
     }
 
     /// <summary>Ticks between swings after moodlets.</summary>
     public static double swingWait(Survivor s, double @base)
     {
-        return (@base - (Js.T(boosted(s, "faster")) ? SWING_SOONER : 0)) + (Js.T(boosted(s, "slower")) ? SWING_LATER : 0);
+        return (@base - (boosted(s, "faster") ? SWING_SOONER : 0)) + (boosted(s, "slower") ? SWING_LATER : 0);
     }
 }
