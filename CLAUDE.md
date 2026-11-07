@@ -10,20 +10,24 @@ This is a **learning and exploration project**. Favour fast iteration, readable 
 
 ## Stack
 
-- TypeScript (strict), Vite, Vitest
-- Canvas 2D for rendering (PixiJS is a possible later swap)
-- Playwright for driving the running game when needed
-- No game framework. No Phaser.
-- Node 22 LTS or newer, npm
+Mid-port to Godot (NOTES.md, port steps 1-5). Two games share one sim:
+
+- **TypeScript (the source of truth for now):** strict TypeScript, Vite, Vitest; Canvas 2D in the browser; Playwright when needed. No game framework. Node 22 LTS or newer, npm.
+- **C# (generated from the TypeScript):** `cs/Sim` (.NET 8, pure C#, no Godot) is translated from `src/sim` by `cs/tools/ts2cs.mjs` (state types by `cs/tools/gen-state.mjs`), with hand fixes in `cs/tools/fixups.mjs` and a few hand-ported modules (Grid, Pathfinding, Space, Rng, Hash, Time, Lookup, Savefile). `cs/Sim.Tests` (xUnit) is translated from `tests/`, `cs/Harness` from `harness/`. `cs/Parity` checks the C# against the TypeScript run for run.
+- **Godot 4.6 .NET (`godot/`):** the game in Godot, reading `cs/Sim`: the browser's renderer and UI ported (`godot/README.md`).
+
+**Change the sim in TypeScript, then regenerate** (`npm run check:cs`); never hand-edit `*.g.cs` (a needed fix goes in fixups.mjs, with its reason). JavaScript semantics the C# keeps (all in `cs/Sim/JsCompat.cs`): numbers are doubles and multiplication is done in doubles; a list read past its end is undefined, not 0; road points are fractional (RoadPoint/PointD); values derived from the clock must be read at day scale 1 (onClock).
 
 ## Commands
 
 - `npm run dev` starts the Vite dev server
-- `npm test` runs Vitest once
-- `npm run test:watch` runs Vitest in watch mode
+- `npm test` runs Vitest once; `npm run test:watch` in watch mode
 - `npm run typecheck` runs `tsc --noEmit`
 - `npm run check` runs typecheck and tests. **Run this before every commit.**
-- `npm run harness -- <name>` runs a tool from harness/ (colony, solo, bench, profile): scripted balance players, a benchmark, a profiler. Not part of `npm test`; output in harness/out/.
+- `npm run check:cs` regenerates the C# from the TypeScript, builds it and the Godot game, and runs the C# tests. **Run it too when the sim, its tests or the translator change.**
+- `npm run parity` writes parity data from the TypeScript and checks the C# against it (generated worlds, whole runs, a command log); `npm run selftest` drives the Godot game with real input (a window opens); `npm run check:all` runs all four.
+- `npm run harness -- <name>` runs a tool from harness/ (colony, solo, bench, stress, profile): scripted balance players, a benchmark, a profiler. Not part of `npm test`; output in harness/out/. The C# ones: `dotnet test cs/Harness -c Release --filter "DisplayName~solo balance"` (or `world balance`, `bench`, `stress`), same env vars, output `harness/out/cs-*.txt`.
+- Godot: `dotnet build godot/LoonieRoo.csproj`, then Godot with `--path godot` (options after `--`: `--seed= --start=solo|group --shot=x.png`, see godot/README.md).
 
 ## Architecture rules (non-negotiable)
 
@@ -56,6 +60,13 @@ src/
   debug/        # window.game hooks, ASCII text renderer
 tests/          # Vitest: one file per system, plus architecture and invariant tests
 harness/        # balance players, benchmark, profiler (npm run harness)
+cs/
+  Sim/          # the sim in C#: Generated/*.g.cs (from src/sim), hand-ported modules, JsCompat.cs
+  Sim.Tests/    # the tests in xUnit: Generated/ (from tests/), Vitest.cs (expect)
+  Harness/      # the harness in C#: Generated/ (colony, solo), Bench.cs (bench, stress)
+  Parity/       # the C# checked against the TypeScript (data from npm run harness -- parity)
+  tools/        # ts2cs.mjs, gen-state.mjs, fixups.mjs, selftest.mjs
+godot/          # the Godot game: Game.cs (loop, input), Render/ (drawing), Ui/ (HUD, menu, map), SelfTest.cs
 NOTES.md        # Start here, decisions, design direction, open questions, session log
 ```
 
