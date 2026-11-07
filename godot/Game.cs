@@ -91,6 +91,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         var args = ParseArgs();
         if (args.TryGetValue("shot", out var shot)) shotPath = shot;
         if (args.TryGetValue("frames", out var f)) shotFrames = int.Parse(f);
+        bool selftest = args.ContainsKey("selftest");
+        if (selftest)
+        {
+            Saves.DIR = "user://selftest-saves";
+            if (!args.ContainsKey("seed")) args["seed"] = "42";
+        }
         bool direct = args.ContainsKey("seed") || args.ContainsKey("start") || args.ContainsKey("size") || args.ContainsKey("load") || shotPath != null;
         double seed = args.TryGetValue("seed", out var s) ? double.Parse(s) : RandomSeed();
         double size = args.TryGetValue("size", out var z) ? double.Parse(z) : Worldgen.WORLD_SIZE;
@@ -110,6 +116,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             view.inGame = true;
             view.paused = args.ContainsKey("paused");
             if (state.control != null) view.Toast("Alone. WASD to walk, click to swing, right-click or E to use. Space to pause.");
+            if (selftest) _ = SelfTest();
         }
         else
         {

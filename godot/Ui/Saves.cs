@@ -14,7 +14,8 @@ public static class Saves
     /// <summary>Written at every dawn; loadable like a slot, never saved to by hand.</summary>
     public const string AUTO_SLOT = "auto";
 
-    const string DIR = "user://saves";
+    /// <summary>Where slots live (the self-test points it elsewhere, so it never touches your saves).</summary>
+    public static string DIR = "user://saves";
     static string DataPath(string slot) => $"{DIR}/slot-{slot}.json";
     static string MetaPath(string slot) => $"{DIR}/slot-{slot}.meta";
 
