@@ -58,7 +58,7 @@ public static partial class Escape
     /// <summary>What a survivor wears and carries: the item ids in their slots.</summary>
     public static List<string> carried(Survivor s)
     {
-        return [s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying, .. s.cartLoad].filter((id) => id != null);
+        return Js.ListOf(new[] { s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying }, s.cartLoad).filter((id) => id != null);
     }
 
     /// <summary>Everyone aboard: a fresh world (same settings, solo start, a new seed), and you in it with what you carried. Pure: makes a new state from the old one.</summary>
@@ -84,12 +84,12 @@ public static partial class Escape
             ids.set(id, copy.id);
             state.items.push(copy);
         }
-        /*TODO return type*/object map(string? id)
+        string? map(string? id)
         {
             return Js.T(id) ? (ids.get(id) ?? null) : null;
         }
         var me = Js.NN(States.cloneState(old).survivors.find((s) => s.id == you.id));
-        /*TODO Object.assign*/Js.Object_assign(fresh, new() { name = me.name, traits = me.traits, xp = me.xp, kills = me.kills, watchHours = me.watchHours, age = me.age, resolve = me.resolve, story = Js.With(Js.Clone(me.story), __s2 => { __s2.knew = []; __s2.nextTalk = 0; }), health = me.health, satiety = me.satiety, hydration = me.hydration, rest = me.rest, infection = me.infection, bitten = me.bitten, wound = me.wound, weapon = map(me.weapon), body = map(me.body), feet = map(me.feet), cart = map(me.cart), tool = map(me.tool), carrying = map(me.carrying), cartLoad = me.cartLoad.map(map).filter((id) => id != null) });
+        Js.With(fresh, __a2 => { __a2.name = me.name; __a2.traits = me.traits; __a2.xp = me.xp; __a2.kills = me.kills; __a2.watchHours = me.watchHours; __a2.age = me.age; __a2.resolve = me.resolve; __a2.story = Js.With(Js.Clone(me.story), __s3 => { __s3.knew = []; __s3.nextTalk = 0; }); __a2.health = me.health; __a2.satiety = me.satiety; __a2.hydration = me.hydration; __a2.rest = me.rest; __a2.infection = me.infection; __a2.bitten = me.bitten; __a2.wound = me.wound; __a2.weapon = map(me.weapon); __a2.body = map(me.body); __a2.feet = map(me.feet); __a2.cart = map(me.cart); __a2.tool = map(me.tool); __a2.carrying = map(me.carrying); __a2.cartLoad = me.cartLoad.map(map).filter((id) => id != null); });
         state.endgame.escaped = (old.endgame.escaped + old.survivors.length) - 1;
         Events.logEvent(state, $"{Js.Str(fresh.name)} came down somewhere new, with what they could carry. {Js.Str(old.survivors.length - 1)} more flew out with them, and went their own way.");
         return state;
@@ -97,6 +97,6 @@ public static partial class Escape
 
     public static Item structuredCloneItem(Item item)
     {
-        return ((Item)(/*TODO JSON.parse*/Js.Json_parse(/*TODO JSON.stringify*/Js.Json_stringify(item))));
+        return ((Item)(Js.DeepClone(item)));
     }
 }

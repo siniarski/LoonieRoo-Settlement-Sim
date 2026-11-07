@@ -512,6 +512,8 @@ public partial class LotContext
 {
     /// <summary>Deer leave after a while; the rest leave when nobody of yours is near (WILD_RADIUS).</summary>
     public double seed { get; set; }
+    public Func<double, double, double> lootAt { get; set; } = null!;
+    public Func<double, double, double> distance { get; set; } = null!;
     public double calm { get; set; }
 }
 

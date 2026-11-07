@@ -581,6 +581,13 @@ public static partial class Js
     public static int Q(int a, int b) => a;
     public static int Q(int? a, int b) => a ?? b;
 
+    /// <summary>a[k] ?? b: b when a has no such key or index (JS's undefined) or holds null there.</summary>
+    public static V At<V>(JsRecord<V> a, string k, V b) => a.TryGetValue(k, out var v) && v is not null ? v : b;
+    public static V At<V>(JsRecord<V> a, double k, V b) => At(a, Str(k), b);
+    public static V At<V>(List<V> a, double i, V b) => i >= 0 && i < a.Count && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
+    public static V At<V>(List<V?> a, double i, V b) where V : struct => i >= 0 && i < a.Count && i == Math.Floor(i) && a[(int)i] is V v ? v : b;
+    public static V At<K, V>(JsMap<K, V> a, K k, V b) where K : notnull => a.has(k) && a.get(k) is V v ? v : b;
+
     /// <summary>a || b used as a value: a if truthy, else b.</summary>
     public static V Or<V>(V a, V b) => T((object?)a) ? a : b;
 
@@ -718,6 +725,12 @@ public static partial class Js
 
     /// <summary>JSON.stringify, for comparing (as the sim uses it) and for logs.</summary>
     public static string Json_stringify(object? x) => System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options);
+
+    /// <summary>JSON.parse(JSON.stringify(x)): a deep copy, through JSON.</summary>
+    public static V DeepClone<V>(V x) => System.Text.Json.JsonSerializer.Deserialize<V>(System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options), StateJson.Options)!;
+
+    /// <summary>[a, b, ...c] as a list in its own right: the parts joined.</summary>
+    public static List<V> ListOf<V>(params IEnumerable<V>[] parts) => parts.SelectMany(p => p).ToList();
 
     /// <summary>Object.assign(target, source): source's set fields copied onto target.</summary>
     public static V Object_assign<V>(V target, object? source) where V : class

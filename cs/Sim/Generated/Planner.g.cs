@@ -118,7 +118,7 @@ public static partial class Planner
             return new() { commands = [], notes = notes };
         }
         List<Point> spots = [];
-        foreach (var p in Js.Iter((freeSpots(state, room)).ToList().sort((a, b) => a.walls - b.walls).map((c) => c.p)))
+        foreach (var p in Js.Iter(Js.ListOf(freeSpots(state, room)).sort((a, b) => a.walls - b.walls).map((c) => c.p)))
         {
             if (spots.length == toAdd)
             {
@@ -207,7 +207,7 @@ public static partial class Planner
                 continue;
             }
             var around = Grids.neighbours4(grid, p.x, p.y).map((n) => Grids.getTile(grid, n.x, n.y));
-            var edges = Grids.neighbours4(grid, p.x, p.y).map((n) => grid.edges[Js.Idx(Grids.edgeBetween(grid, p.x, p.y, n.x, n.y))] ?? Grids.EDGE_NONE);
+            var edges = Grids.neighbours4(grid, p.x, p.y).map((n) => Js.At(grid.edges, Grids.edgeBetween(grid, p.x, p.y, n.x, n.y), Grids.EDGE_NONE));
             if (around.includes("door") || edges.includes(Grids.EDGE_DOOR))
             {
                 continue;

@@ -37,12 +37,39 @@ const classByFields = new Map();
   for (const [k, n] of seen) if (n > 1) classByFields.delete(k);
 }
 
+/** State class -> its fields' C# types. */
+const classFields = new Map();
+for (const m of stateSrc.matchAll(/public partial class (\w+)[^\n]*\n\{([\s\S]*?)\n\}/g)) {
+  const fields = new Map();
+  for (const f of m[2].matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; \}/g)) fields.set(f[2], f[1]);
+  classFields.set(m[1], fields);
+}
+
 /** Field name -> the C# types it has across the state classes. */
 const fieldTypes = new Map();
 for (const m of stateSrc.matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; \}/g)) {
   if (!fieldTypes.has(m[2])) fieldTypes.set(m[2], new Set());
   fieldTypes.get(m[2]).add(m[1].replace(/\?$/, ''));
 }
+/** How many arguments a function-typed field's functions take (when every class with the field agrees), else null. */
+function fieldArity(name) {
+  const ts = [...(fieldTypes.get(name) ?? [])];
+  const arity = (x) => {
+    const m = x.match(/^(Func|Action)<(.*)>$/);
+    if (!m) return x === 'Action' ? 0 : null;
+    let depth = 0;
+    let n = 1;
+    for (const ch of m[2]) {
+      if (ch === '<') depth++;
+      else if (ch === '>') depth--;
+      else if (ch === ',' && depth === 0) n++;
+    }
+    return m[1] === 'Func' ? n - 1 : n;
+  };
+  const ns = ts.map(arity);
+  return ns.length && ns.every((n) => n !== null && n === ns[0]) ? ns[0] : null;
+}
+
 /** A field whose value is always a JsRecord. */
 const recordField = (name) => fieldTypes.has(name) && [...fieldTypes.get(name)].every((x) => x.startsWith('JsRecord'));
 const typeClasses = new Set([...stateSrc.matchAll(/public partial (?:class|interface) (\w+)/g)].map((m) => m[1]));
@@ -75,6 +102,9 @@ for (const m of files) {
     }
   }
 }
+
+/** Per module: the types it imports, by local name, and the module each comes from. */
+const typeImports = new Map();
 
 /** Classes made for inline object types, by name: [members, module]. */
 const inline = new Map();
@@ -238,7 +268,7 @@ function ty(t, mod, intName) {
     case 'fn': {
       core = deref(core);
       if (core.type === 'TSParenthesizedType') core = core.typeAnnotation;
-      const params = (core.params ?? []).map((p) => ty(p.typeAnnotation?.typeAnnotation, mod, p.name) ?? 'object');
+      const params = (core.params ?? []).map((p) => ty(p.typeAnnotation?.typeAnnotation, mod) ?? 'object');
       const ret = ty(core.returnType?.typeAnnotation, mod) ?? 'object';
       return (ret === 'void' ? (params.length ? `Action<${params.join(', ')}>` : 'Action') : `Func<${[...params, ret].join(', ')}>`) + q;
     }
@@ -250,7 +280,7 @@ function ty(t, mod, intName) {
         let name = c.typeName.type === 'Identifier' ? c.typeName.name : c.typeName.right.name;
         if (['Partial', 'Required', 'Readonly'].includes(name)) return ty(c.typeArguments.params[0], mod) + q;
         if (aliases.has(name) && kindOf(aliases.get(name)) === 'record') return ty(aliases.get(name), mod) + q;
-        name = renames[mod + '.ts']?.[name] ?? name;
+        name = renames[mod + '.ts']?.[name] ?? renames[(typeImports.get(mod)?.get(name) ?? '') + '.ts']?.[name] ?? name;
         if (name === 'Point' || name === 'Grid' || typeClasses.has(name)) return name + q;
         if ((name === 'Pick' || name === 'Omit' || name === 'NonNullable') && c.typeArguments) return ty(c.typeArguments.params[0], mod) + q;
         if (name === 'Extract' && c.typeArguments) return ty(c.typeArguments.params[0], mod) + q;
@@ -304,6 +334,8 @@ function translate(mod) {
   for (const n of ast.body) {
     if (n.type !== 'ImportDeclaration') continue;
     const from = n.source.value.replace(/^\.\//, '');
+    if (!typeImports.has(mod)) typeImports.set(mod, new Map());
+    for (const s of n.specifiers) if (s.type === 'ImportSpecifier') typeImports.get(mod).set(s.local.name, from);
     for (const s of n.specifiers) {
       if (s.type !== 'ImportSpecifier' || s.importKind === 'type' || n.importKind === 'type') continue;
       const name = s.imported.name;
@@ -369,6 +401,7 @@ function translate(mod) {
       if (x.type === 'TemplateLiteral') return 'string';
       if (x.type === 'Literal' && typeof x.value === 'number') return 'double';
       if (x.type === 'UnaryExpression' && x.argument.type === 'Literal' && typeof x.argument.value === 'number') return 'double';
+      if (x.type === 'BinaryExpression' && ['<', '>', '<=', '>=', '===', '!==', '==', '!='].includes(x.operator)) return 'bool';
       if (x.type === 'Identifier' || x.type === 'BinaryExpression') return 'num?';
       return null;
     });
@@ -428,11 +461,102 @@ function translate(mod) {
     return out;
   }
   function pushScope(names) {
-    scopes.push({ declared: new Set(names), renames: new Map() });
+    scopes.push({ declared: new Set(names), renames: new Map(), types: new Map() });
   }
   function popScope() {
     scopes.pop();
   }
+  /** Local types: what a name declared in this module holds, as far as it's known (C#). */
+  const moduleTypes = new Map();
+  /** Every type a name was given anywhere in this module (used when it's out of scope: a function's return guessed after its body). */
+  const seenTypes = new Map();
+  function setType(n, ty_) {
+    if (!ty_ || ty_ === 'var' || ty_.includes('TODO') || /^object\??$/.test(ty_)) return;
+    (scopes.length ? scopes[scopes.length - 1].types : moduleTypes).set(n, ty_);
+    if (!seenTypes.has(n)) seenTypes.set(n, new Set());
+    seenTypes.get(n).add(ty_);
+  }
+  function typeOf(n) {
+    for (let i = scopes.length - 1; i >= 0; i--) if (scopes[i].types.has(n)) return scopes[i].types.get(n);
+    if (moduleTypes.has(n)) return moduleTypes.get(n);
+    const seen = seenTypes.get(n);
+    return seen?.size === 1 ? [...seen][0] : null;
+  }
+  const strip = (x) => x?.replace(/\?$/, '') ?? null;
+  /** The C# type of an expression, when it can be told (null when not). */
+  function exprType(e) {
+    if (!e) return null;
+    switch (e.type) {
+      case 'Identifier': return e.name === 'undefined' ? null : typeOf(e.name) ?? (constTypes.get(imports.get(e.name) ?? `${modClass(mod)}.${e.name}`) ?? null);
+      case 'Literal': return typeof e.value === 'string' ? 'string' : typeof e.value === 'number' ? 'double' : typeof e.value === 'boolean' ? 'bool' : null;
+      case 'TemplateLiteral': return 'string';
+      case 'TSNonNullExpression': return strip(exprType(e.expression));
+      case 'TSAsExpression': return e.typeAnnotation.type === 'TSTypeReference' && e.typeAnnotation.typeName.name === 'const' ? exprType(e.expression) : ty(e.typeAnnotation, mod);
+      case 'ParenthesizedExpression': return exprType(e.expression);
+      case 'ConditionalExpression': {
+        const a = exprType(e.consequent);
+        const b = exprType(e.alternate);
+        const nullA = e.consequent.type === 'Literal' && e.consequent.value === null;
+        const nullB = e.alternate.type === 'Literal' && e.alternate.value === null;
+        if (nullA && b) return strip(b) + '?';
+        if (nullB && a) return strip(a) + '?';
+        return a && b && strip(a) === strip(b) ? (a.endsWith('?') || b.endsWith('?') ? strip(a) + '?' : a) : null;
+      }
+      case 'LogicalExpression': {
+        if (e.operator !== '??') return null;
+        const a = exprType(e.left);
+        const nullB = e.right.type === 'Literal' && e.right.value === null;
+        if (nullB) return a ? strip(a) + '?' : null;
+        const b = exprType(e.right);
+        return a && b && strip(a) === strip(b) ? b : null;
+      }
+      case 'NewExpression': {
+        const c = e.callee.name;
+        const targs = e.typeArguments?.params ?? [];
+        if ((c === 'Map' || c === 'WeakMap') && targs.length === 2) return `JsMap<${strip(ty(targs[0], mod))}, ${ty(targs[1], mod)}>`;
+        if (c === 'Set' && targs.length === 1) return `JsSet<${strip(ty(targs[0], mod))}>`;
+        if (/Array$/.test(c) && c !== 'Array') return c;
+        return null;
+      }
+      case 'MemberExpression': {
+        const o = strip(exprType(e.object));
+        if (!o) return null;
+        if (!e.computed) {
+          const f = e.property.name;
+          if (f === 'length') return 'int';
+          return classFields.get(o)?.get(f) ?? (o === 'Point' && (f === 'x' || f === 'y') ? 'int' : null);
+        }
+        const item = o.match(/^(?:List|IReadOnlyList)<(.+)>$/)?.[1] ?? o.match(/^JsRecord<(.+)>$/)?.[1] ?? (/Array$/.test(o) ? 'double' : null);
+        return item;
+      }
+      case 'CallExpression': {
+        const c = e.callee;
+        if (c.type === 'Identifier') {
+          const q = imports.get(c.name);
+          return fnRet.get(q ?? `${modClass(mod)}.${c.name}`) ?? fnRet.get(c.name) ?? null;
+        }
+        if (c.type !== 'MemberExpression' || c.computed) return null;
+        if (c.object.type === 'Identifier' && c.object.name === 'Math') return 'double';
+        if (c.object.type === 'Identifier' && imports.has(c.object.name) === false && /^[A-Z]/.test(c.object.name)) return null;
+        const o = strip(exprType(c.object));
+        if (!o) return null;
+        const m = c.property.name;
+        const item = o.match(/^List<(.+)>$/)?.[1];
+        const map = o.match(/^JsMap<(\w+), (.+)>$/);
+        if (['includes', 'some', 'every', 'has', 'startsWith', 'endsWith'].includes(m)) return 'bool';
+        if (['indexOf', 'findIndex', 'lastIndexOf'].includes(m)) return 'int';
+        if (m === 'join' || (o === 'string' && ['slice', 'trim', 'toUpperCase', 'toLowerCase', 'replace', 'padStart', 'padEnd', 'repeat', 'substring'].includes(m))) return 'string';
+        if (item && ['find', 'findLast', 'at', 'pop', 'shift'].includes(m)) return strip(item) + '?';
+        if (item && ['filter', 'slice', 'concat', 'reverse', 'sort', 'splice'].includes(m)) return o;
+        if (map && m === 'get') return strip(map[2]) + '?';
+        if (map && m === 'keys') return `List<${map[1]}>`;
+        if (map && m === 'values') return `List<${map[2]}>`;
+        return null;
+      }
+      default: return null;
+    }
+  }
+
   /** The C# name for a declaration of `n` in the innermost scope. */
   function declName(n) {
     const top = scopes[scopes.length - 1];
@@ -455,8 +579,13 @@ function translate(mod) {
 
   /** var (a, b) = x; or, for one name, var a = x[0]; */
   function destructure(elements, value, init) {
-    if (init && (init.type === 'ArrayExpression' || (init.type === 'ConditionalExpression' && init.consequent.type === 'ArrayExpression' && init.alternate.type === 'ArrayExpression'))) {
+    if (init && (init.type === 'ArrayExpression' || init.type === 'ConditionalExpression')) {
       const tuple = (a) => `(${a.elements.map((x) => ex(x)).join(', ')})`;
+      const choice = (n) => n.type === 'ArrayExpression' || (n.type === 'ConditionalExpression' && choice(n.consequent) && choice(n.alternate));
+      if (init.type === 'ConditionalExpression' && choice(init) && !(init.consequent.type === 'ArrayExpression' && init.alternate.type === 'ArrayExpression')) {
+        const pick = (n, i) => (n.type === 'ArrayExpression' ? operand(n.elements[i]) : `(${ex(n.test, true)} ? ${pick(n.consequent, i)} : ${pick(n.alternate, i)})`);
+        return elements.map((x, i) => (x ? `var ${declName(x.name)} = ${pick(init, i)};` : '')).filter(Boolean).join(' ');
+      }
       if (init.type === 'ConditionalExpression' && init.consequent.elements.length === init.alternate.elements.length && elements.length <= init.consequent.elements.length) {
         const c = `__c${tmp++}`;
         const parts = [`var ${c} = ${ex(init.test, true)};`];
@@ -557,6 +686,7 @@ function translate(mod) {
       }
       case 'LogicalExpression': {
         if (e.operator === '??' && e.right.type === 'Literal' && typeof e.right.value === 'number') return `Js.Q(${ex(e.left)}, ${ex(e.right)})`;
+        if (e.operator === '??' && e.left.type === 'MemberExpression' && e.left.computed) return `Js.At(${ex(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
         if (e.operator === '??') return `${operand(e.left)} ?? ${operand(e.right)}`;
         if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) return `Js.Or(${ex(e.left)}, ${ex(e.right)})`;
         return `${operand(e.left, true)} ${e.operator} ${operand(e.right, true)}`;
@@ -564,6 +694,7 @@ function translate(mod) {
       case 'ConditionalExpression': return `${operand(e.test, true)} ? ${operand(e.consequent)} : ${operand(e.alternate)}`;
       case 'AssignmentExpression': {
         if (e.left.type === 'TSNonNullExpression') return ex({ ...e, left: e.left.expression }, bool);
+        if (e.right.type === 'ArrowFunctionExpression' && e.left.type === 'MemberExpression' && !e.left.computed) e.right.__arity = fieldArity(e.left.property.name);
         if (e.left.type === 'ArrayPattern' && e.left.elements.every((x) => x && x.type !== 'RestElement')) {
           const l = `(${e.left.elements.map((x) => ex(x)).join(', ')})`;
           return e.right.type === 'ArrayExpression' ? `${l} = (${e.right.elements.map((x) => ex(x)).join(', ')})` : `${l} = ${ex(e.right)}`;
@@ -613,11 +744,21 @@ function translate(mod) {
     // Number and String passed as callbacks (.map(Number)): as lambdas.
     const arg = (a) => (a.type === 'Identifier' && a.name === 'Number' && !imports.has('Number') ? '(__v) => Js.Num(__v)' : a.type === 'Identifier' && a.name === 'String' && !imports.has('String') ? '(__v) => Js.Str(__v)' : ex(a));
     const callbackTakers = ['map', 'filter', 'forEach', 'some', 'every', 'find', 'findIndex', 'findLast', 'flatMap'];
-    const known = c.type === 'Identifier' ? paramTypes.get(c.name) : null;
+    // A function of this module's (its parameters' types), or a push onto a state field's list (its items' type).
+    const listOf = (field) => {
+      const ts = [...(fieldTypes.get(field) ?? [])].map((x) => x.match(/^List<(\w+)>$/)?.[1]);
+      return ts.length && ts.every((x) => x && x === ts[0]) ? ts[0] : null;
+    };
+    const pushed = c.type === 'MemberExpression' && !c.computed && ['push', 'unshift'].includes(c.property.name) && c.object.type === 'MemberExpression' && !c.object.computed ? listOf(c.object.property.name) : null;
+    const known = c.type === 'Identifier' ? paramTypes.get(c.name) : pushed ? e.arguments.map(() => pushed) : null;
     const withTarget = (a, i) => {
       if (a.type === 'ObjectExpression' && known?.[i] && /^\w+$/.test(known[i]) && a.properties.some((q) => q.type === 'SpreadElement')) spreadAs = known[i];
       return a;
     };
+    if (c.type === 'MemberExpression' && !c.computed && callbackTakers.concat(['sort', 'reduce', 'findLast']).includes(c.property.name)) {
+      const item = strip(exprType(c.object))?.match(/^List<(.+)>$/)?.[1];
+      if (item) for (const a of e.arguments) if (a.type === 'ArrowFunctionExpression') a.__paramTypes = c.property.name === 'sort' ? [item, item] : c.property.name === 'reduce' ? [null, item, 'int'] : [item, 'int'];
+    }
     const args = () => e.arguments.map(withTarget).map((a) => (a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : (a.type === 'ArrowFunctionExpression' && a.params.length === 0 && c.type === 'MemberExpression' && callbackTakers.includes(c.property?.name) ? arg(a).replace(/^\(\)\s*=>/, '_ =>') : arg(a)))).join(', ');
     const q = e.optional ? '?' : '';
     if (c.type === 'MemberExpression' && !c.computed) {
@@ -636,8 +777,20 @@ function translate(mod) {
           if (name === 'keys') return `Js.ObjectKeys(${args()})`;
           if (name === 'values') return `Js.ObjectValues(${args()})`;
           if (name === 'entries') return `Js.ObjectEntries(${args()})`;
+          // Object.assign(target, { a, b }): the target, with those set.
+          if (name === 'assign' && e.arguments.length === 2 && e.arguments[1].type === 'ObjectExpression' && e.arguments[1].properties.every((q) => q.type === 'Property' && !q.computed)) {
+            const v = `__a${tmp++}`;
+            const sets = e.arguments[1].properties.map((q) => {
+              const k = String(q.key.name ?? q.key.value);
+              const val = q.shorthand ? ex(q.key) : q.value.type === 'ObjectExpression' && recordField(k) ? recordInit(q.value) : ex(q.value);
+              return `${v}.${id(k)} = ${INT_FIELDS.has(k) ? `Js.I(${val})` : val};`;
+            });
+            return `Js.With(${ex(e.arguments[0])}, ${v} => { ${sets.join(' ')} })`;
+          }
           return `/*TODO Object.${name}*/Js.Object_${name}(${args()})`;
         }
+        const a0 = e.arguments[0];
+        if (o.name === 'JSON' && name === 'parse' && a0?.type === 'CallExpression' && a0.callee.type === 'MemberExpression' && a0.callee.object.name === 'JSON' && a0.callee.property.name === 'stringify' && a0.arguments.length === 1) return `Js.DeepClone(${ex(a0.arguments[0])})`;
         if (o.name === 'JSON') return `/*TODO JSON.${name}*/Js.Json_${name}(${args()})`;
         if (o.name === 'Array' && name === 'from') {
           const [src, fn] = e.arguments;
@@ -647,6 +800,19 @@ function translate(mod) {
         if (o.name === 'Array' && name === 'isArray') return `(${args()} is System.Collections.IList)`;
       }
       if (name === 'toString' && e.arguments.length === 0) return `Js.Str(${ex(o)})`;
+      if (o.type === 'ArrayExpression' && o.elements.length && !literalType(o) && !o.elements.every((x) => x?.type === 'ObjectExpression')) {
+        const parts = [];
+        let run = [];
+        for (const x of o.elements) {
+          if (x?.type === 'SpreadElement') {
+            if (run.length) parts.push(`new[] { ${run.join(', ')} }`);
+            run = [];
+            parts.push(ex(x.argument));
+          } else run.push(x ? ex(x) : 'default');
+        }
+        if (run.length) parts.push(`new[] { ${run.join(', ')} }`);
+        return `Js.ListOf(${parts.join(', ')}).${id(name)}(${args()})`;
+      }
       if (e.__targ && name === 'map') for (const a of e.arguments) if (a.type === 'ArrowFunctionExpression') a.__ret = e.__targ;
       return `${operand(o)}${c.optional ? '?' : ''}.${id(name)}(${args()})`;
     }
@@ -717,6 +883,7 @@ function translate(mod) {
       }
       if (p.computed) return `/*TODO computed key*/new()`;
       const key = p.key.type === 'Identifier' ? p.key.name : p.key.value;
+      if (p.value.type === 'ArrowFunctionExpression') p.value.__arity = fieldArity(String(key));
       const value = p.shorthand ? ex(p.key) : p.value.type === 'ArrowFunctionExpression' || p.value.type === 'FunctionExpression' ? lambda(p.value) : p.value.type === 'ObjectExpression' && recordField(String(key)) ? recordInit(p.value) : ex(p.value);
       parts.push(`${id(String(key))} = ${INT_FIELDS.has(String(key)) ? `Js.I(${value})` : value}`);
     }
@@ -782,6 +949,7 @@ function translate(mod) {
       defaults.push(`${nm} ??= ${ex(def)};`);
       return `${cs.endsWith('?') ? cs : cs + '?'} ${nm} = null`;
     }
+    setType(name, cs);
     if (p.optional) return `${cs} ${nm} = default`;
     return `${cs} ${nm}`;
   }
@@ -801,13 +969,18 @@ function translate(mod) {
     const unpack = [];
     const ps = fn.params.map((p) => {
       if (typed) return param(p, defaults);
-      if (p.type === 'Identifier') return declName(p.name);
+      if (p.type === 'Identifier') {
+        const k = fn.params.indexOf(p);
+        setType(p.name, fn.__paramTypes?.[k] ?? null);
+        return declName(p.name);
+      }
       if (p.type === 'AssignmentPattern') return declName(p.left.name);
       const v = `__p${tmp++}`;
       if (p.type === 'ArrayPattern') unpack.push(destructure(p.elements, v));
       else if (p.type === 'ObjectPattern') for (const q of p.properties) unpack.push(`var ${id(q.value?.name ?? q.key.name)} = ${v}.${id(q.key.name)};`);
       return v;
     });
+    while (fn.__arity && ps.length < fn.__arity) ps.push('_');
     const head = `(${ps.join(', ')})`;
     if (unpack.length) {
       const inner = fn.body.type === 'BlockStatement' ? block(fn.body, '            ', { fnRet: fn.__ret ?? null }).split('\n').slice(1, -1).join('\n') : `            return ${fn.__ret && fn.body.type === 'ArrayExpression' ? `(${fn.__ret})` : ''}${ex(fn.body, !!fn.__pred)};`;
@@ -905,7 +1078,14 @@ function translate(mod) {
               const defaults = [];
               const ps = fn.params.map((p) => param(p, defaults, true));
               paramTypes.set(d.id.name, ps.map(typeOfParam));
-              const ret = fn.returnType ? ty(fn.returnType.typeAnnotation, mod) : guessReturn(fn);
+              let ret = fn.returnType ? ty(fn.returnType.typeAnnotation, mod) : guessReturn(fn);
+              if (ret.includes('TODO') && fn.body.type === 'BlockStatement') {
+                const saved = tmp;
+                block(fn.body, ind + '    ', { fnRet: null });
+                tmp = saved;
+                ret = guessReturn(fn);
+              }
+              if (!ret.includes('TODO')) fnRet.set(d.id.name, ret);
               const bodyText = fn.body.type === 'BlockStatement' ? block(fn.body, ind + '    ', { fnRet: ret }) : `${ind}{\n${ind}    ${ret === 'void' ? '' : 'return '}${ex(fn.body, ret === 'bool')};\n${ind}}`;
               lines.push(`${ind}${ret} ${declName(d.id.name)}(${ps.join(', ')})`);
               lines.push(bodyText.split('\n').map((l, i) => (i === 0 && fn.body.type === 'BlockStatement' ? ind + l.trimStart() : l)).join('\n'));
@@ -920,6 +1100,7 @@ function translate(mod) {
             ? ` = new() { ${lit.properties.map((p) => (p.type === 'Property' ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`
             : d.init ? ` = ${ex(d.init, t === 'bool')}` : t.endsWith('?') ? ' = null' : ' = default!';
           lines.push(`${ind}${t} ${declName(d.id.name)}${init};`);
+          setType(d.id.name, t !== 'var' ? t : exprType(d.init));
         }
         return lines;
       }
@@ -1080,6 +1261,8 @@ function translate(mod) {
       return null;
     };
     const nul = rets.some((r) => !r || isNull(r));
+    const ets = real.map(exprType);
+    if (real.length && ets.every((x) => x && strip(x) === strip(ets[0]))) return strip(ets[0]) + (nul || ets.some((x) => x.endsWith('?')) ? '?' : '');
     const cts = real.map(callType);
     if (real.length && cts.every((c) => c && c === cts[0] && !c.includes('TODO'))) return cts[0].replace(/\?$/, '') + (nul || cts[0].endsWith('?') ? '?' : '');
     if (real.length && real.every(numeric)) return 'double' + (nul ? '?' : '');
@@ -1127,13 +1310,21 @@ function translate(mod) {
     const ps = f.params.map((p) => param(p, defaults, !top));
     paramTypes.set(name, ps.map(typeOfParam));
     hint = pascal(name) + 'Result';
-    const ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
+    let ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
+    if (ret.includes('TODO')) {
+      // Not told by what's returned at a glance: translate the body once to learn its locals' types, and look again.
+      const saved = tmp;
+      block(f.body, ind + '    ', { fnRet: null });
+      tmp = saved;
+      ret = guessReturn(f);
+    }
     if (ret && !ret.includes('TODO')) {
       fnRet.set(top ? `${modClass(mod)}.${name}` : name, ret);
       if (!top) fnRet.set(name, ret);
     }
     const head = `${ind}${top ? 'public static ' : ''}${ret} ${id(name)}${tparams}(${ps.join(', ')})${where}`;
     const b = block(f.body, ind + '    ', { fnRet: ret }).split('\n');
+    if (ret !== 'void' && f.body.body.at(-1)?.type === 'SwitchStatement' && !f.body.body.at(-1).cases.some((c) => !c.test)) b.splice(b.length - 1, 0, `${ind}    throw new InvalidOperationException("unreachable: every case returns");`);
     popScope();
     b[0] = ind + b[0].trimStart();
     if (defaults.length) b.splice(1, 0, ...defaults.map((d) => `${ind}    ${d}`));

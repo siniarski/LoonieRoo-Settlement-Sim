@@ -448,7 +448,7 @@ public static partial class Invariants
         void listed(List<double> arr, List<double> list, string name)
         {
             var want = arr.flatMap((v, i) => (v != 0) ? [i] : []);
-            var have = (list).ToList().sort((a, b) => a - b);
+            var have = Js.ListOf(list).sort((a, b) => a - b);
             if ((want.length != have.length) || want.some((v, k) => v != have[Js.Idx(k)]))
             {
                 problems.push($"{Js.Str(name)} list out of step with the map");

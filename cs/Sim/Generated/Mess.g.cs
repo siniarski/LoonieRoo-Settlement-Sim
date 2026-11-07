@@ -42,7 +42,7 @@ public static partial class Mess
             return null;
         }
         List<Point> seats = [];
-        foreach (var index in Js.Iter((halls).ToList().sort((a, b) => a - b)))
+        foreach (var index in Js.Iter(Js.ListOf(halls).sort((a, b) => a - b)))
         {
             foreach (var table in Js.Iter(FurnitureMod.ofKind(state, "table")))
             {

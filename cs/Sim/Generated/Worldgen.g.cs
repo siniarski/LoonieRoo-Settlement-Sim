@@ -116,7 +116,7 @@ public static partial class Worldgen
         }
         var chunks = JsMath.ceil(((double)(l.size) / (CHUNK)));
         var ctx = lotContext(l);
-        foreach (var id in Js.Iter(l.plan.lotsByChunk[Js.Idx((cy * chunks) + cx)] ?? []))
+        foreach (var id in Js.Iter(Js.At(l.plan.lotsByChunk, (cy * chunks) + cx, [])))
         {
             Lots.drawLot(state, ctx, Js.NN(l.plan.lots[Js.Idx(id)]), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
@@ -286,7 +286,7 @@ public static partial class Worldgen
     public static void settle(SimState state, double cx, double cy) => settle(state, (int)cx, (int)cy);
 
     /// <summary>The nearest accepted tile in growing square rings, across anything (nearestTile only spreads over walkable ground).</summary>
-    public static Point? nearestAcross(SimState state, Point p, Func<int, int, bool> accept)
+    public static Point? nearestAcross(SimState state, Point p, Func<double, double, bool> accept)
     {
         for (var r = 1; r <= CHUNK; r++)
         {

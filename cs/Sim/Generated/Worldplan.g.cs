@@ -172,7 +172,7 @@ public static partial class Worldplan
     {
         var civic = towns.map(_ => 0);
         JsRecord<double> CIVIC_MAX = new() { ["village"] = 1, ["town"] = 2, ["city"] = 4 };
-        var ordered = (streets).ToList().sort((a, b) => Js.Num(b.main) - Js.Num(a.main));
+        var ordered = Js.ListOf(streets).sort((a, b) => Js.Num(b.main) - Js.Num(a.main));
         ordered.forEach((s, si) =>
         {
             var t = Js.NN(towns[Js.Idx(s.town)]);

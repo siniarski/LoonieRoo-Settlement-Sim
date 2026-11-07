@@ -84,7 +84,7 @@ public static partial class Crafting
     /// <summary>The first craftable for this station below its target, or null when stocks are full.</summary>
     public static string? wantedCraft(SimState state, string station = "workbench", bool inWorkshop = false)
     {
-        return wantedCrafts(state, station, inWorkshop)[Js.Idx(0)] ?? null;
+        return Js.At(wantedCrafts(state, station, inWorkshop), 0, null);
     }
 
     /// <summary>What this station should make next: something that uses what's already in it if possible, else the first wanted thing. Null when stocks are full.</summary>

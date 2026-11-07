@@ -59,11 +59,11 @@ public static partial class Mapnotes
     }
 
     /// <summary>Each town's centre and name (generated worlds; none on hand-made maps).</summary>
-    public static List</*TODO inline type*/object> townNames(SimState state)
+    public static /*TODO return type*/object townNames(SimState state)
     {
         if (!Js.T(state.world))
         {
-            return (List</*TODO inline type*/object>)[];
+            return [];
         }
         var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
         var offset = JsMath.floor(Hash.hashRoll(state.world.seed, 0x7041) * TOWN_NAMES.length);

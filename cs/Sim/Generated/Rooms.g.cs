@@ -108,7 +108,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = (ny * width) + nx;
-                    var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
+                    var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
@@ -158,7 +158,7 @@ public static partial class Rooms
                 maxY = JsMath.max(maxY, y);
             }
             region.sort((a, b) => a - b);
-            var doors = (doorSet).ToList().sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
+            var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             rooms.push(new() { index = index, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
         return new() { labels = labels, rooms = rooms };
@@ -310,7 +310,7 @@ public static partial class Rooms
         var storageFor = /*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
             var no = refusing(c);
-            return [c, Js.Set((storage).ToList().filter((r) => !no.has(r)))];
+            return [c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r)))];
         }));
         return new() { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
     }
@@ -340,21 +340,21 @@ public static partial class Rooms
         var UNSEEN = -3;
         var removed = new JsSet<double>();
         List<double> seeds = [];
-        /*TODO return type*/object near(double i)
+        List<int> near(double i)
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
-            List<int> out_1 = [i];
+            List<int> out_2 = [i];
             foreach (var (dx, dy) in Js.Iter(DIRS))
             {
                 var nx = x + dx;
                 var ny = y + dy;
                 if ((((nx >= 0) && (ny >= 0)) && (nx < width)) && (ny < height))
                 {
-                    out_1.push((ny * width) + nx);
+                    out_2.push((ny * width) + nx);
                 }
             }
-            return out_1;
+            return out_2;
         }
         foreach (var c in Js.Iter(changed))
         {
@@ -416,7 +416,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = (ny * width) + nx;
-                    var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
+                    var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
@@ -469,10 +469,10 @@ public static partial class Rooms
                 maxX = JsMath.max(maxX, x);
                 maxY = JsMath.max(maxY, y);
             }
-            var doors = (doorSet).ToList().sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
+            var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
             fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
         }
-        var rooms = [.. old.rooms.filter((r) => !removed.has(r.index)), .. fresh].sort((a, b) => Js.NN(a.tiles[Js.Idx(0)]) - Js.NN(b.tiles[Js.Idx(0)]));
+        var rooms = Js.ListOf(old.rooms.filter((r) => !removed.has(r.index)), fresh).sort((a, b) => Js.NN(a.tiles[Js.Idx(0)]) - Js.NN(b.tiles[Js.Idx(0)]));
         List<Room> @out = rooms.map((r, index) => Js.With(Js.Clone(r), __s3 => { __s3.index = index; }));
         foreach (var r in Js.Iter(@out))
         {

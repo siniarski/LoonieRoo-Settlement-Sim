@@ -128,7 +128,7 @@ public static partial class Leisure
         var __d1 = state.grid;
         var width = __d1.width;
         List<Point> spots = [];
-        foreach (var index in Js.Iter((rooms).ToList().sort((a, b) => a - b)))
+        foreach (var index in Js.Iter(Js.ListOf(rooms).sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(Js.NN(all[Js.Idx(index)]).tiles))
             {

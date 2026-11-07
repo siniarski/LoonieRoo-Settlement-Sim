@@ -60,7 +60,7 @@ public static partial class Expeditions
         {
             v.driverId = $"x:{Js.Str(id)}";
         }
-        state.expeditions.push(Js.With(Js.Clone(Js.T(v) ? new() { truckId = v.id, leftTick = state.tick } : new()), __s0 => { __s0.id = $"x{Js.Str(state.nextId++)}"; __s0.members = members; __s0.target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }; __s0.home = home; __s0.returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((Js.T(inTruck) ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS); __s0.truck = inTruck; __s0.outpost = outpost; }));
+        state.expeditions.push(Js.With(Js.CopyAs<Expedition>(Js.T(v) ? new() { truckId = v.id, leftTick = state.tick } : new()), __s0 => { __s0.id = $"x{Js.Str(state.nextId++)}"; __s0.members = members; __s0.target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }; __s0.home = home; __s0.returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + (((Js.T(inTruck) ? 1 : 2) * distance) * Survivors.TICKS_PER_TILE)) + SEARCH_TICKS); __s0.truck = inTruck; __s0.outpost = outpost; }));
         Events.logEvent(state, $"{Js.Str(members.map((s) => s.name).join(", "))} set out{Js.Str(Js.T(inTruck) ? " in the truck" : "")} for the {Js.Str(poi.label)} at ({Js.Str(poi.x)}, {Js.Str(poi.y)}){Js.Str(Js.T(outpost) ? " to hold it as an outpost" : "")}");
         return null;
     }

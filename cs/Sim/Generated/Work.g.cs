@@ -577,7 +577,7 @@ public static partial class Work
     }
 
     /// <summary>Nearest free item of a kind that the survivor can reach and carry on to the site.</summary>
-    public static /*TODO inline type*/object? freeItemFor(SimState state, string kind, Point from, List<Point> site)
+    public static Item? freeItemFor(SimState state, string kind, Point from, List<Point> site)
     {
         var __d0 = state;
         var grid = __d0.grid;
@@ -865,7 +865,7 @@ public static partial class Work
         var __d2 = state.grid;
         var width = __d2.width;
         List<Point> candidates = [];
-        foreach (var index in Js.Iter((storage).ToList().sort((a, b) => a - b)))
+        foreach (var index in Js.Iter(Js.ListOf(storage).sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(Js.NN(rooms[Js.Idx(index)]).tiles))
             {

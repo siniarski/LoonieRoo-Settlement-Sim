@@ -478,7 +478,7 @@ public static partial class Zombies
         var home = Motion.centre(z.pos);
         if ((z.at.x != home.x) || (z.at.y != home.y))
         {
-            var goal = z.path[Js.Idx(0)] ?? z.pos;
+            var goal = Js.At(z.path, 0, z.pos);
             if (!Js.T(Pathfinding.isPassable(state.grid, goal.x, goal.y, moverOf(z))) || !Js.T(Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, goal.x, goal.y, moverOf(z))))
             {
                 z.path = [];

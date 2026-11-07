@@ -75,7 +75,7 @@ public static partial class Jobs
         var __d0 = state.grid;
         var width = __d0.width;
         var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => (j.y * width) + j.x));
-        foreach (var i in Js.Iter((state.grid.dirtList).ToList().sort((a, b) => a - b)))
+        foreach (var i in Js.Iter(Js.ListOf(state.grid.dirtList).sort((a, b) => a - b)))
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
@@ -103,7 +103,7 @@ public static partial class Jobs
             }
         }
         var repairing = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge == null)).map((j) => (j.y * width) + j.x));
-        foreach (var i in Js.Iter((state.grid.damageList).ToList().sort((a, b) => a - b)))
+        foreach (var i in Js.Iter(Js.ListOf(state.grid.damageList).sort((a, b) => a - b)))
         {
             if (!repairing.has(i))
             {
@@ -458,6 +458,7 @@ public static partial class Jobs
                 }
                 }
         }
+        throw new InvalidOperationException("unreachable: every case returns");
     }
 
     public static string? storeInvalidReason(SimState state, Job job, StoreRooms stores)

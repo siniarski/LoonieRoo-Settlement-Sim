@@ -208,6 +208,7 @@ public static partial class JobChoice
                 }
                 }
         }
+        throw new InvalidOperationException("unreachable: every case returns");
     }
 
     public static JobChoicePlan? pathPlan(SimState state, Point from, List<Point> goals, string? itemId, Point? dest = null)

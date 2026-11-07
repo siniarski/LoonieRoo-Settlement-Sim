@@ -145,7 +145,7 @@ public static partial class Talk
     }
 
     /// <summary>The neighbouring settlement their friend is at: the nearest one still standing.</summary>
-    public static /*TODO return type*/object friendFor(SimState state, Survivor s)
+    public static Settlement friendFor(SimState state, Survivor s)
     {
         return state.settlements.filter((n) => n.people > 0).sort((a, b) => (JsMath.abs(a.x - s.pos.x) + JsMath.abs(a.y - s.pos.y)) - (JsMath.abs(b.x - s.pos.x) + JsMath.abs(b.y - s.pos.y)))[Js.Idx(0)];
     }
@@ -366,6 +366,7 @@ public static partial class Talk
                 }
                 }
         }
+        throw new InvalidOperationException("unreachable: every case returns");
     }
 
     /// <summary>Noon on the radio: the missing relative answers (and sets out to join you), or nobody does.</summary>

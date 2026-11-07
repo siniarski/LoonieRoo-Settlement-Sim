@@ -135,7 +135,7 @@ public static partial class Caravans
             {
                 Items.spawnItem(state, "food", spot.x, spot.y);
             }
-            var what = Js.Or([.. (c.food > 0) ? [$"{Js.Str(c.food)} food"] : [], .. c.goods].join(", "), "nothing left");
+            var what = Js.Or(Js.ListOf((c.food > 0) ? [$"{Js.Str(c.food)} food"] : [], c.goods).join(", "), "nothing left");
             Events.logEvent(state, $"A caravan from {Js.Str(from?.name ?? "the neighbours")} reached you: {Js.Str(what)}");
             return;
         }

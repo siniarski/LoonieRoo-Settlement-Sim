@@ -3,13 +3,11 @@
 // found any more is reported (the translation changed: look at it again).
 // Shape: [file (class name), text as translated, text as it should be, why]
 export const FIXUPS = [
-  ['States', '((SimState)(/*TODO JSON.parse*/Js.Json_parse(/*TODO JSON.stringify*/Js.Json_stringify(state))))', 'StateJson.Clone(state)', 'cloneState: a deep copy through JSON'],
   ["Animals", "Animal a = /*TODO object spread*/Js.Spread(Js.T(packId) ? new() { packId = packId } : new(), new() { id = $\"w{Js.Str(state.wildId = (Js.Q(state.wildId, 0)) + 1)}\", kind = kind, pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, hunted = false, leavesTick = JsNumber.MAX_SAFE_INTEGER, health = HEALTH[Js.Idx(kind)], hunger = 0, targetId = null, nextBite = 0 });", "var placed = Motion.placedAt(new Point { x = x, y = y });\n        Animal a = new Animal { id = $\"w{Js.Str(state.wildId = (state.wildId ?? 0) + 1)}\", kind = kind, pos = new Point { x = x, y = y }, at = placed.at, was = placed.was, move = null, hunted = false, leavesTick = JsNumber.MAX_SAFE_INTEGER, health = HEALTH[kind], hunger = 0, targetId = null, nextBite = 0 };\n        if (Js.T(packId)) a.packId = packId;", "addAnimal: two spreads (placedAt, and packId if given)"],
   ["Animals", "Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>())", "Wanderers.frontierSpot(state, new JsSet<string>())", "new Set(): of strings"],
   ["Animals", "a.move = new() { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = pace };", "a.move = new() { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = (double)pace };", "pace defaults to PACE[kind]: a number by then"],
   ["Animals", "state.animals.splice(state.animals.indexOf(target), 1);", "state.animals.splice(state.animals.indexOf((Animal)target), 1);", "prey: an animal ('kind' in target)"],
   ["Animals", "        var s = target;\n", "        var s = (Survivor)target;\n", "not prey: a survivor"],
-  ["Animals", "/*TODO return type*/object near(string kind, double r)", "List<Animal> near(string kind, double r)", "filter of the animals"],
   ["Handiwork", "public static /*TODO return type*/object carryingWood(SimState state, Survivor s)", "public static Item? carryingWood(SimState state, Survivor s)", "an item or nothing"],
   ["Handiwork", "return new() { what = \"repair\" };", "return new WorkPlan { what = \"repair\" };", "plan: a WorkPlan or a reason"],
   ["Handiwork", "new() { what = \"build\", target = ", "(object)new WorkPlan { what = \"build\", target = ", "plan: a WorkPlan or a reason"],
@@ -27,6 +25,5 @@ export const FIXUPS = [
   ["Zombies", "foreach (var list in Js.Iter([state.survivors, state.residents, state.dogs, state.animals]))", "foreach (var list in new List<IEnumerable<Body>> { state.survivors, state.residents, state.dogs, state.animals })", "every kind of body"],
   ["Hordes", "(x0, x1) = clampBox(x0, x1, mid.x, width);", "var __bx = clampBox(x0, x1, mid.x, width); x0 = (int)__bx.Item1; x1 = (int)__bx.Item2;", "the box's corners are whole numbers"],
   ["Hordes", "(y0, y1) = clampBox(y0, y1, mid.y, height);", "var __by = clampBox(y0, y1, mid.y, height); y0 = (int)__by.Item1; y1 = (int)__by.Item2;", "the box's corners are whole numbers"],
-  ["Roads", "/*TODO return type*/object pop()", "List<double> pop()", "a heap entry: [f, cell]"],
   ["Worldplan", "cache.delete(Js.NN(cache.keys().next().value));", "cache.delete(cache.keys()[0]);", "the oldest key: a Map keeps insertion order"],
 ];

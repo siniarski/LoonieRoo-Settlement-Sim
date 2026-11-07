@@ -201,7 +201,7 @@ public static partial class Buildings
         return lo + JsMath.floor(r * ((hi - lo) + 1));
     }
 
-    public static BuildingsPlan housePlan(Func<int, double> r, HouseOptions o)
+    public static BuildingsPlan housePlan(Func<double, double> r, HouseOptions o)
     {
         var garage = (Js.T(o.garage) && (r(1) < 0.4)) && (o.maxW >= 13);
         var W = JsMath.min(o.maxW - (Js.T(garage) ? 4 : 0), between(r(2), 9, 13));
@@ -304,7 +304,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static BuildingsPlan shopPlan(Func<int, double> r, string kind, double maxW, double maxH)
+    public static BuildingsPlan shopPlan(Func<double, double> r, string kind, double maxW, double maxH)
     {
         var W = JsMath.min(maxW, between(r(2), 11, 14));
         var H = JsMath.min(maxH, between(r(3), 9, 12));
@@ -370,7 +370,7 @@ public static partial class Buildings
     }
 
     /// <summary>A corridor up the middle from a double front door; rooms either side, each with a door onto it.</summary>
-    public static BuildingsPlan civicPlan(Func<int, double> r, string kind, double maxW, double maxH)
+    public static BuildingsPlan civicPlan(Func<double, double> r, string kind, double maxW, double maxH)
     {
         var W = JsMath.min(maxW, between(r(2), 17, 23));
         var H = JsMath.min(maxH, between(r(3), 13, 19));
@@ -410,7 +410,7 @@ public static partial class Buildings
 
     public static readonly JsRecord<List<string>> ROLES = new() { ["police"] = ["desks", "lockers", "cells", "armoury", "toilets", "desks"], ["clinic"] = ["ward", "stores", "ward", "desks", "toilets", "ward"], ["school"] = ["classroom", "classroom", "desks", "toilets", "classroom", "stores"], ["office"] = ["desks", "desks", "toilets", "stores", "desks", "desks"] };
 
-    public static void fitOut(BuildingsPlan p, string role, int x0, int y0, int x1, int y1, Func<int, double> r, int k)
+    public static void fitOut(BuildingsPlan p, string role, int x0, int y0, int x1, int y1, Func<double, double> r, int k)
     {
         string table = (p.kind == "police") ? "police" : ((p.kind == "clinic") ? "clinic" : ((p.kind == "school") ? "school" : "office"));
         switch (role)
@@ -494,10 +494,10 @@ public static partial class Buildings
                 }
         }
     }
-    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<int, double> r, double k) => fitOut(p, role, (int)x0, (int)y0, (int)x1, (int)y1, r, (int)k);
+    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<double, double> r, double k) => fitOut(p, role, (int)x0, (int)y0, (int)x1, (int)y1, r, (int)k);
 
     /// <summary>One hall of pews facing an altar, a vestry in a back corner.</summary>
-    public static BuildingsPlan churchPlan(Func<int, double> r, double maxW, double maxH)
+    public static BuildingsPlan churchPlan(Func<double, double> r, double maxW, double maxH)
     {
         var W = JsMath.min(maxW, between(r(2), 11, 15));
         var H = JsMath.min(maxH, between(r(3), 15, 20));
@@ -523,7 +523,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static BuildingsPlan warehousePlan(Func<int, double> r, string kind, double maxW, double maxH)
+    public static BuildingsPlan warehousePlan(Func<double, double> r, string kind, double maxW, double maxH)
     {
         var W = JsMath.min(maxW, between(r(2), 18, 26));
         var H = JsMath.min(maxH, between(r(3), 13, 20));
@@ -556,7 +556,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static BuildingsPlan barnPlan(Func<int, double> r, double maxW, double maxH)
+    public static BuildingsPlan barnPlan(Func<double, double> r, double maxW, double maxH)
     {
         var W = JsMath.min(maxW, between(r(2), 9, 13));
         var H = JsMath.min(maxH, between(r(3), 8, 10));
@@ -581,7 +581,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static BuildingsPlan shedPlan(Func<int, double> r)
+    public static BuildingsPlan shedPlan(Func<double, double> r)
     {
         var p = newPlan(5, 5, "shed", 0);
         box(p, 0, 0, 4, 4, "boards");
@@ -710,7 +710,7 @@ public static partial class Buildings
             }
         }
         var doorPairs = new JsSet<string>();
-        /*TODO return type*/object pairKey(double ax, double ay, double bx, double by)
+        string pairKey(double ax, double ay, double bx, double by)
         {
             return ((ay < by) || ((ay == by) && (ax < bx))) ? $"{Js.Str(ax)},{Js.Str(ay)},{Js.Str(bx)},{Js.Str(by)}" : $"{Js.Str(bx)},{Js.Str(by)},{Js.Str(ax)},{Js.Str(ay)}";
         }

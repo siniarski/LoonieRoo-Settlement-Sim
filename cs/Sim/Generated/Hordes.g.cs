@@ -643,8 +643,8 @@ public static partial class Hordes
         }
         var share = SHED_SHARE_MIN + (roll(1) * (SHED_SHARE_MAX - SHED_SHARE_MIN));
         var n = JsMath.max(1, JsMath.floor(zs.length * share));
-        var goal = h.goals[Js.Idx(0)] ?? middle(zs);
-        var back = (zs).ToList().sort((a, b) => Js.Or(Space.manhattan(b.pos, goal) - Space.manhattan(a.pos, goal), (string.CompareOrdinal(a.id, b.id) < 0) ? -1 : 1)).slice(0, n);
+        var goal = Js.At(h.goals, 0, middle(zs));
+        var back = Js.ListOf(zs).sort((a, b) => Js.Or(Space.manhattan(b.pos, goal) - Space.manhattan(a.pos, goal), (string.CompareOrdinal(a.id, b.id) < 0) ? -1 : 1)).slice(0, n);
         var mid = middle(back);
         var dx = goal.x - mid.x;
         var dy = goal.y - mid.y;

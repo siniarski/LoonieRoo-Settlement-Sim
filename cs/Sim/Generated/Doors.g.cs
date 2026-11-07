@@ -122,7 +122,7 @@ public static partial class Doors
         {
             across(z.pos, z.path[Js.Idx(0)]);
         }
-        var bodies = [.. state.survivors, .. state.zombies, .. state.residents].map((b) => b.at);
+        var bodies = Js.ListOf(state.survivors, state.zombies, state.residents).map((b) => b.at);
         foreach (var e in Js.Iter((grid.edgePassing).ToList()))
         {
             if (crossing.has(e))

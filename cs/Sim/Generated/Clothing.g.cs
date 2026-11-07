@@ -103,7 +103,7 @@ public static partial class Clothing
     /// <summary>A garment that's half worn, if any.</summary>
     public static Item? needsMending(SimState state, Survivor s)
     {
-        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && Js.T(isGarment(i.kind))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
+        return Js.ListOf(new[] { s.body, s.feet }).map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && Js.T(isGarment(i.kind))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
     }
 
     public static bool startDressing(SimState state, Survivor s)
@@ -229,6 +229,6 @@ public static partial class Clothing
     /// <summary>"coat, boots" for panels.</summary>
     public static string describeClothing(SimState state, Survivor s)
     {
-        return [s.body, s.feet].map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && Js.T(isGarment(i.kind))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
+        return Js.ListOf(new[] { s.body, s.feet }).map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && Js.T(isGarment(i.kind))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
     }
 }

@@ -103,7 +103,7 @@ public static partial class Sight
     }
 
     /// <summary>Tile indices within `r` of `p` with a clear sight line from it (from up high, `overWalls`: all of them). Tiles `skip` says no to aren't looked at (fog.ts: those already explored).</summary>
-    public static List<double> fieldOfView(Grid grid, Point p, double r, bool overWalls = false, Func<int, bool>? skip = default)
+    public static List<double> fieldOfView(Grid grid, Point p, double r, bool overWalls = false, Func<double, bool>? skip = default)
     {
         List<double> @out = [];
         for (var y = JsMath.max(0, p.y - r); y <= JsMath.min(grid.height - 1, p.y + r); y++)
@@ -131,7 +131,7 @@ public static partial class Sight
     }
 
     /// <summary>What a survivor sees now (tile indices): from a tower, everything in range.</summary>
-    public static List<double> sightOf(SimState state, Survivor s, Func<int, bool>? skip = default)
+    public static List<double> sightOf(SimState state, Survivor s, Func<double, bool>? skip = default)
     {
         return fieldOfView(state.grid, s.pos, sightRadius(state, s), Towers.onTower(state, s), skip);
     }

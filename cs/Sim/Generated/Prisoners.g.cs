@@ -27,7 +27,7 @@ public static partial class Prisoners
         var rooms = __d0.rooms;
         var __d1 = state.grid;
         var width = __d1.width;
-        foreach (var index in Js.Iter((cells).ToList().sort((a, b) => a - b)))
+        foreach (var index in Js.Iter(Js.ListOf(cells).sort((a, b) => a - b)))
         {
             foreach (var i in Js.Iter(Js.NN(rooms[Js.Idx(index)]).tiles))
             {

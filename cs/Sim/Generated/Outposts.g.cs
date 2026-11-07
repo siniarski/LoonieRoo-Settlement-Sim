@@ -41,7 +41,7 @@ public static partial class Outposts
     }
 
     /// <summary>The truck as a vehicle, seen and parked (nobody driving it).</summary>
-    public static /*TODO return type*/object truckVehicle(SimState state)
+    public static Vehicle? truckVehicle(SimState state)
     {
         return Vehicles.vehiclesOf(state).find((v) => (((v.kind == "truck") && (v.health > 0)) && (v.driverId == null)) && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y)));
     }

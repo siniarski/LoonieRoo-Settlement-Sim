@@ -259,7 +259,9 @@ function build(name, t, file) {
   const parts = objectParts(t);
   const union = parts.length > 1 && (t.type === 'TSUnionType' || (t.type === 'TSTypeReference' && lookup(refName(t), currentFile)?.node.typeAnnotation?.type === 'TSUnionType'));
   for (const part of parts) {
-    for (const m of part.members) {
+    for (let m of part.members) {
+      // A method (lootAt(x, y): number): a function-typed field.
+      if (m.type === 'TSMethodSignature') m = { ...m, type: 'TSPropertySignature', typeAnnotation: { typeAnnotation: { type: 'TSFunctionType', params: m.params, returnType: m.returnType } } };
       if (m.type !== 'TSPropertySignature' || !m.typeAnnotation) continue;
       const field = m.key.name ?? m.key.value;
       const intField = INTS.has(`${name}.${field}`) || INT_FIELDS.has(field);

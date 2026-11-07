@@ -206,7 +206,7 @@ public static partial class Commands
             var y0 = JsMath.max(0, JsMath.min(command.y0, command.y1));
             var x1 = JsMath.min(state.grid.width - 1, JsMath.max(command.x0, command.x1), (x0 + Fog.MAX_EXPLORE_SIDE) - 1);
             var y1 = JsMath.min(state.grid.height - 1, JsMath.max(command.y0, command.y1), (y0 + Fog.MAX_EXPLORE_SIDE) - 1);
-            if ((![command.x0, command.y0, command.x1, command.y1].every(JsNumber.isInteger) || (x1 < x0)) || (y1 < y0))
+            if ((!Js.ListOf(new[] { command.x0, command.y0, command.x1, command.y1 }).every(JsNumber.isInteger) || (x1 < x0)) || (y1 < y0))
             {
                 return reject("not a box on the map");
             }
@@ -693,6 +693,7 @@ public static partial class Commands
                     return moveSurvivor(state, command.survivorId, x, y);
                 }
         }
+        throw new InvalidOperationException("unreachable: every case returns");
     }
 
     public static CommandResult reject(string reason)
@@ -1103,7 +1104,7 @@ public static partial class Commands
         }
         else
         {
-            var inTheWay = [.. state.survivors, .. state.zombies, .. state.residents].some((e) => (e.pos.x == x) && (e.pos.y == y));
+            var inTheWay = Js.ListOf(state.survivors, state.zombies, state.residents).some((e) => (e.pos.x == x) && (e.pos.y == y));
             if (Js.T(inTheWay))
             {
                 return "someone is in the doorway";

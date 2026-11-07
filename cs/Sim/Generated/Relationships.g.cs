@@ -113,6 +113,6 @@ public static partial class Relationships
         }
         var friends = names((v) => v >= FRIEND);
         var rivals = names((v) => v <= RIVAL);
-        return [Js.T(friends.length) ? $"friends: {Js.Str(friends.join(", "))}" : "", Js.T(rivals.length) ? $"rivals: {Js.Str(rivals.join(", "))}" : ""].filter(Boolean).join("; ");
+        return Js.ListOf(new[] { Js.T(friends.length) ? $"friends: {Js.Str(friends.join(", "))}" : "", Js.T(rivals.length) ? $"rivals: {Js.Str(rivals.join(", "))}" : "" }).filter(Boolean).join("; ");
     }
 }

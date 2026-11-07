@@ -21,6 +21,6 @@ public static partial class States
     /// <summary>Deep copy via JSON. Doubles as a check that state is JSON-safe.</summary>
     public static SimState cloneState(SimState state)
     {
-        return StateJson.Clone(state);
+        return ((SimState)(Js.DeepClone(state)));
     }
 }

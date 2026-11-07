@@ -274,7 +274,7 @@ public static partial class Vehicles
     /// <summary>Top speed here: the truck is slower; off the road, slower still.</summary>
     public static double topSpeed(SimState state, Vehicle v)
     {
-        var ground = Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx((v.pos.y * state.grid.width) + v.pos.x)]))] ?? "grass";
+        var ground = Js.At(Grids.GROUNDS, Js.NN(state.grid.ground[Js.Idx((v.pos.y * state.grid.width) + v.pos.x)]), "grass");
         var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
     }

@@ -144,7 +144,7 @@ public static partial class Water
                 clean.set((f.y * grid.width) + f.x, "tank");
             }
         }
-        List<Func<int, int, string?>> passes = [(x, y) => clean.get((y * grid.width) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has((y * grid.width) + x)) ? "river" : null];
+        List<Func<double, double, string?>> passes = [(x, y) => clean.get((y * grid.width) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has((y * grid.width) + x)) ? "river" : null];
         foreach (var (i, sourceOf) in Js.Iter(passes.entries()))
         {
             if ((i == 0) && (clean.size == 0))

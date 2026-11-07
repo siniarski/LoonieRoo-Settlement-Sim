@@ -150,6 +150,7 @@ public static partial class Wishes
                     return s.comfort >= 60;
                 }
         }
+        throw new InvalidOperationException("unreachable: every case returns");
     }
 
     public static string describeWish(SimState state, Wish w)
