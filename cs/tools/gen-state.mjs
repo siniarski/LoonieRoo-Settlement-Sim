@@ -290,10 +290,24 @@ const lines = [
   'namespace LoonieRoo.Sim;',
   '',
 ];
+/** Shapes: TypeScript interfaces used structurally (anything with these fields is one). C# interfaces, implemented by every class with the fields. */
+const SHAPES = ['Body'];
+for (const name of SHAPES) {
+  const fields = classes.get(name);
+  if (!fields) continue;
+  lines.push(`public partial interface ${name}`, '{');
+  for (const [field, f] of fields) lines.push(`    ${f.type} ${kw.has(field) ? '@' + field : field} { get; set; }`);
+  lines.push('}', '');
+}
 for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]))) {
+  if (SHAPES.includes(name)) continue;
   const d = byFile.get(classFile.get(name))?.get(name.replace(/^[A-Z][a-z]+(?=[A-Z])/, (m) => (byFile.get(classFile.get(name))?.has(name) ? m : ''))) ?? decls.get(name);
   if (d?.doc) lines.push(`/// <summary>${esc(d.doc)}</summary>`);
   const ifaces = [];
+  for (const shape of SHAPES) {
+    const want = classes.get(shape);
+    if (want && shape !== name && [...want].every(([f, w]) => fields.get(f)?.type === w.type)) ifaces.push(shape);
+  }
   if (fields.get('id')?.type === 'string') ifaces.push('IHasId');
   if (fields.get('at')?.type === 'Point') ifaces.push('IHasAt');
   if (fields.get('pos')?.type === 'Point') ifaces.push('IHasPos');

@@ -33,7 +33,7 @@ for (const m of stateSrc.matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; 
 }
 /** A field whose value is always a JsRecord. */
 const recordField = (name) => fieldTypes.has(name) && [...fieldTypes.get(name)].every((x) => x.startsWith('JsRecord'));
-const typeClasses = new Set([...stateSrc.matchAll(/public partial class (\w+)/g)].map((m) => m[1]));
+const typeClasses = new Set([...stateSrc.matchAll(/public partial (?:class|interface) (\w+)/g)].map((m) => m[1]));
 
 const files = readdirSync(SIM).filter((f) => f.endsWith('.ts')).map((f) => f.replace(/\.ts$/, ''));
 const pascal = (s) => s.replace(/^\w/, (c) => c.toUpperCase());
@@ -167,7 +167,16 @@ function ty(t, mod, intName) {
     core = rest.length === 1 ? rest[0] : { ...t, types: rest };
   }
   const q = nullable ? '?' : '';
-  if (core.type === 'TSIndexedAccessType' && fieldType(core)) return ty(fieldType(core), mod, intName)?.replace(/\?$/, '') + q;
+  // NonNullable<X>: X without its null.
+  if (core.type === 'TSTypeReference' && core.typeName.name === 'NonNullable' && core.typeArguments) return ty(core.typeArguments.params[0], mod, intName)?.replace(/\?$/, '');
+  if (core.type === 'TSIndexedAccessType' && fieldType(core)) {
+    // X['field'] written inline in X: gen-state named its class X + Field.
+    const named = core.objectType.typeName.name + pascal(String(core.indexType.literal.value));
+    let ft = fieldType(core);
+    if (ft.type === 'TSUnionType') ft = ft.types.find((u) => u.type === 'TSTypeLiteral') ?? ft;
+    if (ft.type === 'TSTypeLiteral' && typeClasses.has(named)) return named + (q || (fieldType(core).type === 'TSUnionType' && fieldType(core).types.some((u) => u.type === 'TSNullKeyword') ? '?' : ''));
+    return ty(fieldType(core), mod, intName)?.replace(/\?$/, '') + q;
+  }
   const k = kindOf(core);
   switch (k) {
     case 'string': return 'string' + q;

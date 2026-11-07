@@ -613,6 +613,12 @@ public static partial class Js
         return m;
     }
 
+    /// <summary>obj[key] for a field named at run time (s[slot]).</summary>
+    public static V GetProp<V>(object o, string key) => (V)(o.GetType().GetProperty(key)?.GetValue(o) ?? default(V))!;
+
+    /// <summary>obj[key] = v for a field named at run time.</summary>
+    public static void SetProp(object o, string key, object? v) => o.GetType().GetProperty(key)!.SetValue(o, v);
+
     /// <summary>typeof x.</summary>
     public static string TypeOf(object? x) => x switch
     {

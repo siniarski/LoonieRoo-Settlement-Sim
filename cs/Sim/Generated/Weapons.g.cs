@@ -88,7 +88,7 @@ public static partial class Weapons
     }
 
     /// <summary>The survivor's gun, if it has rounds in it.</summary>
-    public static /*TODO return type*/object loadedGun(SimState state, Survivor s)
+    public static Item? loadedGun(SimState state, Survivor s)
     {
         var gun = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
         return ((gun?.kind == "gun") && (gun.wear > 0)) ? gun : null;

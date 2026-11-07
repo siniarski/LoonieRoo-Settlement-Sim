@@ -3,6 +3,14 @@
 #nullable enable
 namespace LoonieRoo.Sim;
 
+public partial interface Body
+{
+    Point pos { get; set; }
+    Movement? move { get; set; }
+    Point at { get; set; }
+    Point was { get; set; }
+}
+
 public partial class Alert
 {
     public string level { get; set; } = "";
@@ -19,7 +27,7 @@ public partial class AlertAt
     public int y { get; set; }
 }
 
-public partial class Animal : IHasId, IHasAt, IHasPos, IBody
+public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string kind { get; set; } = "";
@@ -65,14 +73,6 @@ public partial class Blueprint : IHasId
     public double workRequired { get; set; }
     /// <summary>An edge wall or door (grid.ts): on this tile's north or west side, not on the tile.</summary>
     public string? side { get; set; }
-}
-
-public partial class Body : IHasAt, IHasPos
-{
-    public Point pos { get; set; } = new();
-    public Movement? move { get; set; }
-    public Point at { get; set; } = new();
-    public Point was { get; set; } = new();
 }
 
 /// <summary>What a tick's zombie updates share: the plans left, and who's near a point.</summary>
@@ -218,7 +218,7 @@ public partial class ControlBusy
     public double duration { get; set; }
 }
 
-public partial class Dog : IHasId, IHasAt, IHasPos, IBody
+public partial class Dog : Body, IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
@@ -705,7 +705,7 @@ public partial class Requirement
     public bool met { get; set; }
 }
 
-public partial class Resident : IHasId, IHasAt, IHasPos, IBody
+public partial class Resident : Body, IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string settlementId { get; set; } = "";
@@ -984,7 +984,7 @@ public partial class SupplyRequest : IHasId
     public double until { get; set; }
 }
 
-public partial class Survivor : IHasId, IHasAt, IHasPos, IBody
+public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
@@ -1238,7 +1238,7 @@ public partial class Wound
     public double until { get; set; }
 }
 
-public partial class Zombie : IHasId, IHasAt, IHasPos, IBody
+public partial class Zombie : Body, IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public Point pos { get; set; } = new();

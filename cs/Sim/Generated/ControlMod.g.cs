@@ -257,7 +257,7 @@ public static partial class ControlMod
     }
 
     /// <summary>Asleep: rest comes back (faster in a bed) until full, or until something hurts you.</summary>
-    public static void sleepTick(SimState state, Survivor s, Control c, SleepTickBusy busy)
+    public static void sleepTick(SimState state, Survivor s, Control c, ControlBusy busy)
     {
         if (s.hurtTick == state.tick)
         {
@@ -405,7 +405,7 @@ public static partial class ControlMod
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
         var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
-        var steps = ((face.x != 0) && (face.y != 0)) ? [new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) }] : [face];
+        List<Point> steps = ((face.x != 0) && (face.y != 0)) ? [new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) }] : [face];
         foreach (var d in Js.Iter(steps))
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
@@ -513,7 +513,7 @@ public static partial class ControlMod
         }
         var item = Items.itemAt(state, target.x, target.y);
         var carriedRemedy = (Js.T(s.carrying) && Js.T(Space.samePoint(target, s.pos))) ? Items.getItem(state, s.carrying) : null;
-        var remedy = [item, carriedRemedy].find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
+        var remedy = new List<Item?> { item, carriedRemedy }.find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
         if (Js.T(remedy))
         {
             c.busy = new() { what = "treat", targetId = remedy.id, progress = 0, duration = Health.TREAT_TICKS };
@@ -639,11 +639,11 @@ public static partial class ControlMod
             Inventory.stow(state, s, item);
             return $"put the {Js.Str(item.kind)} in your bag";
         }
-        var old = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, s[Js.Idx(slot)]!) : null;
+        var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.GetProp<string?>(s, slot)!) : null;
         var where = item.pos!;
         item.pos = null;
         item.carriedBy = s.id;
-        s[Js.Idx(slot)] = item.id;
+        Js.SetProp(s, slot, item.id);
         if (Js.T(old))
         {
             Items.dropItem(state, old, where);

@@ -48,14 +48,6 @@ public partial class CompoundResult
     public int y1 { get; set; }
 }
 
-public partial class SleepTickBusy
-{
-    public string what { get; set; }
-    public string targetId { get; set; }
-    public double progress { get; set; }
-    public double duration { get; set; }
-}
-
 public partial class PaneInFrontResult
 {
     public double edge { get; set; }
@@ -180,13 +172,6 @@ public partial class TraitInfoEntry
     public string label { get; set; }
     public string about { get; set; }
     public double mood { get; set; }
-}
-
-public partial class LostOneResult
-{
-    public string name { get; set; }
-    public string relation { get; set; }
-    public bool dead { get; set; }
 }
 
 public partial class TickDying
