@@ -383,7 +383,7 @@ public static partial class Buildings
         door(p, c0 + 1, H - 1);
         floorAs(p, c0, 1, c0 + 1, H - 2, (kind == "clinic") ? "tiles" : "concrete");
         var roles = ROLES[Js.Idx(kind)];
-        var n = 0;
+        double n = 0;
         foreach (var (x0, x1, doorX) in new [] { (1, c0 - 2, c0 - 1), (c0 + 3, W - 2, c0 + 2) })
         {
             var y = 1;
@@ -608,7 +608,7 @@ public static partial class Buildings
             return (c == WALL) || (c == DOOR);
         }
         var room = new Int32Array(w * h).fill(-1);
-        var rooms = 0;
+        double rooms = 0;
         for (var i = 0; i < (w * h); i++)
         {
             if ((p.cells[Js.Idx(i)] != FLOOR) || (room[Js.Idx(i)] != -1))
@@ -796,7 +796,6 @@ public static partial class Buildings
                 {
                     e.window = true;
                 }
-                null;
             }
         }
         return Js.With(Js.Clone(p), __s4 => { __s4.cells = cells; __s4.ground = ground; __s4.edges = edges; });

@@ -85,7 +85,7 @@ function kindOf(t, seen = new Set()) {
     }
     case 'TSTypeLiteral': return 'object';
     case 'TSArrayType': case 'TSTupleType': return 'array';
-    case 'TSTypeOperator': return kindOf(t.typeAnnotation, seen);
+    case 'TSTypeOperator': return t.operator === 'keyof' ? 'string' : kindOf(t.typeAnnotation, seen);
     case 'TSParenthesizedType': return kindOf(t.typeAnnotation, seen);
     case 'TSIndexedAccessType': return 'string'; // (typeof LOOKS)[number] and the like: the const arrays are strings
     case 'TSTypeQuery': return 'other';
@@ -170,7 +170,10 @@ function csType(t, hint, intField) {
       c = c.type === 'TSTypeOperator' ? c.typeAnnotation : c;
       if (c.type === 'TSTupleType') {
         const ks = new Set(c.elementTypes.map((e) => kindOf(e)));
-        return (ks.size === 1 && ks.has('number') ? 'List<double>' : ks.size === 1 && ks.has('string') ? 'List<string>' : 'List<System.Text.Json.Nodes.JsonNode>') + q;
+        if (ks.size === 1 && ks.has('number')) return 'List<double>' + q;
+        if (ks.size === 1 && ks.has('string')) return 'List<string>' + q;
+        const els = c.elementTypes.map((e, i) => csType(e, hint + 'Item' + i, false).replace(/\?$/, ''));
+        return (els.every((x) => x === els[0] && !x.includes('JsonNode')) ? `List<${els[0]}>` : 'List<System.Text.Json.Nodes.JsonNode>') + q;
       }
       const el = c.type === 'TSArrayType' ? c.elementType : c.typeArguments.params[0];
       return `List<${csType(el, hint + 'Item', false).replace(/\?$/, '')}>` + q;

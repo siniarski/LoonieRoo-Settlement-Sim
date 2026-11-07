@@ -86,9 +86,9 @@ public static partial class Skills
     /// <summary>A trait for a new arrival, from their id: three in four get one.</summary>
     public static List<string> rollTraits(string id)
     {
-        var h = JsMath.imul(Js.Num(id.replace(/*TODO regex /\D/g*/null, "")) ^ 1540483477.0, 0x2c1b3c6d);
-        h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x297a2d39);
-        h = Js.Ushr((h ^ (Js.Ushr(h, 13))), 0);
+        var h = JsMath.imul(Js.Xor(Js.Num(id.replace(/*TODO regex /\D/g*/null, "")), 1540483477.0), 0x2c1b3c6d);
+        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x297a2d39);
+        h = Js.Ushr((Js.Xor(h, Js.Ushr(h, 13))), 0);
         return ((h % 4) == 0) ? [] : [Js.NN(TRAITS[Js.Idx(h % TRAITS.length)])];
     }
 

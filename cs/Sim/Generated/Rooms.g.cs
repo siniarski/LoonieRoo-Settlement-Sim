@@ -145,8 +145,8 @@ public static partial class Rooms
             var index = rooms.length;
             var minX = width;
             var minY = height;
-            var maxX = 0;
-            var maxY = 0;
+            double maxX = 0;
+            double maxY = 0;
             foreach (var i in Js.Iter(region))
             {
                 labels[Js.Idx(i)] = index;
@@ -457,8 +457,8 @@ public static partial class Rooms
             region.sort((a, b) => a - b);
             var minX = width;
             var minY = height;
-            var maxX = 0;
-            var maxY = 0;
+            double maxX = 0;
+            double maxY = 0;
             foreach (var i in Js.Iter(region))
             {
                 labels[Js.Idx(i)] = -4;

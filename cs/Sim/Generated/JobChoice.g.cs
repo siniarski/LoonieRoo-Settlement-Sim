@@ -42,7 +42,7 @@ public static partial class JobChoice
     {
         if (s.childUntil != null)
         {
-            return [];
+            return (List<string>)[];
         }
         return JobTypes.JOB_TYPES.filter((t) => (s.priorities[Js.Idx(t)] > 0) && (!Js.T(s.order) || Orders.ORDER_JOBS.includes(t))).sort((a, b) => Js.Or(s.priorities[Js.Idx(a)] - s.priorities[Js.Idx(b)], JobTypes.JOB_TYPES.indexOf(a) - JobTypes.JOB_TYPES.indexOf(b)));
     }
@@ -70,7 +70,7 @@ public static partial class JobChoice
             case "farm":
                 {
                     {
-                    var goal = [new Point { x = Js.I(job.x), y = Js.I(job.y) }];
+                    var goal = new List<Point> { new Point { x = Js.I(job.x), y = Js.I(job.y) } };
                     if (!Js.T(Pathfinding.canReach(grid, v, s.pos, goal)))
                     {
                         return null;

@@ -17,7 +17,7 @@ public static partial class Noise
     /// <summary>Herds hear from this many times further than a noise's radius.</summary>
     public const int HERD_HEARING = 2;
 
-    public static void makeNoise(SimState state, Point p, object kind)
+    public static void makeNoise(SimState state, Point p, string kind)
     {
         var r = NOISE[Js.Idx(kind)];
         var woke = wakeDormantNear(state, (d) => Space.manhattan(d, p) <= r);
@@ -62,7 +62,7 @@ public static partial class Noise
     /// <summary>Dormant zombies matching `near` get up as static zombies. Returns how many.</summary>
     public static double wakeDormantNear(SimState state, Func<Point, bool> near)
     {
-        var woke = 0;
+        double woke = 0;
         foreach (var d in Js.Iter((state.dormant).ToList()))
         {
             if (!Js.T(near(d)))

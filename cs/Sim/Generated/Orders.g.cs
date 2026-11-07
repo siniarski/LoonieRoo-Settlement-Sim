@@ -137,7 +137,7 @@ public static partial class Orders
         {
             return false;
         }
-        var side = [new Point { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new Point { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) }].map((d) => new Point { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
+        var side = new List<Point> { new Point { x = Js.I(-c.facing.y), y = Js.I(c.facing.x) }, new Point { x = Js.I(c.facing.y), y = Js.I(-c.facing.x) } }.map((d) => new Point { x = Js.I(s.pos.x + JsMath.sign(d.x)), y = Js.I(s.pos.y + JsMath.sign(d.y)) }).find((p) => Js.T(Pathfinding.isPassable(state.grid, p.x, p.y, "survivor")) && !Js.T(lane(p)));
         if (!Js.T(side))
         {
             return false;

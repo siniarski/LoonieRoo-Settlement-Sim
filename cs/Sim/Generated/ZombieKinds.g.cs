@@ -22,7 +22,7 @@ public static partial class ZombieKinds
     public static void giveVariant(Zombie z, double night)
     {
         var roll = Hash.hashRoll(Hash.idNumber(z.id), 0x2b1d);
-        var at = 0;
+        double at = 0;
         foreach (var v in Js.Iter(ORDER))
         {
             if (night < VARIANTS[Js.Idx(v)].from)

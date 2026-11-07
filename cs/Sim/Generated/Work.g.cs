@@ -490,7 +490,7 @@ public static partial class Work
         {
             return;
         }
-        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [new Point { x = Js.I(x), y = Js.I(y) }])));
+        var spot = Space.nearestTile(state.grid, home, (x, y) => Js.T(Grids.isWalkable(state.grid, x, y)) && Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, new List<Point> { new Point { x = Js.I(x), y = Js.I(y) } })));
         if (Js.T(spot) && !Js.T(Space.samePoint(spot, s.pos)))
         {
             Survivors.setGoal(s, spot);

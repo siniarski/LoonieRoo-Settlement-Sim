@@ -14,10 +14,10 @@ public static partial class NatureMod
     /// <summary>A well-mixed 32-bit hash of the seed and up to three integers.</summary>
     public static double hash(double seed, double a, double b, double salt)
     {
-        var h = ((JsMath.imul(seed ^ 2654435769.0, 2246822507.0) ^ JsMath.imul(a, 3266489909.0)) ^ JsMath.imul(b, 668265263.0)) ^ JsMath.imul(salt, 0x165667b1);
-        h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x2c1b3c6d);
-        h = JsMath.imul(h ^ (Js.Ushr(h, 12)), 0x297a2d39);
-        return Js.Ushr((h ^ (Js.Ushr(h, 15))), 0);
+        var h = Js.Xor(Js.Xor(Js.Xor(JsMath.imul(Js.Xor(seed, 2654435769.0), 2246822507.0), JsMath.imul(a, 3266489909.0)), JsMath.imul(b, 668265263.0)), JsMath.imul(salt, 0x165667b1));
+        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x2c1b3c6d);
+        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 12)), 0x297a2d39);
+        return Js.Ushr((Js.Xor(h, Js.Ushr(h, 15))), 0);
     }
 
     /// <summary>Uniform in [0, 1).</summary>

@@ -27,7 +27,7 @@ public static partial class Medicine
     /// <summary>What would help this survivor, best first: medicine for an infection, a bandage for wounds.</summary>
     public static List<string> remediesFor(Survivor s)
     {
-        return [.. ((s.infection != null) || (s.sick != null)) ? (["medicine"]) : [], .. (Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding)) ? (["bandage"]) : []];
+        return (List<string>)[.. ((s.infection != null) || (s.sick != null)) ? (["medicine"]) : [], .. (Js.T(Health.isHurt(s.health)) || Js.T(s.bleeding)) ? (["bandage"]) : []];
     }
 
     /// <summary>Applying a remedy: medicine cures an infection (and heals a little); a bandage heals wounds.</summary>

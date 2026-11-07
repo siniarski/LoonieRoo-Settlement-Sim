@@ -92,7 +92,7 @@ public static partial class Roads
             var i = heap.length - 1;
             while (i > 0)
             {
-                var p = (i - 1) >> 1;
+                var p = Js.Shr(i - 1, 1);
                 if (Js.NN(heap[Js.Idx(p)])[Js.Idx(0)] <= Js.NN(heap[Js.Idx(i)])[Js.Idx(0)])
                 {
                     break;

@@ -54,7 +54,7 @@ public static partial class Seasons
         {
             return 0;
         }
-        var growth = (season == "autumn") ? (((state.tick % 2) == 0) ? 1 : 0) : 1;
+        double growth = (season == "autumn") ? (((state.tick % 2) == 0) ? 1 : 0) : 1;
         if (((state.weather == "rain") || (state.weather == "storm")) && ((state.tick % 2) == 0))
         {
             growth += 1;

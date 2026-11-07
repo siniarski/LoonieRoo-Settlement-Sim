@@ -132,7 +132,7 @@ public static partial class Dogs
         var owner = state.survivors.slice().sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos))[Js.Idx(0)];
         if (!Js.T(owner) || (Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW))
         {
-            return [];
+            return (List<Point>)[];
         }
         var path = Pathfinding.findPathToAny(state.grid, dog.pos, Grids.neighbours4(state.grid, owner.pos.x, owner.pos.y)) ?? [];
         return path.slice(0, 15);
@@ -141,7 +141,7 @@ public static partial class Dogs
     public static void bark(SimState state, Dog dog, Zombie z)
     {
         dog.barkedTick = state.tick;
-        var woke = 0;
+        double woke = 0;
         foreach (var s in Js.Iter(state.survivors))
         {
             if ((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(Medicine.isGuard(s))) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))

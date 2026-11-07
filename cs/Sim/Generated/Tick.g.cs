@@ -150,7 +150,7 @@ public static partial class Tick
     /// <summary>Everything with a precise position (motion.ts).</summary>
     public static List<Body> movers(SimState state)
     {
-        return [.. state.survivors, .. state.zombies, .. state.dogs, .. state.animals, .. state.residents];
+        return (List<Body>)[.. state.survivors, .. state.zombies, .. state.dogs, .. state.animals, .. state.residents];
     }
 
     /// <summary>Moving under its own steering, not tile steps (motion.ts).</summary>

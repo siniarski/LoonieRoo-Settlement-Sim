@@ -134,7 +134,7 @@ public static partial class Hordes
     {
         var xs = zs.map((z) => z.pos.x).sort((a, b) => a - b);
         var ys = zs.map((z) => z.pos.y).sort((a, b) => a - b);
-        var k = (zs.length - 1) >> 1;
+        var k = Js.Shr(zs.length - 1, 1);
         return new Point { x = Js.I(Js.NN(xs[Js.Idx(k)])), y = Js.I(Js.NN(ys[Js.Idx(k)])) };
     }
 
@@ -198,7 +198,7 @@ public static partial class Hordes
             hi += BOX_MARGIN;
             if (((hi - lo) + 1) > BOX_MAX)
             {
-                lo = centre - (BOX_MAX >> 1);
+                lo = centre - (Js.Shr(BOX_MAX, 1));
                 hi = (lo + BOX_MAX) - 1;
             }
             return (JsMath.max(0, lo), JsMath.min(size - 1, hi));
@@ -306,7 +306,7 @@ public static partial class Hordes
         var dist = new Int32Array(w * ht).fill(UNREACHED);
         var hc = new Float64Array(1024);
         var hi = new Int32Array(1024);
-        var size = 0;
+        double size = 0;
         bool less(double a, double b)
         {
             return (Js.NN(hc[Js.Idx(a)]) < Js.NN(hc[Js.Idx(b)])) || ((hc[Js.Idx(a)] == hc[Js.Idx(b)]) && (Js.NN(hi[Js.Idx(a)]) < Js.NN(hi[Js.Idx(b)])));
@@ -336,7 +336,7 @@ public static partial class Hordes
             var k = size++;
             while (k > 0)
             {
-                var p = (k - 1) >> 1;
+                var p = Js.Shr(k - 1, 1);
                 if (!Js.T(less(k, p)))
                 {
                     break;

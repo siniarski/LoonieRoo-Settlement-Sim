@@ -11,7 +11,7 @@ public static partial class Replay
     public static SimState replay(SimState initial, List<LoggedCommand> log, double untilTick)
     {
         var state = States.cloneState(initial);
-        var next = 0;
+        double next = 0;
         for (; ; )
         {
             for (var entry = log[Js.Idx(next)]; (entry != null) && (entry.tick <= state.tick); entry = log[Js.Idx(++next)])

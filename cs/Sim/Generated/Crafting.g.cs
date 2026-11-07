@@ -59,7 +59,7 @@ public static partial class Crafting
                 }
             }
         }
-        var n = 0;
+        double n = 0;
         foreach (var i in Js.Iter(state.items))
         {
             if ((i.kind == kind) && !used.has(i.id))

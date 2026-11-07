@@ -77,7 +77,7 @@ public static partial class Power
     {
         if (!Js.T(Time.isNight(state.tick)))
         {
-            return [];
+            return (List<Furniture>)[];
         }
         return FurnitureMod.ofKind(state, "lamp").filter((f) => Js.T(isPowered(state, f)));
     }
@@ -173,7 +173,7 @@ public static partial class Power
         var rate = ((season == "summer") ? 2 : 1) + ((state.weather == "heatwave") ? 1 : 0);
         var stores = Rooms.completeRooms(state, "storage");
         var fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
-        var rotted = 0;
+        double rotted = 0;
         foreach (var item in Js.Iter((state.items).ToList()))
         {
             if ((((item.kind != "food") && (item.kind != "meal")) || !Js.T(item.pos)) || Js.T(item.reservedBy))

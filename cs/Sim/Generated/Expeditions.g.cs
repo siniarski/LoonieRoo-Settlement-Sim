@@ -179,7 +179,7 @@ public static partial class Expeditions
         }
         state.survivors.pushAll(back);
         var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
-        var found = 0;
+        double found = 0;
         foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && Js.T(near(f)))))
         {
             while ((crate.loot > 0) && (room > 0))
@@ -231,6 +231,6 @@ public static partial class Expeditions
     /// <summary>Everyone in the colony or away on an expedition (their ids stay in use).</summary>
     public static List<Survivor> everyone(SimState state)
     {
-        return [.. state.survivors, .. state.expeditions.flatMap((x) => x.members)];
+        return (List<Survivor>)[.. state.survivors, .. state.expeditions.flatMap((x) => x.members)];
     }
 }

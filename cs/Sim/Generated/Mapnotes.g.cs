@@ -63,7 +63,7 @@ public static partial class Mapnotes
     {
         if (!Js.T(state.world))
         {
-            return [];
+            return (List</*TODO inline type*/object>)[];
         }
         var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
         var offset = JsMath.floor(Hash.hashRoll(state.world.seed, 0x7041) * TOWN_NAMES.length);

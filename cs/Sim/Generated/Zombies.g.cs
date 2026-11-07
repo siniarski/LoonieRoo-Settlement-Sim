@@ -120,7 +120,7 @@ public static partial class Zombies
             b = new() { tick = state.tick, edit = edit, cells = cells };
             buckets.set(list, b);
         }
-        var n = 0;
+        double n = 0;
         var reach = r + 2;
         for (var y = p.y - reach; y <= (p.y + reach); y++)
         {
@@ -670,7 +670,7 @@ public static partial class Zombies
             }
         }
         var others = new JsMap<double, List<PushApartOthers>>();
-        var order = 0;
+        double order = 0;
         foreach (var list in new List<IEnumerable<Body>> { state.survivors, state.residents, state.dogs, state.animals })
         {
             foreach (var s in Js.Iter(list))

@@ -176,7 +176,7 @@ public static partial class Herds
     /// <summary>Dormant zombies near a survivor get up.</summary>
     public static void wakeDormant(SimState state)
     {
-        var woke = 0;
+        double woke = 0;
         Point? where = null;
         var cells = new JsMap<double, List<Point>>();
         double cell(double x, double y)

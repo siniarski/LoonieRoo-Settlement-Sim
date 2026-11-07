@@ -94,11 +94,6 @@ public partial class CacheEntry
     public RoomMap map { get; set; }
 }
 
-public partial class PackFurnitureResult
-{
-    public List<object> rows { get; set; }
-}
-
 public partial class SeenEntry
 {
     public int tick { get; set; }
@@ -145,6 +140,15 @@ public partial class CandidatesResult
 {
     public string kind { get; set; }
     public string? targetId { get; set; }
+}
+
+public partial class TownLotsResult
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public object facing { get; set; }
 }
 
 public partial class FarmLotsLot

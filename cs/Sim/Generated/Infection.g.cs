@@ -26,9 +26,9 @@ public static partial class Infection
 
     public static double roll(double a, double b)
     {
-        var h = JsMath.imul(a ^ 668265263.0, 2246822507.0) ^ JsMath.imul(b, 3266489909.0);
-        h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x2c1b3c6d);
-        return ((double)((Js.Ushr((h ^ (Js.Ushr(h, 13))), 0))) / (4294967296.0));
+        var h = Js.Xor(JsMath.imul(Js.Xor(a, 668265263.0), 2246822507.0), JsMath.imul(b, 3266489909.0));
+        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x2c1b3c6d);
+        return ((double)((Js.Ushr((Js.Xor(h, Js.Ushr(h, 13))), 0))) / (4294967296.0));
     }
 
     /// <summary>A zombie's hit: maybe it infects.</summary>

@@ -847,7 +847,7 @@ public static partial class Commands
         }
         var emx = JsMath.floor(((double)((ex0 + ex1)) / (2)));
         var emy = JsMath.floor(((double)((ey0 + ey1)) / (2)));
-        var edgesPlanned = 0;
+        double edgesPlanned = 0;
         void plan(double x, double y, string side, bool door)
         {
             if (!Js.T(Grids.inBounds(state.grid, x, y)) || !Js.T(Fog.isExplored(state, x, y)))
@@ -887,7 +887,7 @@ public static partial class Commands
         }
         var mx = JsMath.floor(((double)((x0 + x1)) / (2)));
         var my = JsMath.floor(((double)((y0 + y1)) / (2)));
-        var planned = 0;
+        double planned = 0;
         for (var y = y0; y <= y1; y++)
         {
             for (var x = x0; x <= x1; x++)
@@ -1231,7 +1231,7 @@ public static partial class Commands
             {
                 return "nothing in it";
             }
-            var took = 0;
+            double took = 0;
             foreach (var item_7 in Js.Iter(inside))
             {
                 if (Inventory.stow(state, s, item_7) == null)

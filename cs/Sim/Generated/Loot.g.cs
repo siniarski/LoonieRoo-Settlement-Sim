@@ -20,7 +20,7 @@ public static partial class Loot
     /// <summary>Maps a [0, 1) roll to a find from a weighted table.</summary>
     public static string pickFrom(List<List<object>> table, double roll)
     {
-        var at = 0;
+        double at = 0;
         foreach (var (kind, chance) in Js.Iter(table))
         {
             at += chance;

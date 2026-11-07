@@ -44,7 +44,7 @@ public static partial class ControlMod
     /// <summary>How many of the dead are within reach of someone, clutching at them (not staggered ones).</summary>
     public static double clutchedBy(SimState state, Survivor s)
     {
-        var n = 0;
+        double n = 0;
         foreach (var z in Js.Iter(state.zombies))
         {
             if (((z.kind != "raider") && (state.tick >= z.staggerUntil)) && Js.T(Motion.inReach(s, z, Motion.REACH, state.grid)))
@@ -405,7 +405,7 @@ public static partial class ControlMod
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
         var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
-        List<Point> steps = ((face.x != 0) && (face.y != 0)) ? [new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) }] : [face];
+        var steps = ((face.x != 0) && (face.y != 0)) ? new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } } : [face];
         foreach (var d in Js.Iter(steps))
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };

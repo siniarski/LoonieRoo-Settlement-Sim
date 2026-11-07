@@ -140,6 +140,13 @@ public static class JsListExtensions
             return o;
         }
 
+        public List<U> flatMap<U>(Func<T, int, IEnumerable<U>> f)
+        {
+            var o = new List<U>();
+            for (int i = 0; i < a.Count; i++) o.AddRange(f(a[i], i));
+            return o;
+        }
+
         public List<U> flatMap<U>(Func<T, IEnumerable<U>> f)
         {
             var o = new List<U>();
@@ -620,8 +627,22 @@ public static partial class Js
     /// <summary>x >>> n</summary>
     public static int Ushr(int x, int n) => (int)((uint)x >> n);
     public static double Ushr(double x, int n) => (double)(ToUint32(x) >> n);
+    // The bitwise operators: on whole numbers as they are; on JS numbers through ToInt32, as JS does.
+    public static int Shr(int x, int n) => x >> n;
+    public static int Shr(double x, double n) => ToInt32(x) >> ToInt32(n);
+    public static int Shl(int x, int n) => x << n;
+    public static int Shl(double x, double n) => ToInt32(x) << ToInt32(n);
+    public static int And(int x, int n) => x & n;
+    public static int And(double x, double n) => ToInt32(x) & ToInt32(n);
+    public static int BitOr(int x, int n) => x | n;
+    public static int BitOr(double x, double n) => ToInt32(x) | ToInt32(n);
+    public static int Xor(int x, int n) => x ^ n;
+    public static int Xor(double x, double n) => ToInt32(x) ^ ToInt32(n);
+    public static int BitNot(int x) => ~x;
+    public static int BitNot(double x) => ~ToInt32(x);
 
     /// <summary>Array.from({ length: n }, (_, i) => f(i)).</summary>
+    public static List<V> ArrayFrom<V>(double n, Func<int, V> f) => ArrayFrom((int)n, f);
     public static List<V> ArrayFrom<V>(int n, Func<int, V> f)
     {
         var o = new List<V>(n);
@@ -635,6 +656,24 @@ public static partial class Js
 
     /// <summary>{ ...x }: a shallow copy (fields copied, what they point to shared).</summary>
     public static V Clone<V>(V x) where V : class => (V)memberwiseClone.Invoke(x, null)!;
+
+    /// <summary>{ ...x } going into another class: a shallow copy of the properties both have (by name).</summary>
+    public static V CopyAs<V>(object x) where V : class, new()
+    {
+        if (x is V same) return Clone(same);
+        var o = new V();
+        foreach (var to in typeof(V).GetProperties())
+        {
+            var from = x.GetType().GetProperty(to.Name);
+            if (from != null && to.CanWrite && to.PropertyType.IsAssignableFrom(from.PropertyType)) to.SetValue(o, from.GetValue(x));
+            else if (from != null && to.CanWrite)
+            {
+                var v = from.GetValue(x);
+                if (v != null) to.SetValue(o, Convert.ChangeType(v, Nullable.GetUnderlyingType(to.PropertyType) ?? to.PropertyType, System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
+        return o;
+    }
 
     /// <summary>{ ...x, a: 1 }: the copy, then the fields set.</summary>
     public static V With<V>(V x, Action<V> set)

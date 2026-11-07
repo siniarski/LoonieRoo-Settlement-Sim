@@ -76,11 +76,11 @@ public static partial class Towns
                     {
                         continue;
                     }
-                    var inside = 0;
-                    var dry = 0;
-                    var wooded = 0;
-                    var around = 0;
-                    var wet = 0;
+                    double inside = 0;
+                    double dry = 0;
+                    double wooded = 0;
+                    double around = 0;
+                    double wet = 0;
                     var reach = radius + 14;
                     for (var j = JsMath.max(0, JsMath.floor(((double)((y - reach)) / (4)))); j <= JsMath.min(N - 1, JsMath.floor(((double)((y + reach)) / (4)))); j++)
                     {
@@ -166,7 +166,7 @@ public static partial class Towns
                 }
                 return false;
             }
-            var steps = 0;
+            double steps = 0;
             while (steps < len)
             {
                 var nx = x + (dx * (steps + 1));

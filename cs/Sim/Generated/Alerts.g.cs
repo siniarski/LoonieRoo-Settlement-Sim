@@ -43,7 +43,7 @@ public static partial class Alerts
         List<Alert> @out = [];
         /*TODO return type*/object add(string level, string text, Point? at = default)
         {
-            return @out.push(/*TODO object spread*/Js.Spread(Js.T(at) ? new() { at = at } : new(), new() { level = level, text = text }));
+            return @out.push(Js.With(Js.Clone(Js.T(at) ? new() { at = at } : new()), __s0 => { __s0.level = level; __s0.text = text; }));
         }
         var people = state.survivors;
         var near = state.zombies.filter((z) => people.some((s) => Space.manhattan(s.pos, z.pos) <= NEAR));

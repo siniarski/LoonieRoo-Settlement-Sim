@@ -62,7 +62,7 @@ public static partial class Resolve
     {
         if ((state.tick == 0) || ((state.tick % Time.DAY_LENGTH) != 0))
         {
-            return [];
+            return (List<Survivor>)[];
         }
         List<Survivor> leaving = [];
         foreach (var s in Js.Iter(state.survivors))

@@ -74,7 +74,7 @@ public static partial class Mood
     /// <summary>What moves this survivor's mood right now, as [label, effect] pairs.</summary>
     public static List<List<object>> moodFactors(SimState state, Survivor s)
     {
-        List<List<object>> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => [THOUGHTS[Js.Idx(t.kind)].label, THOUGHTS[Js.Idx(t.kind)].effect]);
+        List<List<object>> factors = s.thoughts.filter((t) => t.until > state.tick).map((t) => (List<object>)[THOUGHTS[Js.Idx(t.kind)].label, THOUGHTS[Js.Idx(t.kind)].effect]);
         if (Js.T(Health.isHurt(s.health)))
         {
             factors.push(["hurt", HURT_MOOD]);
