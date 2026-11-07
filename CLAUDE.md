@@ -62,7 +62,7 @@ cs/
   LoonieRoo.slnx    # the sim, its tests, the Godot game
 godot/              # the game: Game.cs (loop, input), Render/ (drawing), Ui/ (HUD, menu, map), SelfTest.cs
 scenarios/          # JSON maps the tests load
-experiments/        # old measurements (godot-bench, render-bench: the latter needs the TypeScript, at ts-final)
+experiments/        # old measurements (godot-bench; the browser render-bench is at ts-final)
 check.sh            # the check
 NOTES.md            # Start here, decisions, design direction, open questions, session log
 ```
