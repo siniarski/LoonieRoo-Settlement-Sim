@@ -201,7 +201,7 @@ public static partial class ScenarioMod
             return false;
         }
     }
-    public static bool placeEntity(SimState state, string @char, double x, double y) => placeEntity(state, @char, (int)x, (int)y);
+    public static bool placeEntity(SimState state, string @char, double x, double y) => placeEntity(state, @char, Js.I(x), Js.I(y));
 
     /// <summary>Builds the initial state (tick 0, empty log). Does not apply commands.</summary>
     public static SimState loadScenario(Scenario scenario)

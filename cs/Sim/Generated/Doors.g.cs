@@ -37,7 +37,7 @@ public static partial class Doors
         state.grid.open.push(i);
         state.grid.passing.push(i);
     }
-    public static void passThrough(SimState state, double x, double y, bool hasKey, Point? from = default) => passThrough(state, (int)x, (int)y, hasKey, from);
+    public static void passThrough(SimState state, double x, double y, bool hasKey, Point? from = default) => passThrough(state, Js.I(x), Js.I(y), hasKey, from);
 
     /// <summary>Doors held open for someone passing close once the doorway is clear. Runs every tick.</summary>
     public static void closeBehind(SimState state)

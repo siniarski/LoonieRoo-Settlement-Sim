@@ -34,7 +34,7 @@ public static partial class Designations
     {
         return state.blueprints.find((b) => (b.x == x) && (b.y == y));
     }
-    public static Blueprint? blueprintAt(SimState state, double x, double y) => blueprintAt(state, (int)x, (int)y);
+    public static Blueprint? blueprintAt(SimState state, double x, double y) => blueprintAt(state, Js.I(x), Js.I(y));
 
     /// <summary>Can something be removed here?</summary>
     public static bool hasRemovable(SimState state, int x, int y)
@@ -42,7 +42,7 @@ public static partial class Designations
         var tile = Grids.getTile(state.grid, x, y);
         return (((tile == "wall") || (tile == "door")) || (tile == "barricade")) || (FurnitureMod.furnitureAt(state, x, y) != null);
     }
-    public static bool hasRemovable(SimState state, double x, double y) => hasRemovable(state, (int)x, (int)y);
+    public static bool hasRemovable(SimState state, double x, double y) => hasRemovable(state, Js.I(x), Js.I(y));
 
     /// <summary>Building needs empty floor (no furniture); removing needs something to remove.</summary>
     public static bool preconditionHolds(SimState state, Blueprint bp)
@@ -77,7 +77,7 @@ public static partial class Designations
         state.blueprints.push(bp);
         return bp;
     }
-    public static Blueprint addBlueprint(SimState state, double x, double y, string target, string? side = default) => addBlueprint(state, (int)x, (int)y, target, side);
+    public static Blueprint addBlueprint(SimState state, double x, double y, string target, string? side = default) => addBlueprint(state, Js.I(x), Js.I(y), target, side);
 
     /// <summary>Cancels a blueprint. Delivered material comes back as an item. Its job is dropped by reconcileJobs.</summary>
     public static void cancelBlueprint(SimState state, Blueprint bp)

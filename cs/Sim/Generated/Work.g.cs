@@ -689,7 +689,7 @@ public static partial class Work
         Noise.makeNoise(state, job, "building");
         finishJob(state, s, job, ((((("repaired the " + ((Js.Get(state.grid.edges, e) == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
     }
-    public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, (int)e);
+    public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, Js.I(e));
 
     public static void workHaul(SimState state, Survivor s, Job job)
     {
@@ -957,5 +957,5 @@ public static partial class Work
         }
         return (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) || (clear(ax, ay, ax, by) && clear(ax, by, bx, by));
     }
-    public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, (int)ax, (int)ay, (int)bx, (int)by);
+    public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 }

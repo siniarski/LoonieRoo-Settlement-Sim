@@ -1996,7 +1996,8 @@ function translate(mod) {
       const dps = ps.map((x, i) => (intParams[i] ? x.replace(/^int/, 'double') : x)).map((x, i) => (i === firstNum ? x.replace(/ = .*$/, '') : x));
       // (The parameters' C# names, as declared: a scope may have renamed one.)
       const names = ps.map((x) => x.replace(/ = .*$/, '').trim().split(/\s+/).pop());
-      const call = names.map((n, i) => (intParams[i] ? (ps[i].startsWith('int?') ? `Js.I(${n})` : `(int)${n}`) : n)).join(', ');
+      // Js.I: one place to check that a JS number reaching an int parameter is whole (a fraction would truncate).
+      const call = names.map((n, i) => (intParams[i] ? `Js.I(${n})` : n)).join(', ');
       return [head, ...b, `${ind}public static ${ret} ${id(name)}(${dps.join(', ')})${where} => ${id(name)}(${call});`];
     }
     return [head, ...b];

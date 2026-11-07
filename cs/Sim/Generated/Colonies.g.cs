@@ -295,7 +295,7 @@ public static partial class Colonies
             Events.logEvent(state, (before == "allies") ? $"{Js.Str(a.name)} and {Js.Str(b.name)} are no longer allies" : $"The feud between {Js.Str(a.name)} and {Js.Str(b.name)} has cooled");
         }
     }
-    public static void tie(SimState state, Settlement a, Settlement b, double by) => tie(state, a, b, (int)by);
+    public static void tie(SimState state, Settlement a, Settlement b, double by) => tie(state, a, b, Js.I(by));
 
     public static void split(SimState state, Settlement n, Func<double, double> roll)
     {

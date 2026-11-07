@@ -106,11 +106,10 @@ public static partial class Worldplan
         return new WorldPlan { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk };
     }
 
-    public static double dist(int ax, int ay, int bx, int by)
+    public static double dist(double ax, double ay, double bx, double by)
     {
         return JsMath.sqrt((JsMath.pow((ax - bx), 2)) + (JsMath.pow((ay - by), 2)));
     }
-    public static double dist(double ax, double ay, double bx, double by) => dist((int)ax, (int)ay, (int)bx, (int)by);
 
     /// <summary>Roads between towns (and the start), and a few out to the map's edge.</summary>
     public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask)

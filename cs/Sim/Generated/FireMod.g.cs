@@ -45,7 +45,7 @@ public static partial class FireMod
     {
         return state.fires.find((f) => (f.x == x) && (f.y == y));
     }
-    public static Fire? fireAt(SimState state, double x, double y) => fireAt(state, (int)x, (int)y);
+    public static Fire? fireAt(SimState state, double x, double y) => fireAt(state, Js.I(x), Js.I(y));
 
     /// <summary>Can a fire here keep going (and catch from a neighbour)?</summary>
     public static bool burnable(SimState state, int x, int y)
@@ -57,7 +57,7 @@ public static partial class FireMod
         }
         return (((t == "wall") || (t == "door")) || (t == "barricade")) || ((t == "floor") && (FurnitureMod.furnitureAt(state, x, y) != null));
     }
-    public static bool burnable(SimState state, double x, double y) => burnable(state, (int)x, (int)y);
+    public static bool burnable(SimState state, double x, double y) => burnable(state, Js.I(x), Js.I(y));
 
     /// <summary>Sets a tile alight. Returns false if it can't burn (water, already alight, too many fires).</summary>
     public static bool ignite(SimState state, int x, int y)
@@ -69,7 +69,7 @@ public static partial class FireMod
         state.fires.push(new() { x = Js.I(x), y = Js.I(y), left = burnable(state, x, y) ? FIRE_BURN : GROUND_BURN });
         return true;
     }
-    public static bool ignite(SimState state, double x, double y) => ignite(state, (int)x, (int)y);
+    public static bool ignite(SimState state, double x, double y) => ignite(state, Js.I(x), Js.I(y));
 
     public static void douse(SimState state, Fire f)
     {

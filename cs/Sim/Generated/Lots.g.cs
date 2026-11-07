@@ -49,7 +49,7 @@ public static partial class Lots
         }
         throw new InvalidOperationException("unreachable: every case returns");
     }
-    public static Point transform(BuildingsPlan p, double x, double y, string facing, bool mirror) => transform(p, (int)x, (int)y, facing, mirror);
+    public static Point transform(BuildingsPlan p, double x, double y, string facing, bool mirror) => transform(p, Js.I(x), Js.I(y), facing, mirror);
 
     /// <summary>The lot's frontage (along its street) and depth.</summary>
     public static FrameResult frame(Lot lot)
@@ -107,7 +107,7 @@ public static partial class Lots
         }
         throw new InvalidOperationException("unreachable: every case returns");
     }
-    public static MapToLotResult mapToLot(Lot lot, double x, double y) => mapToLot(lot, (int)x, (int)y);
+    public static MapToLotResult mapToLot(Lot lot, double x, double y) => mapToLot(lot, Js.I(x), Js.I(y));
 
     /// <summary>A plan set in the lot at (u0, v0): its front `v0` back from the street, `u0` along.</summary>
     public static Placement setIn(Lot lot, BuildingsPlan plan, double u0, double v0, bool mirror, string? facing = null)
@@ -343,7 +343,7 @@ public static partial class Lots
         }
         parkCar(state, ctx, lot, (__f0, __f1) => inside(__f0, __f1));
     }
-    public static void drawLot(SimState state, LotContext ctx, Lot lot, double x0, double y0, double x1, double y1) => drawLot(state, ctx, lot, (int)x0, (int)y0, (int)x1, (int)y1);
+    public static void drawLot(SimState state, LotContext ctx, Lot lot, double x0, double y0, double x1, double y1) => drawLot(state, ctx, lot, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1));
 
     /// <summary>Of the lots in town (houses, shops, civic, industry), this many have a car parked in the street in front.</summary>
     public const double CAR_CHANCE = 0.6;

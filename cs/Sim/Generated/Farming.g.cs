@@ -32,7 +32,7 @@ public static partial class Farming
     {
         return state.farm.find((p) => (p.x == x) && (p.y == y));
     }
-    public static FarmPlot? plotAt(SimState state, double x, double y) => plotAt(state, (int)x, (int)y);
+    public static FarmPlot? plotAt(SimState state, double x, double y) => plotAt(state, Js.I(x), Js.I(y));
 
     public static FarmPlot? getPlot(SimState state, string id)
     {
@@ -61,7 +61,7 @@ public static partial class Farming
         state.farm.push(plot);
         return plot;
     }
-    public static FarmPlot addPlot(SimState state, double x, double y, string crop = "potato") => addPlot(state, (int)x, (int)y, crop);
+    public static FarmPlot addPlot(SimState state, double x, double y, string crop = "potato") => addPlot(state, Js.I(x), Js.I(y), crop);
 
     public static bool isCrop(object c)
     {

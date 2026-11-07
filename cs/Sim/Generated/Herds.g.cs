@@ -123,7 +123,7 @@ public static partial class Herds
     }
 
     /// <summary>Compass direction of an offset (y grows southwards).</summary>
-    public static string direction(int dx, int dy)
+    public static string direction(double dx, double dy)
     {
         if ((dx == 0) && (dy == 0))
         {
@@ -133,7 +133,6 @@ public static partial class Herds
         var ew = (((double)(JsMath.abs(dx)) * (2)) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
         return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (ns is var __or1 && Js.T(__or1) ? __or1 : ew);
     }
-    public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
 
     public static double clamp(double v, double size)
     {

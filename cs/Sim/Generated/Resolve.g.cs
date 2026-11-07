@@ -40,7 +40,7 @@ public static partial class Resolve
     {
         s.resolve = JsMath.max(0, JsMath.min(RESOLVE_MAX, s.resolve + by));
     }
-    public static void steel(Survivor s, double by) => steel(s, (int)by);
+    public static void steel(Survivor s, double by) => steel(s, Js.I(by));
 
     public static bool isBreaking(Survivor s)
     {

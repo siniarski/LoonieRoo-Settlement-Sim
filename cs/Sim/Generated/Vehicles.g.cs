@@ -106,7 +106,7 @@ public static partial class Vehicles
         state.vehicles.push(v);
         return v;
     }
-    public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car") => addVehicle(state, (int)x, (int)y, heading, fuel, health, kind);
+    public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car") => addVehicle(state, Js.I(x), Js.I(y), heading, fuel, health, kind);
 
     /// <summary>The car this survivor is driving, if any.</summary>
     public static Vehicle? vehicleOf(SimState state, Survivor s)
@@ -222,7 +222,7 @@ public static partial class Vehicles
         s.at = Js.CopyAs<Point>(v.at);
         s.pos = Js.CopyAs<Point>(v.pos);
     }
-    public static void drive(SimState state, Survivor s, double dx, double dy) => drive(state, s, (int)dx, (int)dy);
+    public static void drive(SimState state, Survivor s, double dx, double dy) => drive(state, s, Js.I(dx), Js.I(dy));
 
     public static void move(SimState state, Survivor s, Vehicle v)
     {
@@ -342,7 +342,7 @@ public static partial class Vehicles
     {
         return (dx > 0) ? 0 : ((dy > 0) ? 8 : ((dx < 0) ? 16 : 24));
     }
-    public static double headingOf(double dx, double dy) => headingOf((int)dx, (int)dy);
+    public static double headingOf(double dx, double dy) => headingOf(Js.I(dx), Js.I(dy));
 
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)

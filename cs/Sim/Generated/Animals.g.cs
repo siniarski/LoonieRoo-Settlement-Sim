@@ -140,7 +140,7 @@ public static partial class Animals
         state.animals.push(a);
         return a;
     }
-    public static Animal addDeer(SimState state, double x, double y) => addDeer(state, (int)x, (int)y);
+    public static Animal addDeer(SimState state, double x, double y) => addDeer(state, Js.I(x), Js.I(y));
 
     /// <summary>A rabbit, wolf or bear at a tile.</summary>
     public static Animal addAnimal(SimState state, string kind, int x, int y, string? packId = default)
@@ -155,14 +155,14 @@ public static partial class Animals
         state.animals.push(a);
         return a;
     }
-    public static Animal addAnimal(SimState state, string kind, double x, double y, string? packId = default) => addAnimal(state, kind, (int)x, (int)y, packId);
+    public static Animal addAnimal(SimState state, string kind, double x, double y, string? packId = default) => addAnimal(state, kind, Js.I(x), Js.I(y), packId);
 
     /// <summary>Open ground an animal can stand on.</summary>
     public static bool ground(SimState state, int x, int y)
     {
         return Grids.getTile(state.grid, x, y) == "floor";
     }
-    public static bool ground(SimState state, double x, double y) => ground(state, (int)x, (int)y);
+    public static bool ground(SimState state, double x, double y) => ground(state, Js.I(x), Js.I(y));
 
     /// <summary>A step from one tile to the next that an animal can take (no walls between).</summary>
     public static bool canStep(SimState state, Point a, Point b)

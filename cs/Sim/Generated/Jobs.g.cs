@@ -495,7 +495,7 @@ public static partial class Jobs
         state.jobs.push(job);
         return job;
     }
-    public static Job addJob(SimState state, string type, double x, double y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null) => addJob(state, type, (int)x, (int)y, blueprintId, itemId, furnitureId, zombieId, plotId);
+    public static Job addJob(SimState state, string type, double x, double y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null) => addJob(state, type, Js.I(x), Js.I(y), blueprintId, itemId, furnitureId, zombieId, plotId);
 
     public static void removeJob(SimState state, Job job, string reason)
     {

@@ -741,7 +741,7 @@ public static partial class Commands
         }
         return changed();
     }
-    public static CommandResult setStructure(SimState state, double x, double y, string tile) => setStructure(state, (int)x, (int)y, tile);
+    public static CommandResult setStructure(SimState state, double x, double y, string tile) => setStructure(state, Js.I(x), Js.I(y), tile);
 
     /// <summary>An edge on the map's own border, or not a side: nothing to build there.</summary>
     public static string? edgeProblem(SimState state, int x, int y, string side)
@@ -756,7 +756,7 @@ public static partial class Commands
         }
         return null;
     }
-    public static string? edgeProblem(SimState state, double x, double y, string side) => edgeProblem(state, (int)x, (int)y, side);
+    public static string? edgeProblem(SimState state, double x, double y, string side) => edgeProblem(state, Js.I(x), Js.I(y), side);
 
     /// <summary>A blueprint for an edge wall or door.</summary>
     public static CommandResult designateEdge(SimState state, int x, int y, string side, string structure)
@@ -783,7 +783,7 @@ public static partial class Commands
         Designations.addBlueprint(state, x, y, structure, side);
         return changed();
     }
-    public static CommandResult designateEdge(SimState state, double x, double y, string side, string structure) => designateEdge(state, (int)x, (int)y, side, structure);
+    public static CommandResult designateEdge(SimState state, double x, double y, string side, string structure) => designateEdge(state, Js.I(x), Js.I(y), side, structure);
 
     /// <summary>An edge wall or door, at once (the instant tools).</summary>
     public static CommandResult placeEdge(SimState state, int x, int y, string side, double kind)
@@ -800,7 +800,7 @@ public static partial class Commands
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         return changed();
     }
-    public static CommandResult placeEdge(SimState state, double x, double y, string side, double kind) => placeEdge(state, (int)x, (int)y, side, kind);
+    public static CommandResult placeEdge(SimState state, double x, double y, string side, double kind) => placeEdge(state, Js.I(x), Js.I(y), side, kind);
 
     public static CommandResult designateBuild(SimState state, int x, int y, string structure)
     {
@@ -833,7 +833,7 @@ public static partial class Commands
         Designations.addBlueprint(state, x, y, structure);
         return changed();
     }
-    public static CommandResult designateBuild(SimState state, double x, double y, string structure) => designateBuild(state, (int)x, (int)y, structure);
+    public static CommandResult designateBuild(SimState state, double x, double y, string structure) => designateBuild(state, Js.I(x), Js.I(y), structure);
 
     /// <summary>Walls in a box: edge-wall plans on its outer borders (grid.ts edges), a door plan mid-way along each side. Borders on the map's edge, or already built on, are skipped.</summary>
     public static CommandResult planPerimeter(SimState state, int ax, int ay, int bx, int by)
@@ -873,7 +873,7 @@ public static partial class Commands
         }
         return (edgesPlanned > 0) ? changed() : unchanged();
     }
-    public static CommandResult planPerimeter(SimState state, double ax, double ay, double bx, double by) => planPerimeter(state, (int)ax, (int)ay, (int)bx, (int)by);
+    public static CommandResult planPerimeter(SimState state, double ax, double ay, double bx, double by) => planPerimeter(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 
     /// <summary>The old tile perimeter (kept for reference by replays of older logs: unused).</summary>
     public static CommandResult planPerimeterTiles(SimState state, int ax, int ay, int bx, int by)
@@ -908,7 +908,7 @@ public static partial class Commands
         }
         return (planned > 0) ? changed() : unchanged();
     }
-    public static CommandResult planPerimeterTiles(SimState state, double ax, double ay, double bx, double by) => planPerimeterTiles(state, (int)ax, (int)ay, (int)bx, (int)by);
+    public static CommandResult planPerimeterTiles(SimState state, double ax, double ay, double bx, double by) => planPerimeterTiles(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 
     public static CommandResult designateRemove(SimState state, int x, int y)
     {
@@ -929,7 +929,7 @@ public static partial class Commands
         Designations.addBlueprint(state, x, y, "floor");
         return changed();
     }
-    public static CommandResult designateRemove(SimState state, double x, double y) => designateRemove(state, (int)x, (int)y);
+    public static CommandResult designateRemove(SimState state, double x, double y) => designateRemove(state, Js.I(x), Js.I(y));
 
     public static CommandResult cancelDesignation(SimState state, int x, int y)
     {
@@ -964,7 +964,7 @@ public static partial class Commands
         state.roomDesignations.splice(state.roomDesignations.indexOf(d), 1);
         return changed();
     }
-    public static CommandResult cancelDesignation(SimState state, double x, double y) => cancelDesignation(state, (int)x, (int)y);
+    public static CommandResult cancelDesignation(SimState state, double x, double y) => cancelDesignation(state, Js.I(x), Js.I(y));
 
     public static CommandResult designateRoom(SimState state, int x, int y, object purpose)
     {
@@ -992,7 +992,7 @@ public static partial class Commands
         }
         return changed();
     }
-    public static CommandResult designateRoom(SimState state, double x, double y, object purpose) => designateRoom(state, (int)x, (int)y, purpose);
+    public static CommandResult designateRoom(SimState state, double x, double y, object purpose) => designateRoom(state, Js.I(x), Js.I(y), purpose);
 
     public static CommandResult spawnSurvivor(SimState state, int x, int y)
     {
@@ -1007,7 +1007,7 @@ public static partial class Commands
         Survivors.addSurvivor(state, x, y);
         return changed();
     }
-    public static CommandResult spawnSurvivor(SimState state, double x, double y) => spawnSurvivor(state, (int)x, (int)y);
+    public static CommandResult spawnSurvivor(SimState state, double x, double y) => spawnSurvivor(state, Js.I(x), Js.I(y));
 
     public static CommandResult moveSurvivor(SimState state, string id, int x, int y)
     {
@@ -1032,7 +1032,7 @@ public static partial class Commands
         Survivors.setGoal(survivor, new Point { x = Js.I(x), y = Js.I(y) });
         return changed();
     }
-    public static CommandResult moveSurvivor(SimState state, string id, double x, double y) => moveSurvivor(state, id, (int)x, (int)y);
+    public static CommandResult moveSurvivor(SimState state, string id, double x, double y) => moveSurvivor(state, id, Js.I(x), Js.I(y));
 
     /// <summary>Stops whatever a survivor was doing: their job, sleep, meal, and so on.</summary>
     public static void dropEverything(SimState state, Survivor survivor, string why)
@@ -1114,7 +1114,7 @@ public static partial class Commands
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         return null;
     }
-    public static string? toggleDoor(SimState state, double x, double y) => toggleDoor(state, (int)x, (int)y);
+    public static string? toggleDoor(SimState state, double x, double y) => toggleDoor(state, Js.I(x), Js.I(y));
 
     public static CommandResult takeControl(SimState state, string? id)
     {

@@ -44,7 +44,7 @@ public static partial class Mapnotes
         state.mapNotes.push(new() { id = $"n{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), text = clean });
         return null;
     }
-    public static string? addMapNote(SimState state, double x, double y, string text) => addMapNote(state, (int)x, (int)y, text);
+    public static string? addMapNote(SimState state, double x, double y, string text) => addMapNote(state, Js.I(x), Js.I(y), text);
 
     public static string? removeMapNote(SimState state, string id)
     {

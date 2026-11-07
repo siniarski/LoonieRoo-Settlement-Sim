@@ -106,7 +106,7 @@ public static partial class FurnitureMod
     {
         return index(state).byTile.get($"{Js.Str(x)},{Js.Str(y)}");
     }
-    public static Furniture? furnitureAt(SimState state, double x, double y) => furnitureAt(state, (int)x, (int)y);
+    public static Furniture? furnitureAt(SimState state, double x, double y) => furnitureAt(state, Js.I(x), Js.I(y));
 
     /// <summary>Every piece of one kind, in list order (so results come out as a scan of the list would). Shared with the index, and kept up to date in place: read it, never change it, and don't add or remove furniture of that kind while looping over it. (A world has thousands of trees and fittings; scanning them all each tick for the one generator was a steady cost.)</summary>
     public static List<Furniture> ofKind(SimState state, string kind)
@@ -180,7 +180,7 @@ public static partial class FurnitureMod
         }
         return f;
     }
-    public static Furniture addFurniture(SimState state, string kind, double x, double y) => addFurniture(state, kind, (int)x, (int)y);
+    public static Furniture addFurniture(SimState state, string kind, double x, double y) => addFurniture(state, kind, Js.I(x), Js.I(y));
 
     /// <summary>Trees grow back a piece of wood each TREE_REGROW_TICKS (up to TREE_WOOD).</summary>
     public static void regrowTrees(SimState state)

@@ -17,7 +17,7 @@ public partial class WishesTest
         state.tick = tick;
         Wishes.updateWishes(state);
     }
-    public static void at(SimState state, double tick) => at(state, (int)tick);
+    public static void at(SimState state, double tick) => at(state, Js.I(tick));
 
     /// <summary>wishes</summary>
     public class D001_wishes

@@ -44,19 +44,19 @@ public static partial class Buildings
     {
         return new BuildingsPlan { w = Js.I(w), h = Js.I(h), cells = Js.Filled<double>(((double)(w) * (h)), OUTSIDE), ground = Js.Filled<string>(((double)(w) * (h)), null), furniture = [], kind = kind, sleepers = sleepers, edges = [] };
     }
-    public static BuildingsPlan newPlan(double w, double h, string kind, double sleepers) => newPlan((int)w, (int)h, kind, sleepers);
+    public static BuildingsPlan newPlan(double w, double h, string kind, double sleepers) => newPlan(Js.I(w), Js.I(h), kind, sleepers);
 
     public static double cellAt(BuildingsPlan p, int x, int y)
     {
         return ((((x < 0) || (y < 0)) || (x >= p.w)) || (y >= p.h)) ? OUTSIDE : Js.NN(Js.Get(p.cells, ((double)(y) * (p.w)) + x));
     }
-    public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, (int)x, (int)y);
+    public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, Js.I(x), Js.I(y));
 
     public static void set(BuildingsPlan p, int x, int y, double c)
     {
         p.cells[Js.Idx(((double)(y) * (p.w)) + x)] = c;
     }
-    public static void set(BuildingsPlan p, double x, double y, double c) => set(p, (int)x, (int)y, c);
+    public static void set(BuildingsPlan p, double x, double y, double c) => set(p, Js.I(x), Js.I(y), c);
 
     /// <summary>A walled box from (x0, y0) to (x1, y1) inclusive, floored inside with `ground`. Shares walls with boxes it touches.</summary>
     public static void box(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
@@ -81,7 +81,7 @@ public static partial class Buildings
             }
         }
     }
-    public static void box(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => box(p, (int)x0, (int)y0, (int)x1, (int)y1, ground);
+    public static void box(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => box(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), ground);
 
     /// <summary>Floors a rectangle (inside a box) with another ground.</summary>
     public static void floorAs(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
@@ -97,7 +97,7 @@ public static partial class Buildings
             }
         }
     }
-    public static void floorAs(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => floorAs(p, (int)x0, (int)y0, (int)x1, (int)y1, ground);
+    public static void floorAs(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => floorAs(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), ground);
 
     public static void hwall(BuildingsPlan p, int y, int x0, int x1)
     {
@@ -109,7 +109,7 @@ public static partial class Buildings
             }
         }
     }
-    public static void hwall(BuildingsPlan p, double y, double x0, double x1) => hwall(p, (int)y, (int)x0, (int)x1);
+    public static void hwall(BuildingsPlan p, double y, double x0, double x1) => hwall(p, Js.I(y), Js.I(x0), Js.I(x1));
 
     public static void vwall(BuildingsPlan p, int x, int y0, int y1)
     {
@@ -121,26 +121,26 @@ public static partial class Buildings
             }
         }
     }
-    public static void vwall(BuildingsPlan p, double x, double y0, double y1) => vwall(p, (int)x, (int)y0, (int)y1);
+    public static void vwall(BuildingsPlan p, double x, double y0, double y1) => vwall(p, Js.I(x), Js.I(y0), Js.I(y1));
 
     public static void door(BuildingsPlan p, int x, int y)
     {
         set(p, x, y, DOOR);
     }
-    public static void door(BuildingsPlan p, double x, double y) => door(p, (int)x, (int)y);
+    public static void door(BuildingsPlan p, double x, double y) => door(p, Js.I(x), Js.I(y));
 
     /// <summary>Next to a door (orthogonally): kept clear of furniture so doorways read.</summary>
     public static bool byDoor(BuildingsPlan p, int x, int y)
     {
         return (((cellAt(p, x + 1, y) == DOOR) || (cellAt(p, x - 1, y) == DOOR)) || (cellAt(p, x, y + 1) == DOOR)) || (cellAt(p, x, y - 1) == DOOR);
     }
-    public static bool byDoor(BuildingsPlan p, double x, double y) => byDoor(p, (int)x, (int)y);
+    public static bool byDoor(BuildingsPlan p, double x, double y) => byDoor(p, Js.I(x), Js.I(y));
 
     public static bool free(BuildingsPlan p, int x, int y)
     {
         return ((cellAt(p, x, y) == FLOOR) && !byDoor(p, x, y)) && !p.furniture.some((f) => (f.x == x) && (f.y == y));
     }
-    public static bool free(BuildingsPlan p, double x, double y) => free(p, (int)x, (int)y);
+    public static bool free(BuildingsPlan p, double x, double y) => free(p, Js.I(x), Js.I(y));
 
     public static bool put(BuildingsPlan p, int x, int y, string look, string? table = null)
     {
@@ -151,7 +151,7 @@ public static partial class Buildings
         p.furniture.push(new() { x = Js.I(x), y = Js.I(y), look = look, table = isContainerLook(look) ? table : null });
         return true;
     }
-    public static bool put(BuildingsPlan p, double x, double y, string look, string? table = null) => put(p, (int)x, (int)y, look, table);
+    public static bool put(BuildingsPlan p, double x, double y, string look, string? table = null) => put(p, Js.I(x), Js.I(y), look, table);
 
     /// <summary>Puts something against a wall of the room (x0..x1, y0..y1 interior), trying the walls in an order set by the roll.</summary>
     public static bool againstWall(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table, double roll)
@@ -176,7 +176,7 @@ public static partial class Buildings
         }
         return false;
     }
-    public static bool againstWall(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table, double roll) => againstWall(p, (int)x0, (int)y0, (int)x1, (int)y1, look, table, roll);
+    public static bool againstWall(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table, double roll) => againstWall(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), look, table, roll);
 
     /// <summary>Somewhere in the middle of the room, away from the walls if there's space.</summary>
     public static bool inMiddle(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table)
@@ -194,7 +194,7 @@ public static partial class Buildings
         }
         return false;
     }
-    public static bool inMiddle(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table) => inMiddle(p, (int)x0, (int)y0, (int)x1, (int)y1, look, table);
+    public static bool inMiddle(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table) => inMiddle(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), look, table);
 
     public static double between(double r, double lo, double hi)
     {
@@ -494,7 +494,7 @@ public static partial class Buildings
                 }
         }
     }
-    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<double, double> r, double k) => fitOut(p, role, (int)x0, (int)y0, (int)x1, (int)y1, r, (int)k);
+    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<double, double> r, double k) => fitOut(p, role, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), r, Js.I(k));
 
     /// <summary>One hall of pews facing an altar, a vestry in a back corner.</summary>
     public static BuildingsPlan churchPlan(Func<double, double> r, double maxW, double maxH)

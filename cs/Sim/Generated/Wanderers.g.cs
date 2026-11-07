@@ -39,7 +39,7 @@ public static partial class Wanderers
         state.wanderers.push(w);
         return w;
     }
-    public static Wanderer addWanderer(SimState state, double x, double y) => addWanderer(state, (int)x, (int)y);
+    public static Wanderer addWanderer(SimState state, double x, double y) => addWanderer(state, Js.I(x), Js.I(y));
 
     public static void removeWanderer(SimState state, Wanderer w)
     {

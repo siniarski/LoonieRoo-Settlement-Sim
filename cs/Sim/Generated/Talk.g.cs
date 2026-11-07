@@ -189,7 +189,7 @@ public static partial class Talk
     {
         of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(Js.Get(of.opinions, about.id), 0)) + by));
     }
-    public static void warm(Survivor of, Survivor about, double by) => warm(of, about, (int)by);
+    public static void warm(Survivor of, Survivor about, double by) => warm(of, about, Js.I(by));
 
     public static void offerTask(SimState state, Survivor s, string kind)
     {

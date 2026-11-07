@@ -75,7 +75,7 @@ public static partial class Difficulty
         item.wear = JsMath.floor(((double)(life) * (Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)))));
         return item;
     }
-    public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, (int)x, (int)y);
+    public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, Js.I(x), Js.I(y));
 
     public static bool isSettings(object v)
     {

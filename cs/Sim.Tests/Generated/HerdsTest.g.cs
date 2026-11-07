@@ -30,7 +30,7 @@ public partial class HerdsTest
         state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
         return state;
     }
-    public static SimState field(double width, double height = 9) => field((int)width, (int)height);
+    public static SimState field(double width, double height = 9) => field(Js.I(width), Js.I(height));
 
     /// <summary>dormant zombies</summary>
     public class D001_dormant_zombies

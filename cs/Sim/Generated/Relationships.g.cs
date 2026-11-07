@@ -38,7 +38,7 @@ public static partial class Relationships
     {
         of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, opinion(of, about) + by));
     }
-    public static void adjust(Survivor of, Survivor about, double by) => adjust(of, about, (int)by);
+    public static void adjust(Survivor of, Survivor about, double by) => adjust(of, about, Js.I(by));
 
     /// <summary>Every BOND_EVERY ticks: survivors near each other, both awake, warm to each other.</summary>
     public static void updateRelationships(SimState state)

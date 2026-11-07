@@ -43,7 +43,7 @@ public partial class BreachTest
     {
         return Breach.structureDamage(state, x, y);
     }
-    public static double damageAt(SimState state, double x, double y) => damageAt(state, (int)x, (int)y);
+    public static double damageAt(SimState state, double x, double y) => damageAt(state, Js.I(x), Js.I(y));
 
     public static List<string> lastEvents(SimState state)
     {

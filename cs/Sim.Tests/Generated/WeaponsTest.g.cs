@@ -195,7 +195,7 @@ public partial class WeaponsTest
         {
             return (x < 5) ? "storage" : "armory";
         }
-        public static string roomOf(double x) => roomOf((int)x);
+        public static string roomOf(double x) => roomOf(Js.I(x));
 
         [Fact(DisplayName = "armory > weapons are hauled to the armory, everything else to storage")]
         public void T012_weapons_are_hauled_to_the_armory_everything_else_to_storage()

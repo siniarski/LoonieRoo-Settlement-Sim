@@ -74,7 +74,7 @@ public static partial class ControlMod
         c.facing = new Point { x = Js.I((((double)(12) * (JsMath.abs(x))) >= ((double)(5) * (big))) ? JsMath.sign(x) : 0), y = Js.I((((double)(12) * (JsMath.abs(y))) >= ((double)(5) * (big))) ? JsMath.sign(y) : 0) };
         return null;
     }
-    public static string? aim(Control c, double x, double y) => aim(c, (int)x, (int)y);
+    public static string? aim(Control c, double x, double y) => aim(c, Js.I(x), Js.I(y));
 
     /// <summary>Which way a swing goes: the aim, else the facing.</summary>
     public static Point swingDir(Control c)

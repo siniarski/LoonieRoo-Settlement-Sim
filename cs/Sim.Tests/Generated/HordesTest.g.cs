@@ -11,7 +11,7 @@ public partial class HordesTest
     {
         return Js.ArrayFrom(h, (int _i) => ".".repeat(w));
     }
-    public static List<string> field(double w, double h = 40) => field((int)w, (int)h);
+    public static List<string> field(double w, double h = 40) => field(Js.I(w), Js.I(h));
 
     public static void quiet(SimState state)
     {
@@ -37,7 +37,7 @@ public partial class HordesTest
         s.pos = new Point { x = Js.I(x), y = Js.I(y) };
         s.at = Motion.centre(s.pos);
     }
-    public static void watcher(SimState state, double x, double y) => watcher(state, (int)x, (int)y);
+    public static void watcher(SimState state, double x, double y) => watcher(state, Js.I(x), Js.I(y));
 
     public static List<string> withSurvivor(List<string> map)
     {
@@ -53,7 +53,7 @@ public partial class HordesTest
         }
         return @out;
     }
-    public static List<Zombie> crowd(SimState state, double x, double y, double n, string kind = "herd") => crowd(state, (int)x, (int)y, n, kind);
+    public static List<Zombie> crowd(SimState state, double x, double y, double n, string kind = "herd") => crowd(state, Js.I(x), Js.I(y), n, kind);
 
     /// <summary>hordes</summary>
     public class D001_hordes

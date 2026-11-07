@@ -27,7 +27,7 @@ public partial class DiagonalTest
         }
         return new WalkToResult { ticks = ticks, tiles = tiles };
     }
-    public static WalkToResult walkTo(List<string> map, double x, double y) => walkTo(map, (int)x, (int)y);
+    public static WalkToResult walkTo(List<string> map, double x, double y) => walkTo(map, Js.I(x), Js.I(y));
 
     /// <summary>colonists walk diagonally</summary>
     public class D001_colonists_walk_diagonally

@@ -57,7 +57,7 @@ public static partial class Planner
         }
         return planHousing(state, room, notes);
     }
-    public static PlannerPlan planFurnish(SimState state, double x, double y) => planFurnish(state, (int)x, (int)y);
+    public static PlannerPlan planFurnish(SimState state, double x, double y) => planFurnish(state, Js.I(x), Js.I(y));
 
     /// <summary>Seats around one table in the open (its four sides).</summary>
     public const int SEATS_PER_TABLE = 4;

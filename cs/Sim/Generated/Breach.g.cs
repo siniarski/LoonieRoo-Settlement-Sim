@@ -27,7 +27,7 @@ public static partial class Breach
         }
         return grid.reinforced.includes(i) ? ((double)(Js.Get(STRUCTURE_HEALTH, tile)) * (2.5)) : Js.Get(STRUCTURE_HEALTH, tile);
     }
-    public static double structureHealth(Grid grid, double i) => structureHealth(grid, (int)i);
+    public static double structureHealth(Grid grid, double i) => structureHealth(grid, Js.I(i));
 
     public static bool isStructure(string? tile)
     {
@@ -38,7 +38,7 @@ public static partial class Breach
     {
         return isStructure(Grids.getTile(state.grid, x, y)) ? Js.NN(Js.Get(state.grid.damage, Grids.tileIndex(state.grid, x, y))) : 0;
     }
-    public static double structureDamage(SimState state, double x, double y) => structureDamage(state, (int)x, (int)y);
+    public static double structureDamage(SimState state, double x, double y) => structureDamage(state, Js.I(x), Js.I(y));
 
     /// <summary>Hits the wall or door at (x, y). Returns true if it broke.</summary>
     public static bool damageStructure(SimState state, int x, int y, double amount)
@@ -65,7 +65,7 @@ public static partial class Breach
         Events.logEvent(state, $"Zombies broke through the {Js.Str(tile)} at ({Js.Str(x)}, {Js.Str(y)})");
         return true;
     }
-    public static bool damageStructure(SimState state, double x, double y, double amount) => damageStructure(state, (int)x, (int)y, amount);
+    public static bool damageStructure(SimState state, double x, double y, double amount) => damageStructure(state, Js.I(x), Js.I(y), amount);
 
     /// <summary>Undoes up to `amount` damage. Returns the damage left.</summary>
     public static double repairStructure(SimState state, int x, int y, double amount)
@@ -78,7 +78,7 @@ public static partial class Breach
         Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(Js.Get(state.grid.damage, i)) - amount));
         return Js.NN(Js.Get(state.grid.damage, i));
     }
-    public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, (int)x, (int)y, amount);
+    public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, Js.I(x), Js.I(y), amount);
 
     /// <summary>What it takes to break an edge wall or door: the same as the tile kinds.</summary>
     public static double edgeHealth(Grid grid, int e)
@@ -94,13 +94,13 @@ public static partial class Breach
         }
         return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : ((kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : 0));
     }
-    public static double edgeHealth(Grid grid, double e) => edgeHealth(grid, (int)e);
+    public static double edgeHealth(Grid grid, double e) => edgeHealth(grid, Js.I(e));
 
     public static double edgeDamage(Grid grid, int e)
     {
         return Js.Q(Js.Get(grid.edgeDamage, Js.Str(e)), 0);
     }
-    public static double edgeDamage(Grid grid, double e) => edgeDamage(grid, (int)e);
+    public static double edgeDamage(Grid grid, double e) => edgeDamage(grid, Js.I(e));
 
     /// <summary>Hits an edge wall or door. Returns true if it broke (it's gone, and the way is open).</summary>
     public static bool damageEdge(SimState state, int e, double amount)
@@ -156,7 +156,7 @@ public static partial class Breach
         Events.logEvent(state, ((((("Zombies broke through the " + ((kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade"))) + " at (") + (tile % grid.width)) + ", ") + JsMath.floor(((double)(tile) / (grid.width)))) + ")");
         return true;
     }
-    public static bool damageEdge(SimState state, double e, double amount) => damageEdge(state, (int)e, amount);
+    public static bool damageEdge(SimState state, double e, double amount) => damageEdge(state, Js.I(e), amount);
 
     /// <summary>Undoes up to `amount` damage on an edge. Returns the damage left.</summary>
     public static double repairEdge(SimState state, int e, double amount)
@@ -172,7 +172,7 @@ public static partial class Breach
         }
         return left;
     }
-    public static double repairEdge(SimState state, double e, double amount) => repairEdge(state, (int)e, amount);
+    public static double repairEdge(SimState state, double e, double amount) => repairEdge(state, Js.I(e), amount);
 
     /// <summary>Glass breaks at this much damage; boards over a window at this.</summary>
     public const int GLASS_HEALTH = 100;
@@ -194,5 +194,5 @@ public static partial class Breach
         var tile = JsMath.floor(((double)(e) / (2)));
         Noise.makeNoise(state, new Point { x = Js.I(tile % grid.width), y = Js.I(JsMath.floor(((double)(tile) / (grid.width)))) }, "glass");
     }
-    public static void smashGlass(SimState state, double e) => smashGlass(state, (int)e);
+    public static void smashGlass(SimState state, double e) => smashGlass(state, Js.I(e));
 }

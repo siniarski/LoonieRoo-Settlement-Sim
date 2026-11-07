@@ -42,14 +42,14 @@ public static partial class Worldgen
     {
         return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && (Js.Get(l.plan.roadMask, ((double)(y) * (l.size)) + x) != 0);
     }
-    public static bool isRoad(Layout l, double x, double y) => isRoad(l, (int)x, (int)y);
+    public static bool isRoad(Layout l, double x, double y) => isRoad(l, Js.I(x), Js.I(y));
 
     /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
         return Js.Get(l.plan.lotMask, ((double)(y) * (l.size)) + x) != 0;
     }
-    public static bool onLot(Layout l, double x, double y) => onLot(l, (int)x, (int)y);
+    public static bool onLot(Layout l, double x, double y) => onLot(l, Js.I(x), Js.I(y));
 
     /// <summary>A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it.</summary>
     public static string? fenceAt(Layout l, int x, int y)
@@ -60,7 +60,7 @@ public static partial class Worldgen
         }
         return isRoad(l, x, y) ? "door" : "wall";
     }
-    public static string? fenceAt(Layout l, double x, double y) => fenceAt(l, (int)x, (int)y);
+    public static string? fenceAt(Layout l, double x, double y) => fenceAt(l, Js.I(x), Js.I(y));
 
     public static readonly int FOREST = Grids.GROUNDS.indexOf("forest");
 
@@ -68,7 +68,7 @@ public static partial class Worldgen
     {
         state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))] = Grids.GROUNDS.indexOf(g);
     }
-    public static void ground(SimState state, double x, double y, string g) => ground(state, (int)x, (int)y, g);
+    public static void ground(SimState state, double x, double y, string g) => ground(state, Js.I(x), Js.I(y), g);
 
     /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees.</summary>
     public static void generateChunk(SimState state, Layout l, int cx, int cy)
@@ -136,7 +136,7 @@ public static partial class Worldgen
             }
         }
     }
-    public static void generateChunk(SimState state, Layout l, double cx, double cy) => generateChunk(state, l, (int)cx, (int)cy);
+    public static void generateChunk(SimState state, Layout l, double cx, double cy) => generateChunk(state, l, Js.I(cx), Js.I(cy));
 
     /// <summary>What drawing a lot needs to know about the world.</summary>
     public static LotContext lotContext(Layout l)
@@ -283,7 +283,7 @@ public static partial class Worldgen
             s.pathVersion = -1;
         }
     }
-    public static void settle(SimState state, double cx, double cy) => settle(state, (int)cx, (int)cy);
+    public static void settle(SimState state, double cx, double cy) => settle(state, Js.I(cx), Js.I(cy));
 
     /// <summary>The nearest accepted tile in growing square rings, across anything (nearestTile only spreads over walkable ground).</summary>
     public static Point? nearestAcross(SimState state, Point p, Func<double, double, bool> accept)

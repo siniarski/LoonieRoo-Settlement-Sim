@@ -258,7 +258,7 @@ public static partial class Hordes
         var i = ((double)(by) * (grid.width)) + bx;
         return STEP + JsMath.ceil(((double)(((double)(((double)(Js.Get(Breach.STRUCTURE_HEALTH, tile)) * ((grid.reinforced.includes(i) ? 2.5 : 1)))) * (STEP))) / (batterRate())));
     }
-    public static double enterCost(SimState state, double bx, double by, bool asShut = false) => enterCost(state, (int)bx, (int)by, asShut);
+    public static double enterCost(SimState state, double bx, double by, bool asShut = false) => enterCost(state, Js.I(bx), Js.I(by), asShut);
 
     /// <summary>Crossing the border from a to b: battering it down if it's in the way, else nothing (`asShut`: an edge door counts as shut).</summary>
     public static double edgeCost(SimState state, int ax, int ay, int bx, int by, bool asShut = false)
@@ -276,7 +276,7 @@ public static partial class Hordes
         }
         return JsMath.ceil(((double)(((double)(JsMath.max(1, Breach.edgeHealth(grid, e))) * (STEP))) / (batterRate())));
     }
-    public static double edgeCost(SimState state, double ax, double ay, double bx, double by, bool asShut = false) => edgeCost(state, (int)ax, (int)ay, (int)bx, (int)by, asShut);
+    public static double edgeCost(SimState state, double ax, double ay, double bx, double by, bool asShut = false) => edgeCost(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by), asShut);
 
     /// <summary>What it costs a zombie to go from tile a into its neighbour b (Infinity: it can't, ever).</summary>
     public static double stepCost(SimState state, int ax, int ay, int bx, int by)
@@ -284,7 +284,7 @@ public static partial class Hordes
         var enter = enterCost(state, bx, by);
         return (enter == double.PositiveInfinity) ? double.PositiveInfinity : (enter + edgeCost(state, ax, ay, bx, by));
     }
-    public static double stepCost(SimState state, double ax, double ay, double bx, double by) => stepCost(state, (int)ax, (int)ay, (int)bx, (int)by);
+    public static double stepCost(SimState state, double ax, double ay, double bx, double by) => stepCost(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 
     /// <summary>The horde's field: cost to a goal from each tile in its box, from what's stored on it and the walls now, every door taken as shut. (A member's own next step sees doors as they are: hordeStep.)</summary>
     public static Field flowField(SimState state, Horde h)

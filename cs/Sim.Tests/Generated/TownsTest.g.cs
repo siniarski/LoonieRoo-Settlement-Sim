@@ -38,7 +38,7 @@ public partial class TownsTest
     {
         return p.edges.find((e) => ((((e.ax == ax) && (e.ay == ay)) && (e.bx == bx)) && (e.by == by)) || ((((e.ax == bx) && (e.ay == by)) && (e.bx == ax)) && (e.by == ay)));
     }
-    public static PlanEdge? edgeOf(BuildingsPlan p, double ax, double ay, double bx, double by) => edgeOf(p, (int)ax, (int)ay, (int)bx, (int)by);
+    public static PlanEdge? edgeOf(BuildingsPlan p, double ax, double ay, double bx, double by) => edgeOf(p, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 
     /// <summary>Floor reachable from outside the plan, in through its outer door edges, crossing no edge wall.</summary>
     public static JsSet<double> reachable(BuildingsPlan p)

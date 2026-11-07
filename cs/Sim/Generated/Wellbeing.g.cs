@@ -63,7 +63,7 @@ public static partial class Wellbeing
     {
         s.social = clamp(s.social + by);
     }
-    public static void socialise(Survivor s, double by) => socialise(s, (int)by);
+    public static void socialise(Survivor s, double by) => socialise(s, Js.I(by));
 
     /// <summary>How good a night's sleep was, where they lie now (bedId: the bed, or null for the floor).</summary>
     public static double nightScore(SimState state, Survivor s, string? bedId)

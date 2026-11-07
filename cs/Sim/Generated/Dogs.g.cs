@@ -42,7 +42,7 @@ public static partial class Dogs
         state.dogs.push(dog);
         return dog;
     }
-    public static Dog addDog(SimState state, double x, double y) => addDog(state, (int)x, (int)y);
+    public static Dog addDog(SimState state, double x, double y) => addDog(state, Js.I(x), Js.I(y));
 
     public static void updateDogs(SimState state)
     {

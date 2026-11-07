@@ -150,7 +150,7 @@ public static partial class BodyMod
     {
         s.panic = clamp(s.panic + by);
     }
-    public static void frighten(Survivor s, double by) => frighten(s, (int)by);
+    public static void frighten(Survivor s, double by) => frighten(s, Js.I(by));
 
     /// <summary>Panicking: does this swing miss? (A hash, not the sim RNG.)</summary>
     public static bool panicMiss(SimState state, Survivor s)

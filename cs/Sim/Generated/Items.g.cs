@@ -16,14 +16,14 @@ public static partial class Items
     {
         return state.items.find((i) => ((i.pos != null) && (i.pos.x == x)) && (i.pos.y == y));
     }
-    public static Item? itemAt(SimState state, double x, double y) => itemAt(state, (int)x, (int)y);
+    public static Item? itemAt(SimState state, double x, double y) => itemAt(state, Js.I(x), Js.I(y));
 
     /// <summary>A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or furniture.</summary>
     public static bool canHoldItem(SimState state, int x, int y)
     {
         return ((Grids.isWalkable(state.grid, x, y) && !Js.T(itemAt(state, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Designations.isFurnitureTarget(b.target)));
     }
-    public static bool canHoldItem(SimState state, double x, double y) => canHoldItem(state, (int)x, (int)y);
+    public static bool canHoldItem(SimState state, double x, double y) => canHoldItem(state, Js.I(x), Js.I(y));
 
     /// <summary>Creates an item on the nearest free tile to (x, y).</summary>
     public static Item spawnItem(SimState state, string kind, int x, int y)
@@ -37,7 +37,7 @@ public static partial class Items
         placeNear(state, item, new Point { x = Js.I(x), y = Js.I(y) });
         return item;
     }
-    public static Item spawnItem(SimState state, string kind, double x, double y) => spawnItem(state, kind, (int)x, (int)y);
+    public static Item spawnItem(SimState state, string kind, double x, double y) => spawnItem(state, kind, Js.I(x), Js.I(y));
 
     /// <summary>Puts an item on the ground at the nearest free tile and clears carry/reservation.</summary>
     public static void dropItem(SimState state, Item item, Point near)

@@ -81,7 +81,7 @@ public static partial class Zombies
         edited(state.zombies);
         return z;
     }
-    public static Zombie addZombie(SimState state, double x, double y, double health = ZOMBIE_HEALTH, string kind = "night") => addZombie(state, (int)x, (int)y, health, kind);
+    public static Zombie addZombie(SimState state, double x, double y, double health = ZOMBIE_HEALTH, string kind = "night") => addZombie(state, Js.I(x), Js.I(y), health, kind);
 
     /// <summary>How many times each zombie list has been added to or taken from in place (for zombiesWithin's buckets).</summary>
     public static readonly JsMap<List<Zombie>, double> edits = new JsMap<List<Zombie>, double>();
@@ -205,14 +205,14 @@ public static partial class Zombies
         }
         return JsMath.min(size, count - ((double)(((double)(t) / (interval))) * (size)));
     }
-    public static double spawnsAt(double tick, double? total = default) => spawnsAt((int)tick, total);
+    public static double spawnsAt(double tick, double? total = default) => spawnsAt(Js.I(tick), total);
 
     /// <summary>The first tick of a night.</summary>
     public static bool nightFallsNow(int tick)
     {
         return (Time.nightNumber(tick) != null) && (Time.ticksIntoNight(tick) == 0);
     }
-    public static bool nightFallsNow(double tick) => nightFallsNow((int)tick);
+    public static bool nightFallsNow(double tick) => nightFallsNow(Js.I(tick));
 
     /// <summary>Raiders open unlocked doors; zombies don't open any; crawlers get under barricades.</summary>
     public static string moverOf(Zombie z)
@@ -224,7 +224,7 @@ public static partial class Zombies
     {
         return spawnsAt(tick) > 0;
     }
-    public static bool isSpawnTick(double tick) => isSpawnTick((int)tick);
+    public static bool isSpawnTick(double tick) => isSpawnTick(Js.I(tick));
 
     /// <summary>Spawning, the dawn retreat, and every zombie's move or attack. Runs first each tick.</summary>
     public static void updateZombies(SimState state)

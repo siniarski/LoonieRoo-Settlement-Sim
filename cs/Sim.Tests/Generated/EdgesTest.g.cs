@@ -30,7 +30,7 @@ public partial class EdgesTest
         }
         return edges;
     }
-    public static List<ScenarioEdgesItem> box(double x0, double y0, double x1, double y1) => box((int)x0, (int)y0, (int)x1, (int)y1);
+    public static List<ScenarioEdgesItem> box(double x0, double y0, double x1, double y1) => box(Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1));
 
     public static readonly List<string> MAP = [".......", ".......", ".......", ".......", ".......", ".......", "......."];
 

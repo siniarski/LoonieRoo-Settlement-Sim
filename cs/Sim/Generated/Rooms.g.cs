@@ -172,7 +172,7 @@ public static partial class Rooms
         }
         return Js.NN(Js.Get(getRoomMap(state).labels, ((double)(y) * (state.grid.width)) + x));
     }
-    public static double labelAt(SimState state, double x, double y) => labelAt(state, (int)x, (int)y);
+    public static double labelAt(SimState state, double x, double y) => labelAt(state, Js.I(x), Js.I(y));
 
     /// <summary>The enclosed room containing (x, y), or null for outdoors/walls/doors.</summary>
     public static Room? roomAt(SimState state, int x, int y)
@@ -180,13 +180,13 @@ public static partial class Rooms
         var label = labelAt(state, x, y);
         return (label >= 0) ? Js.NN(Js.Get(getRoomMap(state).rooms, label)) : null;
     }
-    public static Room? roomAt(SimState state, double x, double y) => roomAt(state, (int)x, (int)y);
+    public static Room? roomAt(SimState state, double x, double y) => roomAt(state, Js.I(x), Js.I(y));
 
     public static bool isIndoors(SimState state, int x, int y)
     {
         return labelAt(state, x, y) >= 0;
     }
-    public static bool isIndoors(SimState state, double x, double y) => isIndoors(state, (int)x, (int)y);
+    public static bool isIndoors(SimState state, double x, double y) => isIndoors(state, Js.I(x), Js.I(y));
 
     /// <summary>The designation that applies to a room (first in state order), if any.</summary>
     public static RoomDesignation? designationOf(SimState state, Room room)

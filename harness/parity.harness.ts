@@ -165,6 +165,7 @@ it('writes generated worlds for the C# port', () => {
   mkdirSync('cs/Parity/data/worlds', { recursive: true });
   const cases: { name: string; seed: number; size: number; preset: keyof typeof PRESETS | null }[] = [];
   for (const seed of [1, 2, 3, 4, 5, 6, 7, 42]) for (const size of [64, 128]) cases.push({ name: `s${seed}-${size}`, seed, size, preset: null });
+  for (const seed of [1, 7]) for (const size of [256, 512]) cases.push({ name: `s${seed}-${size}`, seed, size, preset: null });
   for (const preset of Object.keys(PRESETS) as (keyof typeof PRESETS)[]) cases.push({ name: `s9-96-${preset}`, seed: 9, size: 96, preset });
   for (const c of cases) writeFileSync(`cs/Parity/data/worlds/${c.name}.json`, JSON.stringify(c.preset ? createWorld(c.seed, c.size, PRESETS[c.preset].settings) : createWorld(c.seed, c.size)));
   writeFileSync('cs/Parity/data/worlds/index.json', JSON.stringify(cases));
