@@ -124,7 +124,7 @@ public static partial class Worldgen
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if (((!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y))) || Js.T(onLot(l, x, y))) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)))
+                if (Js.T((Js.T((Js.T(!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y)))) || Js.T(onLot(l, x, y)))) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS))))
                 {
                     continue;
                 }
@@ -253,7 +253,7 @@ public static partial class Worldgen
         }
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (!Js.T(inChunk(z.pos)) || Js.T(floorOnly(z.pos.x, z.pos.y)))
+            if (Js.T(!Js.T(inChunk(z.pos)) || Js.T(floorOnly(z.pos.x, z.pos.y))))
             {
                 continue;
             }
@@ -263,7 +263,7 @@ public static partial class Worldgen
         }
         foreach (var a in Js.Iter(state.animals))
         {
-            if (!Js.T(inChunk(a.pos)) || Js.T(floorOnly(a.pos.x, a.pos.y)))
+            if (Js.T(!Js.T(inChunk(a.pos)) || Js.T(floorOnly(a.pos.x, a.pos.y))))
             {
                 continue;
             }
@@ -273,7 +273,7 @@ public static partial class Worldgen
         }
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (!Js.T(inChunk(s.pos)) || Js.T(open(s.pos.x, s.pos.y)))
+            if (Js.T(!Js.T(inChunk(s.pos)) || Js.T(open(s.pos.x, s.pos.y))))
             {
                 continue;
             }
@@ -294,7 +294,7 @@ public static partial class Worldgen
             {
                 for (var x = p.x - r; x <= (p.x + r); x++)
                 {
-                    if (((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y))) && Js.T(accept(x, y)))
+                    if (Js.T((Js.T((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y)))) && Js.T(accept(x, y))))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }
@@ -336,7 +336,7 @@ public static partial class Worldgen
         {
             for (var x = l.start.x - START_REVEAL_RADIUS; x <= (l.start.x + START_REVEAL_RADIUS); x++)
             {
-                if (Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1)))
+                if (Js.T(Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1))))
                 {
                     state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] = 1;
                 }

@@ -70,7 +70,7 @@ public static partial class Worldplan
                         return false;
                     }
                     var i = (y * size) + x;
-                    if (((((roadMask[Js.Idx(i)] != 0) || (lotMask[Js.Idx(i)] != 0)) || Js.T(NatureMod.isWater(n, x, y))) || Js.T(NatureMod.onFenceLine(n, x, y))) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 2)))
+                    if (Js.T((Js.T((Js.T(((roadMask[Js.Idx(i)] != 0) || (lotMask[Js.Idx(i)] != 0)) || Js.T(NatureMod.isWater(n, x, y)))) || Js.T(NatureMod.onFenceLine(n, x, y)))) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 2))))
                     {
                         return false;
                     }
@@ -118,7 +118,7 @@ public static partial class Worldplan
         var size = n.size;
         List<Point> ends(double ti)
         {
-            return streets.filter((s) => (s.town == ti) && Js.T(s.main)).flatMap((s) => Js.T(s.eastWest) ? new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } } : new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } });
+            return streets.filter((s) => Js.T((s.town == ti) && Js.T(s.main))).flatMap((s) => Js.T(s.eastWest) ? new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } } : new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } });
         }
         List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) }), new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) }];
         Point nearestEnd(double node, Point toward)
@@ -191,7 +191,7 @@ public static partial class Worldplan
                     var __c2 = Js.T(s.eastWest); var mx = __c2 ? mid : (s.x0 + (side * 9)); var my = __c2 ? (s.y0 + (side * 9)) : mid;
                     var share = ((double)(dist(mx, my, t.x, t.y)) / (t.radius));
                     string zone = "residential";
-                    if ((((share < 0.45) && Js.T(s.main)) && (Js.NN(civic[Js.Idx(s.town)]) < CIVIC_MAX[Js.Idx(t.kind)])) && (r(4) < 0.6))
+                    if (((Js.T((share < 0.45) && Js.T(s.main))) && (Js.NN(civic[Js.Idx(s.town)]) < CIVIC_MAX[Js.Idx(t.kind)])) && (r(4) < 0.6))
                     {
                         zone = "civic";
                     }
@@ -215,7 +215,7 @@ public static partial class Worldplan
                     {
                         return Js.T(s.eastWest) ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - 1) - d) : ((s.y0 + Towns.STREET) + 1)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - 1) - d) : ((s.x0 + Towns.STREET) + 1)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
                     }
-                    var placed = Js.T(add(Js.With(Js.CopyAs<Lot>(lotAt(front2, deep)), __s3 => { __s3.zone = zone; __s3.town = s.town; }))) ? front2 : ((((zone != "civic") && (zone != "industrial")) && Js.T(add(Js.With(Js.CopyAs<Lot>(lotAt(12, 12)), __s4 => { __s4.zone = zone; __s4.town = s.town; })))) ? 12 : 0);
+                    var placed = Js.T(add(Js.With(Js.CopyAs<Lot>(lotAt(front2, deep)), __s3 => { __s3.zone = zone; __s3.town = s.town; }))) ? front2 : ((Js.T(((zone != "civic") && (zone != "industrial")) && Js.T(add(Js.With(Js.CopyAs<Lot>(lotAt(12, 12)), __s4 => { __s4.zone = zone; __s4.town = s.town; }))))) ? 12 : 0);
                     if (placed > 0)
                     {
                         if ((zone == "civic") && (placed == front2))

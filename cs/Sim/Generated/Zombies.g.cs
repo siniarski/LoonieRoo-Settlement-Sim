@@ -194,8 +194,8 @@ public static partial class Zombies
         {
             return 0;
         }
-        var count = total ?? zombiesForNight(night.Value);
-        var size = groupSize(night.Value);
+        var count = total ?? zombiesForNight(Js.NN(night));
+        var size = groupSize(Js.NN(night));
         var groups = JsMath.ceil(((double)(count) / (size)));
         var interval = JsMath.floor(((double)(Time.NIGHT_TICKS) / (groups)));
         var t = Time.ticksIntoNight(tick) - JsMath.floor(((double)(interval) / (2)));
@@ -271,14 +271,14 @@ public static partial class Zombies
         pushApart(state);
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (((z.kind == "static") && Js.T(z.heading)) && (Space.manhattan(z.pos, z.heading) <= 1))
+            if ((Js.T((z.kind == "static") && Js.T(z.heading))) && (Space.manhattan(z.pos, z.heading) <= 1))
             {
                 z.heading = null;
             }
         }
         bool gone(Zombie z)
         {
-            return (((z.kind == "herd") && Js.T(z.heading)) && (Space.manhattan(z.pos, z.heading) <= 1)) && !Js.T(z.move);
+            return ((Js.T((z.kind == "herd") && Js.T(z.heading))) && (Space.manhattan(z.pos, z.heading) <= 1)) && !Js.T(z.move);
         }
         if (state.zombies.some((__f0) => gone(__f0)))
         {
@@ -533,7 +533,7 @@ public static partial class Zombies
             {
                 if (z.cooldown == 0)
                 {
-                    if (((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE)) && Js.T(FireMod.ignite(state, next.x, next.y)))
+                    if (Js.T(((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE)) && Js.T(FireMod.ignite(state, next.x, next.y))))
                     {
                         Events.logEvent(state, $"Raiders firebombed the {Js.Str(Grids.getTile(state.grid, next.x, next.y))} at ({Js.Str(next.x)}, {Js.Str(next.y)})");
                     }
@@ -827,7 +827,7 @@ public static partial class Zombies
         {
             return true;
         }
-        return (d <= Sight.heardFrom(state, s)) || Js.T(Sight.zombieSees(state, z.pos, s.pos, Sight.isSneaking(state, s)));
+        return Js.T((d <= Sight.heardFrom(state, s)) || Js.T(Sight.zombieSees(state, z.pos, s.pos, Sight.isSneaking(state, s))));
     }
 
     public static void hit(SimState state, Zombie z, Survivor s)
@@ -927,7 +927,7 @@ public static partial class Zombies
     {
         foreach (var z in Js.Iter(state.zombies))
         {
-            var onIt = Js.T(Space.samePoint(z.pos, tile)) || ((z.move != null) && Js.T(Space.samePoint(z.move.to, tile)));
+            var onIt = Js.Or(Space.samePoint(z.pos, tile), (z.move != null) && Js.T(Space.samePoint(z.move.to, tile)));
             if (!Js.T(onIt))
             {
                 continue;

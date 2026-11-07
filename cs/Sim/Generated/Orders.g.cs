@@ -67,7 +67,7 @@ public static partial class Orders
     /// <summary>Runs when an ordered survivor is standing still with no need pressing: walk back into place if they've drifted. Returns true if that took the tick.</summary>
     public static bool keepOrder(SimState state, Survivor s)
     {
-        if (!Js.T(s.order) || Js.T(s.jobId))
+        if (Js.T(!Js.T(s.order) || Js.T(s.jobId)))
         {
             return false;
         }
@@ -84,7 +84,7 @@ public static partial class Orders
         var far = JsMath.max(JsMath.abs(at.x - s.pos.x), JsMath.abs(at.y - s.pos.y));
         if (far <= gap)
         {
-            return (s.order.kind == "follow") && Js.T(stepAside(state, s));
+            return Js.T((s.order.kind == "follow") && Js.T(stepAside(state, s)));
         }
         var path = Pathfinding.findPath(state.grid, s.pos, at);
         if (!Js.T(path) || (path.length == 0))
@@ -151,7 +151,7 @@ public static partial class Orders
     public static List<Furniture> crates(SimState state, Point o)
     {
         var room = Rooms.roomAt(state, o.x, o.y);
-        return FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && (Js.T(Js.T(room) ? (Rooms.roomAt(state, f.x, f.y)?.index == room.index) : (JsMath.max(JsMath.abs(f.x - o.x), JsMath.abs(f.y - o.y)) <= LOOT_RADIUS))));
+        return FurnitureMod.ofKind(state, "crate").filter((f) => Js.T((f.loot > 0) && (Js.T(Js.T(room) ? (Rooms.roomAt(state, f.x, f.y)?.index == room.index) : (JsMath.max(JsMath.abs(f.x - o.x), JsMath.abs(f.y - o.y)) <= LOOT_RADIUS)))));
     }
 
     /// <summary>One tick of a loot order: walk to the next crate and search it; with none left, follow again.</summary>

@@ -39,10 +39,10 @@ public static partial class Forage
         bool open(double x, double y)
         {
             var g = Grids.GROUNDS[Js.Idx(Js.NN(grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))]))];
-            return ((((g == "grass") || (g == "field")) && Js.T(Grids.isWalkable(grid, x, y))) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today)) && !Js.T(Rooms.isIndoors(state, x, y));
+            return ((Js.T(((g == "grass") || (g == "field")) && Js.T(Grids.isWalkable(grid, x, y)))) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today)) && !Js.T(Rooms.isIndoors(state, x, y));
         }
         var p = Space.nearestTile(grid, s.pos, (__f0, __f1) => open(__f0, __f1), FORAGE_SEARCH);
-        return (Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p]))) ? p : null;
+        return (Js.T(Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p])))) ? p : null;
     }
 
     /// <summary>Runs with the other needs, while standing still. Returns true if foraging took this tick. `hasFood`: is there food they could go and eat (then they don't forage)?</summary>
@@ -90,12 +90,12 @@ public static partial class Forage
             s.forage = null;
             return true;
         }
-        if ((Js.T(s.jobId) || !Js.T(forageTime(state))) || (state.tick < (Js.Q(s.nextForageTick, 0))))
+        if (Js.T((Js.T(Js.T(s.jobId) || !Js.T(forageTime(state)))) || (state.tick < (Js.Q(s.nextForageTick, 0)))))
         {
             return false;
         }
         var @short = Js.T(state.harsh) && (state.items.filter((i) => (((i.kind == "food") || (i.kind == "meal")) && (i.pos != null)) && (i.reservedBy == null)).length < state.survivors.length);
-        if (!Js.T(@short) && ((s.satiety >= Food.HUNGRY) || Js.T(hasFood())))
+        if (Js.T(!Js.T(@short) && (Js.T((s.satiety >= Food.HUNGRY) || Js.T(hasFood())))))
         {
             return false;
         }

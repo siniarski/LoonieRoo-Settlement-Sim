@@ -230,7 +230,7 @@ public static partial class Vehicles
         Point want = new Point { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
-        var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && Js.T(blocked(state, into))) ? v.at : slid;
+        var to = (Js.T(((into.x != v.pos.x) || (into.y != v.pos.y)) && Js.T(blocked(state, into)))) ? v.at : slid;
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
@@ -347,6 +347,6 @@ public static partial class Vehicles
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)
     {
-        return ((Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p))) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS));
+        return Js.T(((Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p))) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS)));
     }
 }

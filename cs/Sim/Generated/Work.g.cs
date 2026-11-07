@@ -133,7 +133,7 @@ public static partial class Work
         var gun = Weapons.loadedGun(state, s);
         var range = Weapons.GUN_RANGE + (Js.T(Towers.onTower(state, s)) ? Towers.TOWER_RANGE_BONUS : 0);
         var inReach = Motion.distance2(s.at, z.at) <= (Motion.SWING_REACH * Motion.SWING_REACH);
-        if (((Js.T(gun) && !Js.T(inReach)) && (Space.manhattan(s.pos, z.pos) <= range)) && Js.T(clearShot(state.grid, s.pos, z.pos)))
+        if (Js.T(((Js.T(gun) && !Js.T(inReach)) && (Space.manhattan(s.pos, z.pos) <= range)) && Js.T(clearShot(state.grid, s.pos, z.pos))))
         {
             if (Skills.workStep(state, s, "guard") == 0)
             {
@@ -440,7 +440,7 @@ public static partial class Work
             bench.storedKind = null;
         }
         Items.spawnItem(state, kind, s.pos.x, s.pos.y);
-        if (((kind == "meal") && (Hash.hashRoll(bench.x, bench.y, state.tick) < FireMod.STOVE_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, bench.x, bench.y)))
+        if (Js.T(((kind == "meal") && (Hash.hashRoll(bench.x, bench.y, state.tick) < FireMod.STOVE_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, bench.x, bench.y))))
         {
             Events.logEvent(state, $"The stove at ({Js.Str(bench.x)}, {Js.Str(bench.y)}) caught fire!");
         }
@@ -472,7 +472,7 @@ public static partial class Work
 
     public static void interruptScouting(SimState state, Survivor s)
     {
-        if ((Js.T(s.jobId) && Js.T(Fog.scoutingOver(state.tick))) && (Jobs.getJob(state, s.jobId)?.type == "scout"))
+        if ((Js.T(Js.T(s.jobId) && Js.T(Fog.scoutingOver(state.tick)))) && (Jobs.getJob(state, s.jobId)?.type == "scout"))
         {
             headHome(state, s);
         }
@@ -583,7 +583,7 @@ public static partial class Work
         var grid = __d0.grid;
         var v = __d0.walkabilityVersion;
         var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == kind)).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
-        return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Js.T(Pathfinding.canReach(grid, v, from, [i.pos])) && Js.T(Pathfinding.canReach(grid, v, i.pos, site)));
+        return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Js.T(Js.T(Pathfinding.canReach(grid, v, from, [i.pos])) && Js.T(Pathfinding.canReach(grid, v, i.pos, site))));
     }
 
     public static void workClean(SimState state, Survivor s, Job job)
@@ -650,7 +650,7 @@ public static partial class Work
     {
         if (job.edge != null)
         {
-            { workRepairEdge(state, s, job, job.edge); return; }
+            { workRepairEdge(state, s, job, Js.NN(job.edge)); return; }
         }
         if (Space.manhattan(s.pos, job) != 1)
         {
@@ -716,7 +716,7 @@ public static partial class Work
             item.carriedBy = s.id;
             s.carrying = item.id;
             s.note = $"picked up {Js.Str(item.kind)}";
-            if (Js.T(Jobs.isStoreJob(job)) && Js.T(s.cart))
+            if (Js.T(Js.T(Jobs.isStoreJob(job)) && Js.T(s.cart)))
             {
                 loadCart(state, s, item);
             }
@@ -838,7 +838,7 @@ public static partial class Work
             var home = Rooms.homeFor(stores, i.kind);
             return (home.size > 0) && !home.has(Rooms.labelAt(state, i.pos.x, i.pos.y));
         }
-        var extra = state.items.filter((i) => (((i.pos != null) && (i.reservedBy == null)) && (Space.manhattan(i.pos, s.pos) <= Jobs.CART_REACH)) && Js.T(astray(i))).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)).slice(0, Jobs.CART_LOAD - 1);
+        var extra = state.items.filter((i) => Js.T((((i.pos != null) && (i.reservedBy == null)) && (Space.manhattan(i.pos, s.pos) <= Jobs.CART_REACH)) && Js.T(astray(i)))).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)).slice(0, Jobs.CART_LOAD - 1);
         foreach (var i in Js.Iter(extra))
         {
             i.pos = null;
@@ -854,7 +854,7 @@ public static partial class Work
     /// <summary>A storage tile is free if it can hold an item and no other active store job has reserved it.</summary>
     public static bool storageTileFree(SimState state, Job job, Point p, JsSet<double> storage)
     {
-        return (storage.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Items.canHoldItem(state, p.x, p.y))) && !state.jobs.some((j) => (((j != job) && (j.reservedBy != null)) && (j.dest != null)) && Js.T(Space.samePoint(j.dest, p)));
+        return (Js.T(storage.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Items.canHoldItem(state, p.x, p.y)))) && !state.jobs.some((j) => Js.T((((j != job) && (j.reservedBy != null)) && (j.dest != null)) && Js.T(Space.samePoint(j.dest, p))));
     }
 
     /// <summary>Nearest free, reachable tile in any of the given complete rooms.</summary>
@@ -955,7 +955,7 @@ public static partial class Work
         {
             return Js.T(clear(ax, ay, bx, by));
         }
-        return (Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by))) || (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)));
+        return Js.T((Js.T(Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by)))) || (Js.T(Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)))));
     }
     public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, (int)ax, (int)ay, (int)bx, (int)by);
 }

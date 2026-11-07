@@ -72,7 +72,7 @@ public static partial class Seasons
         }
         var targets = state.furniture.filter((f) => ((JsMath.abs(f.x - s.pos.x) + JsMath.abs(f.y - s.pos.y)) <= 20) && !Js.T(Rooms.isIndoors(state, f.x, f.y)));
         var t = targets[Js.Idx(JsMath.floor(Hash.hashRoll(state.tick, 2) * targets.length))];
-        if (Js.T(t) && Js.T(FireMod.ignite(state, t.x, t.y)))
+        if (Js.T(Js.T(t) && Js.T(FireMod.ignite(state, t.x, t.y))))
         {
             Events.logEvent(state, $"Lightning struck a {Js.Str(t.kind)} at ({Js.Str(t.x)}, {Js.Str(t.y)})!");
         }
@@ -81,7 +81,7 @@ public static partial class Seasons
     /// <summary>A winter night (any night, in a nuclear winter), or a blizzard.</summary>
     public static bool coldOutside(SimState state)
     {
-        return (((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter)) && Js.T(Time.isNight(state.tick))) || (state.weather == "blizzard");
+        return Js.T((Js.T((Js.T((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))) && Js.T(Time.isNight(state.tick)))) || (state.weather == "blizzard"));
     }
 
     /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>
@@ -126,7 +126,7 @@ public static partial class Seasons
                 s.health = JsMath.max(0, s.health - 1);
                 s.lastHurtBy = "the cold";
             }
-            if ((!Js.T(coldNight) && !Js.T(soaking)) || Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)))
+            if (Js.T((!Js.T(coldNight) && !Js.T(soaking)) || Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))))
             {
                 continue;
             }

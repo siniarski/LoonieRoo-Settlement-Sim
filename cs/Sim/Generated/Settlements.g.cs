@@ -76,7 +76,7 @@ public static partial class Settlements
     {
         var was = isHostile(s);
         s.reputation = JsMath.max(-100, JsMath.min(100, s.reputation + by));
-        if (!Js.T(was) && Js.T(isHostile(s)))
+        if (Js.T(!Js.T(was) && Js.T(isHostile(s))))
         {
             Events.logEvent(state, $"{Js.Str(s.name)} now counts you an enemy: expect more raids");
         }
@@ -151,7 +151,7 @@ public static partial class Settlements
                 continue;
             }
             s.people -= 1;
-            var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w_1) => $"{Js.Str(w_1.x)},{Js.Str(w_1.y)}")));
+            var spot = Wanderers.frontierSpot(state, new JsSet<string>());
             if (!Js.T(spot))
             {
                 return;

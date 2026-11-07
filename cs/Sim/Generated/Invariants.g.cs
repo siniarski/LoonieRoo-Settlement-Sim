@@ -175,7 +175,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} is treating wounds but holds job {Js.Str(s.jobId)}");
                 }
-                if (Js.T(s.sleep) || Js.T(s.meal))
+                if (Js.T(Js.T(s.sleep) || Js.T(s.meal)))
                 {
                     problems.push($"{Js.Str(s.name)} is treating wounds while sleeping or eating");
                 }
@@ -203,7 +203,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} is fetching {Js.Str(weapon.id)}, which isn't reserved on the ground");
                 }
-                if (((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.treatment))
+                if (Js.T((Js.T((Js.T(Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.treatment)))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching a weapon while busy with something else");
                 }
@@ -224,14 +224,14 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} is fetching {Js.Str(s.dressing)}, which isn't reserved on the ground");
                 }
-                if ((((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.treatment)) || Js.T(s.arming))
+                if (Js.T((Js.T((Js.T((Js.T(Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.treatment))) || Js.T(s.arming)))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching clothing while busy with something else");
                 }
             }
             if (Js.T(s.leisure))
             {
-                if (((((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.treatment)) || Js.T(s.arming)) || Js.T(s.breakdown))
+                if (Js.T((Js.T((Js.T((Js.T((Js.T(Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.treatment))) || Js.T(s.arming))) || Js.T(s.breakdown)))
                 {
                     problems.push($"{Js.Str(s.name)} is relaxing while busy with something else");
                 }
@@ -255,7 +255,7 @@ public static partial class Invariants
                     problems.push($"{Js.Str(s.name)} has an opinion {Js.Str(v)} of {Js.Str(id)}");
                 }
             }
-            if (Js.T(s.breakdown) && Js.T(s.jobId))
+            if (Js.T(Js.T(s.breakdown) && Js.T(s.jobId)))
             {
                 problems.push($"{Js.Str(s.name)} holds job {Js.Str(s.jobId)} mid-breakdown");
             }
@@ -279,7 +279,7 @@ public static partial class Invariants
                     problems.push($"{Js.Str(s.name)} is eating and sleeping at once");
                 }
                 var seat = s.meal.seat;
-                if (Js.T(seat) && state.survivors.some((o) => (((o != s) && Js.T(Js.T(o.meal?.seat))) && (o.meal.seat.x == seat.x)) && (o.meal.seat.y == seat.y)))
+                if (Js.T(seat) && state.survivors.some((o) => ((Js.T((o != s) && Js.T(Js.T(o.meal?.seat)))) && (o.meal.seat.x == seat.x)) && (o.meal.seat.y == seat.y)))
                 {
                     problems.push($"{Js.Str(s.name)} shares mess hall seat ({Js.Str(seat.x)}, {Js.Str(seat.y)})");
                 }
@@ -339,7 +339,7 @@ public static partial class Invariants
             {
                 problems.push($"{Js.Str(f.kind)} {Js.Str(f.id)} owned by {Js.Str(f.owner)}, who isn't here");
             }
-            if ((Js.T(f.owner) && Js.T(f.occupant)) && (f.occupant != f.owner))
+            if ((Js.T(Js.T(f.owner) && Js.T(f.occupant))) && (f.occupant != f.owner))
             {
                 problems.push($"{Js.Str(f.owner)}'s bed {Js.Str(f.id)} is used by {Js.Str(f.occupant)}");
             }
@@ -490,7 +490,7 @@ public static partial class Invariants
             {
                 problems.push($"{Js.Str(s.name)} has hydration {Js.Str(s.hydration)}");
             }
-            if (Js.T(s.drink) && (((((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.treatment)) || Js.T(s.arming)) || Js.T(s.dressing)))
+            if (Js.T(Js.T(s.drink) && (Js.T((Js.T((Js.T((Js.T((Js.T(Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.treatment))) || Js.T(s.arming))) || Js.T(s.dressing)))))
             {
                 problems.push($"{Js.Str(s.name)} is drinking while busy with something else");
             }
@@ -504,7 +504,7 @@ public static partial class Invariants
                 {
                     problems.push($"{Js.Str(s.name)} is reading {Js.Str(s.reading.itemId)}, which isn't a reserved book on the ground");
                 }
-                if (((((((Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.treatment)) || Js.T(s.arming)) || Js.T(s.dressing)) || Js.T(s.drink)) || Js.T(s.leisure))
+                if (Js.T((Js.T((Js.T((Js.T((Js.T((Js.T((Js.T(Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.treatment))) || Js.T(s.arming))) || Js.T(s.dressing))) || Js.T(s.drink))) || Js.T(s.leisure)))
                 {
                     problems.push($"{Js.Str(s.name)} is reading while busy with something else");
                 }
@@ -513,7 +513,7 @@ public static partial class Invariants
             {
                 problems.push($"{Js.Str(s.name)} has a bite with no infection");
             }
-            if ((s.childUntil != null) && Js.T(s.jobId))
+            if (Js.T((s.childUntil != null) && Js.T(s.jobId)))
             {
                 problems.push($"{Js.Str(s.name)} is a child with job {Js.Str(s.jobId)}");
             }

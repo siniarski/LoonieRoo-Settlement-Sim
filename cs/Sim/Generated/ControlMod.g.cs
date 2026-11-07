@@ -47,7 +47,7 @@ public static partial class ControlMod
         double n = 0;
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (((z.kind != "raider") && (state.tick >= z.staggerUntil)) && Js.T(Motion.inReach(s, z, Motion.REACH, state.grid)))
+            if (Js.T(((z.kind != "raider") && (state.tick >= z.staggerUntil)) && Js.T(Motion.inReach(s, z, Motion.REACH, state.grid))))
             {
                 n++;
             }
@@ -304,7 +304,7 @@ public static partial class ControlMod
     public static string? swing(SimState state, Survivor s, Point target)
     {
         var c = Js.NN(state.control);
-        if (((state.tick < c.nextSwing) || Js.T(s.move)) || Js.T(Vehicles.vehicleOf(state, s)))
+        if (Js.T((Js.T((state.tick < c.nextSwing) || Js.T(s.move))) || Js.T(Vehicles.vehicleOf(state, s))))
         {
             return null;
         }
@@ -316,12 +316,12 @@ public static partial class ControlMod
         c.busy = null;
         var near = zombieToHit(state, s.at, swingDir(c));
         var wait = Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY) + (Js.T(BodyMod.isWinded(s)) ? BodyMod.WINDED_WAIT : 0);
-        if (Js.T(near) && Js.T(Resolve.freezes(state, s)))
+        if (Js.T(Js.T(near) && Js.T(Resolve.freezes(state, s))))
         {
             c.nextSwing = state.tick + wait;
             return "froze";
         }
-        if (Js.T(near) && Js.T(BodyMod.panicMiss(state, s)))
+        if (Js.T(Js.T(near) && Js.T(BodyMod.panicMiss(state, s))))
         {
             c.nextSwing = state.tick + wait;
             c.swungTick = state.tick;
@@ -358,7 +358,7 @@ public static partial class ControlMod
             var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
             return Js.T(Residents.hitResident(state, person, blow, s)) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
-        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, a.pos))) : null);
+        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => Js.T((((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, a.pos)))) : null);
         if (Js.T(deer))
         {
             var shot = !Js.T(Motion.inReach(deer, s, Motion.SWING_REACH));
@@ -372,7 +372,7 @@ public static partial class ControlMod
         }
         var gun = Weapons.loadedGun(state, s);
         var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
-        if (((Js.T(gun) && Js.T(shotAt)) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, shotAt.pos)))
+        if (Js.T(((Js.T(Js.T(gun) && Js.T(shotAt))) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Js.T(Work.clearShot(state.grid, s.pos, shotAt.pos))))
         {
             var blocking = inTheWay(state, s, shotAt.pos);
             if (Js.T(blocking))
@@ -474,7 +474,7 @@ public static partial class ControlMod
         {
             return Vehicles.leaveVehicle(state, s);
         }
-        if (Js.T(s.move) || !Js.T(nextTo(s.pos, target)))
+        if (Js.T(Js.T(s.move) || !Js.T(nextTo(s.pos, target))))
         {
             return null;
         }
@@ -512,7 +512,7 @@ public static partial class ControlMod
             return Commands.toggleDoor(state, target.x, target.y) ?? (Js.T(was) ? "closed the door" : "opened the door");
         }
         var item = Items.itemAt(state, target.x, target.y);
-        var carriedRemedy = (Js.T(s.carrying) && Js.T(Space.samePoint(target, s.pos))) ? Items.getItem(state, s.carrying) : null;
+        var carriedRemedy = (Js.T(Js.T(s.carrying) && Js.T(Space.samePoint(target, s.pos)))) ? Items.getItem(state, s.carrying) : null;
         var remedy = new[] { item, carriedRemedy }.ToList().find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
         if (Js.T(remedy))
         {
@@ -555,11 +555,11 @@ public static partial class ControlMod
             return "cooking";
         }
         var sleepable = (bed?.kind == "bed") || ((bed?.kind == "decor") && (((bed.look == "bed") || (bed.look == "cot")) || (bed.look == "sofa")));
-        if ((Js.T(bed) && Js.T(sleepable)) && Js.T(Space.samePoint(bed, s.pos)))
+        if (Js.T((Js.T(Js.T(bed) && Js.T(sleepable))) && Js.T(Space.samePoint(bed, s.pos))))
         {
             return lieDown(s, c, bed.id);
         }
-        if (Js.T(bed) && Js.T(sleepable))
+        if (Js.T(Js.T(bed) && Js.T(sleepable)))
         {
             s.pos = new Point { x = Js.I(bed.x), y = Js.I(bed.y) };
             s.at = Motion.centre(s.pos);
@@ -575,7 +575,7 @@ public static partial class ControlMod
         if (Js.T(Space.samePoint(target, s.pos)))
         {
             var why = Handiwork.canForage(state, s);
-            if (Js.T(Time.isNight(state.tick)) || ((s.rest < Rest.TIRED) && ((why != null) || (s.satiety >= Food.HUNGRY))))
+            if (Js.T(Js.T(Time.isNight(state.tick)) || ((s.rest < Rest.TIRED) && ((why != null) || (s.satiety >= Food.HUNGRY)))))
             {
                 return lieDown(s, c, "floor");
             }
@@ -634,7 +634,7 @@ public static partial class ControlMod
             return "eating";
         }
         var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Js.T(Clothing.isGarment(item.kind)) ? Clothing.SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
-        if ((slot == "carrying") && Js.T(Inventory.fitsInPack(state, s, item)))
+        if (Js.T((slot == "carrying") && Js.T(Inventory.fitsInPack(state, s, item))))
         {
             Inventory.stow(state, s, item);
             return $"put the {Js.Str(item.kind)} in your bag";

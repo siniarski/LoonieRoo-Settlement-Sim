@@ -56,7 +56,7 @@ public static partial class Caravans
         }
         foreach (var c in Js.Iter((list).ToList()))
         {
-            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(ambushed(state, c)))
+            if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(ambushed(state, c))))
             {
                 continue;
             }

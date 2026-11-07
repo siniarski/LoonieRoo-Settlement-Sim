@@ -85,7 +85,7 @@ public static partial class Residents
                 r.pos = r.move.to;
                 r.move = null;
             }
-            if (Js.T(Settlements.isHostile(n)) && Js.T(attack(state, r, n)))
+            if (Js.T(Js.T(Settlements.isHostile(n)) && Js.T(attack(state, r, n))))
             {
                 continue;
             }

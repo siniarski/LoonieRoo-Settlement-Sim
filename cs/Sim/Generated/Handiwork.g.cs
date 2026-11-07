@@ -72,7 +72,7 @@ public static partial class Handiwork
         {
             return "you need wood to put up a wall";
         }
-        if (Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) || Js.T(Items.itemAt(state, p.x, p.y)))
+        if (Js.T(Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) || Js.T(Items.itemAt(state, p.x, p.y))))
         {
             return "something is in the way";
         }
@@ -148,7 +148,7 @@ public static partial class Handiwork
         var x = __d0.x;
         var y = __d0.y;
         var g = Grids.GROUNDS[Js.Idx(Js.NN(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]))];
-        if (Js.T(Rooms.isIndoors(state, x, y)) || ((g != "grass") && (g != "field")))
+        if (Js.T(Js.T(Rooms.isIndoors(state, x, y)) || ((g != "grass") && (g != "field"))))
         {
             return "nothing to forage here: find open grass, or a field";
         }

@@ -59,7 +59,7 @@ public static partial class Rooms
             return cached.map;
         }
         var changed = Grids.takeChanges(state.grid);
-        var map = (Js.T(cached) && Js.T(changed)) ? updateRooms(state.grid, cached.map, changed) : computeRooms(state.grid);
+        var map = (Js.T(Js.T(cached) && Js.T(changed))) ? updateRooms(state.grid, cached.map, changed) : computeRooms(state.grid);
         cache.set(state.grid, new() { version = state.walkabilityVersion, map = map });
         return map;
     }
@@ -109,7 +109,7 @@ public static partial class Rooms
                     }
                     var n = (ny * width) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
-                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
+                    if (Js.T(((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge))))
                     {
                         continue;
                     }
@@ -134,7 +134,7 @@ public static partial class Rooms
                     region.push(n);
                 }
             }
-            if (Js.T(touchesEdge) || (region.length > MAX_ROOM_TILES))
+            if (Js.T(Js.T(touchesEdge) || (region.length > MAX_ROOM_TILES)))
             {
                 foreach (var i in Js.Iter(region))
                 {
@@ -292,7 +292,7 @@ public static partial class Rooms
                 continue;
             }
             var room = roomAt(state, d.x, d.y);
-            if (Js.T(room) && Js.T(evaluateRoom(state, room, purpose).complete))
+            if (Js.T(Js.T(room) && Js.T(evaluateRoom(state, room, purpose).complete)))
             {
                 result.add(room.index);
             }
@@ -305,7 +305,7 @@ public static partial class Rooms
         var storage = completeRooms(state, "storage");
         /*TODO return type*/object refusing(string c)
         {
-            return Js.Set(state.roomDesignations.filter((d) => (d.purpose == "storage") && Js.T(d.refuses?.includes(c))).map((d) => labelAt(state, d.x, d.y)));
+            return Js.Set(state.roomDesignations.filter((d) => Js.T((d.purpose == "storage") && Js.T(d.refuses?.includes(c)))).map((d) => labelAt(state, d.x, d.y)));
         }
         var storageFor = Js.AsRecord(/*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
@@ -417,7 +417,7 @@ public static partial class Rooms
                     }
                     var n = (ny * width) + nx;
                     var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
-                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
+                    if (Js.T(((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge))))
                     {
                         continue;
                     }

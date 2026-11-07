@@ -25,8 +25,8 @@ public static partial class JobChoice
         foreach (var type in Js.Iter(typesByPriority(s)))
         {
             var open = openJobsByDistance(state, type, s.pos);
-            var curfew = (((Js.T(Policies.policyOn(state, "curfew")) && Js.T(Time.isNight(state.tick))) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
-            foreach (var job in Js.Iter(open.filter((j) => (!Js.T(curfew) || Js.T(Rooms.isIndoors(state, j.x, j.y))) && Js.T(Orders.withinOrder(state, s, j))).slice(0, Jobs.MAX_CANDIDATES)))
+            var curfew = (((Js.T(Js.T(Policies.policyOn(state, "curfew")) && Js.T(Time.isNight(state.tick)))) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
+            foreach (var job in Js.Iter(open.filter((j) => Js.T((Js.T(!Js.T(curfew) || Js.T(Rooms.isIndoors(state, j.x, j.y)))) && Js.T(Orders.withinOrder(state, s, j)))).slice(0, Jobs.MAX_CANDIDATES)))
             {
                 var plan = planJob(state, s, job);
                 if (Js.T(plan))
@@ -231,7 +231,7 @@ public static partial class JobChoice
                 item.reservedBy = s.id;
             }
         }
-        if (!((job.type == "guard") && Js.T(Weapons.loadedGun(state, s))))
+        if (!(Js.T((job.type == "guard") && Js.T(Weapons.loadedGun(state, s)))))
         {
             Survivors.walk(s, plan.path, state.walkabilityVersion);
         }

@@ -62,7 +62,7 @@ public static partial class FireMod
     /// <summary>Sets a tile alight. Returns false if it can't burn (water, already alight, too many fires).</summary>
     public static bool ignite(SimState state, int x, int y)
     {
-        if (((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y))) || (state.fires.length >= MAX_FIRES))
+        if (Js.T((Js.T((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y)))) || (state.fires.length >= MAX_FIRES)))
         {
             return false;
         }
@@ -113,7 +113,7 @@ public static partial class FireMod
                 Zombies.removeZombie(state, z);
                 Corpses.leaveCorpse(state, z.pos, null);
             }
-            if (((state.tick % SPREAD_EVERY) == 0) && Js.T(burnable(state, f.x, f.y)))
+            if (Js.T(((state.tick % SPREAD_EVERY) == 0) && Js.T(burnable(state, f.x, f.y))))
             {
                 foreach (var n in Js.Iter(Grids.neighbours4(state.grid, f.x, f.y)))
                 {

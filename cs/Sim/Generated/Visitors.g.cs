@@ -46,7 +46,7 @@ public static partial class Visitors
     {
         foreach (var t in Js.Iter((state.traders).ToList()))
         {
-            if ((state.tick >= t.leavesTick) || Js.T(Time.isNight(state.tick)))
+            if (Js.T((state.tick >= t.leavesTick) || Js.T(Time.isNight(state.tick))))
             {
                 state.traders.splice(state.traders.indexOf(t), 1);
                 var home = Settlements.getSettlement(state, t.from);
@@ -63,7 +63,7 @@ public static partial class Visitors
             arrive(state);
         }
         var enemy = state.settlements.find(Settlements.isHostile);
-        if (((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick))) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
+        if ((Js.T((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick)))) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
         {
             raid(state, day, enemy?.name);
         }
@@ -71,13 +71,13 @@ public static partial class Visitors
 
     public static void arrive(SimState state)
     {
-        var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]?.pos;
+        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? state.survivors[Js.Idx(0)]?.pos;
         if (!Js.T(spot))
         {
             return;
         }
         List<Offer> offers = [];
-        var left = (OFFERS).ToList();
+        List<Offer> left = (OFFERS).ToList();
         for (var i = 0; i < 3; i++)
         {
             var o = Rng.pick(state, left);
@@ -123,7 +123,7 @@ public static partial class Visitors
 
     public static void raid(SimState state, double day, string? from = default)
     {
-        var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]?.pos;
+        var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? state.survivors[Js.Idx(0)]?.pos;
         if (!Js.T(spot))
         {
             return;

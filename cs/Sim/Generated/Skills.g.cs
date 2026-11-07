@@ -54,7 +54,7 @@ public static partial class Skills
     public static double skillLevel(Survivor s, string type)
     {
         var @base = JsMath.floor(((double)((Js.Q(s.xp[Js.Idx(type)], 0))) / (XP_PER_LEVEL)));
-        return JsMath.min(MAX_LEVEL, @base + (((type == "farm") && Js.T(hasTrait(s, "greenThumb"))) ? 5 : 0));
+        return JsMath.min(MAX_LEVEL, @base + ((Js.T((type == "farm") && Js.T(hasTrait(s, "greenThumb")))) ? 5 : 0));
     }
 
     /// <summary>Tools and the work they help with: a tool adds a step every TOOL_EVERY ticks of it.</summary>
@@ -74,7 +74,7 @@ public static partial class Skills
 
     public static double workStep(SimState state, Survivor s, string type)
     {
-        var slowed = ((((Js.T(Health.isHurt(s.health)) || Js.T(Mood.isMiserable(state, s))) || Js.T(hasTrait(s, "lazy"))) || (s.sick != null)) || (s.age >= Family.ELDER)) || Js.T(Wounds.armSlowed(s));
+        var slowed = Js.Or((Js.T((Js.T((Js.T(Js.T(Health.isHurt(s.health)) || Js.T(Mood.isMiserable(state, s)))) || Js.T(hasTrait(s, "lazy")))) || (s.sick != null))) || (s.age >= Family.ELDER), Wounds.armSlowed(s));
         if (!Js.T(Time.slowTick(state.tick)) || !Js.T(Health.worksThisTick(((double)(state.tick) / (Time.dayScale())), slowed)))
         {
             return 0;

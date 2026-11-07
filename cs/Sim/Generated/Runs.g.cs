@@ -68,7 +68,7 @@ public static partial class Runs
         }
         foreach (var r in Js.Iter((list).ToList()))
         {
-            if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(caught(state, r)))
+            if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(caught(state, r))))
             {
                 continue;
             }
@@ -117,7 +117,7 @@ public static partial class Runs
         var height = __d0.height;
         foreach (var n in Js.Iter(state.settlements))
         {
-            if ((Js.T(Colonies.isFallen(n)) || (n.people < RUN_MIN_HOME)) || runsOf(state).some((r) => r.from == n.id))
+            if (Js.T((Js.T(Js.T(Colonies.isFallen(n)) || (n.people < RUN_MIN_HOME))) || runsOf(state).some((r) => r.from == n.id)))
             {
                 continue;
             }
@@ -195,7 +195,7 @@ public static partial class Runs
         }
         r.met = true;
         var n = Settlements.getSettlement(state, r.from);
-        if (!Js.T(n) || Js.T(Settlements.isHostile(n)))
+        if (Js.T(!Js.T(n) || Js.T(Settlements.isHostile(n))))
         {
             return;
         }

@@ -109,7 +109,7 @@ public static partial class Relationships
     {
         /*TODO return type*/object names(Func<double, bool> pick)
         {
-            return state.survivors.filter((o) => (o != s) && Js.T(pick(opinion(s, o)))).map((o) => o.name);
+            return state.survivors.filter((o) => Js.T((o != s) && Js.T(pick(opinion(s, o))))).map((o) => o.name);
         }
         var friends = names((v) => v >= FRIEND);
         var rivals = names((v) => v <= RIVAL);

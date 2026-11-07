@@ -73,7 +73,7 @@ public static partial class BodyMod
         {
             return true;
         }
-        return (((s.wetness > DRENCHED) && Js.T(Time.isNight(state.tick))) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Power.isWarmed(state, s.pos));
+        return ((Js.T((s.wetness > DRENCHED) && Js.T(Time.isNight(state.tick)))) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Power.isWarmed(state, s.pos));
     }
 
     public static void updateBody(SimState state, Survivor s)
@@ -88,7 +88,7 @@ public static partial class BodyMod
         }
         var outdoors = !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y));
         var coat = Clothing.wearing(state, s, "coat") != null;
-        if (Js.T(outdoors) && Js.T(Seasons.isWet(state.weather)))
+        if (Js.T(Js.T(outdoors) && Js.T(Seasons.isWet(state.weather))))
         {
             if ((state.tick % (Js.T(coat) ? 12 : 3)) == 0)
             {

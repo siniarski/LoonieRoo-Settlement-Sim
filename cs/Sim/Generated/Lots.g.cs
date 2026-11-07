@@ -367,7 +367,7 @@ public static partial class Lots
         var w = __d7.F;
         var u = 1 + JsMath.floor(r(1) * JsMath.max(1, w - 2));
         var p = lotToMap(lot, u, -2);
-        if ((!Js.T(inside(p.x, p.y)) || !Js.T(Vehicles.parkable(state, p))) || Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)))
+        if (Js.T((!Js.T(inside(p.x, p.y)) || !Js.T(Vehicles.parkable(state, p))) || Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))))
         {
             return;
         }

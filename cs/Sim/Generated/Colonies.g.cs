@@ -76,7 +76,7 @@ public static partial class Colonies
         {
             foreach (var n in Js.Iter(state.settlements))
             {
-                if (!Js.T(n.unfolded) && Js.T(someoneNear(state, n)))
+                if (Js.T(!Js.T(n.unfolded) && Js.T(someoneNear(state, n))))
                 {
                     unfold(state, n);
                 }

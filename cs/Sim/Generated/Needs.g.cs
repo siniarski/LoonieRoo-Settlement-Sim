@@ -38,7 +38,7 @@ public static partial class Needs
     /// <summary>Tired with no zombie close enough to make lying down a bad idea, or critically hurt (then bed is where they recover, zombies or not).</summary>
     public static bool wantsSleep(SimState state, Survivor s)
     {
-        return ((Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos))) || Js.T(Health.isCritical(s.health))) || Js.T(Policies.quarantined(state, s));
+        return Js.T((Js.T((Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos))) || Js.T(Health.isCritical(s.health)))) || Js.T(Policies.quarantined(state, s)));
     }
 
     public static bool isHungry(Survivor s)
@@ -95,7 +95,7 @@ public static partial class Needs
     /// <summary>Interrupts work for a need before movement, so a tired or hungry hauler doesn't finish a long walk first. Hunger only interrupts if there is food to go to.</summary>
     public static void interruptForNeeds(SimState state, Survivor s)
     {
-        if (((((!Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.drink)) || Js.T(s.treatment)) || Js.T(onGuardDuty(state, s)))
+        if (Js.T((Js.T((Js.T((Js.T((Js.T(!Js.T(s.jobId) || Js.T(s.sleep))) || Js.T(s.meal))) || Js.T(s.drink))) || Js.T(s.treatment))) || Js.T(onGuardDuty(state, s))))
         {
             return;
         }
@@ -118,7 +118,7 @@ public static partial class Needs
                 s.nextDrinkTick = state.tick + Water.DRINK_RETRY_TICKS;
             }
         }
-        else if ((state.tick >= s.nextTreatTick) && Js.T(nearestRemedy(state, s)))
+        else if (Js.T((state.tick >= s.nextTreatTick) && Js.T(nearestRemedy(state, s))))
         {
             Jobs.releaseSurvivor(state, s, "going to treat wounds");
         }
@@ -128,7 +128,7 @@ public static partial class Needs
             {
                 Jobs.releaseSurvivor(state, s, "hungry");
             }
-            else if (((s.satiety < Forage.FORAGE_HUNGER) && Js.T(Forage.forageTime(state))) && !Js.T(onGuardDuty(state, s)))
+            else if ((Js.T((s.satiety < Forage.FORAGE_HUNGER) && Js.T(Forage.forageTime(state)))) && !Js.T(onGuardDuty(state, s)))
             {
                 Jobs.releaseSurvivor(state, s, "going to forage");
             }
@@ -146,7 +146,7 @@ public static partial class Needs
         {
             return false;
         }
-        if (!Js.T(s.meal) && Js.T(onGuardDuty(state, s)))
+        if (Js.T(!Js.T(s.meal) && Js.T(onGuardDuty(state, s))))
         {
             return false;
         }
@@ -175,7 +175,7 @@ public static partial class Needs
                 Survivors.walk(s, path, state.walkabilityVersion);
                 return true;
             }
-            if (Js.T(meal.seat) && Js.T(Mess.seatUsable(state, s, meal.seat)))
+            if (Js.T(Js.T(meal.seat) && Js.T(Mess.seatUsable(state, s, meal.seat))))
             {
                 item.pos = null;
                 item.carriedBy = s.id;
@@ -289,7 +289,7 @@ public static partial class Needs
         {
             return false;
         }
-        if (!Js.T(s.treatment) && Js.T(onGuardDuty(state, s)))
+        if (Js.T(!Js.T(s.treatment) && Js.T(onGuardDuty(state, s))))
         {
             return false;
         }
@@ -392,7 +392,7 @@ public static partial class Needs
     /// <summary>Satiety drains every tick, awake or asleep.</summary>
     public static void updateSatiety(SimState state, Survivor s)
     {
-        if (Js.T(Policies.satietyDrains(state)) && Js.T(Time.slowTick(state.tick)))
+        if (Js.T(Js.T(Policies.satietyDrains(state)) && Js.T(Time.slowTick(state.tick))))
         {
             s.satiety = JsMath.max(0, s.satiety - Food.SATIETY_DRAIN);
         }
@@ -408,7 +408,7 @@ public static partial class Needs
         else if (Js.T(Seasons.isCold(state, s)))
         {
         }
-        else if ((s.health > 0) && Js.T(Js.T(s.sleep?.asleep)))
+        else if (Js.T((s.health > 0) && Js.T(Js.T(s.sleep?.asleep))))
         {
             s.health = JsMath.min(Health.HEALTH_MAX, s.health + (Health.SLEEP_HEAL * (Js.T(Medicine.inInfirmary(state, s)) ? Medicine.INFIRMARY_HEAL_FACTOR : 1)));
         }
@@ -431,7 +431,7 @@ public static partial class Needs
             SuccessionMod.beginSuccession(state, s, cause);
         }
         cancelMeal(state, s, cause);
-        if (Js.T(s.jobId) || Js.T(s.carrying))
+        if (Js.T(Js.T(s.jobId) || Js.T(s.carrying)))
         {
             Jobs.releaseSurvivor(state, s, cause);
         }
@@ -472,7 +472,7 @@ public static partial class Needs
     {
         if (!Js.T(s.sleep))
         {
-            if (!Js.T(wantsSleep(state, s)) || Js.T(onGuardDuty(state, s)))
+            if (Js.T(!Js.T(wantsSleep(state, s)) || Js.T(onGuardDuty(state, s))))
             {
                 return false;
             }
@@ -569,7 +569,7 @@ public static partial class Needs
         }
         var inBed = (s.sleep.bedId != null) && (FurnitureMod.furnitureAt(state, s.pos.x, s.pos.y)?.id == s.sleep.bedId);
         s.rest = JsMath.min(Rest.REST_MAX, s.rest + (Js.T(inBed) ? Rest.BED_REGEN : Rest.FLOOR_REGEN));
-        if ((s.rest >= Rest.REST_MAX) && (!Js.T(Health.isHurt(s.health)) || Js.T(isHungry(s))))
+        if (Js.T((s.rest >= Rest.REST_MAX) && (Js.T(!Js.T(Health.isHurt(s.health)) || Js.T(isHungry(s))))))
         {
             Mood.addThought(state, s, Js.T(s.sleep.bedId) ? "sleptInBed" : "sleptOnFloor");
             if (Js.T(s.sleep.bedId))
@@ -586,12 +586,12 @@ public static partial class Needs
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Js.T(Medicine.isGuard(s))) || Js.T(Health.isCritical(s.health)))
+            if (Js.T(((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Js.T(Medicine.isGuard(s))) || Js.T(Health.isCritical(s.health))))
             {
                 continue;
             }
             var bed = getBed(state, s.sleep.bedId);
-            if ((Js.T(bed) && Js.T(Medicine.isBarracksBed(state, bed))) && Js.T(Zombies.zombieNear(state, s.pos)))
+            if (Js.T((Js.T(Js.T(bed) && Js.T(Medicine.isBarracksBed(state, bed)))) && Js.T(Zombies.zombieNear(state, s.pos))))
             {
                 wake(state, s, "woken for guard duty");
             }

@@ -46,7 +46,7 @@ public static partial class Errands
     /// <summary>When you talk with one of their people: maybe they ask you for something. Returns what they said, or null.</summary>
     public static string? maybeAsk(SimState state, Settlement n, double salt)
     {
-        if (Js.T(Settlements.isHostile(n)) || errandsOf(state).some((e_1) => e_1.settlementId == n.id))
+        if (Js.T(Js.T(Settlements.isHostile(n)) || errandsOf(state).some((e_1) => e_1.settlementId == n.id)))
         {
             return null;
         }
@@ -80,7 +80,7 @@ public static partial class Errands
                 var p = Space.nearestTile(state.grid, new Point { x = Js.I(spot.x + (k % 2)), y = Js.I(spot.y + JsMath.floor(((double)(k) / (2)))) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !state.zombies.some((z) => (z.pos.x == x) && (z.pos.y == y)), 100);
                 if (Js.T(p))
                 {
-                    e.zombieIds.push(Zombies.addZombie(state, p.x, p.y, null, "static").id);
+                    e.zombieIds.push(Zombies.addZombie(state, p.x, p.y, kind: "static").id);
                 }
             }
         }

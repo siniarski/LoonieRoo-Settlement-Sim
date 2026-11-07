@@ -66,7 +66,7 @@ public static partial class Water
         }
         if (Js.T(Time.slowTick(state.tick)))
         {
-            s.hydration = JsMath.max(0, s.hydration - (((state.weather == "heatwave") || Js.T(Climate.scorching(state, s.pos.x, s.pos.y))) ? 2 : 1));
+            s.hydration = JsMath.max(0, s.hydration - ((Js.T((state.weather == "heatwave") || Js.T(Climate.scorching(state, s.pos.x, s.pos.y)))) ? 2 : 1));
         }
         if ((s.hydration == 0) && ((state.tick % DEHYDRATION_DAMAGE_EVERY) == 0))
         {
@@ -103,11 +103,11 @@ public static partial class Water
         {
             return "collector";
         }
-        if (Js.T(f) && Js.T(TimelineMod.isTap(state, f)))
+        if (Js.T(Js.T(f) && Js.T(TimelineMod.isTap(state, f))))
         {
             return "tap";
         }
-        if (Js.T(f) && Js.T(isTank(state, f)))
+        if (Js.T(Js.T(f) && Js.T(isTank(state, f))))
         {
             return "tank";
         }
@@ -135,7 +135,7 @@ public static partial class Water
             {
                 clean.set((f.y * grid.width) + f.x, "collector");
             }
-            else if (Js.T(tapsOn) && Js.T(TimelineMod.isTap(state, f)))
+            else if (Js.T(Js.T(tapsOn) && Js.T(TimelineMod.isTap(state, f))))
             {
                 clean.set((f.y * grid.width) + f.x, "tap");
             }
@@ -177,13 +177,13 @@ public static partial class Water
     /// <summary>Interrupt work for a drink (before movement), if there's water to go to.</summary>
     public static bool thirstInterrupts(SimState state, Survivor s)
     {
-        return ((Js.T(state.harsh) && Js.T(isThirsty(s))) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
+        return ((Js.T(Js.T(state.harsh) && Js.T(isThirsty(s)))) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
     }
 
     /// <summary>Runs when standing still, after eating and before treatment. Returns true if drinking handled this tick.</summary>
     public static bool updateDrink(SimState state, Survivor s)
     {
-        if (Js.T(s.sleep) || !Js.T(state.harsh))
+        if (Js.T(Js.T(s.sleep) || !Js.T(state.harsh)))
         {
             return false;
         }

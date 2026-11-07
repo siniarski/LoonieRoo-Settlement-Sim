@@ -52,7 +52,7 @@ public static partial class Farming
     /// <summary>Does this plot need a survivor right now (to sow, or to harvest)?</summary>
     public static bool needsWork(FarmPlot plot)
     {
-        return !Js.T(plot.planted) || Js.T(isRipe(plot));
+        return Js.T(!Js.T(plot.planted) || Js.T(isRipe(plot)));
     }
 
     public static FarmPlot addPlot(SimState state, int x, int y, string crop = "potato")

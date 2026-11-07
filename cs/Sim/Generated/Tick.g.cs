@@ -131,11 +131,11 @@ public static partial class Tick
         Work.interruptScouting(state, s);
         Work.interruptForFight(state, s);
         Survivors.updateMovement(state, s);
-        if (Js.T(s.move) || Js.T(s.goal))
+        if (Js.T(Js.T(s.move) || Js.T(s.goal)))
         {
             return;
         }
-        var needs = (((((Js.T(Needs.updateMeal(state, s)) || Js.T(Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null)))) || Js.T(Water.updateDrink(state, s))) || Js.T(Needs.updateTreatment(state, s))) || Js.T(Weapons.updateArming(state, s))) || Js.T(Clothing.updateDressing(state, s))) || Js.T(Needs.updateSleep(state, s));
+        var needs = Js.Or(Js.Or(Js.Or(Js.Or(Js.Or(Js.Or(Needs.updateMeal(state, s), Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null))), Water.updateDrink(state, s)), Needs.updateTreatment(state, s)), Weapons.updateArming(state, s)), Clothing.updateDressing(state, s)), Needs.updateSleep(state, s));
         if (Js.T(needs))
         {
             s.leisure = null;

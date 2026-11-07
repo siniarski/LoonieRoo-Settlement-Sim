@@ -15,7 +15,7 @@ public static partial class Commands
     public static CommandResult applyCommand(SimState state, Command command)
     {
         var result = execute(state, command);
-        if (Js.T(result.ok) && Js.T(result.changed))
+        if (Js.T(Js.T(result.ok) && Js.T(result.changed)))
         {
             state.commandLog.push(new() { tick = state.tick, command = Js.Clone(command) });
         }
@@ -417,7 +417,7 @@ public static partial class Commands
             var __d3 = command;
             var x_7 = __d3.x;
             var y_8 = __d3.y;
-            if (((command.side != null) && Js.T(Grids.inBounds(state.grid, x_7, y_8))) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x_7, y_8, command.side))] == Grids.EDGE_DOOR))
+            if ((Js.T((command.side != null) && Js.T(Grids.inBounds(state.grid, x_7, y_8)))) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x_7, y_8, command.side))] == Grids.EDGE_DOOR))
             {
                 var e = Grids.edgeIndex(state.grid, x_7, y_8, command.side);
                 var open_9 = state.grid.edgeOpen.indexOf(e);
@@ -618,7 +618,7 @@ public static partial class Commands
                     {
                         return reject($"unknown crop {Js.Str(Js.Str(command.crop))}");
                     }
-                    if ((Grids.getTile(state.grid, x, y) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y)))
+                    if (Js.T((Grids.getTile(state.grid, x, y) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y))))
                     {
                         return unchanged();
                     }
@@ -640,7 +640,7 @@ public static partial class Commands
                 {
                     {
                     var crate = FurnitureMod.furnitureAt(state, x, y);
-                    if ((((crate?.kind != "crate") && (crate?.kind != "tree")) || ((crate.kind == "crate") && (crate.loot == 0))) || Js.T(crate.scavenge))
+                    if (Js.T((((crate?.kind != "crate") && (crate?.kind != "tree")) || ((crate.kind == "crate") && (crate.loot == 0))) || Js.T(crate.scavenge)))
                     {
                         return unchanged();
                     }
@@ -771,7 +771,7 @@ public static partial class Commands
             return reject(why);
         }
         var here = state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x, y, side))];
-        var boarding = ((structure == "barricade") && Js.T(Grids.isWindow(here))) && !state.grid.edgeBoarded.includes(Grids.edgeIndex(state.grid, x, y, side));
+        var boarding = (Js.T((structure == "barricade") && Js.T(Grids.isWindow(here)))) && !state.grid.edgeBoarded.includes(Grids.edgeIndex(state.grid, x, y, side));
         if ((here != Grids.EDGE_NONE) && !Js.T(boarding))
         {
             return unchanged();
@@ -822,7 +822,7 @@ public static partial class Commands
             Designations.addBlueprint(state, x, y, "reinforce");
             return changed();
         }
-        if ((Grids.getTile(state.grid, x, y) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y)))
+        if (Js.T((Grids.getTile(state.grid, x, y) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y))))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is not empty floor; remove what's there first");
         }
@@ -856,7 +856,7 @@ public static partial class Commands
                 return;
             }
             var r = designateEdge(state, x, y, side, Js.T(door) ? "door" : "wall");
-            if (Js.T(r.ok) && Js.T(r.changed))
+            if (Js.T(Js.T(r.ok) && Js.T(r.changed)))
             {
                 edgesPlanned += 1;
             }
@@ -897,7 +897,7 @@ public static partial class Commands
                 {
                     continue;
                 }
-                if (((!Js.T(Fog.isExplored(state, x, y)) || (Grids.getTile(state.grid, x, y) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, y))) || Js.T(Designations.blueprintAt(state, x, y)))
+                if (Js.T((Js.T((!Js.T(Fog.isExplored(state, x, y)) || (Grids.getTile(state.grid, x, y) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, y)))) || Js.T(Designations.blueprintAt(state, x, y))))
                 {
                     continue;
                 }
@@ -1054,7 +1054,7 @@ public static partial class Commands
     /// <summary>Gives one survivor an order. Returns false if it changed nothing.</summary>
     public static bool giveOrder(SimState state, Survivor s, string kind, Point at)
     {
-        if (Js.T(ControlMod.isControlled(state, s)) || (s.childUntil != null))
+        if (Js.T(Js.T(ControlMod.isControlled(state, s)) || (s.childUntil != null)))
         {
             return false;
         }
@@ -1065,7 +1065,7 @@ public static partial class Commands
         }
         s.order = order;
         var job = Js.T(s.jobId) ? state.jobs.find((j) => j.id == s.jobId) : null;
-        if ((Js.T(order) && Js.T(job)) && !(Orders.ORDER_JOBS.includes(job.type) && Js.T(Orders.withinOrder(state, s, job))))
+        if ((Js.T(Js.T(order) && Js.T(job))) && !(Js.T(Orders.ORDER_JOBS.includes(job.type) && Js.T(Orders.withinOrder(state, s, job)))))
         {
             Jobs.releaseSurvivor(state, s, Orders.describeOrder(order));
         }
@@ -1294,7 +1294,7 @@ public static partial class Commands
             s.note = (item.kind == "medicine") ? "taking medicine" : "bandaging";
             return null;
         }
-        if (((item.kind == "weapon") || (item.kind == "gun")) || Js.T(Clothing.isGarment(item.kind)))
+        if (Js.T(((item.kind == "weapon") || (item.kind == "gun")) || Js.T(Clothing.isGarment(item.kind))))
         {
             s.note = Inventory.equipFromPack(state, s, item, s.pos);
             return null;

@@ -82,19 +82,19 @@ public static partial class TimelineMod
     /// <summary>Is this a tap with water coming out of it?</summary>
     public static bool isTap(SimState state, Furniture f)
     {
-        return ((f.look != null) && TAP_LOOKS.includes(f.look)) && Js.T(waterOn(state));
+        return Js.T(((f.look != null) && TAP_LOOKS.includes(f.look)) && Js.T(waterOn(state)));
     }
 
     /// <summary>Does this keep food cold (an icebox with the power on)?</summary>
     public static bool isMainsFridge(SimState state, Furniture f)
     {
-        return (f.look == "icebox") && Js.T(powerOn(state));
+        return Js.T((f.look == "icebox") && Js.T(powerOn(state)));
     }
 
     /// <summary>Indoors at night with the power on: the lights are on.</summary>
     public static bool mainsLit(SimState state, Point p)
     {
-        return ((Js.T(Time.isNight(state.tick)) && Js.T(powerOn(state))) && Js.T(Grids.inBounds(state.grid, p.x, p.y))) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
+        return (Js.T((Js.T(Js.T(Time.isNight(state.tick)) && Js.T(powerOn(state)))) && Js.T(Grids.inBounds(state.grid, p.x, p.y)))) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
     }
 
     /// <summary>Who the world's happenings come looking for: the one you control, else the first survivor.</summary>
@@ -120,7 +120,7 @@ public static partial class TimelineMod
         var dy = b.y - a.y;
         var ns = ((JsMath.abs(dy) * 2) > JsMath.abs(dx)) ? ((dy < 0) ? "north" : "south") : "";
         var ew = ((JsMath.abs(dx) * 2) > JsMath.abs(dy)) ? ((dx < 0) ? "west" : "east") : "";
-        return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : ((Js.T(ns) || Js.T(ew)) || Js.T("nearby"));
+        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(Js.Or(ns, ew), "nearby"));
     }
 
     /// <summary>Ring an alarm (a window smashed into a building while the power's on, maybe).</summary>
@@ -177,7 +177,7 @@ public static partial class TimelineMod
         updateHeli(state, t);
         var winding = (t.powerOffDay > 0) && (day < (t.powerOffDay + WIND_DOWN_DAYS));
         var you = focus(state);
-        if (((Js.T(winding) && Js.T(you)) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), state.tick, 0xfa2) < FAR_CHANCE))
+        if (((Js.T(Js.T(winding) && Js.T(you))) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), state.tick, 0xfa2) < FAR_CHANCE))
         {
             var a = (Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI) * 2;
             var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * ((FAR_MAX - FAR_MIN) + 1)));

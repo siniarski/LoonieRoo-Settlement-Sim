@@ -9,6 +9,12 @@ namespace LoonieRoo.Sim;
 
 public static class JsListExtensions
 {
+    extension(List<string> a)
+    {
+        /// <summary>includes with a value of unknown type: only a string can be in it.</summary>
+        public bool includes(object? x) => x is string s && a.Contains(s);
+    }
+
     extension(List<int> a)
     {
         /// <summary>indexOf/includes with a JS number, on a list of whole numbers.</summary>

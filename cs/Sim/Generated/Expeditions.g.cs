@@ -55,7 +55,7 @@ public static partial class Expeditions
         var truckId = Outposts.truckVehicleId(state);
         var inTruck = Outposts.takeTruck(state);
         var id = $"x{Js.Str(state.nextId)}";
-        var v = (Js.T(inTruck) && Js.T(truckId)) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
+        var v = (Js.T(Js.T(inTruck) && Js.T(truckId))) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
         if (Js.T(v))
         {
             v.driverId = $"x:{Js.Str(id)}";
@@ -70,7 +70,7 @@ public static partial class Expeditions
     {
         foreach (var x in Js.Iter((state.expeditions).ToList()))
         {
-            if (Js.T(x.truckId) && Js.T(onTheRoad(state, x)))
+            if (Js.T(Js.T(x.truckId) && Js.T(onTheRoad(state, x))))
             {
                 continue;
             }
@@ -92,14 +92,14 @@ public static partial class Expeditions
         var leg = JsMath.max(1, JsMath.floor(((double)((Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE)) / (2))));
         var e = state.tick - x.leftTick;
         var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
-        var f = (e < leg) ? ((double)(e) / (leg)) : ((Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
+        var f = (e < leg) ? ((double)(e) / (leg)) : ((Js.T(Js.T(x.outpost) || (e < (leg + SEARCH_TICKS)))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
         Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
         if (Js.T(x.outpost) && (e >= leg))
         {
             v.driverId = null;
-            x.Remove("truckId");
+            x.truckId = null;
             return false;
         }
         if (!Js.T(driving) || ((state.tick % Time.TICKS_PER_HOUR) != 0))
@@ -180,7 +180,7 @@ public static partial class Expeditions
         state.survivors.pushAll(back);
         var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
         double found = 0;
-        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && Js.T(near(f)))))
+        foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => Js.T((f.loot > 0) && Js.T(near(f))))))
         {
             while ((crate.loot > 0) && (room > 0))
             {

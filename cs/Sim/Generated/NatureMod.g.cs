@@ -102,7 +102,7 @@ public static partial class NatureMod
         {
             return false;
         }
-        if (Js.T(isSea(n, x, y)) || Js.T(isChannel(n, x, y)))
+        if (Js.T(Js.T(isSea(n, x, y)) || Js.T(isChannel(n, x, y))))
         {
             return true;
         }

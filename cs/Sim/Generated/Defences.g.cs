@@ -75,7 +75,7 @@ public static partial class Defences
     /// <summary>Turrets shoot; lures rattle. Every tick.</summary>
     public static void updateDefences(SimState state)
     {
-        if (((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(Time.isNight(state.tick)))
+        if (Js.T(((state.tick % Time.TICKS_PER_HOUR) == 0) && Js.T(Time.isNight(state.tick))))
         {
             foreach (var f in Js.Iter((FurnitureMod.ofKind(state, "lure")).ToList()))
             {
@@ -92,7 +92,7 @@ public static partial class Defences
             {
                 continue;
             }
-            var z = state.zombies.filter((q) => ((Space.manhattan(q.pos, t) <= TURRET_RANGE) && Js.T(seen(state, q.pos))) && Js.T(Work.clearShot(state.grid, t, q.pos))).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t))[Js.Idx(0)];
+            var z = state.zombies.filter((q) => Js.T((Js.T((Space.manhattan(q.pos, t) <= TURRET_RANGE) && Js.T(seen(state, q.pos)))) && Js.T(Work.clearShot(state.grid, t, q.pos)))).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t))[Js.Idx(0)];
             if (!Js.T(z))
             {
                 continue;

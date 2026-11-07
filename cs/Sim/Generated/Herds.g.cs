@@ -131,7 +131,7 @@ public static partial class Herds
         }
         var ns = ((JsMath.abs(dy) * 2) < JsMath.abs(dx)) ? "" : ((dy < 0) ? "north" : "south");
         var ew = ((JsMath.abs(dx) * 2) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
-        return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
+        return (Js.T(Js.T(ns) && Js.T(ew))) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
     }
     public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
 

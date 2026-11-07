@@ -59,9 +59,9 @@ public static partial class Sight
         {
             return Js.T(clear(ax, ay, bx, by));
         }
-        var viaX = (Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by))) && !Js.T(opaque(grid, bx, ay));
-        var viaY = (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by))) && !Js.T(opaque(grid, ax, by));
-        return Js.T(viaX) || Js.T(viaY);
+        var viaX = (Js.T(Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by)))) && !Js.T(opaque(grid, bx, ay));
+        var viaY = (Js.T(Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)))) && !Js.T(opaque(grid, ax, by));
+        return Js.T(Js.T(viaX) || Js.T(viaY));
     }
     public static bool stepSeen(Grid grid, double ax, double ay, double bx, double by) => stepSeen(grid, (int)ax, (int)ay, (int)bx, (int)by);
 
@@ -94,7 +94,7 @@ public static partial class Sight
             {
                 return false;
             }
-            if (((x != b.x) || (y != b.y)) && Js.T(opaque(grid, x, y)))
+            if (Js.T(((x != b.x) || (y != b.y)) && Js.T(opaque(grid, x, y))))
             {
                 return false;
             }
@@ -110,11 +110,11 @@ public static partial class Sight
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                if ((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x))))
+                if (Js.T((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x)))))
                 {
                     continue;
                 }
-                if (Js.T(overWalls) || Js.T(sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) })))
+                if (Js.T(Js.T(overWalls) || Js.T(sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) }))))
                 {
                     @out.push((y * grid.width) + x);
                 }
@@ -158,7 +158,7 @@ public static partial class Sight
         {
             return false;
         }
-        return Js.T(Grids.inBounds(state.grid, s.x, s.y)) && Js.T(sightLine(state.grid, z, s));
+        return Js.T(Js.T(Grids.inBounds(state.grid, s.x, s.y)) && Js.T(sightLine(state.grid, z, s)));
     }
 
     public static readonly JsMap<SimState, SeenEntry> seen = new JsMap<SimState, SeenEntry>();

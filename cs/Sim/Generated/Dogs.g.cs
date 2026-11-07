@@ -49,7 +49,7 @@ public static partial class Dogs
         var day = Time.dayOf(state.tick);
         if ((((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR))) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE)) && (state.survivors.length > 0))
         {
-            var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? Js.NN(state.survivors[Js.Idx(0)]).pos;
+            var spot = Wanderers.frontierSpot(state, new JsSet<string>()) ?? Js.NN(state.survivors[Js.Idx(0)]).pos;
             var dog = addDog(state, spot.x, spot.y);
             Events.logEvent(state, $"A stray dog, {Js.Str(dog.name)}, has wandered in at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
         }
@@ -102,7 +102,7 @@ public static partial class Dogs
         {
             bark(state, dog, zombie);
         }
-        if (Js.T(zombie) && Js.T(Motion.inReach(zombie, dog, Motion.REACH, state.grid)))
+        if (Js.T(Js.T(zombie) && Js.T(Motion.inReach(zombie, dog, Motion.REACH, state.grid))))
         {
             if (dog.cooldown == 0)
             {

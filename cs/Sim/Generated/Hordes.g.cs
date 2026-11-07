@@ -270,7 +270,7 @@ public static partial class Hordes
         {
             return 0;
         }
-        if (!(Js.T(asShut) && (grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && Js.T(Pathfinding.crossable(grid, ax, ay, bx, by, "zombie")))
+        if (Js.T(!(Js.T(asShut) && (grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && Js.T(Pathfinding.crossable(grid, ax, ay, bx, by, "zombie"))))
         {
             return 0;
         }
@@ -359,11 +359,11 @@ public static partial class Hordes
                     var l = (2 * k) + 1;
                     var r = l + 1;
                     var m = k;
-                    if ((l < size) && Js.T(less(l, m)))
+                    if (Js.T((l < size) && Js.T(less(l, m))))
                     {
                         m = l;
                     }
-                    if ((r < size) && Js.T(less(r, m)))
+                    if (Js.T((r < size) && Js.T(less(r, m))))
                     {
                         m = r;
                     }
@@ -540,7 +540,7 @@ public static partial class Hordes
         foreach (var z in Js.Iter(zs))
         {
             z.hordeId = null;
-            if ((h.mode == "roam") && Js.T(h.heading))
+            if (Js.T((h.mode == "roam") && Js.T(h.heading)))
             {
                 z.heading = Js.Clone(h.heading);
             }
@@ -592,7 +592,7 @@ public static partial class Hordes
             var mid = middle(zs);
             foreach (var z in Js.Iter(state.zombies))
             {
-                if (((Js.T(z.hordeId) || ((z.kind != "static") && (z.kind != "herd"))) || (z.targetId != null)) || (state.tick < z.stuckUntil))
+                if (Js.T((Js.T((Js.T(Js.T(z.hordeId) || ((z.kind != "static") && (z.kind != "herd")))) || (z.targetId != null))) || (state.tick < z.stuckUntil)))
                 {
                     continue;
                 }
@@ -671,7 +671,7 @@ public static partial class Hordes
     /// <summary>A roaming horde with nobody of yours near goes back to being a herd marker (herds.ts).</summary>
     public static void demote(SimState state, Horde h)
     {
-        if ((h.mode != "roam") || Js.T(h.night))
+        if (Js.T((h.mode != "roam") || Js.T(h.night)))
         {
             return;
         }

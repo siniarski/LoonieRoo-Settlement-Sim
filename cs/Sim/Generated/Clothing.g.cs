@@ -103,7 +103,7 @@ public static partial class Clothing
     /// <summary>A garment that's half worn, if any.</summary>
     public static Item? needsMending(SimState state, Survivor s)
     {
-        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(i) && Js.T(isGarment(i.kind))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
+        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).find((i) => (Js.T(Js.T(i) && Js.T(isGarment(i.kind)))) && ((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]));
     }
 
     public static bool startDressing(SimState state, Survivor s)
@@ -113,7 +113,7 @@ public static partial class Clothing
             return false;
         }
         List<string> body = (s.priorities["guard"] > 0) ? ((List<string>)["armour", "coat"]) : ((List<string>)["coat", "armour"]);
-        List<string> wants = [.. (Js.T(s.body) ? ((List<string>)[]) : body), .. (Js.T(s.feet) ? ((List<string>)[]) : ((List<string>)["boots"])), .. (Js.T(s.cart) || (s.priorities["haul"] == 0) ? ((List<string>)[]) : ((List<string>)["cart"])), .. (Js.T(s.tool) ? ((List<string>)[]) : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])])), .. (Js.T(needsMending(state, s)) ? ((List<string>)["cloth"]) : ((List<string>)[]))];
+        List<string> wants = [.. (Js.T(s.body) ? ((List<string>)[]) : body), .. (Js.T(s.feet) ? ((List<string>)[]) : ((List<string>)["boots"])), .. (Js.T(Js.T(s.cart) || (s.priorities["haul"] == 0)) ? ((List<string>)[]) : ((List<string>)["cart"])), .. (Js.T(s.tool) ? ((List<string>)[]) : (Js.ObjectKeys(Skills.TOOL_FOR)).filter((k) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(k)])] > 0).sort((a, b) => s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(a)])] - s.priorities[Js.Idx(Skills.TOOL_FOR[Js.Idx(b)])])), .. (Js.T(needsMending(state, s)) ? ((List<string>)["cloth"]) : ((List<string>)[]))];
         var item = wants.map((k) => Needs.nearestFreeItem(state, s, k)).find((i) => Js.T(Js.T(i?.pos)));
         if (!Js.T(Js.T(item?.pos)))
         {
@@ -166,7 +166,7 @@ public static partial class Clothing
             return true;
         }
         var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
-        if (!Js.T(slot) || Js.T(Js.GetProp<string?>(s, slot)))
+        if (Js.T(!Js.T(slot) || Js.T(Js.GetProp<string?>(s, slot))))
         {
             item.reservedBy = null;
             return true;
@@ -229,6 +229,6 @@ public static partial class Clothing
     /// <summary>"coat, boots" for panels.</summary>
     public static string describeClothing(SimState state, Survivor s)
     {
-        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => (i != null) && Js.T(isGarment(i.kind))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
+        return new[] { s.body, s.feet }.ToList().map((id) => Js.T(id) ? Items.getItem(state, id) : null).filter((i) => Js.T((i != null) && Js.T(isGarment(i.kind)))).map((i) => $"{Js.Str(i.kind)}{Js.Str(((i.wear * 2) >= GARMENT_LIFE[Js.Idx(i.kind)]) ? " (worn)" : "")}").join(", ");
     }
 }

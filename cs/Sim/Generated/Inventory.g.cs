@@ -96,7 +96,7 @@ public static partial class Inventory
             s.carrying = null;
         }
         item.pos = null;
-        item.Remove("inside");
+        item.inside = null;
         item.carriedBy = s.id;
         item.reservedBy = null;
         s.pack.push(item.id);

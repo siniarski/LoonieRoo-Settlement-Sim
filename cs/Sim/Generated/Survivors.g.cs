@@ -150,7 +150,7 @@ public static partial class Survivors
         {
             return;
         }
-        if ((Rng.random(state) < DIRT_CHANCE) && Js.T(Rooms.isIndoors(state, p.x, p.y)))
+        if (Js.T((Rng.random(state) < DIRT_CHANCE) && Js.T(Rooms.isIndoors(state, p.x, p.y))))
         {
             Grids.setDirty(state.grid, p.x, p.y, true);
         }

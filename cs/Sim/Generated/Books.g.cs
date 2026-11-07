@@ -45,7 +45,7 @@ public static partial class Books
     /// <summary>Idle with nothing to do: go and read a free book. Returns true if they set off.</summary>
     public static bool startReading(SimState state, Survivor s)
     {
-        if (Js.T(s.reading) || Js.T(s.breakdown))
+        if (Js.T(Js.T(s.reading) || Js.T(s.breakdown)))
         {
             return false;
         }

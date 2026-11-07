@@ -30,7 +30,7 @@ public static partial class Noise
         var height = __d0.height;
         foreach (var z in Js.Iter(state.zombies))
         {
-            if (((((z.kind != "static") && (z.kind != "herd")) || (z.targetId != null)) || Js.T(z.hordeId)) || (Space.manhattan(z.pos, p) > r))
+            if (Js.T((Js.T((((z.kind != "static") && (z.kind != "herd")) || (z.targetId != null)) || Js.T(z.hordeId))) || (Space.manhattan(z.pos, p) > r)))
             {
                 continue;
             }

@@ -92,7 +92,7 @@ public static partial class Corpses
         }
         foreach (var c in Js.Iter(corpses))
         {
-            if (((c.tag == null) && Js.T(c.pos)) && ((state.tick - c.wear) >= CORPSE_GONE))
+            if ((Js.T((c.tag == null) && Js.T(c.pos))) && ((state.tick - c.wear) >= CORPSE_GONE))
             {
                 Items.removeItem(state, c);
             }
@@ -131,7 +131,7 @@ public static partial class Corpses
         var rooms = __d0.rooms;
         foreach (var carrier in Js.Iter(state.survivors))
         {
-            if (((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep))) || Js.T(Policies.policyOn(state, "quarantine")))
+            if (Js.T((Js.T((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep)))) || Js.T(Policies.policyOn(state, "quarantine"))))
             {
                 continue;
             }

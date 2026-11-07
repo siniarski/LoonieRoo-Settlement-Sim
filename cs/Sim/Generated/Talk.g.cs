@@ -113,7 +113,7 @@ public static partial class Talk
         }
         if (!state.tasks.some((t) => t.giverId == s.id))
         {
-            var kind = TASK_ORDER.find((k) => (!s.story.asked.includes(k) && (s.story.told >= TOLD_BEFORE[Js.Idx(k)])) && Js.T(wants(state, s, k)));
+            var kind = TASK_ORDER.find((k) => Js.T((!s.story.asked.includes(k) && (s.story.told >= TOLD_BEFORE[Js.Idx(k)])) && Js.T(wants(state, s, k))));
             if (Js.T(kind))
             {
                 offerTask(state, s, kind);
@@ -264,7 +264,7 @@ public static partial class Talk
         var height = __d1.height;
         Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, p);
-        return Space.nearestTile(state.grid, p, (x, y) => (((Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
+        return Space.nearestTile(state.grid, p, (x, y) => ((Js.T((Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
     }
 
     public static bool near(Point a, Point b, double r)
@@ -311,7 +311,7 @@ public static partial class Talk
                 {
                     {
                     var you = ControlMod.controlled(state);
-                    return (Js.T(near(giver.pos, spot, 2)) || ((you != null) && Js.T(near(you.pos, spot, 2)))) ? true : null;
+                    return (Js.T(Js.T(near(giver.pos, spot, 2)) || (Js.T((you != null) && Js.T(near(you.pos, spot, 2)))))) ? true : null;
                 }
                 }
             case "bury":
@@ -342,7 +342,7 @@ public static partial class Talk
                 }
             case "radio":
                 {
-                    return ((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Js.T(Radio.hasRadio(state))) ? callOut(state, task, giver) : null;
+                    return (Js.T((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Js.T(Radio.hasRadio(state)))) ? callOut(state, task, giver) : null;
                 }
             case "medicine":
                 {
@@ -352,7 +352,7 @@ public static partial class Talk
                     {
                         return fail(state, giver, "nobody is left there to help.");
                     }
-                    var bearer = state.survivors.find((s) => (Js.T(s.carrying) && (Items.getItem(state, s.carrying)?.kind == "medicine")) && Js.T(near(s.pos, spot, MEDICINE_REACH)));
+                    var bearer = state.survivors.find((s) => Js.T((Js.T(s.carrying) && (Items.getItem(state, s.carrying)?.kind == "medicine")) && Js.T(near(s.pos, spot, MEDICINE_REACH))));
                     if (!Js.T(bearer))
                     {
                         return null;
@@ -381,7 +381,7 @@ public static partial class Talk
             Events.logEvent(state, $"{Js.Str(giver.name)} called for {Js.Str(lost.name)} on the radio until dark. Nobody answered.");
             return false;
         }
-        var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w_1) => $"{Js.Str(w_1.x)},{Js.Str(w_1.y)}")));
+        var spot = Wanderers.frontierSpot(state, new JsSet<string>());
         if (!Js.T(spot))
         {
             return null;

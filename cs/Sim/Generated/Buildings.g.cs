@@ -187,7 +187,7 @@ public static partial class Buildings
         {
             var x = cx + dx;
             var y = cy + dy;
-            if (((((x > x0) && (x < x1)) && (y > y0)) && (y < y1)) && Js.T(put(p, x, y, look, table)))
+            if (Js.T(((((x > x0) && (x < x1)) && (y > y0)) && (y < y1)) && Js.T(put(p, x, y, look, table))))
             {
                 return true;
             }
@@ -681,7 +681,7 @@ public static partial class Buildings
                         continue;
                     }
                     var r = Js.NN(room[Js.Idx((ny * w) + nx)]);
-                    if ((r == -1) || ((pass == 0) && Js.T(solid(Js.NN(p.cells[Js.Idx((ny * w) + nx)])))))
+                    if (Js.T((r == -1) || (Js.T((pass == 0) && Js.T(solid(Js.NN(p.cells[Js.Idx((ny * w) + nx)])))))))
                     {
                         continue;
                     }
@@ -702,7 +702,7 @@ public static partial class Buildings
             foreach (var (dx, dy) in Js.Iter(DIR4))
             {
                 var j = (((y + dy) * w) + x) + dx;
-                if (((((((x + dx) >= 0) && ((y + dy) >= 0)) && ((x + dx) < w)) && ((y + dy) < h)) && (room[Js.Idx(j)] == room[Js.Idx(i)])) && Js.T(p.ground[Js.Idx(j)]))
+                if (Js.T(((((((x + dx) >= 0) && ((y + dy) >= 0)) && ((x + dx) < w)) && ((y + dy) < h)) && (room[Js.Idx(j)] == room[Js.Idx(i)])) && Js.T(p.ground[Js.Idx(j)])))
                 {
                     ground[Js.Idx(i)] = Js.NN(p.ground[Js.Idx(j)]);
                     break;
@@ -792,7 +792,7 @@ public static partial class Buildings
                 {
                     return outerWall.has($"{Js.Str(e.ax + (sx * k))},{Js.Str(e.ay + (sy * k))},{Js.Str(e.bx + (sx * k))},{Js.Str(e.by + (sy * k))}");
                 }
-                if (Js.T(beside(1)) && Js.T(beside(-1)))
+                if (Js.T(Js.T(beside(1)) && Js.T(beside(-1))))
                 {
                     e.window = true;
                 }

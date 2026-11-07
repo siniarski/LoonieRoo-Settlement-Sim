@@ -59,11 +59,11 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "hotMeal", targetId = null });
         }
-        if (Js.T(has("sleptOnFloor")) || (s.comfort < 50))
+        if (Js.T(Js.T(has("sleptOnFloor")) || (s.comfort < 50)))
         {
             @out.push(new() { kind = "bed", targetId = null });
         }
-        if (!Js.T(s.body) && (((Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter")) || Js.T(state.settings.winter)))
+        if (Js.T(!Js.T(s.body) && (Js.T(((Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter")) || Js.T(state.settings.winter)))))
         {
             @out.push(new() { kind = "coat", targetId = null });
         }
@@ -78,11 +78,11 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "see", targetId = wanted.id });
         }
-        if ((Js.T(has("lostFriend")) || Js.T(has("sawDeath"))) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
+        if ((Js.T(Js.T(has("lostFriend")) || Js.T(has("sawDeath")))) && state.roomDesignations.some((d) => d.purpose == "graveyard"))
         {
             @out.push(new() { kind = "grave", targetId = null });
         }
-        if (Js.T(has("sawDeath")) || Js.T(has("attacked")))
+        if (Js.T(Js.T(has("sawDeath")) || Js.T(has("attacked"))))
         {
             @out.push(new() { kind = "quiet", targetId = null });
         }
@@ -126,7 +126,7 @@ public static partial class Wishes
                 {
                     {
                     var o = state.survivors.find((x) => x.id == w.targetId);
-                    return (((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && Js.T(near(s, o));
+                    return Js.T((((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && Js.T(near(s, o)));
                 }
                 }
             case "grave":
@@ -209,7 +209,7 @@ public static partial class Wishes
         Mood.addThought(state, s, Js.T(w.promised) ? "promiseKept" : "wishMet");
         Resolve.steel(s, Js.T(w.promised) ? PROMISE_RESOLVE : WISH_RESOLVE);
         var you = ControlMod.controlled(state);
-        if ((Js.T(w.promised) && Js.T(you)) && (you != s))
+        if ((Js.T(Js.T(w.promised) && Js.T(you))) && (you != s))
         {
             s.opinions[Js.Idx(you.id)] = JsMath.min(100, (Js.Q(s.opinions[Js.Idx(you.id)], 0)) + PROMISE_OPINION);
         }

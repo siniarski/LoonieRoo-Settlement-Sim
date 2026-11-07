@@ -62,7 +62,7 @@ public static partial class Wanderers
         reconcileWanderers(state);
         foreach (var w in Js.Iter((state.wanderers).ToList()))
         {
-            if ((state.tick >= w.leavesTick) || Js.T(Time.isNight(state.tick)))
+            if (Js.T((state.tick >= w.leavesTick) || Js.T(Time.isNight(state.tick))))
             {
                 removeWanderer(state, w);
                 Events.logEvent(state, $"{Js.Str(w.name)} gave up waiting and left");

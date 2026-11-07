@@ -21,7 +21,7 @@ public static partial class Items
     /// <summary>A tile an item can be dropped on: walkable, empty, no furniture, and not about to become a wall or furniture.</summary>
     public static bool canHoldItem(SimState state, int x, int y)
     {
-        return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(itemAt(state, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))));
+        return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(itemAt(state, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => Js.T(((b.x == x) && (b.y == y)) && (Js.T((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))))));
     }
     public static bool canHoldItem(SimState state, double x, double y) => canHoldItem(state, (int)x, (int)y);
 
@@ -62,7 +62,7 @@ public static partial class Items
         var held = Js.Set(state.items.flatMap((i) => Js.T(i.pos) ? ((List<string>)[$"{Js.Str(i.pos.x)},{Js.Str(i.pos.y)}"]) : ((List<string>)[])));
         bool free(double x, double y)
         {
-            return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))));
+            return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => Js.T(((b.x == x) && (b.y == y)) && (Js.T((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))))));
         }
         item.pos = Space.nearestTile(state.grid, near, (__f0, __f1) => free(__f0, __f1)) ?? new Point { x = Js.I(near.x), y = Js.I(near.y) };
     }

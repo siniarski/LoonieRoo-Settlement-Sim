@@ -88,7 +88,7 @@ public static partial class Difficulty
         {
             return (JsNumber.isInteger(n) && ((Js.Num(n)) >= 0)) && ((Js.Num(n)) < max);
         }
-        return (((((((((s["start"] == "group") || (s["start"] == "solo")) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((s["dayScale"] == 1) || (s["dayScale"] == 2)) || (s["dayScale"] == 3))) && MAP_TYPES.some((__p0) =>
+        return (((Js.T((Js.T((((((s["start"] == "group") || (s["start"] == "solo")) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length)))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length)))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((s["dayScale"] == 1) || (s["dayScale"] == 2)) || (s["dayScale"] == 3))) && MAP_TYPES.some((__p0) =>
         {
             var m = (__p0)[0];
             return m == s["map"];

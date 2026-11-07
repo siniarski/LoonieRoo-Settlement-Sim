@@ -28,7 +28,7 @@ public static partial class Arena
             var spot = openNear(state, new Point { x = Js.I(JsMath.round(you.x + (JsMath.cos(a) * radius))), y = Js.I(JsMath.round(you.y + (JsMath.sin(a) * radius))) });
             if (Js.T(spot))
             {
-                Zombies.addZombie(state, spot.x, spot.y, null, "static");
+                Zombies.addZombie(state, spot.x, spot.y, kind: "static");
             }
         }
         return state;
@@ -45,7 +45,7 @@ public static partial class Arena
                 {
                     var x = p.x + dx;
                     var y = p.y + dy;
-                    if ((Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y)))
+                    if (Js.T((Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y))))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }

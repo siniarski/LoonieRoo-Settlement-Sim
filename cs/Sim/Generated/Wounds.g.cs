@@ -67,13 +67,13 @@ public static partial class Wounds
     /// <summary>Slowed at work: a wounded or lost arm.</summary>
     public static bool armSlowed(Survivor s)
     {
-        return (s.wound?.limb == "arm") || Js.T(Skills.hasTrait(s, "lostArm"));
+        return Js.T((s.wound?.limb == "arm") || Js.T(Skills.hasTrait(s, "lostArm")));
     }
 
     /// <summary>Slowed walking: a wounded or lost leg.</summary>
     public static bool legSlowed(Survivor s)
     {
-        return (s.wound?.limb == "leg") || Js.T(Skills.hasTrait(s, "lostLeg"));
+        return Js.T((s.wound?.limb == "leg") || Js.T(Skills.hasTrait(s, "lostLeg")));
     }
 
     public static bool canAmputate(Survivor s)

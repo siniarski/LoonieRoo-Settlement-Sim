@@ -43,7 +43,7 @@ public static partial class Outposts
     /// <summary>The truck as a vehicle, seen and parked (nobody driving it).</summary>
     public static Vehicle? truckVehicle(SimState state)
     {
-        return Vehicles.vehiclesOf(state).find((v) => (((v.kind == "truck") && (v.health > 0)) && (v.driverId == null)) && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y)));
+        return Vehicles.vehiclesOf(state).find((v) => Js.T((((v.kind == "truck") && (v.health > 0)) && (v.driverId == null)) && Js.T(Fog.isExplored(state, v.pos.x, v.pos.y))));
     }
 
     /// <summary>The truck vehicle a trip would take now (seen, parked), if there is one.</summary>

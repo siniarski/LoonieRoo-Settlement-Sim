@@ -45,9 +45,9 @@ public static partial class Climate
         var night = Time.isNight(state.tick);
         if (climate == "cold")
         {
-            return ((season == "winter") || (Js.T(night) && (season == "autumn"))) || (Js.T(night) && Js.T(state.settings.winter));
+            return Js.T(((season == "winter") || (Js.T(night) && (season == "autumn"))) || (Js.T(Js.T(night) && Js.T(state.settings.winter))));
         }
-        return Js.T(night) && ((season == "winter") || Js.T(state.settings.winter));
+        return Js.T(Js.T(night) && (Js.T((season == "winter") || Js.T(state.settings.winter))));
     }
     public static bool regionCold(SimState state, double x, double y) => regionCold(state, (int)x, (int)y);
 

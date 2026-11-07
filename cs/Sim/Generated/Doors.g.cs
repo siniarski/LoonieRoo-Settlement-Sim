@@ -19,13 +19,13 @@ public static partial class Doors
         if (Js.T(from))
         {
             var e = Grids.edgeBetween(state.grid, from.x, from.y, x, y);
-            if ((((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && !Js.T(Grids.edgeIsOpen(state.grid, e))) && (Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))
+            if (Js.T((((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && !Js.T(Grids.edgeIsOpen(state.grid, e))) && (Js.T(Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))))
             {
                 state.grid.edgeOpen.push(e);
                 state.grid.edgePassing.push(e);
             }
         }
-        if ((Grids.getTile(state.grid, x, y) != "door") || Js.T(Grids.isOpen(state.grid, x, y)))
+        if (Js.T((Grids.getTile(state.grid, x, y) != "door") || Js.T(Grids.isOpen(state.grid, x, y))))
         {
             return;
         }

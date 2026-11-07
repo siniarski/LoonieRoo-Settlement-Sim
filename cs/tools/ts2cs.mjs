@@ -142,6 +142,13 @@ function inlineType(lit, mod) {
 /** Fields that are whole numbers in every class (gen-state.mjs INT_FIELDS). */
 /** Return types of functions, by "Class.name" and by bare name (filled as modules are translated; two passes). */
 const fnRet = new Map(Object.entries({ "Hash.hashRoll": "double", "Hash.idNumber": "double", "Rng.random": "double", "Rng.randomInt": "int", "Grids.inBounds": "bool", "Grids.getTile": "string?", "Grids.isWalkable": "bool", "Grids.tileIndex": "int", "Grids.edgeBetween": "int", "Grids.edgeIndex": "int", "Grids.isOpen": "bool", "Grids.isLocked": "bool", "Space.manhattan": "int", "Space.samePoint": "bool", "Space.nearestTile": "Point?", "Pathfinding.findPathToAny": "List<Point>?", "Pathfinding.findPath": "List<Point>?", "Pathfinding.canReach": "bool", "Pathfinding.isPassable": "bool", "Pathfinding.crossable": "bool", "Pathfinding.openBetween": "bool", "Pathfinding.seesThrough": "bool", "Time.dayOf": "int", "Time.tickOfDay": "int", "Time.hourOf": "double", "Time.isNight": "bool", "Time.slowTick": "bool" }));
+/** "Class.fn" -> its parameters as C# writes them: [{ type, name, optional }]. */
+const fnParams = new Map();
+const parseParams = (list) => list.map((x) => {
+  const decl = x.replace(/ = .*$/, '').trim().split(/\s+/);
+  return { type: decl.slice(0, -1).join(' ').replace(/^params /, ''), name: decl.at(-1), optional: / = /.test(x) };
+});
+
 // The hand-ported modules' return types, read from their C# (the first overload of each name).
 for (const f of ['Grid', 'Pathfinding', 'Space', 'Rng', 'Hash', 'Time', 'Lookup', 'Savefile']) {
   let cls = null;
@@ -150,6 +157,19 @@ for (const f of ['Grid', 'Pathfinding', 'Space', 'Rng', 'Hash', 'Time', 'Lookup'
     if (c) cls = c[1];
     const m = cls && line.match(/^    public static ([\w<>?,\[\] ]+?) (\w+)(?:<\w+>)?\(/);
     if (m && !m[1].includes('class') && !fnRet.has(`${cls}.${m[2]}`)) fnRet.set(`${cls}.${m[2]}`, m[1]);
+    const pm = cls && line.match(/^    public static [\w<>?,\[\] ]+? (\w+)(?:<\w+>)?\((.*)\)/);
+    if (pm && !fnParams.has(`${cls}.${pm[1]}`)) {
+      const parts = [];
+      let depth = 0;
+      let cur = '';
+      for (const ch of pm[2]) {
+        if ('<(['.includes(ch)) depth++;
+        if ('>)]'.includes(ch)) depth--;
+        if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch;
+      }
+      if (cur.trim()) parts.push(cur);
+      fnParams.set(`${cls}.${pm[1]}`, parseParams(parts.map((x) => x.trim())));
+    }
   }
 }
 
@@ -392,7 +412,7 @@ function translate(mod) {
   function isBoolish(e) {
     if (!e) return false;
     if (e.type === 'BinaryExpression') return ['==', '!=', '===', '!==', '<', '>', '<=', '>=', 'in', 'instanceof'].includes(e.operator);
-    if (e.type === 'LogicalExpression') return e.operator !== '??';
+    if (e.type === 'LogicalExpression') return e.operator === '||' ? isBoolish(e.left) && isBoolish(e.right) : e.operator === '&&' ? isBoolish(e.right) : false;
     if (e.type === 'UnaryExpression') return e.operator === '!';
     if (e.type === 'Literal') return typeof e.value === 'boolean';
     if (e.type === 'ParenthesizedExpression') return isBoolish(e.expression);
@@ -738,6 +758,7 @@ function translate(mod) {
         if (e.operator === 'void') return 'null';
         if (e.operator === 'delete') {
           const m = e.argument;
+          if (!m.computed && classFields.has(strip(exprType(m.object)) ?? '')) return `${ex(m)} = null`;
           return `${ex(m.object)}.Remove(${m.computed ? `Js.Str(${ex(m.property)})` : str(m.property.name)})`;
         }
         if (e.operator === '~') return `Js.BitNot(${ex(e.argument)})`;
@@ -799,7 +820,8 @@ function translate(mod) {
         const q = e.optional ? '?' : '';
         const byKey = e.computed ? fieldByKey(e) : null;
         if (byKey) return `Js.GetProp<${byKey}>(${obj}, ${ex(e.property)})`;
-        if (e.computed && e.property.type === 'Literal' && typeof e.property.value === 'number' && /^\(/.test(strip(exprType(e.object)) ?? '')) return `${obj}${q}.Item${e.property.value + 1}`;
+        if (e.computed && e.object.type === 'ArrayExpression' && literalType(e.object)) return `new ${literalType(e.object)} { ${e.object.elements.map((x) => ex(x)).join(', ')} }[Js.Idx(${ex(e.property)})]`;
+        if (e.computed && e.object.type === 'ObjectExpression' && e.object.properties.every((x) => x.type === 'Property' && !x.computed && x.value.type === 'Literal' && typeof x.value.value === 'string')) return `new JsRecord<string> { ${e.object.properties.map((x) => `[${str(String(x.key.name ?? x.key.value))}] = ${ex(x.value)}`).join(', ')} }[Js.Str(${ex(e.property)})]`;
         if (e.computed) return `${obj}${q}[Js.Idx(${ex(e.property)})]`;
         const name = e.property.name;
         // Math.PI and friends.
@@ -871,7 +893,34 @@ function translate(mod) {
       if (item) for (const a of e.arguments) if (a.type === 'ArrowFunctionExpression') a.__paramTypes = c.property.name === 'sort' ? [item, item] : c.property.name === 'reduce' ? [null, item, 'int'] : [item, 'int'];
     }
     if (c.type === 'MemberExpression' && !c.computed && c.property.name === 'reduce' && e.arguments[1]?.type === 'Literal') e.arguments[1].__double = true;
-    const args = () => e.arguments.map(withTarget).map((a) => (a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : (a.type === 'ArrowFunctionExpression' && a.params.length === 0 && c.type === 'MemberExpression' && callbackTakers.includes(c.property?.name) ? arg(a).replace(/^\(\)\s*=>/, '_ =>') : arg(a)))).join(', ');
+    const calleeKey = c.type === 'Identifier' ? imports.get(c.name) ?? `${modClass(mod)}.${c.name}` : c.type === 'MemberExpression' && !c.computed && c.object.type === 'Identifier' && /^[A-Z]/.test(c.object.name) ? `${c.object.name}.${c.property.name}` : null;
+    const params = calleeKey ? fnParams.get(calleeKey) : null;
+    if (params) {
+      const isUndef = (a) => a.type === 'Identifier' && a.name === 'undefined';
+      let named = false;
+      const out = [];
+      e.arguments.forEach((a, i) => {
+        const pi = params[i];
+        if (!pi || a.type === 'SpreadElement') { out.push(a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : arg(a)); return; }
+        // An argument left undefined: the parameter's default (C#: name the ones after it).
+        if (isUndef(a) && pi.optional) { named = true; return; }
+        let text;
+        if (a.type === 'NewExpression' && ['Set', 'Map'].includes(a.callee.name) && !a.typeArguments && /^Js(Set|Map)</.test(pi.type)) text = `new ${pi.type.replace(/\?$/, '')}()`;
+        else {
+          withTarget(a, i);
+          text = arg(a);
+          const at = exprType(a);
+          // A nullable number TypeScript has narrowed (checked for null just before): its value.
+          if (at && /^(double|int|bool)\?$/.test(at) && /^(double|int|bool)$/.test(pi.type)) text = `Js.NN(${text})`;
+        }
+        out.push(named ? `${id(pi.name)}: ${text}` : text);
+      });
+      if (e.arguments.length && !e.arguments.some((a) => a.type === 'SpreadElement')) {
+        const argsText = out.join(', ');
+        e.__args = argsText;
+      }
+    }
+    const args = () => e.__args ?? e.arguments.map(withTarget).map((a) => (a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : (a.type === 'ArrowFunctionExpression' && a.params.length === 0 && c.type === 'MemberExpression' && callbackTakers.includes(c.property?.name) ? arg(a).replace(/^\(\)\s*=>/, '_ =>') : arg(a)))).join(', ');
     const q = e.optional ? '?' : '';
     if (c.type === 'MemberExpression' && !c.computed) {
       const o = c.object;
@@ -1156,6 +1205,10 @@ function translate(mod) {
     if (init.type === 'Literal' && init.value === null) return '/*TODO null-initialised*/object';
     if (init.type === 'ArrayExpression' && init.elements.length === 0) return '/*TODO empty array*/List<object>';
     if (literalType(init)) return literalType(init);
+    if (init.type === 'ArrayExpression' && init.elements.length && init.elements.every((x) => x?.type === 'SpreadElement')) {
+      const ts = init.elements.map((x) => strip(exprType(x.argument)));
+      if (ts.every((x) => x && x === ts[0] && /^List</.test(x))) return ts[0];
+    }
     if (init.type === 'ConditionalExpression' && literalType(init.consequent) && literalType(init.consequent) === literalType(init.alternate)) return literalType(init.consequent);
     let lit = init;
     while (lit.type === 'TSAsExpression') lit = lit.expression;
@@ -1461,6 +1514,7 @@ function translate(mod) {
     pushScope(f.params.map((p) => (p.type === 'AssignmentPattern' ? p.left.name : p.name)).filter(Boolean));
     const ps = f.params.map((p) => param(p, defaults, !top));
     paramTypes.set(name, ps.map(typeOfParam));
+    if (top) fnParams.set(`${modClass(mod)}.${name}`, parseParams(ps));
     hint = pascal(name) + 'Result';
     let ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
     if (ret.includes('TODO')) {

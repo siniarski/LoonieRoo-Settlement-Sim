@@ -50,7 +50,7 @@ public static partial class Designations
         if (Js.T(bp.side))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
-            if ((bp.target == "barricade") && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(e)])))
+            if (Js.T((bp.target == "barricade") && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(e)]))))
             {
                 return !state.grid.edgeBoarded.includes(e);
             }
@@ -101,7 +101,7 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if ((Js.T(bp.side) && (bp.target == "barricade")) && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))])))
+        if (Js.T((Js.T(bp.side) && (bp.target == "barricade")) && Js.T(Grids.isWindow(state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))]))))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
             if (!state.grid.edgeBoarded.includes(e))
@@ -203,7 +203,7 @@ public static partial class Designations
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            var onIt = Js.T(Space.samePoint(s.pos, tile)) || ((s.move != null) && Js.T(Space.samePoint(s.move.to, tile)));
+            var onIt = Js.Or(Space.samePoint(s.pos, tile), (s.move != null) && Js.T(Space.samePoint(s.move.to, tile)));
             if (!Js.T(onIt))
             {
                 continue;

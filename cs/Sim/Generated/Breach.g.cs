@@ -119,7 +119,7 @@ public static partial class Breach
             grid.edgeDamage[Js.Idx(Js.Str(e))] = damage;
             return false;
         }
-        if (Js.T(boarded) || (kind == Grids.EDGE_WINDOW))
+        if (Js.T(Js.T(boarded) || (kind == Grids.EDGE_WINDOW)))
         {
             grid.edgeDamage.Remove(Js.Str(Js.Str(e)));
             var tile_1 = JsMath.floor(((double)(e) / (2)));

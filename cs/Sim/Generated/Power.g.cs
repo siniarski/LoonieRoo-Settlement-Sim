@@ -84,7 +84,7 @@ public static partial class Power
 
     public static bool inLight(SimState state, Point p)
     {
-        return Js.T(TimelineMod.mainsLit(state, p)) || litLamps(state).some((l) => Space.manhattan(l, p) <= LAMP_LIGHT);
+        return Js.T(Js.T(TimelineMod.mainsLit(state, p)) || litLamps(state).some((l) => Space.manhattan(l, p) <= LAMP_LIGHT));
     }
 
     /// <summary>Generators burn fuel while they have something to power. Every tick.</summary>
@@ -96,7 +96,7 @@ public static partial class Power
             {
                 continue;
             }
-            var load = CONSUMERS.some((kind) => ((kind != "lamp") || Js.T(Time.isNight(state.tick))) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
+            var load = CONSUMERS.some((kind) => (Js.T((kind != "lamp") || Js.T(Time.isNight(state.tick)))) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
             if (!Js.T(load))
             {
                 continue;
@@ -141,7 +141,7 @@ public static partial class Power
                 continue;
             }
             h.loot += 1;
-            if ((((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, h.x, h.y)))
+            if (Js.T((((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, h.x, h.y))))
             {
                 Events.logEvent(state, $"The heater at ({Js.Str(h.x)}, {Js.Str(h.y)}) set something alight!");
             }
@@ -172,11 +172,11 @@ public static partial class Power
         }
         var rate = ((season == "summer") ? 2 : 1) + ((state.weather == "heatwave") ? 1 : 0);
         var stores = Rooms.completeRooms(state, "storage");
-        var fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
+        List<Furniture> fridges = [.. FurnitureMod.ofKind(state, "fridge").filter((f) => Js.T(isPowered(state, f))), .. FurnitureMod.ofKind(state, "crate").filter((f) => Js.T(TimelineMod.isMainsFridge(state, f)))];
         double rotted = 0;
         foreach (var item in Js.Iter((state.items).ToList()))
         {
-            if ((((item.kind != "food") && (item.kind != "meal")) || !Js.T(item.pos)) || Js.T(item.reservedBy))
+            if (Js.T((((item.kind != "food") && (item.kind != "meal")) || !Js.T(item.pos)) || Js.T(item.reservedBy)))
             {
                 continue;
             }
