@@ -122,9 +122,9 @@ public static partial class Breach
         if (Js.T(boarded) || (kind == Grids.EDGE_WINDOW))
         {
             grid.edgeDamage.Remove(Js.Str(Js.Str(e)));
-            var tile = JsMath.floor(((double)(e) / (2)));
-            var x = tile % grid.width;
-            var y = JsMath.floor(((double)(tile) / (grid.width)));
+            var tile_1 = JsMath.floor(((double)(e) / (2)));
+            var x = tile_1 % grid.width;
+            var y = JsMath.floor(((double)(tile_1) / (grid.width)));
             if (Js.T(boarded))
             {
                 grid.edgeBoarded.splice(grid.edgeBoarded.indexOf(e), 1);

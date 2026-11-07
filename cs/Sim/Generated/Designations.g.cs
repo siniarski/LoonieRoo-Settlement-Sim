@@ -171,10 +171,10 @@ public static partial class Designations
             case "reinforce":
                 {
                     {
-                    var i = (bp.y * state.grid.width) + bp.x;
-                    if (!state.grid.reinforced.includes(i))
+                    var i_1 = (bp.y * state.grid.width) + bp.x;
+                    if (!state.grid.reinforced.includes(i_1))
                     {
-                        state.grid.reinforced.push(i);
+                        state.grid.reinforced.push(i_1);
                     }
                     return;
                 }

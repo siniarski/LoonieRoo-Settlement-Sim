@@ -98,17 +98,15 @@ public static partial class Vehicles
         return state.vehicles ?? [];
     }
 
-    public static Vehicle addVehicle(SimState state, int x, int y, double heading = 0, double? fuel = null, double? health = null, string kind = "car")
+    public static Vehicle addVehicle(SimState state, int x, int y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car")
     {
-        fuel ??= FUEL_MAX;
-        health ??= VEHICLE_HEALTH;
         state.vehicles ??= [];
         var at = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
         Vehicle v = new() { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new Point { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
         state.vehicles.push(v);
         return v;
     }
-    public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double? fuel = null, double? health = null, string kind = "car") => addVehicle(state, (int)x, (int)y, heading, fuel, health, kind);
+    public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car") => addVehicle(state, (int)x, (int)y, heading, fuel, health, kind);
 
     /// <summary>The car this survivor is driving, if any.</summary>
     public static Vehicle? vehicleOf(SimState state, Survivor s)
@@ -117,9 +115,8 @@ public static partial class Vehicles
     }
 
     /// <summary>The nearest car within reach of a point (SUB units), or undefined.</summary>
-    public static Vehicle? vehicleNear(SimState state, Point at, double? reach = null)
+    public static Vehicle? vehicleNear(SimState state, Point at, double reach = ENTER_REACH)
     {
-        reach ??= ENTER_REACH;
         Vehicle? best = null;
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {

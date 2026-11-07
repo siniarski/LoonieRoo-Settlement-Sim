@@ -148,11 +148,11 @@ public static partial class Commands
             var you = ControlMod.controlled(state);
             if (Js.T(you) && !Js.T(command.survivorId))
             {
-                var r = state.residents.find((x) => JsMath.max(JsMath.abs(x.pos.x - you.pos.x), JsMath.abs(x.pos.y - you.pos.y)) <= Talk.TALK_RANGE);
+                var r = state.residents.find((x_1) => JsMath.max(JsMath.abs(x_1.pos.x - you.pos.x), JsMath.abs(x_1.pos.y - you.pos.y)) <= Talk.TALK_RANGE);
                 if (Js.T(r))
                 {
-                    var why = Residents.meetResident(state, you, r);
-                    return Js.T(why) ? reject(why) : changed();
+                    var why_2 = Residents.meetResident(state, you, r);
+                    return Js.T(why_2) ? reject(why_2) : changed();
                 }
             }
             var s = Js.T(command.survivorId) ? Survivors.getSurvivor(state, command.survivorId) : (Js.T(you) ? state.survivors.filter((o) => o != you).sort((a, b) => (JsMath.abs(a.pos.x - you.pos.x) + JsMath.abs(a.pos.y - you.pos.y)) - (JsMath.abs(b.pos.x - you.pos.x) + JsMath.abs(b.pos.y - you.pos.y)))[Js.Idx(0)] : null);
@@ -211,11 +211,11 @@ public static partial class Commands
                 return reject("not a box on the map");
             }
             var dark = false;
-            for (var y = y0; (y <= y1) && !Js.T(dark); y++)
+            for (var y_3 = y0; (y_3 <= y1) && !Js.T(dark); y_3++)
             {
-                for (var x = x0; (x <= x1) && !Js.T(dark); x++)
+                for (var x_4 = x0; (x_4 <= x1) && !Js.T(dark); x_4++)
                 {
-                    dark = !Js.T(Fog.isExplored(state, x, y));
+                    dark = !Js.T(Fog.isExplored(state, x_4, y_3));
                 }
             }
             if (!Js.T(dark))
@@ -420,15 +420,15 @@ public static partial class Commands
             if ((command.side != null) && Js.T(Grids.inBounds(state.grid, x, y)) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x, y, command.side))] == Grids.EDGE_DOOR))
             {
                 var e = Grids.edgeIndex(state.grid, x, y, command.side);
-                var open = state.grid.edgeOpen.indexOf(e);
-                if (open >= 0)
+                var open_5 = state.grid.edgeOpen.indexOf(e);
+                if (open_5 >= 0)
                 {
-                    state.grid.edgeOpen.splice(open, 1);
+                    state.grid.edgeOpen.splice(open_5, 1);
                 }
-                var at = state.grid.edgeLocked.indexOf(e);
-                if (at >= 0)
+                var at_6 = state.grid.edgeLocked.indexOf(e);
+                if (at_6 >= 0)
                 {
-                    state.grid.edgeLocked.splice(at, 1);
+                    state.grid.edgeLocked.splice(at_6, 1);
                 }
                 else
                 {
@@ -1232,9 +1232,9 @@ public static partial class Commands
                 return "nothing in it";
             }
             var took = 0;
-            foreach (var item in Js.Iter(inside))
+            foreach (var item_7 in Js.Iter(inside))
             {
-                if (Inventory.stow(state, s, item) == null)
+                if (Inventory.stow(state, s, item_7) == null)
                 {
                     took++;
                 }

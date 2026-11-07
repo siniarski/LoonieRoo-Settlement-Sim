@@ -132,12 +132,12 @@ public static partial class Wanderers
 
     public static void arrive(SimState state)
     {
-        var taken0 = Js.Set(state.wanderers.map((w) => $"{Js.Str(w.x)},{Js.Str(w.y)}"));
+        var taken0 = Js.Set(state.wanderers.map((w_1) => $"{Js.Str(w_1.x)},{Js.Str(w_1.y)}"));
         var spot = frontierSpot(state, taken0);
         if (Js.T(spot))
         {
-            var w = addWanderer(state, spot.x, spot.y);
-            Events.logEvent(state, $"{Js.Str(w.name)}, a wanderer, is waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)}): take them in?");
+            var w_2 = addWanderer(state, spot.x, spot.y);
+            Events.logEvent(state, $"{Js.Str(w_2.name)}, a wanderer, is waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)}): take them in?");
             return;
         }
         var __d0 = state.grid;
@@ -152,8 +152,8 @@ public static partial class Wanderers
         {
             edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
         }
-        var taken = Js.Set(state.wanderers.map((w) => $"{Js.Str(w.x)},{Js.Str(w.y)}"));
-        var candidates = edge.filter((p) => (Grids.getTile(state.grid, p.x, p.y) == "floor") && !taken.has($"{Js.Str(p.x)},{Js.Str(p.y)}"));
+        var taken = Js.Set(state.wanderers.map((w_3) => $"{Js.Str(w_3.x)},{Js.Str(w_3.y)}"));
+        var candidates = edge.filter((p_4) => (Grids.getTile(state.grid, p_4.x, p_4.y) == "floor") && !taken.has($"{Js.Str(p_4.x)},{Js.Str(p_4.y)}"));
         if (candidates.length == 0)
         {
             return;

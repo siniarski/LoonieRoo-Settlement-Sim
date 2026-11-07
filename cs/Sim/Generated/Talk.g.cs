@@ -380,7 +380,7 @@ public static partial class Talk
             Events.logEvent(state, $"{Js.Str(giver.name)} called for {Js.Str(lost.name)} on the radio until dark. Nobody answered.");
             return false;
         }
-        var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w) => $"{Js.Str(w.x)},{Js.Str(w.y)}")));
+        var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w_1) => $"{Js.Str(w_1.x)},{Js.Str(w_1.y)}")));
         if (!Js.T(spot))
         {
             return null;

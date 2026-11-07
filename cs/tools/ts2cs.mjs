@@ -22,6 +22,14 @@ const OUT = 'cs/Sim/Generated';
 const HAND = { grid: 'Grids', pathfinding: 'Pathfinding', space: 'Space', rng: 'Rng', hash: 'Hash', time: 'Time', lookup: 'Lookup' };
 const renames = JSON.parse(readFileSync('cs/tools/typenames.json', 'utf8'));
 const stateSrc = readFileSync('cs/Sim/State.g.cs', 'utf8');
+/** Field name -> the C# types it has across the state classes. */
+const fieldTypes = new Map();
+for (const m of stateSrc.matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; \}/g)) {
+  if (!fieldTypes.has(m[2])) fieldTypes.set(m[2], new Set());
+  fieldTypes.get(m[2]).add(m[1].replace(/\?$/, ''));
+}
+/** A field whose value is always a JsRecord. */
+const recordField = (name) => fieldTypes.has(name) && [...fieldTypes.get(name)].every((x) => x.startsWith('JsRecord'));
 const typeClasses = new Set([...stateSrc.matchAll(/public partial class (\w+)/g)].map((m) => m[1]));
 
 const files = readdirSync(SIM).filter((f) => f.endsWith('.ts')).map((f) => f.replace(/\.ts$/, ''));
@@ -75,6 +83,9 @@ function inlineType(lit, mod) {
 /** Fields that are whole numbers in every class (gen-state.mjs INT_FIELDS). */
 /** Return types of functions, by "Class.name" and by bare name (filled as modules are translated; two passes). */
 const fnRet = new Map(Object.entries({ "Hash.hashRoll": "double", "Hash.idNumber": "double", "Rng.random": "double", "Rng.randomInt": "int", "Grids.inBounds": "bool", "Grids.getTile": "string?", "Grids.isWalkable": "bool", "Grids.tileIndex": "int", "Grids.edgeBetween": "int", "Grids.edgeIndex": "int", "Grids.isOpen": "bool", "Grids.isLocked": "bool", "Space.manhattan": "int", "Space.samePoint": "bool", "Space.nearestTile": "Point?", "Pathfinding.findPathToAny": "List<Point>?", "Pathfinding.findPath": "List<Point>?", "Pathfinding.canReach": "bool", "Pathfinding.isPassable": "bool", "Pathfinding.crossable": "bool", "Pathfinding.openBetween": "bool", "Pathfinding.seesThrough": "bool", "Time.dayOf": "int", "Time.tickOfDay": "int", "Time.hourOf": "double", "Time.isNight": "bool", "Time.slowTick": "bool" }));
+
+/** Module constants that are C# consts (literals), by "Class.NAME" -> type: usable as default values. */
+const constTypes = new Map();
 
 /** Re-exports, module -> name -> the module it really lives in. */
 const reexports = new Map();
@@ -312,9 +323,55 @@ function translate(mod) {
     return n;
   }
 
+  // Block scopes: JavaScript lets an inner block declare a name an enclosing block also declares (even later);
+  // C# doesn't, so such an inner declaration gets a new name (to_1), used for it throughout its block.
+  const scopes = [];
+  let renameCount = 0;
+  function namesIn(stmts) {
+    const out = [];
+    const pat = (x) => {
+      if (!x) return;
+      if (x.type === 'Identifier') out.push(x.name);
+      else if (x.type === 'ObjectPattern') x.properties.forEach((q) => pat(q.value ?? q.key));
+      else if (x.type === 'ArrayPattern') x.elements.forEach(pat);
+      else if (x.type === 'AssignmentPattern') pat(x.left);
+      else if (x.type === 'RestElement') pat(x.argument);
+    };
+    for (const s of stmts) {
+      if (s.type === 'VariableDeclaration') s.declarations.forEach((d) => pat(d.id));
+      if (s.type === 'FunctionDeclaration') out.push(s.id.name);
+    }
+    return out;
+  }
+  function pushScope(names) {
+    scopes.push({ declared: new Set(names), renames: new Map() });
+  }
+  function popScope() {
+    scopes.pop();
+  }
+  /** The C# name for a declaration of `n` in the innermost scope. */
+  function declName(n) {
+    const top = scopes[scopes.length - 1];
+    if (!top) return id(n);
+    for (let i = 0; i < scopes.length - 1; i++) {
+      const s = scopes[i];
+      if (s.declared.has(n) || [...s.renames.values()].includes(n)) {
+        const nn = `${n}_${++renameCount}`;
+        top.renames.set(n, nn);
+        return id(nn);
+      }
+    }
+    return id(n);
+  }
+  /** What a name refers to here (a renamed declaration, or itself). */
+  function lookupName(n) {
+    for (let i = scopes.length - 1; i >= 0; i--) if (scopes[i].renames.has(n)) return scopes[i].renames.get(n);
+    return n;
+  }
+
   /** var (a, b) = x; or, for one name, var a = x[0]; */
   function destructure(elements, value) {
-    const names = elements.map((x) => (x ? id(x.name) : '_'));
+    const names = elements.map((x) => (x ? declName(x.name) : '_'));
     if (names.length === 1) return `var ${names[0]} = (${value})[0];`;
     return `var (${names.join(', ')}) = ${value};`;
   }
@@ -343,6 +400,8 @@ function translate(mod) {
         if (n === 'undefined') return 'null';
         if (n === 'Infinity') return 'double.PositiveInfinity';
         if (n === 'NaN') return 'double.NaN';
+        const local = lookupName(n);
+        if (local !== n) return id(local);
         if (imports.has(n)) return imports.get(n);
         return id(n);
       }
@@ -525,6 +584,11 @@ function translate(mod) {
     return `new ${c}(${args})`;
   }
 
+  /** An object literal as a JsRecord: new() { ["k"] = v }. */
+  function recordInit(o) {
+    return `new() { ${o.properties.map((p) => (p.type === 'Property' && !p.computed ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`;
+  }
+
   function obj(e) {
     const parts = [];
     let spread = null;
@@ -535,7 +599,7 @@ function translate(mod) {
       }
       if (p.computed) return `/*TODO computed key*/new()`;
       const key = p.key.type === 'Identifier' ? p.key.name : p.key.value;
-      const value = p.shorthand ? ex(p.key) : p.value.type === 'ArrowFunctionExpression' || p.value.type === 'FunctionExpression' ? lambda(p.value) : ex(p.value);
+      const value = p.shorthand ? ex(p.key) : p.value.type === 'ArrowFunctionExpression' || p.value.type === 'FunctionExpression' ? lambda(p.value) : p.value.type === 'ObjectExpression' && recordField(String(key)) ? recordInit(p.value) : ex(p.value);
       parts.push(`${id(String(key))} = ${INT_FIELDS.has(String(key)) ? `Js.I(${value})` : value}`);
     }
     if (spread) {
@@ -554,6 +618,7 @@ function translate(mod) {
   }
 
   function param(p, defaults) {
+    const pname = (n) => (scopes.length ? declName(n) : id(n));
     let name;
     let t;
     let def = null;
@@ -566,30 +631,49 @@ function translate(mod) {
     } else if (p.type === 'Identifier') {
       name = p.name;
       t = p.typeAnnotation?.typeAnnotation;
+    } else if (p.type === 'ObjectPattern') {
+      const v = `__o${tmp++}`;
+      for (const q of p.properties) defaults.push(`var ${id(q.value?.name ?? q.key.name)} = ${v}.${id(q.key.name)};`);
+      return `${ty(p.typeAnnotation?.typeAnnotation, mod) ?? 'object'} ${v}`;
     } else return `/*TODO param pattern*/object _p${tmp++}`;
     hint = pascal(curFn) + pascal(name);
     let cs = t ? ty(t, mod, name) : def ? (def.type === 'Literal' && typeof def.value === 'number' ? (Number.isInteger(def.value) && INT_NAMES.has(name) ? 'int' : 'double') : def.type === 'Literal' && typeof def.value === 'string' ? 'string' : def.type === 'Literal' && typeof def.value === 'boolean' ? 'bool' : null) : null;
+    if (!cs && def?.type === 'Identifier' && constTypes.has(imports.get(def.name) ?? `${modClass(mod)}.${def.name}`)) cs = 'double';
     if (!cs && def && ((def.type === 'Identifier' && /^[A-Z_0-9]+$/.test(def.name)) || def.type === 'BinaryExpression' || (def.type === 'MemberExpression' && /^[A-Z_0-9]+$/.test(def.property?.name ?? '')))) cs = 'double';
     if (!cs) cs = '/*TODO param type*/object';
+    const nm = pname(name);
     if (p.optional && !cs.endsWith('?')) cs += '?';
     if (def) {
-      const literal = def.type === 'Literal' || (def.type === 'Identifier' && def.name === 'Infinity') || (def.type === 'UnaryExpression' && def.argument.type === 'Literal');
-      if (literal) return `${cs} ${id(name)} = ${ex(def)}`;
-      defaults.push(`${id(name)} ??= ${ex(def)};`);
-      return `${cs.endsWith('?') ? cs : cs + '?'} ${id(name)} = null`;
+      // A C# const (a module constant that's a literal) can be a default value too.
+      const constName = def.type === 'Identifier' ? (imports.get(def.name) ?? `${modClass(mod)}.${def.name}`) : null;
+      const isConstDefault = !!constName && constTypes.has(constName);
+      if (isConstDefault && cs.includes('TODO')) cs = constTypes.get(constName);
+      const literal = def.type === 'Literal' || (def.type === 'Identifier' && def.name === 'Infinity') || (def.type === 'UnaryExpression' && def.argument.type === 'Literal') || isConstDefault;
+      if (literal) return `${cs} ${nm} = ${ex(def)}`;
+      defaults.push(`${nm} ??= ${ex(def)};`);
+      return `${cs.endsWith('?') ? cs : cs + '?'} ${nm} = null`;
     }
-    if (p.optional) return `${cs} ${id(name)} = default`;
-    return `${cs} ${id(name)}`;
+    if (p.optional) return `${cs} ${nm} = default`;
+    return `${cs} ${nm}`;
   }
 
   function lambda(fn) {
+    pushScope(namesIn([{ type: 'VariableDeclaration', declarations: fn.params.map((x) => ({ id: x })) }]));
+    try {
+      return lambda0(fn);
+    } finally {
+      popScope();
+    }
+  }
+
+  function lambda0(fn) {
     const defaults = [];
     const typed = fn.params.every((p) => p.type === 'Identifier' && p.typeAnnotation);
     const unpack = [];
     const ps = fn.params.map((p) => {
       if (typed) return param(p, defaults);
-      if (p.type === 'Identifier') return id(p.name);
-      if (p.type === 'AssignmentPattern') return id(p.left.name);
+      if (p.type === 'Identifier') return declName(p.name);
+      if (p.type === 'AssignmentPattern') return declName(p.left.name);
       const v = `__p${tmp++}`;
       if (p.type === 'ArrayPattern') unpack.push(destructure(p.elements, v));
       else if (p.type === 'ObjectPattern') for (const q of p.properties) unpack.push(`var ${id(q.value?.name ?? q.key.name)} = ${v}.${id(q.key.name)};`);
@@ -610,9 +694,11 @@ function translate(mod) {
 
   // Statements.
   function block(b, ind, ctx) {
+    pushScope(namesIn(b.body));
     const lines = [`${ind.slice(4)}{`];
     for (const s of b.body) lines.push(...stmt(s, ind, ctx));
     lines.push(`${ind.slice(4)}}`);
+    popScope();
     return lines.join('\n');
   }
 
@@ -680,7 +766,7 @@ function translate(mod) {
               const ps = fn.params.map((p) => param(p, defaults));
               const ret = fn.returnType ? ty(fn.returnType.typeAnnotation, mod) : guessReturn(fn);
               const bodyText = fn.body.type === 'BlockStatement' ? block(fn.body, ind + '    ', { fnRet: ret }) : `${ind}{\n${ind}    ${ret === 'void' ? '' : 'return '}${ex(fn.body, ret === 'bool')};\n${ind}}`;
-              lines.push(`${ind}${ret} ${id(d.id.name)}(${ps.join(', ')})`);
+              lines.push(`${ind}${ret} ${declName(d.id.name)}(${ps.join(', ')})`);
               lines.push(bodyText.split('\n').map((l, i) => (i === 0 && fn.body.type === 'BlockStatement' ? ind + l.trimStart() : l)).join('\n'));
               continue;
             }
@@ -690,7 +776,7 @@ function translate(mod) {
           const init = d.__record || (t.startsWith('JsRecord') && lit?.type === 'ObjectExpression')
             ? ` = new() { ${lit.properties.map((p) => (p.type === 'Property' ? `[${str(String(p.key.name ?? p.key.value))}] = ${ex(p.value)}` : '[Js.TODO_SPREAD] = default!')).join(', ')} }`
             : d.init ? ` = ${ex(d.init, t === 'bool')}` : t.endsWith('?') ? ' = null' : ' = default!';
-          lines.push(`${ind}${t} ${id(d.id.name)}${init};`);
+          lines.push(`${ind}${t} ${declName(d.id.name)}${init};`);
         }
         return lines;
       }
@@ -710,30 +796,38 @@ function translate(mod) {
       }
       case 'BlockStatement': return [block(s, ind + '    ', ctx)];
       case 'ForStatement': {
+        pushScope(s.init?.type === 'VariableDeclaration' ? namesIn([s.init]) : []);
         let init = '';
         if (s.init?.type === 'VariableDeclaration') {
           init = s.init.declarations.map((d, i) => {
             const t = d.id.typeAnnotation ? ty(d.id.typeAnnotation.typeAnnotation, mod, d.id.name) : 'var';
-            return `${i === 0 ? t + ' ' : ''}${id(d.id.name)} = ${ex(d.init)}`;
+            const v = ex(d.init);
+            return `${i === 0 ? t + ' ' : ''}${declName(d.id.name)} = ${v}`;
           }).join(', ');
         } else if (s.init) init = ex(s.init);
         const update = s.update ? (s.update.type === 'SequenceExpression' ? s.update.expressions.map((x) => ex(x)).join(', ') : ex(s.update)) : '';
-        return [`${ind}for (${init}; ${s.test ? ex(s.test, true) : ''}; ${update})`, body(s.body, ind, ctx)];
+        const out = [`${ind}for (${init}; ${s.test ? ex(s.test, true) : ''}; ${update})`, body(s.body, ind, ctx)];
+        popScope();
+        return out;
       }
       case 'ForOfStatement': {
         const left = s.left.type === 'VariableDeclaration' ? s.left.declarations[0].id : s.left;
-        const v = left.type === 'ArrayPattern' ? `var (${left.elements.map((x) => (x ? id(x.name) : '_')).join(', ')})` : left.type === 'ObjectPattern' ? `var __o${tmp}` : `var ${id(left.name)}`;
         const lt = literalType(s.right);
-        const lines = [`${ind}foreach (${v} in Js.Iter(${lt ? `(${lt})` : ''}${ex(s.right)}))`];
+        const iter = ex(s.right);
+        pushScope(s.left.type === 'VariableDeclaration' ? namesIn([s.left]) : []);
+        const v = left.type === 'ArrayPattern' ? `var (${left.elements.map((x) => (x ? declName(x.name) : '_')).join(', ')})` : left.type === 'ObjectPattern' ? `var __o${tmp}` : `var ${declName(left.name)}`;
+        const lines = [`${ind}foreach (${v} in Js.Iter(${lt ? `(${lt})` : ''}${iter}))`];
         if (left.type === 'ObjectPattern') {
           const t = `__o${tmp++}`;
-          const inner = left.properties.map((p) => `${ind}    var ${id(p.value.name ?? p.key.name)} = ${t}.${id(p.key.name)};`);
+          const inner = left.properties.map((p) => `${ind}    var ${declName(p.value.name ?? p.key.name)} = ${t}.${id(p.key.name)};`);
           const b = body(s.body, ind, ctx).split('\n');
           b.splice(1, 0, ...inner);
           lines.push(b.join('\n'));
+          popScope();
           return lines;
         }
         lines.push(body(s.body, ind, ctx));
+        popScope();
         return lines;
       }
       case 'ForInStatement': {
@@ -853,6 +947,7 @@ function translate(mod) {
       const c = ty(p.constraint, mod);
       return c && !c.includes('TODO') && c !== 'object' ? ` where ${p.name.name ?? p.name} : class, ${c}` : ` where ${p.name.name ?? p.name} : class`;
     }).join('');
+    pushScope(f.params.map((p) => (p.type === 'AssignmentPattern' ? p.left.name : p.name)).filter(Boolean));
     const ps = f.params.map((p) => param(p, defaults));
     hint = pascal(name) + 'Result';
     const ret = f.returnType ? ty(f.returnType.typeAnnotation, mod) : guessReturn(f);
@@ -862,6 +957,7 @@ function translate(mod) {
     }
     const head = `${ind}${top ? 'public static ' : ''}${ret} ${id(name)}${tparams}(${ps.join(', ')})${where}`;
     const b = block(f.body, ind + '    ', { fnRet: ret }).split('\n');
+    popScope();
     b[0] = ind + b[0].trimStart();
     if (defaults.length) b.splice(1, 0, ...defaults.map((d) => `${ind}    ${d}`));
     b[b.length - 1] = ind + b[b.length - 1].trimStart();
@@ -870,7 +966,8 @@ function translate(mod) {
     const intParams = ps.map((x) => /^int\??\s/.test(x));
     if (top && intParams.some(Boolean) && !tparams) {
       const dps = ps.map((x, i) => (intParams[i] ? x.replace(/^int/, 'double') : x));
-      const names = f.params.map((p) => id(p.type === 'AssignmentPattern' ? p.left.name : p.type === 'RestElement' ? p.argument.name : p.name));
+      // (The parameters' C# names, as declared: a scope may have renamed one.)
+      const names = ps.map((x) => x.replace(/ = .*$/, '').trim().split(/\s+/).pop());
       const call = names.map((n, i) => (intParams[i] ? (ps[i].startsWith('int?') ? `Js.I(${n})` : `(int)${n}`) : n)).join(', ');
       return [head, ...b, `${ind}public static ${ret} ${id(name)}(${dps.join(', ')})${where} => ${id(name)}(${call});`];
     }
@@ -933,6 +1030,7 @@ function translate(mod) {
         }
         if (t === 'var') t = '/*TODO const type*/object';
         const isConst = d.kind === 'const' && ['int', 'double', 'string', 'bool'].includes(t) && init && (init.type === 'Literal' || init.type === 'TemplateLiteral' && init.expressions.length === 0 || (init.type === 'UnaryExpression' && init.argument.type === 'Literal'));
+        if (isConst) constTypes.set(`${modClass(mod)}.${name}`, t);
         members.push('', ...docFor(n, '    '), `    public ${isConst ? 'const' : d.kind === 'const' ? 'static readonly' : 'static'} ${t} ${id(name)}${initText !== null ? ` = ${initText}` : ''};`);
       }
       continue;

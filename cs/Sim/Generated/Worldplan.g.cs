@@ -252,23 +252,23 @@ public static partial class Worldplan
         });
                 if (Js.T(edge) && (since >= 15))
                 {
-                    double r(int j)
+                    double r_1(int j)
                     {
                         return NatureMod.roll(n.seed, ri, i, 0x7480 + j);
                     }
-                    var along = JsMath.abs(b.x - a.x) >= JsMath.abs(b.y - a.y);
-                    var cx = JsMath.round(b.x);
-                    var cy = JsMath.round(b.y);
-                    foreach (var side in Js.Iter((List<int>)[-1, 1]))
+                    var along_2 = JsMath.abs(b.x - a.x) >= JsMath.abs(b.y - a.y);
+                    var cx_3 = JsMath.round(b.x);
+                    var cy_4 = JsMath.round(b.y);
+                    foreach (var side_5 in Js.Iter((List<int>)[-1, 1]))
                     {
-                        if (r(side + 2) > 0.7)
+                        if (r_1(side_5 + 2) > 0.7)
                         {
                             continue;
                         }
-                        var front = 12 + JsMath.floor(r(5 + side) * 3);
-                        var deep = 13 + JsMath.floor(r(8 + side) * 3);
-                        var lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
-                        if (Js.T(add(Js.With(Js.Clone(lot), __s3 => { __s3.zone = "residential"; __s3.town = towns.indexOf(edge); }))))
+                        var front_6 = 12 + JsMath.floor(r_1(5 + side_5) * 3);
+                        var deep_7 = 13 + JsMath.floor(r_1(8 + side_5) * 3);
+                        var lot_8 = Js.T(along_2) ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
+                        if (Js.T(add(Js.With(Js.Clone(lot_8), __s3 => { __s3.zone = "residential"; __s3.town = towns.indexOf(edge); }))))
                         {
                             since = 0;
                         }

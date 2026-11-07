@@ -34,9 +34,8 @@ public static partial class Fog
     public static bool isExplored(SimState state, double x, double y) => isExplored(state, (int)x, (int)y);
 
     /// <summary>Reveals a whole circle, walls or not (the camp at the start).</summary>
-    public static void revealAround(SimState state, Point p, double? r = null)
+    public static void revealAround(SimState state, Point p, double r = Sight.SIGHT_RADIUS)
     {
-        r ??= Sight.SIGHT_RADIUS;
         var __d0 = state;
         var grid = __d0.grid;
         for (var y = JsMath.max(0, p.y - r); y <= JsMath.min(grid.height - 1, p.y + r); y++)

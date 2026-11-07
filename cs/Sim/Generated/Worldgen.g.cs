@@ -305,9 +305,8 @@ public static partial class Worldgen
     }
 
     /// <summary>A new generated world; `you`, if given, becomes the first survivor (character.ts).</summary>
-    public static SimState createWorld(double seed, double? size = null, Settings? settings = null, Character? you = default)
+    public static SimState createWorld(double seed, double size = WORLD_SIZE, Settings? settings = null, Character? you = default)
     {
-        size ??= WORLD_SIZE;
         settings ??= Difficulty.NORMAL;
         var state = States.createState(new() { seed = seed, width = Js.I(size), height = Js.I(size) });
         state.settings = Js.Clone(settings);

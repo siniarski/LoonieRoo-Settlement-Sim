@@ -344,17 +344,17 @@ public static partial class Rooms
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
-            List<int> @out = [i];
+            List<int> out_1 = [i];
             foreach (var (dx, dy) in Js.Iter(DIRS))
             {
                 var nx = x + dx;
                 var ny = y + dy;
                 if ((nx >= 0) && (ny >= 0) && (nx < width) && (ny < height))
                 {
-                    @out.push((ny * width) + nx);
+                    out_1.push((ny * width) + nx);
                 }
             }
-            return @out;
+            return out_1;
         }
         foreach (var c in Js.Iter(changed))
         {

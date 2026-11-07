@@ -46,7 +46,7 @@ public static partial class Errands
     /// <summary>When you talk with one of their people: maybe they ask you for something. Returns what they said, or null.</summary>
     public static string? maybeAsk(SimState state, Settlement n, double salt)
     {
-        if (Js.T(Settlements.isHostile(n)) || errandsOf(state).some((e) => e.settlementId == n.id))
+        if (Js.T(Settlements.isHostile(n)) || errandsOf(state).some((e_1) => e_1.settlementId == n.id))
         {
             return null;
         }

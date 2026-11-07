@@ -76,10 +76,10 @@ public static partial class Books
             {
                 return true;
             }
-            var book = Items.getItem(state, was.itemId);
-            if (Js.T(Js.T(book?.pos)) && (book.reservedBy == null))
+            var book_1 = Items.getItem(state, was.itemId);
+            if (Js.T(Js.T(book_1?.pos)) && (book_1.reservedBy == null))
             {
-                book.reservedBy = s.id;
+                book_1.reservedBy = s.id;
                 s.reading = was;
             }
             else

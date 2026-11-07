@@ -58,7 +58,7 @@ public static partial class Roads
             return (p == a) ? q : p;
         });
             var longest = JsMath.max(linked.map((b) => d(a, b)));
-            var near = nodes.map((_, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
+            var near = nodes.map((__1, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
             if ((near != null) && (d(a, near) < (longest * 1.4)) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5) && !edges.some((__p2) =>
         {
             var (p, q) = __p2;

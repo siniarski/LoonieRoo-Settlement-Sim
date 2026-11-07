@@ -438,8 +438,8 @@ public static partial class Lots
         foreach (var e in Js.Iter(plan.edges))
         {
             var a = at(e.ax, e.ay);
-            var b = at(e.bx, e.by);
-            var (ox, oy, side) = (b.y == (a.y - 1)) ? [a.x, a.y, "n"] : (b.y == (a.y + 1)) ? [b.x, b.y, "n"] : ((b.x == (a.x - 1)) ? [a.x, a.y, "w"] : [b.x, b.y, "w"]);
+            var b_1 = at(e.bx, e.by);
+            var (ox, oy, side) = (b_1.y == (a.y - 1)) ? [a.x, a.y, "n"] : (b_1.y == (a.y + 1)) ? [b_1.x, b_1.y, "n"] : ((b_1.x == (a.x - 1)) ? [a.x, a.y, "w"] : [b_1.x, b_1.y, "w"]);
             if (!Js.T(inside(ox, oy)))
             {
                 continue;
@@ -490,9 +490,9 @@ public static partial class Lots
             }
             else
             {
-                var d = FurnitureMod.addFurniture(state, "decor", w.x, w.y);
-                d.look = f.look;
-                d.loot = TimelineMod.TANK_WATER[Js.Idx(f.look)] ?? 0;
+                var d_2 = FurnitureMod.addFurniture(state, "decor", w.x, w.y);
+                d_2.look = f.look;
+                d_2.loot = TimelineMod.TANK_WATER[Js.Idx(f.look)] ?? 0;
             }
         });
         var d = ctx.distance(b.ox, b.oy);

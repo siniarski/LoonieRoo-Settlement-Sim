@@ -3,4 +3,5 @@
 // found any more is reported (the translation changed: look at it again).
 // Shape: [file (class name), text as translated, text as it should be, why]
 export const FIXUPS = [
+  ['States', '((SimState)(/*TODO JSON.parse*/Js.Json_parse(/*TODO JSON.stringify*/Js.Json_stringify(state))))', 'StateJson.Clone(state)', 'cloneState: a deep copy through JSON'],
 ];

@@ -66,7 +66,7 @@ public static partial class Settlements
 
     public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)
     {
-        Settlement n = new() { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new(), unfolded = false, lastTalk = -1, lastRaid = -1 };
+        Settlement n = new() { id = $"n{Js.Str(state.nextId++)}", name = name, x = Js.I(x), y = Js.I(y), reputation = 0, people = people, food = food, defence = defence, ties = new() {  }, unfolded = false, lastTalk = -1, lastRaid = -1 };
         state.settlements.push(n);
         return n;
     }
@@ -151,7 +151,7 @@ public static partial class Settlements
                 continue;
             }
             s.people -= 1;
-            var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w) => $"{Js.Str(w.x)},{Js.Str(w.y)}")));
+            var spot = Wanderers.frontierSpot(state, Js.Set(state.wanderers.map((w_1) => $"{Js.Str(w_1.x)},{Js.Str(w_1.y)}")));
             if (!Js.T(spot))
             {
                 return;

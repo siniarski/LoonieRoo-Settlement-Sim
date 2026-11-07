@@ -29,16 +29,14 @@ public static partial class Motion
     public const int REACH = 282;
 
     /// <summary>Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door between their tiles (grid.ts) stops a blow or a bite (pathfinding.ts openBetween).</summary>
-    public static bool inReach(IHasAt a, IHasAt b, double? reach = null, Grid? grid = default)
+    public static bool inReach(IHasAt a, IHasAt b, double reach = REACH, Grid? grid = default)
     {
-        reach ??= REACH;
         return (distance2(a.at, b.at) <= (reach * reach)) && (!Js.T(grid) || Js.T(Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at))));
     }
 
     /// <summary>The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees of `facing` either way). Integer maths: dot &gt; 0 and 4 * dot^2 &gt;= |facing|^2 * |d|^2 (cos 60 = 1/2).</summary>
-    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, double? reach = null, Grid? grid = default) where T : class, IHasAt
+    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, double reach = SWING_REACH, Grid? grid = default) where T : class, IHasAt
     {
-        reach ??= SWING_REACH;
         var f2 = (facing.x * facing.x) + (facing.y * facing.y);
         T? best = null;
         var bestD2 = double.PositiveInfinity;
@@ -123,9 +121,8 @@ public static partial class Motion
     }
 
     /// <summary>Can a body of BODY_RADIUS stand with its centre here (every tile it overlaps passable)?</summary>
-    public static bool fits(Grid grid, Point at, string mover, double? r = null)
+    public static bool fits(Grid grid, Point at, string mover, double r = BODY_RADIUS)
     {
-        r ??= BODY_RADIUS;
         var x0 = JsMath.floor(((double)((at.x - r)) / (SUB)));
         var x1 = JsMath.floor(((double)((at.x + r)) / (SUB)));
         var y0 = JsMath.floor(((double)((at.y - r)) / (SUB)));
@@ -171,9 +168,8 @@ public static partial class Motion
     public static bool touches(Point c, double r, double x0, double y0, double x1, double y1) => touches(c, r, (int)x0, (int)y0, (int)x1, (int)y1);
 
     /// <summary>Move a body by (dx, dy) SUB units, stopping at walls: each axis on its own, so it slides along a wall rather than sticking to it. Big moves go in steps no longer than a radius, so nothing tunnels through a wall. Returns the new centre.</summary>
-    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double? r = null)
+    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double r = BODY_RADIUS)
     {
-        r ??= BODY_RADIUS;
         var x = at.x;
         var y = at.y;
         var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.max(JsMath.abs(dx), JsMath.abs(dy))) / (r))));
@@ -192,7 +188,7 @@ public static partial class Motion
         }
         return new Point { x = Js.I(x), y = Js.I(y) };
     }
-    public static Point slide(Grid grid, Point at, double dx, double dy, string mover, double? r = null) => slide(grid, at, (int)dx, (int)dy, mover, r);
+    public static Point slide(Grid grid, Point at, double dx, double dy, string mover, double r = BODY_RADIUS) => slide(grid, at, (int)dx, (int)dy, mover, r);
 
     /// <summary>A vector of length `len` (SUB units) towards (dx, dy), in integers. (0, 0) stays (0, 0).</summary>
     public static Point toward(int dx, int dy, double len)
@@ -207,9 +203,8 @@ public static partial class Motion
     public static Point toward(double dx, double dy, double len) => toward((int)dx, (int)dy, len);
 
     /// <summary>Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (control.ts).</summary>
-    public static bool inWindowFrame(Grid grid, Point at, double? r = null)
+    public static bool inWindowFrame(Grid grid, Point at, double r = BODY_RADIUS)
     {
-        r ??= BODY_RADIUS;
         var x0 = JsMath.floor(((double)((at.x - r)) / (SUB)));
         var x1 = JsMath.floor(((double)((at.x + r)) / (SUB)));
         var y0 = JsMath.floor(((double)((at.y - r)) / (SUB)));

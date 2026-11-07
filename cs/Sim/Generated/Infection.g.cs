@@ -32,9 +32,8 @@ public static partial class Infection
     }
 
     /// <summary>A zombie's hit: maybe it infects.</summary>
-    public static void maybeInfect(SimState state, Survivor s, string zombieId, double? chance = null)
+    public static void maybeInfect(SimState state, Survivor s, string zombieId, double chance = INFECTION_CHANCE)
     {
-        chance ??= INFECTION_CHANCE;
         if (s.infection != null)
         {
             return;

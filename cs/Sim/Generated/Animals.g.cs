@@ -311,19 +311,19 @@ public static partial class Animals
         var nearest = closestSurvivor(state, a.pos);
         if ((Js.T(hurt) && Js.T(nearest)) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
-            var to = stepAway(state, a, nearest.pos);
-            if (Js.T(to))
+            var to_1 = stepAway(state, a, nearest.pos);
+            if (Js.T(to_1))
             {
-                step(a, to);
+                step(a, to_1);
             }
             return;
         }
         if (((a.backOffUntil ?? 0) > state.tick) && !Js.T(a.angryAt) && Js.T(nearest) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
-            var to = stepAway(state, a, nearest.pos);
-            if (Js.T(to))
+            var to_2 = stepAway(state, a, nearest.pos);
+            if (Js.T(to_2))
             {
-                step(a, to);
+                step(a, to_2);
             }
             return;
         }
@@ -331,10 +331,10 @@ public static partial class Animals
         a.targetId = target?.id ?? null;
         if ((!Js.T(target) && (a.kind == "wolf")) && Js.T(nearest) && (Space.manhattan(nearest.pos, a.pos) <= WOLF_WARY))
         {
-            var to = stepAway(state, a, nearest.pos);
-            if (Js.T(to))
+            var to_3 = stepAway(state, a, nearest.pos);
+            if (Js.T(to_3))
             {
-                step(a, to);
+                step(a, to_3);
             }
             return;
         }
@@ -343,10 +343,10 @@ public static partial class Animals
             var leader = (Js.T(a.packId) && (a.packId != a.id)) ? state.animals.find((o) => o.id == a.packId) : null;
             if (Js.T(leader) && (Space.manhattan(leader.pos, a.pos) > 2))
             {
-                var to = stepAway(state, a, leader.pos, true);
-                if (Js.T(to))
+                var to_4 = stepAway(state, a, leader.pos, true);
+                if (Js.T(to_4))
                 {
-                    step(a, to);
+                    step(a, to_4);
                 }
                 return;
             }

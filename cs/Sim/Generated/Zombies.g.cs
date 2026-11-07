@@ -74,15 +74,14 @@ public static partial class Zombies
         return Lookup.findById(state.zombies, id);
     }
 
-    public static Zombie addZombie(SimState state, int x, int y, double? health = null, string kind = "night")
+    public static Zombie addZombie(SimState state, int x, int y, double health = ZOMBIE_HEALTH, string kind = "night")
     {
-        health ??= ZOMBIE_HEALTH;
         Zombie z = /*TODO object spread*/Js.Spread(Motion.placedAt(new Point { x = Js.I(x), y = Js.I(y) }), new() { id = $"z{Js.Str(state.nextId++)}", pos = new Point { x = Js.I(x), y = Js.I(y) }, move = null, path = [], targetId = null, health = health, maxHealth = health, cooldown = 0, nextThinkTick = 0, kind = kind, heading = null, variant = "walker", screamed = false, stuckUntil = 0, windup = 0, staggerUntil = 0, hurtTick = -1 });
         state.zombies.push(z);
         edited(state.zombies);
         return z;
     }
-    public static Zombie addZombie(SimState state, double x, double y, double? health = null, string kind = "night") => addZombie(state, (int)x, (int)y, health, kind);
+    public static Zombie addZombie(SimState state, double x, double y, double health = ZOMBIE_HEALTH, string kind = "night") => addZombie(state, (int)x, (int)y, health, kind);
 
     /// <summary>How many times each zombie list has been added to or taken from in place (for zombiesWithin's buckets).</summary>
     public static readonly JsMap<List<Zombie>, double> edits = new JsMap<List<Zombie>, double>();
@@ -154,9 +153,8 @@ public static partial class Zombies
     }
 
     /// <summary>Any zombie within `radius` (Manhattan) of a point.</summary>
-    public static bool zombieNear(SimState state, Point p, double? radius = null)
+    public static bool zombieNear(SimState state, Point p, double radius = DANGER_RADIUS)
     {
-        radius ??= DANGER_RADIUS;
         return state.zombies.some((z) => Space.manhattan(z.pos, p) <= radius);
     }
 
@@ -346,7 +344,7 @@ public static partial class Zombies
         {
             bool free(int x, int y)
             {
-                return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.zombies.some((z) => (z.pos.x == x) && (z.pos.y == y));
+                return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.zombies.some((z_1) => (z_1.pos.x == x) && (z_1.pos.y == y));
             }
             var q = Space.nearestTile(state.grid, p, free) ?? p;
             var z = addZombie(state, q.x, q.y, health);
