@@ -90,19 +90,19 @@ public static partial class Lots
         {
             case "north":
                 {
-                    return new() { u = Js.I(x - lot.x), v = Js.I(y - lot.y) };
+                    return new MapToLotResult { u = Js.I(x - lot.x), v = Js.I(y - lot.y) };
                 }
             case "south":
                 {
-                    return new() { u = Js.I(x - lot.x), v = Js.I(((lot.y + lot.h) - 1) - y) };
+                    return new MapToLotResult { u = Js.I(x - lot.x), v = Js.I(((lot.y + lot.h) - 1) - y) };
                 }
             case "west":
                 {
-                    return new() { u = Js.I(y - lot.y), v = Js.I(x - lot.x) };
+                    return new MapToLotResult { u = Js.I(y - lot.y), v = Js.I(x - lot.x) };
                 }
             case "east":
                 {
-                    return new() { u = Js.I(y - lot.y), v = Js.I(((lot.x + lot.w) - 1) - x) };
+                    return new MapToLotResult { u = Js.I(y - lot.y), v = Js.I(((lot.x + lot.w) - 1) - x) };
                 }
         }
         throw new InvalidOperationException("unreachable: every case returns");

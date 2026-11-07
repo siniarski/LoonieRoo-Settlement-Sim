@@ -74,12 +74,12 @@ public static partial class FurnitureMod
     /// <summary>Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never moves, and only addFurniture/removeFurniture change the list, so they drop the cache. (A generated world has thousands of trees: scanning the list per tile was the cost.)</summary>
     public static readonly JsMap<List<Furniture>, IndexesEntry> indexes = new JsMap<List<Furniture>, IndexesEntry>();
 
-    public static /*TODO return type*/object index(SimState state)
+    public static IndexesEntry? index(SimState state)
     {
         var found = indexes.get(state.furniture);
         if (!Js.T(found))
         {
-            found = new() { byTile = /*TODO Map type*/new JsMap<object, object>(), byId = /*TODO Map type*/new JsMap<object, object>(), byKind = /*TODO Map type*/new JsMap<object, object>(), marked = null };
+            found = new IndexesEntry { byTile = new JsMap<string, Furniture>(), byId = new JsMap<string, Furniture>(), byKind = new JsMap<string, List<Furniture>>(), marked = null };
             foreach (var f in Js.Iter(state.furniture))
             {
                 if (!found.byTile.has($"{Js.Str(f.x)},{Js.Str(f.y)}"))
@@ -145,7 +145,7 @@ public static partial class FurnitureMod
         return kinds.flatMap((k) => ofKind(state, k)).sort((a, b) => idOrder(a) - idOrder(b));
     }
 
-    public static /*TODO return type*/object idOrder(Furniture f)
+    public static double idOrder(Furniture f)
     {
         return Js.Num(f.id.slice(1));
     }

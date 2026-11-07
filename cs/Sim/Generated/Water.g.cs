@@ -161,7 +161,7 @@ public static partial class Water
                 {
                     continue;
                 }
-                found = new() { x = Js.I(x), y = Js.I(y), source = source, from = n, progress = 0 };
+                found = new Drink { x = Js.I(x), y = Js.I(y), source = source, from = n, progress = 0 };
                 return true;
             }
             return false;

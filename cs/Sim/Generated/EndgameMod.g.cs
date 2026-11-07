@@ -58,7 +58,7 @@ public static partial class EndgameMod
     public static double siegeFactor(SimState state, double night)
     {
         var evac = state.endgame.evacuation;
-        if ((evac != null) && ((Time.dayOf(evac) - 1) == night))
+        if ((evac != null) && ((Time.dayOf(Js.NN(evac)) - 1) == night))
         {
             return EVAC_SIEGE;
         }
@@ -116,7 +116,7 @@ public static partial class EndgameMod
                 return;
             }
             eg.evacuation = (JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS) * Time.DAY_LENGTH;
-            Events.logEvent(state, $"The beacon got through: a helicopter will come at dawn on day {Js.Str(Time.dayOf(eg.evacuation))}. The night before will be the worst yet. Hold out");
+            Events.logEvent(state, $"The beacon got through: a helicopter will come at dawn on day {Js.Str(Time.dayOf(Js.NN(eg.evacuation)))}. The night before will be the worst yet. Hold out");
             return;
         }
         if (state.tick < eg.evacuation)

@@ -135,7 +135,20 @@ function inlineType(lit, mod) {
   let name = hint.replace(/[^A-Za-z0-9]/g, '');
   if (typeClasses.has(name)) name += 'Shape';
   if (inline.has(name) && inline.get(name)[2] !== names) name += inline.size;
-  if (!inline.has(name)) inline.set(name, [members, mod, names]);
+  if (!inline.has(name)) {
+    inline.set(name, [members, mod, names]);
+    // Its fields' types, for the translator's type table (as the inline class will declare them).
+    const saved = hint;
+    const fields = new Map();
+    classFields.set(name, fields);
+    for (const m of members) {
+      const k = String(m.key.name ?? m.key.value);
+      hint = name + k.replace(/^\w/, (c) => c.toUpperCase());
+      const ft = ty(m.typeAnnotation?.typeAnnotation, mod, INT_FIELDS.has(k) ? k : undefined);
+      if (ft) fields.set(k, ft + (m.optional && !ft.endsWith('?') ? '?' : ''));
+    }
+    hint = saved;
+  }
   return name;
 }
 
@@ -157,7 +170,7 @@ for (const f of ['Grid', 'Pathfinding', 'Space', 'Rng', 'Hash', 'Time', 'Lookup'
     if (c) cls = c[1];
     const m = cls && line.match(/^    public static ([\w<>?,\[\] ]+?) (\w+)(?:<\w+>)?\(/);
     if (m && !m[1].includes('class') && !fnRet.has(`${cls}.${m[2]}`)) fnRet.set(`${cls}.${m[2]}`, m[1]);
-    const pm = cls && line.match(/^    public static [\w<>?,\[\] ]+? (\w+)(?:<\w+>)?\((.*)\)/);
+    const pm = cls && line.match(/^    public static [\w<>?,\[\] ]+? (\w+)(?:<\w+>)?\(([^)]*)\)/);
     if (pm && !fnParams.has(`${cls}.${pm[1]}`)) {
       const parts = [];
       let depth = 0;
@@ -519,6 +532,8 @@ function translate(mod) {
   }
   /** The const declarations seen, by name: their values tell what strings a key can be. */
   const initOf = new Map();
+  /** Module consts whose type comes from their value (new Map<...>() and the like). */
+  const moduleInits = new Map();
   for (const n of ast.body) {
     const d = n.type === 'ExportNamedDeclaration' ? n.declaration : n;
     if (d?.type !== 'VariableDeclaration') continue;
@@ -530,6 +545,7 @@ function translate(mod) {
         moduleTypes.set(v.id.name, ty(v.id.typeAnnotation.typeAnnotation, mod));
       }
       if (d.kind === 'const' && v.init) initOf.set(v.id.name, v.init);
+      if (d.kind === 'const' && v.init && !v.id.typeAnnotation && v.init.type === 'NewExpression') moduleInits.set(v.id.name, v.init);
     }
   }
   /** The strings an expression can be (null and undefined aside), when that can be told. */
@@ -559,14 +575,18 @@ function translate(mod) {
     const ts = keys.map((k) => fields.get(k));
     return ts.length && ts.every((x) => x && x === ts[0]) ? ts[0] : null;
   }
+  /** While a body's dry run is on: its locals' types (they're out of scope by the time the return type is guessed). */
+  let collecting = null;
   function setType(n, ty_) {
     if (!ty_ || ty_ === 'var' || (ty_.includes('TODO') && !/^\/\*TODO[^*]*\*\/object\??$/.test(ty_))) return;
     ty_ = ty_.replace(/^\/\*TODO[^*]*\*\//, '');
     (scopes.length ? scopes[scopes.length - 1].types : moduleTypes).set(n, ty_);
+    if (collecting) collecting.set(n, ty_);
     if (!seenTypes.has(n)) seenTypes.set(n, new Set());
     seenTypes.get(n).add(ty_);
   }
   function typeOf(n) {
+    if (collecting?.has(n)) return collecting.get(n);
     for (let i = scopes.length - 1; i >= 0; i--) if (scopes[i].types.has(n)) return scopes[i].types.get(n);
     if (moduleTypes.has(n)) return moduleTypes.get(n);
     const seen = seenTypes.get(n);
@@ -577,7 +597,18 @@ function translate(mod) {
   function exprType(e) {
     if (!e) return null;
     switch (e.type) {
-      case 'Identifier': return e.name === 'undefined' ? null : typeOf(e.name) ?? (constTypes.get(imports.get(e.name) ?? `${modClass(mod)}.${e.name}`) ?? null);
+      case 'Identifier': {
+        if (e.name === 'undefined') return null;
+        const known = typeOf(e.name) ?? constTypes.get(imports.get(e.name) ?? `${modClass(mod)}.${e.name}`);
+        if (known) return known;
+        // A module const with no type written: its value's (worked out once, when first needed).
+        const init = !scopes.some((s) => s.declared.has(e.name)) ? moduleInits.get(e.name) : null;
+        if (init && !moduleTypes.has(e.name)) {
+          moduleTypes.set(e.name, null);
+          moduleTypes.set(e.name, exprType(init));
+        }
+        return moduleTypes.get(e.name) ?? null;
+      }
       case 'Literal': return typeof e.value === 'string' ? 'string' : typeof e.value === 'number' ? 'double' : typeof e.value === 'boolean' ? 'bool' : null;
       case 'TemplateLiteral': return 'string';
       case 'TSNonNullExpression': return strip(exprType(e.expression));
@@ -621,6 +652,10 @@ function translate(mod) {
       }
       case 'CallExpression': {
         const c = e.callee;
+        if (c.type === 'Identifier' && !imports.has(c.name)) {
+          const builtin = { Number: 'double', String: 'string', Boolean: 'bool', parseInt: 'double', parseFloat: 'double' }[c.name];
+          if (builtin) return builtin;
+        }
         if (c.type === 'Identifier') {
           const q = imports.get(c.name);
           return fnRet.get(q ?? `${modClass(mod)}.${c.name}`) ?? fnRet.get(c.name) ?? null;
@@ -632,7 +667,17 @@ function translate(mod) {
         if (!o) return null;
         const m = c.property.name;
         const item = o.match(/^List<(.+)>$/)?.[1];
-        const map = o.match(/^JsMap<(\w+), (.+)>$/);
+        // JsMap<K, V>: split at the top-level comma (K may be generic itself).
+        let map = null;
+        if (o.startsWith('JsMap<') && o.endsWith('>')) {
+          const inner = o.slice(6, -1);
+          let depth = 0;
+          for (let i = 0; i < inner.length; i++) {
+            if (inner[i] === '<' || inner[i] === '(') depth++;
+            else if (inner[i] === '>' || inner[i] === ')') depth--;
+            else if (inner[i] === ',' && depth === 0) { map = [o, inner.slice(0, i).trim(), inner.slice(i + 1).trim()]; break; }
+          }
+        }
         if (['includes', 'some', 'every', 'has', 'startsWith', 'endsWith'].includes(m)) return 'bool';
         if (['indexOf', 'findIndex', 'lastIndexOf'].includes(m)) return 'int';
         if (m === 'join' || (o === 'string' && ['slice', 'trim', 'toUpperCase', 'toLowerCase', 'replace', 'padStart', 'padEnd', 'repeat', 'substring'].includes(m))) return 'string';
@@ -800,6 +845,7 @@ function translate(mod) {
       }
       case 'AssignmentExpression': {
         if (e.left.type === 'TSNonNullExpression') return ex({ ...e, left: e.left.expression }, bool);
+        if (e.operator === '=' && e.right.type === 'ObjectExpression' && e.left.type === 'Identifier' && classFields.has(strip(typeOf(e.left.name)) ?? '')) e.right.__class = strip(typeOf(e.left.name));
         if (e.operator === '=' && e.left.type === 'MemberExpression' && e.left.computed && fieldByKey(e.left)) return `Js.SetProp(${operand(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
         if (e.right.type === 'ArrowFunctionExpression' && e.left.type === 'MemberExpression' && !e.left.computed) e.right.__arity = fieldArity(e.left.property.name);
         if (e.left.type === 'ArrayPattern' && e.left.elements.every((x) => x && x.type !== 'RestElement')) {
@@ -1005,6 +1051,7 @@ function translate(mod) {
   }
 
   function newEx(e) {
+    if (e.__newAs) return `new ${e.__newAs}()`;
     const c = e.callee.type === 'Identifier' ? e.callee.name : null;
     const targs = e.typeArguments?.params ?? [];
     const args = e.arguments.map((a) => ex(a)).join(', ');
@@ -1060,6 +1107,7 @@ function translate(mod) {
         const item = ft?.match(/^List<(\w+)>\??$/)?.[1];
         if (item && p.value.type === 'CallExpression' && p.value.callee.type === 'MemberExpression' && p.value.callee.property?.name === 'map') p.value.__targ = item;
         if (ft && classFields.has(strip(ft)) && p.value.type === 'ObjectExpression') p.value.__class = strip(ft);
+        if (ft && /^Js(Map|Set)</.test(ft) && p.value.type === 'NewExpression' && ['Map', 'Set', 'WeakMap'].includes(p.value.callee.name) && !p.value.typeArguments && !p.value.arguments.length) p.value.__newAs = strip(ft);
       }
       if (p.type === 'SpreadElement') {
         spread = p.argument;
@@ -1276,9 +1324,12 @@ function translate(mod) {
               let ret = fn.returnType ? ty(fn.returnType.typeAnnotation, mod) : guessReturn(fn);
               if (ret.includes('TODO') && fn.body.type === 'BlockStatement') {
                 const saved = tmp;
+                const outer = collecting;
+                collecting = new Map();
                 block(fn.body, ind + '    ', { fnRet: null });
                 tmp = saved;
                 ret = guessReturn(fn);
+                collecting = outer;
               }
               if (!ret.includes('TODO')) fnRet.set(d.id.name, ret);
               const bodyText = fn.body.type === 'BlockStatement' ? block(fn.body, ind + '    ', { fnRet: ret }) : `${ind}{\n${ind}    ${ret === 'void' ? '' : 'return '}${ex(fn.body, ret === 'bool')};\n${ind}}`;
@@ -1520,9 +1571,11 @@ function translate(mod) {
     if (ret.includes('TODO')) {
       // Not told by what's returned at a glance: translate the body once to learn its locals' types, and look again.
       const saved = tmp;
+      collecting = new Map();
       block(f.body, ind + '    ', { fnRet: null });
       tmp = saved;
       ret = guessReturn(f);
+      collecting = null;
     }
     if (ret && !ret.includes('TODO')) {
       fnRet.set(top ? `${modClass(mod)}.${name}` : name, ret);

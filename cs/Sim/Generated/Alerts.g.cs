@@ -80,7 +80,7 @@ public static partial class Alerts
         }
         else if (eg.evacuation != null)
         {
-            add("warn", $"The helicopter comes at dawn on day {Js.Str(Time.dayOf(eg.evacuation))}: hold out (the last night is a siege)");
+            add("warn", $"The helicopter comes at dawn on day {Js.Str(Time.dayOf(Js.NN(eg.evacuation)))}: hold out (the last night is a siege)");
         }
         var toSiege = EndgameMod.daysToSiege(state.tick);
         if (toSiege <= 2)

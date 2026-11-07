@@ -412,7 +412,7 @@ public static partial class ControlMod
             var e = Grids.edgeBetween(state.grid, from.x, from.y, to.x, to.y);
             if (((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(e))
             {
-                return new() { edge = e, to = to };
+                return new PaneInFrontResult { edge = e, to = to };
             }
         }
         return null;

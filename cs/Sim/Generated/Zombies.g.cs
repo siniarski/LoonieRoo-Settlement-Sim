@@ -117,7 +117,7 @@ public static partial class Zombies
                     cells.set(k, [z]);
                 }
             }
-            b = new() { tick = state.tick, edit = edit, cells = cells };
+            b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells };
             buckets.set(list, b);
         }
         double n = 0;
@@ -676,7 +676,7 @@ public static partial class Zombies
             foreach (var s in Js.Iter(list))
             {
                 var k = (s.pos.y * width) + s.pos.x;
-                PushApartOthers entry = new() { s = s, order = order++ };
+                PushApartOthers entry = new PushApartOthers { s = s, order = order++ };
                 var at = others.get(k);
                 if (Js.T(at))
                 {

@@ -119,7 +119,7 @@ public static partial class Towns
                     var score = ((dryShare - (((double)(wooded) / (JsMath.max(1, inside))) * 0.6)) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + (NatureMod.roll(n.seed, x, y, 0x7103) * 0.15);
                     if (!Js.T(best) || (score > best.score))
                     {
-                        best = new() { x = Js.I(x), y = Js.I(y), score = score };
+                        best = new SiteTownsBest { x = Js.I(x), y = Js.I(y), score = score };
                     }
                 }
             }

@@ -31,7 +31,7 @@ public static partial class JobChoice
                 var plan = planJob(state, s, job);
                 if (Js.T(plan))
                 {
-                    return new() { job = job, plan = plan, why = $"priority {Js.Str(s.priorities[Js.Idx(type)])}, nearest of {Js.Str(open.length)} open" };
+                    return new ChooseJobResult { job = job, plan = plan, why = $"priority {Js.Str(s.priorities[Js.Idx(type)])}, nearest of {Js.Str(open.length)} open" };
                 }
             }
         }

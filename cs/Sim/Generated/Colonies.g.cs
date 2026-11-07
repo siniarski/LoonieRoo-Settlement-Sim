@@ -333,7 +333,7 @@ public static partial class Colonies
     public static CompoundResult compound(Settlement n)
     {
         var w = JsMath.max(7, JsMath.min(15, 5 + JsMath.ceil(((double)(n.people) / (2)))));
-        return new() { x0 = Js.I(n.x - JsMath.floor(((double)(w) / (2)))), y0 = Js.I(n.y - 3), x1 = Js.I(((n.x - JsMath.floor(((double)(w) / (2)))) + w) - 1), y1 = Js.I(n.y + 3) };
+        return new CompoundResult { x0 = Js.I(n.x - JsMath.floor(((double)(w) / (2)))), y0 = Js.I(n.y - 3), x1 = Js.I(((n.x - JsMath.floor(((double)(w) / (2)))) + w) - 1), y1 = Js.I(n.y + 3) };
     }
 
     /// <summary>Builds the real thing: walls and a door, beds, food, and residents (or a ruin, if it fell).</summary>

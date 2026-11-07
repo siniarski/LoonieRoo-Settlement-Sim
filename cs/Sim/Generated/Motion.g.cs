@@ -77,7 +77,7 @@ public static partial class Motion
     /// <summary>A new mover's position fields, on a tile.</summary>
     public static PlacedAtResult placedAt(Point tile)
     {
-        return new() { at = centre(tile), was = centre(tile) };
+        return new PlacedAtResult { at = centre(tile), was = centre(tile) };
     }
 
     /// <summary>Put a mover on a tile now (teleports: spawning, evictions).</summary>
