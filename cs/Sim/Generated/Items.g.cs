@@ -59,7 +59,7 @@ public static partial class Items
     public static void placeNear(SimState state, Item item, Point near)
     {
         item.pos = null;
-        var held = Js.Set(state.items.flatMap((i) => Js.T(i.pos) ? [$"{Js.Str(i.pos.x)},{Js.Str(i.pos.y)}"] : []));
+        var held = Js.Set(state.items.flatMap((i) => Js.T(i.pos) ? ((List<string>)[$"{Js.Str(i.pos.x)},{Js.Str(i.pos.y)}"]) : ((List<string>)[])));
         bool free(double x, double y)
         {
             return ((Js.T(Grids.isWalkable(state.grid, x, y)) && !held.has($"{Js.Str(x)},{Js.Str(y)}")) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !state.blueprints.some((b) => ((b.x == x) && (b.y == y)) && ((b.target == "wall") || Js.T(Designations.isFurnitureTarget(b.target))));

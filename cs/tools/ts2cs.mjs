@@ -259,7 +259,8 @@ function ty(t, mod, intName) {
         if (ks.size === 1 && ks.has('number')) return 'List<double>' + q;
         // [Point, Point] and the like: a list of that type.
         const els = c.elementTypes.map((e) => (ty(e, mod) ?? 'object').replace(/\?$/, ''));
-        return (els.every((x) => x === els[0] && !x.includes('TODO')) ? `List<${els[0]}>` : 'List<object>') + q;
+        if (els.every((x) => x === els[0] && !x.includes('TODO'))) return `List<${els[0]}>` + q;
+        return 'List<object>' + q;
       }
       const el = c.type === 'TSArrayType' ? c.elementType : c.typeArguments?.params[0];
       return `List<${(ty(el, mod) ?? 'object').replace(/\?$/, '')}>` + q;
@@ -411,7 +412,7 @@ function translate(mod) {
       if (x.type === 'Literal' && typeof x.value === 'number') return 'double';
       if (x.type === 'UnaryExpression' && x.argument.type === 'Literal' && typeof x.argument.value === 'number') return 'double';
       if (x.type === 'BinaryExpression' && ['<', '>', '<=', '>=', '===', '!==', '==', '!='].includes(x.operator)) return 'bool';
-      if (x.type === 'Identifier' && exprType(x) && ['string', 'bool'].includes(strip(exprType(x)))) return strip(exprType(x));
+      if (x.type === 'Identifier' && exprType(x) && !['int', 'double'].includes(strip(exprType(x)))) return strip(exprType(x));
       if (x.type === 'Identifier' || x.type === 'BinaryExpression') return 'num?';
       return null;
     });
@@ -771,7 +772,11 @@ function translate(mod) {
         if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) return `Js.Or(${ex(e.left)}, ${ex(e.right)})`;
         return `${operand(e.left, true)} ${e.operator} ${operand(e.right, true)}`;
       }
-      case 'ConditionalExpression': return `${operand(e.test, true)} ? ${operand(e.consequent)} : ${operand(e.alternate)}`;
+      case 'ConditionalExpression': {
+        const lt = [e.consequent, e.alternate].every((x) => x.type === 'ArrayExpression') ? literalType(e.consequent) ?? literalType(e.alternate) : null;
+        if (lt) return `${operand(e.test, true)} ? ((${lt})${ex(e.consequent)}) : ((${lt})${ex(e.alternate)})`;
+        return `${operand(e.test, true)} ? ${operand(e.consequent)} : ${operand(e.alternate)}`;
+      }
       case 'AssignmentExpression': {
         if (e.left.type === 'TSNonNullExpression') return ex({ ...e, left: e.left.expression }, bool);
         if (e.operator === '=' && e.left.type === 'MemberExpression' && e.left.computed && fieldByKey(e.left)) return `Js.SetProp(${operand(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
@@ -794,6 +799,7 @@ function translate(mod) {
         const q = e.optional ? '?' : '';
         const byKey = e.computed ? fieldByKey(e) : null;
         if (byKey) return `Js.GetProp<${byKey}>(${obj}, ${ex(e.property)})`;
+        if (e.computed && e.property.type === 'Literal' && typeof e.property.value === 'number' && /^\(/.test(strip(exprType(e.object)) ?? '')) return `${obj}${q}.Item${e.property.value + 1}`;
         if (e.computed) return `${obj}${q}[Js.Idx(${ex(e.property)})]`;
         const name = e.property.name;
         // Math.PI and friends.
@@ -808,11 +814,12 @@ function translate(mod) {
       case 'CallExpression': return call(e);
       case 'NewExpression': return newEx(e);
       case 'ArrayExpression': {
+        if (e.__tuple) return `(${e.elements.map((x) => ex(x)).join(', ')})`;
         if (e.elements.length === 1 && e.elements[0]?.type === 'SpreadElement') return `(${ex(e.elements[0].argument)}).ToList()`;
         const spreadOf = (a) => {
           while (a.type === 'ParenthesizedExpression') a = a.expression;
           if (a.type !== 'ConditionalExpression') return ex(a);
-          const unp = (s) => { while (s.type === 'ParenthesizedExpression') s = s.expression; return s; };
+          const unp = (s) => { while (s.type === 'ParenthesizedExpression' || (s.type === 'TSAsExpression' && s.expression.type !== 'CallExpression')) s = s.expression; return s; };
           a = { ...a, consequent: unp(a.consequent), alternate: unp(a.alternate) };
           const sides = [a.consequent, a.alternate];
           const known = sides.map((s) => (s.type === 'ArrayExpression' ? literalType(s) : strip(exprType(s)))).find((x) => x && /^List</.test(x));
@@ -846,7 +853,7 @@ function translate(mod) {
       const vs = Array.from({ length: n }, (_, i) => `__f${i}`);
       return `(${vs.join(', ')}) => ${ex(a)}(${vs.join(', ')})`;
     };
-    const arg = (a) => (a.type === 'MemberExpression' && !a.computed && ['Number', 'Math'].includes(a.object.name) ? `(__v) => ${ex(a)}(__v)` : a.type === 'Identifier' && a.name === 'Number' && !imports.has('Number') ? '(__v) => Js.Num(__v)' : a.type === 'Identifier' && a.name === 'String' && !imports.has('String') ? '(__v) => Js.Str(__v)' : a.type === 'Identifier' && passed(a) ? passed(a) : ex(a));
+    const arg = (a) => (a.type === 'Identifier' && a.name === 'Boolean' && !imports.has('Boolean') ? '(__v) => Js.T(__v)' : a.type === 'MemberExpression' && !a.computed && ['Number', 'Math'].includes(a.object.name) ? `(__v) => ${ex(a)}(__v)` : a.type === 'Identifier' && a.name === 'Number' && !imports.has('Number') ? '(__v) => Js.Num(__v)' : a.type === 'Identifier' && a.name === 'String' && !imports.has('String') ? '(__v) => Js.Str(__v)' : a.type === 'Identifier' && passed(a) ? passed(a) : ex(a));
     const callbackTakers = ['map', 'filter', 'forEach', 'some', 'every', 'find', 'findIndex', 'findLast', 'flatMap'];
     // A function of this module's (its parameters' types), or a push onto a state field's list (its items' type).
     const listOf = (field) => {
@@ -1510,6 +1517,11 @@ function translate(mod) {
         }
         hint = pascal(name.toLowerCase().replace(/_(\w)/g, (_, c) => c.toUpperCase())) + 'Entry';
         let t = v.id.typeAnnotation ? ty(v.id.typeAnnotation.typeAnnotation, mod, name) : null;
+        if (t && /^List<\(/.test(t)) {
+          let a = init;
+          while (a?.type === 'TSAsExpression') a = a.expression;
+          if (a?.type === 'ArrayExpression') for (const x of a.elements) if (x?.type === 'ArrayExpression') x.__tuple = true;
+        }
         let initText = init ? ex(init, t === 'bool') : null;
         if (!t) {
           if (init?.type === 'Literal' && typeof init.value === 'number') t = Number.isInteger(init.value) && Math.abs(init.value) <= 2147483647 && !/[.eE]/.test(init.raw) && d.kind === 'const' ? 'int' : 'double';

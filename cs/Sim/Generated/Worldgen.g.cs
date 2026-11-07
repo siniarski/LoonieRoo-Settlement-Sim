@@ -170,11 +170,11 @@ public static partial class Worldgen
             }
         }
         var solo = state.settings.start == "solo";
-        foreach (var dx in Js.Iter(Js.T(solo) ? [3] : [1, 3, 5]))
+        foreach (var dx in Js.Iter(Js.T(solo) ? ((List<double>)[3]) : ((List<double>)[1, 3, 5])))
         {
             FurnitureMod.addFurniture(state, "bed", x0 + dx, y0 + 1);
         }
-        foreach (var dx in Js.Iter(Js.T(solo) ? [0] : [-2, 0, 2]))
+        foreach (var dx in Js.Iter(Js.T(solo) ? ((List<double>)[0]) : ((List<double>)[-2, 0, 2])))
         {
             var s = Survivors.addSurvivor(state, sx + dx, sy + 1);
             s.traits = Skills.rollTraits(s.id);

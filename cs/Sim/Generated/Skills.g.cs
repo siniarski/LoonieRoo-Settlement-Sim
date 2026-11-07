@@ -105,6 +105,6 @@ public static partial class Skills
             var (k, level) = __p1;
             return $"{Js.Str(k)} {Js.Str(level)}";
         });
-        return Js.Or(new[] { traits.join(", "), skills.join(", ") }.ToList().filter(Boolean).join("; "), "no skills yet");
+        return Js.Or(new[] { traits.join(", "), skills.join(", ") }.ToList().filter((__v) => Js.T(__v)).join("; "), "no skills yet");
     }
 }

@@ -783,6 +783,8 @@ public static partial class Js
     }
 
     public static IEnumerable<V> Iter<V>(IEnumerable<V> xs) => xs;
+    /// <summary>for (const [k, v] of map): its entries, in insertion order.</summary>
+    public static IEnumerable<(K, V)> Iter<K, V>(JsMap<K, V> m) where K : notnull => m.entries();
     public static IEnumerable<string> Iter(string s) => s.Select(c => c.ToString());
 
     /// <summary>Number(x).</summary>

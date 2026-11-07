@@ -447,7 +447,7 @@ public static partial class Invariants
         }
         void listed(List<double> arr, List<double> list, string name)
         {
-            var want = arr.flatMap((v, i) => (v != 0) ? [i] : []);
+            var want = arr.flatMap((v, i) => (v != 0) ? ((List<double>)[i]) : ((List<double>)[]));
             var have = Js.ListOf(list).sort((a, b) => a - b);
             if ((want.length != have.length) || want.some((v, k) => v != have[Js.Idx(k)]))
             {

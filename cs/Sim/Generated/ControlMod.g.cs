@@ -405,7 +405,7 @@ public static partial class ControlMod
     public static PaneInFrontResult? paneInFront(SimState state, Point from, Point target, Point facing)
     {
         var face = Js.T(nextTo(from, target)) ? (towards(from, target) ?? facing) : facing;
-        var steps = ((face.x != 0) && (face.y != 0)) ? new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } } : [face];
+        var steps = ((face.x != 0) && (face.y != 0)) ? ((List<Point>)new List<Point> { new Point { x = Js.I(face.x), y = Js.I(0) }, new Point { x = Js.I(0), y = Js.I(face.y) } }) : ((List<Point>)[face]);
         foreach (var d in Js.Iter(steps))
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
@@ -513,7 +513,7 @@ public static partial class ControlMod
         }
         var item = Items.itemAt(state, target.x, target.y);
         var carriedRemedy = (Js.T(s.carrying) && Js.T(Space.samePoint(target, s.pos))) ? Items.getItem(state, s.carrying) : null;
-        var remedy = new List<Item?> { item, carriedRemedy }.find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
+        var remedy = new[] { item, carriedRemedy }.ToList().find((i) => (Js.T(i) && !Js.T(i.reservedBy)) && Medicine.remediesFor(s).includes(i.kind));
         if (Js.T(remedy))
         {
             c.busy = new() { what = "treat", targetId = remedy.id, progress = 0, duration = Health.TREAT_TICKS };

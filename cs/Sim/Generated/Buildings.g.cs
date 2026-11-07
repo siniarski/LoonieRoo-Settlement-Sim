@@ -726,13 +726,13 @@ public static partial class Buildings
             var __c2 = Js.T(vertical); var ax = __c2 ? (x - 1) : x; var ay = __c2 ? y : (y - 1); var bx = __c2 ? (x + 1) : x; var by = __c2 ? y : (y + 1);
             if (cells[Js.Idx(i)] == OUTSIDE)
             {
-                List<double> inside = (((((cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? [ax, ay] : [bx, by];
+                List<double> inside = (((((cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? ((List<double>)[ax, ay]) : ((List<double>)[bx, by]);
                 doorPairs.add(pairKey(x, y, Js.NN(inside[Js.Idx(0)]), Js.NN(inside[Js.Idx(1)])));
             }
             else
             {
                 var aRoom = ((((ax >= 0) && (ay >= 0)) && (ax < w)) && (ay < h)) ? room[Js.Idx((ay * w) + ax)] : -2;
-                List<double> other = (aRoom == room[Js.Idx(i)]) ? [bx, by] : [ax, ay];
+                List<double> other = (aRoom == room[Js.Idx(i)]) ? ((List<double>)[bx, by]) : ((List<double>)[ax, ay]);
                 doorPairs.add(pairKey(x, y, Js.NN(other[Js.Idx(0)]), Js.NN(other[Js.Idx(1)])));
             }
         }

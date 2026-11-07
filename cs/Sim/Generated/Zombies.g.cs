@@ -504,7 +504,7 @@ public static partial class Zombies
         if (Js.T(horde) && (z.path.length == 0))
         {
             var step = Hordes.hordeStep(state, z, horde);
-            z.path = Js.T(step) ? [step] : [];
+            z.path = Js.T(step) ? ((List<Point>)[step]) : ((List<Point>)[]);
         }
         else if (((state.tick >= z.nextThinkTick) || (z.path.length == 0)) && (budget.plans > 0))
         {
@@ -804,7 +804,7 @@ public static partial class Zombies
                 return;
             }
             var best = options.sort((a, b) => Space.manhattan(a, Js.NN(z.heading)) - Space.manhattan(b, Js.NN(z.heading)))[Js.Idx(0)];
-            z.path = (Js.T(best) && (Space.manhattan(best, z.heading) < Space.manhattan(z.pos, z.heading))) ? [best] : [];
+            z.path = (Js.T(best) && (Space.manhattan(best, z.heading) < Space.manhattan(z.pos, z.heading))) ? ((List<Point>)[best]) : ((List<Point>)[]);
             return;
         }
         z.path = (options.length > 0) ? [Rng.pick(state, options)] : [];

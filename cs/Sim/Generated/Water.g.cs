@@ -125,7 +125,7 @@ public static partial class Water
         var grid = __d0.grid;
         var clean = new JsMap<double, string>();
         var tapsOn = TimelineMod.waterOn(state);
-        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.T(tapsOn) ? ["well", "collector", "crate", "decor"] : ["well", "collector", "decor"])))
+        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.T(tapsOn) ? ((List<string>)["well", "collector", "crate", "decor"]) : ((List<string>)["well", "collector", "decor"]))))
         {
             if (f.kind == "well")
             {

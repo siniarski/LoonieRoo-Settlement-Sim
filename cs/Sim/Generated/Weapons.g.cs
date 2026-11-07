@@ -101,7 +101,7 @@ public static partial class Weapons
             return false;
         }
         var held = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : (((held.kind == "gun") && (held.wear == 0)) ? ["ammo"] : []);
+        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : (((held.kind == "gun") && (held.wear == 0)) ? ((List<string>)["ammo"]) : ((List<string>)[]));
         if (wants.length == 0)
         {
             return false;
