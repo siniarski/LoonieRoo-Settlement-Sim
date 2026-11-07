@@ -810,7 +810,7 @@ public static partial class Js
     /// <summary>JSON.stringify, for comparing (as the sim uses it) and for logs.</summary>
     public static string Json_stringify(object? x) => System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options);
 
-    /// <summary>A file in the repository (src/scenarios/...): looked for from the working folder up.</summary>
+    /// <summary>A file in the repository (scenarios/...): looked for from the working folder up.</summary>
     public static string RepoFile(string relative)
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)

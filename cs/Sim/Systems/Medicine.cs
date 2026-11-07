@@ -1,0 +1,73 @@
+// Ported from src/sim/medicine.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Doctors and the infirmary.
+//
+// A patient is a hurt survivor asleep in a bed (resting, see needs.ts). Each
+// patient gets one doctor job: the doctor fetches the nearest free bandage,
+// carries it to the bedside, and treats them (BANDAGE_HEAL, same as treating
+// yourself). The job itself lives in jobs.ts; this file says who is a patient.
+//
+// The infirmary is a room with beds. Hurt survivors pick its beds first and
+// heal INFIRMARY_HEAL_FACTOR times as fast in them; others only use them when
+// there's no other bed. Barracks beds are the guards' (see needs.ts: light sleepers).
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Medicine
+{
+
+    public const int INFIRMARY_HEAL_FACTOR = 2;
+
+    public const int MEDICINE_HEAL = 100;
+
+    public static bool isPatient(Survivor s)
+    {
+        return (((((Health.isHurt(s.health) || s.bleeding) || (s.infection != null)) || (s.sick != null)) && (s.sleep?.asleep == true)) && (s.sleep.bedId != null)) && !Js.T(s.treatment);
+    }
+
+    /// <summary>What would help this survivor, best first: medicine for an infection, a bandage for wounds.</summary>
+    public static List<string> remediesFor(Survivor s)
+    {
+        return (List<string>)[.. ((s.infection != null) || (s.sick != null) ? ((List<string>)["medicine"]) : ((List<string>)[])), .. (Health.isHurt(s.health) || s.bleeding ? ((List<string>)["bandage"]) : ((List<string>)[]))];
+    }
+
+    /// <summary>Applying a remedy: medicine cures an infection (and heals a little); a bandage heals wounds.</summary>
+    public static void applyRemedy(Survivor s, string kind)
+    {
+        if (kind == "medicine")
+        {
+            s.infection = null;
+            s.sick = null;
+            s.health = JsMath.min(Health.HEALTH_MAX, s.health + MEDICINE_HEAL);
+        }
+        else
+        {
+            s.health = JsMath.min(Health.HEALTH_MAX, s.health + Health.BANDAGE_HEAL);
+            s.bleeding = false;
+        }
+    }
+
+    /// <summary>Is this bed in a complete infirmary?</summary>
+    public static bool isInfirmaryBed(SimState state, Furniture bed)
+    {
+        return Rooms.completeRooms(state, "infirmary").has(Rooms.labelAt(state, bed.x, bed.y));
+    }
+
+    /// <summary>Is this bed in a complete barracks?</summary>
+    public static bool isBarracksBed(SimState state, Furniture bed)
+    {
+        return Rooms.completeRooms(state, "barracks").has(Rooms.labelAt(state, bed.x, bed.y));
+    }
+
+    /// <summary>Guards: anyone with guarding switched on. They prefer barracks beds and sleep lightly there.</summary>
+    public static bool isGuard(Survivor s)
+    {
+        return s.priorities["guard"] > 0;
+    }
+
+    /// <summary>Is this survivor resting in an infirmary bed right now?</summary>
+    public static bool inInfirmary(SimState state, Survivor s)
+    {
+        var bed = (Js.T(Js.T(s.sleep?.asleep) && Js.T(s.sleep.bedId))) ? FurnitureMod.getFurniture(state, s.sleep.bedId) : null;
+        return (bed != null) && isInfirmaryBed(state, bed);
+    }
+}

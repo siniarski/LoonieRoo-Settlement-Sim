@@ -8,13 +8,13 @@ namespace LoonieRoo.Harness;
 
 public static class Node
 {
-    /// <summary>The repo root: the nearest folder up from the build output with a package.json.</summary>
+    /// <summary>The repo root: the nearest folder up from the build output with a CLAUDE.md.</summary>
     public static readonly string Root = FindRoot();
 
     static string FindRoot()
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
-            if (File.Exists(Path.Combine(d.FullName, "package.json"))) return d.FullName;
+            if (File.Exists(Path.Combine(d.FullName, "CLAUDE.md"))) return d.FullName;
         return Directory.GetCurrentDirectory();
     }
 

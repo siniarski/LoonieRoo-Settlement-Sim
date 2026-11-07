@@ -1,0 +1,556 @@
+// Ported from src/sim/jobs.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Designations -> jobs -> workers.
+//
+// The job queue is derived from the world: reconcileJobs (start of every
+// tick) drops jobs whose target is gone and creates missing ones: one per
+// blueprint (haul while it needs material, then build), one per indoor dirty
+// tile (clean), one per loose item outside storage (haul to storage), and
+// one per marked crate with loot left (scavenge). Survivors reserve a job when they claim it, so two survivors
+// never share one. Every way a job can go wrong ends the same way:
+// releaseSurvivor() frees the reservation, drops anything carried, and the
+// survivor goes back to looking for work. Nobody gets stuck.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Jobs
+{
+
+    /// <summary>Things a cart holds, and how far round the first one a hauler gathers the rest.</summary>
+    public const int CART_LOAD = 4;
+
+    public const int CART_REACH = 4;
+
+    /// <summary>Ticks to clean one tile.</summary>
+    public const int CLEAN_WORK = 15;
+
+    /// <summary>Ticks to search a crate once; each search yields one find.</summary>
+    public const int SCAVENGE_WORK = 40;
+
+    /// <summary>What a crate search turns up (one sim RNG roll against these, in order; they sum to 1).</summary>
+    public static readonly List<(string, double)> SCAVENGE_TABLE = [("food", 0.29), ("wood", 0.2), ("fuel", 0.03), ("scrap", 0.06), ("book", 0.02), ("bandage", 0.12), ("cloth", 0.12), ("weapon", 0.05), ("ammo", 0.03), ("coat", 0.02), ("boots", 0.02), ("armour", 0.01), ("gun", 0.01), ("axe", 0.01), ("hammer", 0.01)];
+
+    /// <summary>A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits).</summary>
+    public const int GUARD_ATTACK_EVERY = 10;
+
+    public const int GUARD_DAMAGE = 50;
+
+    /// <summary>How many nearest candidates a survivor checks per job type before giving up on that type.</summary>
+    public const int MAX_CANDIDATES = 8;
+
+    /// <summary>An idle survivor with nothing doable looks again after this many ticks.</summary>
+    public const int IDLE_RETRY_TICKS = 5;
+
+    public static Job? getJob(SimState state, string id)
+    {
+        return Lookup.findById(state.jobs, id);
+    }
+
+    public static void reconcileJobs(SimState state)
+    {
+        Rooms.reconcileRoomDesignations(state);
+        foreach (var bp in Js.Iter((state.blueprints).ToList()))
+        {
+            if (!Designations.preconditionHolds(state, bp))
+            {
+                Designations.cancelBlueprint(state, bp);
+            }
+        }
+        var stores = Rooms.completeStoreRooms(state);
+        foreach (var job in Js.Iter((state.jobs).ToList()))
+        {
+            var reason = invalidReason(state, job, stores);
+            if (Js.T(reason))
+            {
+                removeJob(state, job, reason);
+            }
+        }
+        var haveJob = Js.Set(state.jobs.map((j) => j.blueprintId));
+        foreach (var bp in Js.Iter(state.blueprints))
+        {
+            if (!haveJob.has(bp.id))
+            {
+                addJob(state, wantedJobType(bp), bp.x, bp.y, bp.id, null);
+            }
+        }
+        var __d0 = state.grid;
+        var width = __d0.width;
+        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => ((double)(j.y) * (width)) + j.x));
+        foreach (var i in Js.Iter(Js.ListOf(state.grid.dirtList).sort((a, b) => a - b)))
+        {
+            var x = i % width;
+            var y = JsMath.floor(((double)(i) / (width)));
+            if (!cleaning.has(i) && Rooms.isIndoors(state, x, y))
+            {
+                addJob(state, "clean", x, y, null, null);
+            }
+        }
+        var storing = Js.Set(state.jobs.filter(isStoreJob).map((j) => j.itemId));
+        foreach (var item in Js.Iter(state.items))
+        {
+            var home = Rooms.homeFor(stores, item.kind);
+            if (((!Js.T(item.pos) || (home.size == 0)) || storing.has(item.id)) || home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
+            {
+                continue;
+            }
+            addJob(state, "haul", item.pos.x, item.pos.y, null, item.id);
+        }
+        var fuelling = Js.Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
+        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.ObjectKeys(FUEL))))
+        {
+            if ((f.stored < fuelMax(f.kind)) && !fuelling.has(f.id))
+            {
+                addJob(state, "haul", f.x, f.y, null, null, f.id);
+            }
+        }
+        var repairing = Js.Set(state.jobs.filter((j) => isRepairJob(j) && (j.edge == null)).map((j) => ((double)(j.y) * (width)) + j.x));
+        foreach (var i in Js.Iter(Js.ListOf(state.grid.damageList).sort((a, b) => a - b)))
+        {
+            if (!repairing.has(i))
+            {
+                addJob(state, "build", i % width, JsMath.floor(((double)(i) / (width))), null, null);
+            }
+        }
+        var mending = Js.Set(state.jobs.filter((j) => isRepairJob(j) && (j.edge != null)).map((j) => Js.NN(j.edge)));
+        foreach (var e in Js.Iter(Js.ObjectKeys(state.grid.edgeDamage).map((__v) => Js.Num(__v)).sort((a, b) => a - b)))
+        {
+            if (mending.has(e))
+            {
+                continue;
+            }
+            var tile = JsMath.floor(((double)(e) / (2)));
+            addJob(state, "build", tile % width, JsMath.floor(((double)(tile) / (width))), null, null).edge = e;
+        }
+        var scouting = Js.Set(state.jobs.filter((j) => j.type == "scout").map((j) => j.areaId));
+        foreach (var a in Js.Iter(state.exploreAreas))
+        {
+            if (!scouting.has(a.id))
+            {
+                addJob(state, "scout", JsMath.floor(((double)((a.x0 + a.x1)) / (2))), JsMath.floor(((double)((a.y0 + a.y1)) / (2))), null, null).areaId = a.id;
+            }
+        }
+        var treating = Js.Set(state.jobs.filter((j) => j.type == "doctor").map((j) => j.patientId));
+        foreach (var p in Js.Iter(state.survivors))
+        {
+            if (Medicine.isPatient(p) && !treating.has(p.id))
+            {
+                addJob(state, "doctor", p.pos.x, p.pos.y, null, null).patientId = p.id;
+            }
+        }
+        JsRecord<string> wanted = new() { ["workbench"] = Crafting.wantedCraft(state, "workbench", true), ["stove"] = Crafting.wantedCraft(state, "stove") };
+        if (Js.T(Js.T(wanted["workbench"]) || Js.T(wanted["stove"])))
+        {
+            var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
+            foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, ["workbench", "stove"])))
+            {
+                if (((!Crafting.isStation(f.kind) || !Js.T(Js.Get(wanted, f.kind))) || stationed.has(f.id)) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
+                {
+                    continue;
+                }
+                addJob(state, (f.kind == "stove") ? "cook" : "craft", f.x, f.y, null, null, f.id);
+            }
+        }
+        var searching = Js.Set(state.jobs.filter((j) => j.type == "scavenge").map((j) => j.furnitureId));
+        foreach (var f in Js.Iter(FurnitureMod.markedForScavenge(state)))
+        {
+            if (((f.scavenge && ((f.kind == "crate") || (f.kind == "tree"))) && (f.loot > 0)) && !searching.has(f.id))
+            {
+                addJob(state, "scavenge", f.x, f.y, null, null, f.id);
+            }
+        }
+        var tending = Js.Set(state.jobs.filter((j) => j.type == "farm").map((j) => j.plotId));
+        foreach (var plot in Js.Iter(state.farm))
+        {
+            if (Farming.needsWork(plot) && !tending.has(plot.id))
+            {
+                addJob(state, "farm", plot.x, plot.y, null, null, null, null, plot.id);
+            }
+        }
+        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => ((double)(j.y) * (width)) + j.x));
+        foreach (var f in Js.Iter(state.fires))
+        {
+            if (!fighting.has(((double)(f.y) * (width)) + f.x))
+            {
+                addJob(state, "firefight", f.x, f.y, null, null);
+            }
+        }
+        if (EndgameMod.researchWanted(state))
+        {
+            var researching = Js.Set(state.jobs.filter((j) => j.type == "research").map((j) => j.furnitureId));
+            var samples = state.items.some((i) => (i.kind == "sample") && (i.pos != null));
+            foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "lab")))
+            {
+                if ((!researching.has(f.id) && ((f.stored > 0) || samples)) && Power.isPowered(state, f))
+                {
+                    addJob(state, "research", f.x, f.y, null, null, f.id);
+                }
+            }
+        }
+        var hunting = Js.Set(state.jobs.filter((j) => j.type == "hunt").map((j) => j.animalId));
+        foreach (var a in Js.Iter(state.animals))
+        {
+            if (a.hunted && !hunting.has(a.id))
+            {
+                addJob(state, "hunt", a.pos.x, a.pos.y, null, null).animalId = a.id;
+            }
+        }
+        var hunted = Js.Set(state.jobs.filter((j) => j.type == "guard").map((j) => j.zombieId));
+        foreach (var z in Js.Iter(state.zombies))
+        {
+            if (!hunted.has(z.id))
+            {
+                addJob(state, "guard", z.pos.x, z.pos.y, null, null, null, z.id);
+            }
+        }
+        var guarding = Js.Set(state.jobs.filter((j) => Js.T((j.type == "guard") && Js.T(j.animalId))).map((j) => j.animalId));
+        foreach (var a in Js.Iter(state.animals))
+        {
+            if (Animals.isMenace(state, a) && !guarding.has(a.id))
+            {
+                addJob(state, "guard", a.pos.x, a.pos.y, null, null).animalId = a.id;
+            }
+        }
+    }
+
+    /// <summary>Repairs are build jobs with no blueprint: they fix a damaged wall or door at x, y.</summary>
+    public static bool isRepairJob(Job job)
+    {
+        return (job.type == "build") && (job.blueprintId == null);
+    }
+
+    public static bool isStoreJob(Job job)
+    {
+        return ((job.type == "haul") && (job.blueprintId == null)) && (job.furnitureId == null);
+    }
+
+    /// <summary>What each fed piece of furniture takes, and how much it holds.</summary>
+    public static readonly JsRecord<string> FUEL = new() { ["generator"] = "wood", ["heater"] = "wood", ["turret"] = "ammo" };
+
+    public static double fuelMax(string kind)
+    {
+        return (kind == "turret") ? Defences.TURRET_AMMO_MAX : Power.FUEL_MAX;
+    }
+
+    /// <summary>Fuel hauls: wood to a generator or heater, ammo to a turret (`furnitureId`).</summary>
+    public static bool isFuelJob(Job job)
+    {
+        return (job.type == "haul") && (job.furnitureId != null);
+    }
+
+    public static string wantedJobType(Blueprint bp)
+    {
+        return (bp.needsMaterial && !bp.delivered) ? "haul" : "build";
+    }
+
+    public static string? invalidReason(SimState state, Job job, StoreRooms stores)
+    {
+        switch (job.type)
+        {
+            case "clean":
+                {
+                    if (!Grids.isDirty(state.grid, job.x, job.y))
+                    {
+                    return "tile already clean";
+                }
+                    return Rooms.isIndoors(state, job.x, job.y) ? null : "tile is no longer indoors";
+                }
+            case "farm":
+                {
+                    {
+                    var plot = Js.T(job.plotId) ? Farming.getPlot(state, job.plotId) : null;
+                    if (!Js.T(plot))
+                    {
+                        return "plot gone";
+                    }
+                    return Farming.needsWork(plot) ? null : "crop is growing";
+                }
+                }
+            case "guard":
+                {
+                    {
+                    if (Js.T(job.animalId))
+                    {
+                        var a = Animals.getAnimal(state, job.animalId);
+                        if (!Js.T(a) || !Animals.isMenace(state, a))
+                        {
+                            return "the animal is gone";
+                        }
+                        job.x = Js.I(a.pos.x);
+                        job.y = Js.I(a.pos.y);
+                        return null;
+                    }
+                    var z = Js.T(job.zombieId) ? Zombies.getZombie(state, job.zombieId) : null;
+                    if (!Js.T(z))
+                    {
+                        return "zombie gone";
+                    }
+                    job.x = Js.I(z.pos.x);
+                    job.y = Js.I(z.pos.y);
+                    return null;
+                }
+                }
+            case "scout":
+                {
+                    return (Js.T(Js.T(job.areaId) && Js.T(Fog.getExploreArea(state, job.areaId)))) ? null : "area explored";
+                }
+            case "firefight":
+                {
+                    return Js.T(FireMod.fireAt(state, job.x, job.y)) ? null : "fire is out";
+                }
+            case "research":
+                {
+                    {
+                    var lab = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
+                    if (!Js.T(lab) || (lab.kind != "lab"))
+                    {
+                        return "lab gone";
+                    }
+                    if (!EndgameMod.researchWanted(state))
+                    {
+                        return "nothing left to find";
+                    }
+                    if (Js.T(job.itemId))
+                    {
+                        var item = Items.getItem(state, job.itemId);
+                        if (!Js.T(item))
+                        {
+                            return "item gone";
+                        }
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+                        {
+                            return "item taken by someone else";
+                        }
+                    }
+                    return Power.isPowered(state, lab) ? null : "the lab has no power";
+                }
+                }
+            case "hunt":
+                {
+                    {
+                    var a = Js.T(job.animalId) ? Animals.getAnimal(state, job.animalId) : null;
+                    if (!Js.T(a))
+                    {
+                        return "the animal got away";
+                    }
+                    job.x = Js.I(a.pos.x);
+                    job.y = Js.I(a.pos.y);
+                    return null;
+                }
+                }
+            case "doctor":
+                {
+                    {
+                    var patient = Js.T(job.patientId) ? Survivors.getSurvivor(state, job.patientId) : null;
+                    if (!Js.T(patient) || !Medicine.isPatient(patient))
+                    {
+                        return "patient is up and about";
+                    }
+                    job.x = Js.I(patient.pos.x);
+                    job.y = Js.I(patient.pos.y);
+                    if (Js.T(job.itemId))
+                    {
+                        var item = Items.getItem(state, job.itemId);
+                        if (!Js.T(item))
+                        {
+                            return "item gone";
+                        }
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+                        {
+                            return "item taken by someone else";
+                        }
+                    }
+                    return null;
+                }
+                }
+            case "craft":
+            case "cook":
+                {
+                    {
+                    var station = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
+                    if (!Js.T(station) || !Crafting.isStation(station.kind))
+                    {
+                        return "station gone";
+                    }
+                    if (Js.T(job.itemId))
+                    {
+                        var item = Items.getItem(state, job.itemId);
+                        if (!Js.T(item))
+                        {
+                            return "item gone";
+                        }
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+                        {
+                            return "item taken by someone else";
+                        }
+                    }
+                    return Js.T(Crafting.wantedCraft(state, station.kind, Crafting.inWorkshop(state, station))) ? null : "stocks are full";
+                }
+                }
+            case "scavenge":
+                {
+                    {
+                    var crate = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
+                    if (!Js.T(crate))
+                    {
+                        return "crate gone";
+                    }
+                    if (!Js.T(crate.scavenge))
+                    {
+                        return "no longer marked for scavenging";
+                    }
+                    return (crate.loot > 0) ? null : ((crate.kind == "tree") ? "tree is bare" : "crate is empty");
+                }
+                }
+            case "build":
+            case "haul":
+                {
+                    {
+                    if (isRepairJob(job))
+                    {
+                        return (((job.edge != null) ? Breach.edgeDamage(state.grid, Js.NN(job.edge)) : Breach.structureDamage(state, job.x, job.y)) > 0) ? null : "nothing to repair";
+                    }
+                    if (isStoreJob(job))
+                    {
+                        return storeInvalidReason(state, job, stores);
+                    }
+                    if (isFuelJob(job))
+                    {
+                        var g = FurnitureMod.getFurniture(state, Js.NN(job.furnitureId));
+                        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, FUEL)))
+                        {
+                            return "generator gone";
+                        }
+                        if (Js.T(job.itemId))
+                        {
+                            var item = Items.getItem(state, job.itemId);
+                            if (!Js.T(item))
+                            {
+                                return "item gone";
+                            }
+                            if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+                            {
+                                return "item taken by someone else";
+                            }
+                        }
+                        return (g.stored < fuelMax(g.kind)) ? null : $"{Js.Str(g.kind)} is full";
+                    }
+                    var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
+                    if (!Js.T(bp))
+                    {
+                        return "designation cancelled";
+                    }
+                    if (wantedJobType(bp) != job.type)
+                    {
+                        return "designation moved on";
+                    }
+                    if (Js.T((job.type == "haul") && Js.T(job.itemId)))
+                    {
+                        var item = Items.getItem(state, job.itemId);
+                        if (!Js.T(item))
+                        {
+                            return "item gone";
+                        }
+                        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+                        {
+                            return "item taken by someone else";
+                        }
+                    }
+                    return null;
+                }
+                }
+        }
+        throw new InvalidOperationException("unreachable: every case returns");
+    }
+
+    public static string? storeInvalidReason(SimState state, Job job, StoreRooms stores)
+    {
+        var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
+        if (!Js.T(item))
+        {
+            return "item gone";
+        }
+        if (Js.T(item.carriedBy) && (item.carriedBy != job.reservedBy))
+        {
+            return "item taken by someone else";
+        }
+        var home = Rooms.homeFor(stores, item.kind);
+        if (home.size == 0)
+        {
+            return "no complete storage room";
+        }
+        if (Js.T(item.pos))
+        {
+            if (home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
+            {
+                return "already in storage";
+            }
+            job.x = Js.I(item.pos.x);
+            job.y = Js.I(item.pos.y);
+        }
+        return null;
+    }
+
+    public static Job addJob(SimState state, string type, int x, int y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null)
+    {
+        Job job = new Job { id = $"j{Js.Str(state.nextId++)}", type = type, x = Js.I(x), y = Js.I(y), blueprintId = blueprintId, itemId = itemId, furnitureId = furnitureId, zombieId = zombieId, plotId = plotId, patientId = null, areaId = null, animalId = null, dest = null, progress = 0, reservedBy = null };
+        state.jobs.push(job);
+        return job;
+    }
+    public static Job addJob(SimState state, string type, double x, double y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null) => addJob(state, type, Js.I(x), Js.I(y), blueprintId, itemId, furnitureId, zombieId, plotId);
+
+    public static void removeJob(SimState state, Job job, string reason)
+    {
+        var worker = Js.T(job.reservedBy) ? Survivors.getSurvivor(state, job.reservedBy) : null;
+        if (Js.T(worker) && (worker.jobId == job.id))
+        {
+            releaseSurvivor(state, worker, reason);
+        }
+        var i = state.jobs.indexOf(job);
+        if (i >= 0)
+        {
+            state.jobs.splice(i, 1);
+        }
+    }
+
+    /// <summary>Frees the survivor's job reservation and drops anything they carry. Always safe to call.</summary>
+    public static void releaseSurvivor(SimState state, Survivor s, string reason)
+    {
+        var job = Js.T(s.jobId) ? getJob(state, s.jobId) : null;
+        if (Js.T(job) && (job.reservedBy == s.id))
+        {
+            job.reservedBy = null;
+            var reserved = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
+            if (Js.T(reserved) && (reserved.reservedBy == s.id))
+            {
+                reserved.reservedBy = null;
+            }
+            if (!isStoreJob(job))
+            {
+                job.itemId = null;
+            }
+            job.dest = null;
+        }
+        if (Js.T(s.carrying))
+        {
+            var item = Items.getItem(state, s.carrying);
+            if (Js.T(item))
+            {
+                Items.dropItem(state, item, s.pos);
+            }
+            s.carrying = null;
+        }
+        foreach (var id in Js.Iter(s.cartLoad))
+        {
+            var item = Items.getItem(state, id);
+            if (Js.T(item))
+            {
+                Items.dropItem(state, item, s.pos);
+            }
+        }
+        s.cartLoad = [];
+        s.jobId = null;
+        s.goal = null;
+        s.path = [];
+        s.pathVersion = -1;
+        s.note = $"stopped: {Js.Str(reason)}";
+    }
+}

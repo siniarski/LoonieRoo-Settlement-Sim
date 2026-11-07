@@ -1,0 +1,201 @@
+// Ported from src/sim/sight.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Sight: what can be seen from where, and how far.
+//
+//   sight lines  from tile to tile (Bresenham): blocked by wall and door tiles in between (an
+//                open door tile doesn't block) and by any border sight can't cross
+//                (pathfinding.ts seesThrough: edge walls, shut edge doors, boarded windows; glass
+//                lets it through). The far end is seen even if it's a wall.
+//   field        the tiles within a radius with a clear sight line (fieldOfView): what a
+//                survivor sees, and so what fog.ts reveals.
+//   how far      SIGHT_RADIUS by day, NIGHT_SIGHT at night (plus towers and the vigilant trait);
+//                from a tower you see over walls and roofs (sightOf);
+//                the dead see further (ZOMBIE_SIGHT, ZOMBIE_NIGHT_SIGHT) but need the same line.
+//   noticing     the dead (not the night's waves, which always know where you are) notice a
+//                survivor they can see (zombieSees: by day ZOMBIE_SIGHT, at night less, half
+//                that if you're sneaking) or hear moving (heardFrom: running RUN_HEARD tiles off,
+//                walking WALK_HEARD, sneaking SNEAK_HEARD, standing still not at all), and keep
+//                after whoever they were already chasing. Never beyond AGGRO_RADIUS (zombies.ts).
+//                Loud things (noise.ts) carry much further and draw them over.
+//   seen now     visibleNow: what the survivor you control can see this tick (all survivors
+//                when nobody's controlled): derived, cached per state and tick, never stored.
+//                The renderer dims explored tiles outside it and hides the dead you can't see.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Sight
+{
+
+    public const int SIGHT_RADIUS = 8;
+
+    public const int NIGHT_SIGHT = 5;
+
+    public const int ZOMBIE_SIGHT = 12;
+
+    public const int ZOMBIE_NIGHT_SIGHT = 6;
+
+    /// <summary>How far off (Manhattan) the dead hear you move: running, walking, sneaking.</summary>
+    public const int RUN_HEARD = 8;
+
+    public const int WALK_HEARD = 4;
+
+    public const int SNEAK_HEARD = 1;
+
+    /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
+    public static bool opaque(Grid grid, int x, int y)
+    {
+        var t = Js.Get(grid.tiles, Grids.tileIndex(grid, x, y));
+        return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Grids.isOpen(grid, x, y));
+    }
+    public static bool opaque(Grid grid, double x, double y) => opaque(grid, Js.I(x), Js.I(y));
+
+    /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
+    public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
+    {
+        bool clear(double px, double py, double qx, double qy)
+        {
+            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+        }
+        if ((ax == bx) || (ay == by))
+        {
+            return clear(ax, ay, bx, by);
+        }
+        var viaX = (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) && !opaque(grid, bx, ay);
+        var viaY = (clear(ax, ay, ax, by) && clear(ax, by, bx, by)) && !opaque(grid, ax, by);
+        return Js.T(Js.T(viaX) || Js.T(viaY));
+    }
+    public static bool stepSeen(Grid grid, double ax, double ay, double bx, double by) => stepSeen(grid, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
+
+    /// <summary>Can someone at `a` see `b`? (The far end may be a wall: you see the wall.)</summary>
+    public static bool sightLine(Grid grid, Point a, Point b)
+    {
+        double x = a.x;
+        double y = a.y;
+        var dx = JsMath.abs(b.x - a.x);
+        var dy = -JsMath.abs(b.y - a.y);
+        var sx = (a.x < b.x) ? 1 : -1;
+        var sy = (a.y < b.y) ? 1 : -1;
+        double err = dx + dy;
+        while ((x != b.x) || (y != b.y))
+        {
+            var e2 = ((double)(2) * (err));
+            var px = x;
+            var py = y;
+            if (e2 >= dy)
+            {
+                err += dy;
+                x += sx;
+            }
+            if (e2 <= dx)
+            {
+                err += dx;
+                y += sy;
+            }
+            if (!stepSeen(grid, px, py, x, y))
+            {
+                return false;
+            }
+            if (((x != b.x) || (y != b.y)) && opaque(grid, x, y))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>Tile indices within `r` of `p` with a clear sight line from it (from up high, `overWalls`: all of them). Tiles `skip` says no to aren't looked at (fog.ts: those already explored).</summary>
+    public static List<double> fieldOfView(Grid grid, Point p, double r, bool overWalls = false, Func<double, bool>? skip = default)
+    {
+        List<double> @out = [];
+        for (var y = JsMath.max(0, p.y - r); y <= JsMath.min(grid.height - 1, p.y + r); y++)
+        {
+            for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
+            {
+                if (Js.T((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > ((double)(r) * (r))) || Js.T(Js.T(skip?.Invoke(((double)(y) * (grid.width)) + x)))))
+                {
+                    continue;
+                }
+                if (Js.T(Js.T(overWalls) || sightLine(grid, p, new Point { x = Js.I(x), y = Js.I(y) })))
+                {
+                    @out.push(((double)(y) * (grid.width)) + x);
+                }
+            }
+        }
+        return @out;
+    }
+
+    /// <summary>How far a survivor sees: less at night (unless the lights are on indoors: timeline.ts); more from a tower, or with the vigilant trait.</summary>
+    public static double sightRadius(SimState state, Survivor s)
+    {
+        var @base = Towers.onTower(state, s) ? Towers.TOWER_SIGHT : ((Time.isNight(state.tick) && !TimelineMod.mainsLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS);
+        return @base + (Skills.hasTrait(s, "vigilant") ? Skills.VIGILANT_SIGHT : 0);
+    }
+
+    /// <summary>What a survivor sees now (tile indices): from a tower, everything in range.</summary>
+    public static List<double> sightOf(SimState state, Survivor s, Func<double, bool>? skip = default)
+    {
+        return fieldOfView(state.grid, s.pos, sightRadius(state, s), Towers.onTower(state, s), skip);
+    }
+
+    /// <summary>Is this survivor the one you control, sneaking?</summary>
+    public static bool isSneaking(SimState state, Survivor s)
+    {
+        return (state.control?.survivorId == s.id) && (state.control.sneaking == true);
+    }
+
+    /// <summary>How far off (Manhattan) a survivor's movement can be heard, 0 standing still (traits: graceful, clumsy).</summary>
+    public static double heardFrom(SimState state, Survivor s)
+    {
+        var c = (state.control?.survivorId == s.id) ? state.control : null;
+        var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (((c.dx == 0) && (c.dy == 0)) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD)));
+        return Skills.hasTrait(s, "graceful") ? JsMath.floor(((double)(@base) / (2))) : (Skills.hasTrait(s, "clumsy") ? JsMath.round(((double)(((double)(@base) * (3))) / (2))) : @base);
+    }
+
+    /// <summary>Can a zombie at `z` see a survivor at `s` (`sneaking`: half as far)?</summary>
+    public static bool zombieSees(SimState state, Point z, Point s, bool sneaking = false)
+    {
+        var r = ((double)((Time.isNight(state.tick) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
+        if (((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2))) > ((double)(r) * (r)))
+        {
+            return false;
+        }
+        return Grids.inBounds(state.grid, s.x, s.y) && sightLine(state.grid, z, s);
+    }
+
+    public static readonly JsMap<SimState, SeenEntry> seen = new JsMap<SimState, SeenEntry>();
+
+    /// <summary>What can be seen now: by the survivor you control, or by any survivor when nobody is controlled. Per tile 1 or 0. Derived, cached per state and tick (for the renderer).</summary>
+    public static Uint8Array visibleNow(SimState state)
+    {
+        var you = ControlMod.controlled(state);
+        var lookers = Js.T(you) ? [you] : state.survivors;
+        var who = lookers.map((s) => $"{Js.Str(s.id)}@{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}").join("|");
+        var hit = seen.get(state);
+        if ((Js.T(hit) && (hit.tick == state.tick)) && (hit.who == who))
+        {
+            return hit.mask;
+        }
+        var size = ((double)(state.grid.width) * (state.grid.height));
+        var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new Uint8Array(size);
+        if (Js.T(hit) && (hit.mask == mask))
+        {
+            foreach (var i in Js.Iter(hit.set))
+            {
+                mask[Js.Idx(i)] = 0;
+            }
+        }
+        List<double> set = [];
+        foreach (var s in Js.Iter(lookers))
+        {
+            foreach (var i in Js.Iter(sightOf(state, s)))
+            {
+                if (Js.Get(mask, i) == 0)
+                {
+                    mask[Js.Idx(i)] = 1;
+                    set.push(i);
+                }
+            }
+        }
+        seen.set(state, new() { tick = state.tick, who = who, mask = mask, set = set });
+        return mask;
+    }
+}

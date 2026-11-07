@@ -1,0 +1,199 @@
+// Ported from tests/hunger.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class HungerTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map)
+    {
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = map });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = new(JobTypes.NO_JOBS) {  };
+        }
+        return state;
+    }
+
+    public static CommandResult starve(SimState state, Survivor s, double? satiety = null)
+    {
+        satiety ??= Food.HUNGRY - 1;
+        return Commands.applyCommand(state, new Command { type = "setSatiety", survivorId = s.id, satiety = satiety });
+    }
+
+    /// <summary>hunger and food</summary>
+    public class D001_hunger_and_food
+    {
+
+        [Fact(DisplayName = "hunger and food > starts staggered and drains by 1 per tick")]
+        public void T002_starts_staggered_and_drains_by_1_per_tick()
+        {
+            expect(new List<double> { 0, 1, 2, 3 }.map((__f0) => Food.initialSatiety(__f0))).toEqual(Js.Arr([3000, 2400, 1800, 2700]));
+            var state = setup(["s..."]);
+            for (var i = 0; i < 10; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(Js.NN(Js.Get(state.survivors, 0)).satiety).toBe(Food.SATIETY_MAX - 10);
+        }
+
+        [Fact(DisplayName = "hunger and food > a hungry survivor walks to the nearest food, eats it, and is fed")]
+        public void T003_a_hungry_survivor_walks_to_the_nearest_food_eats_it_and_is_f()
+        {
+            var state = setup(["s....f..f"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            starve(state, s);
+            Tick.tick(state);
+            expect(s.note).toBe("going to eat at (5, 0)");
+            expect(Js.NN(Js.Get(state.items, 0)).reservedBy).toBe(s.id);
+            runUntil(state, (_) => s.meal == null);
+            expect(s.note).toBe("ate a meal");
+            expect(state.items.map((i) => i.pos)).toEqual(Js.Arr([Js.Obj(("x", (object?)(8)), ("y", (object?)(0)))]));
+            expect(s.satiety).toBeGreaterThan(((((Food.HUNGRY - 1) + Food.MEAL_VALUE) - ((double)(5) * (4))) - Food.EAT_TICKS) - 5);
+        }
+
+        [Fact(DisplayName = "hunger and food > two hungry survivors never go for the same food")]
+        public void T004_two_hungry_survivors_never_go_for_the_same_food()
+        {
+            var state = setup(["s.f.s.....f"]);
+            foreach (var s in Js.Iter(state.survivors))
+            {
+                starve(state, s);
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+            var targets = state.survivors.map((s) => s.meal?.itemId);
+            expect(Js.Set(targets).size).toBe(2);
+            runUntil(state, (st) => st.items.length == 0);
+        }
+
+        [Fact(DisplayName = "hunger and food > with no food, a hungry survivor keeps working")]
+        public void T005_with_no_food_a_hungry_survivor_keeps_working()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.w....."] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            s.priorities["clean"] = 0;
+            starve(state, s);
+            Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(6), y = Js.I(0), structure = "wall" });
+            runUntil(state, (st) => Js.Get(st.grid.tiles, 6) == "wall");
+            expect(s.meal).toBeNull();
+        }
+
+        [Fact(DisplayName = "hunger and food > getting hungry mid-job drops the job (and the wood) when there is food to go to")]
+        public void T006_getting_hungry_mid_job_drops_the_job_and_the_wood_when_there()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.w........f"] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            s.priorities["clean"] = 0;
+            Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(9), y = Js.I(0), structure = "wall" });
+            runUntil(state, (_) => s.carrying != null);
+            starve(state, s);
+            Tick.tick(state);
+            expect(s.jobId).toBeNull();
+            expect(s.carrying).toBeNull();
+            expect(s.meal).not.toBeNull();
+            runUntil(state, (_) => s.note == "ate a meal");
+            runUntil(state, (st) => Js.Get(st.grid.tiles, 9) == "wall");
+        }
+
+        [Fact(DisplayName = "hunger and food > eats before sleeping when both hungry and tired")]
+        public void T007_eats_before_sleeping_when_both_hungry_and_tired()
+        {
+            var state = setup(["s.f.b"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            starve(state, s);
+            Commands.applyCommand(state, new Command { type = "setRest", survivorId = s.id, rest = Rest.TIRED - 1 });
+            Tick.tick(state);
+            expect(s.meal).not.toBeNull();
+            expect(s.sleep).toBeNull();
+            runUntil(state, (_) => s.note == "ate a meal");
+            runUntil(state, (_) => s.sleep?.asleep == true);
+        }
+
+        [Fact(DisplayName = "hunger and food > sleepers are not woken to eat")]
+        public void T008_sleepers_are_not_woken_to_eat()
+        {
+            var state = setup(["s.b.f"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Commands.applyCommand(state, new Command { type = "setRest", survivorId = s.id, rest = Rest.TIRED - 1 });
+            runUntil(state, (_) => s.sleep?.asleep == true);
+            starve(state, s);
+            for (var i = 0; i < 20; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(s.sleep?.asleep).toBe(true);
+            expect(s.meal).toBeNull();
+        }
+
+        [Fact(DisplayName = "hunger and food > food walled off mid-walk is given up, and the survivor finds other food")]
+        public void T009_food_walled_off_mid_walk_is_given_up_and_the_survivor_finds_()
+        {
+            var state = setup(["f.....s........f", "................"]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            starve(state, s);
+            Tick.tick(state);
+            var first = Js.NN(s.meal).itemId;
+            var target = Js.NN(Js.NN(state.items.find((i) => i.id == first)).pos);
+            var dx = (target.x == 0) ? 1 : -1;
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(target.x + dx), y = Js.I(0) });
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(target.x), y = Js.I(1) });
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(target.x + dx), y = Js.I(1) });
+            runUntil(state, (_) => s.note == "ate a meal");
+            expect(state.items.map((i) => i.id)).toEqual(Js.Arr([first]));
+        }
+
+        [Fact(DisplayName = "hunger and food > a direct order interrupts a meal and frees the food")]
+        public void T010_a_direct_order_interrupts_a_meal_and_frees_the_food()
+        {
+            var state = setup(["s.....f", "......."]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            starve(state, s);
+            Tick.tick(state);
+            Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(0), y = Js.I(1) });
+            expect(s.meal).toBeNull();
+            expect(Js.NN(Js.Get(state.items, 0)).reservedBy).toBeNull();
+        }
+
+        [Fact(DisplayName = "hunger and food > food is stored like any item, but never used for building")]
+        public void T011_food_is_stored_like_any_item_but_never_used_for_building()
+        {
+            List<string> map = ["..........", ".####.....", ".#..#..f..", ".#..#.....", ".##D#.....", "..s......."];
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = map, rooms = [new() { x = Js.I(2), y = Js.I(2), purpose = "storage" }] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            s.priorities["clean"] = 0;
+            Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(8), y = Js.I(5), structure = "wall" });
+            Tick.tick(state);
+            expect(state.jobs.some((j) => Jobs.isStoreJob(j) && (j.itemId == Js.NN(Js.Get(state.items, 0)).id))).toBe(true);
+            runUntil(state, (st) => (Js.NN(Js.Get(st.items, 0)).pos?.x == 2) || (Js.NN(Js.Get(st.items, 0)).pos?.x == 3));
+            expect(Js.NN(Js.Get(state.blueprints, 0)).delivered).toBe(false);
+        }
+
+        [Fact(DisplayName = "hunger and food > setSatiety and spawnFood validate their input")]
+        public void T012_setSatiety_and_spawnFood_validate_their_input()
+        {
+            var state = setup(["s.#"]);
+            expect(Commands.applyCommand(state, new Command { type = "setSatiety", survivorId = "s1", satiety = Food.SATIETY_MAX + 1 }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "setSatiety", survivorId = "s1", satiety = 0 }).ok).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "spawnFood", x = Js.I(2), y = Js.I(0) }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "spawnFood", x = Js.I(1), y = Js.I(0) }).ok).toBe(true);
+            expect(DebugText.dumpText(state)).toBe("sf#");
+        }
+    }
+}

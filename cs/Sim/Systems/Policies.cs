@@ -1,0 +1,94 @@
+// Ported from src/sim/policies.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Colony policies and the leader.
+//
+// Policies are switches with a price:
+//   rationing   food goes a quarter further (satiety drains 3 ticks in 4), but everyone minds (-5)
+//   curfew      at night nobody but guards, firefighters and doctors takes work outdoors
+//   quarantine  the infected and the sick keep to their beds (so doctors come to them) and stop spreading it
+//
+// The leader is whoever the others think best of (an average opinion of at
+// least LEADER_MIN, with three or more in the colony), settled each dawn. A
+// colony with a leader is a little happier (+5); losing them hits everyone
+// hard ("lost our leader", mood.ts).
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Policies
+{
+
+    public static readonly List<string> POLICIES = ["rationing", "curfew", "quarantine"];
+
+    public static readonly JsRecord<string> POLICY_INFO = new() { ["rationing"] = "food lasts a quarter longer; everyone minds (-5 mood)", ["curfew"] = "no work outdoors at night but guarding, firefighting and doctoring", ["quarantine"] = "the infected and sick keep to bed (doctors come) and stop spreading it" };
+
+    public const double RATIONED_MOOD = -5;
+
+    public const int LEADER_MIN = 20;
+
+    public const int LEADER_MOOD = 5;
+
+    public static bool isPolicy(object p)
+    {
+        return (/*TODO typeof*/Js.TypeOf(p) == "string") && (POLICIES).includes(p);
+    }
+
+    public static bool policyOn(SimState state, string p)
+    {
+        return state.policies.includes(p);
+    }
+
+    /// <summary>Rationing: satiety drains three ticks in four.</summary>
+    public static bool satietyDrains(SimState state)
+    {
+        return !policyOn(state, "rationing") || ((state.tick % 4) != 0);
+    }
+
+    /// <summary>Quarantine: the infected and sick stay in bed.</summary>
+    public static bool quarantined(SimState state, Survivor s)
+    {
+        return policyOn(state, "quarantine") && ((s.infection != null) || (s.sick != null));
+    }
+
+    /// <summary>The best-thought-of survivor, if anyone is thought well enough of.</summary>
+    public static Survivor? chooseLeader(SimState state)
+    {
+        if (state.survivors.length < 3)
+        {
+            return null;
+        }
+        Survivor? best = null;
+        double bestScore = LEADER_MIN;
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            if (s.childUntil != null)
+            {
+                continue;
+            }
+            var others = state.survivors.filter((o) => o != s);
+            var score = ((double)(others.reduce((sum, o) => sum + Relationships.opinion(o, s), 0.0)) / (others.length));
+            if (score >= bestScore)
+            {
+                best = s;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    public static void updateLeader(SimState state)
+    {
+        if ((state.tick % Time.DAY_LENGTH) != 0)
+        {
+            return;
+        }
+        var leader = chooseLeader(state);
+        if ((leader?.id ?? null) == state.leaderId)
+        {
+            return;
+        }
+        state.leaderId = leader?.id ?? null;
+        if (Js.T(leader))
+        {
+            Events.logEvent(state, $"{Js.Str(leader.name)} has become the colony's leader (+{Js.Str(LEADER_MOOD)} mood for everyone)");
+        }
+    }
+}

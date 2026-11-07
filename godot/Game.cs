@@ -596,6 +596,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.N: view.showMinimap = !view.showMinimap; return;
             case Key.O: view.showOverview = !view.showOverview; return;
             case Key.K: view.showKeys = !view.showKeys; return;
+            // Speed up or down a step (1x, 2x, 4x), as the HUD's buttons.
+            case Key.Equal or Key.KpAdd: view.speed = view.speed == 1 ? 2 : 4; view.paused = false; return;
+            case Key.Minus or Key.KpSubtract: view.speed = view.speed == 4 ? 2 : 1; return;
             case Key.Home: view.camera = centredOn(state.grid.width, state.grid.height, view.camera.zoom); return;
             case Key.F:
                 if (c != null) Command(new Command { type = "takeControl", survivorId = null });

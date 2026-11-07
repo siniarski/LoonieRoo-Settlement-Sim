@@ -114,10 +114,10 @@ public sealed partial class Hud : Control
         bottomLeft.AddChild(priorities);
         bottomLeft.AddChild(card);
         AddChild(bottomLeft);
-        Anchor(bottomLeft, 0, 1, 12, -12, GrowDirection.End, GrowDirection.Begin);
+        Pin(bottomLeft, 0, 1, 12, -12, GrowDirection.End, GrowDirection.Begin);
 
         // Top right: conditions; bottom right: loot, the bag, the minimap.
-        Anchor(conditions, 1, 0, -12, 12, GrowDirection.Begin, GrowDirection.End);
+        Pin(conditions, 1, 0, -12, 12, GrowDirection.Begin, GrowDirection.End);
         AddChild(conditions);
         var bottomRight = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         bottomRight.AddThemeConstantOverride("separation", 6);
@@ -125,13 +125,13 @@ public sealed partial class Hud : Control
         bottomRight.AddChild(bag);
         bottomRight.AddChild(minimap);
         AddChild(bottomRight);
-        Anchor(bottomRight, 1, 1, -12, -12, GrowDirection.Begin, GrowDirection.Begin);
+        Pin(bottomRight, 1, 1, -12, -12, GrowDirection.Begin, GrowDirection.Begin);
 
         // Right: the debug panel; middle top: the overview; bottom middle: the build bar and the paused banner.
         AddChild(debug);
-        Anchor(debug, 1, 0, -12, 60, GrowDirection.Begin, GrowDirection.End);
+        Pin(debug, 1, 0, -12, 60, GrowDirection.Begin, GrowDirection.End);
         AddChild(overview);
-        Anchor(overview, 0.5f, 0, 0, 58, GrowDirection.Both, GrowDirection.End);
+        Pin(overview, 0.5f, 0, 0, 58, GrowDirection.Both, GrowDirection.End);
         var bottom = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
         bottom.AddThemeConstantOverride("separation", 6);
         var bannerRow = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -139,10 +139,10 @@ public sealed partial class Hud : Control
         bottom.AddChild(bannerRow);
         bottom.AddChild(buildBar);
         AddChild(bottom);
-        Anchor(bottom, 0.5f, 1, 0, -12, GrowDirection.Both, GrowDirection.Begin);
+        Pin(bottom, 0.5f, 1, 0, -12, GrowDirection.Both, GrowDirection.Begin);
     }
 
-    static void Anchor(Control c, float ax, float ay, float x, float y, Control.GrowDirection gx, Control.GrowDirection gy)
+    static void Pin(Control c, float ax, float ay, float x, float y, Control.GrowDirection gx, Control.GrowDirection gy)
     {
         c.AnchorLeft = c.AnchorRight = ax;
         c.AnchorTop = c.AnchorBottom = ay;

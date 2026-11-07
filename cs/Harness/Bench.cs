@@ -1,7 +1,6 @@
-// The benchmark and the stress test (harness/bench.harness.ts, stress.harness.ts, stressScenarios.ts) in C#, by hand:
-// what a tick costs as the world fills up, and where the sim breaks at scale. Same scenarios, same output lines, so
-// the two languages' numbers sit side by side (harness/out/cs-bench.txt, cs-stress.txt). The V8 CPU profiles of the
-// TypeScript versions have no in-process equivalent here: profile the C# with dotnet-trace instead.
+// The benchmark and the stress test (ported by hand from the TypeScript harness, retired: git tag ts-final): what a
+// tick costs as the world fills up, and where the sim breaks at scale. Reports go to cs/Harness/out (bench.txt,
+// stress.txt). For a CPU profile, run it under dotnet-trace.
 // Env: ONLY=<name> one stress scenario (or the zombie-heavy bench case, for longer); TICKS per stress scenario (300).
 
 using System.Diagnostics;
@@ -115,7 +114,7 @@ public static class Scenarios
 public class Bench
 {
     static string? Env(string name) => System.Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;
-    static string OutPath(string name) => Path.Combine(Node.Root, Env("OUT") ?? $"harness/out/cs-{name}.txt");
+    static string OutPath(string name) => Path.Combine(Node.Root, Env("OUT") ?? $"cs/Harness/out/{name}.txt");
     static double Mb() => GC.GetTotalMemory(true) / 1e6;
 
     static string Line(string size, SimState state, List<double> times)

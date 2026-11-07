@@ -1,0 +1,207 @@
+// Ported from tests/people.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class PeopleTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map, JsRecord<double>? jobs = null)
+    {
+        jobs ??= new() {  };
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 13, map = map });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
+        }
+        return state;
+    }
+
+    /// <summary>A book's id with the given subject (subjects come from the id).</summary>
+    public static double bookWith(string subject)
+    {
+        for (var n = 1; n < 10000; n++)
+        {
+            if (Books.bookSubject($"i{Js.Str(n)}") == subject)
+            {
+                return n;
+            }
+        }
+        throw new Exception($"no {Js.Str(subject)} book");
+    }
+
+    /// <summary>books</summary>
+    public class D001_books
+    {
+
+        [Fact(DisplayName = "books > subjects come from the id: mostly skills, some knowledge")]
+        public void T002_subjects_come_from_the_id_mostly_skills_some_knowledge()
+        {
+            var subjects = Js.ArrayFrom(400, (int n) => Books.bookSubject($"i{Js.Str(n)}"));
+            expect(subjects.filter((s) => (s == "gunsmithing") || (s == "tailoring")).length).toBeGreaterThan(40);
+            expect(subjects.filter((s) => s == "farm").length).toBeGreaterThan(20);
+        }
+
+        [Fact(DisplayName = "books > an idle survivor reads a free book: a skill book is a level of practice, and used up")]
+        public void T003_an_idle_survivor_reads_a_free_book_a_skill_book_is_a_level_o()
+        {
+            var state = setup(["s...."]);
+            state.nextId = Js.I(bookWith("farm"));
+            Items.spawnItem(state, "book", 4, 0);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => state.items.length == 0, Books.READ_TICKS + 50);
+            expect(s.xp["farm"]).toBe(Skills.XP_PER_LEVEL);
+            expect(s.reading).toBeNull();
+        }
+
+        [Fact(DisplayName = "books > a knowledge book unlocks recipes that need it")]
+        public void T004_a_knowledge_book_unlocks_recipes_that_need_it()
+        {
+            var state = setup(["s....", ".k..."]);
+            state.craftTargets["armour"] = 1;
+            expect(Crafting.wantedCraft(state, "workbench", false)).toBeNull();
+            state.nextId = Js.I(bookWith("tailoring"));
+            Items.spawnItem(state, "book", 4, 0);
+            runUntil(state, (_) => state.knowledge.includes("tailoring"), Books.READ_TICKS + 50);
+            expect(Crafting.wantedCraft(state, "workbench", false)).toBe("armour");
+        }
+
+        [Fact(DisplayName = "books > a job turning up interrupts reading")]
+        public void T005_a_job_turning_up_interrupts_reading()
+        {
+            var state = setup(["s...N", "....."], new() { ["clean"] = 3 });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => (Js.Q(s.reading?.progress, 0)) > 10, 100);
+            state.grid.dirt[Js.Idx(((double)(1) * (5)) + 0)] = 0;
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(0), y = Js.I(1) });
+            Js.NN(Js.Get(state.survivors, 0)).priorities["haul"] = 3;
+            state.items.push(new() { id = "w1", kind = "wood", pos = new Point { x = Js.I(2), y = Js.I(1) }, carriedBy = null, reservedBy = null, wear = 0, tag = null });
+            state.blueprints.push(new() { id = "bp", x = Js.I(1), y = Js.I(1), target = "wall", needsMaterial = true, delivered = false, workDone = 0, workRequired = 30 });
+            runUntil(state, (_) => s.jobId != null, 50);
+            expect(s.reading).toBeNull();
+            expect(Js.NN(state.items.find((i) => i.kind == "book")).reservedBy).toBeNull();
+        }
+    }
+
+    /// <summary>dogs</summary>
+    public class D006_dogs
+    {
+
+        [Fact(DisplayName = "dogs > a dog barks at a zombie, goes for it, and brings it down")]
+        public void T007_a_dog_barks_at_a_zombie_goes_for_it_and_brings_it_down()
+        {
+            var state = setup(["s.g.......", ".........."]);
+            state.tick = Js.I(((double)(17) * (Time.TICKS_PER_HOUR)) + 1);
+            state.zombiesTonight = 0;
+            Zombies.addZombie(state, 9, 1, 80, "static");
+            expect((9 - 2) + 1).toBeLessThanOrEqual(Dogs.DOG_SENSE);
+            runUntil(state, (_) => state.zombies.length == 0, 400);
+            expect(state.events.some((e) => e.message.includes("barking"))).toBe(true);
+            expect(state.events.some((e) => e.message.includes("brought down a zombie"))).toBe(true);
+        }
+
+        [Fact(DisplayName = "dogs > follows people and cheers them up")]
+        public void T008_follows_people_and_cheers_them_up()
+        {
+            var state = setup(["s.........g"]);
+            runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).thoughts.some((t) => t.kind == "dog"), 400);
+        }
+
+        [Fact(DisplayName = "dogs > strays turn up some days, and expeditions sometimes bring one home")]
+        public void T009_strays_turn_up_some_days_and_expeditions_sometimes_bring_one()
+        {
+            var state = setup(["s...."]);
+            Dogs.addDog(state, 2, 0);
+            expect(state.dogs).toHaveLength(1);
+        }
+    }
+
+    /// <summary>settlements</summary>
+    public class D010_settlements
+    {
+
+        [Fact(DisplayName = "settlements > a generated world has neighbours; traders come from them")]
+        public void T011_a_generated_world_has_neighbours_traders_come_from_them()
+        {
+            var state = Worldgen.createWorld(4, 64);
+            expect(state.settlements).toHaveLength(3);
+        }
+
+        [Fact(DisplayName = "settlements > gifts warm them; snubs and enemies show in the events")]
+        public void T012_gifts_warm_them_snubs_and_enemies_show_in_the_events()
+        {
+            var state = setup(["s.ffff"]);
+            state.settlements.push(new() { id = "n1", name = "Testville", x = Js.I(0), y = Js.I(0), reputation = 0, people = 8, food = 32, defence = 1, ties = new() {  }, unfolded = true, lastTalk = -1, lastRaid = -1 });
+            expect(Commands.applyCommand(state, new Command { type = "giftSettlement", settlementId = "n1" }).ok).toBe(true);
+            expect(Js.NN(Js.Get(state.settlements, 0)).reputation).toBe(Settlements.GIFT_REP);
+            expect(state.items.filter((i) => i.kind == "food")).toHaveLength(1);
+            expect(Commands.applyCommand(state, new Command { type = "giftSettlement", settlementId = "n1" }).ok).toBe(false);
+            Settlements.adjustReputation(state, Js.NN(Js.Get(state.settlements, 0)), Settlements.HOSTILE - Settlements.GIFT_REP);
+            expect(Js.NN(state.events.at(-1)).message).toMatch(new JsRegExp("enemy", ""));
+        }
+
+        [Fact(DisplayName = "settlements > a friendly settlement sends someone to join")]
+        public void T013_a_friendly_settlement_sends_someone_to_join()
+        {
+            var state = setup(["s...."]);
+            state.settlements.push(new() { id = "n1", name = "Testville", x = Js.I(0), y = Js.I(0), reputation = Settlements.FRIENDLY, people = 8, food = 32, defence = 1, ties = new() {  }, unfolded = true, lastTalk = -1, lastRaid = -1 });
+            state.tick = Js.I(((double)(5) * (Time.DAY_LENGTH)) - ((double)(6) * (Time.TICKS_PER_HOUR)));
+            while ((state.wanderers.length == 0) && (state.tick < ((double)(6) * (Time.DAY_LENGTH))))
+            {
+                Tick.tick(state);
+            }
+            expect(state.wanderers).toHaveLength(1);
+        }
+    }
+
+    /// <summary>children</summary>
+    public class D014_children
+    {
+
+        [Fact(DisplayName = "children > lovers with a spare bed may have a baby, who does no work, then grows up")]
+        public void T015_lovers_with_a_spare_bed_may_have_a_baby_who_does_no_work_the()
+        {
+            var state = setup(["ss..b", "....."]);
+            state.harsh = true;
+            var (a, b) = state.survivors;
+            Js.NN(a).opinions[Js.Idx(Js.NN(b).id)] = Family.LOVERS;
+            Js.NN(b).opinions[Js.Idx(Js.NN(a).id)] = Family.LOVERS;
+            foreach (var s in Js.Iter(state.survivors))
+            {
+                s.age = 30;
+                s.satiety = 3000;
+            }
+            double days = 0;
+            while ((state.survivors.length < 3) && (days < 40))
+            {
+                state.tick = Js.I(((double)(days) * (Time.DAY_LENGTH)) + ((double)(Time.DAY_LENGTH) / (2)));
+                Tick.tick(state);
+                days += 1;
+            }
+            expect(state.survivors).toHaveLength(3);
+            var baby = Js.NN(Js.Get(state.survivors, 2));
+            expect(Family.isChild(baby)).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "setPriority", survivorId = baby.id, jobType = "build", priority = 1 }).ok).toBe(false);
+            state.tick = Js.I(Js.NN(baby.childUntil));
+            Tick.tick(state);
+            expect(Family.isChild(baby)).toBe(false);
+            expect(baby.priorities["build"]).toBeGreaterThan(0);
+            expect(Family.CHILDHOOD).toBeGreaterThan(Time.DAY_LENGTH);
+        }
+    }
+}

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The harness tools in C# (harness/*.harness.ts): scripted balance players (translated, Generated/), a benchmark and
-       a stress test (by hand). Not part of the check. Run one with cs/harness.sh (see it). -->
+  <!-- The harness: scripted balance players (ColonyHarness, SoloHarness), a benchmark and a stress test (Bench.cs).
+       Not in the solution or the check. How to run one: CLAUDE.md, Commands. -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

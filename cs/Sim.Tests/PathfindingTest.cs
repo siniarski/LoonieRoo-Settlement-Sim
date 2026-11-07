@@ -1,0 +1,190 @@
+// Ported from tests/pathfinding.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class PathfindingTest
+{
+
+    /// <summary>Builds a grid from rows; 'A' marks start and 'B' marks goal (both floor).</summary>
+    public static SetupResult setup(List<string> rows)
+    {
+        Point start = new Point { x = Js.I(0), y = Js.I(0) };
+        Point goal = new Point { x = Js.I(0), y = Js.I(0) };
+        var map = rows.map((row, y) => Js.ListOf(Js.Chars(row)).map((c, x) =>
+        {
+            if (c == "A")
+            {
+                start = new Point { x = Js.I(x), y = Js.I(y) };
+            }
+            if (c == "B")
+            {
+                goal = new Point { x = Js.I(x), y = Js.I(y) };
+            }
+            return ((c == "A") || (c == "B")) ? "." : c;
+        }).join(""));
+        return new SetupResult { grid = ScenarioMod.loadScenario(new Scenario { seed = 0, map = map }).grid, start = start, goal = goal, rows = rows };
+    }
+
+    /// <summary>Draws the path with '*' so failures show the route in the terminal.</summary>
+    public static string show(List<string> rows, List<Point>? path)
+    {
+        var @out = rows.map((r) => Js.Arr([.. r]));
+        foreach (var p in Js.Iter(path ?? []))
+        {
+            var row = Js.NN(Js.Get(@out, p.y));
+            if (Js.Str(Js.Get(row, p.x)) != "B")
+            {
+                row[Js.Idx(p.x)] = "*";
+            }
+        }
+        return @out.map((r) => r.join("")).join("\n");
+    }
+
+    public static bool isConnected(Point start, List<Point> path)
+    {
+        var prev = start;
+        foreach (var p in Js.Iter(path))
+        {
+            if ((JsMath.abs(p.x - prev.x) + JsMath.abs(p.y - prev.y)) != 1)
+            {
+                return false;
+            }
+            prev = p;
+        }
+        return true;
+    }
+
+    /// <summary>findPath</summary>
+    public class D001_findPath
+    {
+
+        [Fact(DisplayName = "findPath > walks a straight line, excluding start and including goal")]
+        public void T002_walks_a_straight_line_excluding_start_and_including_goal()
+        {
+            var __d0 = setup(["A...B"]);
+            var grid = __d0.grid;
+            var start = __d0.start;
+            var goal = __d0.goal;
+            expect(Pathfinding.findPath(grid, start, goal)).toEqual(Js.Arr([Js.Obj(("x", (object?)(1)), ("y", (object?)(0))), Js.Obj(("x", (object?)(2)), ("y", (object?)(0))), Js.Obj(("x", (object?)(3)), ("y", (object?)(0))), Js.Obj(("x", (object?)(4)), ("y", (object?)(0)))]));
+        }
+
+        [Fact(DisplayName = "findPath > returns [] when already at the goal")]
+        public void T003_returns_when_already_at_the_goal()
+        {
+            var __d1 = setup(["..."]);
+            var grid = __d1.grid;
+            expect(Pathfinding.findPath(grid, new Point { x = Js.I(1), y = Js.I(0) }, new Point { x = Js.I(1), y = Js.I(0) })).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "findPath > goes around walls with an optimal, connected path")]
+        public void T004_goes_around_walls_with_an_optimal_connected_path()
+        {
+            List<string> rows = [".......", ".A.#.B.", "...#...", ".###...", "......."];
+            var __d2 = setup(rows);
+            var grid = __d2.grid;
+            var start = __d2.start;
+            var goal = __d2.goal;
+            var path = Pathfinding.findPath(grid, start, goal);
+            expect(path, show(rows, path)).not.toBeNull();
+            expect(isConnected(start, Js.NN(path)), show(rows, path)).toBe(true);
+            expect(Js.NN(path).at(-1)).toEqual(goal);
+            expect(Js.NN(path).length, show(rows, path)).toBe(6);
+        }
+
+        [Fact(DisplayName = "findPath > walks through doors")]
+        public void T005_walks_through_doors()
+        {
+            List<string> rows = ["#####", "A.D.B", "#####"];
+            var __d3 = setup(rows);
+            var grid = __d3.grid;
+            var start = __d3.start;
+            var goal = __d3.goal;
+            expect(Pathfinding.findPath(grid, start, goal)).toHaveLength(4);
+        }
+
+        [Fact(DisplayName = "findPath > returns null when the goal is walled off")]
+        public void T006_returns_null_when_the_goal_is_walled_off()
+        {
+            List<string> rows = ["A..###", "...#B#", "...###"];
+            var __d4 = setup(rows);
+            var grid = __d4.grid;
+            var start = __d4.start;
+            var goal = __d4.goal;
+            expect(Pathfinding.findPath(grid, start, goal)).toBeNull();
+        }
+
+        [Fact(DisplayName = "findPath > returns null for unwalkable or out-of-bounds goals")]
+        public void T007_returns_null_for_unwalkable_or_out_of_bounds_goals()
+        {
+            var __d5 = setup(["A.#"]);
+            var grid = __d5.grid;
+            expect(Pathfinding.findPath(grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(2), y = Js.I(0) })).toBeNull();
+            expect(Pathfinding.findPath(grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(9), y = Js.I(0) })).toBeNull();
+        }
+
+        [Fact(DisplayName = "findPath > can leave an unwalkable start tile")]
+        public void T008_can_leave_an_unwalkable_start_tile()
+        {
+            var __d6 = setup(["#.."]);
+            var grid = __d6.grid;
+            expect(Pathfinding.findPath(grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(2), y = Js.I(0) })).toHaveLength(2);
+        }
+
+        [Fact(DisplayName = "findPath > is deterministic and Manhattan-optimal in open space")]
+        public void T009_is_deterministic_and_Manhattan_optimal_in_open_space()
+        {
+            var rows = Js.ArrayFrom(20, (int _i) => ".".repeat(30));
+            var __d7 = setup(rows);
+            var grid = __d7.grid;
+            var a = Pathfinding.findPath(grid, new Point { x = Js.I(2), y = Js.I(3) }, new Point { x = Js.I(27), y = Js.I(17) });
+            var b = Pathfinding.findPath(grid, new Point { x = Js.I(2), y = Js.I(3) }, new Point { x = Js.I(27), y = Js.I(17) });
+            expect(a).toEqual(b);
+            expect(a).toHaveLength(25 + 14);
+        }
+
+        [Fact(DisplayName = "findPath > findPathToAny goes to the nearest reachable goal")]
+        public void T010_findPathToAny_goes_to_the_nearest_reachable_goal()
+        {
+            List<string> rows = ["..#....", "A.#..B.", "..#...."];
+            var __d8 = setup(rows);
+            var grid = __d8.grid;
+            var start = __d8.start;
+            expect(Pathfinding.findPathToAny(grid, start, new List<Point> { new Point { x = Js.I(5), y = Js.I(1) }, new Point { x = Js.I(0), y = Js.I(0) } })).toEqual(Js.Arr([Js.Obj(("x", (object?)(0)), ("y", (object?)(0)))]));
+            expect(Pathfinding.findPathToAny(grid, start, new List<Point> { new Point { x = Js.I(5), y = Js.I(1) } })).toBeNull();
+            expect(Pathfinding.findPathToAny(grid, start, new List<Point> { new Point { x = Js.I(0), y = Js.I(1) } })).toEqual(Js.Arr([]));
+            expect(Pathfinding.findPathToAny(grid, start, new List<Point> { new Point { x = Js.I(2), y = Js.I(1) } })).toBeNull();
+        }
+
+        [Fact(DisplayName = "findPath > canReach agrees with A* and refreshes when the version changes")]
+        public void T011_canReach_agrees_with_A_and_refreshes_when_the_version_change()
+        {
+            List<string> rows = ["A.#..B", "..#...", "......"];
+            var __d9 = setup(rows);
+            var grid = __d9.grid;
+            var start = __d9.start;
+            var goal = __d9.goal;
+            expect(Pathfinding.canReach(grid, 0, start, [goal])).toBe(true);
+            Grids.setTile(grid, 2, 2, "wall");
+            expect(Pathfinding.canReach(grid, 0, start, [goal])).toBe(true);
+            expect(Pathfinding.canReach(grid, 1, start, [goal])).toBe(false);
+            expect(Pathfinding.findPath(grid, start, goal)).toBeNull();
+            expect(Pathfinding.canReach(grid, 1, new Point { x = Js.I(2), y = Js.I(0) }, [goal])).toBe(true);
+        }
+
+        [Fact(DisplayName = "findPath > solves a maze")]
+        public void T012_solves_a_maze()
+        {
+            List<string> rows = ["A.#.......", "#.#.####.#", "#.#.#..#.#", "#...#.##.#", "#####.#..#", "#.....#.##", "#.#####..B"];
+            var __d10 = setup(rows);
+            var grid = __d10.grid;
+            var start = __d10.start;
+            var goal = __d10.goal;
+            var path = Pathfinding.findPath(grid, start, goal);
+            expect(path, show(rows, path)).not.toBeNull();
+            expect(isConnected(start, Js.NN(path))).toBe(true);
+            expect(Js.NN(path).at(-1)).toEqual(goal);
+        }
+    }
+}

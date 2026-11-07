@@ -1,0 +1,53 @@
+// Ported from tests/mapnotes.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class MapnotesTest
+{
+
+    /// <summary>the map</summary>
+    public class D001_the_map
+    {
+
+        [Fact(DisplayName = "the map > pins notes by command, tidies them, and takes them off")]
+        public void T002_pins_notes_by_command_tidies_them_and_takes_them_off()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = [".....", "....."] });
+            expect(Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(3), y = Js.I(1), text = "  food here  " }).ok).toBe(true);
+            expect(Mapnotes.notesOf(state)).toEqual(Js.Arr([Vitest.objectContaining(Js.Obj(("x", (object?)(3)), ("y", (object?)(1)), ("text", (object?)("food here"))))]));
+            expect(Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(9), y = Js.I(1), text = "off the map" }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(1), y = Js.I(1), text = "   " }).ok).toBe(false);
+            Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(0), y = Js.I(0), text = "x".repeat(Mapnotes.NOTE_MAX + 10) });
+            expect(Js.NN(Js.Get(Mapnotes.notesOf(state), 1)).text.length).toBe(Mapnotes.NOTE_MAX);
+            expect(Js.DeepClone(state).mapNotes).toHaveLength(2);
+            expect(Commands.applyCommand(state, new Command { type = "removeMapNote", id = Js.NN(Js.Get(Mapnotes.notesOf(state), 0)).id }).ok).toBe(true);
+            expect(Mapnotes.notesOf(state).map((n) => n.text)).toEqual(Js.Arr(["x".repeat(Mapnotes.NOTE_MAX)]));
+            expect(Commands.applyCommand(state, new Command { type = "removeMapNote", id = "nope" }).ok).toBe(false);
+        }
+
+        [Fact(DisplayName = "the map > holds only so many")]
+        public void T003_holds_only_so_many()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["."] });
+            for (var i = 0; i < Mapnotes.MAX_NOTES; i++)
+            {
+                Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(0), y = Js.I(0), text = $"n{Js.Str(i)}" });
+            }
+            expect(Commands.applyCommand(state, new Command { type = "addMapNote", x = Js.I(0), y = Js.I(0), text = "one more" }).ok).toBe(false);
+        }
+
+        [Fact(DisplayName = "the map > names a generated world's towns, each differently, from the towns in people's stories first")]
+        public void T004_names_a_generated_world_s_towns_each_differently_from_the_to()
+        {
+            var state = Worldgen.createWorld(5, 256);
+            var towns = Mapnotes.townNames(state);
+            expect(towns.length).toBeGreaterThan(0);
+            expect(Js.Set(towns.map((t) => t.name)).size).toBe(JsMath.min(towns.length, Mapnotes.TOWN_NAMES.length));
+            expect(Mapnotes.TOWN_NAMES.slice(0, StoryMod.TOWNS.length)).toEqual(Js.Arr([.. StoryMod.TOWNS]));
+            expect(Mapnotes.townNames(Worldgen.createWorld(5, 256))).toEqual(towns);
+            expect(Mapnotes.townNames(ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["."] }))).toEqual(Js.Arr([]));
+        }
+    }
+}

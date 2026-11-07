@@ -1,0 +1,138 @@
+// Ported from src/sim/endgame.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// The endgame: two ways to win, and the siege nights on the way.
+//
+// A cure: zombies brought down sometimes leave a tissue sample (SAMPLE_CHANCE,
+// a hash). A powered lab bench gets a research job while there are samples to
+// study (jobs.ts): bring one to the bench, work RESEARCH_WORK, and it's
+// studied. CURE_SAMPLES studied and the colony has a cure.
+//
+// Evacuation: from day EVAC_FROM_DAY, a powered beacon and a powered radio get
+// through to the military. A helicopter is promised for the dawn EVAC_DAYS later; the night
+// before it is the worst siege of all (EVAC_SIEGE times the zombies). Anyone
+// still alive at that dawn is flown out.
+//
+// Siege nights: every SIEGE_EVERY nights the horde comes in earnest
+// (SIEGE_FACTOR times the zombies), with a warning two days ahead.
+// Winning doesn't stop the game: it's marked (state.endgame.won) and told.
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class EndgameMod
+{
+
+    public const double SAMPLE_CHANCE = 0.15;
+
+    public const int CURE_SAMPLES = 40;
+
+    public const int RESEARCH_WORK = 200;
+
+    public const int EVAC_DAYS = 3;
+
+    /// <summary>The military only answers from this day on (a year in).</summary>
+    public const int EVAC_FROM_DAY = 20;
+
+    public const int EVAC_SIEGE = 3;
+
+    public const int SIEGE_EVERY = 7;
+
+    /// <summary>The first siege night (balance pass 5: night 7 was too soon).</summary>
+    public const int FIRST_SIEGE = 14;
+
+    public const double SIEGE_FACTOR = 1.25;
+
+    public static Endgame newEndgame()
+    {
+        return new Endgame { cure = 0, evacuation = null, won = null, helicopter = false, escaped = 0 };
+    }
+
+    /// <summary>A zombie went down: maybe it leaves a sample.</summary>
+    public static void maybeSample(SimState state, string zombieId, Point at)
+    {
+        if ((state.endgame.won == null) && (Hash.hashRoll(Hash.idNumber(zombieId), 0x5a3) < SAMPLE_CHANCE))
+        {
+            Items.spawnItem(state, "sample", at.x, at.y);
+        }
+    }
+
+    /// <summary>Is this night (by number) the evacuation night, or a siege night?</summary>
+    public static double siegeFactor(SimState state, double night)
+    {
+        var evac = state.endgame.evacuation;
+        if ((evac != null) && ((Time.dayOf(Js.NN(evac)) - 1) == night))
+        {
+            return EVAC_SIEGE;
+        }
+        return ((night >= FIRST_SIEGE) && ((night % SIEGE_EVERY) == 0)) ? SIEGE_FACTOR : 1;
+    }
+
+    /// <summary>Days to the next siege night (0: tonight).</summary>
+    public static double daysToSiege(int tick)
+    {
+        var day = Time.dayOf(tick);
+        if (day < FIRST_SIEGE)
+        {
+            return FIRST_SIEGE - day;
+        }
+        return (SIEGE_EVERY - (day % SIEGE_EVERY)) % SIEGE_EVERY;
+    }
+    public static double daysToSiege(double tick) => daysToSiege(Js.I(tick));
+
+    public static bool researchWanted(SimState state)
+    {
+        return (state.endgame.won == null) && (state.endgame.cure < CURE_SAMPLES);
+    }
+
+    /// <summary>A sample studied at a lab bench.</summary>
+    public static void studied(SimState state)
+    {
+        state.endgame.cure += 1;
+        if (state.endgame.cure < CURE_SAMPLES)
+        {
+            return;
+        }
+        state.endgame.won = "cure";
+        Events.logEvent(state, "THE CURE: the last sample gave it up. The colony has a cure for the infection. You have won (play on if you like)");
+    }
+
+    public static void updateEndgame(SimState state)
+    {
+        var eg = state.endgame;
+        if (((state.tick % Time.DAY_LENGTH) == 0) && (state.tick > 0))
+        {
+            var ahead = daysToSiege(state.tick);
+            if (ahead == 2)
+            {
+                Events.logEvent(state, $"A siege is coming in two nights (night {Js.Str(Time.dayOf(state.tick) + 2)}): a quarter more zombies. Get ready");
+            }
+        }
+        if (eg.helicopter)
+        {
+            return;
+        }
+        if (eg.evacuation == null)
+        {
+            if (((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Radio.hasRadio(state)) || !FurnitureMod.ofKind(state, "beacon").some((f) => Power.isPowered(state, f)))
+            {
+                return;
+            }
+            eg.evacuation = ((double)((JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + EVAC_DAYS)) * (Time.DAY_LENGTH));
+            Events.logEvent(state, $"The beacon got through: a helicopter will come at dawn on day {Js.Str(Time.dayOf(Js.NN(eg.evacuation)))}. The night before will be the worst yet. Hold out");
+            return;
+        }
+        if (state.tick < eg.evacuation)
+        {
+            return;
+        }
+        if (state.survivors.length == 0)
+        {
+            eg.evacuation = null;
+            return;
+        }
+        eg.helicopter = true;
+        if (eg.won == null)
+        {
+            eg.won = "evacuation";
+        }
+        Events.logEvent(state, "THE HELICOPTER is down at dawn. It waits until dusk: choose who goes (everyone, for a new start elsewhere; or just the others)");
+    }
+}

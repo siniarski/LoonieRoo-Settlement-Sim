@@ -1,0 +1,270 @@
+// Ported from src/sim/water.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+// Thirst: a third need, in a harsh game only (state.harsh).
+//
+// Hydration drains a point a tick. Below THIRSTY a survivor drops their job
+// and walks to the nearest place to drink: next to a well, or next to a rain
+// collector with water in it (both clean), or failing those, next to open
+// water (a river or lake), which now and then makes them sick. Drinking
+// takes DRINK_TICKS and fills them up. At 0 they lose health.
+//
+// Rain collectors fill while it rains or snows. While the mains are on, kitchen counters,
+// toilets and baths are taps (timeline.ts).
+#nullable disable warnings
+namespace LoonieRoo.Sim;
+
+public static partial class Water
+{
+
+    public const int HYDRATION_MAX = 2400;
+
+    public const int THIRSTY = 800;
+
+    public const int DRINK_TICKS = 20;
+
+    /// <summary>Dehydrated (hydration 0): lose 1 health every this many ticks.</summary>
+    public const int DEHYDRATION_DAMAGE_EVERY = 2;
+
+    public const int DRINK_RETRY_TICKS = 50;
+
+    /// <summary>Chance a drink of river water makes someone sick.</summary>
+    public const double DIRTY_WATER_SICK = 0.05;
+
+    public const double THIRSTY_MOOD = -10;
+
+    /// <summary>Water a rain collector holds, and how often it gains one in rain or snow.</summary>
+    public const int COLLECTOR_MAX = 20;
+
+    public const int COLLECTOR_FILL_EVERY = 50;
+
+    /// <summary>Water standing in a fitting with the mains off.</summary>
+    public static bool isTank(SimState state, Furniture f)
+    {
+        return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !TimelineMod.waterOn(state);
+    }
+
+    /// <summary>A drink taken from a source: collectors and tanks run down.</summary>
+    public static void drankFrom(SimState state, string source, int x, int y)
+    {
+        if ((source == "collector") || (source == "tank"))
+        {
+            Js.NN(FurnitureMod.furnitureAt(state, x, y)).loot -= 1;
+        }
+    }
+    public static void drankFrom(SimState state, string source, double x, double y) => drankFrom(state, source, Js.I(x), Js.I(y));
+
+    public static bool isThirsty(Survivor s)
+    {
+        return s.hydration < THIRSTY;
+    }
+
+    /// <summary>Drains hydration (harsh games only); dehydration hurts. Every tick, every survivor.</summary>
+    public static void updateHydration(SimState state, Survivor s)
+    {
+        if (!state.harsh)
+        {
+            return;
+        }
+        if (Time.slowTick(state.tick))
+        {
+            s.hydration = JsMath.max(0, s.hydration - (((state.weather == "heatwave") || Climate.scorching(state, s.pos.x, s.pos.y)) ? 2 : 1));
+        }
+        if ((s.hydration == 0) && ((state.tick % DEHYDRATION_DAMAGE_EVERY) == 0))
+        {
+            s.health = JsMath.max(0, s.health - 1);
+            s.lastHurtBy = "thirst";
+        }
+    }
+
+    /// <summary>Rain collectors fill in the wet.</summary>
+    public static void updateCollectors(SimState state)
+    {
+        if (!Seasons.isWet(state.weather) || ((state.tick % COLLECTOR_FILL_EVERY) != 0))
+        {
+            return;
+        }
+        foreach (var f in Js.Iter(state.furniture))
+        {
+            if ((f.kind == "collector") && (f.loot < COLLECTOR_MAX))
+            {
+                f.loot += 1;
+            }
+        }
+    }
+
+    /// <summary>What's drinkable from tile (x, y): a well, a collector with water, or open water.</summary>
+    public static string? sourceAt(SimState state, int x, int y)
+    {
+        var f = FurnitureMod.furnitureAt(state, x, y);
+        if (f?.kind == "well")
+        {
+            return "well";
+        }
+        if ((f?.kind == "collector") && (f.loot > 0))
+        {
+            return "collector";
+        }
+        if (Js.T(f) && TimelineMod.isTap(state, f))
+        {
+            return "tap";
+        }
+        if (Js.T(f) && isTank(state, f))
+        {
+            return "tank";
+        }
+        return (Grids.getTile(state.grid, x, y) == "water") ? "river" : null;
+    }
+    public static string? sourceAt(SimState state, double x, double y) => sourceAt(state, Js.I(x), Js.I(y));
+
+    /// <summary>How far (tiles searched) anyone looks for water: about a 100-tile walk.</summary>
+    public const int WATER_SEARCH = 20000;
+
+    /// <summary>Nearest tile to stand on and drink from: clean water first, the river only if there's none. The clean sources are looked up once, not tile by tile (profiling: on a 256 map, a thirsty crowd flooding the whole map with furniture lookups took 145 ms in one tick).</summary>
+    public static Drink? findWater(SimState state, Point from)
+    {
+        var __d0 = state;
+        var grid = __d0.grid;
+        var clean = new JsMap<double, string>();
+        var tapsOn = TimelineMod.waterOn(state);
+        foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, tapsOn ? ((List<string>)["well", "collector", "crate", "decor"]) : ((List<string>)["well", "collector", "decor"]))))
+        {
+            if (f.kind == "well")
+            {
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "well");
+            }
+            else if ((f.kind == "collector") && (f.loot > 0))
+            {
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "collector");
+            }
+            else if (tapsOn && TimelineMod.isTap(state, f))
+            {
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "tap");
+            }
+            else if (isTank(state, f))
+            {
+                clean.set(((double)(f.y) * (grid.width)) + f.x, "tank");
+            }
+        }
+        List<Func<double, double, string?>> passes = [(x, y) => clean.get(((double)(y) * (grid.width)) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has(((double)(y) * (grid.width)) + x)) ? "river" : null];
+        foreach (var (i, sourceOf) in Js.Iter(passes.entries()))
+        {
+            if ((i == 0) && (clean.size == 0))
+            {
+                continue;
+            }
+            Drink? found = null;
+            Space.nearestTile(grid, from, (x, y) =>
+        {
+            foreach (var n in Js.Iter(Grids.neighbours4(grid, x, y)))
+            {
+                var source = sourceOf(n.x, n.y);
+                if (!Js.T(source))
+                {
+                    continue;
+                }
+                found = new Drink { x = Js.I(x), y = Js.I(y), source = source, from = n, progress = 0 };
+                return true;
+            }
+            return false;
+        }, WATER_SEARCH);
+            if (Js.T(found))
+            {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Interrupt work for a drink (before movement), if there's water to go to.</summary>
+    public static bool thirstInterrupts(SimState state, Survivor s)
+    {
+        return ((state.harsh && isThirsty(s)) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
+    }
+
+    /// <summary>Runs when standing still, after eating and before treatment. Returns true if drinking handled this tick.</summary>
+    public static bool updateDrink(SimState state, Survivor s)
+    {
+        if (Js.T(Js.T(s.sleep) || !state.harsh))
+        {
+            return false;
+        }
+        if (!Js.T(s.drink) && !startDrink(state, s))
+        {
+            return false;
+        }
+        var d = Js.NN(s.drink);
+        if (!Space.samePoint(s.pos, d))
+        {
+            var path = Pathfinding.findPathToAny(state.grid, s.pos, [d]);
+            if (!Js.T(path) || (path.length == 0))
+            {
+                cancelDrink(s, "can't reach water");
+                s.nextDrinkTick = state.tick + DRINK_RETRY_TICKS;
+                return false;
+            }
+            Survivors.walk(s, path, state.walkabilityVersion);
+            return true;
+        }
+        var source = sourceAt(state, d.from.x, d.from.y);
+        if (source != d.source)
+        {
+            cancelDrink(s, "the water ran dry");
+            return false;
+        }
+        d.progress += 1;
+        if (d.progress == 1)
+        {
+            s.note = $"drinking from {Js.Str((d.source == "river") ? Js.Str("the river") : Js.Str($"a {Js.Str(d.source)}"))}";
+        }
+        if (d.progress < DRINK_TICKS)
+        {
+            return true;
+        }
+        s.hydration = HYDRATION_MAX;
+        s.drink = null;
+        drankFrom(state, d.source, d.from.x, d.from.y);
+        if (((d.source == "river") && (s.sick == null)) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7) < DIRTY_WATER_SICK))
+        {
+            s.sick = ((double)(Corpses.SICK_TICKS) / (2));
+            Events.logEvent(state, $"{Js.Str(s.name)} got sick from river water (wells and rain collectors are clean)");
+        }
+        s.note = "had a drink";
+        return true;
+    }
+
+    public static bool startDrink(SimState state, Survivor s)
+    {
+        if (!isThirsty(s) || (state.tick < s.nextDrinkTick))
+        {
+            return false;
+        }
+        var d = findWater(state, s.pos);
+        if (!Js.T(d))
+        {
+            s.nextDrinkTick = state.tick + DRINK_RETRY_TICKS;
+            return false;
+        }
+        if (Js.T(s.jobId))
+        {
+            Jobs.releaseSurvivor(state, s, "thirsty");
+        }
+        Needs.cancelTreatment(state, s, "thirsty");
+        Weapons.cancelArming(state, s, "thirsty");
+        Clothing.cancelDressing(state, s, "thirsty");
+        s.drink = d;
+        s.note = $"going for a drink at ({Js.Str(d.x)}, {Js.Str(d.y)})";
+        return true;
+    }
+
+    public static void cancelDrink(Survivor s, string note)
+    {
+        if (!Js.T(s.drink))
+        {
+            return;
+        }
+        s.drink = null;
+        s.goal = null;
+        s.path = [];
+        s.pathVersion = -1;
+        s.note = note;
+    }
+}

@@ -1,0 +1,201 @@
+// Ported from tests/leisure.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class LeisureTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map, List<ScenarioRoomsItem>? rooms = null, JsRecord<double>? jobs = null, double seed = 2)
+    {
+        rooms ??= new();
+        jobs ??= new() {  };
+        var state = ScenarioMod.loadScenario(new Scenario { seed = seed, map = map, rooms = rooms });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
+        }
+        return state;
+    }
+
+    public static List<string> thoughtsOf(Survivor s)
+    {
+        return s.thoughts.map((t) => t.kind);
+    }
+
+    /// <summary>Pushes mood under the miserable line.</summary>
+    public static void miserable(SimState state, Survivor s)
+    {
+        Mood.addThought(state, s, "sawDeath");
+        Mood.addThought(state, s, "sleptOnFloor");
+    }
+
+    public static readonly List<string> REC = ["#####", "#...#", "#...#", "##D##", ".s..."];
+
+    public static readonly ScenarioRoomsItem RECROOM = new ScenarioRoomsItem { x = Js.I(1), y = Js.I(1), purpose = "recroom" };
+
+    /// <summary>mood: new thoughts</summary>
+    public class D001_mood_new_thoughts
+    {
+
+        [Fact(DisplayName = "mood: new thoughts > hunger weighs on mood while it lasts")]
+        public void T002_hunger_weighs_on_mood_while_it_lasts()
+        {
+            var state = setup(["s.."]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Commands.applyCommand(state, new Command { type = "setSatiety", survivorId = s.id, satiety = Food.HUNGRY - 1 });
+            expect(Mood.mood(state, s)).toBe(Mood.MOOD_BASE - 10);
+        }
+
+        [Fact(DisplayName = "mood: new thoughts > a zombie attack leaves its mark")]
+        public void T003_a_zombie_attack_leaves_its_mark()
+        {
+            var state = setup(["zs.."]);
+            state.tick = Js.I(((double)(17) * (200)) + 1);
+            runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).health < 1000);
+            expect(thoughtsOf(Js.NN(Js.Get(state.survivors, 0)))).toContain("attacked");
+        }
+    }
+
+    /// <summary>rec room</summary>
+    public class D004_rec_room
+    {
+
+        [Fact(DisplayName = "rec room > an idle, so-so survivor goes to relax there and comes back happier")]
+        public void T005_an_idle_so_so_survivor_goes_to_relax_there_and_comes_back_ha()
+        {
+            var state = setup(REC, [RECROOM]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Mood.addThought(state, s, "ateWithoutTable");
+            runUntil(state, (_) => s.leisure != null);
+            expect(s.note).toMatch(new JsRegExp("^going to relax at", ""));
+            runUntil(state, (_) => s.note == "relaxed in the rec room", Leisure.RELAX_TICKS + 200);
+            expect(thoughtsOf(s)).toContain("relaxed");
+            for (var i = 0; i < 100; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(s.leisure).toBeNull();
+        }
+
+        [Fact(DisplayName = "rec room > a content survivor (mood 70+) has no need of it")]
+        public void T006_a_content_survivor_mood_70_has_no_need_of_it()
+        {
+            var state = setup(REC, [RECROOM]);
+            Mood.addThought(state, Js.NN(Js.Get(state.survivors, 0)), "ateAtTable");
+            Mood.addThought(state, Js.NN(Js.Get(state.survivors, 0)), "relaxed");
+            for (var i = 0; i < 100; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(Js.NN(Js.Get(state.survivors, 0)).leisure).toBeNull();
+        }
+
+        [Fact(DisplayName = "rec room > a job turning up ends the visit: work comes first")]
+        public void T007_a_job_turning_up_ends_the_visit_work_comes_first()
+        {
+            var state = setup(["#####", "#...#", "#...#", "##D##", ".s..#"], [RECROOM], new() { ["build"] = 3 });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            Mood.addThought(state, s, "ateWithoutTable");
+            runUntil(state, (_) => s.leisure?.progress == 5);
+            Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(4), y = Js.I(4) });
+            var t = runUntil(state, (_) => s.jobId != null);
+            expect(t).toBeLessThanOrEqual(10);
+            expect(s.leisure).toBeNull();
+        }
+
+        [Fact(DisplayName = "rec room > two survivors never share a spot")]
+        public void T008_two_survivors_never_share_a_spot()
+        {
+            var state = setup(["####", "#..#", "#..#", "##D#", "s..s"], [new() { x = Js.I(1), y = Js.I(1), purpose = "recroom" }]);
+            foreach (var s in Js.Iter(state.survivors))
+            {
+                Mood.addThought(state, s, "ateWithoutTable");
+            }
+            runUntil(state, (_) => state.survivors.every((s) => Js.T(Js.T(s.leisure?.progress))));
+            var spots = state.survivors.map((s) => $"{Js.Str(Js.NN(s.leisure).x)},{Js.Str(Js.NN(s.leisure).y)}");
+            expect(Js.Set(spots).size).toBe(2);
+        }
+    }
+
+    /// <summary>breakdowns</summary>
+    public class D009_breakdowns
+    {
+
+        /// <summary>Ticks until a miserable survivor breaks down (sim RNG; checked every BREAKDOWN_CHECK_EVERY).</summary>
+        public static SimState breakdownState(double seed)
+        {
+            var state = setup(["s...", "#..."], [], new() { ["build"] = 3 }, seed);
+            miserable(state, Js.NN(Js.Get(state.survivors, 0)));
+            return state;
+        }
+
+        [Fact(DisplayName = "breakdowns > a miserable survivor eventually breaks down: drops work, then pulls together")]
+        public void T010_a_miserable_survivor_eventually_breaks_down_drops_work_then_()
+        {
+            var dry = breakdownState(2);
+            Js.NN(Js.Get(dry.survivors, 0)).social = 60;
+            Js.NN(Js.Get(dry.survivors, 0)).resolve = Resolve.STEELED - 1;
+            Js.NN(Js.Get(dry.survivors, 0)).nextForageTick = JsNumber.MAX_SAFE_INTEGER;
+            runUntil(dry, (_) => Js.NN(Js.Get(dry.survivors, 0)).breakdown != null, ((double)(20) * (Leisure.BREAKDOWN_CHECK_EVERY)));
+            var state = breakdownState(2);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            s.social = 60;
+            s.resolve = Resolve.STEELED - 1;
+            s.nextForageTick = JsNumber.MAX_SAFE_INTEGER;
+            runUntil(state, (_) => state.tick == (dry.tick - 15), ((double)(20) * (Leisure.BREAKDOWN_CHECK_EVERY)));
+            Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(0), y = Js.I(1) });
+            runUntil(state, (_) => s.breakdown != null, 20);
+            expect(s.jobId).toBeNull();
+            expect(Js.NN(state.events.at(-1)).message).toBe($"{Js.Str(s.name)} is having a breakdown");
+            expect(Js.NN(Js.Get(state.jobs, 0)).reservedBy).toBeNull();
+            for (var i = 0; i < (Leisure.BREAKDOWN_TICKS - 10); i++)
+            {
+                Tick.tick(state);
+            }
+            expect(s.jobId).toBeNull();
+            runUntil(state, (_) => s.breakdown == null, 20);
+            expect(thoughtsOf(s)).toContain("vented");
+            expect(Mood.mood(state, s)).toBeGreaterThanOrEqual(30 + ((s.social < Wellbeing.LOW) ? Wellbeing.LONELY_MOOD : 0));
+            runUntil(state, (_) => s.jobId != null, 3000);
+        }
+
+        [Fact(DisplayName = "breakdowns > only the miserable break down")]
+        public void T011_only_the_miserable_break_down()
+        {
+            var state = setup(["s..."], [], new() {  }, 2);
+            for (var i = 0; (i < ((double)(40) * (Leisure.BREAKDOWN_CHECK_EVERY))) && (i < 3000); i++)
+            {
+                Tick.tick(state);
+            }
+            expect(Js.NN(Js.Get(state.survivors, 0)).breakdown).toBeNull();
+            expect(state.events.some((e) => e.message.includes("breakdown"))).toBe(false);
+        }
+
+        [Fact(DisplayName = "breakdowns > breakdowns are rolled with the sim RNG: same seed, same moment")]
+        public void T012_breakdowns_are_rolled_with_the_sim_RNG_same_seed_same_moment()
+        {
+            double when(double seed)
+            {
+                var state = breakdownState(seed);
+                return runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).breakdown != null, ((double)(40) * (Leisure.BREAKDOWN_CHECK_EVERY)));
+            }
+            expect(when(4)).toBe(when(4));
+        }
+    }
+}

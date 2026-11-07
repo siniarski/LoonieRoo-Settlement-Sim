@@ -1,0 +1,272 @@
+// Ported from tests/talk.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class TalkTest
+{
+
+    /// <summary>An open 80x80 field with two survivors side by side.</summary>
+    public static FieldResult field()
+    {
+        var state = States.createState(new NewStateOptions { seed = 1, width = Js.I(80), height = Js.I(80) });
+        var you = Survivors.addSurvivor(state, 40, 40);
+        var them = Survivors.addSurvivor(state, 41, 40);
+        return new FieldResult { state = state, you = you, them = them };
+    }
+
+    /// <summary>Talk until they ask for a task of this kind (moving time on between talks).</summary>
+    public static void talkUntil(SimState state, Survivor s, string kind)
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            expect(Talk.talk(state, s)).toBeNull();
+            var task = state.tasks.find((t) => t.giverId == s.id);
+            if (task?.kind == kind)
+            {
+                return;
+            }
+            if (Js.T(task))
+            {
+                state.tasks.splice(state.tasks.indexOf(task), 1);
+            }
+            state.tick = Js.I(state.tick + Talk.TALK_EVERY);
+        }
+        throw new Exception($"{Js.Str(s.name)} never asked for {Js.Str(kind)}");
+    }
+
+    /// <summary>A survivor id whose story has a dead relative and a dog.</summary>
+    public static string storyWith(bool dead, bool pet)
+    {
+        for (var n = 1; n < 500; n++)
+        {
+            var s = StoryMod.makeStory($"s{Js.Str(n)}");
+            if ((s.lost.dead == dead) && ((s.pet != null) == pet))
+            {
+                return $"s{Js.Str(n)}";
+            }
+        }
+        throw new Exception("none");
+    }
+
+    /// <summary>stories</summary>
+    public class D001_stories
+    {
+
+        [Fact(DisplayName = "stories > are the same for the same id, and come out a line at a talk")]
+        public void T002_are_the_same_for_the_same_id_and_come_out_a_line_at_a_talk()
+        {
+            expect(StoryMod.makeStory("s7")).toEqual(StoryMod.makeStory("s7"));
+            var __d0 = field();
+            var state = __d0.state;
+            var them = __d0.them;
+            expect(Talk.talk(state, them)).toBeNull();
+            expect(them.story.told).toBe(1);
+            expect(Js.NN(state.events.at(-1)).message).toContain(Js.NN(Js.Get(StoryMod.storyLines(them.story), 0)));
+            expect(Talk.talk(state, them)).toMatch(new JsRegExp("yet", ""));
+        }
+
+        [Fact(DisplayName = "stories > you need to be close to talk to someone while controlling")]
+        public void T003_you_need_to_be_close_to_talk_to_someone_while_controlling()
+        {
+            var __d1 = field();
+            var state = __d1.state;
+            var you = __d1.you;
+            var them = __d1.them;
+            Commands.applyCommand(state, new Command { type = "takeControl", survivorId = you.id });
+            them.pos = new Point { x = Js.I(50), y = Js.I(40) };
+            expect(Commands.applyCommand(state, new Command { type = "talk" }).ok).toBe(false);
+            them.pos = new Point { x = Js.I(41), y = Js.I(41) };
+            expect(Commands.applyCommand(state, new Command { type = "talk" })).toMatchObject(Js.Obj(("ok", (object?)(true))));
+            expect(Js.Missing(them.opinions, you.id) ? null : (object?)(Js.Get(them.opinions, you.id))).toBeGreaterThan(0);
+        }
+    }
+
+    /// <summary>tasks</summary>
+    public class D004_tasks
+    {
+
+        [Fact(DisplayName = "tasks > home: go and see their old place")]
+        public void T005_home_go_and_see_their_old_place()
+        {
+            var __d2 = field();
+            var state = __d2.state;
+            var you = __d2.you;
+            var them = __d2.them;
+            Commands.applyCommand(state, new Command { type = "takeControl", survivorId = you.id });
+            talkUntil(state, them, "home");
+            var task = Js.NN(Js.Get(state.tasks, 0));
+            expect(state.furniture.some((f) => ((f.kind == "crate") && (f.x == task.x)) && (f.y == task.y))).toBe(true);
+            you.pos = new Point { x = Js.I(task.x + 1), y = Js.I(task.y) };
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
+            Talk.updateTasks(state);
+            expect(state.tasks).toEqual(Js.Arr([]));
+            expect(them.thoughts.some((t) => t.kind == "wentHome")).toBe(true);
+            expect(Js.Missing(them.opinions, you.id) ? null : (object?)(Js.Get(them.opinions, you.id))).toBeGreaterThanOrEqual(25);
+        }
+
+        [Fact(DisplayName = "tasks > bury: their dead in a graveyard")]
+        public void T006_bury_their_dead_in_a_graveyard()
+        {
+            var state = States.createState(new NewStateOptions { seed = 1, width = Js.I(80), height = Js.I(80) });
+            state.nextId = Js.I(Js.Num(storyWith(true, false).slice(1)));
+            var them = Survivors.addSurvivor(state, 41, 40);
+            talkUntil(state, them, "bury");
+            var body = Js.NN(state.items.find((i) => i.kind == "corpse"));
+            expect(body.tag).toBe(them.story.lost.name);
+            for (var x = 30; x <= 34; x++)
+            {
+                for (var y = 30; y <= 34; y++)
+                {
+                    if ((((x == 30) || (x == 34)) || (y == 30)) || (y == 34))
+                    {
+                        Grids.setTile(state.grid, x, y, ((x == 32) && (y == 34)) ? "door" : "wall");
+                    }
+                }
+            }
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+            expect(Commands.applyCommand(state, new Command { type = "designateRoom", x = Js.I(32), y = Js.I(32), purpose = "graveyard" })).toMatchObject(Js.Obj(("ok", (object?)(true))));
+            body.pos = new Point { x = Js.I(32), y = Js.I(32) };
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
+            Talk.updateTasks(state);
+            expect(state.tasks).toEqual(Js.Arr([]));
+            expect(them.thoughts.some((t) => t.kind == "laidToRest")).toBe(true);
+        }
+
+        [Fact(DisplayName = "tasks > pet: the dog waits at the house until someone comes")]
+        public void T007_pet_the_dog_waits_at_the_house_until_someone_comes()
+        {
+            var state = States.createState(new NewStateOptions { seed = 1, width = Js.I(80), height = Js.I(80) });
+            state.nextId = Js.I(Js.Num(storyWith(false, true).slice(1)));
+            var them = Survivors.addSurvivor(state, 41, 40);
+            talkUntil(state, them, "pet");
+            var dog = Js.NN(Js.Get(state.dogs, 0));
+            expect(dog.name).toBe(them.story.pet);
+            var at = Js.Clone(dog.pos);
+            for (var i = 0; i < 50; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(dog.pos).toEqual(at);
+            them.pos = new Point { x = Js.I(at.x + 1), y = Js.I(at.y) };
+            for (var i = 0; i < 20; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(dog.waiting).toBe(false);
+            expect(state.tasks).toEqual(Js.Arr([]));
+            expect(them.thoughts.some((t) => t.kind == "petFound")).toBe(true);
+        }
+
+        [Fact(DisplayName = "tasks > burn: set the place alight")]
+        public void T008_burn_set_the_place_alight()
+        {
+            var __d3 = field();
+            var state = __d3.state;
+            var them = __d3.them;
+            talkUntil(state, them, "burn");
+            var task = Js.NN(Js.Get(state.tasks, 0));
+            Commands.applyCommand(state, new Command { type = "ignite", x = Js.I(task.x), y = Js.I(task.y) });
+            expect(state.fires.length).toBeGreaterThan(0);
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
+            Talk.updateTasks(state);
+            expect(state.tasks).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "tasks > a task is dropped when whoever asked is gone")]
+        public void T009_a_task_is_dropped_when_whoever_asked_is_gone()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s".padEnd(60, "."), "".padEnd(60, ".")] });
+            var them = Js.NN(Js.Get(state.survivors, 0));
+            talkUntil(state, them, "home");
+            state.survivors = [];
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
+            Talk.updateTasks(state);
+            expect(state.tasks).toEqual(Js.Arr([]));
+        }
+    }
+
+    /// <summary>more of their stories</summary>
+    public class D010_more_of_their_stories
+    {
+
+        [Fact(DisplayName = "more of their stories > people from the same town recognise each other")]
+        public void T011_people_from_the_same_town_recognise_each_other()
+        {
+            var state = States.createState(new NewStateOptions { seed = 1, width = Js.I(80), height = Js.I(80) });
+            var a = Survivors.addSurvivor(state, 40, 40);
+            var b = Survivors.addSurvivor(state, 41, 40);
+            b.story.town = a.story.town;
+            expect(Talk.talk(state, a)).toBeNull();
+            expect(a.story.knew).toEqual(Js.Arr([]));
+            expect(Talk.talk(state, b)).toBeNull();
+            expect(b.story.knew).toEqual(Js.Arr([a.id]));
+            expect(Js.Missing(a.opinions, b.id) ? null : (object?)(Js.Get(a.opinions, b.id))).toBeGreaterThanOrEqual(20);
+        }
+
+        [Fact(DisplayName = "more of their stories > once everything is told, they confess to the others")]
+        public void T012_once_everything_is_told_they_confess_to_the_others()
+        {
+            var __d4 = field();
+            var state = __d4.state;
+            var you = __d4.you;
+            var them = __d4.them;
+            them.story.told = StoryMod.storyLines(them.story).length;
+            expect(Talk.talk(state, them)).toBeNull();
+            expect(them.story.confessed).toBe(true);
+            expect(Js.Missing(you.opinions, them.id) ? null : (object?)(Js.Get(you.opinions, them.id))).toBeLessThan(0);
+            expect(them.thoughts.some((t) => t.kind == "confessed")).toBe(true);
+        }
+
+        [Fact(DisplayName = "more of their stories > radio: at noon with a powered radio, the missing relative answers or nobody does")]
+        public void T013_radio_at_noon_with_a_powered_radio_the_missing_relative_answ()
+        {
+            var outcomes = new JsSet<string>();
+            for (var n = 1; (n < 400) && (outcomes.size < 2); n++)
+            {
+                if (StoryMod.makeStory($"s{Js.Str(n)}").lost.dead)
+                {
+                    continue;
+                }
+                var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["EI.".padEnd(40, "."), "".padEnd(40, ".")] });
+                state.grid.explored.fill(0);
+                state.grid.explored[Js.Idx(0)] = 1;
+                Js.NN(state.furniture.find((f) => f.kind == "generator")).stored = 4;
+                state.nextId = Js.I(n);
+                var s = Survivors.addSurvivor(state, 5, 1);
+                talkUntil(state, s, "radio");
+                state.tick = Js.I(((double)((JsMath.floor(((double)(state.tick) / (Time.DAY_LENGTH))) + 1)) * (Time.DAY_LENGTH)) + ((double)(6) * (Time.TICKS_PER_HOUR)));
+                Talk.updateTasks(state);
+                expect(state.tasks).toEqual(Js.Arr([]));
+                outcomes.add(state.wanderers.some((w) => w.name == s.story.lost.name) ? "answered" : "silence");
+            }
+            expect(Js.ListOf(outcomes).sort()).toEqual(Js.Arr(["answered", "silence"]));
+        }
+
+        [Fact(DisplayName = "more of their stories > medicine: carried to their friend at a neighbouring settlement")]
+        public void T014_medicine_carried_to_their_friend_at_a_neighbouring_settlemen()
+        {
+            var __d5 = field();
+            var state = __d5.state;
+            var you = __d5.you;
+            var them = __d5.them;
+            var friend = Settlements.newSettlement(state, "Saint Agnes", 70, 40, 6, 20, 1);
+            friend.unfolded = true;
+            them.story.told = 2;
+            talkUntil(state, them, "medicine");
+            var task = Js.NN(Js.Get(state.tasks, 0));
+            expect(task.targetId).toBe(friend.id);
+            var med = Items.spawnItem(state, "medicine", 40, 41);
+            med.pos = null;
+            med.carriedBy = you.id;
+            you.carrying = med.id;
+            you.pos = new Point { x = Js.I(66), y = Js.I(40) };
+            state.tick = Js.I(((double)(JsMath.ceil(((double)(state.tick) / (10)))) * (10)));
+            Talk.updateTasks(state);
+            expect(state.tasks).toEqual(Js.Arr([]));
+            expect(you.carrying).toBeNull();
+            expect(friend.reputation).toBe(15);
+        }
+    }
+}

@@ -1,0 +1,95 @@
+// Ported from tests/carts.test.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
+#nullable disable warnings
+using LoonieRoo.Sim;
+using static LoonieRoo.Sim.Tests.Vitest;
+namespace LoonieRoo.Sim.Tests.Ported;
+
+public partial class CartsTest
+{
+
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
+    {
+        for (var t = 0; t < max; t++)
+        {
+            if (Js.T(done(state)))
+            {
+                return t;
+            }
+            Tick.tick(state);
+            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
+        }
+        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
+    }
+
+    public static SimState setup(List<string> map, JsRecord<double>? jobs = null, List<ScenarioRoomsItem>? rooms = null)
+    {
+        jobs ??= new() {  };
+        rooms ??= new();
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 17, map = map, rooms = rooms });
+        foreach (var s in Js.Iter(state.survivors))
+        {
+            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
+        }
+        return state;
+    }
+
+    public static readonly List<string> STORE = ["#######.......", "#.....D.s.....", "#.....#.......", "#######..wwff."];
+
+    /// <summary>carts</summary>
+    public class D001_carts
+    {
+
+        [Fact(DisplayName = "carts > a hauler with a cart carries several things in one trip")]
+        public void T002_a_hauler_with_a_cart_carries_several_things_in_one_trip()
+        {
+            var state = setup(STORE.map((r, i) => (i == 1) ? r.replace("s.", "sP") : r), new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(1), purpose = "storage" }]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => s.cart != null, 200);
+            runUntil(state, (_) => s.cartLoad.length > 0, 400);
+            var load = s.cartLoad.length;
+            expect(load).toBeGreaterThanOrEqual(2);
+            runUntil(state, (_) => state.items.filter((i) => i.kind != "cart").every((i) => Js.T(i.pos) && (Rooms.labelAt(state, i.pos.x, i.pos.y) >= 0)), 1000);
+            expect(s.note).toMatch(new JsRegExp("more from the cart", ""));
+        }
+
+        [Fact(DisplayName = "carts > a hauler without one carries one at a time")]
+        public void T003_a_hauler_without_one_carries_one_at_a_time()
+        {
+            var state = setup(STORE, new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(1), purpose = "storage" }]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => s.carrying != null, 200);
+            expect(s.cartLoad).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "carts > drops the load and the cart when they die")]
+        public void T004_drops_the_load_and_the_cart_when_they_die()
+        {
+            var state = setup(STORE.map((r, i) => (i == 1) ? r.replace("s.", "sP") : r), new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(1), purpose = "storage" }]);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => s.cartLoad.length > 0, 600);
+            Needs.killSurvivor(state, s, "testing");
+            expect(state.items.every((i) => (i.pos != null) && (i.carriedBy == null))).toBe(true);
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+        }
+    }
+
+    /// <summary>stockpile filters</summary>
+    public class D005_stockpile_filters
+    {
+
+        [Fact(DisplayName = "stockpile filters > a storage room told to refuse food gets none hauled to it")]
+        public void T006_a_storage_room_told_to_refuse_food_gets_none_hauled_to_it()
+        {
+            var state = setup(STORE, new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(1), purpose = "storage" }]);
+            expect(Commands.applyCommand(state, new Command { type = "setStorageFilter", x = Js.I(2), y = Js.I(2), category = "food", accept = false }).ok).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "setStorageFilter", x = Js.I(2), y = Js.I(2), category = "food", accept = false })).toEqual(Js.Obj(("ok", (object?)(true)), ("changed", (object?)(false))));
+            runUntil(state, (_) => state.items.filter((i) => i.kind == "wood").every((i) => Js.T(i.pos) && (Rooms.labelAt(state, i.pos.x, i.pos.y) >= 0)), 1500);
+            for (var i = 0; i < 300; i++)
+            {
+                Tick.tick(state);
+            }
+            expect(state.items.filter((i) => i.kind == "food").every((i) => Js.T(i.pos) && (Rooms.labelAt(state, i.pos.x, i.pos.y) < 0))).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "setStorageFilter", x = Js.I(8), y = Js.I(2), category = "food", accept = false }).ok).toBe(false);
+        }
+    }
+}
