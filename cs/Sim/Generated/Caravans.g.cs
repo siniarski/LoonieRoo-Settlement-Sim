@@ -34,7 +34,7 @@ public static partial class Caravans
     /// <summary>Sends a caravan from a settlement to another settlement, or to you ('you': to `dest`).</summary>
     public static Caravan? sendCaravan(SimState state, string fromId, string to, Point dest, double food, List<string>? goods = null)
     {
-        goods ??= [];
+        goods ??= new();
         var from = Settlements.getSettlement(state, fromId);
         if (!Js.T(from))
         {
@@ -65,8 +65,8 @@ public static partial class Caravans
                 continue;
             }
             c.nextStepTick = state.tick + CARAVAN_STEP;
-            c.x += JsMath.sign(c.dest.x - c.x);
-            c.y += JsMath.sign(c.dest.y - c.y);
+            c.x = Js.I(c.x + JsMath.sign(c.dest.x - c.x));
+            c.y = Js.I(c.y + JsMath.sign(c.dest.y - c.y));
             if ((c.x == c.dest.x) && (c.y == c.dest.y))
             {
                 arrive(state, c);

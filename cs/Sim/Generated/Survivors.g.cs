@@ -99,7 +99,7 @@ public static partial class Survivors
             }
             s.path = path;
             s.pathVersion = state.walkabilityVersion;
-            s.note = Js.T(wasRepath) ? $"walls changed, repathed to ({Js.Str(goal.x)}, {Js.Str(goal.y)})" : $"walking to ({Js.Str(goal.x)}, {Js.Str(goal.y)}), {Js.Str(path.length)} tiles";
+            s.note = wasRepath ? $"walls changed, repathed to ({Js.Str(goal.x)}, {Js.Str(goal.y)})" : $"walking to ({Js.Str(goal.x)}, {Js.Str(goal.y)}), {Js.Str(path.length)} tiles";
         }
         if (s.path.length >= 2)
         {

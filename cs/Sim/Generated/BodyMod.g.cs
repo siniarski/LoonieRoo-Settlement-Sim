@@ -88,9 +88,9 @@ public static partial class BodyMod
         }
         var outdoors = !Rooms.isIndoors(state, s.pos.x, s.pos.y);
         var coat = Clothing.wearing(state, s, "coat") != null;
-        if (Js.T(outdoors) && Seasons.isWet(state.weather))
+        if (outdoors && Seasons.isWet(state.weather))
         {
-            if ((state.tick % (Js.T(coat) ? 12 : 3)) == 0)
+            if ((state.tick % (coat ? 12 : 3)) == 0)
             {
                 s.wetness = clamp(s.wetness + 1);
             }
@@ -126,7 +126,7 @@ public static partial class BodyMod
             return;
         }
         var alone = !state.survivors.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= PANIC_RANGE));
-        var factor = (Js.T(alone) ? 1.5 : 1) * (Resolve.isSteeled(s) ? 0.5 : (Resolve.isBreaking(s) ? 1.5 : 1));
+        var factor = (alone ? 1.5 : 1) * (Resolve.isSteeled(s) ? 0.5 : (Resolve.isBreaking(s) ? 1.5 : 1));
         s.panic = clamp(s.panic + JsMath.round((near * PANIC_PER_ZOMBIE) * factor));
     }
 

@@ -75,7 +75,7 @@ public static partial class Relationships
         var fight = opinion(target, s) <= FIGHT_BELOW;
         adjust(s, target, -LASH_OUT);
         adjust(target, s, -LASH_OUT);
-        if (!Js.T(fight))
+        if (!fight)
         {
             Events.logEvent(state, $"{Js.Str(s.name)} lashed out at {Js.Str(target.name)}");
             return;

@@ -47,7 +47,7 @@ public static partial class Orders
         }
         if (s.order.kind != "follow")
         {
-            return new Point { x = Js.I(s.order.x), y = Js.I(s.order.y) };
+            return new Point { x = Js.I(Js.NN(s.order.x)), y = Js.I(Js.NN(s.order.y)) };
         }
         var leader = ControlMod.controlled(state);
         return (Js.T(leader) && (leader.id != s.id)) ? leader.pos : null;

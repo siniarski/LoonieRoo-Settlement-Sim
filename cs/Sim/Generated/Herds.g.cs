@@ -90,11 +90,11 @@ public static partial class Herds
         List<Point> edge = [];
         for (var x = 0; x < width; x += 4)
         {
-            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
+            edge.pushAll([new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) }]);
         }
         for (var y = 4; y < (height - 1); y += 4)
         {
-            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
+            edge.pushAll([new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) }]);
         }
         var from = Rng.pick(state, edge);
         Point to = default!;
@@ -163,10 +163,10 @@ public static partial class Herds
             var z = Zombies.addZombie(state, p.x, p.y, Zombies.zombieHealthForNight(Time.dayOf(state.tick)), "herd");
             taken.add((p.y * width) + p.x);
             ZombieKinds.giveVariant(z, Time.dayOf(state.tick));
-            z.heading = Js.Clone(h.to);
+            z.heading = Js.CopyAs<Point>(h.to);
             made.push(z);
         }
-        Hordes.formHorde(state, made, Js.Clone(h.to), false);
+        Hordes.formHorde(state, made, Js.CopyAs<Point>(h.to), false);
         if (n > 0)
         {
             Events.logEvent(state, $"A herd of {Js.Str(n)} zombies is passing near ({Js.Str(h.x)}, {Js.Str(h.y)})");

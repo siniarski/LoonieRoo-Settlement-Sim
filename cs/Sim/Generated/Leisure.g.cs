@@ -97,15 +97,15 @@ public static partial class Leisure
         var mourning = s.leisure.at == "graveyard";
         if (s.leisure.progress == 1)
         {
-            s.note = Js.T(mourning) ? $"paying respects at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"relaxing at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
+            s.note = mourning ? $"paying respects at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"relaxing at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
         }
         if (s.leisure.progress < RELAX_TICKS)
         {
             return true;
         }
         s.leisure = null;
-        Mood.addThought(state, s, Js.T(mourning) ? "paidRespects" : "relaxed");
-        s.note = Js.T(mourning) ? "paid their respects" : "relaxed in the rec room";
+        Mood.addThought(state, s, mourning ? "paidRespects" : "relaxed");
+        s.note = mourning ? "paid their respects" : "relaxed in the rec room";
         return true;
     }
 

@@ -248,7 +248,7 @@ public static partial class Talk
     {
         if (kind == "radio")
         {
-            return Js.Clone(s.pos);
+            return Js.CopyAs<Point>(s.pos);
         }
         if (kind == "medicine")
         {

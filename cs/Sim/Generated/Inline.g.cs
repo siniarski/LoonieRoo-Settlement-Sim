@@ -8,14 +8,6 @@ public partial class HousePlanRest
     public int x1 { get; set; }
 }
 
-public partial class CompoundResult
-{
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
-}
-
 public partial class PaneInFrontResult
 {
     public double edge { get; set; }
@@ -148,7 +140,7 @@ public partial class TownLotsResult
     public int y { get; set; }
     public int w { get; set; }
     public int h { get; set; }
-    public object facing { get; set; }
+    public string facing { get; set; }
 }
 
 public partial class FarmLotsLot
@@ -157,16 +149,16 @@ public partial class FarmLotsLot
     public int y { get; set; }
     public int w { get; set; }
     public int h { get; set; }
-    public object facing { get; set; }
+    public string facing { get; set; }
 }
 
-public partial class FarmLotsLotShape23
+public partial class FarmLotsLotShape22
 {
     public int x { get; set; }
     public int y { get; set; }
     public int w { get; set; }
     public int h { get; set; }
-    public object facing { get; set; }
+    public string facing { get; set; }
 }
 
 public partial class BucketsEntry
@@ -180,4 +172,88 @@ public partial class PushApartOthers
 {
     public Body s { get; set; }
     public double order { get; set; }
+}
+
+public partial class WalkToResult
+{
+    public double ticks { get; set; }
+    public List<string> tiles { get; set; }
+}
+
+public partial class HungryResult
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+}
+
+public partial class WorldResult
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+    public Settlement a { get; set; }
+    public Settlement b { get; set; }
+}
+
+public partial class SetupResult
+{
+    public Grid grid { get; set; }
+    public Point start { get; set; }
+    public Point goal { get; set; }
+    public List<string> rows { get; set; }
+}
+
+public partial class TownResult
+{
+    public SimState state { get; set; }
+    public Survivor you { get; set; }
+    public Settlement n { get; set; }
+}
+
+public partial class WithTruckResult
+{
+    public SimState state { get; set; }
+    public Vehicle v { get; set; }
+}
+
+public partial class PlayedResult
+{
+    public SimState initial { get; set; }
+    public SimState state { get; set; }
+}
+
+public partial class TestOld
+{
+    public double schemaVersion { get; set; }
+}
+
+public partial class TestReport
+{
+    public List<object> commands { get; set; }
+}
+
+public partial class RemoveWallResult
+{
+    public double ticks { get; set; }
+    public Survivor s { get; set; }
+}
+
+public partial class OnlyResult
+{
+    public SimState state { get; set; }
+    public Func<Survivor> survivor { get; set; }
+    public string id { get; set; }
+}
+
+public partial class FieldResult
+{
+    public SimState state { get; set; }
+    public Survivor you { get; set; }
+    public Survivor them { get; set; }
+}
+
+public partial class FieldResultShape37
+{
+    public SimState state { get; set; }
+    public Survivor s { get; set; }
+    public Vehicle car { get; set; }
 }

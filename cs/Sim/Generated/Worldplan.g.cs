@@ -77,7 +77,7 @@ public static partial class Worldplan
                 }
             }
             var id = lots.length;
-            lots.push(Js.With(Js.CopyAs<Lot>(lot), __s0 => { __s0.id = id; }));
+            lots.push(Js.With(new Lot { id = id }, __s0 => Js.AssignSet(__s0, lot)));
             for (var y = lot.y; y < (lot.y + lot.h); y++)
             {
                 for (var x = lot.x; x < (lot.x + lot.w); x++)
@@ -267,7 +267,7 @@ public static partial class Worldplan
                         }
                         var front_6 = 12 + JsMath.floor(r_1(5 + side_5) * 3);
                         var deep_7 = 13 + JsMath.floor(r_1(8 + side_5) * 3);
-                        FarmLotsLot lot_8 = Js.T(along_2) ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
+                        FarmLotsLot lot_8 = along_2 ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
                         if (add(Js.With(Js.CopyAs<Lot>(lot_8), __s5 => { __s5.zone = "residential"; __s5.town = towns.indexOf(edge); })))
                         {
                             since = 0;
@@ -303,7 +303,7 @@ public static partial class Worldplan
                 string zone = (r(4) < 0.6) ? "farm" : "field";
                 var cx = JsMath.round(b.x);
                 var cy = JsMath.round(b.y);
-                FarmLotsLotShape23 lot = Js.T(along) ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
+                FarmLotsLotShape22 lot = along ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
                 if (add(Js.With(Js.CopyAs<Lot>(lot), __s6 => { __s6.zone = zone; __s6.town = null; })))
                 {
                     since = 0;
@@ -333,7 +333,7 @@ public static partial class Worldplan
                 var dx = t.x - cx;
                 var dy = t.y - cy;
                 string facing = (JsMath.abs(dx) > JsMath.abs(dy)) ? ((dx > 0) ? "east" : "west") : ((dy > 0) ? "south" : "north");
-                add(new() { x = Js.I(cx - JsMath.floor(((double)(w) / (2)))), y = Js.I(cy - JsMath.floor(((double)(h) / (2)))), w = Js.I(w), h = Js.I(h), facing = facing, zone = ((r(4) < 0.25) && (w >= 27)) ? "farm" : "field", town = null });
+                add(new Lot { x = Js.I(cx - JsMath.floor(((double)(w) / (2)))), y = Js.I(cy - JsMath.floor(((double)(h) / (2)))), w = Js.I(w), h = Js.I(h), facing = facing, zone = ((r(4) < 0.25) && (w >= 27)) ? "farm" : "field", town = null });
             }
         });
     }
@@ -356,7 +356,7 @@ public static partial class Worldplan
                 var x = (gx + 4) + JsMath.floor(r(1) * 30);
                 var y = (gy + 4) + JsMath.floor(r(2) * 30);
                 List<string> facings = ["north", "south", "east", "west"];
-                add(new() { x = Js.I(x), y = Js.I(y), w = Js.I(13), h = Js.I(13), facing = Js.NN(Js.Get(facings, JsMath.floor(r(3) * 4))), zone = "cabin", town = null });
+                add(new Lot { x = Js.I(x), y = Js.I(y), w = Js.I(13), h = Js.I(13), facing = Js.NN(Js.Get(facings, JsMath.floor(r(3) * 4))), zone = "cabin", town = null });
             }
         }
     }

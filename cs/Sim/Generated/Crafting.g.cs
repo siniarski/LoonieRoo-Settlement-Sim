@@ -51,7 +51,7 @@ public static partial class Crafting
         var used = new JsSet<string>();
         foreach (var s in Js.Iter(state.survivors))
         {
-            foreach (var id in Js.Iter([s.weapon, s.body, s.feet, s.cart, s.tool]))
+            foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool]))
             {
                 if (Js.T(id))
                 {

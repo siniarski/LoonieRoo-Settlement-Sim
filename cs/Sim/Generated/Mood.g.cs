@@ -134,7 +134,7 @@ public static partial class Mood
     {
         var friends = Relationships.forget(state, dead);
         var wasLeader = state.leaderId == dead.id;
-        if (Js.T(wasLeader))
+        if (wasLeader)
         {
             state.leaderId = null;
         }
@@ -146,7 +146,7 @@ public static partial class Mood
             {
                 Skills.earnTrait(state, s, "haunted", $"lost {Js.Str(dead.name)}");
             }
-            if (Js.T(wasLeader))
+            if (wasLeader)
             {
                 addThought(state, s, "lostLeader");
             }

@@ -137,9 +137,9 @@ public static partial class Expeditions
         if (Js.T(v))
         {
             var spot = Vehicles.parkable(state, x.home) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
-            v.pos = Js.Clone(spot);
+            v.pos = Js.CopyAs<Point>(spot);
             v.at = Motion.centre(spot);
-            v.was = Js.Clone(v.at);
+            v.was = Js.CopyAs<Point>(v.at);
             v.driverId = null;
         }
         bool near(Point p)
@@ -157,7 +157,7 @@ public static partial class Expeditions
             if (Rng.random(state) < deathChance)
             {
                 lost.push(s);
-                foreach (var id in Js.Iter([s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
+                foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
                 {
                     var item = Js.T(id) ? state.items.find((i) => i.id == id) : null;
                     if (Js.T(item))
@@ -173,12 +173,12 @@ public static partial class Expeditions
                 hurt.push(s);
             }
             s.health = JsMath.min(Health.HEALTH_MAX, s.health);
-            s.pos = Js.Clone(x.home);
+            s.pos = Js.CopyAs<Point>(x.home);
             s.note = $"back from the {Js.Str(x.target.label)}";
             back.push(s);
         }
         state.survivors.pushAll(back);
-        var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
+        double room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
         double found = 0;
         foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && near(f))))
         {

@@ -145,8 +145,8 @@ public static partial class Vehicles
         }
         v.driverId = s.id;
         s.move = null;
-        s.at = Js.Clone(v.at);
-        s.pos = Js.Clone(v.pos);
+        s.at = Js.CopyAs<Point>(v.at);
+        s.pos = Js.CopyAs<Point>(v.pos);
         return (v.health <= 0) ? "got in: it's a wreck, it won't go" : ((v.fuel <= 0) ? "got in: the tank is empty" : "got in");
     }
 
@@ -219,8 +219,8 @@ public static partial class Vehicles
         {
             move(state, s, v);
         }
-        s.at = Js.Clone(v.at);
-        s.pos = Js.Clone(v.pos);
+        s.at = Js.CopyAs<Point>(v.at);
+        s.pos = Js.CopyAs<Point>(v.pos);
     }
     public static void drive(SimState state, Survivor s, double dx, double dy) => drive(state, s, (int)dx, (int)dy);
 
@@ -235,7 +235,7 @@ public static partial class Vehicles
         v.at = to;
         v.pos = Motion.tileOf(to);
         var lost = (Motion.distance2(want, got) * 9) > ((want.x * want.x) + (want.y * want.y));
-        if (Js.T(lost))
+        if (lost)
         {
             var fast = JsMath.abs(v.speed);
             if (fast > CRASH_SPEED)
@@ -319,7 +319,7 @@ public static partial class Vehicles
     {
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
-            v.was = Js.Clone(v.at);
+            v.was = Js.CopyAs<Point>(v.at);
             if (!Js.T(v.driverId) || v.driverId.startsWith("x:"))
             {
                 continue;

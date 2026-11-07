@@ -133,7 +133,7 @@ public static partial class Work
         var gun = Weapons.loadedGun(state, s);
         var range = Weapons.GUN_RANGE + (Towers.onTower(state, s) ? Towers.TOWER_RANGE_BONUS : 0);
         var inReach = Motion.distance2(s.at, z.at) <= (Motion.SWING_REACH * Motion.SWING_REACH);
-        if (((Js.T(gun) && !Js.T(inReach)) && (Space.manhattan(s.pos, z.pos) <= range)) && clearShot(state.grid, s.pos, z.pos))
+        if (((Js.T(gun) && !inReach) && (Space.manhattan(s.pos, z.pos) <= range)) && clearShot(state.grid, s.pos, z.pos))
         {
             if (Skills.workStep(state, s, "guard") == 0)
             {
@@ -152,7 +152,7 @@ public static partial class Work
             }
             { finishJob(state, s, job, $"shot a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})"); return; }
         }
-        if (!Js.T(inReach))
+        if (!inReach)
         {
             { goTo(state, s, job, Grids.neighbours4(state.grid, z.pos.x, z.pos.y), Js.T(gun) ? 1 : null); return; }
         }
@@ -801,7 +801,7 @@ public static partial class Work
         {
             { goTo(state, s, job, [job.dest]); return; }
         }
-        item.pos = Js.Clone(job.dest);
+        item.pos = Js.CopyAs<Point>(job.dest);
         item.carriedBy = null;
         item.reservedBy = null;
         s.carrying = null;
@@ -901,7 +901,7 @@ public static partial class Work
         var dy = -JsMath.abs(b.y - a.y);
         var sx = (a.x < b.x) ? 1 : -1;
         var sy = (a.y < b.y) ? 1 : -1;
-        var err = dx + dy;
+        double err = dx + dy;
         for (; ; )
         {
             var e2 = 2 * err;

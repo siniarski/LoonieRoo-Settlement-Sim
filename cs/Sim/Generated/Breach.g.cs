@@ -55,7 +55,7 @@ public static partial class Breach
             return false;
         }
         Grids.setTile(state.grid, x, y, "floor");
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         var planned = Designations.blueprintAt(state, x, y);
         if (Js.T(planned))
         {
@@ -134,7 +134,7 @@ public static partial class Breach
                 smashGlass(state, e);
             }
             Grids.noteEdgeChange(grid, e);
-            state.walkabilityVersion += 1;
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             Events.logEvent(state, ((((("Zombies " + (boarded ? "tore the boards off" : "smashed")) + " the window at (") + x) + ", ") + y) + ")");
             return true;
         }
@@ -151,7 +151,7 @@ public static partial class Breach
         {
             grid.edgePassing.splice(passing, 1);
         }
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         var tile = JsMath.floor(((double)(e) / (2)));
         Events.logEvent(state, ((((("Zombies broke through the " + ((kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade"))) + " at (") + (tile % grid.width)) + ", ") + JsMath.floor(((double)(tile) / (grid.width)))) + ")");
         return true;
@@ -190,7 +190,7 @@ public static partial class Breach
         }
         grid.edges[Js.Idx(e)] = Grids.EDGE_WINDOW_BROKEN;
         Grids.noteEdgeChange(grid, e);
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         var tile = JsMath.floor(((double)(e) / (2)));
         Noise.makeNoise(state, new Point { x = Js.I(tile % grid.width), y = Js.I(JsMath.floor(((double)(tile) / (grid.width)))) }, "glass");
     }

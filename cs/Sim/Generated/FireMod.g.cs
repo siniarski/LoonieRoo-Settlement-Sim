@@ -146,7 +146,7 @@ public static partial class FireMod
         if (((t == "wall") || (t == "door")) || (t == "barricade"))
         {
             Grids.setTile(state.grid, f.x, f.y, "floor");
-            state.walkabilityVersion += 1;
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         }
         var item = Items.itemAt(state, f.x, f.y);
         if (Js.T(item))

@@ -244,10 +244,10 @@ public static partial class Animals
         return true;
     }
 
-    public static void step(Animal a, Point to, /*TODO param type*/object? pace = null)
+    public static void step(Animal a, Point to, double? pace = null)
     {
         pace ??= Js.Get(PACE, a.kind);
-        a.move = new Movement { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = (double)pace };
+        a.move = new Movement { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = Js.NN(pace) };
     }
 
     /// <summary>The neighbour that's furthest from (or nearest to) a point, of those an animal can step to.</summary>
@@ -311,7 +311,7 @@ public static partial class Animals
         var hp = Js.Q(a.health, 0);
         var hurt = hp < (Js.Get(HEALTH, a.kind) * 0.3);
         var nearest = closestSurvivor(state, a.pos);
-        if ((Js.T(Js.T(hurt) && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
+        if ((Js.T(hurt && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
             var to_1 = stepAway(state, a, nearest.pos);
             if (Js.T(to_1))
@@ -429,7 +429,7 @@ public static partial class Animals
             return;
         }
         var bear = a.kind == "bear";
-        a.nextBite = state.tick + (Js.T(bear) ? BEAR_BITE_EVERY : WOLF_BITE_EVERY);
+        a.nextBite = state.tick + (bear ? BEAR_BITE_EVERY : WOLF_BITE_EVERY);
         if (/*TODO in*/Js.In("kind", target))
         {
             state.animals.splice(state.animals.indexOf((Animal)target), 1);
@@ -437,9 +437,9 @@ public static partial class Animals
             return;
         }
         var s = (Survivor)target;
-        s.health = JsMath.max(0, s.health - (Js.T(bear) ? BEAR_DAMAGE : WOLF_DAMAGE));
+        s.health = JsMath.max(0, s.health - (bear ? BEAR_DAMAGE : WOLF_DAMAGE));
         a.bitTick = state.tick;
-        s.lastHurtBy = Js.T(bear) ? "a bear" : "wolves";
+        s.lastHurtBy = bear ? "a bear" : "wolves";
         s.hurtTick = state.tick;
         s.note = $"attacked by a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})";
         Mood.addThought(state, s, "attacked");
@@ -451,7 +451,7 @@ public static partial class Animals
         if (!Js.T(a.hunted))
         {
             a.hunted = true;
-            Events.logEvent(state, $"{Js.Str(Js.T(bear) ? "A bear" : "Wolves")} attacked {Js.Str(s.name)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})!");
+            Events.logEvent(state, $"{Js.Str(bear ? "A bear" : "Wolves")} attacked {Js.Str(s.name)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})!");
         }
     }
 
@@ -489,11 +489,11 @@ public static partial class Animals
             {
                 return state.animals.filter((a) => (a.kind == kind) && (Space.manhattan(a.pos, s.pos) <= r));
             }
-            if ((near("rabbit", RABBIT_RANGE).length < (Js.T(winter) ? 2 : RABBITS_NEAR)) && (roll(1) < RABBIT_CHANCE))
+            if ((near("rabbit", RABBIT_RANGE).length < (winter ? 2 : RABBITS_NEAR)) && (roll(1) < RABBIT_CHANCE))
             {
                 spawnNear(state, s.pos, "rabbit", roll(2), roll(3));
             }
-            var wolfChance = (WOLF_CHANCE * (Time.isNight(state.tick) ? 2 : 1)) * (Js.T(winter) ? 2 : 1);
+            var wolfChance = (WOLF_CHANCE * (Time.isNight(state.tick) ? 2 : 1)) * (winter ? 2 : 1);
             if (((k == 0) && (near("wolf", 60).length == 0)) && (roll(4) < wolfChance))
             {
                 var lead = spawnNear(state, s.pos, "wolf", roll(5), roll(6));
@@ -513,7 +513,7 @@ public static partial class Animals
                         {
                             continue;
                         }
-                        o.hunger = Js.T(winter) ? (WOLF_STARVING - WOLF_HUNGRY) : WOLF_HUNGRY;
+                        o.hunger = winter ? (WOLF_STARVING - WOLF_HUNGRY) : WOLF_HUNGRY;
                         o.leavesTick = state.tick + PACK_STAYS;
                     }
                     Events.logEvent(state, $"Wolves howling out past ({Js.Str(lead.pos.x)}, {Js.Str(lead.pos.y)})");
@@ -530,7 +530,7 @@ public static partial class Animals
         });
         foreach (var a in Js.Iter((state.animals).ToList()))
         {
-            if (Js.T((a.kind != "rabbit") || Js.T(winter)))
+            if ((a.kind != "rabbit") || winter)
             {
                 continue;
             }

@@ -26,7 +26,7 @@ public static partial class Needs
     public static bool isTired(SimState state, Survivor s)
     {
         var bedtime = (s.shift == "night") ? !Time.isNight(state.tick) : Time.isNight(state.tick);
-        return s.rest < (Js.T(bedtime) ? Rest.NIGHT_TIRED : Rest.TIRED);
+        return s.rest < (bedtime ? Rest.NIGHT_TIRED : Rest.TIRED);
     }
 
     /// <summary>A guard finishes the fight: needs don't pull them off a guard job. (Without this, a tired guard flip-flops between hunting and bed as the zombie drifts in and out of DANGER_RADIUS.)</summary>
@@ -215,9 +215,9 @@ public static partial class Needs
         }
         Items.removeItem(state, item);
         var hot = item.kind == "meal";
-        s.satiety = JsMath.min(Food.SATIETY_MAX, s.satiety + (Js.T(hot) ? Food.HOT_MEAL_VALUE : Food.MEAL_VALUE));
+        s.satiety = JsMath.min(Food.SATIETY_MAX, s.satiety + (hot ? Food.HOT_MEAL_VALUE : Food.MEAL_VALUE));
         Mood.addThought(state, s, Js.T(meal.seat) ? "ateAtTable" : "ateWithoutTable");
-        if (Js.T(hot))
+        if (hot)
         {
             Mood.addThought(state, s, "hotMeal");
         }

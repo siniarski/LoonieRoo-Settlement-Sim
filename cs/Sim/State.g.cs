@@ -125,66 +125,66 @@ public partial class Character
     public List<string> traits { get; set; } = new();
 }
 
-public partial class Command : IHasId
+public partial class Command
 {
-    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Command v) => new(v.x, v.y);
+    /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>
+    public static implicit operator Point(Command v) => new(v.x!.Value, v.y!.Value);
     public string type { get; set; } = "";
-    public int x { get; set; }
-    public int y { get; set; }
-    public string side { get; set; } = "";
+    public int? x { get; set; }
+    public int? y { get; set; }
+    public string? side { get; set; }
     /// <summary>No bite before this tick.</summary>
-    public string kind { get; set; } = "";
-    public double count { get; set; }
-    public string bedId { get; set; } = "";
+    public string? kind { get; set; }
+    public double? count { get; set; }
+    public string? bedId { get; set; }
     public string? survivorId { get; set; }
-    public string structure { get; set; } = "";
-    public string crop { get; set; } = "";
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
+    public string? structure { get; set; }
+    public string? crop { get; set; }
+    public int? x0 { get; set; }
+    public int? y0 { get; set; }
+    public int? x1 { get; set; }
+    public int? y1 { get; set; }
     /// <summary>Only these kinds (all if missing).</summary>
-    public List<string> kinds { get; set; } = new();
-    public string purpose { get; set; } = "";
-    public string jobType { get; set; } = "";
-    public double priority { get; set; }
-    public string wandererId { get; set; } = "";
-    public List<string> survivorIds { get; set; } = new();
-    public string poiId { get; set; } = "";
-    public bool outpost { get; set; }
-    public string expeditionId { get; set; } = "";
-    public string category { get; set; } = "";
-    public bool accept { get; set; }
-    public string prisonerId { get; set; } = "";
-    public string shift { get; set; } = "";
-    public string requestId { get; set; } = "";
-    public string policy { get; set; } = "";
-    public bool on { get; set; }
-    public string settlementId { get; set; } = "";
-    public string traderId { get; set; } = "";
-    public double offer { get; set; }
-    public double rest { get; set; }
-    public double satiety { get; set; }
-    public double health { get; set; }
-    public double amount { get; set; }
-    public string text { get; set; } = "";
-    public string id { get; set; } = "";
-    public double dx { get; set; }
-    public double dy { get; set; }
-    public bool run { get; set; }
-    public string itemId { get; set; } = "";
-    public string containerId { get; set; } = "";
-    public string order { get; set; } = "";
-    public string choice { get; set; } = "";
-    public string who { get; set; } = "";
+    public List<string>? kinds { get; set; }
+    public string? purpose { get; set; }
+    public string? jobType { get; set; }
+    public double? priority { get; set; }
+    public string? wandererId { get; set; }
+    public List<string>? survivorIds { get; set; }
+    public string? poiId { get; set; }
+    public bool? outpost { get; set; }
+    public string? expeditionId { get; set; }
+    public string? category { get; set; }
+    public bool? accept { get; set; }
+    public string? prisonerId { get; set; }
+    public string? shift { get; set; }
+    public string? requestId { get; set; }
+    public string? policy { get; set; }
+    public bool? on { get; set; }
+    public string? settlementId { get; set; }
+    public string? traderId { get; set; }
+    public double? offer { get; set; }
+    public double? rest { get; set; }
+    public double? satiety { get; set; }
+    public double? health { get; set; }
+    public double? amount { get; set; }
+    public string? text { get; set; }
+    public string? id { get; set; }
+    public double? dx { get; set; }
+    public double? dy { get; set; }
+    public bool? run { get; set; }
+    public string? itemId { get; set; }
+    public string? containerId { get; set; }
+    public string? order { get; set; }
+    public string? choice { get; set; }
+    public string? who { get; set; }
 }
 
 public partial class CommandResult
 {
     public bool ok { get; set; }
-    public bool changed { get; set; }
-    public string reason { get; set; } = "";
+    public bool? changed { get; set; }
+    public string? reason { get; set; }
 }
 
 public partial class Control
@@ -459,9 +459,9 @@ public partial class Layout : Nature
 public partial class LoadResult
 {
     public bool ok { get; set; }
-    public SimState state { get; set; } = new();
-    public string kind { get; set; } = "";
-    public string error { get; set; } = "";
+    public SimState? state { get; set; }
+    public string? kind { get; set; }
+    public string? error { get; set; }
 }
 
 public partial class LoggedCommand
@@ -564,13 +564,13 @@ public partial class Offer
 
 public partial class Order
 {
-    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Order v) => new(v.x, v.y);
+    /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>
+    public static implicit operator Point(Order v) => new(v.x!.Value, v.y!.Value);
     public string kind { get; set; } = "";
-    public int x { get; set; }
-    public int y { get; set; }
+    public int? x { get; set; }
+    public int? y { get; set; }
     public string? crateId { get; set; }
-    public double progress { get; set; }
+    public double? progress { get; set; }
 }
 
 /// <summary>A building on a lot: its plan, its footprint's top-left corner on the map, which way it faces.</summary>
@@ -699,7 +699,7 @@ public partial class Resident : Body, IHasId, IHasAt, IHasPos, IBody
     public double nextThinkTick { get; set; }
 }
 
-public partial class RngHolder
+public partial class RngHolder : IRngHolder
 {
     public double rng { get; set; }
 }

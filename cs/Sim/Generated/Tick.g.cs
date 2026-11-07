@@ -120,7 +120,7 @@ public static partial class Tick
             }
         }
         Fog.updateFog(state);
-        state.tick += 1;
+        state.tick = Js.I(state.tick + 1);
     }
 
     /// <summary>What a survivor does on their own: needs first, then leisure, then work.</summary>

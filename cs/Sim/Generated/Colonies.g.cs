@@ -268,9 +268,9 @@ public static partial class Colonies
         foe.food -= took;
         n.food += took;
         var win = roll(12) < 0.5;
-        (Js.T(win) ? foe : n).people = JsMath.max(0, (Js.T(win) ? foe : n).people - 1);
+        (win ? foe : n).people = JsMath.max(0, (win ? foe : n).people - 1);
         tie(state, n, foe, -10);
-        news(state, n, $"{Js.Str(n.name)} raided {Js.Str(foe.name)}, their old enemy: {Js.Str(took)} food taken, one of {Js.Str(Js.T(win) ? foe.name : n.name)} dead");
+        news(state, n, $"{Js.Str(n.name)} raided {Js.Str(foe.name)}, their old enemy: {Js.Str(took)} food taken, one of {Js.Str(win ? foe.name : n.name)} dead");
     }
 
     /// <summary>Ties between two settlements, with the news when they become allies or fall out for good.</summary>
@@ -330,10 +330,10 @@ public static partial class Colonies
     }
 
     /// <summary>The compound's box: wider for more people.</summary>
-    public static CompoundResult compound(Settlement n)
+    public static HordeBox compound(Settlement n)
     {
         var w = JsMath.max(7, JsMath.min(15, 5 + JsMath.ceil(((double)(n.people) / (2)))));
-        return new CompoundResult { x0 = Js.I(n.x - JsMath.floor(((double)(w) / (2)))), y0 = Js.I(n.y - 3), x1 = Js.I(((n.x - JsMath.floor(((double)(w) / (2)))) + w) - 1), y1 = Js.I(n.y + 3) };
+        return new HordeBox { x0 = Js.I(n.x - JsMath.floor(((double)(w) / (2)))), y0 = Js.I(n.y - 3), x1 = Js.I(((n.x - JsMath.floor(((double)(w) / (2)))) + w) - 1), y1 = Js.I(n.y + 3) };
     }
 
     /// <summary>Builds the real thing: walls and a door, beds, food, and residents (or a ruin, if it fell).</summary>
@@ -370,7 +370,7 @@ public static partial class Colonies
                 }
             }
         }
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         List<Point> inside = [];
         for (var y = box.y0 + 1; y < box.y1; y++)
         {

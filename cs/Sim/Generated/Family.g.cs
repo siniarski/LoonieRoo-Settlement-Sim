@@ -98,8 +98,8 @@ public static partial class Family
                 var baby = Survivors.addSurvivor(state, spot.x, spot.y);
                 baby.age = 0;
                 baby.childUntil = state.tick + CHILDHOOD;
-                baby.priorities = Js.Clone(JobTypes.NO_JOBS);
-                baby.opinions = /*TODO computed key*/new();
+                baby.priorities = new(JobTypes.NO_JOBS) {  };
+                baby.opinions = new() { [Js.Str(a.id)] = 50, [Js.Str(b.id)] = 50 };
                 a.opinions[Js.Idx(baby.id)] = 50;
                 b.opinions[Js.Idx(baby.id)] = 50;
                 Events.logEvent(state, $"A baby, {Js.Str(baby.name)}, was born to {Js.Str(a.name)} and {Js.Str(b.name)}");
@@ -112,7 +112,7 @@ public static partial class Family
     {
         s.childUntil = null;
         s.age = JsMath.max(s.age, GROWN_AGE);
-        s.priorities = Js.Clone(JobTypes.DEFAULT_PRIORITIES);
+        s.priorities = new(JobTypes.DEFAULT_PRIORITIES) {  };
         var n = Hash.idNumber(s.id);
         var a = Js.NN(Js.Get(HEAD_START, n % HEAD_START.length));
         var b = Js.NN(Js.Get(HEAD_START, (n + 3) % HEAD_START.length));

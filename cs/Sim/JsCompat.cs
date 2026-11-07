@@ -26,6 +26,9 @@ public static class JsListExtensions
         /// <summary>indexOf/includes with a JS number, on a list of whole numbers.</summary>
         public int indexOf(double x) => x == Math.Floor(x) && x >= int.MinValue && x <= int.MaxValue ? a.IndexOf((int)x) : -1;
         public bool includes(double x) => a.indexOf(x) >= 0;
+        public int indexOf(int? x) => x is int v ? a.IndexOf(v) : -1;
+        /// <summary>push of a whole number TypeScript narrowed to present.</summary>
+        public int push(int? x) { a.Add(x!.Value); return a.Count; }
     }
 
     extension<T>(List<T> a)
@@ -349,6 +352,8 @@ public static class JsStringExtensions
         public string toUpperCase() => s.ToUpperInvariant();
         public string toLowerCase() => s.ToLowerInvariant();
         public string trim() => s.Trim();
+        public string trimEnd() => s.TrimEnd();
+        public string trimStart() => s.TrimStart();
         public string charAt(int i) => i >= 0 && i < s.Length ? s[i].ToString() : "";
         /// <summary>A string pattern: the first occurrence only, as in JS.</summary>
         public string replace(string from, string to)
@@ -357,6 +362,7 @@ public static class JsStringExtensions
             return i < 0 ? s : s.Substring(0, i) + to + s.Substring(i + from.Length);
         }
         public string replaceAll(string from, string to) => s.Replace(from, to, StringComparison.Ordinal);
+        public string repeat(double n) => s.repeat((int)n);
         public string repeat(int n) => string.Concat(Enumerable.Repeat(s, Math.Max(0, n)));
         public string at(int i)
         {
@@ -404,6 +410,13 @@ public static class JsDeconstruct
 
 public static class JsMath
 {
+    /// <summary>Math.hypot: as JS computes it (the square root of the sum of squares).</summary>
+    public static double hypot(params double[] xs) => Math.Sqrt(xs.Sum(x => x * x));
+    /// <summary>Math.min/max of fields TypeScript narrowed to present (a command's x0, x1); missing is NaN, as undefined gives.</summary>
+    public static double min(int? a, int? b) => a is int x && b is int y ? Math.Min(x, y) : double.NaN;
+    public static double max(int? a, int? b) => a is int x && b is int y ? Math.Max(x, y) : double.NaN;
+    public static double min(IEnumerable<int> xs) => xs.Any() ? xs.Min() : double.PositiveInfinity;
+    public static double max(IEnumerable<int> xs) => xs.Any() ? xs.Max() : double.NegativeInfinity;
     public const double PI = Math.PI;
     public const double SQRT2 = 1.4142135623730951;
     public const double SQRT1_2 = 0.7071067811865476;
@@ -459,6 +472,12 @@ public static class JsMath
     }
     public static double min(IEnumerable<double> xs) => min(xs.ToArray().AsSpan());
     public static double max(IEnumerable<double> xs) => max(xs.ToArray().AsSpan());
+}
+
+/// <summary>String.fromCharCode and the like.</summary>
+public static class JsString
+{
+    public static string fromCharCode(params double[] codes) => new(codes.Select(c => (char)(ushort)Js.ToUint32(c)).ToArray());
 }
 
 public static class JsNumber
@@ -686,6 +705,19 @@ public static partial class Js
     /// <summary>{ ...x }: a shallow copy (fields copied, what they point to shared).</summary>
     public static V Clone<V>(V x) where V : class => (V)memberwiseClone.Invoke(x, null)!;
 
+    /// <summary>{ a, ...src }: src's set properties (those not left as a fresh one has them: JS's missing) copied over.</summary>
+    public static void AssignSet<V>(V target, V? src) where V : class, new()
+    {
+        if (src == null) return;
+        var fresh = new V();
+        foreach (var p in typeof(V).GetProperties())
+        {
+            if (!p.CanWrite || p.GetIndexParameters().Length > 0) continue;
+            var v = p.GetValue(src);
+            if (!Equals(v, p.GetValue(fresh))) p.SetValue(target, v);
+        }
+    }
+
     /// <summary>{ ...x } going into another class: a shallow copy of the properties both have (by name).</summary>
     public static V CopyAs<V>(object x) where V : class, new()
     {
@@ -748,8 +780,43 @@ public static partial class Js
     /// <summary>JSON.stringify, for comparing (as the sim uses it) and for logs.</summary>
     public static string Json_stringify(object? x) => System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options);
 
+    /// <summary>JSON.parse(text) as T: read as T (or as JSON nodes).</summary>
+    public static V JsonParse<V>(string text) => System.Text.Json.JsonSerializer.Deserialize<V>(text, StateJson.Options)!;
+
     /// <summary>JSON.parse(JSON.stringify(x)): a deep copy, through JSON.</summary>
     public static V DeepClone<V>(V x) => System.Text.Json.JsonSerializer.Deserialize<V>(System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options), StateJson.Options)!;
+
+    /// <summary>A list or object literal written as a loose JS value (the tests' expected values): any items, any fields.</summary>
+    public static JsLooseList Arr(List<object?> items) => new(items);
+    /// <summary>{ ...src, k: v } as a loose JS value: src's fields (in order), then these.</summary>
+    public static JsRecord<object?> ObjFrom(object? src, params (string key, object? value)[] fields)
+    {
+        var o = new JsRecord<object?>(AsRecord(src));
+        foreach (var (k, v) in fields) o[k] = v;
+        return o;
+    }
+
+    public static JsRecord<object?> Obj(params (string key, object? value)[] fields)
+    {
+        var o = new JsRecord<object?>();
+        foreach (var (k, v) in fields) o[k] = v;
+        return o;
+    }
+
+    /// <summary>{ ...first, ...: a record copied from first, then the rest added.</summary>
+    public static JsRecord<V> RecordFrom<V>(Dictionary<string, V> first, Action<JsRecord<V>> rest)
+    {
+        var r = new JsRecord<V>(first);
+        rest(r);
+        return r;
+    }
+
+    /// <summary>{ ...into, ...from }: from's entries copied in (later ones win).</summary>
+    public static void MergeInto<V>(Dictionary<string, V> into, Dictionary<string, V>? from)
+    {
+        if (from == null) return;
+        foreach (var kv in from) into[kv.Key] = kv.Value;
+    }
 
     /// <summary>(() => { ... })(): a function run where it's written.</summary>
     public static V Run<V>(Func<V> f) => f();
@@ -768,8 +835,15 @@ public static partial class Js
     public static V Object_assign<V>(V target, object? source) where V : class
     {
         if (source is null) return target;
+        // Records (a priorities table): key by key.
+        if (target is System.Collections.IDictionary td && source is System.Collections.IDictionary sd)
+        {
+            foreach (System.Collections.DictionaryEntry kv in sd) td[kv.Key] = kv.Value;
+            return target;
+        }
         foreach (var sp in source.GetType().GetProperties())
         {
+            if (sp.GetIndexParameters().Length > 0) continue;
             var v = sp.GetValue(source);
             if (v is null) continue;
             var tp = target.GetType().GetProperty(sp.Name);
@@ -903,3 +977,6 @@ public static class JsRegExpExtensions
         public string replaceAll(JsRegExp r, string to) => r.re.Replace(s, to);
     }
 }
+
+/// <summary>A list literal written as a loose JS value (Js.Arr).</summary>
+public sealed class JsLooseList(IEnumerable<object?> items) : List<object?>(items);

@@ -55,7 +55,7 @@ public static partial class Commands
         }
         if ((command.type == "addMapNote") || (command.type == "removeMapNote"))
         {
-            var why = (command.type == "addMapNote") ? Mapnotes.addMapNote(state, command.x, command.y, Js.Str(command.text)) : Mapnotes.removeMapNote(state, command.id);
+            var why = (command.type == "addMapNote") ? Mapnotes.addMapNote(state, Js.NN(command.x), Js.NN(command.y), Js.Str(command.text)) : Mapnotes.removeMapNote(state, command.id);
             return (why == null) ? changed() : reject(why);
         }
         if (command.type == "sneak")
@@ -80,7 +80,7 @@ public static partial class Commands
             }
             if (command.type == "aim")
             {
-                var why = ControlMod.aim(Js.NN(state.control), command.x, command.y);
+                var why = ControlMod.aim(Js.NN(state.control), Js.NN(command.x), Js.NN(command.y));
                 return (why == null) ? changed() : ((why == "same") ? unchanged() : reject(why));
             }
             if (command.type == "steer")
@@ -88,7 +88,7 @@ public static partial class Commands
                 var __d0 = command;
                 var dx = __d0.dx;
                 var dy = __d0.dy;
-                if (!new List<double> { dx, dy }.every((d) => ((d == -1) || (d == 0)) || (d == 1)))
+                if (!new List<double?> { dx, dy }.every((d) => ((d == -1) || (d == 0)) || (d == 1)))
                 {
                     return reject("steer takes -1, 0 or 1");
                 }
@@ -97,8 +97,8 @@ public static partial class Commands
                 {
                     return unchanged();
                 }
-                Js.NN(state.control).dx = dx;
-                Js.NN(state.control).dy = dy;
+                Js.NN(state.control).dx = Js.NN(dx);
+                Js.NN(state.control).dy = Js.NN(dy);
                 Js.NN(state.control).running = run;
                 return changed();
             }
@@ -170,7 +170,7 @@ public static partial class Commands
             {
                 return reject($"no survivor {Js.Str(command.survivorId)}");
             }
-            var at = ((command.x != null) && (command.y != null)) ? new Point { x = Js.I(command.x), y = Js.I(command.y) } : s.pos;
+            var at = ((command.x != null) && (command.y != null)) ? new Point { x = Js.I(Js.NN(command.x)), y = Js.I(Js.NN(command.y)) } : s.pos;
             if (((command.order == "hold") || (command.order == "loot")) && !Grids.isWalkable(state.grid, at.x, at.y))
             {
                 return reject($"({Js.Str(at.x)}, {Js.Str(at.y)}) is not walkable");
@@ -186,7 +186,7 @@ public static partial class Commands
             }
             var heard = state.survivors.filter((s) => (s != you) && ((JsMath.abs(s.pos.x - you.pos.x) + JsMath.abs(s.pos.y - you.pos.y)) <= Orders.SHOUT_RANGE));
             var any = false;
-            if ((command.order == "loot") && (((command.x == null) || (command.y == null)) || !Grids.inBounds(state.grid, command.x, command.y)))
+            if ((command.order == "loot") && (((command.x == null) || (command.y == null)) || !Grids.inBounds(state.grid, Js.NN(command.x), Js.NN(command.y))))
             {
                 return reject("loot where?");
             }
@@ -277,7 +277,7 @@ public static partial class Commands
             var x_5 = __d1.x;
             var y_6 = __d1.y;
             var amount = __d1.amount;
-            if (!Breach.isStructure(Grids.getTile(state.grid, x_5, y_6)))
+            if (!Breach.isStructure(Grids.getTile(state.grid, Js.NN(x_5), Js.NN(y_6))))
             {
                 return reject($"({Js.Str(x_5)}, {Js.Str(y_6)}) is not a wall or door");
             }
@@ -285,7 +285,7 @@ public static partial class Commands
             {
                 return reject("damage must be a positive integer");
             }
-            Breach.damageStructure(state, x_5, y_6, amount);
+            Breach.damageStructure(state, Js.NN(x_5), Js.NN(y_6), Js.NN(amount));
             return changed();
         }
         if (command.type == "setCraftTarget")
@@ -305,12 +305,12 @@ public static partial class Commands
             {
                 return unchanged();
             }
-            state.craftTargets[Js.Idx(kind)] = count;
+            state.craftTargets[Js.Idx(kind)] = Js.NN(count);
             return changed();
         }
         if (command.type == "setStorageFilter")
         {
-            var room = Rooms.roomAt(state, command.x, command.y);
+            var room = Rooms.roomAt(state, Js.NN(command.x), Js.NN(command.y));
             var d = Js.T(room) ? Rooms.designationOf(state, room) : null;
             if (!Js.T(d) || (d.purpose != "storage"))
             {
@@ -361,7 +361,7 @@ public static partial class Commands
         }
         if (command.type == "planPerimeter")
         {
-            return planPerimeter(state, command.x0, command.y0, command.x1, command.y1);
+            return planPerimeter(state, Js.NN(command.x0), Js.NN(command.y0), Js.NN(command.x1), Js.NN(command.y1));
         }
         if (command.type == "fulfilRequest")
         {
@@ -404,12 +404,12 @@ public static partial class Commands
         }
         if (command.type == "trade")
         {
-            var failed = Visitors.trade(state, command.traderId, command.offer);
+            var failed = Visitors.trade(state, command.traderId, Js.NN(command.offer));
             return Js.T(failed) ? reject(failed) : changed();
         }
         if (command.type == "toggleDoor")
         {
-            var why = toggleDoor(state, command.x, command.y);
+            var why = toggleDoor(state, Js.NN(command.x), Js.NN(command.y));
             return Js.T(why) ? reject(why) : changed();
         }
         if (command.type == "toggleLock")
@@ -417,9 +417,9 @@ public static partial class Commands
             var __d3 = command;
             var x_7 = __d3.x;
             var y_8 = __d3.y;
-            if (((command.side != null) && Grids.inBounds(state.grid, x_7, y_8)) && (Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, x_7, y_8, command.side)) == Grids.EDGE_DOOR))
+            if (((command.side != null) && Grids.inBounds(state.grid, Js.NN(x_7), Js.NN(y_8))) && (Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side)) == Grids.EDGE_DOOR))
             {
-                var e = Grids.edgeIndex(state.grid, x_7, y_8, command.side);
+                var e = Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side);
                 var open_9 = state.grid.edgeOpen.indexOf(e);
                 if (open_9 >= 0)
                 {
@@ -435,10 +435,10 @@ public static partial class Commands
                     state.grid.edgeLocked.push(e);
                 }
                 Grids.noteEdgeChange(state.grid, e);
-                state.walkabilityVersion += 1;
+                state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
                 return changed();
             }
-            if (Grids.getTile(state.grid, x_7, y_8) != "door")
+            if (Grids.getTile(state.grid, Js.NN(x_7), Js.NN(y_8)) != "door")
             {
                 return reject($"({Js.Str(x_7)}, {Js.Str(y_8)}) is not a door");
             }
@@ -456,10 +456,10 @@ public static partial class Commands
             else
             {
                 state.grid.locked.push(i);
-                Zombies.evictZombies(state, new Point { x = Js.I(x_7), y = Js.I(y_8) });
+                Zombies.evictZombies(state, new Point { x = Js.I(Js.NN(x_7)), y = Js.I(Js.NN(y_8)) });
             }
-            Grids.noteChange(state.grid, i);
-            state.walkabilityVersion += 1;
+            Grids.noteChange(state.grid, Js.NN(i));
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             return changed();
         }
         if (command.type == "sendExpedition")
@@ -538,11 +538,11 @@ public static partial class Commands
         var __d4 = command;
         var x = __d4.x;
         var y = __d4.y;
-        if (!Grids.inBounds(state.grid, x, y))
+        if (!Grids.inBounds(state.grid, Js.NN(x), Js.NN(y)))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is out of bounds");
         }
-        if (DESIGNATIONS.has(command.type) && !Fog.isExplored(state, x, y))
+        if (DESIGNATIONS.has(command.type) && !Fog.isExplored(state, Js.NN(x), Js.NN(y)))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is unexplored");
         }
@@ -552,64 +552,64 @@ public static partial class Commands
                 {
                     if (command.side != null)
                     {
-                    return placeEdge(state, x, y, command.side, Grids.EDGE_WALL);
+                    return placeEdge(state, Js.NN(x), Js.NN(y), command.side, Grids.EDGE_WALL);
                 }
-                    if (Js.T(Survivors.survivorAt(state, x, y)))
+                    if (Js.T(Survivors.survivorAt(state, Js.NN(x), Js.NN(y))))
                     {
                     return reject($"({Js.Str(x)}, {Js.Str(y)}) is occupied");
                 }
-                    return setStructure(state, x, y, "wall");
+                    return setStructure(state, Js.NN(x), Js.NN(y), "wall");
                 }
             case "placeDoor":
                 {
                     if (command.side != null)
                     {
-                    return placeEdge(state, x, y, command.side, Grids.EDGE_DOOR);
+                    return placeEdge(state, Js.NN(x), Js.NN(y), command.side, Grids.EDGE_DOOR);
                 }
-                    return setStructure(state, x, y, "door");
+                    return setStructure(state, Js.NN(x), Js.NN(y), "door");
                 }
             case "clearTile":
                 {
                     {
-                    var f = FurnitureMod.furnitureAt(state, x, y);
+                    var f = FurnitureMod.furnitureAt(state, Js.NN(x), Js.NN(y));
                     if (Js.T(f))
                     {
                         FurnitureMod.removeFurniture(state, f);
                         return changed();
                     }
-                    return setStructure(state, x, y, "floor");
+                    return setStructure(state, Js.NN(x), Js.NN(y), "floor");
                 }
                 }
             case "placeBed":
             case "placeTable":
             case "placeWorkbench":
                 {
-                    if (Grids.getTile(state.grid, x, y) != "floor")
+                    if (Grids.getTile(state.grid, Js.NN(x), Js.NN(y)) != "floor")
                     {
                     return reject($"({Js.Str(x)}, {Js.Str(y)}) is not floor");
                 }
-                    if (Js.T(FurnitureMod.furnitureAt(state, x, y)))
+                    if (Js.T(FurnitureMod.furnitureAt(state, Js.NN(x), Js.NN(y))))
                     {
                     return unchanged();
                 }
-                    FurnitureMod.addFurniture(state, (command.type == "placeBed") ? "bed" : ((command.type == "placeTable") ? "table" : "workbench"), x, y);
+                    FurnitureMod.addFurniture(state, (command.type == "placeBed") ? "bed" : ((command.type == "placeTable") ? "table" : "workbench"), Js.NN(x), Js.NN(y));
                     return changed();
                 }
             case "designateBuild":
                 {
                     if (command.side != null)
                     {
-                    return designateEdge(state, x, y, command.side, command.structure);
+                    return designateEdge(state, Js.NN(x), Js.NN(y), command.side, command.structure);
                 }
-                    return designateBuild(state, x, y, command.structure);
+                    return designateBuild(state, Js.NN(x), Js.NN(y), command.structure);
                 }
             case "designateRemove":
                 {
-                    return designateRemove(state, x, y);
+                    return designateRemove(state, Js.NN(x), Js.NN(y));
                 }
             case "cancelDesignation":
                 {
-                    return cancelDesignation(state, x, y);
+                    return cancelDesignation(state, Js.NN(x), Js.NN(y));
                 }
             case "designateFarm":
                 {
@@ -618,12 +618,12 @@ public static partial class Commands
                     {
                         return reject($"unknown crop {Js.Str(Js.Str(command.crop))}");
                     }
-                    if (Js.T((Grids.getTile(state.grid, x, y) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y))))
+                    if (Js.T((Grids.getTile(state.grid, Js.NN(x), Js.NN(y)) != "floor") || Js.T(FurnitureMod.furnitureAt(state, Js.NN(x), Js.NN(y)))))
                     {
                         return unchanged();
                     }
                     var crop = command.crop ?? "potato";
-                    var existing = Farming.plotAt(state, x, y);
+                    var existing = Farming.plotAt(state, Js.NN(x), Js.NN(y));
                     if (existing?.crop == crop)
                     {
                         return unchanged();
@@ -632,14 +632,14 @@ public static partial class Commands
                     {
                         Farming.removePlot(state, existing);
                     }
-                    Farming.addPlot(state, x, y, crop);
+                    Farming.addPlot(state, Js.NN(x), Js.NN(y), crop);
                     return changed();
                 }
                 }
             case "designateScavenge":
                 {
                     {
-                    var crate = FurnitureMod.furnitureAt(state, x, y);
+                    var crate = FurnitureMod.furnitureAt(state, Js.NN(x), Js.NN(y));
                     if (Js.T((((crate?.kind != "crate") && (crate?.kind != "tree")) || ((crate.kind == "crate") && (crate.loot == 0))) || Js.T(crate.scavenge)))
                     {
                         return unchanged();
@@ -650,47 +650,47 @@ public static partial class Commands
                 }
             case "designateRoom":
                 {
-                    return designateRoom(state, x, y, command.purpose);
+                    return designateRoom(state, Js.NN(x), Js.NN(y), command.purpose);
                 }
             case "ignite":
                 {
-                    return FireMod.ignite(state, x, y) ? changed() : unchanged();
+                    return FireMod.ignite(state, Js.NN(x), Js.NN(y)) ? changed() : unchanged();
                 }
             case "spawnSurvivor":
                 {
-                    return spawnSurvivor(state, x, y);
+                    return spawnSurvivor(state, Js.NN(x), Js.NN(y));
                 }
             case "spawnZombie":
                 {
-                    if (Grids.getTile(state.grid, x, y) != "floor")
+                    if (Grids.getTile(state.grid, Js.NN(x), Js.NN(y)) != "floor")
                     {
                     return reject($"({Js.Str(x)}, {Js.Str(y)}) is not floor");
                 }
-                    Zombies.addZombie(state, x, y);
+                    Zombies.addZombie(state, Js.NN(x), Js.NN(y));
                     return changed();
                 }
             case "spawnVehicle":
                 {
-                    if (!Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))
+                    if (!Vehicles.parkable(state, new Point { x = Js.I(Js.NN(x)), y = Js.I(Js.NN(y)) }))
                     {
                     return reject($"a car won't fit at ({Js.Str(x)}, {Js.Str(y)})");
                 }
-                    Vehicles.addVehicle(state, x, y);
+                    Vehicles.addVehicle(state, Js.NN(x), Js.NN(y));
                     return changed();
                 }
             case "spawnFood":
             case "spawnWeapon":
                 {
-                    if (!Grids.isWalkable(state.grid, x, y))
+                    if (!Grids.isWalkable(state.grid, Js.NN(x), Js.NN(y)))
                     {
                     return reject($"({Js.Str(x)}, {Js.Str(y)}) is not walkable");
                 }
-                    Items.spawnItem(state, (command.type == "spawnFood") ? "food" : "weapon", x, y);
+                    Items.spawnItem(state, (command.type == "spawnFood") ? "food" : "weapon", Js.NN(x), Js.NN(y));
                     return changed();
                 }
             case "moveSurvivor":
                 {
-                    return moveSurvivor(state, command.survivorId, x, y);
+                    return moveSurvivor(state, command.survivorId, Js.NN(x), Js.NN(y));
                 }
         }
         throw new InvalidOperationException("unreachable: every case returns");
@@ -721,7 +721,7 @@ public static partial class Commands
         {
             return unchanged();
         }
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         if (tile != "floor")
         {
             var f = FurnitureMod.furnitureAt(state, x, y);
@@ -797,7 +797,7 @@ public static partial class Commands
         {
             return unchanged();
         }
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         return changed();
     }
     public static CommandResult placeEdge(SimState state, double x, double y, string side, double kind) => placeEdge(state, (int)x, (int)y, side, kind);
@@ -897,12 +897,12 @@ public static partial class Commands
                 {
                     continue;
                 }
-                if (Js.T((Js.T((!Fog.isExplored(state, x, y) || (Grids.getTile(state.grid, x, y) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, y)))) || Js.T(Designations.blueprintAt(state, x, y))))
+                if (Js.T((Js.T((!Fog.isExplored(state, x, Js.NN(y)) || (Grids.getTile(state.grid, x, Js.NN(y)) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, Js.NN(y))))) || Js.T(Designations.blueprintAt(state, x, Js.NN(y)))))
                 {
                     continue;
                 }
                 var door = ((x == mx) && ((y == y0) || (y == y1))) || ((y == my) && ((x == x0) || (x == x1)));
-                Designations.addBlueprint(state, x, y, door ? "door" : "wall");
+                Designations.addBlueprint(state, x, Js.NN(y), Js.T(door) ? "door" : "wall");
                 planned += 1;
             }
         }
@@ -1059,7 +1059,7 @@ public static partial class Commands
             return false;
         }
         Order? order = (kind == "settle") ? null : ((kind == "follow") ? new() { kind = kind } : ((kind == "loot") ? new() { kind = kind, x = Js.I(at.x), y = Js.I(at.y), crateId = null, progress = 0 } : new() { kind = kind, x = Js.I(at.x), y = Js.I(at.y) }));
-        if (/*TODO JSON.stringify*/Js.Json_stringify(order) == /*TODO JSON.stringify*/Js.Json_stringify(s.order))
+        if (Js.Json_stringify(order) == Js.Json_stringify(s.order))
         {
             return false;
         }
@@ -1111,7 +1111,7 @@ public static partial class Commands
             }
             state.grid.open.splice(at, 1);
         }
-        state.walkabilityVersion += 1;
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         return null;
     }
     public static string? toggleDoor(SimState state, double x, double y) => toggleDoor(state, (int)x, (int)y);
@@ -1227,7 +1227,7 @@ public static partial class Commands
             {
                 return "not beside you";
             }
-            var inside = Inventory.contents(state, new() { id = command.containerId });
+            var inside = Inventory.contents(state, new Furniture { id = command.containerId });
             if (inside.length == 0)
             {
                 return "nothing in it";

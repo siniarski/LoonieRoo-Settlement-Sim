@@ -250,7 +250,7 @@ public static partial class Zombies
         {
             state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night)) * (Js.T(state.harsh) ? groupShare(state.survivors.length) : 1))));
             var siege = EndgameMod.siegeFactor(state, night) > 1;
-            Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(Js.T(siege) ? " (a SIEGE night)" : "")}");
+            Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(siege ? " (a SIEGE night)" : "")}");
         }
         var arriving = JsMath.min(spawnsAt(state.tick, tonight(state, night)), MAX_ZOMBIES - state.zombies.length);
         if (arriving > 0)
@@ -319,11 +319,11 @@ public static partial class Zombies
         List<Point> edge = [];
         for (var x = 0; x < width; x++)
         {
-            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
+            edge.pushAll([new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) }]);
         }
         for (var y = 1; y < (height - 1); y++)
         {
-            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
+            edge.pushAll([new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) }]);
         }
         var candidates = edge.filter((p) => open(p.x, p.y));
         return (candidates.length > 0) ? Rng.pick(state, candidates) : null;
@@ -618,7 +618,7 @@ public static partial class Zombies
         var dy = -JsMath.abs(b.y - y);
         var sx = (x < b.x) ? 1 : -1;
         var sy = (y < b.y) ? 1 : -1;
-        var err = dx + dy;
+        double err = dx + dy;
         for (; ; )
         {
             if (!Pathfinding.isPassable(state.grid, x, y, "zombie") && !((x == b.x) && (y == b.y)))
@@ -845,7 +845,7 @@ public static partial class Zombies
         if (z.kind != "raider")
         {
             var was = s.infection;
-            Infection.maybeInfect(state, s, z.id, Js.T(armoured) ? ((double)(Infection.INFECTION_CHANCE) / (2)) : Infection.INFECTION_CHANCE);
+            Infection.maybeInfect(state, s, z.id, armoured ? ((double)(Infection.INFECTION_CHANCE) / (2)) : Infection.INFECTION_CHANCE);
             if ((was == null) && (s.infection != null))
             {
                 s.bitten = limb;

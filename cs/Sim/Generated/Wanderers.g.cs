@@ -146,11 +146,11 @@ public static partial class Wanderers
         List<Point> edge = [];
         for (var x = 0; x < width; x++)
         {
-            edge.push(new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) });
+            edge.pushAll([new Point { x = Js.I(x), y = Js.I(0) }, new Point { x = Js.I(x), y = Js.I(height - 1) }]);
         }
         for (var y = 1; y < (height - 1); y++)
         {
-            edge.push(new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) });
+            edge.pushAll([new Point { x = Js.I(0), y = Js.I(y) }, new Point { x = Js.I(width - 1), y = Js.I(y) }]);
         }
         var taken = Js.Set(state.wanderers.map((w_3) => $"{Js.Str(w_3.x)},{Js.Str(w_3.y)}"));
         var candidates = edge.filter((p_4) => (Grids.getTile(state.grid, p_4.x, p_4.y) == "floor") && !taken.has($"{Js.Str(p_4.x)},{Js.Str(p_4.y)}"));

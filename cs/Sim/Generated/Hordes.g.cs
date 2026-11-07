@@ -170,7 +170,7 @@ public static partial class Hordes
         {
             if (((h.mode == "hunt") && !Js.T(h.heading)) && (h.goals.length > 0))
             {
-                h.heading = Js.Clone(Js.NN(Js.Get(h.goals, 0)));
+                h.heading = Js.CopyAs<Point>(Js.NN(Js.Get(h.goals, 0)));
             }
             h.mode = "roam";
             h.goals = Js.T(h.heading) ? [Js.Clone(h.heading)] : [];
@@ -210,7 +210,7 @@ public static partial class Hordes
         {
             return (((((q.x - b.x0) >= BOX_SLACK) || (b.x0 == 0)) && (((b.x1 - q.x) >= BOX_SLACK) || (b.x1 == (width - 1)))) && (((q.y - b.y0) >= BOX_SLACK) || (b.y0 == 0))) && (((b.y1 - q.y) >= BOX_SLACK) || (b.y1 == (height - 1)));
         }
-        if (!Js.T(goalsKept) || !zs.every((z) => inside(z.pos)))
+        if (!goalsKept || !zs.every((z) => inside(z.pos)))
         {
             h.box = new HordeBox { x0 = Js.I(x0), y0 = Js.I(y0), x1 = Js.I(x1), y1 = Js.I(y1) };
         }
@@ -542,7 +542,7 @@ public static partial class Hordes
             z.hordeId = null;
             if (Js.T((h.mode == "roam") && Js.T(h.heading)))
             {
-                z.heading = Js.Clone(h.heading);
+                z.heading = Js.CopyAs<Point>(h.heading);
             }
         }
         Js.NN(state.hordes).splice(Js.NN(state.hordes).indexOf(h), 1);
@@ -613,7 +613,7 @@ public static partial class Hordes
                 z.hordeId = null;
                 if (Js.T(h.heading))
                 {
-                    z.heading = Js.Clone(h.heading);
+                    z.heading = Js.CopyAs<Point>(h.heading);
                 }
             }
             shed(state, h);
@@ -662,7 +662,7 @@ public static partial class Hordes
         {
             foreach (var z in Js.Iter(back))
             {
-                z.heading = Js.Clone(heading);
+                z.heading = Js.CopyAs<Point>(heading);
             }
         }
         Events.logEvent(state, $"{Js.Str(n)} broke away from a horde of {Js.Str(zs.length)} near ({Js.Str(mid.x)}, {Js.Str(mid.y)})");
@@ -729,7 +729,7 @@ public static partial class Hordes
             {
                 foreach (var z in Js.Iter(heard))
                 {
-                    z.heading = Js.Clone(heading);
+                    z.heading = Js.CopyAs<Point>(heading);
                 }
             }
         }

@@ -212,7 +212,7 @@ public static partial class ScenarioMod
         {
             throw new Exception("loadScenario: map is empty");
         }
-        var state = States.createState(new() { seed = scenario.seed, width = Js.I(width), height = Js.I(height) });
+        var state = States.createState(new NewStateOptions { seed = scenario.seed, width = Js.I(width), height = Js.I(height) });
         scenario.map.forEach((row, y) =>
         {
             if (row.length != width)

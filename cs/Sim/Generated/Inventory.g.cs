@@ -67,7 +67,7 @@ public static partial class Inventory
         {
             return "not in your bag";
         }
-        var load = contents(state, new() { id = containerId }).reduce((sum, i) => sum + Js.Get(ITEM_WEIGHT, i.kind), 0.0);
+        var load = contents(state, new Furniture { id = containerId }).reduce((sum, i) => sum + Js.Get(ITEM_WEIGHT, i.kind), 0.0);
         if ((load + Js.Get(ITEM_WEIGHT, item.kind)) > box.max)
         {
             return "it won't fit";

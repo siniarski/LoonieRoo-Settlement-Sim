@@ -282,6 +282,7 @@ function build(name, t, file) {
   const fields = new Map();
   const parts = objectParts(t);
   const union = parts.length > 1 && (t.type === 'TSUnionType' || (t.type === 'TSTypeReference' && lookup(refName(t), currentFile)?.node.typeAnnotation?.type === 'TSUnionType'));
+  const presentIn = new Map(); // field -> how many union members have it (not optional)
   for (const part of parts) {
     for (let m of part.members) {
       // A method (lootAt(x, y): number): a function-typed field.
@@ -293,6 +294,7 @@ function build(name, t, file) {
       const explicitNull = type.endsWith('?');
       // A union member's fields are there when its type says so (TypeScript narrows on it): plain values, unless optional.
       if (m.optional && !type.endsWith('?')) type += '?';
+      if (!m.optional) presentIn.set(field, (presentIn.get(field) ?? 0) + 1);
       const prev = fields.get(field);
       if (prev) {
         // Union members: optional only if every member that has it leaves it optional (a command's x is there
@@ -311,6 +313,8 @@ function build(name, t, file) {
       fields.set(field, { type: union && !explicitNull ? type.replace(/\?$/, '') : type, explicitNull, doc: before ? clean(before[1]) : '' });
     }
   }
+  // A field some members of a union don't have is undefined in those (JS): nullable here, so it can be missing.
+  if (union) for (const [f, info] of fields) if ((presentIn.get(f) ?? 0) < parts.length && !info.type.endsWith('?')) info.type += '?';
   classes.set(name, fields);
 }
 
@@ -358,6 +362,7 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
     if (want && shape !== name && [...want].every(([f, w]) => fields.get(f)?.type === w.type)) ifaces.push(shape);
   }
   if (fields.get('id')?.type === 'string') ifaces.push('IHasId');
+  if (fields.get('rng')?.type === 'double' && name !== 'SimState') ifaces.push('IRngHolder');
   if (fields.get('at')?.type === 'Point') ifaces.push('IHasAt');
   if (fields.get('pos')?.type === 'Point') ifaces.push('IHasPos');
   // A body (survivor, zombie, animal, dog, resident...): an id, a tile and a precise position.
@@ -366,6 +371,7 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
   const inherited = base ? classes.get(base) : null;
   const heads = [...(base ? [base] : []), ...ifaces.filter((i) => !inherited || i === 'Body' ? true : !['IHasId', 'IHasAt', 'IHasPos', 'IBody'].includes(i))];
   lines.push(`public partial class ${name}${heads.length ? ' : ' + heads.join(', ') : ''}`, '{');
+  if (fields.get('x')?.type === 'int?' && fields.get('y')?.type === 'int?') lines.push(`    /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x!.Value, v.y!.Value);`);
   if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x, v.y);`);
   for (const [field, f] of fields) {
     if (inherited?.get(field)?.type === f.type) continue; // the base class has it

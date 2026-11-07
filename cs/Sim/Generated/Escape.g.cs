@@ -65,7 +65,7 @@ public static partial class Escape
     public static SimState newGamePlus(SimState old, double seed)
     {
         var you = old.survivors.find((s) => s.id == old.control?.survivorId) ?? Js.Get(old.survivors, 0);
-        var state = Worldgen.createWorld(seed, old.world?.size ?? Worldgen.WORLD_SIZE, Js.With(Js.Clone(old.settings), __s0 => { __s0.start = "solo"; }));
+        var state = Worldgen.createWorld(seed, old.world?.size ?? Worldgen.WORLD_SIZE, Js.With(Js.CopyAs<Settings>(old.settings), __s0 => { __s0.start = "solo"; }));
         if (!Js.T(you))
         {
             return state;
@@ -97,6 +97,6 @@ public static partial class Escape
 
     public static Item structuredCloneItem(Item item)
     {
-        return ((Item)(Js.DeepClone(item)));
+        return Js.DeepClone(item);
     }
 }

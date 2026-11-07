@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <RootNamespace>LoonieRoo.Sim.Tests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <!-- Translated tests: nullable annotations outside a nullable context, and JS null checks C# knows are moot. -->
+    <NoWarn>$(NoWarn);CS8669;CS0472;CS8632</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />

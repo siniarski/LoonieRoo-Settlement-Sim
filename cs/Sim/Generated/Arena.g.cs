@@ -17,7 +17,7 @@ public static partial class Arena
 
     public static SimState createArena(double seed, string kind)
     {
-        var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.Clone(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
+        var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.CopyAs<Settings>(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
         state.settlements = [];
         var you = Js.NN(Js.Get(state.survivors, 0)).pos;
         var count = (kind == "one") ? 1 : CROWD_SIZE;

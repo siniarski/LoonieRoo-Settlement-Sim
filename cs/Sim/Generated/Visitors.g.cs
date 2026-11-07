@@ -62,7 +62,7 @@ public static partial class Visitors
         {
             arrive(state);
         }
-        var enemy = state.settlements.find(Settlements.isHostile);
+        var enemy = state.settlements.find((__f0) => Settlements.isHostile(__f0));
         if (((day >= RAID_FIRST_DAY) && Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
         {
             raid(state, day, enemy?.name);

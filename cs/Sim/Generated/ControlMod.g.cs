@@ -362,13 +362,13 @@ public static partial class ControlMod
         if (Js.T(deer))
         {
             var shot = !Motion.inReach(deer, s, Motion.SWING_REACH);
-            c.nextSwing = state.tick + (Js.T(shot) ? Weapons.GUN_EVERY : Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY));
-            if (Js.T(shot))
+            c.nextSwing = state.tick + (shot ? Weapons.GUN_EVERY : Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY));
+            if (shot)
             {
                 Js.NN(Weapons.loadedGun(state, s)).wear -= 1;
                 Noise.makeNoise(state, s.pos, "gunfire");
             }
-            return Handiwork.hitAnimal(state, s, deer.id, Js.T(shot) ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))));
+            return Handiwork.hitAnimal(state, s, deer.id, shot ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"))));
         }
         var gun = Weapons.loadedGun(state, s);
         var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
@@ -434,7 +434,7 @@ public static partial class ControlMod
         var dy = -JsMath.abs(to.y - y);
         var sx = (x < to.x) ? 1 : -1;
         var sy = (y < to.y) ? 1 : -1;
-        var err = dx + dy;
+        double err = dx + dy;
         for (; ; )
         {
             var e2 = 2 * err;

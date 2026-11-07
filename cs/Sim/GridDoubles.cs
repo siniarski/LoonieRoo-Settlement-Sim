@@ -54,3 +54,13 @@ public static partial class Grids
 {
     public static bool setEdge(Grid grid, double x, double y, string side, double kind) => setEdge(grid, x, y, side, (int)kind);
 }
+
+public static partial class Grids
+{
+    /// <summary>createGrid with JS numbers: a size that isn't a whole number is refused, as the TypeScript does.</summary>
+    public static Grid createGrid(double width, double height, string fill = FLOOR)
+    {
+        if (width != Math.Floor(width) || height != Math.Floor(height)) throw new ArgumentException($"createGrid: invalid size {width}x{height}");
+        return createGrid((int)width, (int)height, fill);
+    }
+}

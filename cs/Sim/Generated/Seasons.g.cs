@@ -99,7 +99,7 @@ public static partial class Seasons
             var season = seasonOf(state.tick);
             var winter = season == "winter";
             var roll = Rng.random(state);
-            state.weather = (roll < (Js.T(winter) ? SNOW_CHANCE : RAIN_CHANCE)) ? (Js.T(winter) ? "snow" : "rain") : ((roll >= (1 - Difficulty.eventChance(state, EVENT_CHANCE))) ? (Js.T(winter) ? "blizzard" : ((season == "summer") ? "heatwave" : "storm")) : "clear");
+            state.weather = (roll < (winter ? SNOW_CHANCE : RAIN_CHANCE)) ? (winter ? "snow" : "rain") : ((roll >= (1 - Difficulty.eventChance(state, EVENT_CHANCE))) ? (winter ? "blizzard" : ((season == "summer") ? "heatwave" : "storm")) : "clear");
             if (state.weather == "blizzard")
             {
                 Events.logEvent(state, "A blizzard: anyone outdoors without a coat or a heater will freeze, day or night");

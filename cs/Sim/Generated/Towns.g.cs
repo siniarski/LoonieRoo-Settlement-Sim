@@ -214,7 +214,7 @@ public static partial class Towns
                 return;
             }
             var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
-            var off = (STREET_GAP - 8) + JsMath.floor(r(k++) * 7);
+            double off = (STREET_GAP - 8) + JsMath.floor(r(k++) * 7);
             while (off < (steps - 4))
             {
                 var bx = x + (dx * off);

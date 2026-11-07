@@ -109,14 +109,14 @@ public static partial class Designations
                 state.grid.edgeBoarded.push(e);
             }
             Grids.noteEdgeChange(state.grid, e);
-            state.walkabilityVersion += 1;
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             return;
         }
         if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade")))
         {
             if (Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE)))
             {
-                state.walkabilityVersion += 1;
+                state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             }
             return;
         }
@@ -128,7 +128,7 @@ public static partial class Designations
                 {
                     if (Grids.setTile(state.grid, bp.x, bp.y, bp.target))
                     {
-                    state.walkabilityVersion += 1;
+                    state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
                 }
                     if (bp.target == "wall")
                     {
@@ -189,7 +189,7 @@ public static partial class Designations
                     }
                     else if (Grids.setTile(state.grid, bp.x, bp.y, "floor"))
                     {
-                        state.walkabilityVersion += 1;
+                        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
                     }
                     Items.spawnItem(state, "wood", bp.x, bp.y);
                     return;

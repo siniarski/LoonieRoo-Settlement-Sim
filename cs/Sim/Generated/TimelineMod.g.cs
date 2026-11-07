@@ -182,8 +182,8 @@ public static partial class TimelineMod
             var a = (Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI) * 2;
             var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * ((FAR_MAX - FAR_MIN) + 1)));
             var shots = Hash.hashRoll(state.tick, 0xfa5) < 0.6;
-            Noise.makeNoise(state, at, Js.T(shots) ? "gunfire" : "scream");
-            Events.logEvent(state, $"{Js.Str(Js.T(shots) ? "Gunshots" : "A scream")}, far off to the {Js.Str(compass(you, at))}.");
+            Noise.makeNoise(state, at, shots ? "gunfire" : "scream");
+            Events.logEvent(state, $"{Js.Str(shots ? "Gunshots" : "A scream")}, far off to the {Js.Str(compass(you, at))}.");
         }
     }
 
@@ -209,17 +209,17 @@ public static partial class TimelineMod
         }
         var h = t.heli;
         var leaving = state.tick >= h.leaveTick;
-        var goal = Js.T(leaving) ? h.exit : (you ?? h.exit);
+        var goal = leaving ? h.exit : (you ?? h.exit);
         if ((state.tick % HELI_STEP) == 0)
         {
-            h.x += JsMath.sign(goal.x - h.x);
-            h.y += JsMath.sign(goal.y - h.y);
+            h.x = Js.I(h.x + JsMath.sign(goal.x - h.x));
+            h.y = Js.I(h.y + JsMath.sign(goal.y - h.y));
         }
         if ((state.tick % HELI_NOISE_EVERY) == 0)
         {
             Noise.makeNoise(state, h, "helicopter");
         }
-        if ((Js.T(leaving) && (h.x == h.exit.x)) && (h.y == h.exit.y))
+        if ((leaving && (h.x == h.exit.x)) && (h.y == h.exit.y))
         {
             t.heli = null;
             t.helicopterDay = 0;

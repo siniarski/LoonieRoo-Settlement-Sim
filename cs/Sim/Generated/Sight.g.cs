@@ -74,7 +74,7 @@ public static partial class Sight
         var dy = -JsMath.abs(b.y - a.y);
         var sx = (a.x < b.x) ? 1 : -1;
         var sy = (a.y < b.y) ? 1 : -1;
-        var err = dx + dy;
+        double err = dx + dy;
         while ((x != b.x) || (y != b.y))
         {
             var e2 = 2 * err;

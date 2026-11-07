@@ -154,7 +154,7 @@ public static partial class Lots
                 {
                     {
                     var setback = 1 + JsMath.floor(r(90) * 3);
-                    var house = Buildings.housePlan(r, new() { maxW = F - 2, maxH = (D - setback) - 1, garage = true });
+                    var house = Buildings.housePlan(r, new HouseOptions { maxW = F - 2, maxH = (D - setback) - 1, garage = true });
                     @out.buildings.push(setIn(lot, house, along(house.w, 1), setback, mirror));
                     var behind = (D - setback) - house.h;
                     if ((behind >= 7) && (r(91) < 0.5))
@@ -212,7 +212,7 @@ public static partial class Lots
             case "cabin":
                 {
                     {
-                    var plan = Buildings.housePlan(r, new() { maxW = JsMath.min(10, F - 3), maxH = JsMath.min(10, D - 3), garage = false });
+                    var plan = Buildings.housePlan(r, new HouseOptions { maxW = JsMath.min(10, F - 3), maxH = JsMath.min(10, D - 3), garage = false });
                     @out.buildings.push(setIn(lot, plan, along(plan.w, 1), 2, mirror));
                     break;
                 }
@@ -231,7 +231,7 @@ public static partial class Lots
     public static void farmLayout(double seed, Lot lot, Func<double, double> r, double F, double D, LotLayout @out)
     {
         var stead = lot.zone == "farm";
-        var yardDepth = Js.T(stead) ? 13 : 0;
+        var yardDepth = stead ? 13 : 0;
         var use = r(10);
         var rowsAlong = r(11) < 0.5;
         string crop(double u, double v)
@@ -242,7 +242,7 @@ public static partial class Lots
             }
             if (use < 0.7)
             {
-                return (((Js.T(rowsAlong) ? v : u) % 2) == 0) ? "field" : "dirt";
+                return (((rowsAlong ? v : u) % 2) == 0) ? "field" : "dirt";
             }
             return "grass";
         }
@@ -277,15 +277,15 @@ public static partial class Lots
                 @out.decor.push(Js.With(Js.CopyAs<LotLayoutDecorItem>(lotToMap(lot, 2 + JsMath.floor(r(40 + i) * (F - 4)), (yardDepth + 2) + JsMath.floor(r(50 + i) * JsMath.max(1, (D - yardDepth) - 4)))), __s2 => { __s2.look = "hay"; }));
             }
         }
-        if (!Js.T(stead))
+        if (!stead)
         {
             return;
         }
-        var house = Buildings.housePlan((k) => r(300 + k), new() { maxW = 12, maxH = 11, garage = false });
+        var house = Buildings.housePlan((k) => r(300 + k), new HouseOptions { maxW = 12, maxH = 11, garage = false });
         var barn = Buildings.barnPlan((k) => r(400 + k), 12, 10);
         var leftHouse = r(12) < 0.5;
-        var hu = Js.T(leftHouse) ? 1 : ((F - 1) - house.w);
-        var bu = Js.T(leftHouse) ? ((F - 1) - barn.w) : 1;
+        var hu = leftHouse ? 1 : ((F - 1) - house.w);
+        var bu = leftHouse ? ((F - 1) - barn.w) : 1;
         if (((house.w + barn.w) + 3) <= F)
         {
             @out.buildings.push(setIn(lot, house, hu, 1, r(13) < 0.5));
@@ -470,7 +470,7 @@ public static partial class Lots
                     state.grid.edgeOpen.push(Grids.edgeIndex(state.grid, ox, oy, side));
                 }
             }
-            else if (fall > ((Js.T(outer) ? 0.08 : 0.04) + decay))
+            else if (fall > ((outer ? 0.08 : 0.04) + decay))
             {
                 Grids.setEdge(state.grid, ox, oy, side, Grids.EDGE_WALL);
             }

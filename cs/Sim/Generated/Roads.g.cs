@@ -196,7 +196,7 @@ public static partial class Roads
             {
                 var a = Js.NN(Js.Get(line, i));
                 var b = Js.NN(Js.Get(line, i + 1));
-                next.push(new Point { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new Point { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) });
+                next.pushAll([new Point { x = Js.I((a.x * 0.75) + (b.x * 0.25)), y = Js.I((a.y * 0.75) + (b.y * 0.25)) }, new Point { x = Js.I((a.x * 0.25) + (b.x * 0.75)), y = Js.I((a.y * 0.25) + (b.y * 0.75)) }]);
             }
             next.push(Js.NN(line.at(-1)));
             line = next;

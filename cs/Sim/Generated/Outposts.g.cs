@@ -108,7 +108,7 @@ public static partial class Outposts
                 continue;
             }
             x.members.splice(x.members.indexOf(s), 1);
-            foreach (var id in Js.Iter([s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
+            foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
             {
                 var item = Js.T(id) ? state.items.find((i) => i.id == id) : null;
                 if (Js.T(item))

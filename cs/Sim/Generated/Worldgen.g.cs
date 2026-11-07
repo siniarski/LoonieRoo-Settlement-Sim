@@ -170,16 +170,16 @@ public static partial class Worldgen
             }
         }
         var solo = state.settings.start == "solo";
-        foreach (var dx in Js.Iter(Js.T(solo) ? ((List<double>)[3]) : ((List<double>)[1, 3, 5])))
+        foreach (var dx in Js.Iter(solo ? ((List<double>)[3]) : ((List<double>)[1, 3, 5])))
         {
             FurnitureMod.addFurniture(state, "bed", x0 + dx, y0 + 1);
         }
-        foreach (var dx in Js.Iter(Js.T(solo) ? ((List<double>)[0]) : ((List<double>)[-2, 0, 2])))
+        foreach (var dx in Js.Iter(solo ? ((List<double>)[0]) : ((List<double>)[-2, 0, 2])))
         {
             var s = Survivors.addSurvivor(state, sx + dx, sy + 1);
             s.traits = Skills.rollTraits(s.id);
         }
-        if (Js.T(solo))
+        if (solo)
         {
             var you = Js.NN(Js.Get(state.survivors, 0));
             state.control = new Control { survivorId = you.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
@@ -189,11 +189,11 @@ public static partial class Worldgen
             you.weapon = weapon.id;
             Items.spawnItem(state, "bandage", you.pos.x, you.pos.y);
         }
-        for (var i = 0; i < (Js.T(solo) ? 4 : 12); i++)
+        for (var i = 0; i < (solo ? 4 : 12); i++)
         {
             Items.spawnItem(state, "wood", (sx - 6) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
-        for (var i = 0; i < (Js.T(solo) ? 4 : 10); i++)
+        for (var i = 0; i < (solo ? 4 : 10); i++)
         {
             Items.spawnItem(state, "food", (sx + 3) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
@@ -231,7 +231,7 @@ public static partial class Worldgen
                 l ??= layout(world.seed, world.size, state.settings.map);
                 generateChunk(state, l, cx, cy);
                 settle(state, cx, cy);
-                state.walkabilityVersion += 1;
+                state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             }
         }
     }
@@ -308,7 +308,7 @@ public static partial class Worldgen
     public static SimState createWorld(double seed, double size = WORLD_SIZE, Settings? settings = null, Character? you = default)
     {
         settings ??= Difficulty.NORMAL;
-        var state = States.createState(new() { seed = seed, width = Js.I(size), height = Js.I(size) });
+        var state = States.createState(new NewStateOptions { seed = seed, width = Js.I(size), height = Js.I(size) });
         state.settings = Js.CopyAs<Settings>(settings);
         var l = layout(seed, size, settings.map);
         var chunks = JsMath.ceil(((double)(size) / (CHUNK)));

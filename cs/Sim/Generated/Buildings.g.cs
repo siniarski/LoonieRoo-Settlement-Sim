@@ -159,11 +159,11 @@ public static partial class Buildings
         List<List<double>> spots = [];
         for (var x = x0; x <= x1; x++)
         {
-            spots.push([x, y0], [x, y1]);
+            spots.pushAll([[x, y0], [x, y1]]);
         }
         for (var y = y0 + 1; y < y1; y++)
         {
-            spots.push([x0, y], [x1, y]);
+            spots.pushAll([[x0, y], [x1, y]]);
         }
         var start = JsMath.floor(roll * spots.length);
         for (var i = 0; i < spots.length; i++)
@@ -183,7 +183,7 @@ public static partial class Buildings
     {
         var cx = JsMath.floor(((double)((x0 + x1)) / (2)));
         var cy = JsMath.floor(((double)((y0 + y1)) / (2)));
-        foreach (var (dx, dy) in new [] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
+        foreach (var (dx, dy) in new (double, double)[] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
         {
             var x = cx + dx;
             var y = cy + dy;
@@ -223,9 +223,9 @@ public static partial class Buildings
         HordeBox bath = new HordeBox { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
         vwall(p, bathW + 1, 0, div);
         floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
-        HousePlanRest rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
+        HousePlanRest rest = new HousePlanRest { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
         var two = ((rest.x1 - rest.x0) + 1) >= 7;
-        List<HordeBox> bedrooms = Js.T(two) ? Js.Run<List<HordeBox>>(() =>
+        List<HordeBox> bedrooms = two ? Js.Run<List<HordeBox>>(() =>
         {
             var mid = rest.x0 + JsMath.floor(((double)(((rest.x1 - rest.x0) + 1)) / (2)));
             vwall(p, mid, 0, div);
@@ -384,9 +384,9 @@ public static partial class Buildings
         floorAs(p, c0, 1, c0 + 1, H - 2, (kind == "clinic") ? "tiles" : "concrete");
         var roles = Js.Get(ROLES, kind);
         double n = 0;
-        foreach (var (x0, x1, doorX) in new [] { (1, c0 - 2, c0 - 1), (c0 + 3, W - 2, c0 + 2) })
+        foreach (var (x0, x1, doorX) in new (double, double, double)[] { (1, c0 - 2, c0 - 1), (c0 + 3, W - 2, c0 + 2) })
         {
-            var y = 1;
+            double y = 1;
             while (y <= (H - 2))
             {
                 double depth = between(r(40 + n), 3, 5);
@@ -745,7 +745,7 @@ public static partial class Buildings
         {
             for (var x = 0; x < w; x++)
             {
-                foreach (var (dx, dy) in new [] { (0, -1), (-1, 0), (0, 1), (1, 0) })
+                foreach (var (dx, dy) in new (double, double)[] { (0, -1), (-1, 0), (0, 1), (1, 0) })
                 {
                     var nx = x + dx;
                     var ny = y + dy;

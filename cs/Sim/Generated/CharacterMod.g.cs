@@ -97,7 +97,7 @@ public static partial class CharacterMod
         foreach (var kind in Js.Iter(p.kit))
         {
             var item = Items.spawnItem(state, kind, s.pos.x, s.pos.y);
-            if (Js.T(yours))
+            if (yours)
             {
                 Inventory.stow(state, s, item);
             }
