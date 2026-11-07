@@ -1,11 +1,18 @@
-; Godot benchmark for the LoonieRoo dev loop (see README.md). Not part of the game.
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
 
-config/name="LoonieRoo Godot bench"
+config/name="EXPERIMENT render bench (not the game: that is godot/)"
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.6")
+config/features=PackedStringArray("4.6", "C#")
 
 [display]
 
@@ -13,10 +20,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/vsync/vsync_mode=0
 
-[rendering]
-
-renderer/rendering_method="gl_compatibility"
-
 [dotnet]
 
 project/assembly_name="LoonieBench"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
