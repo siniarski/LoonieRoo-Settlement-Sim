@@ -28,7 +28,7 @@ public static partial class TimelineMod
     }
 
     /// <summary>[earliest, latest] day the water goes, the power goes, and the helicopter comes, by progression.</summary>
-    public static readonly List<WindowsEntry> WINDOWS = [new() { water = [8, 14], power = [10, 18], heli = [3, 6] }, new() { water = [3, 7], power = [4, 9], heli = [2, 5] }, new() { water = [0, 0], power = [0, 0], heli = [0, 0] }, new() { water = [0, 0], power = [0, 0], heli = [0, 0] }];
+    public static readonly List<WINDOWS> WINDOWS = [new() { water = [8, 14], power = [10, 18], heli = [3, 6] }, new() { water = [3, 7], power = [4, 9], heli = [2, 5] }, new() { water = [0, 0], power = [0, 0], heli = [0, 0] }, new() { water = [0, 0], power = [0, 0], heli = [0, 0] }];
 
     public const int HELI_HOVER = 300;
 

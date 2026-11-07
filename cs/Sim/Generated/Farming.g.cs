@@ -17,7 +17,7 @@ namespace LoonieRoo.Sim;
 public static partial class Farming
 {
 
-    public static readonly JsRecord<CropsEntry> CROPS = new() { ["potato"] = new() { grow = 2400, yield = 1, item = "food", label = "Potatoes" }, ["wheat"] = new() { grow = 4800, yield = 3, item = "food", label = "Wheat" }, ["herb"] = new() { grow = 4800, yield = 1, item = "medicine", label = "Herbs" } };
+    public static readonly JsRecord<CROPS> CROPS = new() { ["potato"] = new() { grow = 2400, yield = 1, item = "food", label = "Potatoes" }, ["wheat"] = new() { grow = 4800, yield = 3, item = "food", label = "Wheat" }, ["herb"] = new() { grow = 4800, yield = 1, item = "medicine", label = "Herbs" } };
 
     /// <summary>Ticks from sowing to ripe for potatoes: half a day (12 in-game hours, 2 min at 1x).</summary>
     public static readonly /*TODO const type*/object GROW_TICKS = CROPS["potato"].grow;
@@ -65,7 +65,7 @@ public static partial class Farming
 
     public static bool isCrop(object c)
     {
-        return ((c == "potato") || (c == "wheat")) || (c == "herb");
+        return ((Js.Eq(c, "potato")) || (Js.Eq(c, "wheat"))) || (Js.Eq(c, "herb"));
     }
 
     public static void removePlot(SimState state, FarmPlot plot)

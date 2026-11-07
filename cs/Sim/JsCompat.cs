@@ -454,6 +454,7 @@ public static class JsNumber
     public const double MAX_SAFE_INTEGER = 9007199254740991;
     public const double POSITIVE_INFINITY = double.PositiveInfinity;
     public static bool isInteger(double x) => double.IsFinite(x) && Math.Floor(x) == x;
+    public static bool isInteger(object? x) => x is double or int or float or long or uint && isInteger(Convert.ToDouble(x, CultureInfo.InvariantCulture));
     public static bool isFinite(double x) => double.IsFinite(x);
     public static bool isNaN(double x) => double.IsNaN(x);
 }
@@ -732,6 +733,13 @@ public static partial class Js
     /// <summary>JSON.parse(JSON.stringify(x)): a deep copy, through JSON.</summary>
     public static V DeepClone<V>(V x) => System.Text.Json.JsonSerializer.Deserialize<V>(System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options), StateJson.Options)!;
 
+    /// <summary>(() => { ... })(): a function run where it's written.</summary>
+    public static V Run<V>(Func<V> f) => f();
+    public static void Run(Action f) => f();
+
+    /// <summary>new Array(n).fill(v).</summary>
+    public static List<V> Filled<V>(double n, V v) => Enumerable.Repeat(v, (int)n).ToList();
+
     /// <summary>[a, b, ...c] as a list in its own right: the parts joined.</summary>
     public static List<V> ListOf<V>(params IEnumerable<V>[] parts) => parts.SelectMany(p => p).ToList();
 
@@ -780,6 +788,44 @@ public static partial class Js
     /// <summary>Number(x).</summary>
     public static double Num(string? s) => double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : (string.IsNullOrWhiteSpace(s) ? 0 : double.NaN);
     public static double Num(double d) => d;
+    /// <summary>Number(x) for a value of unknown type.</summary>
+    public static double Num(object? x) => x switch
+    {
+        null => 0,
+        double d => d,
+        int i => i,
+        float f => f,
+        long l => l,
+        uint u => u,
+        bool b => b ? 1 : 0,
+        string s => Num(s),
+        _ => double.NaN,
+    };
+
+    /// <summary>a === b for values of unknown type: numbers by value (whatever their C# type), strings by content, the rest by reference.</summary>
+    public static bool Eq(object? a, object? b)
+    {
+        if (a is null || b is null) return a is null && b is null;
+        if (a is double or int or float or long or uint && b is double or int or float or long or uint) return Num(a) == Num(b);
+        if (a is string sa && b is string sb) return sa == sb;
+        if (a is bool ba && b is bool bb) return ba == bb;
+        return ReferenceEquals(a, b);
+    }
+
+    /// <summary>x as Record&lt;string, unknown&gt;: a record as it is, or an object's properties by name (a copy).</summary>
+    public static JsRecord<object?> AsRecord(object? x)
+    {
+        if (x is JsRecord<object?> r) return r;
+        var o = new JsRecord<object?>();
+        if (x is System.Collections.IDictionary d)
+        {
+            foreach (System.Collections.DictionaryEntry kv in d) o[Convert.ToString(kv.Key, CultureInfo.InvariantCulture)!] = kv.Value;
+            return o;
+        }
+        if (x is null || x is string || x.GetType().IsPrimitive) return o;
+        foreach (var prop in x.GetType().GetProperties()) if (prop.GetIndexParameters().Length == 0) o[prop.Name] = prop.GetValue(x);
+        return o;
+    }
     public static double Num(bool b) => b ? 1 : 0;
 
     public static List<string> ObjectKeys<V>(Dictionary<string, V> r) => r.Keys.ToList();

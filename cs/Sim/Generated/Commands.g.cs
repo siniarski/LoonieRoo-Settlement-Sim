@@ -88,7 +88,7 @@ public static partial class Commands
                 var __d0 = command;
                 var dx = __d0.dx;
                 var dy = __d0.dy;
-                if (![dx, dy].every((d) => ((d == -1) || (d == 0)) || (d == 1)))
+                if (!new List<double> { dx, dy }.every((d) => ((d == -1) || (d == 0)) || (d == 1)))
                 {
                     return reject("steer takes -1, 0 or 1");
                 }
@@ -206,7 +206,7 @@ public static partial class Commands
             var y0 = JsMath.max(0, JsMath.min(command.y0, command.y1));
             var x1 = JsMath.min(state.grid.width - 1, JsMath.max(command.x0, command.x1), (x0 + Fog.MAX_EXPLORE_SIDE) - 1);
             var y1 = JsMath.min(state.grid.height - 1, JsMath.max(command.y0, command.y1), (y0 + Fog.MAX_EXPLORE_SIDE) - 1);
-            if ((!Js.ListOf(new[] { command.x0, command.y0, command.x1, command.y1 }).every(JsNumber.isInteger) || (x1 < x0)) || (y1 < y0))
+            if ((!new[] { command.x0, command.y0, command.x1, command.y1 }.ToList().every((__v) => JsNumber.isInteger(__v)) || (x1 < x0)) || (y1 < y0))
             {
                 return reject("not a box on the map");
             }
@@ -274,18 +274,18 @@ public static partial class Commands
         if (command.type == "damageStructure")
         {
             var __d1 = command;
-            var x = __d1.x;
-            var y = __d1.y;
+            var x_5 = __d1.x;
+            var y_6 = __d1.y;
             var amount = __d1.amount;
-            if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x, y))))
+            if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x_5, y_6))))
             {
-                return reject($"({Js.Str(x)}, {Js.Str(y)}) is not a wall or door");
+                return reject($"({Js.Str(x_5)}, {Js.Str(y_6)}) is not a wall or door");
             }
             if (!JsNumber.isInteger(amount) || (amount <= 0))
             {
                 return reject("damage must be a positive integer");
             }
-            Breach.damageStructure(state, x, y, amount);
+            Breach.damageStructure(state, x_5, y_6, amount);
             return changed();
         }
         if (command.type == "setCraftTarget")
@@ -415,20 +415,20 @@ public static partial class Commands
         if (command.type == "toggleLock")
         {
             var __d3 = command;
-            var x = __d3.x;
-            var y = __d3.y;
-            if (((command.side != null) && Js.T(Grids.inBounds(state.grid, x, y))) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x, y, command.side))] == Grids.EDGE_DOOR))
+            var x_7 = __d3.x;
+            var y_8 = __d3.y;
+            if (((command.side != null) && Js.T(Grids.inBounds(state.grid, x_7, y_8))) && (state.grid.edges[Js.Idx(Grids.edgeIndex(state.grid, x_7, y_8, command.side))] == Grids.EDGE_DOOR))
             {
-                var e = Grids.edgeIndex(state.grid, x, y, command.side);
-                var open_5 = state.grid.edgeOpen.indexOf(e);
-                if (open_5 >= 0)
+                var e = Grids.edgeIndex(state.grid, x_7, y_8, command.side);
+                var open_9 = state.grid.edgeOpen.indexOf(e);
+                if (open_9 >= 0)
                 {
-                    state.grid.edgeOpen.splice(open_5, 1);
+                    state.grid.edgeOpen.splice(open_9, 1);
                 }
-                var at_6 = state.grid.edgeLocked.indexOf(e);
-                if (at_6 >= 0)
+                var at_10 = state.grid.edgeLocked.indexOf(e);
+                if (at_10 >= 0)
                 {
-                    state.grid.edgeLocked.splice(at_6, 1);
+                    state.grid.edgeLocked.splice(at_10, 1);
                 }
                 else
                 {
@@ -438,11 +438,11 @@ public static partial class Commands
                 state.walkabilityVersion += 1;
                 return changed();
             }
-            if (Grids.getTile(state.grid, x, y) != "door")
+            if (Grids.getTile(state.grid, x_7, y_8) != "door")
             {
-                return reject($"({Js.Str(x)}, {Js.Str(y)}) is not a door");
+                return reject($"({Js.Str(x_7)}, {Js.Str(y_8)}) is not a door");
             }
-            var i = (y * state.grid.width) + x;
+            var i = (y_8 * state.grid.width) + x_7;
             var open = state.grid.open.indexOf(i);
             if (open >= 0)
             {
@@ -456,7 +456,7 @@ public static partial class Commands
             else
             {
                 state.grid.locked.push(i);
-                Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
+                Zombies.evictZombies(state, new Point { x = Js.I(x_7), y = Js.I(y_8) });
             }
             Grids.noteChange(state.grid, i);
             state.walkabilityVersion += 1;
@@ -968,7 +968,7 @@ public static partial class Commands
 
     public static CommandResult designateRoom(SimState state, int x, int y, object purpose)
     {
-        if (!Rooms.ROOM_PURPOSES.includes(purpose))
+        if (!Rooms.ROOM_PURPOSES.includes((purpose as string)))
         {
             return reject($"unknown room purpose {Js.Str(Js.Str(purpose))}");
         }
@@ -978,17 +978,17 @@ public static partial class Commands
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is not inside an enclosed room");
         }
         var existing = Rooms.designationOf(state, room);
-        if (existing?.purpose == purpose)
+        if (Js.Eq(existing?.purpose, purpose))
         {
             return unchanged();
         }
         if (Js.T(existing))
         {
-            existing.purpose = purpose;
+            existing.purpose = (purpose as string);
         }
         else
         {
-            state.roomDesignations.push(new() { id = $"r{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), purpose = purpose });
+            state.roomDesignations.push(new() { id = $"r{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), purpose = (purpose as string) });
         }
         return changed();
     }
@@ -1104,7 +1104,7 @@ public static partial class Commands
         }
         else
         {
-            var inTheWay = Js.ListOf(state.survivors, state.zombies, state.residents).some((e) => (e.pos.x == x) && (e.pos.y == y));
+            var inTheWay = Js.ListOf<IBody>(state.survivors, state.zombies, state.residents).some((e) => (e.pos.x == x) && (e.pos.y == y));
             if (Js.T(inTheWay))
             {
                 return "someone is in the doorway";
@@ -1167,15 +1167,15 @@ public static partial class Commands
         {
             return reject($"no survivor {Js.Str(id)}");
         }
-        if ((((/*TODO typeof*/Js.TypeOf(value) != "number") || !JsNumber.isInteger(value)) || (value < 0)) || (value > max))
+        if ((((/*TODO typeof*/Js.TypeOf(value) != "number") || !JsNumber.isInteger(value)) || (Js.Num(value) < 0)) || (Js.Num(value) > max))
         {
             return reject($"{Js.Str(need)} must be an integer 0-{Js.Str(max)}");
         }
-        if (survivor[Js.Idx(need)] == value)
+        if (Js.Eq(Js.GetProp<double>(survivor, need), value))
         {
             return unchanged();
         }
-        survivor[Js.Idx(need)] = value;
+        Js.SetProp(survivor, need, value);
         if (need == "satiety")
         {
             survivor.nextMealTick = 0;
@@ -1202,7 +1202,7 @@ public static partial class Commands
         {
             return reject($"{Js.Str(survivor.name)} is a child");
         }
-        if (survivor.priorities[Js.Idx(jobType)] == priority)
+        if (Js.Eq(survivor.priorities[Js.Idx(jobType)], priority))
         {
             return unchanged();
         }
@@ -1233,9 +1233,9 @@ public static partial class Commands
                 return "nothing in it";
             }
             double took = 0;
-            foreach (var item_7 in Js.Iter(inside))
+            foreach (var item_11 in Js.Iter(inside))
             {
-                if (Inventory.stow(state, s, item_7) == null)
+                if (Inventory.stow(state, s, item_11) == null)
                 {
                     took++;
                 }

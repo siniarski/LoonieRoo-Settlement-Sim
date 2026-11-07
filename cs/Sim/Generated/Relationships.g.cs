@@ -80,7 +80,7 @@ public static partial class Relationships
             Events.logEvent(state, $"{Js.Str(s.name)} lashed out at {Js.Str(target.name)}");
             return;
         }
-        foreach (var who in Js.Iter((List<int>)[s, target]))
+        foreach (var who in Js.Iter((List<double>)[s, target]))
         {
             who.health = JsMath.max(1, who.health - FIGHT_DAMAGE);
             who.lastHurtBy = "a fight";
@@ -113,6 +113,6 @@ public static partial class Relationships
         }
         var friends = names((v) => v >= FRIEND);
         var rivals = names((v) => v <= RIVAL);
-        return Js.ListOf(new[] { Js.T(friends.length) ? $"friends: {Js.Str(friends.join(", "))}" : "", Js.T(rivals.length) ? $"rivals: {Js.Str(rivals.join(", "))}" : "" }).filter(Boolean).join("; ");
+        return new[] { Js.T(friends.length) ? $"friends: {Js.Str(friends.join(", "))}" : "", Js.T(rivals.length) ? $"rivals: {Js.Str(rivals.join(", "))}" : "" }.ToList().filter(Boolean).join("; ");
     }
 }

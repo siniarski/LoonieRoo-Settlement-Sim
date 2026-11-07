@@ -312,7 +312,7 @@ public static partial class Worldgen
         state.settings = Js.Clone(settings);
         var l = layout(seed, size, settings.map);
         var chunks = JsMath.ceil(((double)(size) / (CHUNK)));
-        state.world = new() { seed = seed, size = size, chunks = chunks, generated = /*TODO new Array*/new List<object>().fill(0) };
+        state.world = new() { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(chunks * chunks, 0) };
         ensureGeneratedAround(state, l.start);
         startCamp(state, l);
         if (Js.T(you) && (CharacterMod.characterProblem(you) == null))

@@ -143,8 +143,8 @@ public static partial class Rooms
                 continue;
             }
             var index = rooms.length;
-            var minX = width;
-            var minY = height;
+            double minX = width;
+            double minY = height;
             double maxX = 0;
             double maxY = 0;
             foreach (var i in Js.Iter(region))
@@ -244,7 +244,7 @@ public static partial class Rooms
     public static RoomStatus evaluateRoom(SimState state, Room? room, string purpose)
     {
         var size = Js.Q(room?.tiles.length, 0);
-        /*TODO return type*/object count(string kind)
+        double count(string kind)
         {
             return Js.T(room) ? FurnitureMod.ofKind(state, kind).filter((f) => labelAt(state, f.x, f.y) == room.index).length : 0;
         }
@@ -307,11 +307,11 @@ public static partial class Rooms
         {
             return Js.Set(state.roomDesignations.filter((d) => (d.purpose == "storage") && Js.T(d.refuses?.includes(c))).map((d) => labelAt(state, d.x, d.y)));
         }
-        var storageFor = /*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
+        var storageFor = Js.AsRecord(/*TODO Object.fromEntries*/Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
             var no = refusing(c);
             return [c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r)))];
-        }));
+        })));
         return new StoreRooms { storage = storage, armory = completeRooms(state, "armory"), graveyard = completeRooms(state, "graveyard"), storageFor = storageFor };
     }
 
@@ -340,11 +340,11 @@ public static partial class Rooms
         var UNSEEN = -3;
         var removed = new JsSet<double>();
         List<double> seeds = [];
-        List<int> near(double i)
+        List<double> near(double i)
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
-            List<int> out_2 = [i];
+            List<double> out_2 = [i];
             foreach (var (dx, dy) in Js.Iter(DIRS))
             {
                 var nx = x + dx;
@@ -455,8 +455,8 @@ public static partial class Rooms
                 continue;
             }
             region.sort((a, b) => a - b);
-            var minX = width;
-            var minY = height;
+            double minX = width;
+            double minY = height;
             double maxX = 0;
             double maxY = 0;
             foreach (var i in Js.Iter(region))

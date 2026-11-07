@@ -33,7 +33,7 @@ public static partial class Skills
 
     public const int VIGILANT_SIGHT = 3;
 
-    public static readonly JsRecord<TraitInfoEntry> TRAIT_INFO = new() { ["tough"] = new() { label = "tough", about = "takes a quarter less from zombies", mood = 0 }, ["lazy"] = new() { label = "lazy", about = "works at 3/4 speed, but happier for it", mood = 5 }, ["greenThumb"] = new() { label = "green thumb", about = "farms as if five levels better", mood = 0 }, ["cheerful"] = new() { label = "cheerful", about = "in a better mood", mood = 10 }, ["gloomy"] = new() { label = "gloomy", about = "in a worse mood", mood = -10 }, ["quick"] = new() { label = "quick", about = "walks faster", mood = 0 }, ["hardened"] = new() { label = "hardened", about = $"hits {Js.Str(HARDENED_DAMAGE)} harder (earned: many kills)", mood = 0 }, ["vigilant"] = new() { label = "vigilant", about = $"sees {Js.Str(VIGILANT_SIGHT)} tiles further (earned: nights on watch)", mood = 0 }, ["haunted"] = new() { label = "haunted", about = "never quite got over losing a friend", mood = -5 }, ["lostArm"] = new() { label = "one-armed", about = "works slower (an amputation)", mood = -5 }, ["lostLeg"] = new() { label = "one-legged", about = "walks slower (an amputation)", mood = -5 }, ["graceful"] = new() { label = "graceful", about = "moves quietly: heard half as far", mood = 0 }, ["clumsy"] = new() { label = "clumsy", about = "moves noisily: heard half as far again", mood = 0 } };
+    public static readonly JsRecord<TRAITINFO> TRAIT_INFO = new() { ["tough"] = new() { label = "tough", about = "takes a quarter less from zombies", mood = 0 }, ["lazy"] = new() { label = "lazy", about = "works at 3/4 speed, but happier for it", mood = 5 }, ["greenThumb"] = new() { label = "green thumb", about = "farms as if five levels better", mood = 0 }, ["cheerful"] = new() { label = "cheerful", about = "in a better mood", mood = 10 }, ["gloomy"] = new() { label = "gloomy", about = "in a worse mood", mood = -10 }, ["quick"] = new() { label = "quick", about = "walks faster", mood = 0 }, ["hardened"] = new() { label = "hardened", about = $"hits {Js.Str(HARDENED_DAMAGE)} harder (earned: many kills)", mood = 0 }, ["vigilant"] = new() { label = "vigilant", about = $"sees {Js.Str(VIGILANT_SIGHT)} tiles further (earned: nights on watch)", mood = 0 }, ["haunted"] = new() { label = "haunted", about = "never quite got over losing a friend", mood = -5 }, ["lostArm"] = new() { label = "one-armed", about = "works slower (an amputation)", mood = -5 }, ["lostLeg"] = new() { label = "one-legged", about = "walks slower (an amputation)", mood = -5 }, ["graceful"] = new() { label = "graceful", about = "moves quietly: heard half as far", mood = 0 }, ["clumsy"] = new() { label = "clumsy", about = "moves noisily: heard half as far again", mood = 0 } };
 
     /// <summary>Experience leaves its mark (once).</summary>
     public static void earnTrait(SimState state, Survivor s, string t, string why)
@@ -105,6 +105,6 @@ public static partial class Skills
             var (k, level) = __p1;
             return $"{Js.Str(k)} {Js.Str(level)}";
         });
-        return Js.Or(Js.ListOf(new[] { traits.join(", "), skills.join(", ") }).filter(Boolean).join("; "), "no skills yet");
+        return Js.Or(new[] { traits.join(", "), skills.join(", ") }.ToList().filter(Boolean).join("; "), "no skills yet");
     }
 }

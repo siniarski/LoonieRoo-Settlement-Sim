@@ -56,7 +56,7 @@ public static partial class Policies
             return null;
         }
         Survivor? best = null;
-        var bestScore = LEADER_MIN;
+        double bestScore = LEADER_MIN;
         foreach (var s in Js.Iter(state.survivors))
         {
             if (s.childUntil != null)

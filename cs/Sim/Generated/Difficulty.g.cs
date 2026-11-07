@@ -25,7 +25,7 @@ public static partial class Difficulty
 
     public static readonly Settings NORMAL = new() { start = "group", zombies = 100, weather = 1, progression = 1, winter = false, dayScale = 1, map = "mainland" };
 
-    public static readonly /*TODO const type*/object PRESETS = new() { settler = new() { label = "Settler: a group, a gentle start", settings = new() { start = "group", zombies = 60, weather = 0, progression = 0, winter = false, dayScale = 1, map = "mainland" } }, survivor = new() { label = "Survivor: the usual game", settings = NORMAL }, apocalypse = new() { label = "Apocalypse: alone, a year on", settings = new() { start = "solo", zombies = 150, weather = 2, progression = 2, winter = false, dayScale = 2, map = "mainland" } }, winter = new() { label = "Nuclear winter: alone, years on, no summer", settings = new() { start = "solo", zombies = 125, weather = 3, progression = 3, winter = true, dayScale = 2, map = "islands" } } };
+    public static readonly /*TODO const type*/object PRESETS = Js.AsRecord(new() { settler = new() { label = "Settler: a group, a gentle start", settings = new() { start = "group", zombies = 60, weather = 0, progression = 0, winter = false, dayScale = 1, map = "mainland" } }, survivor = new() { label = "Survivor: the usual game", settings = NORMAL }, apocalypse = new() { label = "Apocalypse: alone, a year on", settings = new() { start = "solo", zombies = 150, weather = 2, progression = 2, winter = false, dayScale = 2, map = "mainland" } }, winter = new() { label = "Nuclear winter: alone, years on, no summer", settings = new() { start = "solo", zombies = 125, weather = 3, progression = 3, winter = true, dayScale = 2, map = "islands" } } });
 
     /// <summary>Weather events (blizzards, heatwaves, storms) come this many times as often.</summary>
     public static readonly List<double> EVENT_SCALE = [0.5, 1, 1.5, 2];
@@ -79,16 +79,16 @@ public static partial class Difficulty
 
     public static bool isSettings(object v)
     {
-        if ((/*TODO typeof*/Js.TypeOf(v) != "object") || (v == null))
+        if ((/*TODO typeof*/Js.TypeOf(v) != "object") || (Js.Eq(v, null)))
         {
             return false;
         }
-        var s = v;
+        var s = Js.AsRecord(v);
         bool level(object n, double max)
         {
-            return (JsNumber.isInteger(n) && ((n) >= 0)) && ((n) < max);
+            return (JsNumber.isInteger(n) && ((Js.Num(n)) >= 0)) && ((Js.Num(n)) < max);
         }
-        return (((((((((s["start"] == "group") || (s["start"] == "solo")) && JsNumber.isInteger(s["zombies"])) && ((s["zombies"]) >= 25)) && ((s["zombies"]) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((s["dayScale"] == 1) || (s["dayScale"] == 2)) || (s["dayScale"] == 3))) && MAP_TYPES.some((__p0) =>
+        return (((((((((s["start"] == "group") || (s["start"] == "solo")) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && Js.T(level(s["weather"], WEATHER_LEVELS.length))) && Js.T(level(s["progression"], PROGRESSION_LEVELS.length))) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((s["dayScale"] == 1) || (s["dayScale"] == 2)) || (s["dayScale"] == 3))) && MAP_TYPES.some((__p0) =>
         {
             var m = (__p0)[0];
             return m == s["map"];

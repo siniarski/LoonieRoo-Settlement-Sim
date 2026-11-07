@@ -22,7 +22,7 @@ public partial class PaneInFrontResult
     public Point to { get; set; }
 }
 
-public partial class CropsEntry
+public partial class CROPS
 {
     public double grow { get; set; }
     public double yield { get; set; }
@@ -69,7 +69,7 @@ public partial class MapToLotResult
     public double v { get; set; }
 }
 
-public partial class ThoughtsEntry
+public partial class THOUGHTS
 {
     public string label { get; set; }
     public double effect { get; set; }
@@ -102,7 +102,7 @@ public partial class SeenEntry
     public List<double> set { get; set; }
 }
 
-public partial class TraitInfoEntry
+public partial class TRAITINFO
 {
     public string label { get; set; }
     public string about { get; set; }
@@ -115,7 +115,7 @@ public partial class TickDying
     public string cause { get; set; }
 }
 
-public partial class WindowsEntry
+public partial class WINDOWS
 {
     public List<double> water { get; set; }
     public List<double> power { get; set; }
