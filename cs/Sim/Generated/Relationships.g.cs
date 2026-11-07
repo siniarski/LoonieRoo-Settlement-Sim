@@ -67,7 +67,7 @@ public static partial class Relationships
     /// <summary>A breakdown begins: lash out at the nearest awake survivor; a rival hits back.</summary>
     public static void lashOut(SimState state, Survivor s)
     {
-        var target = state.survivors.filter((o) => (o != s) && !Js.T(Js.T(o.sleep?.asleep)) && (Space.manhattan(o.pos, s.pos) <= 5)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos))[Js.Idx(0)];
+        var target = state.survivors.filter((o) => ((o != s) && !Js.T(Js.T(o.sleep?.asleep))) && (Space.manhattan(o.pos, s.pos) <= 5)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos))[Js.Idx(0)];
         if (!Js.T(target))
         {
             return;

@@ -40,7 +40,7 @@ public static partial class Designations
     public static bool hasRemovable(SimState state, int x, int y)
     {
         var tile = Grids.getTile(state.grid, x, y);
-        return (tile == "wall") || (tile == "door") || (tile == "barricade") || (FurnitureMod.furnitureAt(state, x, y) != null);
+        return (((tile == "wall") || (tile == "door")) || (tile == "barricade")) || (FurnitureMod.furnitureAt(state, x, y) != null);
     }
     public static bool hasRemovable(SimState state, double x, double y) => hasRemovable(state, (int)x, (int)y);
 
@@ -112,7 +112,7 @@ public static partial class Designations
             state.walkabilityVersion += 1;
             return;
         }
-        if (Js.T(bp.side) && (bp.target == "wall") || (bp.target == "door") || (bp.target == "barricade"))
+        if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade")))
         {
             if (Js.T(Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE))))
             {
@@ -203,7 +203,7 @@ public static partial class Designations
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            var onIt = Js.T(Space.samePoint(s.pos, tile)) || (s.move != null) && Js.T(Space.samePoint(s.move.to, tile));
+            var onIt = Js.T(Space.samePoint(s.pos, tile)) || ((s.move != null) && Js.T(Space.samePoint(s.move.to, tile)));
             if (!Js.T(onIt))
             {
                 continue;

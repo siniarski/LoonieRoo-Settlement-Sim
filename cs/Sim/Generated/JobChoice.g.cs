@@ -25,7 +25,7 @@ public static partial class JobChoice
         foreach (var type in Js.Iter(typesByPriority(s)))
         {
             var open = openJobsByDistance(state, type, s.pos);
-            var curfew = (Js.T(Policies.policyOn(state, "curfew")) && Js.T(Time.isNight(state.tick))) && (type != "guard") && (type != "firefight") && (type != "doctor");
+            var curfew = (((Js.T(Policies.policyOn(state, "curfew")) && Js.T(Time.isNight(state.tick))) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
             foreach (var job in Js.Iter(open.filter((j) => (!Js.T(curfew) || Js.T(Rooms.isIndoors(state, j.x, j.y))) && Js.T(Orders.withinOrder(state, s, j))).slice(0, Jobs.MAX_CANDIDATES)))
             {
                 var plan = planJob(state, s, job);
@@ -195,7 +195,7 @@ public static partial class JobChoice
                     }
                     var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
                     var material = Js.T(bp) ? Designations.materialFor(bp.target) : "wood";
-                    var free = state.items.filter((i) => (i.pos != null) && (i.reservedBy == null) && (i.kind == material)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos));
+                    var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == material)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos));
                     foreach (var item in Js.Iter(free.slice(0, Jobs.MAX_CANDIDATES)))
                     {
                         if (!Js.T(Pathfinding.canReach(grid, v, s.pos, [item.pos])) || !Js.T(Pathfinding.canReach(grid, v, item.pos, site)))
@@ -230,7 +230,7 @@ public static partial class JobChoice
                 item.reservedBy = s.id;
             }
         }
-        if (!(job.type == "guard") && Js.T(Weapons.loadedGun(state, s)))
+        if (!((job.type == "guard") && Js.T(Weapons.loadedGun(state, s))))
         {
             Survivors.walk(s, plan.path, state.walkabilityVersion);
         }
@@ -251,7 +251,7 @@ public static partial class JobChoice
             return "no open jobs of enabled types";
         }
         var haulOnly = open.every((j) => j.type == "haul");
-        var freeWood = state.items.some((i) => (i.kind == "wood") && (i.pos != null) && (i.reservedBy == null));
+        var freeWood = state.items.some((i) => ((i.kind == "wood") && (i.pos != null)) && (i.reservedBy == null));
         if (Js.T(haulOnly) && !Js.T(freeWood))
         {
             return $"{Js.Str(open.length)} haul job(s) waiting for wood";

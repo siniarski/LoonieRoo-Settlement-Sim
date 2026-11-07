@@ -62,7 +62,7 @@ public static partial class EndgameMod
         {
             return EVAC_SIEGE;
         }
-        return (night >= FIRST_SIEGE) && ((night % SIEGE_EVERY) == 0) ? SIEGE_FACTOR : 1;
+        return ((night >= FIRST_SIEGE) && ((night % SIEGE_EVERY) == 0)) ? SIEGE_FACTOR : 1;
     }
 
     /// <summary>Days to the next siege night (0: tonight).</summary>
@@ -111,7 +111,7 @@ public static partial class EndgameMod
         }
         if (eg.evacuation == null)
         {
-            if ((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Js.T(Radio.hasRadio(state)) || !FurnitureMod.ofKind(state, "beacon").some((f) => Js.T(Power.isPowered(state, f))))
+            if (((Time.dayOf(state.tick) < EVAC_FROM_DAY) || !Js.T(Radio.hasRadio(state))) || !FurnitureMod.ofKind(state, "beacon").some((f) => Js.T(Power.isPowered(state, f))))
             {
                 return;
             }

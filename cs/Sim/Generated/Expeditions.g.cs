@@ -92,7 +92,7 @@ public static partial class Expeditions
         var leg = JsMath.max(1, JsMath.floor(((double)((Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE)) / (2))));
         var e = state.tick - x.leftTick;
         var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
-        var f = (e < leg) ? ((double)(e) / (leg)) : (Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg)));
+        var f = (e < leg) ? ((double)(e) / (leg)) : ((Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
         Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
@@ -194,7 +194,7 @@ public static partial class Expeditions
                 FurnitureMod.setScavenge(state, crate, false);
             }
         }
-        state.pointsOfInterest = state.pointsOfInterest.filter((p) => !(p.x == x.target.x) && (p.y == x.target.y));
+        state.pointsOfInterest = state.pointsOfInterest.filter((p) => !((p.x == x.target.x) && (p.y == x.target.y)));
         foreach (var s in Js.Iter(lost))
         {
             Mood.mournDeath(state, s);

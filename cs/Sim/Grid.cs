@@ -27,6 +27,11 @@ public interface IHasPos
     Point pos { get; set; }
 }
 
+/// <summary>A body (survivor, zombie, animal, dog, resident): an id, the tile under it, and where exactly it is.</summary>
+public interface IBody : IHasId, IHasAt, IHasPos
+{
+}
+
 public sealed class Grid
 {
     public int width;

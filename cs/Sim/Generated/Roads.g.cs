@@ -59,7 +59,7 @@ public static partial class Roads
         });
             var longest = JsMath.max(linked.map((b) => d(a, b)));
             var near = nodes.map((__1, b) => b).filter((b) => (b != a) && !linked.includes(b)).sort((p, q) => d(a, p) - d(a, q))[Js.Idx(0)];
-            if ((near != null) && (d(a, near) < (longest * 1.4)) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5) && !edges.some((__p2) =>
+            if ((((near != null) && (d(a, near) < (longest * 1.4))) && (NatureMod.roll(seed, a, near, 0x7300) < 0.5)) && !edges.some((__p2) =>
         {
             var (p, q) = __p2;
             return (p == near) && (q == a);
@@ -158,12 +158,12 @@ public static partial class Roads
                     }
                     var nx = cx + dx;
                     var ny = cy + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= N) || (ny >= N))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= N)) || (ny >= N))
                     {
                         continue;
                     }
                     var nc = (ny * N) + nx;
-                    var step = ((double)((cost[Js.Idx(c)]! + cost[Js.Idx(nc)]!)) / (2)) * ((dx != 0) && (dy != 0) ? JsMath.SQRT2 : 1);
+                    var step = ((double)((cost[Js.Idx(c)]! + cost[Js.Idx(nc)]!)) / (2)) * (((dx != 0) && (dy != 0)) ? JsMath.SQRT2 : 1);
                     if (!JsNumber.isFinite(step))
                     {
                         continue;
@@ -256,11 +256,11 @@ public static partial class Roads
                 {
                     for (var x = JsMath.floor(px - 1); x <= JsMath.ceil(px + 1); x++)
                     {
-                        if ((x < 0) || (y < 0) || (x >= size) || (y >= size))
+                        if ((((x < 0) || (y < 0)) || (x >= size)) || (y >= size))
                         {
                             continue;
                         }
-                        if (((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2)) <= 1.1) && (mask[Js.Idx((y * size) + x)] == 0))
+                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (mask[Js.Idx((y * size) + x)] == 0))
                         {
                             mask[Js.Idx((y * size) + x)] = value;
                         }

@@ -30,7 +30,7 @@ public static partial class Seasons
     /// <summary>Rain, snow, storms and blizzards wet things (crops, collectors, fires).</summary>
     public static bool isWet(string w)
     {
-        return (w == "rain") || (w == "snow") || (w == "storm") || (w == "blizzard");
+        return (((w == "rain") || (w == "snow")) || (w == "storm")) || (w == "blizzard");
     }
 
     /// <summary>Out on a winter night, a survivor loses 1 health this often, and doesn't heal (about 160 over a night).</summary>
@@ -55,7 +55,7 @@ public static partial class Seasons
             return 0;
         }
         var growth = (season == "autumn") ? (((state.tick % 2) == 0) ? 1 : 0) : 1;
-        if ((state.weather == "rain") || (state.weather == "storm") && ((state.tick % 2) == 0))
+        if (((state.weather == "rain") || (state.weather == "storm")) && ((state.tick % 2) == 0))
         {
             growth += 1;
         }
@@ -81,14 +81,14 @@ public static partial class Seasons
     /// <summary>A winter night (any night, in a nuclear winter), or a blizzard.</summary>
     public static bool coldOutside(SimState state)
     {
-        return (seasonOf(state.tick) == "winter") || Js.T(state.settings.winter) && Js.T(Time.isNight(state.tick)) || (state.weather == "blizzard");
+        return (((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter)) && Js.T(Time.isNight(state.tick))) || (state.weather == "blizzard");
     }
 
     /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>
     public static bool isCold(SimState state, Survivor s)
     {
         var cold = Js.T(state.world) ? (Js.T(Climate.regionCold(state, s.pos.x, s.pos.y)) || (state.weather == "blizzard")) : coldOutside(state);
-        return (Js.T(cold) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Clothing.wearing(state, s, "coat")) && !Js.T(Power.isWarmed(state, s.pos));
+        return ((Js.T(cold) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Clothing.wearing(state, s, "coat"))) && !Js.T(Power.isWarmed(state, s.pos));
     }
 
     /// <summary>Dawn's weather roll, and the weather's effect on people outdoors. Runs every tick.</summary>
@@ -113,7 +113,7 @@ public static partial class Seasons
                 Events.logEvent(state, "A storm: lightning may set things alight");
             }
         }
-        if ((state.weather == "storm") && ((state.tick % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE))
+        if (((state.weather == "storm") && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(state.tick, 0x57) < LIGHTNING_CHANCE))
         {
             lightning(state);
         }

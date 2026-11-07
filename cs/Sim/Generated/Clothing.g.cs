@@ -97,7 +97,7 @@ public static partial class Clothing
 
     public static bool free(SimState state, Survivor s)
     {
-        return (!Js.T(s.jobId) && !Js.T(s.sleep)) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.arming) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && (state.tick >= s.nextDressTick);
+        return (((((((!Js.T(s.jobId) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.arming)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Js.T(Needs.wantsSleep(state, s))) && (state.tick >= s.nextDressTick);
     }
 
     /// <summary>A garment that's half worn, if any.</summary>
@@ -165,7 +165,7 @@ public static partial class Clothing
             s.note = $"mended their {Js.Str(worn.kind)}";
             return true;
         }
-        var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : (item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null);
+        var slot = Js.T(isGarment(item.kind)) ? SLOT_OF[Js.Idx(item.kind)] : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
         if (!Js.T(slot) || Js.T(s[Js.Idx(slot)]))
         {
             item.reservedBy = null;

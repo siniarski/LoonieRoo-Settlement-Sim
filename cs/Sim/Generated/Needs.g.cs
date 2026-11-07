@@ -38,7 +38,7 @@ public static partial class Needs
     /// <summary>Tired with no zombie close enough to make lying down a bad idea, or critically hurt (then bed is where they recover, zombies or not).</summary>
     public static bool wantsSleep(SimState state, Survivor s)
     {
-        return (Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos))) || Js.T(Health.isCritical(s.health)) || Js.T(Policies.quarantined(state, s));
+        return ((Js.T(isTired(state, s)) && !Js.T(Zombies.zombieNear(state, s.pos))) || Js.T(Health.isCritical(s.health))) || Js.T(Policies.quarantined(state, s));
     }
 
     public static bool isHungry(Survivor s)
@@ -95,7 +95,7 @@ public static partial class Needs
     /// <summary>Interrupts work for a need before movement, so a tired or hungry hauler doesn't finish a long walk first. Hunger only interrupts if there is food to go to.</summary>
     public static void interruptForNeeds(SimState state, Survivor s)
     {
-        if ((!Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal) || Js.T(s.drink) || Js.T(s.treatment) || Js.T(onGuardDuty(state, s)))
+        if (((((!Js.T(s.jobId) || Js.T(s.sleep)) || Js.T(s.meal)) || Js.T(s.drink)) || Js.T(s.treatment)) || Js.T(onGuardDuty(state, s)))
         {
             return;
         }
@@ -128,7 +128,7 @@ public static partial class Needs
             {
                 Jobs.releaseSurvivor(state, s, "hungry");
             }
-            else if ((s.satiety < Forage.FORAGE_HUNGER) && Js.T(Forage.forageTime(state)) && !Js.T(onGuardDuty(state, s)))
+            else if (((s.satiety < Forage.FORAGE_HUNGER) && Js.T(Forage.forageTime(state))) && !Js.T(onGuardDuty(state, s)))
             {
                 Jobs.releaseSurvivor(state, s, "going to forage");
             }
@@ -255,7 +255,7 @@ public static partial class Needs
     /// <summary>Nearest unreserved item of a kind, on the ground, that this survivor can reach.</summary>
     public static Item? nearestFreeItem(SimState state, Survivor s, string kind)
     {
-        return state.items.filter((i) => (i.kind == kind) && (i.pos != null) && (i.reservedBy == null)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos])));
+        return state.items.filter((i) => ((i.kind == kind) && (i.pos != null)) && (i.reservedBy == null)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos])));
     }
 
     /// <summary>Gives up the reserved food (if any). Safe to call when not eating.</summary>
@@ -412,7 +412,7 @@ public static partial class Needs
         {
             s.health = JsMath.min(Health.HEALTH_MAX, s.health + (Health.SLEEP_HEAL * (Js.T(Medicine.inInfirmary(state, s)) ? Medicine.INFIRMARY_HEAL_FACTOR : 1)));
         }
-        else if ((s.health > 0) && !Js.T(isHungry(s)) && ((state.tick % Health.AWAKE_HEAL_EVERY) == 0))
+        else if (((s.health > 0) && !Js.T(isHungry(s))) && ((state.tick % Health.AWAKE_HEAL_EVERY) == 0))
         {
             s.health = JsMath.min(Health.HEALTH_MAX, s.health + 1);
         }
@@ -524,7 +524,7 @@ public static partial class Needs
             return;
         }
         bed.occupant = s.id;
-        if ((bed.owner == null) && !Js.T(Medicine.isInfirmaryBed(state, bed)) && !FurnitureMod.ofKind(state, "bed").some((f) => f.owner == s.id))
+        if (((bed.owner == null) && !Js.T(Medicine.isInfirmaryBed(state, bed))) && !FurnitureMod.ofKind(state, "bed").some((f) => f.owner == s.id))
         {
             bed.owner = s.id;
         }
@@ -550,9 +550,9 @@ public static partial class Needs
         var guard = Medicine.isGuard(s);
         double rank(Furniture f)
         {
-            return ((Medicine.isInfirmaryBed(state, f) == hurt) ? 0 : 4) + ((f.owner == s.id) ? 0 : 2) + ((Medicine.isBarracksBed(state, f) == guard) ? 0 : 1);
+            return (((Medicine.isInfirmaryBed(state, f) == hurt) ? 0 : 4) + ((f.owner == s.id) ? 0 : 2)) + ((Medicine.isBarracksBed(state, f) == guard) ? 0 : 1);
         }
-        return FurnitureMod.ofKind(state, "bed").filter((f) => (f.occupant == null) && (f.owner == null) || (f.owner == s.id)).sort((a, b) => Js.Or(rank(a) - rank(b), Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b))).find((f) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [f])));
+        return FurnitureMod.ofKind(state, "bed").filter((f) => (f.occupant == null) && ((f.owner == null) || (f.owner == s.id))).sort((a, b) => Js.Or(rank(a) - rank(b), Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b))).find((f) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [f])));
     }
 
     /// <summary>Drains or restores rest; wakes the survivor when full. Runs every tick, after movement and work.</summary>
@@ -586,7 +586,7 @@ public static partial class Needs
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Js.T(Medicine.isGuard(s)) || Js.T(Health.isCritical(s.health)))
+            if (((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Js.T(Medicine.isGuard(s))) || Js.T(Health.isCritical(s.health)))
             {
                 continue;
             }

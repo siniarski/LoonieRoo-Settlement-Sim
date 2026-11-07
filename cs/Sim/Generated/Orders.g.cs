@@ -99,7 +99,7 @@ public static partial class Orders
 
     public static string describeOrder(Order? o)
     {
-        return !Js.T(o) ? "settled" : (o.kind == "follow") ? "following" : ((o.kind == "loot") ? $"looting ({Js.Str(o.x)}, {Js.Str(o.y)})" : $"holding ({Js.Str(o.x)}, {Js.Str(o.y)})");
+        return !Js.T(o) ? "settled" : ((o.kind == "follow") ? "following" : ((o.kind == "loot") ? $"looting ({Js.Str(o.x)}, {Js.Str(o.y)})" : $"holding ({Js.Str(o.x)}, {Js.Str(o.y)})"));
     }
 
     /// <summary>A follower falling behind hurries (stepPace in survivors.ts).</summary>
@@ -110,7 +110,7 @@ public static partial class Orders
             return false;
         }
         var leader = ControlMod.controlled(state);
-        return (leader != null) && (leader != s) && (JsMath.max(JsMath.abs(leader.pos.x - s.pos.x), JsMath.abs(leader.pos.y - s.pos.y)) > HURRY_GAP);
+        return ((leader != null) && (leader != s)) && (JsMath.max(JsMath.abs(leader.pos.x - s.pos.x), JsMath.abs(leader.pos.y - s.pos.y)) > HURRY_GAP);
     }
 
     /// <summary>Standing in your line of fire: step to a free tile beside it. Returns true if they moved.</summary>

@@ -17,7 +17,7 @@ public static partial class JobTypes
 
     public static bool isPriority(object n)
     {
-        return (n == 0) || (n == 1) || (n == 2) || (n == 3) || (n == 4);
+        return ((((n == 0) || (n == 1)) || (n == 2)) || (n == 3)) || (n == 4);
     }
 
     public static bool isJobType(object t)

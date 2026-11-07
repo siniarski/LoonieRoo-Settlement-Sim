@@ -97,7 +97,7 @@ public static partial class SuccessionMod
                     }
                     var x = aim.x + dx;
                     var y = aim.y + dy;
-                    if ((x >= 0) && (y >= 0) && (x < width) && (y < height) && (Grids.getTile(state.grid, x, y) == "floor") && Js.T(Grids.isWalkable(state.grid, x, y)))
+                    if ((((((x >= 0) && (y >= 0)) && (x < width)) && (y < height)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)))
                     {
                         spot = new Point { x = Js.I(x), y = Js.I(y) };
                     }
@@ -120,7 +120,7 @@ public static partial class SuccessionMod
         {
             for (var x = spot.x - 6; x <= (spot.x + 6); x++)
             {
-                if ((x >= 0) && (y >= 0) && (x < width) && (y < height))
+                if ((((x >= 0) && (y >= 0)) && (x < width)) && (y < height))
                 {
                     state.grid.explored[Js.Idx((y * width) + x)] = 1;
                 }

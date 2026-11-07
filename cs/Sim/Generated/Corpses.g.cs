@@ -67,7 +67,7 @@ public static partial class Corpses
 
     public static bool isRotting(SimState state, Item corpse, JsSet<double> graves)
     {
-        return (corpse.kind == "corpse") && (corpse.pos != null) && ((state.tick - corpse.wear) >= CORPSE_ROT) && !graves.has(Rooms.labelAt(state, corpse.pos.x, corpse.pos.y));
+        return (((corpse.kind == "corpse") && (corpse.pos != null)) && ((state.tick - corpse.wear) >= CORPSE_ROT)) && !graves.has(Rooms.labelAt(state, corpse.pos.x, corpse.pos.y));
     }
 
     public static void updateCorpses(SimState state)
@@ -92,7 +92,7 @@ public static partial class Corpses
         }
         foreach (var c in Js.Iter(corpses))
         {
-            if ((c.tag == null) && Js.T(c.pos) && ((state.tick - c.wear) >= CORPSE_GONE))
+            if (((c.tag == null) && Js.T(c.pos)) && ((state.tick - c.wear) >= CORPSE_GONE))
             {
                 Items.removeItem(state, c);
             }
@@ -118,7 +118,7 @@ public static partial class Corpses
     public static void spreadSickness(SimState state)
     {
         var season = Seasons.seasonOf(state.tick);
-        if (((state.tick % Time.DAY_LENGTH) == 0) && (season == "autumn") || (season == "winter") && (Hash.hashRoll(Time.dayOf(state.tick), 3870.0) < FLU_CHANCE))
+        if ((((state.tick % Time.DAY_LENGTH) == 0) && ((season == "autumn") || (season == "winter"))) && (Hash.hashRoll(Time.dayOf(state.tick), 3870.0) < FLU_CHANCE))
         {
             var s = state.survivors[Js.Idx(JsMath.floor(Hash.hashRoll(Time.dayOf(state.tick), 1) * state.survivors.length))];
             if (Js.T(s) && (s.sick == null))
@@ -131,7 +131,7 @@ public static partial class Corpses
         var rooms = __d0.rooms;
         foreach (var carrier in Js.Iter(state.survivors))
         {
-            if ((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep)) || Js.T(Policies.policyOn(state, "quarantine")))
+            if (((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep))) || Js.T(Policies.policyOn(state, "quarantine")))
             {
                 continue;
             }
@@ -145,7 +145,7 @@ public static partial class Corpses
             var chance = CONTAGION * ((((double)(room.tiles.length) / (heads)) < CRAMPED_TILES) ? 2 : 1);
             foreach (var o in Js.Iter(state.survivors))
             {
-                if ((o == carrier) || (o.sick != null) || (Space.manhattan(o.pos, carrier.pos) > CONTAGION_RADIUS))
+                if (((o == carrier) || (o.sick != null)) || (Space.manhattan(o.pos, carrier.pos) > CONTAGION_RADIUS))
                 {
                     continue;
                 }

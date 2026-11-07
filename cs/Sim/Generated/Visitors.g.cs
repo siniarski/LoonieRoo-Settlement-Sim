@@ -58,12 +58,12 @@ public static partial class Visitors
             }
         }
         var day = Time.dayOf(state.tick);
-        if ((day >= TRADER_FIRST_DAY) && (((day - TRADER_FIRST_DAY) % TRADER_EVERY) == 0) && (Time.tickOfDay(state.tick) == (TRADER_HOUR * Time.TICKS_PER_HOUR)))
+        if (((day >= TRADER_FIRST_DAY) && (((day - TRADER_FIRST_DAY) % TRADER_EVERY) == 0)) && (Time.tickOfDay(state.tick) == (TRADER_HOUR * Time.TICKS_PER_HOUR)))
         {
             arrive(state);
         }
         var enemy = state.settlements.find(Settlements.isHostile);
-        if ((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick)) && (Rng.random(state) < (Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state)))
+        if (((day >= RAID_FIRST_DAY) && Js.T(Zombies.nightFallsNow(state.tick))) && (Rng.random(state) < ((Js.T(enemy) ? HOSTILE_RAID_CHANCE : RAID_CHANCE) * Director.threatScale(state))))
         {
             raid(state, day, enemy?.name);
         }
@@ -98,7 +98,7 @@ public static partial class Visitors
         {
             return "no such offer";
         }
-        var free = state.items.filter((i) => (i.kind == o.want) && (i.pos != null) && (i.reservedBy == null));
+        var free = state.items.filter((i) => ((i.kind == o.want) && (i.pos != null)) && (i.reservedBy == null));
         if (free.length < o.wantCount)
         {
             return $"not enough {Js.Str(o.want)} (need {Js.Str(o.wantCount)}, have {Js.Str(free.length)} free)";

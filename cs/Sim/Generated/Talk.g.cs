@@ -155,7 +155,7 @@ public static partial class Talk
     {
         foreach (var o in Js.Iter(state.survivors))
         {
-            if ((o == s) || (o.story.told == 0) || (o.story.town != s.story.town) || s.story.knew.includes(o.id))
+            if ((((o == s) || (o.story.told == 0)) || (o.story.town != s.story.town)) || s.story.knew.includes(o.id))
             {
                 continue;
             }
@@ -264,7 +264,7 @@ public static partial class Talk
         var height = __d1.height;
         Point p = new Point { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, p);
-        return Space.nearestTile(state.grid, p, (x, y) => (Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        return Space.nearestTile(state.grid, p, (x, y) => (((Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y))) && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
     }
 
     public static bool near(Point a, Point b, double r)
@@ -311,7 +311,7 @@ public static partial class Talk
                 {
                     {
                     var you = ControlMod.controlled(state);
-                    return (Js.T(near(giver.pos, spot, 2)) || (you != null) && Js.T(near(you.pos, spot, 2))) ? true : null;
+                    return (Js.T(near(giver.pos, spot, 2)) || ((you != null) && Js.T(near(you.pos, spot, 2)))) ? true : null;
                 }
                 }
             case "bury":
@@ -342,7 +342,7 @@ public static partial class Talk
                 }
             case "radio":
                 {
-                    return (Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Js.T(Radio.hasRadio(state)) ? callOut(state, task, giver) : null;
+                    return ((Time.tickOfDay(state.tick) == (12 * Time.TICKS_PER_HOUR)) && Js.T(Radio.hasRadio(state))) ? callOut(state, task, giver) : null;
                 }
             case "medicine":
                 {

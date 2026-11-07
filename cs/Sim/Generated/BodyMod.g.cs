@@ -73,7 +73,7 @@ public static partial class BodyMod
         {
             return true;
         }
-        return (s.wetness > DRENCHED) && Js.T(Time.isNight(state.tick)) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y)) && !Js.T(Power.isWarmed(state, s.pos));
+        return (((s.wetness > DRENCHED) && Js.T(Time.isNight(state.tick))) && !Js.T(Rooms.isIndoors(state, s.pos.x, s.pos.y))) && !Js.T(Power.isWarmed(state, s.pos));
     }
 
     public static void updateBody(SimState state, Survivor s)

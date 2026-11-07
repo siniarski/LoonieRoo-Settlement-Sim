@@ -78,7 +78,7 @@ public static partial class Wounds
 
     public static bool canAmputate(Survivor s)
     {
-        return (s.infection != null) && (s.infection < amputateWindow()) && (s.bitten != null);
+        return ((s.infection != null) && (s.infection < amputateWindow())) && (s.bitten != null);
     }
 
     /// <summary>Takes the bitten limb off. Returns an error, or null when done.</summary>

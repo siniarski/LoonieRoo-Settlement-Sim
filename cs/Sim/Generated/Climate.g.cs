@@ -45,16 +45,16 @@ public static partial class Climate
         var night = Time.isNight(state.tick);
         if (climate == "cold")
         {
-            return (season == "winter") || (Js.T(night) && (season == "autumn")) || (Js.T(night) && Js.T(state.settings.winter));
+            return ((season == "winter") || (Js.T(night) && (season == "autumn"))) || (Js.T(night) && Js.T(state.settings.winter));
         }
-        return Js.T(night) && (season == "winter") || Js.T(state.settings.winter);
+        return Js.T(night) && ((season == "winter") || Js.T(state.settings.winter));
     }
     public static bool regionCold(SimState state, double x, double y) => regionCold(state, (int)x, (int)y);
 
     /// <summary>Summer days in the hot south: thirst comes twice as fast.</summary>
     public static bool scorching(SimState state, int x, int y)
     {
-        return (Seasons.seasonOf(state.tick) == "summer") && !Js.T(Time.isNight(state.tick)) && (climateAt(state, x, y) == "hot");
+        return ((Seasons.seasonOf(state.tick) == "summer") && !Js.T(Time.isNight(state.tick))) && (climateAt(state, x, y) == "hot");
     }
     public static bool scorching(SimState state, double x, double y) => scorching(state, (int)x, (int)y);
 
@@ -66,7 +66,7 @@ public static partial class Climate
             return false;
         }
         var c = ((double)(world.size) / (2));
-        if ((JsMath.pow((x - c), 2)) + (JsMath.pow((y - c), 2)) < (CLEAN_RADIUS * CLEAN_RADIUS))
+        if (((JsMath.pow((x - c), 2)) + (JsMath.pow((y - c), 2))) < (CLEAN_RADIUS * CLEAN_RADIUS))
         {
             return false;
         }

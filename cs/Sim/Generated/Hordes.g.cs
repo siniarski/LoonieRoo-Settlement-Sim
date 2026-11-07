@@ -157,7 +157,7 @@ public static partial class Hordes
             h.mode = "hunt";
             var goals = prey.map((s) => new Point { x = Js.I(s.pos.x), y = Js.I(s.pos.y) });
             var ids = prey.map((s) => s.id);
-            var samePeople = (wasMode == "hunt") && (ids.length == wasIds.length) && ids.every((id, i) => id == wasIds[Js.Idx(i)]);
+            var samePeople = ((wasMode == "hunt") && (ids.length == wasIds.length)) && ids.every((id, i) => id == wasIds[Js.Idx(i)]);
             var barely = Js.T(samePeople) && ids.every((_, i) => Space.manhattan(goals[Js.Idx(i)]!, was[Js.Idx(i)]!) <= GOAL_SLACK);
             if (!Js.T(samePeople) || (!Js.T(barely) && ((state.tick - (h.goalTick ?? -GOAL_EVERY)) >= GOAL_EVERY)))
             {
@@ -168,7 +168,7 @@ public static partial class Hordes
         }
         else
         {
-            if ((h.mode == "hunt") && !Js.T(h.heading) && (h.goals.length > 0))
+            if (((h.mode == "hunt") && !Js.T(h.heading)) && (h.goals.length > 0))
             {
                 h.heading = Js.Clone(h.goals[Js.Idx(0)]!);
             }
@@ -208,7 +208,7 @@ public static partial class Hordes
         var b = h.box;
         bool inside(Point q)
         {
-            return ((q.x - b.x0) >= BOX_SLACK) || (b.x0 == 0) && ((b.x1 - q.x) >= BOX_SLACK) || (b.x1 == (width - 1)) && ((q.y - b.y0) >= BOX_SLACK) || (b.y0 == 0) && ((b.y1 - q.y) >= BOX_SLACK) || (b.y1 == (height - 1));
+            return (((((q.x - b.x0) >= BOX_SLACK) || (b.x0 == 0)) && (((b.x1 - q.x) >= BOX_SLACK) || (b.x1 == (width - 1)))) && (((q.y - b.y0) >= BOX_SLACK) || (b.y0 == 0))) && (((b.y1 - q.y) >= BOX_SLACK) || (b.y1 == (height - 1)));
         }
         if (!Js.T(goalsKept) || !zs.every((z) => Js.T(inside(z.pos))))
         {
@@ -309,7 +309,7 @@ public static partial class Hordes
         var size = 0;
         bool less(double a, double b)
         {
-            return (hc[Js.Idx(a)]! < hc[Js.Idx(b)]!) || (hc[Js.Idx(a)] == hc[Js.Idx(b)]) && (hi[Js.Idx(a)]! < hi[Js.Idx(b)]!);
+            return (hc[Js.Idx(a)]! < hc[Js.Idx(b)]!) || ((hc[Js.Idx(a)] == hc[Js.Idx(b)]) && (hi[Js.Idx(a)]! < hi[Js.Idx(b)]!));
         }
         void swap(double a, double b)
         {
@@ -379,7 +379,7 @@ public static partial class Hordes
         }
         bool inBox(int x, int y)
         {
-            return (x >= x0) && (x <= x1) && (y >= y0) && (y <= y1);
+            return (((x >= x0) && (x <= x1)) && (y >= y0)) && (y <= y1);
         }
         var outside = h.goals.filter((g) => !Js.T(inBox(g.x, g.y)));
         foreach (var g in Js.Iter(h.goals))
@@ -395,7 +395,7 @@ public static partial class Hordes
             {
                 for (var x = x0; x <= x1; x++)
                 {
-                    if ((x != x0) && (x != x1) && (y != y0) && (y != y1))
+                    if ((((x != x0) && (x != x1)) && (y != y0)) && (y != y1))
                     {
                         continue;
                     }
@@ -473,7 +473,7 @@ public static partial class Hordes
         var y1 = __d4.y1;
         var w = (x1 - x0) + 1;
         var here = z.pos;
-        if ((here.x < x0) || (here.x > x1) || (here.y < y0) || (here.y > y1))
+        if ((((here.x < x0) || (here.x > x1)) || (here.y < y0)) || (here.y > y1))
         {
             return null;
         }
@@ -487,7 +487,7 @@ public static partial class Hordes
         {
             var nx = here.x + d.x;
             var ny = here.y + d.y;
-            if ((nx < x0) || (nx > x1) || (ny < y0) || (ny > y1))
+            if ((((nx < x0) || (nx > x1)) || (ny < y0)) || (ny > y1))
             {
                 continue;
             }
@@ -566,7 +566,7 @@ public static partial class Hordes
                     }
                     var za = membersOf(state, a);
                     var zb = membersOf(state, b);
-                    if ((za.length == 0) || (zb.length == 0) || (Space.manhattan(middle(za), middle(zb)) > JOIN_RADIUS))
+                    if (((za.length == 0) || (zb.length == 0)) || (Space.manhattan(middle(za), middle(zb)) > JOIN_RADIUS))
                     {
                         continue;
                     }
@@ -592,7 +592,7 @@ public static partial class Hordes
             var mid = middle(zs);
             foreach (var z in Js.Iter(state.zombies))
             {
-                if ((Js.T(z.hordeId) || (z.kind != "static") && (z.kind != "herd")) || (z.targetId != null) || (state.tick < z.stuckUntil))
+                if (((Js.T(z.hordeId) || ((z.kind != "static") && (z.kind != "herd"))) || (z.targetId != null)) || (state.tick < z.stuckUntil))
                 {
                     continue;
                 }

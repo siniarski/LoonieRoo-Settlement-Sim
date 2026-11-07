@@ -96,7 +96,7 @@ public static partial class Power
             {
                 continue;
             }
-            var load = CONSUMERS.some((kind) => (kind != "lamp") || Js.T(Time.isNight(state.tick)) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
+            var load = CONSUMERS.some((kind) => ((kind != "lamp") || Js.T(Time.isNight(state.tick))) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
             if (!Js.T(load))
             {
                 continue;
@@ -129,7 +129,7 @@ public static partial class Power
     /// <summary>Heaters burn on cold nights (winter, or a blizzard).</summary>
     public static void updateHeaters(SimState state)
     {
-        var cold = Js.T(Time.isNight(state.tick)) && (Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard");
+        var cold = Js.T(Time.isNight(state.tick)) && ((Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard"));
         if (!Js.T(cold))
         {
             return;
@@ -141,7 +141,7 @@ public static partial class Power
                 continue;
             }
             h.loot += 1;
-            if (((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE) && Js.T(FireMod.ignite(state, h.x, h.y)))
+            if ((((h.loot % Time.TICKS_PER_HOUR) == 0) && (Hash.hashRoll(h.x, h.y, state.tick) < HEATER_FIRE_CHANCE)) && Js.T(FireMod.ignite(state, h.x, h.y)))
             {
                 Events.logEvent(state, $"The heater at ({Js.Str(h.x)}, {Js.Str(h.y)}) set something alight!");
             }
@@ -176,7 +176,7 @@ public static partial class Power
         var rotted = 0;
         foreach (var item in Js.Iter((state.items).ToList()))
         {
-            if ((item.kind != "food") && (item.kind != "meal") || !Js.T(item.pos) || Js.T(item.reservedBy))
+            if ((((item.kind != "food") && (item.kind != "meal")) || !Js.T(item.pos)) || Js.T(item.reservedBy))
             {
                 continue;
             }

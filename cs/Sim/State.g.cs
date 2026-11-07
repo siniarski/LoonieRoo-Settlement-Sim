@@ -19,7 +19,7 @@ public partial class AlertAt
     public int y { get; set; }
 }
 
-public partial class Animal : IHasId, IHasAt, IHasPos
+public partial class Animal : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string kind { get; set; } = "";
@@ -218,7 +218,7 @@ public partial class ControlBusy
     public double duration { get; set; }
 }
 
-public partial class Dog : IHasId, IHasAt, IHasPos
+public partial class Dog : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
@@ -705,7 +705,7 @@ public partial class Requirement
     public bool met { get; set; }
 }
 
-public partial class Resident : IHasId, IHasAt, IHasPos
+public partial class Resident : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string settlementId { get; set; } = "";
@@ -984,7 +984,7 @@ public partial class SupplyRequest : IHasId
     public double until { get; set; }
 }
 
-public partial class Survivor : IHasId, IHasAt, IHasPos
+public partial class Survivor : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public string name { get; set; } = "";
@@ -1176,7 +1176,7 @@ public partial class VariantInfo
     public double chance { get; set; }
 }
 
-public partial class Vehicle : IHasId, IHasAt, IHasPos
+public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public Point at { get; set; } = new();
@@ -1238,7 +1238,7 @@ public partial class Wound
     public double until { get; set; }
 }
 
-public partial class Zombie : IHasId, IHasAt, IHasPos
+public partial class Zombie : IHasId, IHasAt, IHasPos, IBody
 {
     public string id { get; set; } = "";
     public Point pos { get; set; } = new();

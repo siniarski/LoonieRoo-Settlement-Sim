@@ -55,14 +55,14 @@ public static partial class FireMod
         {
             return false;
         }
-        return (t == "wall") || (t == "door") || (t == "barricade") || (t == "floor") && (FurnitureMod.furnitureAt(state, x, y) != null);
+        return (((t == "wall") || (t == "door")) || (t == "barricade")) || ((t == "floor") && (FurnitureMod.furnitureAt(state, x, y) != null));
     }
     public static bool burnable(SimState state, double x, double y) => burnable(state, (int)x, (int)y);
 
     /// <summary>Sets a tile alight. Returns false if it can't burn (water, already alight, too many fires).</summary>
     public static bool ignite(SimState state, int x, int y)
     {
-        if ((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y)) || (state.fires.length >= MAX_FIRES))
+        if (((!Js.T(Grids.inBounds(state.grid, x, y)) || (Grids.getTile(state.grid, x, y) == "water")) || Js.T(fireAt(state, x, y))) || (state.fires.length >= MAX_FIRES))
         {
             return false;
         }
@@ -143,7 +143,7 @@ public static partial class FireMod
             FurnitureMod.removeFurniture(state, furniture);
         }
         var t = Grids.getTile(state.grid, f.x, f.y);
-        if ((t == "wall") || (t == "door") || (t == "barricade"))
+        if (((t == "wall") || (t == "door")) || (t == "barricade"))
         {
             Grids.setTile(state.grid, f.x, f.y, "floor");
             state.walkabilityVersion += 1;

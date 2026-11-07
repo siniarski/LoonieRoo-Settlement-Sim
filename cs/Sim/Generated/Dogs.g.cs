@@ -47,7 +47,7 @@ public static partial class Dogs
     public static void updateDogs(SimState state)
     {
         var day = Time.dayOf(state.tick);
-        if ((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR)) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE) && (state.survivors.length > 0))
+        if ((((day >= 2) && (Time.tickOfDay(state.tick) == (6 * Time.TICKS_PER_HOUR))) && (Hash.hashRoll(day, 0xd06) < STRAY_CHANCE)) && (state.survivors.length > 0))
         {
             var spot = Wanderers.frontierSpot(state, /*TODO Set type*/new JsSet<object>()) ?? state.survivors[Js.Idx(0)]!.pos;
             var dog = addDog(state, spot.x, spot.y);

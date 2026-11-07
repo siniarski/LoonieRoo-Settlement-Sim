@@ -43,7 +43,7 @@ public static partial class Fog
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
                 var i = (y * grid.width) + x;
-                if ((grid.explored[Js.Idx(i)] == 1) || (JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2)) > (r * r))
+                if ((grid.explored[Js.Idx(i)] == 1) || (((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)))
                 {
                     continue;
                 }
@@ -143,7 +143,7 @@ public static partial class Fog
     /// <summary>The nearest unexplored tile in the area that `from` can walk to, or null when the area is done.</summary>
     public static Point? scoutTarget(SimState state, ExploreArea a, Point from)
     {
-        var targets = unexploredIn(state, a).sort((p, q) => (Js.T(Space.manhattan(from, p) - Space.manhattan(from, q))) || (Js.T(p.y - q.y)) || (Js.T(p.x - q.x)));
+        var targets = unexploredIn(state, a).sort((p, q) => ((Js.T(Space.manhattan(from, p) - Space.manhattan(from, q))) || (Js.T(p.y - q.y))) || (Js.T(p.x - q.x)));
         return targets.find((p) => Js.T(Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p]))) ?? null;
     }
 

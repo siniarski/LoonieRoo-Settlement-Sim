@@ -22,6 +22,9 @@ const OUT = 'cs/Sim/Generated';
 const HAND = { grid: 'Grids', pathfinding: 'Pathfinding', space: 'Space', rng: 'Rng', hash: 'Hash', time: 'Time', lookup: 'Lookup' };
 const renames = JSON.parse(readFileSync('cs/tools/typenames.json', 'utf8'));
 const stateSrc = readFileSync('cs/Sim/State.g.cs', 'utf8');
+/** Classes that are bodies (they implement IBody). */
+const bodyClasses = new Set([...stateSrc.matchAll(/public partial class (\w+) : [^\n]*IBody/g)].map((m) => m[1]));
+
 /** Field name -> the C# types it has across the state classes. */
 const fieldTypes = new Map();
 for (const m of stateSrc.matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; \}/g)) {
@@ -200,6 +203,8 @@ function ty(t, mod, intName) {
     }
     case 'object': {
       let c = core;
+      // A union of bodies (Animal | Survivor): what they share.
+      if (c.type === 'TSUnionType' && c.types.every((u) => u.type === 'TSTypeReference' && bodyClasses.has(u.typeName.name))) return 'IBody' + q;
       if (c.type === 'TSTypeReference') {
         let name = c.typeName.type === 'Identifier' ? c.typeName.name : c.typeName.right.name;
         if (['Partial', 'Required', 'Readonly'].includes(name)) return ty(c.typeArguments.params[0], mod) + q;
@@ -214,7 +219,10 @@ function ty(t, mod, intName) {
       if (c.type === 'TSTypeLiteral') return inlineType(c, mod) + q;
       return '/*TODO inline type*/object' + q;
     }
-    default: return 'object' + q;
+    default:
+      // A union of bodies (Animal | Survivor): what they share.
+      if (core.type === 'TSUnionType' && core.types.every((u) => u.type === 'TSTypeReference' && bodyClasses.has(u.typeName.name))) return 'IBody' + q;
+      return 'object' + q;
   }
 }
 
@@ -260,7 +268,29 @@ function translate(mod) {
   function operand(e, bool = false) {
     const s = ex(e, bool);
     const compound = ['BinaryExpression', 'LogicalExpression', 'ConditionalExpression', 'AssignmentExpression', 'SequenceExpression', 'ArrowFunctionExpression', 'TSAsExpression'].includes(e.type);
-    return compound && !(s.startsWith('(') && s.endsWith(')')) ? `(${s})` : s;
+    return compound && !wrapped(s) ? `(${s})` : s;
+  }
+
+  /** Is the whole of s inside one pair of parentheses? ("(a) ? b : (c)" starts and ends with them, but isn't.) Strings skipped. */
+  function wrapped(s) {
+    if (!s.startsWith('(') || !s.endsWith(')')) return false;
+    let depth = 0;
+    let quote = null;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (quote) {
+        if (ch === '\\') i++;
+        else if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"') quote = ch;
+      else if (ch === '(') depth++;
+      else if (ch === ')') {
+        depth--;
+        if (depth === 0 && i < s.length - 1) return false;
+      }
+    }
+    return depth === 0;
   }
 
   // Expressions. `bool`: wanted as a condition.
@@ -501,7 +531,9 @@ function translate(mod) {
   function call(e) {
     const c = e.callee;
     if (c.type === 'MemberExpression' && !c.computed && PREDICATE_METHODS.has(c.property.name)) for (const a of e.arguments) if (a.type === 'ArrowFunctionExpression') a.__pred = true;
-    const args = () => e.arguments.map((a) => (a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : ex(a))).join(', ');
+    // Number and String passed as callbacks (.map(Number)): as lambdas.
+    const arg = (a) => (a.type === 'Identifier' && a.name === 'Number' && !imports.has('Number') ? '(__v) => Js.Num(__v)' : a.type === 'Identifier' && a.name === 'String' && !imports.has('String') ? '(__v) => Js.Str(__v)' : ex(a));
+    const args = () => e.arguments.map((a) => (a.type === 'SpreadElement' ? `[.. ${ex(a.argument)}]` : arg(a))).join(', ');
     const q = e.optional ? '?' : '';
     if (c.type === 'MemberExpression' && !c.computed) {
       const o = c.object;

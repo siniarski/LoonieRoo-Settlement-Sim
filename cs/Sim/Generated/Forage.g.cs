@@ -39,7 +39,7 @@ public static partial class Forage
         bool open(int x, int y)
         {
             var g = Grids.GROUNDS[Js.Idx(grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))]!)];
-            return (g == "grass") || (g == "field") && Js.T(Grids.isWalkable(grid, x, y)) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today) && !Js.T(Rooms.isIndoors(state, x, y));
+            return ((((g == "grass") || (g == "field")) && Js.T(Grids.isWalkable(grid, x, y))) && (state.foraged[Js.Idx(Js.Str(Grids.tileIndex(grid, x, y)))] != today)) && !Js.T(Rooms.isIndoors(state, x, y));
         }
         var p = Space.nearestTile(grid, s.pos, open, FORAGE_SEARCH);
         return (Js.T(p) && Js.T(Pathfinding.canReach(grid, state.walkabilityVersion, s.pos, [p]))) ? p : null;
@@ -94,8 +94,8 @@ public static partial class Forage
         {
             return false;
         }
-        var @short = Js.T(state.harsh) && (state.items.filter((i) => (i.kind == "food") || (i.kind == "meal") && (i.pos != null) && (i.reservedBy == null)).length < state.survivors.length);
-        if (!Js.T(@short) && (s.satiety >= Food.HUNGRY) || Js.T(hasFood()))
+        var @short = Js.T(state.harsh) && (state.items.filter((i) => (((i.kind == "food") || (i.kind == "meal")) && (i.pos != null)) && (i.reservedBy == null)).length < state.survivors.length);
+        if (!Js.T(@short) && ((s.satiety >= Food.HUNGRY) || Js.T(hasFood())))
         {
             return false;
         }

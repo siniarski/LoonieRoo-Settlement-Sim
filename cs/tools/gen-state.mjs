@@ -297,6 +297,8 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
   if (fields.get('id')?.type === 'string') ifaces.push('IHasId');
   if (fields.get('at')?.type === 'Point') ifaces.push('IHasAt');
   if (fields.get('pos')?.type === 'Point') ifaces.push('IHasPos');
+  // A body (survivor, zombie, animal, dog, resident...): an id, a tile and a precise position.
+  if (ifaces.includes('IHasId') && ifaces.includes('IHasAt') && ifaces.includes('IHasPos')) ifaces.push('IBody');
   lines.push(`public partial class ${name}${ifaces.length ? ' : ' + ifaces.join(', ') : ''}`, '{');
   if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x, v.y);`);
   for (const [field, f] of fields) {

@@ -31,7 +31,7 @@ public static partial class Towers
     /// <summary>Hourly, for every survivor: a night up a tower counts towards being vigilant.</summary>
     public static void countWatch(SimState state, Survivor s)
     {
-        if (((state.tick % Time.TICKS_PER_HOUR) != 0) || !Js.T(Time.isNight(state.tick)) || !Js.T(onTower(state, s)))
+        if ((((state.tick % Time.TICKS_PER_HOUR) != 0) || !Js.T(Time.isNight(state.tick))) || !Js.T(onTower(state, s)))
         {
             return;
         }
@@ -56,7 +56,7 @@ public static partial class Towers
         }
         bool taken(int x, int y)
         {
-            return state.survivors.some((o) => (o != s) && (o.pos.x == x) && (o.pos.y == y) || (o.goal?.x == x) && (o.goal.y == y));
+            return state.survivors.some((o) => (o != s) && (((o.pos.x == x) && (o.pos.y == y)) || ((o.goal?.x == x) && (o.goal.y == y))));
         }
         var towers = state.furniture.filter((f) => (f.kind == "tower") && !Js.T(taken(f.x, f.y))).sort((a, b) => Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b));
         foreach (var t in Js.Iter(towers.slice(0, 4)))

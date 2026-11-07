@@ -50,7 +50,7 @@ public static partial class Motion
                 continue;
             }
             var dot = (dx * facing.x) + (dy * facing.y);
-            if ((d2 > 0) && (dot <= 0) || ((4 * dot) * dot) < (f2 * d2))
+            if ((d2 > 0) && ((dot <= 0) || (((4 * dot) * dot) < (f2 * d2))))
             {
                 continue;
             }
@@ -145,11 +145,11 @@ public static partial class Motion
                 {
                     continue;
                 }
-                if ((y > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x, y - 1, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)))
+                if (((y > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x, y - 1, mover))) && Js.T(touches(at, r, x * SUB, y * SUB, (x + 1) * SUB, y * SUB)))
                 {
                     return false;
                 }
-                if ((x > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x - 1, y, mover)) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)))
+                if (((x > 0) && !Js.T(Pathfinding.crossable(grid, x, y, x - 1, y, mover))) && Js.T(touches(at, r, x * SUB, y * SUB, x * SUB, (y + 1) * SUB)))
                 {
                     return false;
                 }
@@ -163,7 +163,7 @@ public static partial class Motion
     {
         var px = JsMath.max(x0, JsMath.min(x1, c.x));
         var py = JsMath.max(y0, JsMath.min(y1, c.y));
-        return (JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2)) < (r * r);
+        return ((JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2))) < (r * r);
     }
     public static bool touches(Point c, double r, double x0, double y0, double x1, double y1) => touches(c, r, (int)x0, (int)y0, (int)x1, (int)y1);
 

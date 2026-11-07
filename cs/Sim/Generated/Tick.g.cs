@@ -135,13 +135,13 @@ public static partial class Tick
         {
             return;
         }
-        var needs = (Js.T(Needs.updateMeal(state, s)) || Js.T(Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null)))) || Js.T(Water.updateDrink(state, s)) || Js.T(Needs.updateTreatment(state, s)) || Js.T(Weapons.updateArming(state, s)) || Js.T(Clothing.updateDressing(state, s)) || Js.T(Needs.updateSleep(state, s));
+        var needs = (((((Js.T(Needs.updateMeal(state, s)) || Js.T(Forage.updateForage(state, s, () => (Needs.nearestFreeItem(state, s, "food") != null) || (Needs.nearestFreeItem(state, s, "meal") != null)))) || Js.T(Water.updateDrink(state, s))) || Js.T(Needs.updateTreatment(state, s))) || Js.T(Weapons.updateArming(state, s))) || Js.T(Clothing.updateDressing(state, s))) || Js.T(Needs.updateSleep(state, s));
         if (Js.T(needs))
         {
             s.leisure = null;
             Books.stopReading(state, s, s.note ?? "");
         }
-        else if ((!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s))) && !Js.T(Leisure.updateLeisure(state, s)) && !Js.T(Books.updateReading(state, s)))
+        else if (((!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s))) && !Js.T(Leisure.updateLeisure(state, s))) && !Js.T(Books.updateReading(state, s)))
         {
             Work.updateWork(state, s);
         }
@@ -157,7 +157,7 @@ public static partial class Tick
     public static bool isFree(SimState state, Body e)
     {
         var id = (e).id ?? "";
-        return id.startsWith("z") || (state.control != null) && (id == state.control.survivorId);
+        return id.startsWith("z") || ((state.control != null) && (id == state.control.survivorId));
     }
 
     public static void step(SimState state, double ticks)

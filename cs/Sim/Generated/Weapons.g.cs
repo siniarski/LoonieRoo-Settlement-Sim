@@ -37,7 +37,7 @@ public static partial class Weapons
 
     public static bool wantsWeapon(SimState state, Survivor s)
     {
-        return (!Js.T(s.dressing) && (s.priorities.guard > 0)) && !Js.T(s.jobId) && !Js.T(s.sleep) && !Js.T(s.meal) && !Js.T(s.treatment) && !Js.T(s.breakdown) && !Js.T(s.leisure) && !Js.T(Needs.wantsSleep(state, s)) && (state.tick >= s.nextArmTick);
+        return ((((((((!Js.T(s.dressing) && (s.priorities.guard > 0)) && !Js.T(s.jobId)) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.treatment)) && !Js.T(s.breakdown)) && !Js.T(s.leisure)) && !Js.T(Needs.wantsSleep(state, s))) && (state.tick >= s.nextArmTick);
     }
 
     /// <summary>Runs when standing still, after treatment and before sleep: walk to the reserved weapon and pick it up. Returns true if arming handled this tick.</summary>
@@ -91,7 +91,7 @@ public static partial class Weapons
     public static /*TODO return type*/object loadedGun(SimState state, Survivor s)
     {
         var gun = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        return (gun?.kind == "gun") && (gun.wear > 0) ? gun : null;
+        return ((gun?.kind == "gun") && (gun.wear > 0)) ? gun : null;
     }
 
     public static bool startArming(SimState state, Survivor s)
@@ -101,7 +101,7 @@ public static partial class Weapons
             return false;
         }
         var held = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
-        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : ((held.kind == "gun") && (held.wear == 0) ? ["ammo"] : []);
+        List<string> wants = !Js.T(held) ? ["gun", "weapon"] : (((held.kind == "gun") && (held.wear == 0)) ? ["ammo"] : []);
         if (wants.length == 0)
         {
             return false;

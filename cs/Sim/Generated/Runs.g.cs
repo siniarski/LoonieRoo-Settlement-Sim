@@ -147,7 +147,7 @@ public static partial class Runs
     /// <summary>The dead catch up with them: one lost; all of them, and they lie where they fell. Returns true if the run is over.</summary>
     public static bool caught(SimState state, ScavRun r)
     {
-        var danger = ((double)((((r.phase == "search") ? RUIN_DANGER : ROAD_DANGER) * (1 + ((double)(Time.dayOf(state.tick)) / (20))) * state.settings.zombies)) / (100));
+        var danger = ((double)(((((r.phase == "search") ? RUIN_DANGER : ROAD_DANGER) * (1 + ((double)(Time.dayOf(state.tick)) / (20)))) * state.settings.zombies)) / (100));
         if (Hash.hashRoll(Hash.idNumber(r.id), state.tick, 3562.0) >= danger)
         {
             return false;

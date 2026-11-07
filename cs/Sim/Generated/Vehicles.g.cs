@@ -160,7 +160,7 @@ public static partial class Vehicles
         }
         v.driverId = null;
         v.speed = 0;
-        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => (x != v.pos.x) || (y != v.pos.y) && Js.T(Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
+        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => ((x != v.pos.x) || (y != v.pos.y)) && Js.T(Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free"))) ?? v.pos;
         s.at = Motion.centre(spot);
         s.pos = spot;
         return "got out";
@@ -192,7 +192,7 @@ public static partial class Vehicles
         {
             v.speed = JsMath.max(top, v.speed - BRAKE);
         }
-        if ((dx != 0) && (JsMath.abs(v.speed) >= TURN_MIN_SPEED) && ((state.tick % TURN_EVERY) == 0))
+        if (((dx != 0) && (JsMath.abs(v.speed) >= TURN_MIN_SPEED)) && ((state.tick % TURN_EVERY) == 0))
         {
             v.heading = ((v.heading + (dx * JsMath.sign(v.speed))) + HEADINGS) % HEADINGS;
         }
@@ -230,11 +230,11 @@ public static partial class Vehicles
         Point want = new Point { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
-        var to = (into.x != v.pos.x) || (into.y != v.pos.y) && Js.T(blocked(state, into)) ? v.at : slid;
+        var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && Js.T(blocked(state, into))) ? v.at : slid;
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
-        var lost = (Motion.distance2(want, got) * 9) > (want.x * want.x) + (want.y * want.y);
+        var lost = (Motion.distance2(want, got) * 9) > ((want.x * want.x) + (want.y * want.y));
         if (Js.T(lost))
         {
             var fast = JsMath.abs(v.speed);
@@ -283,7 +283,7 @@ public static partial class Vehicles
     public static bool blocked(SimState state, Point p)
     {
         var f = FurnitureMod.furnitureAt(state, p.x, p.y);
-        return (f != null) && (f.kind != "trap") && (f.kind != "pit");
+        return ((f != null) && (f.kind != "trap")) && (f.kind != "pit");
     }
 
     /// <summary>How much a vehicle's boot holds.</summary>
@@ -340,13 +340,13 @@ public static partial class Vehicles
     /// <summary>A heading pointing along (dx, dy) (one of the four ways).</summary>
     public static double headingOf(int dx, int dy)
     {
-        return (dx > 0) ? 0 : (dy > 0) ? 8 : ((dx < 0) ? 16 : 24);
+        return (dx > 0) ? 0 : ((dy > 0) ? 8 : ((dx < 0) ? 16 : 24));
     }
     public static double headingOf(double dx, double dy) => headingOf((int)dx, (int)dy);
 
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)
     {
-        return (Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p)) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS));
+        return ((Grids.getTile(state.grid, p.x, p.y) == "floor") && !Js.T(blocked(state, p))) && Js.T(Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS));
     }
 }

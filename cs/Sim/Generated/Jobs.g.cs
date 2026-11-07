@@ -88,7 +88,7 @@ public static partial class Jobs
         foreach (var item in Js.Iter(state.items))
         {
             var home = Rooms.homeFor(stores, item.kind);
-            if ((!Js.T(item.pos) || (home.size == 0)) || storing.has(item.id) || home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
+            if (((!Js.T(item.pos) || (home.size == 0)) || storing.has(item.id)) || home.has(Rooms.labelAt(state, item.pos.x, item.pos.y)))
             {
                 continue;
             }
@@ -111,7 +111,7 @@ public static partial class Jobs
             }
         }
         var mending = Js.Set(state.jobs.filter((j) => Js.T(isRepairJob(j)) && (j.edge != null)).map((j) => j.edge!));
-        foreach (var e in Js.Iter(Js.ObjectKeys(state.grid.edgeDamage).map(Number).sort((a, b) => a - b)))
+        foreach (var e in Js.Iter(Js.ObjectKeys(state.grid.edgeDamage).map((__v) => Js.Num(__v)).sort((a, b) => a - b)))
         {
             if (mending.has(e))
             {
@@ -142,7 +142,7 @@ public static partial class Jobs
             var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
             foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, ["workbench", "stove"])))
             {
-                if ((!Js.T(Crafting.isStation(f.kind)) || !Js.T(wanted[Js.Idx(f.kind)])) || stationed.has(f.id) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
+                if (((!Js.T(Crafting.isStation(f.kind)) || !Js.T(wanted[Js.Idx(f.kind)])) || stationed.has(f.id)) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
                 {
                     continue;
                 }
@@ -152,7 +152,7 @@ public static partial class Jobs
         var searching = Js.Set(state.jobs.filter((j) => j.type == "scavenge").map((j) => j.furnitureId));
         foreach (var f in Js.Iter(FurnitureMod.markedForScavenge(state)))
         {
-            if ((Js.T(f.scavenge) && (f.kind == "crate") || (f.kind == "tree")) && (f.loot > 0) && !searching.has(f.id))
+            if (((Js.T(f.scavenge) && ((f.kind == "crate") || (f.kind == "tree"))) && (f.loot > 0)) && !searching.has(f.id))
             {
                 addJob(state, "scavenge", f.x, f.y, null, null, f.id);
             }
@@ -179,7 +179,7 @@ public static partial class Jobs
             var samples = state.items.some((i) => (i.kind == "sample") && (i.pos != null));
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "lab")))
             {
-                if ((!researching.has(f.id) && (f.stored > 0) || Js.T(samples)) && Js.T(Power.isPowered(state, f)))
+                if ((!researching.has(f.id) && ((f.stored > 0) || Js.T(samples))) && Js.T(Power.isPowered(state, f)))
                 {
                     addJob(state, "research", f.x, f.y, null, null, f.id);
                 }
@@ -219,7 +219,7 @@ public static partial class Jobs
 
     public static bool isStoreJob(Job job)
     {
-        return (job.type == "haul") && (job.blueprintId == null) && (job.furnitureId == null);
+        return ((job.type == "haul") && (job.blueprintId == null)) && (job.furnitureId == null);
     }
 
     /// <summary>What each fed piece of furniture takes, and how much it holds.</summary>
@@ -406,7 +406,7 @@ public static partial class Jobs
                     {
                     if (Js.T(isRepairJob(job)))
                     {
-                        return ((job.edge != null) ? Breach.edgeDamage(state.grid, job.edge) : Breach.structureDamage(state, job.x, job.y) > 0) ? null : "nothing to repair";
+                        return (((job.edge != null) ? Breach.edgeDamage(state.grid, job.edge) : Breach.structureDamage(state, job.x, job.y)) > 0) ? null : "nothing to repair";
                     }
                     if (Js.T(isStoreJob(job)))
                     {

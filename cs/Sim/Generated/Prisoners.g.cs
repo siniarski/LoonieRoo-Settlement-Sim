@@ -70,7 +70,7 @@ public static partial class Prisoners
         var cells = Rooms.completeRooms(state, "cell");
         foreach (var p in Js.Iter((state.prisoners).ToList()))
         {
-            var food = state.items.find((i) => (i.kind == "food") && (i.pos != null) && (i.reservedBy == null));
+            var food = state.items.find((i) => ((i.kind == "food") && (i.pos != null)) && (i.reservedBy == null));
             if (!cells.has(Rooms.labelAt(state, p.x, p.y)) || !Js.T(food))
             {
                 state.prisoners.splice(state.prisoners.indexOf(p), 1);
@@ -89,7 +89,7 @@ public static partial class Prisoners
         {
             return "no such prisoner";
         }
-        if (Js.T(recruit) && (state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH))
+        if (Js.T(recruit) && ((state.tick - p.since) < (RECRUIT_DAYS * Time.DAY_LENGTH)))
         {
             return $"{Js.Str(p.name)} isn't ready to join yet";
         }

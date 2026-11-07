@@ -25,7 +25,7 @@ public static partial class Handiwork
     public const double HUNT_CHANCE = 0.5;
 
     /// <summary>Wood in your hands, else in your bag (picked-up wood goes in the bag when it fits).</summary>
-    public static /*TODO return type*/object carryingWood(SimState state, Survivor s)
+    public static Item? carryingWood(SimState state, Survivor s)
     {
         var item = Js.T(s.carrying) ? Items.getItem(state, s.carrying) : null;
         if (item?.kind == "wood")
@@ -49,12 +49,12 @@ public static partial class Handiwork
         var tile = Grids.getTile(state.grid, p.x, p.y);
         if (Js.T(Breach.isStructure(tile)) && (Breach.structureDamage(state, p.x, p.y) > 0))
         {
-            return new() { what = "repair" };
+            return new WorkPlan { what = "repair" };
         }
         var wood = carryingWood(state, s);
         if (tile == "door")
         {
-            return Js.T(wood) ? new() { what = "build", target = "barricade" } : "you need wood to barricade a door";
+            return Js.T(wood) ? (object)new WorkPlan { what = "build", target = "barricade" } : "you need wood to barricade a door";
         }
         if ((tile == "wall") || (tile == "barricade"))
         {
@@ -62,7 +62,7 @@ public static partial class Handiwork
             {
                 return "already as strong as you can make it";
             }
-            return Js.T(wood) ? new() { what = "build", target = "reinforce" } : "you need wood to reinforce it";
+            return Js.T(wood) ? (object)new WorkPlan { what = "build", target = "reinforce" } : "you need wood to reinforce it";
         }
         if (tile != "floor")
         {
@@ -80,7 +80,7 @@ public static partial class Handiwork
         {
             return "someone is in the way";
         }
-        return new() { what = "build", target = "wall" };
+        return (object)new WorkPlan { what = "build", target = "wall" };
     }
 
     /// <summary>Start working a tile next to you. Returns the busy action, or why not.</summary>
@@ -90,22 +90,23 @@ public static partial class Handiwork
         {
             return "you can't build where you stand";
         }
-        var job = plan(state, s, p);
-        if (/*TODO typeof*/Js.TypeOf(job) == "string")
+        var planned = plan(state, s, p);
+        if (planned is string why)
         {
-            return job;
+            return why;
         }
+        var job = (WorkPlan)planned;
         if (job.what == "repair")
         {
-            return new() { what = "repair", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)}", duration = JsMath.ceil(((double)(Breach.structureDamage(state, p.x, p.y)) / (Breach.REPAIR_PER_TICK))) };
+            return new WorkStart { what = "repair", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)}", duration = JsMath.ceil(((double)(Breach.structureDamage(state, p.x, p.y)) / (Breach.REPAIR_PER_TICK))) };
         }
-        return new() { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Designations.BUILD_WORK[Js.Idx(job.target)] };
+        return new WorkStart { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Designations.BUILD_WORK[Js.Idx(job.target)] };
     }
 
     /// <summary>A tick of repairing. Returns true when done (or no longer needed).</summary>
     public static bool repairTick(SimState state, string targetId)
     {
-        var (x, y) = targetId.split(",").map(Number);
+        var (x, y) = targetId.split(",").map((__v) => Js.Num(__v));
         if (!Js.T(Breach.isStructure(Grids.getTile(state.grid, x, y))))
         {
             return true;
@@ -120,9 +121,13 @@ public static partial class Handiwork
         var (xs, ys, target) = targetId.split(",");
         Point p = new Point { x = Js.I(Js.Num(xs)), y = Js.I(Js.Num(ys)) };
         var now = plan(state, s, p);
-        if ((/*TODO typeof*/Js.TypeOf(now) == "string") || (now.what != "build") || (now.target != target))
+        if (now is string why)
         {
-            return (/*TODO typeof*/Js.TypeOf(now) == "string") ? now : "it changed while you worked";
+            return why;
+        }
+        if ((((WorkPlan)now).what != "build") || (((WorkPlan)now).target != target))
+        {
+            return "it changed while you worked";
         }
         var wood = carryingWood(state, s)!;
         if (s.carrying == wood.id)
@@ -143,7 +148,7 @@ public static partial class Handiwork
         var x = __d0.x;
         var y = __d0.y;
         var g = Grids.GROUNDS[Js.Idx(state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))]!)];
-        if (Js.T(Rooms.isIndoors(state, x, y)) || (g != "grass") && (g != "field"))
+        if (Js.T(Rooms.isIndoors(state, x, y)) || ((g != "grass") && (g != "field")))
         {
             return "nothing to forage here: find open grass, or a field";
         }

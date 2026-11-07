@@ -39,7 +39,7 @@ public static partial class Herds
 
     public static void updateHerds(SimState state)
     {
-        if ((Time.dayOf(state.tick) >= 2) && (Time.tickOfDay(state.tick) == (HERD_HOUR * Time.TICKS_PER_HOUR)) && (Rng.random(state) < HERD_CHANCE))
+        if (((Time.dayOf(state.tick) >= 2) && (Time.tickOfDay(state.tick) == (HERD_HOUR * Time.TICKS_PER_HOUR))) && (Rng.random(state) < HERD_CHANCE))
         {
             startHerd(state);
         }
@@ -129,8 +129,8 @@ public static partial class Herds
         {
             return "nearby";
         }
-        var ns = (JsMath.abs(dy) * 2) < JsMath.abs(dx) ? "" : ((dy < 0) ? "north" : "south");
-        var ew = (JsMath.abs(dx) * 2) < JsMath.abs(dy) ? "" : ((dx < 0) ? "west" : "east");
+        var ns = ((JsMath.abs(dy) * 2) < JsMath.abs(dx)) ? "" : ((dy < 0) ? "north" : "south");
+        var ew = ((JsMath.abs(dx) * 2) < JsMath.abs(dy)) ? "" : ((dx < 0) ? "west" : "east");
         return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
     }
     public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
@@ -150,7 +150,7 @@ public static partial class Herds
         var taken = Js.Set(state.zombies.map((z) => (z.pos.y * width) + z.pos.x));
         bool free(int x, int y)
         {
-            return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !taken.has((y * width) + x);
+            return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !taken.has((y * width) + x);
         }
         List<Zombie> made = [];
         for (var i = 0; i < n; i++)

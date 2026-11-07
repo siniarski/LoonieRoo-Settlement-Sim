@@ -39,7 +39,7 @@ public static partial class Water
     /// <summary>Water standing in a fitting with the mains off.</summary>
     public static bool isTank(SimState state, IsTankF f)
     {
-        return (f.kind == "decor") && (f.look != null) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER)) && (f.loot > 0) && !Js.T(TimelineMod.waterOn(state));
+        return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !Js.T(TimelineMod.waterOn(state));
     }
 
     /// <summary>A drink taken from a source: collectors and tanks run down.</summary>
@@ -66,7 +66,7 @@ public static partial class Water
         }
         if (Js.T(Time.slowTick(state.tick)))
         {
-            s.hydration = JsMath.max(0, s.hydration - ((state.weather == "heatwave") || Js.T(Climate.scorching(state, s.pos.x, s.pos.y)) ? 2 : 1));
+            s.hydration = JsMath.max(0, s.hydration - (((state.weather == "heatwave") || Js.T(Climate.scorching(state, s.pos.x, s.pos.y))) ? 2 : 1));
         }
         if ((s.hydration == 0) && ((state.tick % DEHYDRATION_DAMAGE_EVERY) == 0))
         {
@@ -144,7 +144,7 @@ public static partial class Water
                 clean.set((f.y * grid.width) + f.x, "tank");
             }
         }
-        List<Func<int, int, string?>> passes = [(x, y) => clean.get((y * grid.width) + x), (x, y) => (Grids.getTile(grid, x, y) == "water") && !clean.has((y * grid.width) + x) ? "river" : null];
+        List<Func<int, int, string?>> passes = [(x, y) => clean.get((y * grid.width) + x), (x, y) => ((Grids.getTile(grid, x, y) == "water") && !clean.has((y * grid.width) + x)) ? "river" : null];
         foreach (var (i, sourceOf) in Js.Iter(passes.entries()))
         {
             if ((i == 0) && (clean.size == 0))
@@ -177,7 +177,7 @@ public static partial class Water
     /// <summary>Interrupt work for a drink (before movement), if there's water to go to.</summary>
     public static bool thirstInterrupts(SimState state, Survivor s)
     {
-        return (Js.T(state.harsh) && Js.T(isThirsty(s))) && (state.tick >= s.nextDrinkTick) && !Js.T(s.drink);
+        return ((Js.T(state.harsh) && Js.T(isThirsty(s))) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
     }
 
     /// <summary>Runs when standing still, after eating and before treatment. Returns true if drinking handled this tick.</summary>
@@ -222,7 +222,7 @@ public static partial class Water
         s.hydration = HYDRATION_MAX;
         s.drink = null;
         drankFrom(state, d.source, d.from.x, d.from.y);
-        if ((d.source == "river") && (s.sick == null) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7) < DIRTY_WATER_SICK))
+        if (((d.source == "river") && (s.sick == null)) && (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 7) < DIRTY_WATER_SICK))
         {
             s.sick = ((double)(Corpses.SICK_TICKS) / (2));
             Events.logEvent(state, $"{Js.Str(s.name)} got sick from river water (wells and rain collectors are clean)");

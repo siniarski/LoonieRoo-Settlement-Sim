@@ -25,7 +25,7 @@ public static partial class Alerts
         {
             return double.PositiveInfinity;
         }
-        var satiety = state.items.reduce((sum, i) => sum + (i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0), 0);
+        var satiety = state.items.reduce((sum, i) => sum + ((i.kind == "food") ? Food.MEAL_VALUE : ((i.kind == "meal") ? Food.HOT_MEAL_VALUE : 0)), 0);
         return ((double)(satiety) / ((people * DAILY_SATIETY)));
     }
 
@@ -132,7 +132,7 @@ public static partial class Alerts
         {
             add("danger", $"Food for less than a day ({Js.Str(people.length)} to feed)");
         }
-        else if ((people.length > 0) && (toWinter > 0) && (toWinter <= 5) && (days < Seasons.SEASON_DAYS))
+        else if ((((people.length > 0) && (toWinter > 0)) && (toWinter <= 5)) && (days < Seasons.SEASON_DAYS))
         {
             add("warn", $"Winter in {Js.Str(toWinter)} day{Js.Str((toWinter == 1) ? "" : "s")}: food for about {Js.Str(days.toFixed(1))} days, and nothing grows outdoors in winter (chicken coops lay all year; a greenhouse grows all year)");
         }
@@ -140,7 +140,7 @@ public static partial class Alerts
         {
             add("warn", $"Food for about {Js.Str(days.toFixed(1))} days");
         }
-        if ((toWinter > 0) && (toWinter <= 2) && people.some((s) => !Js.T(s.body)))
+        if (((toWinter > 0) && (toWinter <= 2)) && people.some((s) => !Js.T(s.body)))
         {
             add("info", "Winter is coming: coats keep the cold off outdoors at night");
         }

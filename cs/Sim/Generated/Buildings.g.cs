@@ -48,7 +48,7 @@ public static partial class Buildings
 
     public static double cellAt(BuildingsPlan p, int x, int y)
     {
-        return (x < 0) || (y < 0) || (x >= p.w) || (y >= p.h) ? OUTSIDE : p.cells[Js.Idx((y * p.w) + x)]!;
+        return ((((x < 0) || (y < 0)) || (x >= p.w)) || (y >= p.h)) ? OUTSIDE : p.cells[Js.Idx((y * p.w) + x)]!;
     }
     public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, (int)x, (int)y);
 
@@ -65,7 +65,7 @@ public static partial class Buildings
         {
             for (var x = x0; x <= x1; x++)
             {
-                var edge = (x == x0) || (x == x1) || (y == y0) || (y == y1);
+                var edge = (((x == x0) || (x == x1)) || (y == y0)) || (y == y1);
                 if (Js.T(edge))
                 {
                     if (cellAt(p, x, y) != DOOR)
@@ -132,13 +132,13 @@ public static partial class Buildings
     /// <summary>Next to a door (orthogonally): kept clear of furniture so doorways read.</summary>
     public static bool byDoor(BuildingsPlan p, int x, int y)
     {
-        return (cellAt(p, x + 1, y) == DOOR) || (cellAt(p, x - 1, y) == DOOR) || (cellAt(p, x, y + 1) == DOOR) || (cellAt(p, x, y - 1) == DOOR);
+        return (((cellAt(p, x + 1, y) == DOOR) || (cellAt(p, x - 1, y) == DOOR)) || (cellAt(p, x, y + 1) == DOOR)) || (cellAt(p, x, y - 1) == DOOR);
     }
     public static bool byDoor(BuildingsPlan p, double x, double y) => byDoor(p, (int)x, (int)y);
 
     public static bool free(BuildingsPlan p, int x, int y)
     {
-        return (cellAt(p, x, y) == FLOOR) && !Js.T(byDoor(p, x, y)) && !p.furniture.some((f) => (f.x == x) && (f.y == y));
+        return ((cellAt(p, x, y) == FLOOR) && !Js.T(byDoor(p, x, y))) && !p.furniture.some((f) => (f.x == x) && (f.y == y));
     }
     public static bool free(BuildingsPlan p, double x, double y) => free(p, (int)x, (int)y);
 
@@ -187,7 +187,7 @@ public static partial class Buildings
         {
             var x = cx + dx;
             var y = cy + dy;
-            if ((x > x0) && (x < x1) && (y > y0) && (y < y1) && Js.T(put(p, x, y, look, table)))
+            if (((((x > x0) && (x < x1)) && (y > y0)) && (y < y1)) && Js.T(put(p, x, y, look, table)))
             {
                 return true;
             }
@@ -310,7 +310,7 @@ public static partial class Buildings
         var H = JsMath.min(maxH, between(r(3), 9, 12));
         string table = kind;
         var p = newPlan(W, H, kind, 1);
-        box(p, 0, 0, W - 1, H - 1, (kind == "bar") || (kind == "office") ? "boards" : "tiles");
+        box(p, 0, 0, W - 1, H - 1, ((kind == "bar") || (kind == "office")) ? "boards" : "tiles");
         var div = 4;
         hwall(p, div, 0, W - 1);
         vwall(p, 3, 0, div);
@@ -374,7 +374,7 @@ public static partial class Buildings
     {
         var W = JsMath.min(maxW, between(r(2), 17, 23));
         var H = JsMath.min(maxH, between(r(3), 13, 19));
-        var p = newPlan(W, H, kind, (kind == "police") || (kind == "clinic") ? 3 : 2);
+        var p = newPlan(W, H, kind, ((kind == "police") || (kind == "clinic")) ? 3 : 2);
         box(p, 0, 0, W - 1, H - 1, (kind == "clinic") ? "tiles" : "boards");
         var c0 = JsMath.floor(((double)(W) / (2))) - 1;
         vwall(p, c0 - 1, 0, H - 1);
@@ -390,7 +390,7 @@ public static partial class Buildings
             while (y <= (H - 2))
             {
                 var depth = between(r(40 + n), 3, 5);
-                if ((H - 2) - (y + depth) < 3)
+                if (((H - 2) - (y + depth)) < 3)
                 {
                     depth = (H - 1) - y;
                 }
@@ -412,7 +412,7 @@ public static partial class Buildings
 
     public static void fitOut(BuildingsPlan p, string role, int x0, int y0, int x1, int y1, Func<int, double> r, int k)
     {
-        string table = (p.kind == "police") ? "police" : (p.kind == "clinic") ? "clinic" : ((p.kind == "school") ? "school" : "office");
+        string table = (p.kind == "police") ? "police" : ((p.kind == "clinic") ? "clinic" : ((p.kind == "school") ? "school" : "office"));
         switch (role)
         {
             case "desks":
@@ -601,7 +601,7 @@ public static partial class Buildings
         var h = __d0.h;
         /*TODO return type*/object at(int x, int y)
         {
-            return (x < 0) || (y < 0) || (x >= w) || (y >= h) ? OUTSIDE : p.cells[Js.Idx((y * w) + x)]!;
+            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : p.cells[Js.Idx((y * w) + x)]!;
         }
         bool solid(double c)
         {
@@ -676,12 +676,12 @@ public static partial class Buildings
                 {
                     var nx = x + dx;
                     var ny = y + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= w) || (ny >= h) || (cells[Js.Idx((ny * w) + nx)] != FLOOR))
+                    if (((((nx < 0) || (ny < 0)) || (nx >= w)) || (ny >= h)) || (cells[Js.Idx((ny * w) + nx)] != FLOOR))
                     {
                         continue;
                     }
                     var r = room[Js.Idx((ny * w) + nx)]!;
-                    if ((r == -1) || (pass == 0) && Js.T(solid(p.cells[Js.Idx((ny * w) + nx)]!)))
+                    if ((r == -1) || ((pass == 0) && Js.T(solid(p.cells[Js.Idx((ny * w) + nx)]!))))
                     {
                         continue;
                     }
@@ -702,7 +702,7 @@ public static partial class Buildings
             foreach (var (dx, dy) in Js.Iter(DIR4))
             {
                 var j = (((y + dy) * w) + x) + dx;
-                if (((x + dx) >= 0) && ((y + dy) >= 0) && ((x + dx) < w) && ((y + dy) < h) && (room[Js.Idx(j)] == room[Js.Idx(i)]) && Js.T(p.ground[Js.Idx(j)]))
+                if (((((((x + dx) >= 0) && ((y + dy) >= 0)) && ((x + dx) < w)) && ((y + dy) < h)) && (room[Js.Idx(j)] == room[Js.Idx(i)])) && Js.T(p.ground[Js.Idx(j)]))
                 {
                     ground[Js.Idx(i)] = p.ground[Js.Idx(j)]!;
                     break;
@@ -712,7 +712,7 @@ public static partial class Buildings
         var doorPairs = new JsSet<string>();
         /*TODO return type*/object pairKey(int ax, int ay, int bx, int by)
         {
-            return (ay < by) || (ay == by) && (ax < bx) ? $"{Js.Str(ax)},{Js.Str(ay)},{Js.Str(bx)},{Js.Str(by)}" : $"{Js.Str(bx)},{Js.Str(by)},{Js.Str(ax)},{Js.Str(ay)}";
+            return ((ay < by) || ((ay == by) && (ax < bx))) ? $"{Js.Str(ax)},{Js.Str(ay)},{Js.Str(bx)},{Js.Str(by)}" : $"{Js.Str(bx)},{Js.Str(by)},{Js.Str(ax)},{Js.Str(ay)}";
         }
         for (var i = 0; i < (w * h); i++)
         {
@@ -726,12 +726,12 @@ public static partial class Buildings
             var (ax, ay, bx, by) = Js.T(vertical) ? [x - 1, y, x + 1, y] : [x, y - 1, x, y + 1];
             if (cells[Js.Idx(i)] == OUTSIDE)
             {
-                var inside = (cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0) && (ay >= 0) && (ax < w) && (ay < h) ? [ax, ay] : [bx, by];
+                var inside = (((((cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? [ax, ay] : [bx, by];
                 doorPairs.add(pairKey(x, y, inside[Js.Idx(0)]!, inside[Js.Idx(1)]!));
             }
             else
             {
-                var aRoom = (ax >= 0) && (ay >= 0) && (ax < w) && (ay < h) ? room[Js.Idx((ay * w) + ax)] : -2;
+                var aRoom = ((((ax >= 0) && (ay >= 0)) && (ax < w)) && (ay < h)) ? room[Js.Idx((ay * w) + ax)] : -2;
                 var other = (aRoom == room[Js.Idx(i)]) ? [bx, by] : [ax, ay];
                 doorPairs.add(pairKey(x, y, other[Js.Idx(0)]!, other[Js.Idx(1)]!));
             }
@@ -739,7 +739,7 @@ public static partial class Buildings
         List<PlanEdge> edges = [];
         /*TODO return type*/object cellOf(int x, int y)
         {
-            return (x < 0) || (y < 0) || (x >= w) || (y >= h) ? OUTSIDE : cells[Js.Idx((y * w) + x)]!;
+            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : cells[Js.Idx((y * w) + x)]!;
         }
         for (var y = 0; y < h; y++)
         {
@@ -759,7 +759,7 @@ public static partial class Buildings
                     {
                         continue;
                     }
-                    if ((there == FLOOR) && (dx > 0) || (dy > 0))
+                    if ((there == FLOOR) && ((dx > 0) || (dy > 0)))
                     {
                         continue;
                     }

@@ -139,7 +139,7 @@ public static partial class Lots
         var mirror = r(81) < 0.5;
         double along(int w, double margin)
         {
-            return margin + JsMath.floor(r(80) * JsMath.max(1, (F - w) - (2 * margin) + 1));
+            return margin + JsMath.floor(r(80) * JsMath.max(1, ((F - w) - (2 * margin)) + 1));
         }
         /*TODO return type*/object decor(double u, double v, string look)
         {
@@ -160,7 +160,7 @@ public static partial class Lots
                         @out.buildings.push(setIn(lot, shed, (r(92) < 0.5) ? 1 : (F - 6), D - 6, false));
                     }
                     var garden = (behind >= 5) && (r(93) < 0.35);
-                    @out.yard = (u, v) => (Js.T(garden) && (v >= (D - 4))) && (u > 1) && (u < (F - 2)) ? (((v % 2) == 0) ? "field" : "dirt") : "grass";
+                    @out.yard = (u, v) => (((Js.T(garden) && (v >= (D - 4))) && (u > 1)) && (u < (F - 2))) ? (((v % 2) == 0) ? "field" : "dirt") : "grass";
                     break;
                 }
                 }
@@ -169,7 +169,7 @@ public static partial class Lots
                     {
                     List<string> kinds = ["grocery", "pharmacy", "hardware", "bar", "station", "office"];
                     var pick = r(0);
-                    var kind = kinds[Js.Idx((pick < 0.25) ? 0 : (pick < 0.4) ? 1 : (pick < 0.6) ? 2 : (pick < 0.75) ? 3 : ((pick < 0.85) ? 4 : 5))];
+                    var kind = kinds[Js.Idx((pick < 0.25) ? 0 : ((pick < 0.4) ? 1 : ((pick < 0.6) ? 2 : ((pick < 0.75) ? 3 : ((pick < 0.85) ? 4 : 5)))))];
                     var setback = (kind == "station") ? 4 : 1;
                     var shop = Buildings.shopPlan(r, kind, F - 2, (D - setback) - 1);
                     @out.buildings.push(setIn(lot, shop, along(shop.w, 1), setback, mirror));
@@ -249,7 +249,7 @@ public static partial class Lots
         {
             for (var u = 0; u < F; u++)
             {
-                var edge = (Js.T(sides[Js.Idx(0)]) && (u == 0)) || (Js.T(sides[Js.Idx(1)]) && (u == (F - 1))) || (Js.T(sides[Js.Idx(2)]) && (v == (D - 1)));
+                var edge = ((Js.T(sides[Js.Idx(0)]) && (u == 0)) || (Js.T(sides[Js.Idx(1)]) && (u == (F - 1)))) || (Js.T(sides[Js.Idx(2)]) && (v == (D - 1)));
                 var gate = (v == yardDepth) && (JsMath.abs(u - JsMath.floor(((double)(F) / (2)))) <= 1);
                 if ((Js.T(edge) && !Js.T(gate)) && (Hash.hashRoll(seed, lot.x + u, lot.y + v, 0x9200) < 0.75))
                 {
@@ -310,7 +310,7 @@ public static partial class Lots
         var layout = layoutLot(ctx.seed, lot);
         bool inside(int x, int y)
         {
-            return (x >= x0) && (y >= y0) && (x <= x1) && (y <= y1);
+            return (((x >= x0) && (y >= y0)) && (x <= x1)) && (y <= y1);
         }
         for (var y = JsMath.max(y0, lot.y); y <= JsMath.min(y1, (lot.y + lot.h) - 1); y++)
         {
@@ -348,7 +348,7 @@ public static partial class Lots
     /// <summary>A car in the street in front of a lot in town, some of the time (by hash): along the street, a little fuel, some wear. Only the chunk holding its tile parks it, so it's parked once.</summary>
     public static void parkCar(SimState state, LotContext ctx, Lot lot, Func<int, int, bool> inside)
     {
-        if ((lot.zone != "residential") && (lot.zone != "commercial") && (lot.zone != "civic") && (lot.zone != "industrial"))
+        if ((((lot.zone != "residential") && (lot.zone != "commercial")) && (lot.zone != "civic")) && (lot.zone != "industrial"))
         {
             return;
         }
@@ -408,7 +408,7 @@ public static partial class Lots
                     continue;
                 }
                 var fall = Hash.hashRoll(ctx.seed, w.x, w.y, 19);
-                var outer = (Buildings.cellAt(plan, x - 1, y) == 0) || (Buildings.cellAt(plan, x + 1, y) == 0) || (Buildings.cellAt(plan, x, y - 1) == 0) || (Buildings.cellAt(plan, x, y + 1) == 0);
+                var outer = (((Buildings.cellAt(plan, x - 1, y) == 0) || (Buildings.cellAt(plan, x + 1, y) == 0)) || (Buildings.cellAt(plan, x, y - 1) == 0)) || (Buildings.cellAt(plan, x, y + 1) == 0);
                 state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, w.x, w.y))] = Grids.GROUNDS.indexOf(plan.ground[Js.Idx((y * plan.w) + x)] ?? "dirt");
                 if (c == Buildings.WALL)
                 {
@@ -439,7 +439,7 @@ public static partial class Lots
         {
             var a = at(e.ax, e.ay);
             var b_1 = at(e.bx, e.by);
-            var (ox, oy, side) = (b_1.y == (a.y - 1)) ? [a.x, a.y, "n"] : (b_1.y == (a.y + 1)) ? [b_1.x, b_1.y, "n"] : ((b_1.x == (a.x - 1)) ? [a.x, a.y, "w"] : [b_1.x, b_1.y, "w"]);
+            var (ox, oy, side) = (b_1.y == (a.y - 1)) ? [a.x, a.y, "n"] : ((b_1.y == (a.y + 1)) ? [b_1.x, b_1.y, "n"] : ((b_1.x == (a.x - 1)) ? [a.x, a.y, "w"] : [b_1.x, b_1.y, "w"]));
             if (!Js.T(inside(ox, oy)))
             {
                 continue;
@@ -500,7 +500,7 @@ public static partial class Lots
         {
             return;
         }
-        var sleepers = Difficulty.zombieScale(state, JsMath.floor(r(300) * (plan.sleepers + 1) + JsMath.floor(((double)(d) / (60)))));
+        var sleepers = Difficulty.zombieScale(state, JsMath.floor(r(300) * ((plan.sleepers + 1) + JsMath.floor(((double)(d) / (60))))));
         for (var k = 0; k < sleepers; k++)
         {
             var p = floors[Js.Idx(JsMath.floor(r(310 + k) * floors.length))]!;

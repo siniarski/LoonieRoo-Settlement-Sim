@@ -153,7 +153,7 @@ public static partial class Savefile
         {
             return new() { ok = false, error = "not a JSON file" };
         }
-        if ((/*TODO typeof*/Js.TypeOf(data) != "object") || (data == null) || !(/*TODO in*/Js.In("format", data)))
+        if (((/*TODO typeof*/Js.TypeOf(data) != "object") || (data == null)) || !(/*TODO in*/Js.In("format", data)))
         {
             return new() { ok = false, error = "not a LoonieRoo file" };
         }

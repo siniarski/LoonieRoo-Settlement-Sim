@@ -31,7 +31,7 @@ public static partial class Breach
 
     public static bool isStructure(string? tile)
     {
-        return (tile == "wall") || (tile == "door") || (tile == "barricade");
+        return ((tile == "wall") || (tile == "door")) || (tile == "barricade");
     }
 
     public static double structureDamage(SimState state, int x, int y)
@@ -92,7 +92,7 @@ public static partial class Breach
         {
             return GLASS_HEALTH;
         }
-        return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : (kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : 0);
+        return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : ((kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : 0));
     }
     public static double edgeHealth(Grid grid, double e) => edgeHealth(grid, (int)e);
 
@@ -109,7 +109,7 @@ public static partial class Breach
         var grid = __d0.grid;
         var kind = grid.edges[Js.Idx(e)];
         var boarded = grid.edgeBoarded.includes(e);
-        if ((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR) && (kind != Grids.EDGE_BARRICADE) && (kind != Grids.EDGE_WINDOW) && !Js.T(boarded))
+        if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && !Js.T(boarded))
         {
             return false;
         }
@@ -153,7 +153,7 @@ public static partial class Breach
         }
         state.walkabilityVersion += 1;
         var tile = JsMath.floor(((double)(e) / (2)));
-        Events.logEvent(state, ((("Zombies broke through the " + (kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade")) + " at (") + (tile % grid.width) + ", ") + JsMath.floor(((double)(tile) / (grid.width))) + ")");
+        Events.logEvent(state, ((((("Zombies broke through the " + ((kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade"))) + " at (") + (tile % grid.width)) + ", ") + JsMath.floor(((double)(tile) / (grid.width)))) + ")");
         return true;
     }
     public static bool damageEdge(SimState state, double e, double amount) => damageEdge(state, (int)e, amount);

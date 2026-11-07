@@ -30,7 +30,7 @@ public static partial class Towns
         for (var i = 0; i < count; i++)
         {
             var r = NatureMod.roll(seed, i, 1, 0x7101);
-            kinds.push((size >= 384) && (r < 0.2) ? "city" : ((r < 0.6) ? "town" : "village"));
+            kinds.push(((size >= 384) && (r < 0.2)) ? "city" : ((r < 0.6) ? "town" : "village"));
         }
         JsRecord<double> order = new() { ["city"] = 0, ["town"] = 1, ["village"] = 2 };
         return kinds.sort((a, b) => order[Js.Idx(a)] - order[Js.Idx(b)]);
@@ -116,7 +116,7 @@ public static partial class Towns
                         continue;
                     }
                     var wetShare = ((double)(wet) / (JsMath.max(1, around)));
-                    var score = (dryShare - (((double)(wooded) / (JsMath.max(1, inside))) * 0.6)) + ((wetShare > 0.02) && (wetShare < 0.3) ? 0.3 : 0) + (NatureMod.roll(n.seed, x, y, 0x7103) * 0.15);
+                    var score = ((dryShare - (((double)(wooded) / (JsMath.max(1, inside))) * 0.6)) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + (NatureMod.roll(n.seed, x, y, 0x7103) * 0.15);
                     if (!Js.T(best) || (score > best.score))
                     {
                         best = new() { x = Js.I(x), y = Js.I(y), score = score };
@@ -141,7 +141,7 @@ public static partial class Towns
         }
         bool blocked(int x, int y)
         {
-            return (x < 3) || (y < 3) || (x >= (n.size - 4)) || (y >= (n.size - 4)) || Js.T(NatureMod.isWater(n, x, y)) || Js.T(NatureMod.isWater(n, x + 1, y + 1)) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
+            return ((((((x < 3) || (y < 3)) || (x >= (n.size - 4))) || (y >= (n.size - 4))) || Js.T(NatureMod.isWater(n, x, y))) || Js.T(NatureMod.isWater(n, x + 1, y + 1))) || Js.T(NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3));
         }
         var laid = new JsSet<double>();
         bool isStreet(int x, int y)

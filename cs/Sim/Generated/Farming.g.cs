@@ -65,7 +65,7 @@ public static partial class Farming
 
     public static bool isCrop(object c)
     {
-        return (c == "potato") || (c == "wheat") || (c == "herb");
+        return ((c == "potato") || (c == "wheat")) || (c == "herb");
     }
 
     public static void removePlot(SimState state, FarmPlot plot)

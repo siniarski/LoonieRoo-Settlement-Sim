@@ -113,7 +113,7 @@ public static partial class Leisure
     public static bool spotFree(SimState state, Survivor s, Point p, string at)
     {
         var rooms = Rooms.completeRooms(state, at);
-        return (rooms.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Grids.isWalkable(state.grid, p.x, p.y))) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y)) && !state.survivors.some((o) => (o != s) && Js.T(o.leisure) && (o.leisure.x == p.x) && (o.leisure.y == p.y));
+        return ((rooms.has(Rooms.labelAt(state, p.x, p.y)) && Js.T(Grids.isWalkable(state.grid, p.x, p.y))) && !Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) && !state.survivors.some((o) => (((o != s) && Js.T(o.leisure)) && (o.leisure.x == p.x)) && (o.leisure.y == p.y));
     }
 
     public static Point? pickSpot(SimState state, Survivor s, string at)
@@ -157,7 +157,7 @@ public static partial class Leisure
             s.note = "pulled themselves together";
             return;
         }
-        if (((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Js.T(Mood.isMiserable(state, s)) || Js.T(Resolve.isSteeled(s)) || Js.T(s.sleep))
+        if (((((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Js.T(Mood.isMiserable(state, s))) || Js.T(Resolve.isSteeled(s))) || Js.T(s.sleep))
         {
             return;
         }

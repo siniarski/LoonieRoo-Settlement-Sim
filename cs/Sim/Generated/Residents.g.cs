@@ -116,7 +116,7 @@ public static partial class Residents
             return Hash.hashRoll(Hash.idNumber(r.id), state.tick, salt);
         }
         Point to = new Point { x = Js.I((box.x0 + 1) + JsMath.floor(roll(1) * ((box.x1 - box.x0) - 1))), y = Js.I((box.y0 + 2) + JsMath.floor(roll(2) * JsMath.max(1, (box.y1 - box.y0) - 2))) };
-        if (state.residents.some((o) => (o != r) && (o.pos.x == to.x) && (o.pos.y == to.y)))
+        if (state.residents.some((o) => ((o != r) && (o.pos.x == to.x)) && (o.pos.y == to.y)))
         {
             return [];
         }

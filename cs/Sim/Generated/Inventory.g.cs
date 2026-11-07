@@ -129,7 +129,7 @@ public static partial class Inventory
     /// <summary>Wields a weapon or wears clothing from the bag: whatever was in the slot goes into the bag in its place (or down at your feet if it won't fit). Returns what happened.</summary>
     public static string equipFromPack(SimState state, Survivor s, Item item, Point where)
     {
-        var slot = (item.kind == "weapon") || (item.kind == "gun") ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
+        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
         unpack(s, item.id);
         var old = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, s[Js.Idx(slot)]!) : null;
         s[Js.Idx(slot)] = item.id;

@@ -32,7 +32,7 @@ public static partial class Radio
     public static void updateRadio(SimState state)
     {
         state.requests = state.requests.filter((r) => r.until > state.tick);
-        if ((Time.tickOfDay(state.tick) != (RADIO_HOUR * Time.TICKS_PER_HOUR)) || !Js.T(hasRadio(state)) || (state.survivors.length == 0))
+        if (((Time.tickOfDay(state.tick) != (RADIO_HOUR * Time.TICKS_PER_HOUR)) || !Js.T(hasRadio(state))) || (state.survivors.length == 0))
         {
             return;
         }
@@ -67,7 +67,7 @@ public static partial class Radio
         {
             return "no such request";
         }
-        var free = state.items.filter((i) => (i.kind == r.kind) && (i.pos != null) && (i.reservedBy == null));
+        var free = state.items.filter((i) => ((i.kind == r.kind) && (i.pos != null)) && (i.reservedBy == null));
         if (free.length < r.count)
         {
             return $"need {Js.Str(r.count)} free {Js.Str(r.kind)}";

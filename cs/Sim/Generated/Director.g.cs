@@ -44,7 +44,7 @@ public static partial class Director
 
     public static double threatScale(SimState state)
     {
-        var wealth = state.items.filter((i) => (i.kind != "corpse") && (i.kind != "wood") && (i.kind != "food")).length;
+        var wealth = state.items.filter((i) => ((i.kind != "corpse") && (i.kind != "wood")) && (i.kind != "food")).length;
         var scale = (1 + (THREAT_PER_WEALTH * JsMath.floor(((double)(wealth) / (WEALTH_STEP))))) - (THREAT_PER_DEATH * recentDeaths(state));
         return JsMath.max(MIN_THREAT, JsMath.min(MAX_THREAT, scale));
     }
@@ -56,7 +56,7 @@ public static partial class Director
         {
             return;
         }
-        if (((state.tick - state.lastRelief) < RELIEF_GAP) || (recentDeaths(state) < 2) || (Alerts.foodDays(state) >= 1))
+        if ((((state.tick - state.lastRelief) < RELIEF_GAP) || (recentDeaths(state) < 2)) || (Alerts.foodDays(state) >= 1))
         {
             return;
         }

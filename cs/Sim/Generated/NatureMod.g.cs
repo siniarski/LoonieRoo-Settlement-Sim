@@ -14,7 +14,7 @@ public static partial class NatureMod
     /// <summary>A well-mixed 32-bit hash of the seed and up to three integers.</summary>
     public static double hash(double seed, double a, double b, double salt)
     {
-        var h = (JsMath.imul(seed ^ 2654435769.0, 2246822507.0) ^ JsMath.imul(a, 3266489909.0)) ^ JsMath.imul(b, 668265263.0) ^ JsMath.imul(salt, 0x165667b1);
+        var h = ((JsMath.imul(seed ^ 2654435769.0, 2246822507.0) ^ JsMath.imul(a, 3266489909.0)) ^ JsMath.imul(b, 668265263.0)) ^ JsMath.imul(salt, 0x165667b1);
         h = JsMath.imul(h ^ (Js.Ushr(h, 15)), 0x2c1b3c6d);
         h = JsMath.imul(h ^ (Js.Ushr(h, 12)), 0x297a2d39);
         return Js.Ushr((h ^ (Js.Ushr(h, 15))), 0);
@@ -58,7 +58,7 @@ public static partial class NatureMod
 
     public static bool nearStart(Nature n, int x, int y, double r)
     {
-        return (JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2)) < (r * r);
+        return ((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < (r * r);
     }
     public static bool nearStart(Nature n, double x, double y, double r) => nearStart(n, (int)x, (int)y, r);
 
@@ -137,7 +137,7 @@ public static partial class NatureMod
             return false;
         }
         var s = n.size;
-        return (x == 2) || (y == 2) || (x == (s - 3)) || (y == (s - 3)) && (x >= 2) && (y >= 2) && (x <= (s - 3)) && (y <= (s - 3));
+        return (((((((x == 2) || (y == 2)) || (x == (s - 3))) || (y == (s - 3))) && (x >= 2)) && (y >= 2)) && (x <= (s - 3))) && (y <= (s - 3));
     }
     public static bool onFenceLine(Nature n, double x, double y) => onFenceLine(n, (int)x, (int)y);
 }

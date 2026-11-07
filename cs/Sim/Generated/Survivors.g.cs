@@ -46,7 +46,7 @@ public static partial class Survivors
     /// <summary>The survivor standing on, or stepping onto, a tile.</summary>
     public static Survivor? survivorAt(SimState state, int x, int y)
     {
-        return state.survivors.find((s) => (s.pos.x == x) && (s.pos.y == y) || (s.move != null) && (s.move.to.x == x) && (s.move.to.y == y));
+        return state.survivors.find((s) => ((s.pos.x == x) && (s.pos.y == y)) || (((s.move != null) && (s.move.to.x == x)) && (s.move.to.y == y)));
     }
     public static Survivor? survivorAt(SimState state, double x, double y) => survivorAt(state, (int)x, (int)y);
 
@@ -141,7 +141,7 @@ public static partial class Survivors
     public static double stepPace(SimState state, Survivor s, Point next)
     {
         var road = ROAD_GROUNDS.includes(state.grid.ground[Js.Idx((next.y * state.grid.width) + next.x)]!);
-        return JsMath.max(2, (Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0) - (Js.T(road) ? 1 : 0) + (Js.T(Wounds.legSlowed(s)) ? 1 : 0) - (Js.T(Orders.hurries(state, s)) ? 1 : 0) + (Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0));
+        return JsMath.max(2, (((((Js.T(Health.isHurt(s.health)) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Js.T(Skills.hasTrait(s, "quick")) ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Js.T(Wounds.legSlowed(s)) ? 1 : 0)) - (Js.T(Orders.hurries(state, s)) ? 1 : 0)) + (Js.T(Moodlets.boosted(s, "slowWalk")) ? 1 : 0));
     }
 
     public static void trackDirt(SimState state, Point p)

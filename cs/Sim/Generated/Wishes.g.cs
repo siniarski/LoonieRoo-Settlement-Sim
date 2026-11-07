@@ -63,7 +63,7 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "bed", targetId = null });
         }
-        if (!Js.T(s.body) && (Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))
+        if (!Js.T(s.body) && (((Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter")) || Js.T(state.settings.winter)))
         {
             @out.push(new() { kind = "coat", targetId = null });
         }
@@ -73,7 +73,7 @@ public static partial class Wishes
         }
         var friend = state.survivors.filter((o) => (o != s) && ((s.opinions[Js.Idx(o.id)] ?? 0) >= 10)).sort((a, b) => Js.Or((s.opinions[Js.Idx(b.id)] ?? 0) - (s.opinions[Js.Idx(a.id)] ?? 0), a.id.localeCompare(b.id)))[Js.Idx(0)];
         var you = ControlMod.controlled(state);
-        var wanted = (Js.T(you) && (you != s)) && ((s.opinions[Js.Idx(you.id)] ?? 0) >= 0) ? you : friend;
+        var wanted = ((Js.T(you) && (you != s)) && ((s.opinions[Js.Idx(you.id)] ?? 0) >= 0)) ? you : friend;
         if (Js.T(wanted) && !Js.T(near(s, wanted)))
         {
             @out.push(new() { kind = "see", targetId = wanted.id });
@@ -126,7 +126,7 @@ public static partial class Wishes
                 {
                     {
                     var o = state.survivors.find((x) => x.id == w.targetId);
-                    return (o != null) && !Js.T(Js.T(o.sleep?.asleep)) && !Js.T(Js.T(s.sleep?.asleep)) && Js.T(near(s, o));
+                    return (((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && Js.T(near(s, o));
                 }
                 }
             case "grave":
@@ -135,7 +135,7 @@ public static partial class Wishes
                 }
             case "quiet":
                 {
-                    return (state.tick >= w.until) && !Js.T(gotThought(s, "sawDeath", w.since)) && !Js.T(gotThought(s, "attacked", w.since)) && !Js.T(gotThought(s, "lostFriend", w.since));
+                    return (((state.tick >= w.until) && !Js.T(gotThought(s, "sawDeath", w.since))) && !Js.T(gotThought(s, "attacked", w.since))) && !Js.T(gotThought(s, "lostFriend", w.since));
                 }
             case "kill":
                 {

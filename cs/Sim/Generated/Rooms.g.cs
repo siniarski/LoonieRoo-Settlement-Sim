@@ -26,7 +26,7 @@ public static partial class Rooms
         {
             return "food";
         }
-        if ((kind == "wood") || (kind == "cloth") || (kind == "scrap"))
+        if (((kind == "wood") || (kind == "cloth")) || (kind == "scrap"))
         {
             return "materials";
         }
@@ -95,7 +95,7 @@ public static partial class Rooms
                 var i = region[Js.Idx(head)]!;
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
-                if ((x == 0) || (y == 0) || (x == (width - 1)) || (y == (height - 1)))
+                if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
                 {
                     touchesEdge = true;
                 }
@@ -103,13 +103,13 @@ public static partial class Rooms
                 {
                     var nx = x + dx;
                     var ny = y + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
                     {
                         continue;
                     }
                     var n = (ny * width) + nx;
                     var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
-                    if ((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE) || Js.T(Grids.isWindow(edge)))
+                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
                     }
@@ -166,7 +166,7 @@ public static partial class Rooms
 
     public static double labelAt(SimState state, int x, int y)
     {
-        if ((x < 0) || (y < 0) || (x >= state.grid.width) || (y >= state.grid.height))
+        if ((((x < 0) || (y < 0)) || (x >= state.grid.width)) || (y >= state.grid.height))
         {
             return NOT_FLOOR;
         }
@@ -322,7 +322,7 @@ public static partial class Rooms
         {
             return rooms.graveyard;
         }
-        if ((kind == "weapon") || (kind == "gun") || (kind == "ammo") && (rooms.armory.size > 0))
+        if ((((kind == "weapon") || (kind == "gun")) || (kind == "ammo")) && (rooms.armory.size > 0))
         {
             return rooms.armory;
         }
@@ -349,7 +349,7 @@ public static partial class Rooms
             {
                 var nx = x + dx;
                 var ny = y + dy;
-                if ((nx >= 0) && (ny >= 0) && (nx < width) && (ny < height))
+                if ((((nx >= 0) && (ny >= 0)) && (nx < width)) && (ny < height))
                 {
                     out_1.push((ny * width) + nx);
                 }
@@ -403,7 +403,7 @@ public static partial class Rooms
                 var i = region[Js.Idx(head)]!;
                 var x = i % width;
                 var y = JsMath.floor(((double)(i) / (width)));
-                if ((x == 0) || (y == 0) || (x == (width - 1)) || (y == (height - 1)))
+                if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
                 {
                     outdoors = true;
                 }
@@ -411,13 +411,13 @@ public static partial class Rooms
                 {
                     var nx = x + dx;
                     var ny = y + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
                     {
                         continue;
                     }
                     var n = (ny * width) + nx;
                     var edge = grid.edges[Js.Idx(Grids.edgeBetween(grid, x, y, nx, ny))] ?? Grids.EDGE_NONE;
-                    if ((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE) || Js.T(Grids.isWindow(edge)))
+                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Js.T(Grids.isWindow(edge)))
                     {
                         continue;
                     }

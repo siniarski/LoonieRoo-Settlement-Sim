@@ -199,7 +199,7 @@ public static partial class Zombies
         var groups = JsMath.ceil(((double)(count) / (size)));
         var interval = JsMath.floor(((double)(Time.NIGHT_TICKS) / (groups)));
         var t = Time.ticksIntoNight(tick) - JsMath.floor(((double)(interval) / (2)));
-        if ((t < 0) || ((t % interval) != 0) || (((double)(t) / (interval)) >= groups))
+        if (((t < 0) || ((t % interval) != 0)) || (((double)(t) / (interval)) >= groups))
         {
             return 0;
         }
@@ -248,7 +248,7 @@ public static partial class Zombies
         var night = Time.nightNumber(state.tick)!;
         if (Time.ticksIntoNight(state.tick) == 0)
         {
-            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night) * (Js.T(state.harsh) ? groupShare(state.survivors.length) : 1))));
+            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night)) * (Js.T(state.harsh) ? groupShare(state.survivors.length) : 1))));
             var siege = EndgameMod.siegeFactor(state, night) > 1;
             Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(Js.T(siege) ? " (a SIEGE night)" : "")}");
         }
@@ -271,14 +271,14 @@ public static partial class Zombies
         pushApart(state);
         foreach (var z in Js.Iter(state.zombies))
         {
-            if ((z.kind == "static") && Js.T(z.heading) && (Space.manhattan(z.pos, z.heading) <= 1))
+            if (((z.kind == "static") && Js.T(z.heading)) && (Space.manhattan(z.pos, z.heading) <= 1))
             {
                 z.heading = null;
             }
         }
         bool gone(Zombie z)
         {
-            return (z.kind == "herd") && Js.T(z.heading) && (Space.manhattan(z.pos, z.heading) <= 1) && !Js.T(z.move);
+            return (((z.kind == "herd") && Js.T(z.heading)) && (Space.manhattan(z.pos, z.heading) <= 1)) && !Js.T(z.move);
         }
         if (state.zombies.some(gone))
         {
@@ -292,7 +292,7 @@ public static partial class Zombies
         var lamps = Power.litLamps(state);
         bool open(int x, int y)
         {
-            return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.survivors.some((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) < SPAWN_MIN_DISTANCE) && !lamps.some((l) => Space.manhattan(l, new Point { x = Js.I(x), y = Js.I(y) }) < Power.LAMP_DETER);
+            return (((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.survivors.some((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) < SPAWN_MIN_DISTANCE)) && !lamps.some((l) => Space.manhattan(l, new Point { x = Js.I(x), y = Js.I(y) }) < Power.LAMP_DETER);
         }
         if ((state.survivors.length > 0) && state.grid.explored.includes(0))
         {
@@ -344,7 +344,7 @@ public static partial class Zombies
         {
             bool free(int x, int y)
             {
-                return (Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS) && !state.zombies.some((z_1) => (z_1.pos.x == x) && (z_1.pos.y == y));
+                return ((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.zombies.some((z_1) => (z_1.pos.x == x) && (z_1.pos.y == y));
             }
             var q = Space.nearestTile(state.grid, p, free) ?? p;
             var z = addZombie(state, q.x, q.y, health);
@@ -506,7 +506,7 @@ public static partial class Zombies
             var step = Hordes.hordeStep(state, z, horde);
             z.path = Js.T(step) ? [step] : [];
         }
-        else if ((state.tick >= z.nextThinkTick) || (z.path.length == 0) && (budget.plans > 0))
+        else if (((state.tick >= z.nextThinkTick) || (z.path.length == 0)) && (budget.plans > 0))
         {
             budget.plans -= 1;
             plan(state, z);
@@ -533,7 +533,7 @@ public static partial class Zombies
             {
                 if (z.cooldown == 0)
                 {
-                    if ((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE) && Js.T(FireMod.ignite(state, next.x, next.y)))
+                    if (((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE)) && Js.T(FireMod.ignite(state, next.x, next.y)))
                     {
                         Events.logEvent(state, $"Raiders firebombed the {Js.Str(Grids.getTile(state.grid, next.x, next.y))} at ({Js.Str(next.x)}, {Js.Str(next.y)})");
                     }
@@ -563,7 +563,7 @@ public static partial class Zombies
     {
         var dx = to.x - z.at.x;
         var dy = to.y - z.at.y;
-        if ((dx * dx) + (dy * dy) <= (speed * speed))
+        if (((dx * dx) + (dy * dy)) <= (speed * speed))
         {
             z.at = new Point { x = Js.I(to.x), y = Js.I(to.y) };
             return true;
@@ -621,7 +621,7 @@ public static partial class Zombies
         var err = dx + dy;
         for (; ; )
         {
-            if (!Js.T(Pathfinding.isPassable(state.grid, x, y, "zombie")) && !(x == b.x) && (y == b.y))
+            if (!Js.T(Pathfinding.isPassable(state.grid, x, y, "zombie")) && !((x == b.x) && (y == b.y)))
             {
                 return false;
             }
@@ -696,7 +696,7 @@ public static partial class Zombies
                 {
                     var nx = z.pos.x + dx;
                     var ny = z.pos.y + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
                     {
                         continue;
                     }
@@ -727,7 +727,7 @@ public static partial class Zombies
                 {
                     var nx = z.pos.x + dx;
                     var ny = z.pos.y + dy;
-                    if ((nx < 0) || (ny < 0) || (nx >= width) || (ny >= height))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
                     {
                         continue;
                     }
@@ -927,7 +927,7 @@ public static partial class Zombies
     {
         foreach (var z in Js.Iter(state.zombies))
         {
-            var onIt = Js.T(Space.samePoint(z.pos, tile)) || (z.move != null) && Js.T(Space.samePoint(z.move.to, tile));
+            var onIt = Js.T(Space.samePoint(z.pos, tile)) || ((z.move != null) && Js.T(Space.samePoint(z.move.to, tile)));
             if (!Js.T(onIt))
             {
                 continue;

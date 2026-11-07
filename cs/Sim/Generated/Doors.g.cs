@@ -19,7 +19,7 @@ public static partial class Doors
         if (Js.T(from))
         {
             var e = Grids.edgeBetween(state.grid, from.x, from.y, x, y);
-            if ((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR) && !Js.T(Grids.edgeIsOpen(state.grid, e)) && (Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))
+            if ((((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_DOOR)) && !Js.T(Grids.edgeIsOpen(state.grid, e))) && (Js.T(hasKey) || !state.grid.edgeLocked.includes(e)))
             {
                 state.grid.edgeOpen.push(e);
                 state.grid.edgePassing.push(e);
@@ -138,7 +138,7 @@ public static partial class Doors
         {
             var px = JsMath.max(x, JsMath.min(x1, c.x));
             var py = JsMath.max(y, JsMath.min(y1, c.y));
-            return (JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2)) < (r * r);
+            return ((JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2))) < (r * r);
         });
             if (Js.T(inDoorway))
             {

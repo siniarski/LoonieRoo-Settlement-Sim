@@ -44,7 +44,7 @@ public static partial class Sight
     public static bool opaque(Grid grid, int x, int y)
     {
         var t = grid.tiles[Js.Idx(Grids.tileIndex(grid, x, y))];
-        return (t == "wall") || (t == "barricade") || (t == "door") && !Js.T(Grids.isOpen(grid, x, y));
+        return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Js.T(Grids.isOpen(grid, x, y)));
     }
     public static bool opaque(Grid grid, double x, double y) => opaque(grid, (int)x, (int)y);
 
@@ -94,7 +94,7 @@ public static partial class Sight
             {
                 return false;
             }
-            if ((x != b.x) || (y != b.y) && Js.T(opaque(grid, x, y)))
+            if (((x != b.x) || (y != b.y)) && Js.T(opaque(grid, x, y)))
             {
                 return false;
             }
@@ -110,7 +110,7 @@ public static partial class Sight
         {
             for (var x = JsMath.max(0, p.x - r); x <= JsMath.min(grid.width - 1, p.x + r); x++)
             {
-                if ((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2)) > (r * r) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x))))
+                if ((((JsMath.pow((x - p.x), 2)) + (JsMath.pow((y - p.y), 2))) > (r * r)) || Js.T(Js.T(skip?.Invoke((y * grid.width) + x))))
                 {
                     continue;
                 }
@@ -146,7 +146,7 @@ public static partial class Sight
     public static double heardFrom(SimState state, Survivor s)
     {
         var c = (state.control?.survivorId == s.id) ? state.control : null;
-        var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (c.dx == 0) && (c.dy == 0) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD));
+        var @base = !Js.T(c) ? (Js.T(s.move) ? WALK_HEARD : 0) : (((c.dx == 0) && (c.dy == 0)) ? 0 : (Js.T(c.sneaking) ? SNEAK_HEARD : (Js.T(c.running) ? RUN_HEARD : WALK_HEARD)));
         return Js.T(Skills.hasTrait(s, "graceful")) ? JsMath.floor(((double)(@base) / (2))) : (Js.T(Skills.hasTrait(s, "clumsy")) ? JsMath.round(((double)((@base * 3)) / (2))) : @base);
     }
 
@@ -154,7 +154,7 @@ public static partial class Sight
     public static bool zombieSees(SimState state, Point z, Point s, bool sneaking = false)
     {
         var r = ((double)((Js.T(Time.isNight(state.tick)) ? ZOMBIE_NIGHT_SIGHT : ZOMBIE_SIGHT)) / ((Js.T(sneaking) ? 2 : 1)));
-        if ((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2)) > (r * r))
+        if (((JsMath.pow((z.x - s.x), 2)) + (JsMath.pow((z.y - s.y), 2))) > (r * r))
         {
             return false;
         }

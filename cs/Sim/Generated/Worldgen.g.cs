@@ -40,7 +40,7 @@ public static partial class Worldgen
     /// <summary>A country road or town street on this tile.</summary>
     public static bool isRoad(Layout l, int x, int y)
     {
-        return (x >= 0) && (y >= 0) && (x < l.size) && (y < l.size) && (l.plan.roadMask[Js.Idx((y * l.size) + x)] != 0);
+        return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && (l.plan.roadMask[Js.Idx((y * l.size) + x)] != 0);
     }
     public static bool isRoad(Layout l, double x, double y) => isRoad(l, (int)x, (int)y);
 
@@ -124,12 +124,12 @@ public static partial class Worldgen
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if ((!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y))) || Js.T(onLot(l, x, y)) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)))
+                if (((!Js.T(Grids.inBounds(state.grid, x, y)) || Js.T(isRoad(l, x, y))) || Js.T(onLot(l, x, y))) || Js.T(NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)))
                 {
                     continue;
                 }
                 var i = Grids.tileIndex(state.grid, x, y);
-                if ((state.grid.tiles[Js.Idx(i)] == "floor") && (state.grid.ground[Js.Idx(i)] == FOREST) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
+                if (((state.grid.tiles[Js.Idx(i)] == "floor") && (state.grid.ground[Js.Idx(i)] == FOREST)) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
                 {
                     FurnitureMod.addFurniture(state, "tree", x, y);
                 }
@@ -163,9 +163,9 @@ public static partial class Worldgen
             for (var x = x0; x <= (x0 + 7); x++)
             {
                 ground(state, x, y, "dirt");
-                if ((x == x0) || (x == (x0 + 7)) || (y == y0) || (y == (y0 + 5)))
+                if ((((x == x0) || (x == (x0 + 7))) || (y == y0)) || (y == (y0 + 5)))
                 {
-                    Grids.setTile(state.grid, x, y, (x == (x0 + 3)) && (y == (y0 + 5)) ? "door" : "wall");
+                    Grids.setTile(state.grid, x, y, ((x == (x0 + 3)) && (y == (y0 + 5))) ? "door" : "wall");
                 }
             }
         }
@@ -197,7 +197,7 @@ public static partial class Worldgen
         {
             Items.spawnItem(state, "food", (sx + 3) + (i % 4), (sy + 3) + JsMath.floor(((double)(i) / (4))));
         }
-        var c = Space.nearestTile(state.grid, new Point { x = Js.I(sx + 5), y = Js.I(sy + 1) }, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        var c = Space.nearestTile(state.grid, new Point { x = Js.I(sx + 5), y = Js.I(sy + 1) }, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
         if (Js.T(c))
         {
             FurnitureMod.addFurniture(state, "collector", c.x, c.y).loot = START_WATER;
@@ -294,7 +294,7 @@ public static partial class Worldgen
             {
                 for (var x = p.x - r; x <= (p.x + r); x++)
                 {
-                    if ((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y)))
+                    if (((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Js.T(Grids.inBounds(state.grid, x, y))) && Js.T(accept(x, y)))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }
@@ -325,7 +325,7 @@ public static partial class Worldgen
         var angle = (Hash.hashRoll(seed, 0x7a0c) * JsMath.PI) * 2;
         Point near = new Point { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
         Point clamped = new Point { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
-        var spot = Space.nearestTile(state.grid, clamped, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
+        var spot = Space.nearestTile(state.grid, clamped, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
         var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))));
         if (Js.T(park))
         {
