@@ -13,7 +13,11 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.sim.json",
     "check": "npm run typecheck && npm test",
-    "harness": "vitest run --config vitest.harness.config.ts"
+    "harness": "vitest run --config vitest.harness.config.ts",
+    "check:cs": "node cs/tools/gen-state.mjs && node cs/tools/ts2cs.mjs && dotnet build cs/LoonieRoo.slnx -c Release -v q -nologo && dotnet build godot/LoonieRoo.csproj -v q -nologo && dotnet test cs/Sim.Tests -c Release --no-build",
+    "parity": "npm run harness -- parity && dotnet run --project cs/Parity -c Release --no-build -- cs/Parity/data",
+    "selftest": "node cs/tools/selftest.mjs",
+    "check:all": "npm run check && npm run check:cs && npm run parity && npm run selftest"
   },
   "devDependencies": {
     "playwright-core": "^1.65.0",
