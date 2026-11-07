@@ -128,8 +128,8 @@ public static partial class Tick
     {
         Leisure.updateBreakdown(state, s);
         Needs.interruptForNeeds(state, s);
-        Jobs.interruptScouting(state, s);
-        Jobs.interruptForFight(state, s);
+        Work.interruptScouting(state, s);
+        Work.interruptForFight(state, s);
         Survivors.updateMovement(state, s);
         if (Js.T(s.move) || Js.T(s.goal))
         {
@@ -143,7 +143,7 @@ public static partial class Tick
         }
         else if ((!Js.T(s.breakdown) && !Js.T(Orders.keepOrder(state, s))) && !Js.T(Leisure.updateLeisure(state, s)) && !Js.T(Books.updateReading(state, s)))
         {
-            Jobs.updateWork(state, s);
+            Work.updateWork(state, s);
         }
     }
 

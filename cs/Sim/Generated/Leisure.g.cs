@@ -68,13 +68,13 @@ public static partial class Leisure
             s.nextSeekTick = state.tick + Jobs.IDLE_RETRY_TICKS;
             var was = s.leisure;
             s.leisure = null;
-            if (Js.T(Jobs.seekJob(state, s)))
+            if (Js.T(JobChoice.seekJob(state, s)))
             {
                 return true;
             }
             s.leisure = was;
         }
-        var spot = new() { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
+        Point spot = new() { x = Js.I(s.leisure.x), y = Js.I(s.leisure.y) };
         if (!Js.T(spotFree(state, s, spot, s.leisure.at)))
         {
             s.leisure = null;
@@ -132,7 +132,7 @@ public static partial class Leisure
         {
             foreach (var i in Js.Iter(all[Js.Idx(index)]!.tiles))
             {
-                var p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                Point p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(spotFree(state, s, p, at)))
                 {
                     spots.push(p);

@@ -44,7 +44,7 @@ public static partial class Noise
             {
                 continue;
             }
-            var to = new() { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
+            Point to = new() { x = Js.I(clamp((2 * p.x) - h.x, width)), y = Js.I(clamp((2 * p.y) - h.y, height)) };
             if ((to.x == h.to.x) && (to.y == h.to.y))
             {
                 continue;
@@ -54,7 +54,7 @@ public static partial class Noise
         }
     }
 
-    public static /*TODO return type*/object clamp(double v, double size)
+    public static double clamp(double v, double size)
     {
         return JsMath.max(0, JsMath.min(size - 1, v));
     }

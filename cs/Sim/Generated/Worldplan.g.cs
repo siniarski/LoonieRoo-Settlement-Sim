@@ -106,10 +106,11 @@ public static partial class Worldplan
         return new() { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk };
     }
 
-    public static /*TODO return type*/object dist(int ax, int ay, int bx, int by)
+    public static double dist(int ax, int ay, int bx, int by)
     {
         return JsMath.sqrt((JsMath.pow((ax - bx), 2)) + (JsMath.pow((ay - by), 2)));
     }
+    public static double dist(double ax, double ay, double bx, double by) => dist((int)ax, (int)ay, (int)bx, (int)by);
 
     /// <summary>Roads between towns (and the start), and a few out to the map's edge.</summary>
     public static List<List<Point>> layRoads(Nature n, List<Town> towns, List<Street> streets, byte[] mask)
@@ -171,7 +172,7 @@ public static partial class Worldplan
         ordered.forEach((s, si) =>
         {
             var t = towns[Js.Idx(s.town)]!;
-            foreach (var side in Js.Iter([-1, 1]))
+            foreach (var side in Js.Iter((List<int>)[-1, 1]))
             {
                 var p = Js.T(s.eastWest) ? s.x0 : s.y0;
                 var end = Js.T(s.eastWest) ? (s.x1 + 1) : (s.y1 + 1);
@@ -254,7 +255,7 @@ public static partial class Worldplan
                     var along = JsMath.abs(b.x - a.x) >= JsMath.abs(b.y - a.y);
                     var cx = JsMath.round(b.x);
                     var cy = JsMath.round(b.y);
-                    foreach (var side in Js.Iter([-1, 1]))
+                    foreach (var side in Js.Iter((List<int>)[-1, 1]))
                     {
                         if (r(side + 2) > 0.7)
                         {

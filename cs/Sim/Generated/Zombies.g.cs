@@ -82,6 +82,7 @@ public static partial class Zombies
         edited(state.zombies);
         return z;
     }
+    public static Zombie addZombie(SimState state, double x, double y, double? health = null, string kind = "night") => addZombie(state, (int)x, (int)y, health, kind);
 
     /// <summary>How many times each zombie list has been added to or taken from in place (for zombiesWithin's buckets).</summary>
     public static readonly JsMap<List<Zombie>, double> edits = new JsMap<List<Zombie>, double>();
@@ -206,12 +207,14 @@ public static partial class Zombies
         }
         return JsMath.min(size, count - (((double)(t) / (interval)) * size));
     }
+    public static double spawnsAt(double tick, double? total = default) => spawnsAt((int)tick, total);
 
     /// <summary>The first tick of a night.</summary>
     public static bool nightFallsNow(int tick)
     {
         return (Time.nightNumber(tick) != null) && (Time.ticksIntoNight(tick) == 0);
     }
+    public static bool nightFallsNow(double tick) => nightFallsNow((int)tick);
 
     /// <summary>Raiders open unlocked doors; zombies don't open any; crawlers get under barricades.</summary>
     public static string moverOf(Zombie z)
@@ -223,6 +226,7 @@ public static partial class Zombies
     {
         return spawnsAt(tick) > 0;
     }
+    public static bool isSpawnTick(double tick) => isSpawnTick((int)tick);
 
     /// <summary>Spawning, the dawn retreat, and every zombie's move or attack. Runs first each tick.</summary>
     public static void updateZombies(SimState state)
@@ -303,7 +307,7 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                var near = new() { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + dx))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + dy))) };
+                Point near = new() { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + dx))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + dy))) };
                 var p = Space.nearestTile(state.grid, near, (x, y) => !Js.T(Fog.isExplored(state, x, y)) && Js.T(open(x, y)));
                 if (Js.T(p) && (Space.manhattan(p, near) <= FRONTIER_MAX))
                 {
@@ -397,7 +401,7 @@ public static partial class Zombies
                     var c = cells.get(((t.y + dy) * width) + x);
                     if (Js.T(c))
                     {
-                        found.push([.. c]);
+                        found.pushAll(c);
                     }
                 }
             }
@@ -674,7 +678,7 @@ public static partial class Zombies
             foreach (var s in Js.Iter(list))
             {
                 var k = (s.pos.y * width) + s.pos.x;
-                var entry = new() { s = s, order = order++ };
+                PushApartEntry entry = new() { s = s, order = order++ };
                 var at = others.get(k);
                 if (Js.T(at))
                 {
@@ -732,7 +736,7 @@ public static partial class Zombies
                     var at = others.get((ny * width) + nx);
                     if (Js.T(at))
                     {
-                        near.push([.. at]);
+                        near.pushAll(at);
                     }
                 }
             }

@@ -29,4 +29,5 @@ public static partial class Rest
     {
         return REST_MAX - JsMath.floor(((double)((REST_MAX * 15) * (index % 4)) / (100)));
     }
+    public static double initialRest(double index) => initialRest((int)index);
 }

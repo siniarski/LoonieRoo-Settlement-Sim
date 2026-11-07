@@ -38,6 +38,7 @@ public static partial class Relationships
     {
         of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, opinion(of, about) + by));
     }
+    public static void adjust(Survivor of, Survivor about, double by) => adjust(of, about, (int)by);
 
     /// <summary>Every BOND_EVERY ticks: survivors near each other, both awake, warm to each other.</summary>
     public static void updateRelationships(SimState state)
@@ -79,7 +80,7 @@ public static partial class Relationships
             Events.logEvent(state, $"{Js.Str(s.name)} lashed out at {Js.Str(target.name)}");
             return;
         }
-        foreach (var who in Js.Iter([s, target]))
+        foreach (var who in Js.Iter((List<int>)[s, target]))
         {
             who.health = JsMath.max(1, who.health - FIGHT_DAMAGE);
             who.lastHurtBy = "a fight";

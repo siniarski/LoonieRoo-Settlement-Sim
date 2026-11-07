@@ -36,7 +36,7 @@ public static partial class Wellbeing
 
     public const int COMFORTABLE_MOOD = 8;
 
-    public static /*TODO return type*/object clamp(double n)
+    public static double clamp(double n)
     {
         return JsMath.max(0, JsMath.min(NEED_MAX, n));
     }
@@ -63,6 +63,7 @@ public static partial class Wellbeing
     {
         s.social = clamp(s.social + by);
     }
+    public static void socialise(Survivor s, double by) => socialise(s, (int)by);
 
     /// <summary>How good a night's sleep was, where they lie now (bedId: the bed, or null for the floor).</summary>
     public static double nightScore(SimState state, Survivor s, string? bedId)

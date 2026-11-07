@@ -31,6 +31,7 @@ public static partial class Fog
     {
         return Js.T(Grids.inBounds(state.grid, x, y)) && (state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] == 1);
     }
+    public static bool isExplored(SimState state, double x, double y) => isExplored(state, (int)x, (int)y);
 
     /// <summary>Reveals a whole circle, walls or not (the camp at the start).</summary>
     public static void revealAround(SimState state, Point p, double? r = null)
@@ -68,6 +69,7 @@ public static partial class Fog
         state.pointsOfInterest.push(new() { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), label = "ruin with crates" });
         Events.logEvent(state, $"Found a ruin with crates at ({Js.Str(x)}, {Js.Str(y)})");
     }
+    public static void noteFind(SimState state, double x, double y) => noteFind(state, (int)x, (int)y);
 
     /// <summary>Drops markers whose crates have all been searched.</summary>
     public static void reconcilePointsOfInterest(SimState state)
@@ -85,6 +87,7 @@ public static partial class Fog
     {
         return Js.T(Time.isNight(tick)) || (Time.hourOf(tick) >= SCOUT_HOME_HOUR);
     }
+    public static bool scoutingOver(double tick) => scoutingOver((int)tick);
 
     /// <summary>What each survivor last looked at: skip the look when nothing it depends on has changed.</summary>
     public static readonly JsMap<SimState, JsRecord<string>> looked = new JsMap<SimState, JsRecord<string>>();

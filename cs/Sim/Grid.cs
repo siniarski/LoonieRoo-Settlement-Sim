@@ -57,7 +57,7 @@ public sealed class Grid
     public List<int> edgeBoarded = new();
 }
 
-public static class Grids
+public static partial class Grids
 {
     public const string FLOOR = "floor", WALL = "wall", DOOR = "door", WATER = "water", BARRICADE = "barricade";
 

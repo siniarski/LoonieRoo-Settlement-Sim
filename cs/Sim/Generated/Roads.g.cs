@@ -23,11 +23,11 @@ public static partial class Roads
         {
             return edges;
         }
-        /*TODO return type*/object d(double a, double b)
+        double d(double a, double b)
         {
             return JsMath.sqrt((JsMath.pow((nodes[Js.Idx(a)]!.x - nodes[Js.Idx(b)]!.x), 2)) + (JsMath.pow((nodes[Js.Idx(a)]!.y - nodes[Js.Idx(b)]!.y), 2)));
         }
-        var inTree = [0];
+        List<int> inTree = [0];
         var rest = nodes.map((_, i) => i).slice(1);
         while (rest.length > 0)
         {
@@ -63,7 +63,7 @@ public static partial class Roads
     public static List<Point>? route(Nature n, float[] cost, Point from, Point to)
     {
         var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
-        /*TODO return type*/object cell(Point p)
+        double cell(Point p)
         {
             return (JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL))))) * N) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
         }

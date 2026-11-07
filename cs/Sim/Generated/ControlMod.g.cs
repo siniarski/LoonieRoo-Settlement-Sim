@@ -74,6 +74,7 @@ public static partial class ControlMod
         c.facing = new() { x = Js.I((12 * JsMath.abs(x)) >= (5 * big) ? JsMath.sign(x) : 0), y = Js.I((12 * JsMath.abs(y)) >= (5 * big) ? JsMath.sign(y) : 0) };
         return null;
     }
+    public static string? aim(Control c, double x, double y) => aim(c, (int)x, (int)y);
 
     /// <summary>Which way a swing goes: the aim, else the facing.</summary>
     public static Point swingDir(Control c)
@@ -139,7 +140,7 @@ public static partial class ControlMod
         var busy = c.busy!;
         if (busy.what == "sleep")
         {
-            return sleepTick(state, s, c, busy);
+            { sleepTick(state, s, c, busy); return; }
         }
         if (!Js.T(Time.slowTick(state.tick)))
         {
@@ -245,7 +246,7 @@ public static partial class ControlMod
         List<string> found = [];
         while (crate.loot > 0)
         {
-            var item = Difficulty.spawnFind(state, Jobs.scavengeFind(Rng.random(state), crate.table), s.pos.x, s.pos.y);
+            var item = Difficulty.spawnFind(state, Work.scavengeFind(Rng.random(state), crate.table), s.pos.x, s.pos.y);
             item.pos = null;
             item.inside = crate.id;
             crate.loot -= 1;
@@ -357,7 +358,7 @@ public static partial class ControlMod
             var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + (Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard"));
             return Js.T(Residents.hitResident(state, person, blow, s)) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
-        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (a.pos.x == target.x) && (a.pos.y == target.y) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE) && Js.T(Jobs.clearShot(state.grid, s.pos, a.pos))) : null);
+        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (a.pos.x == target.x) && (a.pos.y == target.y) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE) && Js.T(Work.clearShot(state.grid, s.pos, a.pos))) : null);
         if (Js.T(deer))
         {
             var shot = !Js.T(Motion.inReach(deer, s, Motion.SWING_REACH));
@@ -371,7 +372,7 @@ public static partial class ControlMod
         }
         var gun = Weapons.loadedGun(state, s);
         var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
-        if ((Js.T(gun) && Js.T(shotAt)) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE) && Js.T(Jobs.clearShot(state.grid, s.pos, shotAt.pos)))
+        if ((Js.T(gun) && Js.T(shotAt)) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE) && Js.T(Work.clearShot(state.grid, s.pos, shotAt.pos)))
         {
             var blocking = inTheWay(state, s, shotAt.pos);
             if (Js.T(blocking))
@@ -407,7 +408,7 @@ public static partial class ControlMod
         var steps = (face.x != 0) && (face.y != 0) ? [new() { x = Js.I(face.x), y = Js.I(0) }, new() { x = Js.I(0), y = Js.I(face.y) }] : [face];
         foreach (var d in Js.Iter(steps))
         {
-            var to = new() { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
+            Point to = new() { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
             var e = Grids.edgeBetween(state.grid, from.x, from.y, to.x, to.y);
             if ((e >= 0) && (state.grid.edges[Js.Idx(e)] == Grids.EDGE_WINDOW) && !state.grid.edgeBoarded.includes(e))
             {

@@ -82,7 +82,7 @@ public static partial class SuccessionMod
         var height = __d0.height;
         var angle = (Hash.hashRoll(state.tick, near.x, near.y) * JsMath.PI) * 2;
         var dist = ANEW_MIN + (Hash.hashRoll(state.tick, near.y, near.x) * ANEW_SPREAD);
-        var aim = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
+        Point aim = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, aim);
         Point? spot = null;
         for (var r = 0; (r <= 20) && !Js.T(spot); r++)

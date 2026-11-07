@@ -46,6 +46,7 @@ public static partial class Sight
         var t = grid.tiles[Js.Idx(Grids.tileIndex(grid, x, y))];
         return (t == "wall") || (t == "barricade") || (t == "door") && !Js.T(Grids.isOpen(grid, x, y));
     }
+    public static bool opaque(Grid grid, double x, double y) => opaque(grid, (int)x, (int)y);
 
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
     public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
@@ -62,6 +63,7 @@ public static partial class Sight
         var viaY = (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by))) && !Js.T(opaque(grid, ax, by));
         return Js.T(viaX) || Js.T(viaY);
     }
+    public static bool stepSeen(Grid grid, double ax, double ay, double bx, double by) => stepSeen(grid, (int)ax, (int)ay, (int)bx, (int)by);
 
     /// <summary>Can someone at `a` see `b`? (The far end may be a wall: you see the wall.)</summary>
     public static bool sightLine(Grid grid, Point a, Point b)

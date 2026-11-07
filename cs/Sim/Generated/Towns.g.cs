@@ -219,7 +219,7 @@ public static partial class Towns
             {
                 var bx = x + (dx * off);
                 var by = y + (dy * off);
-                foreach (var side in Js.Iter([1, -1]))
+                foreach (var side in Js.Iter((List<int>)[1, -1]))
                 {
                     if (r(k++) > odds)
                     {

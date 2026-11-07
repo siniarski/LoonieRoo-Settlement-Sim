@@ -108,6 +108,7 @@ public static partial class Vehicles
         state.vehicles.push(v);
         return v;
     }
+    public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double? fuel = null, double? health = null, string kind = "car") => addVehicle(state, (int)x, (int)y, heading, fuel, health, kind);
 
     /// <summary>The car this survivor is driving, if any.</summary>
     public static Vehicle? vehicleOf(SimState state, Survivor s)
@@ -224,15 +225,16 @@ public static partial class Vehicles
         s.at = Js.Clone(v.at);
         s.pos = Js.Clone(v.pos);
     }
+    public static void drive(SimState state, Survivor s, double dx, double dy) => drive(state, s, (int)dx, (int)dy);
 
     public static void move(SimState state, Survivor s, Vehicle v)
     {
         var (cx, cy) = HEADING_DIRS[Js.Idx(v.heading)]!;
-        var want = new() { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
+        Point want = new() { x = Js.I(JsMath.trunc(((double)((cx * v.speed)) / (256)))), y = Js.I(JsMath.trunc(((double)((cy * v.speed)) / (256)))) };
         var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
         var to = (into.x != v.pos.x) || (into.y != v.pos.y) && Js.T(blocked(state, into)) ? v.at : slid;
-        var got = new() { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
+        Point got = new() { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
         var lost = (Motion.distance2(want, got) * 9) > (want.x * want.x) + (want.y * want.y);
@@ -343,6 +345,7 @@ public static partial class Vehicles
     {
         return (dx > 0) ? 0 : (dy > 0) ? 8 : ((dx < 0) ? 16 : 24);
     }
+    public static double headingOf(double dx, double dy) => headingOf((int)dx, (int)dy);
 
     /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
     public static bool parkable(SimState state, Point p)

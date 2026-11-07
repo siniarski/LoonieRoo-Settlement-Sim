@@ -58,7 +58,7 @@ public static partial class Residents
         for (var i = here.length; i < want; i++)
         {
             var id = $"r{Js.Str(state.nextId++)}";
-            var spot = new() { x = Js.I((box.x0 + 1) + (i % JsMath.max(1, (box.x1 - box.x0) - 1))), y = Js.I((box.y1 - 1) - (JsMath.floor(((double)(i) / (JsMath.max(1, (box.x1 - box.x0) - 1)))) % 3)) };
+            Point spot = new() { x = Js.I((box.x0 + 1) + (i % JsMath.max(1, (box.x1 - box.x0) - 1))), y = Js.I((box.y1 - 1) - (JsMath.floor(((double)(i) / (JsMath.max(1, (box.x1 - box.x0) - 1)))) % 3)) };
             var where = Js.T(Grids.inBounds(state.grid, spot.x, spot.y)) ? spot : new() { x = Js.I(n.x), y = Js.I(n.y) };
             state.residents.push(/*TODO object spread*/Js.Spread(Motion.placedAt(where), new() { id = id, settlementId = n.id, name = NAMES[Js.Idx(Hash.idNumber(id) % NAMES.length)]!, pos = where, move = null, path = [], health = RESIDENT_HEALTH, cooldown = 0, nextThinkTick = 0 }));
         }
@@ -115,7 +115,7 @@ public static partial class Residents
         {
             return Hash.hashRoll(Hash.idNumber(r.id), state.tick, salt);
         }
-        var to = new() { x = Js.I((box.x0 + 1) + JsMath.floor(roll(1) * ((box.x1 - box.x0) - 1))), y = Js.I((box.y0 + 2) + JsMath.floor(roll(2) * JsMath.max(1, (box.y1 - box.y0) - 2))) };
+        Point to = new() { x = Js.I((box.x0 + 1) + JsMath.floor(roll(1) * ((box.x1 - box.x0) - 1))), y = Js.I((box.y0 + 2) + JsMath.floor(roll(2) * JsMath.max(1, (box.y1 - box.y0) - 2))) };
         if (state.residents.some((o) => (o != r) && (o.pos.x == to.x) && (o.pos.y == to.y)))
         {
             return [];
@@ -126,7 +126,7 @@ public static partial class Residents
     /// <summary>An enemy's resident goes for the nearest of your people in sight. Returns true if it took the tick.</summary>
     public static bool attack(SimState state, Resident r, Settlement n)
     {
-        /*TODO return type*/object near(Survivor s)
+        double near(Survivor s)
         {
             return JsMath.max(JsMath.abs(s.pos.x - r.pos.x), JsMath.abs(s.pos.y - r.pos.y));
         }

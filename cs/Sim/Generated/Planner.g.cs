@@ -57,6 +57,7 @@ public static partial class Planner
         }
         return planHousing(state, room, notes);
     }
+    public static PlannerPlan planFurnish(SimState state, double x, double y) => planFurnish(state, (int)x, (int)y);
 
     /// <summary>Seats around one table in the open (its four sides).</summary>
     public const int SEATS_PER_TABLE = 4;
@@ -200,7 +201,7 @@ public static partial class Planner
         List<FreeSpotsCandidates> candidates = [];
         foreach (var i in Js.Iter(room.tiles))
         {
-            var p = new() { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
+            Point p = new() { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
             if (taken.has($"{Js.Str(p.x)},{Js.Str(p.y)}"))
             {
                 continue;

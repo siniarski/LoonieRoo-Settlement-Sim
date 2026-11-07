@@ -41,164 +41,163 @@ public static partial class ScenarioMod
             Designations.addBlueprint(state, x, y, planned);
             return true;
         }
-        switch (@char)
+        var __sw1 = @char;
+        if (__sw1 == ENTITY_CHARS["survivor"])
         {
-            case ENTITY_CHARS["survivor"]:
-                {
-                    Survivors.addSurvivor(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["wood"]:
-                {
-                    Items.spawnItem(state, "wood", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["food"]:
-                {
-                    Items.spawnItem(state, "food", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["bandage"]:
-                {
-                    Items.spawnItem(state, "bandage", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["weapon"]:
-                {
-                    Items.spawnItem(state, "weapon", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["dirt"]:
-                {
-                    Grids.setDirty(state.grid, x, y, true);
-                    return true;
-                }
-            case ENTITY_CHARS["wallBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "wall");
-                    return true;
-                }
-            case ENTITY_CHARS["doorBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "door");
-                    return true;
-                }
-            case ENTITY_CHARS["bed"]:
-                {
-                    FurnitureMod.addFurniture(state, "bed", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["farmPlot"]:
-                {
-                    Farming.addPlot(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["wanderer"]:
-                {
-                    Wanderers.addWanderer(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["zombie"]:
-                {
-                    Zombies.addZombie(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["crate"]:
-                {
-                    FurnitureMod.addFurniture(state, "crate", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["tree"]:
-                {
-                    FurnitureMod.addFurniture(state, "tree", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["bedBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "bed");
-                    return true;
-                }
-            case ENTITY_CHARS["table"]:
-                {
-                    FurnitureMod.addFurniture(state, "table", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["tableBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "table");
-                    return true;
-                }
-            case ENTITY_CHARS["workbench"]:
-                {
-                    FurnitureMod.addFurniture(state, "workbench", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["trap"]:
-                {
-                    FurnitureMod.addFurniture(state, "trap", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["stove"]:
-                {
-                    FurnitureMod.addFurniture(state, "stove", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["barricadeBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "barricade");
-                    return true;
-                }
-            case ENTITY_CHARS["trapBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "trap");
-                    return true;
-                }
-            case ENTITY_CHARS["stoveBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "stove");
-                    return true;
-                }
-            case ENTITY_CHARS["meal"]:
-                {
-                    Items.spawnItem(state, "meal", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["medicine"]:
-                {
-                    Items.spawnItem(state, "medicine", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["deer"]:
-                {
-                    Animals.addDeer(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["dog"]:
-                {
-                    Dogs.addDog(state, x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["tower"]:
-                {
-                    FurnitureMod.addFurniture(state, "tower", x, y);
-                    return true;
-                }
-            case ENTITY_CHARS["towerBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "tower");
-                    return true;
-                }
-            case ENTITY_CHARS["workbenchBlueprint"]:
-                {
-                    Designations.addBlueprint(state, x, y, "workbench");
-                    return true;
-                }
-            default:
-                {
-                    return false;
-                }
+            Survivors.addSurvivor(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["wood"])
+        {
+            Items.spawnItem(state, "wood", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["food"])
+        {
+            Items.spawnItem(state, "food", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["bandage"])
+        {
+            Items.spawnItem(state, "bandage", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["weapon"])
+        {
+            Items.spawnItem(state, "weapon", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["dirt"])
+        {
+            Grids.setDirty(state.grid, x, y, true);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["wallBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "wall");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["doorBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "door");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["bed"])
+        {
+            FurnitureMod.addFurniture(state, "bed", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["farmPlot"])
+        {
+            Farming.addPlot(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["wanderer"])
+        {
+            Wanderers.addWanderer(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["zombie"])
+        {
+            Zombies.addZombie(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["crate"])
+        {
+            FurnitureMod.addFurniture(state, "crate", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["tree"])
+        {
+            FurnitureMod.addFurniture(state, "tree", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["bedBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "bed");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["table"])
+        {
+            FurnitureMod.addFurniture(state, "table", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["tableBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "table");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["workbench"])
+        {
+            FurnitureMod.addFurniture(state, "workbench", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["trap"])
+        {
+            FurnitureMod.addFurniture(state, "trap", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["stove"])
+        {
+            FurnitureMod.addFurniture(state, "stove", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["barricadeBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "barricade");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["trapBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "trap");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["stoveBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "stove");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["meal"])
+        {
+            Items.spawnItem(state, "meal", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["medicine"])
+        {
+            Items.spawnItem(state, "medicine", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["deer"])
+        {
+            Animals.addDeer(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["dog"])
+        {
+            Dogs.addDog(state, x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["tower"])
+        {
+            FurnitureMod.addFurniture(state, "tower", x, y);
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["towerBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "tower");
+            return true;
+        }
+        else if (__sw1 == ENTITY_CHARS["workbenchBlueprint"])
+        {
+            Designations.addBlueprint(state, x, y, "workbench");
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
+    public static bool placeEntity(SimState state, string @char, double x, double y) => placeEntity(state, @char, (int)x, (int)y);
 
     /// <summary>Builds the initial state (tick 0, empty log). Does not apply commands.</summary>
     public static SimState loadScenario(Scenario scenario)

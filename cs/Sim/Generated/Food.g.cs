@@ -33,4 +33,5 @@ public static partial class Food
     {
         return JsMath.floor(((double)((SATIETY_MAX * [100, 80, 60, 90][Js.Idx(index % 4)]!)) / (100)));
     }
+    public static double initialSatiety(double index) => initialSatiety((int)index);
 }

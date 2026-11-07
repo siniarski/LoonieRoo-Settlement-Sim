@@ -118,7 +118,7 @@ public static partial class Handiwork
     public static string finishBuild(SimState state, Survivor s, string targetId)
     {
         var (xs, ys, target) = targetId.split(",");
-        var p = new() { x = Js.I(Js.Num(xs)), y = Js.I(Js.Num(ys)) };
+        Point p = new() { x = Js.I(Js.Num(xs)), y = Js.I(Js.Num(ys)) };
         var now = plan(state, s, p);
         if ((/*TODO typeof*/Js.TypeOf(now) == "string") || (now.what != "build") || (now.target != target))
         {

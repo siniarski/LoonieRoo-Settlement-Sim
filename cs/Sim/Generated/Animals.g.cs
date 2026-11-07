@@ -140,6 +140,7 @@ public static partial class Animals
         state.animals.push(a);
         return a;
     }
+    public static Animal addDeer(SimState state, double x, double y) => addDeer(state, (int)x, (int)y);
 
     /// <summary>A rabbit, wolf or bear at a tile.</summary>
     public static Animal addAnimal(SimState state, string kind, int x, int y, string? packId = default)
@@ -152,12 +153,14 @@ public static partial class Animals
         state.animals.push(a);
         return a;
     }
+    public static Animal addAnimal(SimState state, string kind, double x, double y, string? packId = default) => addAnimal(state, kind, (int)x, (int)y, packId);
 
     /// <summary>Open ground an animal can stand on.</summary>
     public static bool ground(SimState state, int x, int y)
     {
         return Grids.getTile(state.grid, x, y) == "floor";
     }
+    public static bool ground(SimState state, double x, double y) => ground(state, (int)x, (int)y);
 
     /// <summary>A step from one tile to the next that an animal can take (no walls between).</summary>
     public static bool canStep(SimState state, Point a, Point b)
@@ -551,7 +554,7 @@ public static partial class Animals
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var want = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, JsMath.round(from.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, JsMath.round(from.y + (JsMath.sin(angle) * dist))))) };
         bool clear(int x, int y)
         {
             return state.survivors.every((s) => Space.manhattan(s.pos, new() { x = Js.I(x), y = Js.I(y) }) >= SPAWN_CLEAR);

@@ -36,6 +36,7 @@ public static partial class Alerts
         var intoYear = (day - 1) % (4 * Seasons.SEASON_DAYS);
         return (Seasons.seasonOf(tick) == "winter") ? 0 : ((3 * Seasons.SEASON_DAYS) - intoYear);
     }
+    public static double daysToWinter(double tick) => daysToWinter((int)tick);
 
     public static List<Alert> alerts(SimState state)
     {

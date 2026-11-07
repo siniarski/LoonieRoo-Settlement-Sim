@@ -87,7 +87,7 @@ public static partial class Clothing
         var boots = wearing(state, s, "boots");
         if (Js.T(boots))
         {
-            return wearOut(state, s, boots);
+            { wearOut(state, s, boots); return; }
         }
         s.health = JsMath.max(0, s.health - TRAP_STEP_DAMAGE);
         s.lastHurtBy = "a spike trap";
@@ -215,7 +215,7 @@ public static partial class Clothing
     /// <summary>Takes everything off where the survivor stands (death).</summary>
     public static void undress(SimState state, Survivor s)
     {
-        foreach (var slot in Js.Iter(["body", "feet", "cart", "tool"]))
+        foreach (var slot in Js.Iter((List<string>)["body", "feet", "cart", "tool"]))
         {
             var item = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, s[Js.Idx(slot)]!) : null;
             s[Js.Idx(slot)] = null;

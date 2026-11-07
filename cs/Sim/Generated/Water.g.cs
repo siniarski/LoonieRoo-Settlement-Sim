@@ -50,6 +50,7 @@ public static partial class Water
             FurnitureMod.furnitureAt(state, x, y)!.loot -= 1;
         }
     }
+    public static void drankFrom(SimState state, string source, double x, double y) => drankFrom(state, source, (int)x, (int)y);
 
     public static bool isThirsty(Survivor s)
     {
@@ -112,6 +113,7 @@ public static partial class Water
         }
         return (Grids.getTile(state.grid, x, y) == "water") ? "river" : null;
     }
+    public static string? sourceAt(SimState state, double x, double y) => sourceAt(state, (int)x, (int)y);
 
     /// <summary>How far (tiles searched) anyone looks for water: about a 100-tile walk.</summary>
     public const int WATER_SEARCH = 20000;

@@ -26,7 +26,7 @@ public static partial class NatureMod
         return ((double)(hash(seed, a, b, salt)) / (4294967296.0));
     }
 
-    public static /*TODO return type*/object smooth(double t)
+    public static double smooth(double t)
     {
         return (t * t) * (3 - (2 * t));
     }
@@ -46,10 +46,11 @@ public static partial class NatureMod
         var bottom = c(0, 1) + ((c(1, 1) - c(0, 1)) * fx);
         return top + ((bottom - top) * fy);
     }
+    public static double noise(double seed, double x, double y, double scale, double salt) => noise(seed, (int)x, (int)y, scale, salt);
 
     public static Nature natureFor(double seed, double size, string map)
     {
-        var start = new() { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
+        Point start = new() { x = Js.I(JsMath.floor(((double)(size) / (2)))), y = Js.I(JsMath.floor(((double)(size) / (2)))) };
         var side = ((hash(seed, 0, 0, 3) % 2) == 0) ? -1 : 1;
         var riverBase = start.y + (side * (48 + (hash(seed, 0, 0, 4) % 24)));
         return new() { seed = seed, size = size, map = map, start = start, riverAlongX = (hash(seed, 0, 0, 5) % 2) == 0, riverBase = riverBase };
@@ -59,6 +60,7 @@ public static partial class NatureMod
     {
         return (JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2)) < (r * r);
     }
+    public static bool nearStart(Nature n, double x, double y, double r) => nearStart(n, (int)x, (int)y, r);
 
     /// <summary>Open sea round an island or a chain (no bridges reach out into it): beyond a coast that wanders around 40% of the map's width from the middle.</summary>
     public static bool isSea(Nature n, int x, int y)
@@ -74,12 +76,14 @@ public static partial class NatureMod
         var r = ((double)(JsMath.sqrt((JsMath.pow((x - ((double)(n.size) / (2))), 2)) + (JsMath.pow((y - ((double)(n.size) / (2))), 2)))) / (((double)(n.size) / (2))));
         return r > (0.78 + (0.18 * (noise(n.seed, x, y, 18, 30) - 0.5)));
     }
+    public static bool isSea(Nature n, double x, double y) => isSea(n, (int)x, (int)y);
 
     /// <summary>An island chain: channels between the islands, which roads cross on bridges.</summary>
     public static bool isChannel(Nature n, int x, int y)
     {
         return (n.map == "islands") && (JsMath.abs(noise(n.seed, x, y, 40, 31) - 0.5) < 0.045);
     }
+    public static bool isChannel(Nature n, double x, double y) => isChannel(n, (int)x, (int)y);
 
     /// <summary>The river's distance from (x, y), across it, in tiles (negative never).</summary>
     public static double riverDistance(Nature n, int x, int y)
@@ -90,6 +94,7 @@ public static partial class NatureMod
         var width = 3 + (2 * noise(n.seed, along, 0, 23, 7));
         return JsMath.max(0, JsMath.abs(across - centre) - ((double)(width) / (2)));
     }
+    public static double riverDistance(Nature n, double x, double y) => riverDistance(n, (int)x, (int)y);
 
     public static bool isWater(Nature n, int x, int y)
     {
@@ -107,12 +112,14 @@ public static partial class NatureMod
         }
         return noise(n.seed, x, y, 24, 8) > 0.8;
     }
+    public static bool isWater(Nature n, double x, double y) => isWater(n, (int)x, (int)y);
 
     /// <summary>How wooded the land is here, 0..1: forest where it's over FOREST_AT.</summary>
     public static double woodedness(Nature n, int x, int y)
     {
         return noise(n.seed, x, y, 20, 9);
     }
+    public static double woodedness(Nature n, double x, double y) => woodedness(n, (int)x, (int)y);
 
     public const double FOREST_AT = 0.6;
 
@@ -120,6 +127,7 @@ public static partial class NatureMod
     {
         return woodedness(n, x, y) > FOREST_AT;
     }
+    public static bool isForest(Nature n, double x, double y) => isForest(n, (int)x, (int)y);
 
     /// <summary>A quarantine zone's fence ring, two tiles in from the edge.</summary>
     public static bool onFenceLine(Nature n, int x, int y)
@@ -131,4 +139,5 @@ public static partial class NatureMod
         var s = n.size;
         return (x == 2) || (y == 2) || (x == (s - 3)) || (y == (s - 3)) && (x >= 2) && (y >= 2) && (x <= (s - 3)) && (y <= (s - 3));
     }
+    public static bool onFenceLine(Nature n, double x, double y) => onFenceLine(n, (int)x, (int)y);
 }

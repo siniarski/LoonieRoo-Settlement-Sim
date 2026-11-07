@@ -75,6 +75,7 @@ public static partial class EndgameMod
         }
         return (SIEGE_EVERY - (day % SIEGE_EVERY)) % SIEGE_EVERY;
     }
+    public static double daysToSiege(double tick) => daysToSiege((int)tick);
 
     public static bool researchWanted(SimState state)
     {

@@ -61,7 +61,7 @@ public static partial class BodyMod
 
     public const double PANIC_MOOD = -10;
 
-    public static /*TODO return type*/object clamp(double n)
+    public static double clamp(double n)
     {
         return JsMath.max(0, JsMath.min(BODY_MAX, n));
     }
@@ -150,6 +150,7 @@ public static partial class BodyMod
     {
         s.panic = clamp(s.panic + by);
     }
+    public static void frighten(Survivor s, double by) => frighten(s, (int)by);
 
     /// <summary>Panicking: does this swing miss? (A hash, not the sim RNG.)</summary>
     public static bool panicMiss(SimState state, Survivor s)

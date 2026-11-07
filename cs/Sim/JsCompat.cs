@@ -21,9 +21,31 @@ public static class JsListExtensions
             }
         }
 
-        public int push(params ReadOnlySpan<T> xs)
+        public int push(T x)
         {
-            foreach (var x in xs) a.Add(x);
+            a.Add(x);
+            return a.Count;
+        }
+
+        public int push(T x, T y)
+        {
+            a.Add(x);
+            a.Add(y);
+            return a.Count;
+        }
+
+        public int push(T x, T y, T z)
+        {
+            a.Add(x);
+            a.Add(y);
+            a.Add(z);
+            return a.Count;
+        }
+
+        /// <summary>push(...xs)</summary>
+        public int pushAll(IEnumerable<T> xs)
+        {
+            a.AddRange(xs.ToList());
             return a.Count;
         }
 
@@ -43,9 +65,15 @@ public static class JsListExtensions
             return x;
         }
 
-        public int unshift(params ReadOnlySpan<T> xs)
+        public int unshift(T x)
         {
-            a.InsertRange(0, xs.ToArray());
+            a.Insert(0, x);
+            return a.Count;
+        }
+
+        public int unshiftAll(IEnumerable<T> xs)
+        {
+            a.InsertRange(0, xs.ToList());
             return a.Count;
         }
 
@@ -566,6 +594,51 @@ public static partial class Js
     {
         set(x);
         return x;
+    }
+
+    /// <summary>typeof x.</summary>
+    public static string TypeOf(object? x) => x switch
+    {
+        null => "undefined",
+        double or int or long or float => "number",
+        string => "string",
+        bool => "boolean",
+        Delegate => "function",
+        _ => "object",
+    };
+
+    /// <summary>'key' in obj: a record's key, or a set field of an object.</summary>
+    public static bool In(string key, object? o)
+    {
+        if (o is null) return false;
+        if (o is System.Collections.IDictionary d) return d.Contains(key);
+        var prop = o.GetType().GetProperty(key);
+        return prop != null && prop.GetValue(o) != null;
+    }
+
+    /// <summary>JSON.stringify, for comparing (as the sim uses it) and for logs.</summary>
+    public static string Json_stringify(object? x) => System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options);
+
+    /// <summary>Object.assign(target, source): source's set fields copied onto target.</summary>
+    public static V Object_assign<V>(V target, object? source) where V : class
+    {
+        if (source is null) return target;
+        foreach (var sp in source.GetType().GetProperties())
+        {
+            var v = sp.GetValue(source);
+            if (v is null) continue;
+            var tp = target.GetType().GetProperty(sp.Name);
+            if (tp != null && tp.CanWrite) tp.SetValue(target, v);
+        }
+        return target;
+    }
+
+    /// <summary>Object.fromEntries.</summary>
+    public static JsRecord<V> Object_fromEntries<V>(IEnumerable<(string, V)> entries)
+    {
+        var r = new JsRecord<V>();
+        foreach (var (k, v) in entries) r[k] = v;
+        return r;
     }
 
     /// <summary>A whole-number field (a coordinate) set from a number: as JS stores it, when it's whole (Math.floor and friends return doubles).</summary>

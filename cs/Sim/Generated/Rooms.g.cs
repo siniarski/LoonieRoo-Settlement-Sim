@@ -172,6 +172,7 @@ public static partial class Rooms
         }
         return getRoomMap(state).labels[Js.Idx((y * state.grid.width) + x)]!;
     }
+    public static double labelAt(SimState state, double x, double y) => labelAt(state, (int)x, (int)y);
 
     /// <summary>The enclosed room containing (x, y), or null for outdoors/walls/doors.</summary>
     public static Room? roomAt(SimState state, int x, int y)
@@ -179,11 +180,13 @@ public static partial class Rooms
         var label = labelAt(state, x, y);
         return (label >= 0) ? getRoomMap(state).rooms[Js.Idx(label)]! : null;
     }
+    public static Room? roomAt(SimState state, double x, double y) => roomAt(state, (int)x, (int)y);
 
     public static bool isIndoors(SimState state, int x, int y)
     {
         return labelAt(state, x, y) >= 0;
     }
+    public static bool isIndoors(SimState state, double x, double y) => isIndoors(state, (int)x, (int)y);
 
     /// <summary>The designation that applies to a room (first in state order), if any.</summary>
     public static RoomDesignation? designationOf(SimState state, Room room)
@@ -337,7 +340,7 @@ public static partial class Rooms
         {
             var x = i % width;
             var y = JsMath.floor(((double)(i) / (width)));
-            var @out = [i];
+            List<int> @out = [i];
             foreach (var (dx, dy) in Js.Iter(DIRS))
             {
                 var nx = x + dx;

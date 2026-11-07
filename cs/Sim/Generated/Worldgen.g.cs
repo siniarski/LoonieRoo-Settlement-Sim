@@ -42,12 +42,14 @@ public static partial class Worldgen
     {
         return (x >= 0) && (y >= 0) && (x < l.size) && (y < l.size) && (l.plan.roadMask[Js.Idx((y * l.size) + x)] != 0);
     }
+    public static bool isRoad(Layout l, double x, double y) => isRoad(l, (int)x, (int)y);
 
     /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
         return l.plan.lotMask[Js.Idx((y * l.size) + x)] != 0;
     }
+    public static bool onLot(Layout l, double x, double y) => onLot(l, (int)x, (int)y);
 
     /// <summary>A quarantine zone: a fence two tiles in from the edge, a gate where a road crosses it.</summary>
     public static string? fenceAt(Layout l, int x, int y)
@@ -58,6 +60,7 @@ public static partial class Worldgen
         }
         return Js.T(isRoad(l, x, y)) ? "door" : "wall";
     }
+    public static string? fenceAt(Layout l, double x, double y) => fenceAt(l, (int)x, (int)y);
 
     public static readonly /*TODO const type*/object FOREST = Grids.GROUNDS.indexOf("forest");
 
@@ -65,6 +68,7 @@ public static partial class Worldgen
     {
         state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))] = Grids.GROUNDS.indexOf(g);
     }
+    public static void ground(SimState state, double x, double y, string g) => ground(state, (int)x, (int)y, g);
 
     /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees.</summary>
     public static void generateChunk(SimState state, Layout l, int cx, int cy)
@@ -132,6 +136,7 @@ public static partial class Worldgen
             }
         }
     }
+    public static void generateChunk(SimState state, Layout l, double cx, double cy) => generateChunk(state, l, (int)cx, (int)cy);
 
     /// <summary>What drawing a lot needs to know about the world.</summary>
     public static LotContext lotContext(Layout l)
@@ -278,6 +283,7 @@ public static partial class Worldgen
             s.pathVersion = -1;
         }
     }
+    public static void settle(SimState state, double cx, double cy) => settle(state, (int)cx, (int)cy);
 
     /// <summary>The nearest accepted tile in growing square rings, across anything (nearestTile only spreads over walkable ground).</summary>
     public static Point? nearestAcross(SimState state, Point p, Func<int, int, bool> accept)
@@ -318,8 +324,8 @@ public static partial class Worldgen
         TimelineMod.rollTimeline(state, seed);
         Settlements.placeSettlements(state, l.start, seed);
         var angle = (Hash.hashRoll(seed, 0x7a0c) * JsMath.PI) * 2;
-        var near = new() { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
-        var clamped = new() { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
+        Point near = new() { x = Js.I(JsMath.round(l.start.x + (JsMath.cos(angle) * 35))), y = Js.I(JsMath.round(l.start.y + (JsMath.sin(angle) * 35))) };
+        Point clamped = new() { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
         var spot = Space.nearestTile(state.grid, clamped, (x, y) => (Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
         var park = Js.T(spot) && (Js.T(Js.T(Vehicles.parkable(state, spot)) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new() { x = Js.I(x), y = Js.I(y) }))));
         if (Js.T(park))

@@ -93,7 +93,7 @@ public static partial class Expeditions
         var e = state.tick - x.leftTick;
         var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
         var f = (e < leg) ? ((double)(e) / (leg)) : (Js.T(x.outpost) || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg)));
-        var p = new() { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
+        Point p = new() { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
         if (Js.T(x.outpost) && (e >= leg))
@@ -177,7 +177,7 @@ public static partial class Expeditions
             s.note = $"back from the {Js.Str(x.target.label)}";
             back.push(s);
         }
-        state.survivors.push([.. back]);
+        state.survivors.pushAll(back);
         var room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
         var found = 0;
         foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && Js.T(near(f)))))
@@ -187,7 +187,7 @@ public static partial class Expeditions
                 crate.loot -= 1;
                 room -= 1;
                 found += 1;
-                Difficulty.spawnFind(state, Jobs.scavengeFind(Rng.random(state)), x.home.x, x.home.y);
+                Difficulty.spawnFind(state, Work.scavengeFind(Rng.random(state)), x.home.x, x.home.y);
             }
             if (crate.loot == 0)
             {
@@ -199,7 +199,7 @@ public static partial class Expeditions
         {
             Mood.mournDeath(state, s);
         }
-        var parts = [$"brought back {Js.Str(found)} find{Js.Str((found == 1) ? "" : "s")}"];
+        List<string> parts = [$"brought back {Js.Str(found)} find{Js.Str((found == 1) ? "" : "s")}"];
         if (Js.T(hurt.length))
         {
             parts.push($"{Js.Str(hurt.map((s) => s.name).join(", "))} hurt");

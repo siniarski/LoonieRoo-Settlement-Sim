@@ -258,6 +258,7 @@ public static partial class Hordes
         var i = (by * grid.width) + bx;
         return STEP + JsMath.ceil(((double)(((Breach.STRUCTURE_HEALTH[Js.Idx(tile)] * (grid.reinforced.includes(i) ? 2.5 : 1)) * STEP)) / (batterRate())));
     }
+    public static double enterCost(SimState state, double bx, double by, bool asShut = false) => enterCost(state, (int)bx, (int)by, asShut);
 
     /// <summary>Crossing the border from a to b: battering it down if it's in the way, else nothing (`asShut`: an edge door counts as shut).</summary>
     public static double edgeCost(SimState state, int ax, int ay, int bx, int by, bool asShut = false)
@@ -275,6 +276,7 @@ public static partial class Hordes
         }
         return JsMath.ceil(((double)((JsMath.max(1, Breach.edgeHealth(grid, e)) * STEP)) / (batterRate())));
     }
+    public static double edgeCost(SimState state, double ax, double ay, double bx, double by, bool asShut = false) => edgeCost(state, (int)ax, (int)ay, (int)bx, (int)by, asShut);
 
     /// <summary>What it costs a zombie to go from tile a into its neighbour b (Infinity: it can't, ever).</summary>
     public static double stepCost(SimState state, int ax, int ay, int bx, int by)
@@ -282,6 +284,7 @@ public static partial class Hordes
         var enter = enterCost(state, bx, by);
         return (enter == double.PositiveInfinity) ? double.PositiveInfinity : (enter + edgeCost(state, ax, ay, bx, by));
     }
+    public static double stepCost(SimState state, double ax, double ay, double bx, double by) => stepCost(state, (int)ax, (int)ay, (int)bx, (int)by);
 
     /// <summary>The horde's field: cost to a goal from each tile in its box, from what's stored on it and the walls now, every door taken as shut. (A member's own next step sees doors as they are: hordeStep.)</summary>
     public static Field flowField(SimState state, Horde h)
@@ -454,7 +457,7 @@ public static partial class Hordes
                 push(c + step, j);
             }
         }
-        var field = new() { key = key, dist = dist, box = h.box };
+        FlowFieldField field = new() { key = key, dist = dist, box = h.box };
         fields.set(h, field);
         return field;
     }
@@ -572,7 +575,7 @@ public static partial class Hordes
                     {
                         z.hordeId = big.id;
                     }
-                    big.members.push([.. small.members]);
+                    big.members.pushAll(small.members);
                     list.splice(list.indexOf(small), 1);
                     refresh(state, big);
                     merged = true;
@@ -649,7 +652,7 @@ public static partial class Hordes
         var __d5 = state.grid;
         var width = __d5.width;
         var height = __d5.height;
-        var heading = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
+        Point heading = new() { x = Js.I(JsMath.max(0, JsMath.min(width - 1, mid.x - (side * dy)))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, mid.y + (side * dx)))) };
         foreach (var z in Js.Iter(back))
         {
             z.hordeId = null;

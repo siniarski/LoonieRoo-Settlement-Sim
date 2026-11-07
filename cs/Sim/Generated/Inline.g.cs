@@ -2,6 +2,44 @@
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
+public partial class HousePlanLiving
+{
+    public int x0 { get; set; }
+    public int y0 { get; set; }
+    public int x1 { get; set; }
+    public int y1 { get; set; }
+}
+
+public partial class HousePlanKitchen
+{
+    public int x0 { get; set; }
+    public int y0 { get; set; }
+    public int x1 { get; set; }
+    public int y1 { get; set; }
+}
+
+public partial class HousePlanBath
+{
+    public int x0 { get; set; }
+    public int y0 { get; set; }
+    public int x1 { get; set; }
+    public int y1 { get; set; }
+}
+
+public partial class HousePlanRest
+{
+    public int x0 { get; set; }
+    public int x1 { get; set; }
+}
+
+public partial class ShopPlanFloor
+{
+    public int x0 { get; set; }
+    public int y0 { get; set; }
+    public int x1 { get; set; }
+    public int y1 { get; set; }
+}
+
 public partial class CompoundResult
 {
     public int x0 { get; set; }
@@ -40,6 +78,13 @@ public partial class IndexesEntry
     public List<Furniture>? marked { get; set; }
 }
 
+public partial class FlowFieldField
+{
+    public object key { get; set; }
+    public object dist { get; set; }
+    public object box { get; set; }
+}
+
 public partial class ContainerOfResult
 {
     public Point at { get; set; }
@@ -51,6 +96,12 @@ public partial class ChooseJobResult
     public Job job { get; set; }
     public JobChoicePlan plan { get; set; }
     public string why { get; set; }
+}
+
+public partial class ReconcileJobsWanted
+{
+    public object workbench { get; set; }
+    public object stove { get; set; }
 }
 
 public partial class FrameResult
@@ -104,6 +155,16 @@ public partial class PackFurnitureResult
 public partial class UnpackFurniturePacked
 {
     public List<object> rows { get; set; }
+}
+
+public partial class ToBugReportReport
+{
+    public string format { get; set; }
+    public object schemaVersion { get; set; }
+    public object note { get; set; }
+    public object initial { get; set; }
+    public object commands { get; set; }
+    public object tick { get; set; }
 }
 
 public partial class SeenEntry
@@ -178,6 +239,12 @@ public partial class PushApartOthers
 {
     public Body s { get; set; }
     public double order { get; set; }
+}
+
+public partial class PushApartEntry
+{
+    public object s { get; set; }
+    public object order { get; set; }
 }
 
 public partial class PushApartNear

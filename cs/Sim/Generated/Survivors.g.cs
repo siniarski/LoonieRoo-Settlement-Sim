@@ -36,6 +36,7 @@ public static partial class Survivors
         state.survivors.push(survivor);
         return survivor;
     }
+    public static Survivor addSurvivor(SimState state, double x, double y, string? name = default) => addSurvivor(state, (int)x, (int)y, name);
 
     public static Survivor? getSurvivor(SimState state, string id)
     {
@@ -47,6 +48,7 @@ public static partial class Survivors
     {
         return state.survivors.find((s) => (s.pos.x == x) && (s.pos.y == y) || (s.move != null) && (s.move.to.x == x) && (s.move.to.y == y));
     }
+    public static Survivor? survivorAt(SimState state, double x, double y) => survivorAt(state, (int)x, (int)y);
 
     public static void setGoal(Survivor survivor, Point goal)
     {

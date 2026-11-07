@@ -44,16 +44,19 @@ public static partial class Buildings
     {
         return new() { w = Js.I(w), h = Js.I(h), cells = /*TODO new Array*/new List<object>().fill(OUTSIDE), ground = /*TODO new Array*/new List<object>().fill(null), furniture = [], kind = kind, sleepers = sleepers, edges = [] };
     }
+    public static BuildingsPlan newPlan(double w, double h, string kind, double sleepers) => newPlan((int)w, (int)h, kind, sleepers);
 
     public static double cellAt(BuildingsPlan p, int x, int y)
     {
         return (x < 0) || (y < 0) || (x >= p.w) || (y >= p.h) ? OUTSIDE : p.cells[Js.Idx((y * p.w) + x)]!;
     }
+    public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, (int)x, (int)y);
 
     public static void set(BuildingsPlan p, int x, int y, double c)
     {
         p.cells[Js.Idx((y * p.w) + x)] = c;
     }
+    public static void set(BuildingsPlan p, double x, double y, double c) => set(p, (int)x, (int)y, c);
 
     /// <summary>A walled box from (x0, y0) to (x1, y1) inclusive, floored inside with `ground`. Shares walls with boxes it touches.</summary>
     public static void box(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
@@ -78,6 +81,7 @@ public static partial class Buildings
             }
         }
     }
+    public static void box(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => box(p, (int)x0, (int)y0, (int)x1, (int)y1, ground);
 
     /// <summary>Floors a rectangle (inside a box) with another ground.</summary>
     public static void floorAs(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
@@ -93,6 +97,7 @@ public static partial class Buildings
             }
         }
     }
+    public static void floorAs(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => floorAs(p, (int)x0, (int)y0, (int)x1, (int)y1, ground);
 
     public static void hwall(BuildingsPlan p, int y, int x0, int x1)
     {
@@ -104,6 +109,7 @@ public static partial class Buildings
             }
         }
     }
+    public static void hwall(BuildingsPlan p, double y, double x0, double x1) => hwall(p, (int)y, (int)x0, (int)x1);
 
     public static void vwall(BuildingsPlan p, int x, int y0, int y1)
     {
@@ -115,22 +121,26 @@ public static partial class Buildings
             }
         }
     }
+    public static void vwall(BuildingsPlan p, double x, double y0, double y1) => vwall(p, (int)x, (int)y0, (int)y1);
 
     public static void door(BuildingsPlan p, int x, int y)
     {
         set(p, x, y, DOOR);
     }
+    public static void door(BuildingsPlan p, double x, double y) => door(p, (int)x, (int)y);
 
     /// <summary>Next to a door (orthogonally): kept clear of furniture so doorways read.</summary>
     public static bool byDoor(BuildingsPlan p, int x, int y)
     {
         return (cellAt(p, x + 1, y) == DOOR) || (cellAt(p, x - 1, y) == DOOR) || (cellAt(p, x, y + 1) == DOOR) || (cellAt(p, x, y - 1) == DOOR);
     }
+    public static bool byDoor(BuildingsPlan p, double x, double y) => byDoor(p, (int)x, (int)y);
 
     public static bool free(BuildingsPlan p, int x, int y)
     {
         return (cellAt(p, x, y) == FLOOR) && !Js.T(byDoor(p, x, y)) && !p.furniture.some((f) => (f.x == x) && (f.y == y));
     }
+    public static bool free(BuildingsPlan p, double x, double y) => free(p, (int)x, (int)y);
 
     public static bool put(BuildingsPlan p, int x, int y, string look, string? table = null)
     {
@@ -141,6 +151,7 @@ public static partial class Buildings
         p.furniture.push(new() { x = Js.I(x), y = Js.I(y), look = look, table = Js.T(isContainerLook(look)) ? table : null });
         return true;
     }
+    public static bool put(BuildingsPlan p, double x, double y, string look, string? table = null) => put(p, (int)x, (int)y, look, table);
 
     /// <summary>Puts something against a wall of the room (x0..x1, y0..y1 interior), trying the walls in an order set by the roll.</summary>
     public static bool againstWall(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table, double roll)
@@ -165,13 +176,14 @@ public static partial class Buildings
         }
         return false;
     }
+    public static bool againstWall(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table, double roll) => againstWall(p, (int)x0, (int)y0, (int)x1, (int)y1, look, table, roll);
 
     /// <summary>Somewhere in the middle of the room, away from the walls if there's space.</summary>
     public static bool inMiddle(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table)
     {
         var cx = JsMath.floor(((double)((x0 + x1)) / (2)));
         var cy = JsMath.floor(((double)((y0 + y1)) / (2)));
-        foreach (var (dx, dy) in Js.Iter([[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]))
+        foreach (var (dx, dy) in Js.Iter((List<List<int>>)[[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]))
         {
             var x = cx + dx;
             var y = cy + dy;
@@ -182,8 +194,9 @@ public static partial class Buildings
         }
         return false;
     }
+    public static bool inMiddle(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table) => inMiddle(p, (int)x0, (int)y0, (int)x1, (int)y1, look, table);
 
-    public static /*TODO return type*/object between(double r, double lo, double hi)
+    public static double between(double r, double lo, double hi)
     {
         return lo + JsMath.floor(r * ((hi - lo) + 1));
     }
@@ -201,16 +214,16 @@ public static partial class Buildings
         var inner = W - 2;
         var split = 1 + JsMath.max(3, JsMath.floor(inner * 0.55));
         vwall(p, split, div, H - 1);
-        var living = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
-        var kitchen = new() { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        HousePlanLiving living = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
+        HousePlanKitchen kitchen = new() { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         floorAs(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "tiles");
         door(p, JsMath.floor(((double)((living.x0 + living.x1)) / (2))), H - 1);
         door(p, split, JsMath.floor(((double)(((living.y0 + living.y1) + 1)) / (2))));
         var bathW = (inner >= 10) ? 3 : 2;
-        var bath = new() { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
+        HousePlanBath bath = new() { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
         vwall(p, bathW + 1, 0, div);
         floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
-        var rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
+        HousePlanRest rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
         var two = ((rest.x1 - rest.x0) + 1) >= 7;
         var bedrooms = Js.T(two) ? () =>
         {
@@ -313,7 +326,7 @@ public static partial class Buildings
         {
             againstWall(p, 4, 1, W - 2, div - 1, ((i % 2) == 0) ? "pallet" : "crate", table, r(7 + i));
         }
-        var floor = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        ShopPlanFloor floor = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         if (kind == "office")
         {
             for (var y = floor.y0 + 1; y < floor.y1; y += 2)
@@ -371,7 +384,7 @@ public static partial class Buildings
         floorAs(p, c0, 1, c0 + 1, H - 2, (kind == "clinic") ? "tiles" : "concrete");
         var roles = ROLES[Js.Idx(kind)];
         var n = 0;
-        foreach (var (x0, x1, doorX) in Js.Iter([[1, c0 - 2, c0 - 1], [c0 + 3, W - 2, c0 + 2]]))
+        foreach (var (x0, x1, doorX) in Js.Iter((List<List<int>>)[[1, c0 - 2, c0 - 1], [c0 + 3, W - 2, c0 + 2]]))
         {
             var y = 1;
             while (y <= (H - 2))
@@ -481,6 +494,7 @@ public static partial class Buildings
                 }
         }
     }
+    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<int, double> r, double k) => fitOut(p, role, (int)x0, (int)y0, (int)x1, (int)y1, r, (int)k);
 
     /// <summary>One hall of pews facing an altar, a vestry in a back corner.</summary>
     public static BuildingsPlan churchPlan(Func<int, double> r, double maxW, double maxH)
@@ -577,7 +591,7 @@ public static partial class Buildings
         return toEdges(p);
     }
 
-    public static readonly /*TODO array type*/List<object> DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    public static readonly List<List<int>> DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
 
     /// <summary>Turns a plan drawn with wall cells into one with edge walls (grid.ts): walls on the borders between cells, so rooms get the floor the walls stood on. - Wall cells on the outside (next to the outside or the plan's edge) become outside: the building's outer walls are edges round its floor. An outer door becomes a door edge there. - Inside, each wall cell becomes floor of a room beside it (south, else east, north, west of it, whichever is a room's floor first; a cell with none takes a neighbour's), so a wall line goes to the room below or right of it. - Then an edge wall wherever two cells side by side are in different rooms, or a room meets the outside; an edge door where a door cell stood (between the door's two sides).</summary>
     public static BuildingsPlan toEdges(BuildingsPlan p)
@@ -601,7 +615,7 @@ public static partial class Buildings
             {
                 continue;
             }
-            var queue = [i];
+            List<int> queue = [i];
             room[Js.Idx(i)] = rooms;
             while (Js.T(queue.length))
             {
@@ -727,7 +741,7 @@ public static partial class Buildings
         {
             for (var x = 0; x < w; x++)
             {
-                foreach (var (dx, dy) in Js.Iter([[0, -1], [-1, 0], [0, 1], [1, 0]]))
+                foreach (var (dx, dy) in Js.Iter((List<List<int>>)[[0, -1], [-1, 0], [0, 1], [1, 0]]))
                 {
                     var nx = x + dx;
                     var ny = y + dy;

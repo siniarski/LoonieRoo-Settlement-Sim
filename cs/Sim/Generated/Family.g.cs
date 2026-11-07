@@ -116,7 +116,7 @@ public static partial class Family
         var n = Hash.idNumber(s.id);
         var a = HEAD_START[Js.Idx(n % HEAD_START.length)]!;
         var b = HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]!;
-        foreach (var t in Js.Iter([a, b]))
+        foreach (var t in Js.Iter((List<int>)[a, b]))
         {
             s.xp[Js.Idx(t)] = (s.xp[Js.Idx(t)] ?? 0) + (2 * Skills.XP_PER_LEVEL);
         }

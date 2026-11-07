@@ -137,7 +137,7 @@ public static partial class Savefile
     /// <summary>`initial` is the state play started from (scenario, loaded save); the report carries only the commands logged since then.</summary>
     public static string toBugReport(SimState initial, SimState state, string note = "")
     {
-        var report = new() { format = "loonieroo-bug", schemaVersion = States.SCHEMA_VERSION, note = note, initial = pack(initial), commands = state.commandLog.slice(initial.commandLog.length), tick = state.tick };
+        ToBugReportReport report = new() { format = "loonieroo-bug", schemaVersion = States.SCHEMA_VERSION, note = note, initial = pack(initial), commands = state.commandLog.slice(initial.commandLog.length), tick = state.tick };
         return /*TODO JSON.stringify*/Js.Json_stringify(report);
     }
 

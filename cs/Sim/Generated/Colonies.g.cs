@@ -295,6 +295,7 @@ public static partial class Colonies
             Events.logEvent(state, (before == "allies") ? $"{Js.Str(a.name)} and {Js.Str(b.name)} are no longer allies" : $"The feud between {Js.Str(a.name)} and {Js.Str(b.name)} has cooled");
         }
     }
+    public static void tie(SimState state, Settlement a, Settlement b, double by) => tie(state, a, b, (int)by);
 
     public static void split(SimState state, Settlement n, Func<double, double> roll)
     {
@@ -344,7 +345,7 @@ public static partial class Colonies
         var __d1 = state;
         var grid = __d1.grid;
         var fallen = isFallen(n);
-        var door = new() { x = Js.I(n.x), y = Js.I(box.y1) };
+        Point door = new() { x = Js.I(n.x), y = Js.I(box.y1) };
         for (var y = box.y0; y <= box.y1; y++)
         {
             for (var x = box.x0; x <= box.x1; x++)

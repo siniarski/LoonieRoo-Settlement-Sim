@@ -72,7 +72,7 @@ public static partial class Books
             s.nextSeekTick = state.tick + Jobs.IDLE_RETRY_TICKS;
             var was = s.reading;
             stopReading(state, s, "put the book down for work");
-            if (Js.T(Jobs.seekJob(state, s)))
+            if (Js.T(JobChoice.seekJob(state, s)))
             {
                 return true;
             }

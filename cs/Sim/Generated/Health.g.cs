@@ -57,4 +57,5 @@ public static partial class Health
     {
         return !Js.T(slowed) || ((tick % HURT_WORK_SKIP_EVERY) != 0);
     }
+    public static bool worksThisTick(double tick, bool slowed) => worksThisTick((int)tick, slowed);
 }

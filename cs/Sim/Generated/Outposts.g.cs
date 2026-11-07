@@ -94,7 +94,7 @@ public static partial class Outposts
             }
             for (var k = 0; k < (x.members.length * OUTPOST_FINDS); k++)
             {
-                Difficulty.spawnFind(state, Jobs.scavengeFind(Hash.hashRoll(Hash.idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
+                Difficulty.spawnFind(state, Work.scavengeFind(Hash.hashRoll(Hash.idNumber(x.id), state.tick, k)), x.home.x, x.home.y);
             }
             if ((Hash.hashRoll(Hash.idNumber(x.id), state.tick, 0xd4) >= OUTPOST_DANGER) || (x.members.length == 0))
             {

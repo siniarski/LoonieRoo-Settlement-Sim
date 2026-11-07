@@ -37,52 +37,52 @@ public static partial class Work
         {
             case "clean":
                 {
-                    return workClean(state, s, job);
+                    { workClean(state, s, job); return; }
                 }
             case "build":
                 {
-                    return workBuild(state, s, job);
+                    { workBuild(state, s, job); return; }
                 }
             case "haul":
                 {
-                    return workHaul(state, s, job);
+                    { workHaul(state, s, job); return; }
                 }
             case "scavenge":
                 {
-                    return workScavenge(state, s, job);
+                    { workScavenge(state, s, job); return; }
                 }
             case "craft":
             case "cook":
                 {
-                    return workCraft(state, s, job);
+                    { workCraft(state, s, job); return; }
                 }
             case "doctor":
                 {
-                    return workDoctor(state, s, job);
+                    { workDoctor(state, s, job); return; }
                 }
             case "scout":
                 {
-                    return workScout(state, s, job);
+                    { workScout(state, s, job); return; }
                 }
             case "guard":
                 {
-                    return Js.T(job.animalId) ? workHunt(state, s, job) : workGuard(state, s, job);
+                    { Js.T(job.animalId) ? workHunt(state, s, job) : workGuard(state, s, job); return; }
                 }
             case "firefight":
                 {
-                    return workFirefight(state, s, job);
+                    { workFirefight(state, s, job); return; }
                 }
             case "hunt":
                 {
-                    return workHunt(state, s, job);
+                    { workHunt(state, s, job); return; }
                 }
             case "research":
                 {
-                    return workResearch(state, s, job);
+                    { workResearch(state, s, job); return; }
                 }
             case "farm":
                 {
-                    return workFarm(state, s, job);
+                    { workFarm(state, s, job); return; }
                 }
         }
     }
@@ -93,11 +93,11 @@ public static partial class Work
         var plot = Js.T(job.plotId) ? Farming.getPlot(state, job.plotId) : null;
         if (!Js.T(plot) || !Js.T(Farming.needsWork(plot)))
         {
-            return Jobs.releaseSurvivor(state, s, "plot no longer needs work");
+            { Jobs.releaseSurvivor(state, s, "plot no longer needs work"); return; }
         }
         if (!Js.T(Space.samePoint(s.pos, plot)))
         {
-            return goTo(state, s, job, [Farming.plotPoint(plot)]);
+            { goTo(state, s, job, [Farming.plotPoint(plot)]); return; }
         }
         var step = Skills.workStep(state, s, "farm");
         if (step == 0)
@@ -128,7 +128,7 @@ public static partial class Work
         var z = Js.T(job.zombieId) ? Zombies.getZombie(state, job.zombieId) : null;
         if (!Js.T(z))
         {
-            return Jobs.releaseSurvivor(state, s, "zombie gone");
+            { Jobs.releaseSurvivor(state, s, "zombie gone"); return; }
         }
         var gun = Weapons.loadedGun(state, s);
         var range = Weapons.GUN_RANGE + (Js.T(Towers.onTower(state, s)) ? Towers.TOWER_RANGE_BONUS : 0);
@@ -150,11 +150,11 @@ public static partial class Work
             {
                 return;
             }
-            return finishJob(state, s, job, $"shot a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})");
+            { finishJob(state, s, job, $"shot a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})"); return; }
         }
         if (!Js.T(inReach))
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, z.pos.x, z.pos.y), Js.T(gun) ? 1 : null);
+            { goTo(state, s, job, Grids.neighbours4(state.grid, z.pos.x, z.pos.y), Js.T(gun) ? 1 : null); return; }
         }
         if (Skills.workStep(state, s, "guard") == 0)
         {
@@ -182,7 +182,7 @@ public static partial class Work
         var lab = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
         if (!Js.T(lab) || (lab.kind != "lab"))
         {
-            return Jobs.releaseSurvivor(state, s, "lab gone");
+            { Jobs.releaseSurvivor(state, s, "lab gone"); return; }
         }
         var site = Grids.neighbours4(state.grid, lab.x, lab.y);
         if (lab.stored == 0)
@@ -193,7 +193,7 @@ public static partial class Work
                 item = freeItemFor(state, "sample", s.pos, site);
                 if (!Js.T(item))
                 {
-                    return Jobs.releaseSurvivor(state, s, "no samples to study");
+                    { Jobs.releaseSurvivor(state, s, "no samples to study"); return; }
                 }
                 job.itemId = item.id;
                 item.reservedBy = s.id;
@@ -202,11 +202,11 @@ public static partial class Work
             {
                 if (!Js.T(item.pos))
                 {
-                    return Jobs.releaseSurvivor(state, s, "item taken by someone else");
+                    { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
                 }
                 if (!Js.T(Space.samePoint(s.pos, item.pos)))
                 {
-                    return goTo(state, s, job, [item.pos]);
+                    { goTo(state, s, job, [item.pos]); return; }
                 }
                 item.pos = null;
                 item.carriedBy = s.id;
@@ -214,7 +214,7 @@ public static partial class Work
             }
             if (Space.manhattan(s.pos, lab) != 1)
             {
-                return goTo(state, s, job, site);
+                { goTo(state, s, job, site); return; }
             }
             Items.removeItem(state, item);
             s.carrying = null;
@@ -226,7 +226,7 @@ public static partial class Work
         }
         if (Space.manhattan(s.pos, lab) != 1)
         {
-            return goTo(state, s, job, site);
+            { goTo(state, s, job, site); return; }
         }
         var step = Skills.workStep(state, s, "research");
         if (step == 0)
@@ -250,11 +250,11 @@ public static partial class Work
         var a = Js.T(job.animalId) ? Animals.getAnimal(state, job.animalId) : null;
         if (!Js.T(a))
         {
-            return Jobs.releaseSurvivor(state, s, "the animal got away");
+            { Jobs.releaseSurvivor(state, s, "the animal got away"); return; }
         }
         if (Space.manhattan(s.pos, a.pos) > 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, a.pos.x, a.pos.y), 3);
+            { goTo(state, s, job, Grids.neighbours4(state.grid, a.pos.x, a.pos.y), 3); return; }
         }
         if ((a.kind == "wolf") || (a.kind == "bear"))
         {
@@ -295,11 +295,11 @@ public static partial class Work
         var fire = FireMod.fireAt(state, job.x, job.y);
         if (!Js.T(fire))
         {
-            return Jobs.releaseSurvivor(state, s, "fire is out");
+            { Jobs.releaseSurvivor(state, s, "fire is out"); return; }
         }
         if (Space.manhattan(s.pos, fire) != 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, fire.x, fire.y));
+            { goTo(state, s, job, Grids.neighbours4(state.grid, fire.x, fire.y)); return; }
         }
         var step = Skills.workStep(state, s, "firefight");
         if (step == 0)
@@ -321,11 +321,11 @@ public static partial class Work
         var crate = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
         if (!Js.T(crate) || (crate.loot <= 0))
         {
-            return Jobs.releaseSurvivor(state, s, "crate is empty");
+            { Jobs.releaseSurvivor(state, s, "crate is empty"); return; }
         }
         if (Space.manhattan(s.pos, crate) != 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, crate.x, crate.y));
+            { goTo(state, s, job, Grids.neighbours4(state.grid, crate.x, crate.y)); return; }
         }
         var step = Skills.workStep(state, s, "scavenge");
         if (step == 0)
@@ -359,13 +359,13 @@ public static partial class Work
         var bench = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
         if (!Js.T(bench) || !Js.T(Crafting.isStation(bench.kind)))
         {
-            return Jobs.releaseSurvivor(state, s, "station gone");
+            { Jobs.releaseSurvivor(state, s, "station gone"); return; }
         }
         var workshop = Crafting.inWorkshop(state, bench);
         var kind = Crafting.stationCraft(state, bench);
         if (!Js.T(kind))
         {
-            return Jobs.releaseSurvivor(state, s, "stocks are full");
+            { Jobs.releaseSurvivor(state, s, "stocks are full"); return; }
         }
         if ((bench.stored > 0) && (bench.storedKind != Crafting.RECIPES[Js.Idx(kind)].input))
         {
@@ -388,7 +388,7 @@ public static partial class Work
                 item = freeItemFor(state, recipe.input, s.pos, site);
                 if (!Js.T(item))
                 {
-                    return Jobs.releaseSurvivor(state, s, $"no {Js.Str(recipe.input)} for {Js.Str(station)}");
+                    { Jobs.releaseSurvivor(state, s, $"no {Js.Str(recipe.input)} for {Js.Str(station)}"); return; }
                 }
                 job.itemId = item.id;
                 item.reservedBy = s.id;
@@ -397,11 +397,11 @@ public static partial class Work
             {
                 if (!Js.T(item.pos))
                 {
-                    return Jobs.releaseSurvivor(state, s, "item taken by someone else");
+                    { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
                 }
                 if (!Js.T(Space.samePoint(s.pos, item.pos)))
                 {
-                    return goTo(state, s, job, [item.pos]);
+                    { goTo(state, s, job, [item.pos]); return; }
                 }
                 item.pos = null;
                 item.carriedBy = s.id;
@@ -410,7 +410,7 @@ public static partial class Work
             }
             if (Space.manhattan(s.pos, bench) != 1)
             {
-                return goTo(state, s, job, site);
+                { goTo(state, s, job, site); return; }
             }
             Items.removeItem(state, item);
             s.carrying = null;
@@ -422,7 +422,7 @@ public static partial class Work
         }
         if (Space.manhattan(s.pos, bench) != 1)
         {
-            return goTo(state, s, job, site);
+            { goTo(state, s, job, site); return; }
         }
         var step = Skills.workStep(state, s, job.type);
         if (step == 0)
@@ -502,22 +502,22 @@ public static partial class Work
         var area = Js.T(job.areaId) ? Fog.getExploreArea(state, job.areaId) : null;
         if (!Js.T(area))
         {
-            return Jobs.releaseSurvivor(state, s, "area explored");
+            { Jobs.releaseSurvivor(state, s, "area explored"); return; }
         }
         if (Js.T(Fog.scoutingOver(state.tick)))
         {
-            return headHome(state, s);
+            { headHome(state, s); return; }
         }
         var target = Js.T(Fog.isExplored(state, job.x, job.y)) ? Fog.scoutTarget(state, area, s.pos) : new() { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(target))
         {
-            return finishJob(state, s, job, $"scouted ({Js.Str(area.x0)}, {Js.Str(area.y0)})-({Js.Str(area.x1)}, {Js.Str(area.y1)}) as far as it goes");
+            { finishJob(state, s, job, $"scouted ({Js.Str(area.x0)}, {Js.Str(area.y0)})-({Js.Str(area.x1)}, {Js.Str(area.y1)}) as far as it goes"); return; }
         }
         job.x = Js.I(target.x);
         job.y = Js.I(target.y);
         if (!Js.T(Space.samePoint(s.pos, target)))
         {
-            return goTo(state, s, job, [target]);
+            { goTo(state, s, job, [target]); return; }
         }
     }
 
@@ -527,7 +527,7 @@ public static partial class Work
         var patient = Js.T(job.patientId) ? Survivors.getSurvivor(state, job.patientId) : null;
         if (!Js.T(patient) || !Js.T(Medicine.isPatient(patient)))
         {
-            return Jobs.releaseSurvivor(state, s, "patient is up and about");
+            { Jobs.releaseSurvivor(state, s, "patient is up and about"); return; }
         }
         var site = Grids.neighbours4(state.grid, patient.pos.x, patient.pos.y);
         var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
@@ -536,7 +536,7 @@ public static partial class Work
             item = Medicine.remediesFor(patient).map((k) => freeItemFor(state, k, s.pos, site)).find((i) => i != null);
             if (!Js.T(item))
             {
-                return Jobs.releaseSurvivor(state, s, "nothing to treat them with");
+                { Jobs.releaseSurvivor(state, s, "nothing to treat them with"); return; }
             }
             job.itemId = item.id;
             item.reservedBy = s.id;
@@ -545,11 +545,11 @@ public static partial class Work
         {
             if (!Js.T(item.pos))
             {
-                return Jobs.releaseSurvivor(state, s, "item taken by someone else");
+                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
             }
             if (!Js.T(Space.samePoint(s.pos, item.pos)))
             {
-                return goTo(state, s, job, [item.pos]);
+                { goTo(state, s, job, [item.pos]); return; }
             }
             item.pos = null;
             item.carriedBy = s.id;
@@ -558,7 +558,7 @@ public static partial class Work
         }
         if (Space.manhattan(s.pos, patient.pos) != 1)
         {
-            return goTo(state, s, job, site);
+            { goTo(state, s, job, site); return; }
         }
         var step = Skills.workStep(state, s, "doctor");
         if (step == 0)
@@ -588,10 +588,10 @@ public static partial class Work
 
     public static void workClean(SimState state, Survivor s, Job job)
     {
-        var target = new() { x = Js.I(job.x), y = Js.I(job.y) };
+        Point target = new() { x = Js.I(job.x), y = Js.I(job.y) };
         if (!Js.T(Space.samePoint(s.pos, target)))
         {
-            return goTo(state, s, job, [target]);
+            { goTo(state, s, job, [target]); return; }
         }
         var step = Skills.workStep(state, s, "clean");
         if (step == 0)
@@ -611,24 +611,24 @@ public static partial class Work
     {
         if (Js.T(Jobs.isRepairJob(job)))
         {
-            return workRepair(state, s, job);
+            { workRepair(state, s, job); return; }
         }
         var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
         if (!Js.T(bp))
         {
-            return Jobs.releaseSurvivor(state, s, "designation cancelled");
+            { Jobs.releaseSurvivor(state, s, "designation cancelled"); return; }
         }
         if (Js.T(bp.side))
         {
             var sides = [new() { x = Js.I(bp.x), y = Js.I(bp.y) }, (bp.side == "n") ? new() { x = Js.I(bp.x), y = Js.I(bp.y - 1) } : new() { x = Js.I(bp.x - 1), y = Js.I(bp.y) }];
             if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
             {
-                return goTo(state, s, job, sides);
+                { goTo(state, s, job, sides); return; }
             }
         }
         else if (Space.manhattan(s.pos, bp) != 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, bp.x, bp.y));
+            { goTo(state, s, job, Grids.neighbours4(state.grid, bp.x, bp.y)); return; }
         }
         var step = Skills.workStep(state, s, "build");
         if (step == 0)
@@ -650,11 +650,11 @@ public static partial class Work
     {
         if (job.edge != null)
         {
-            return workRepairEdge(state, s, job, job.edge);
+            { workRepairEdge(state, s, job, job.edge); return; }
         }
         if (Space.manhattan(s.pos, job) != 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, job.x, job.y));
+            { goTo(state, s, job, Grids.neighbours4(state.grid, job.x, job.y)); return; }
         }
         var step = Skills.workStep(state, s, "build");
         if (step == 0)
@@ -675,7 +675,7 @@ public static partial class Work
         var sides = [new() { x = Js.I(job.x), y = Js.I(job.y) }, ((e % 2) == 0) ? new() { x = Js.I(job.x), y = Js.I(job.y - 1) } : new() { x = Js.I(job.x - 1), y = Js.I(job.y) }];
         if (!sides.some((p) => Js.T(Space.samePoint(p, s.pos))))
         {
-            return goTo(state, s, job, sides);
+            { goTo(state, s, job, sides); return; }
         }
         var step = Skills.workStep(state, s, "build");
         if (step == 0)
@@ -689,27 +689,28 @@ public static partial class Work
         Noise.makeNoise(state, job, "building");
         finishJob(state, s, job, ((((("repaired the " + ((state.grid.edges[Js.Idx(e)] == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
     }
+    public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, (int)e);
 
     public static void workHaul(SimState state, Survivor s, Job job)
     {
         if (Js.T(Jobs.isFuelJob(job)))
         {
-            return workFuel(state, s, job);
+            { workFuel(state, s, job); return; }
         }
         var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
         if (!Js.T(item))
         {
-            return Jobs.releaseSurvivor(state, s, "item gone");
+            { Jobs.releaseSurvivor(state, s, "item gone"); return; }
         }
         if (s.carrying != item.id)
         {
             if (!Js.T(item.pos))
             {
-                return Jobs.releaseSurvivor(state, s, "item taken by someone else");
+                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
             }
             if (!Js.T(Space.samePoint(s.pos, item.pos)))
             {
-                return goTo(state, s, job, [item.pos]);
+                { goTo(state, s, job, [item.pos]); return; }
             }
             item.pos = null;
             item.carriedBy = s.id;
@@ -722,16 +723,16 @@ public static partial class Work
         }
         if (Js.T(Jobs.isStoreJob(job)))
         {
-            return carryToStorage(state, s, job, item);
+            { carryToStorage(state, s, job, item); return; }
         }
         var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
         if (!Js.T(bp))
         {
-            return Jobs.releaseSurvivor(state, s, "designation cancelled");
+            { Jobs.releaseSurvivor(state, s, "designation cancelled"); return; }
         }
         if (Space.manhattan(s.pos, bp) != 1)
         {
-            return goTo(state, s, job, Grids.neighbours4(state.grid, bp.x, bp.y));
+            { goTo(state, s, job, Grids.neighbours4(state.grid, bp.x, bp.y)); return; }
         }
         Items.removeItem(state, item);
         s.carrying = null;
@@ -745,7 +746,7 @@ public static partial class Work
         var g = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
         if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, Jobs.FUEL)))
         {
-            return Jobs.releaseSurvivor(state, s, $"{Js.Str(g?.kind ?? "generator")} gone");
+            { Jobs.releaseSurvivor(state, s, $"{Js.Str(g?.kind ?? "generator")} gone"); return; }
         }
         var fuel = Jobs.FUEL[Js.Idx(g.kind)];
         var site = Grids.neighbours4(state.grid, g.x, g.y);
@@ -755,7 +756,7 @@ public static partial class Work
             item = freeItemFor(state, fuel, s.pos, site);
             if (!Js.T(item))
             {
-                return Jobs.releaseSurvivor(state, s, $"no {Js.Str(fuel)} for the {Js.Str(g.kind)}");
+                { Jobs.releaseSurvivor(state, s, $"no {Js.Str(fuel)} for the {Js.Str(g.kind)}"); return; }
             }
             job.itemId = item.id;
             item.reservedBy = s.id;
@@ -764,11 +765,11 @@ public static partial class Work
         {
             if (!Js.T(item.pos))
             {
-                return Jobs.releaseSurvivor(state, s, "item taken by someone else");
+                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
             }
             if (!Js.T(Space.samePoint(s.pos, item.pos)))
             {
-                return goTo(state, s, job, [item.pos]);
+                { goTo(state, s, job, [item.pos]); return; }
             }
             item.pos = null;
             item.carriedBy = s.id;
@@ -776,7 +777,7 @@ public static partial class Work
         }
         if (Space.manhattan(s.pos, g) != 1)
         {
-            return goTo(state, s, job, site);
+            { goTo(state, s, job, site); return; }
         }
         Items.removeItem(state, item);
         s.carrying = null;
@@ -793,12 +794,12 @@ public static partial class Work
             job.dest = pickStorageTile(state, s.pos, job, home);
             if (!Js.T(job.dest))
             {
-                return Jobs.releaseSurvivor(state, s, "no free storage tile");
+                { Jobs.releaseSurvivor(state, s, "no free storage tile"); return; }
             }
         }
         if (!Js.T(Space.samePoint(s.pos, job.dest)))
         {
-            return goTo(state, s, job, [job.dest]);
+            { goTo(state, s, job, [job.dest]); return; }
         }
         item.pos = Js.Clone(job.dest);
         item.carriedBy = null;
@@ -868,7 +869,7 @@ public static partial class Work
         {
             foreach (var i in Js.Iter(rooms[Js.Idx(index)]!.tiles))
             {
-                var p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
+                Point p = new() { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
                 if (Js.T(storageTileFree(state, job, p, storage)))
                 {
                     candidates.push(p);
@@ -956,4 +957,5 @@ public static partial class Work
         }
         return (Js.T(clear(ax, ay, bx, ay)) && Js.T(clear(bx, ay, bx, by))) || (Js.T(clear(ax, ay, ax, by)) && Js.T(clear(ax, by, bx, by)));
     }
+    public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, (int)ax, (int)ay, (int)bx, (int)by);
 }

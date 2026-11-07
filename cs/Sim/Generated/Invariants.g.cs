@@ -208,7 +208,7 @@ public static partial class Invariants
                     problems.push($"{Js.Str(s.name)} is fetching a weapon while busy with something else");
                 }
             }
-            foreach (var slot in Js.Iter(["body", "feet"]))
+            foreach (var slot in Js.Iter((List<string>)["body", "feet"]))
             {
                 var id = s[Js.Idx(slot)];
                 var worn = Js.T(id) ? items.get(id) : null;

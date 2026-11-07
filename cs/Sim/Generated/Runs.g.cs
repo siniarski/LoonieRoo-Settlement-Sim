@@ -132,7 +132,7 @@ public static partial class Runs
             }
             var angle = (roll(1) * JsMath.PI) * 2;
             var dist = RUN_MIN + JsMath.floor(roll(2) * (RUN_MAX - RUN_MIN));
-            var ruin = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+            Point ruin = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
             var people = JsMath.min(RUN_PARTY, (n.people - RUN_MIN_HOME) + RUN_PARTY);
             n.people -= people;
             state.runs ??= [];

@@ -548,7 +548,7 @@ public static partial class Needs
     {
         var hurt = Health.isHurt(s.health);
         var guard = Medicine.isGuard(s);
-        /*TODO return type*/object rank(Furniture f)
+        double rank(Furniture f)
         {
             return ((Medicine.isInfirmaryBed(state, f) == hurt) ? 0 : 4) + ((f.owner == s.id) ? 0 : 2) + ((Medicine.isBarracksBed(state, f) == guard) ? 0 : 1);
         }

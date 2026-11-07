@@ -133,8 +133,9 @@ public static partial class Herds
         var ew = (JsMath.abs(dx) * 2) < JsMath.abs(dy) ? "" : ((dx < 0) ? "west" : "east");
         return (Js.T(ns) && Js.T(ew)) ? $"{Js.Str(ns)}-{Js.Str(ew)}" : (Js.Or(ns, ew));
     }
+    public static string direction(double dx, double dy) => direction((int)dx, (int)dy);
 
-    public static /*TODO return type*/object clamp(double v, double size)
+    public static double clamp(double v, double size)
     {
         return JsMath.max(0, JsMath.min(size - 1, v));
     }
@@ -178,7 +179,7 @@ public static partial class Herds
         var woke = 0;
         Point? where = null;
         var cells = new JsMap<double, List<Point>>();
-        /*TODO return type*/object cell(int x, int y)
+        double cell(int x, int y)
         {
             return (JsMath.floor(((double)(y) / (WAKE_RADIUS))) * 100003) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
         }

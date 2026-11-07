@@ -63,7 +63,7 @@ public static partial class Errands
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var want = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
+        Point want = new() { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(n.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(n.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, want);
         var spot = Space.nearestTile(state.grid, want, (x, y) => Grids.getTile(state.grid, x, y) == "floor", 400);
         if (!Js.T(spot))

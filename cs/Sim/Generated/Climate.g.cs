@@ -28,9 +28,10 @@ public static partial class Climate
         {
             return "mild";
         }
-        var t = ((double)(y) / (world.size)) + (0.25 * (Worldgen.noise(world.seed, x, y, 64, 41) - 0.5));
+        var t = ((double)(y) / (world.size)) + (0.25 * (NatureMod.noise(world.seed, x, y, 64, 41) - 0.5));
         return (t < 0.33) ? "cold" : ((t > 0.67) ? "hot" : "mild");
     }
+    public static string climateAt(SimState state, double x, double y) => climateAt(state, (int)x, (int)y);
 
     /// <summary>Is the open air cold here and now, by region and season? (Blizzards are handled by the caller.)</summary>
     public static bool regionCold(SimState state, int x, int y)
@@ -48,12 +49,14 @@ public static partial class Climate
         }
         return Js.T(night) && (season == "winter") || Js.T(state.settings.winter);
     }
+    public static bool regionCold(SimState state, double x, double y) => regionCold(state, (int)x, (int)y);
 
     /// <summary>Summer days in the hot south: thirst comes twice as fast.</summary>
     public static bool scorching(SimState state, int x, int y)
     {
         return (Seasons.seasonOf(state.tick) == "summer") && !Js.T(Time.isNight(state.tick)) && (climateAt(state, x, y) == "hot");
     }
+    public static bool scorching(SimState state, double x, double y) => scorching(state, (int)x, (int)y);
 
     public static bool isRadioactive(SimState state, int x, int y)
     {
@@ -67,8 +70,9 @@ public static partial class Climate
         {
             return false;
         }
-        return Worldgen.noise(world.seed, x, y, 30, 42) > 0.8;
+        return NatureMod.noise(world.seed, x, y, 30, 42) > 0.8;
     }
+    public static bool isRadioactive(SimState state, double x, double y) => isRadioactive(state, (int)x, (int)y);
 
     /// <summary>Every RAD_EVERY ticks in a hot spot: health, and the thought of it.</summary>
     public static void updateRadiation(SimState state, Survivor s)

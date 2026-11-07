@@ -40,6 +40,7 @@ public static partial class Seasons
     {
         return SEASONS[Js.Idx(JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length)]!;
     }
+    public static string seasonOf(double tick) => seasonOf((int)tick);
 
     /// <summary>Does a planted crop grow this tick? (Called once per plot per tick.)</summary>
     public static double cropGrows(SimState state)

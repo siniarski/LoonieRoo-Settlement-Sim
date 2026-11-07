@@ -48,6 +48,7 @@ public static partial class Lots
                 }
         }
     }
+    public static Point transform(/*TODO type Plan*/object p, double x, double y, string facing, bool mirror) => transform(p, (int)x, (int)y, facing, mirror);
 
     /// <summary>The lot's frontage (along its street) and depth.</summary>
     public static FrameResult frame(Lot lot)
@@ -103,6 +104,7 @@ public static partial class Lots
                 }
         }
     }
+    public static MapToLotResult mapToLot(Lot lot, double x, double y) => mapToLot(lot, (int)x, (int)y);
 
     /// <summary>A plan set in the lot at (u0, v0): its front `v0` back from the street, `u0` along.</summary>
     public static Placement setIn(Lot lot, /*TODO type Plan*/object plan, double u0, double v0, bool mirror, string? facing = null)
@@ -135,7 +137,7 @@ public static partial class Lots
         var D = __d0.D;
         LotLayout @out = new() { buildings = [], yard = () => "grass", trees = [], decor = [] };
         var mirror = r(81) < 0.5;
-        /*TODO return type*/object along(int w, double margin)
+        double along(int w, double margin)
         {
             return margin + JsMath.floor(r(80) * JsMath.max(1, (F - w) - (2 * margin) + 1));
         }
@@ -165,7 +167,7 @@ public static partial class Lots
             case "commercial":
                 {
                     {
-                    var kinds = ["grocery", "pharmacy", "hardware", "bar", "station", "office"];
+                    List<string> kinds = ["grocery", "pharmacy", "hardware", "bar", "station", "office"];
                     var pick = r(0);
                     var kind = kinds[Js.Idx((pick < 0.25) ? 0 : (pick < 0.4) ? 1 : (pick < 0.6) ? 2 : (pick < 0.75) ? 3 : ((pick < 0.85) ? 4 : 5))];
                     var setback = (kind == "station") ? 4 : 1;
@@ -183,7 +185,7 @@ public static partial class Lots
             case "civic":
                 {
                     {
-                    var kinds = ["police", "clinic", "school", "church", "office"];
+                    List<string> kinds = ["police", "clinic", "school", "church", "office"];
                     var kind = kinds[Js.Idx(JsMath.floor(r(0) * kinds.length))]!;
                     var plan = (kind == "church") ? Buildings.churchPlan(r, F - 4, D - 3) : Buildings.civicPlan(r, kind, F - 4, D - 3);
                     @out.buildings.push(setIn(lot, plan, along(plan.w, 2), 2, mirror));
@@ -242,7 +244,7 @@ public static partial class Lots
             return "grass";
         }
         @out.yard = crop;
-        var sides = [r(20) < 0.6, r(21) < 0.6, r(22) < 0.6];
+        List<int> sides = [r(20) < 0.6, r(21) < 0.6, r(22) < 0.6];
         for (var v = yardDepth; v < D; v++)
         {
             for (var u = 0; u < F; u++)
@@ -291,7 +293,7 @@ public static partial class Lots
             @out.buildings.push(setIn(lot, house, JsMath.max(1, JsMath.floor(((double)((F - house.w)) / (2)))), 1, r(13) < 0.5));
         }
         var mid = JsMath.floor(((double)(F) / (2)));
-        foreach (var (du, dv) in Js.Iter([[0, 0], [1, 0], [0, 1], [1, 1]]))
+        foreach (var (du, dv) in Js.Iter((List<List<int>>)[[0, 0], [1, 0], [0, 1], [1, 1]]))
         {
             @out.decor.push(Js.With(Js.Clone(lotToMap(lot, (mid - 1) + du, 2 + dv)), __s3 => { __s3.look = "silo"; }));
         }
@@ -338,6 +340,7 @@ public static partial class Lots
         }
         parkCar(state, ctx, lot, inside);
     }
+    public static void drawLot(SimState state, LotContext ctx, Lot lot, double x0, double y0, double x1, double y1) => drawLot(state, ctx, lot, (int)x0, (int)y0, (int)x1, (int)y1);
 
     /// <summary>Of the lots in town (houses, shops, civic, industry), this many have a car parked in the street in front.</summary>
     public const double CAR_CHANCE = 0.6;
@@ -379,7 +382,7 @@ public static partial class Lots
             return Hash.hashRoll(ctx.seed, lot.x, lot.y, (0x9300 + (bi * 1000)) + k);
         }
         var decay = Difficulty.ruinDecay(state);
-        /*TODO return type*/object at(int x, int y)
+        Point at(int x, int y)
         {
             var t = transform(plan, x, y, b.facing, b.mirror);
             return new() { x = Js.I(b.ox + t.x), y = Js.I(b.oy + t.y) };

@@ -70,6 +70,7 @@ public static partial class Settlements
         state.settlements.push(n);
         return n;
     }
+    public static Settlement newSettlement(SimState state, string name, double x, double y, double people, double food, double defence) => newSettlement(state, name, (int)x, (int)y, people, food, defence);
 
     public static void adjustReputation(SimState state, Settlement s, int by, bool spill = true)
     {
@@ -104,6 +105,7 @@ public static partial class Settlements
             }
         }
     }
+    public static void adjustReputation(SimState state, Settlement s, double by, bool spill = true) => adjustReputation(state, s, (int)by, spill);
 
     public const int ALLY = 40;
 
@@ -120,12 +122,13 @@ public static partial class Settlements
     public static string? tieSettlements(Settlement a, Settlement b, int by)
     {
         var before = relation(a, b);
-        foreach (var (x, y) in Js.Iter([[a, b], [b, a]]))
+        foreach (var (x, y) in Js.Iter((List<List<int>>)[[a, b], [b, a]]))
         {
             x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (x.ties[Js.Idx(y.id)] ?? 0) + by));
         }
         return before;
     }
+    public static string? tieSettlements(Settlement a, Settlement b, double by) => tieSettlements(a, b, (int)by);
 
     /// <summary>Whose turn it is to send a trader: friendly-ish settlements in turn, or none.</summary>
     public static Settlement? traderFrom(SimState state)

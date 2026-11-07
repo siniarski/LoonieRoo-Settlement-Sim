@@ -136,7 +136,7 @@ public static partial class Jobs
                 addJob(state, "doctor", p.pos.x, p.pos.y, null, null).patientId = p.id;
             }
         }
-        var wanted = new() { workbench = Crafting.wantedCraft(state, "workbench", true), stove = Crafting.wantedCraft(state, "stove") };
+        ReconcileJobsWanted wanted = new() { workbench = Crafting.wantedCraft(state, "workbench", true), stove = Crafting.wantedCraft(state, "stove") };
         if (Js.T(wanted.workbench) || Js.T(wanted.stove))
         {
             var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
@@ -494,6 +494,7 @@ public static partial class Jobs
         state.jobs.push(job);
         return job;
     }
+    public static Job addJob(SimState state, string type, double x, double y, string? blueprintId, string? itemId, string? furnitureId = null, string? zombieId = null, string? plotId = null) => addJob(state, type, (int)x, (int)y, blueprintId, itemId, furnitureId, zombieId, plotId);
 
     public static void removeJob(SimState state, Job job, string reason)
     {

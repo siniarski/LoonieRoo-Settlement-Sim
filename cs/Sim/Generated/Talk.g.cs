@@ -189,6 +189,7 @@ public static partial class Talk
     {
         of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (of.opinions[Js.Idx(about.id)] ?? 0) + by));
     }
+    public static void warm(Survivor of, Survivor about, double by) => warm(of, about, (int)by);
 
     public static void offerTask(SimState state, Survivor s, string kind)
     {
@@ -261,7 +262,7 @@ public static partial class Talk
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        var p = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
+        Point p = new() { x = Js.I(JsMath.max(1, JsMath.min(width - 2, JsMath.round(s.pos.x + (JsMath.cos(angle) * dist))))), y = Js.I(JsMath.max(1, JsMath.min(height - 2, JsMath.round(s.pos.y + (JsMath.sin(angle) * dist))))) };
         Worldgen.ensureGeneratedAround(state, p);
         return Space.nearestTile(state.grid, p, (x, y) => (Js.T(Grids.inBounds(state.grid, x, y)) && (Grids.getTile(state.grid, x, y) == "floor")) && Js.T(Grids.isWalkable(state.grid, x, y)) && !Js.T(FurnitureMod.furnitureAt(state, x, y)) && !Js.T(Items.itemAt(state, x, y)));
     }
@@ -303,7 +304,7 @@ public static partial class Talk
     /// <summary>True: done. False: can't be done any more. Null: still open.</summary>
     public static bool? check(SimState state, Task task, Survivor giver, JsSet<double> graves)
     {
-        var spot = new() { x = Js.I(task.x), y = Js.I(task.y) };
+        Point spot = new() { x = Js.I(task.x), y = Js.I(task.y) };
         switch (task.kind)
         {
             case "home":

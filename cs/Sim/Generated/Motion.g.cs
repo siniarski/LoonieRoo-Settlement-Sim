@@ -168,6 +168,7 @@ public static partial class Motion
         var py = JsMath.max(y0, JsMath.min(y1, c.y));
         return (JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2)) < (r * r);
     }
+    public static bool touches(Point c, double r, double x0, double y0, double x1, double y1) => touches(c, r, (int)x0, (int)y0, (int)x1, (int)y1);
 
     /// <summary>Move a body by (dx, dy) SUB units, stopping at walls: each axis on its own, so it slides along a wall rather than sticking to it. Big moves go in steps no longer than a radius, so nothing tunnels through a wall. Returns the new centre.</summary>
     public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double? r = null)
@@ -191,6 +192,7 @@ public static partial class Motion
         }
         return new() { x = Js.I(x), y = Js.I(y) };
     }
+    public static Point slide(Grid grid, Point at, double dx, double dy, string mover, double? r = null) => slide(grid, at, (int)dx, (int)dy, mover, r);
 
     /// <summary>A vector of length `len` (SUB units) towards (dx, dy), in integers. (0, 0) stays (0, 0).</summary>
     public static Point toward(int dx, int dy, double len)
@@ -202,6 +204,7 @@ public static partial class Motion
         }
         return new() { x = Js.I(JsMath.round(((double)((dx * len)) / (d)))), y = Js.I(JsMath.round(((double)((dy * len)) / (d)))) };
     }
+    public static Point toward(double dx, double dy, double len) => toward((int)dx, (int)dy, len);
 
     /// <summary>Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (control.ts).</summary>
     public static bool inWindowFrame(Grid grid, Point at, double? r = null)

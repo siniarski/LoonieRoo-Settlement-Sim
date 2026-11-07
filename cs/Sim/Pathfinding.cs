@@ -7,7 +7,7 @@ using static LoonieRoo.Sim.Grids;
 
 namespace LoonieRoo.Sim;
 
-public static class Pathfinding
+public static partial class Pathfinding
 {
     public const string SURVIVOR = "survivor", FREE = "free", ZOMBIE = "zombie", BREACHER = "breacher", RAIDER = "raider", CRAWLER = "crawler", VEHICLE = "vehicle";
 
