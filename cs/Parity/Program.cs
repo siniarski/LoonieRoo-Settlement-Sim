@@ -110,7 +110,6 @@ foreach (var file in Directory.GetFiles(Path.Combine(dir, "states"), "*.json"))
 
 // Whole runs: from the TypeScript's start state, tick to each checkpoint and compare the whole state.
 // Stops a run at its first differing checkpoint (later ones only repeat the difference).
-int[] checkpoints = [1, 2, 5, 10, 30, 100, 300];
 var runsDir = Path.Combine(dir, "runs");
 if (Directory.Exists(runsDir))
 {
@@ -121,6 +120,7 @@ if (Directory.Exists(runsDir))
         try { state = StateJson.Read(File.ReadAllText(Path.Combine(run, "start.json"))); }
         catch (Exception e) { Check("run start", false, $"{name}: {e.Message}"); continue; }
         int done = 0;
+        var checkpoints = JsonSerializer.Deserialize<int[]>(File.ReadAllText(Path.Combine(run, "checkpoints.json")))!;
         foreach (int at in checkpoints)
         {
             try
