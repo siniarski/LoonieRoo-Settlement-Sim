@@ -152,7 +152,7 @@ public partial class WeaponsTest
             var at = Js.Clone(s.pos);
             Needs.killSurvivor(state, s, "a test");
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
-            expect(Js.Get(weapons(state), 0)).toMatchObject(Js.Obj(("carriedBy", (object?)(null)), ("pos", (object?)(at))));
+            expect(Js.Missing(weapons(state), 0) ? null : (object?)(Js.Get(weapons(state), 0))).toMatchObject(Js.Obj(("carriedBy", (object?)(null)), ("pos", (object?)(at))));
         }
 
         [Fact(DisplayName = "weapons > a direct order interrupts fetching a weapon and frees it")]
@@ -231,7 +231,7 @@ public partial class WeaponsTest
             var state = setup(map, new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(1), purpose = "armory" }, new() { x = Js.I(6), y = Js.I(1), purpose = "storage" }]);
             var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
             expect(status.complete).toBe(false);
-            expect(status.requirements.filter((r) => !Js.T(r.met)).map((r) => r.label)).toEqual(Js.Arr(["at least 4 tiles"]));
+            expect(status.requirements.filter((r) => !r.met).map((r) => r.label)).toEqual(Js.Arr(["at least 4 tiles"]));
             runUntil(state, (_) => (state.jobs.length == 0) && (Js.NN(Js.NN(Js.Get(weapons(state), 0)).pos).y < 3), 800);
             expect(Js.NN(Js.NN(Js.Get(weapons(state), 0)).pos).x).toBeGreaterThan(4);
         }

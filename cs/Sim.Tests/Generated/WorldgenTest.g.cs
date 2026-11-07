@@ -99,11 +99,11 @@ public partial class WorldgenTest
             {
                 for (var x = (sx - NatureMod.START_CLEAR_RADIUS) + 2; x < ((sx + NatureMod.START_CLEAR_RADIUS) - 2); x++)
                 {
-                    expect(Js.Get(world.grid.tiles, Grids.tileIndex(world.grid, x, y))).not.toBe("water");
+                    expect(Js.Missing(world.grid.tiles, Grids.tileIndex(world.grid, x, y)) ? null : (object?)(Js.Get(world.grid.tiles, Grids.tileIndex(world.grid, x, y)))).not.toBe("water");
                 }
             }
-            expect(Js.Get(world.grid.explored, Grids.tileIndex(world.grid, sx, sy))).toBe(1);
-            expect(Js.Get(world.grid.explored, 0)).toBe(0);
+            expect(Js.Missing(world.grid.explored, Grids.tileIndex(world.grid, sx, sy)) ? null : (object?)(Js.Get(world.grid.explored, Grids.tileIndex(world.grid, sx, sy)))).toBe(1);
+            expect(Js.Missing(world.grid.explored, 0) ? null : (object?)(Js.Get(world.grid.explored, 0))).toBe(0);
         }
 
         [Fact(DisplayName = "world generation > crates further out hold more")]
@@ -159,7 +159,7 @@ public partial class WorldgenTest
             var n = ((double)(512) / (Worldgen.CHUNK));
             expect(Js.NN(world.world).generated.filter((g) => g == 1)).toHaveLength(JsMath.pow(((2 * Worldgen.GENERATE_RADIUS) + 1), 2));
             expect(Js.NN(world.world).generated.length).toBe(n * n);
-            expect(Js.Get(world.grid.tiles, 0)).toBe("floor");
+            expect(Js.Missing(world.grid.tiles, 0) ? null : (object?)(Js.Get(world.grid.tiles, 0))).toBe("floor");
         }
 
         [Fact(DisplayName = "lazy generation > chunks appear ahead of a survivor as they walk, the same as if made up front")]
@@ -178,7 +178,7 @@ public partial class WorldgenTest
             {
                 for (var x = 7 * Worldgen.CHUNK; x < (8 * Worldgen.CHUNK); x++)
                 {
-                    expect(Js.Get(lazy.grid.tiles, (y * 256) + x)).toBe(Js.Get(alone.grid.tiles, (y * 256) + x));
+                    expect(Js.Missing(lazy.grid.tiles, (y * 256) + x) ? null : (object?)(Js.Get(lazy.grid.tiles, (y * 256) + x))).toBe(Js.Get(alone.grid.tiles, (y * 256) + x));
                 }
             }
             expect(Invariants.checkInvariants(lazy)).toEqual(Js.Arr([]));

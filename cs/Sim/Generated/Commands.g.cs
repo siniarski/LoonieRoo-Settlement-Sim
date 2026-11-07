@@ -15,7 +15,7 @@ public static partial class Commands
     public static CommandResult applyCommand(SimState state, Command command)
     {
         var result = execute(state, command);
-        if (Js.T(Js.T(result.ok) && Js.T(result.changed)))
+        if (Js.T(result.ok && Js.T(result.changed)))
         {
             state.commandLog.push(new() { tick = state.tick, command = Js.Clone(command) });
         }
@@ -229,7 +229,7 @@ public static partial class Commands
         {
             var (x0, x1) = (JsMath.min(command.x0, command.x1), JsMath.max(command.x0, command.x1));
             var (y0, y1) = (JsMath.min(command.y0, command.y1), JsMath.max(command.y0, command.y1));
-            var marked = state.animals.filter((a) => ((((!Js.T(a.hunted) && (!Js.T(command.kinds) || command.kinds.includes(a.kind))) && (a.pos.x >= x0)) && (a.pos.x <= x1)) && (a.pos.y >= y0)) && (a.pos.y <= y1));
+            var marked = state.animals.filter((a) => ((((!a.hunted && (!Js.T(command.kinds) || command.kinds.includes(a.kind))) && (a.pos.x >= x0)) && (a.pos.x <= x1)) && (a.pos.y >= y0)) && (a.pos.y <= y1));
             foreach (var a in Js.Iter(marked))
             {
                 a.hunted = true;
@@ -640,7 +640,7 @@ public static partial class Commands
                 {
                     {
                     var crate = FurnitureMod.furnitureAt(state, Js.NN(x), Js.NN(y));
-                    if (Js.T((((crate?.kind != "crate") && (crate?.kind != "tree")) || ((crate.kind == "crate") && (crate.loot == 0))) || Js.T(crate.scavenge)))
+                    if ((((crate?.kind != "crate") && (crate?.kind != "tree")) || ((crate.kind == "crate") && (crate.loot == 0))) || crate.scavenge)
                     {
                         return unchanged();
                     }
@@ -856,7 +856,7 @@ public static partial class Commands
                 return;
             }
             var r = designateEdge(state, x, y, side, door ? "door" : "wall");
-            if (Js.T(Js.T(r.ok) && Js.T(r.changed)))
+            if (Js.T(r.ok && Js.T(r.changed)))
             {
                 edgesPlanned += 1;
             }
@@ -948,7 +948,7 @@ public static partial class Commands
         var crate = FurnitureMod.furnitureAt(state, x, y);
         if ((crate?.kind == "crate") || (crate?.kind == "tree"))
         {
-            if (!Js.T(crate.scavenge))
+            if (!crate.scavenge)
             {
                 return unchanged();
             }

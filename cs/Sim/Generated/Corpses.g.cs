@@ -56,7 +56,7 @@ public static partial class Corpses
 
     public static void leaveCorpse(SimState state, Point p, string? name)
     {
-        if (!Js.T(state.harsh))
+        if (!state.harsh)
         {
             return;
         }
@@ -72,7 +72,7 @@ public static partial class Corpses
 
     public static void updateCorpses(SimState state)
     {
-        if (!Js.T(state.harsh))
+        if (!state.harsh)
         {
             return;
         }
@@ -131,7 +131,7 @@ public static partial class Corpses
         var rooms = __d0.rooms;
         foreach (var carrier in Js.Iter(state.survivors))
         {
-            if (Js.T((Js.T((carrier.sick == null) || Js.T(Js.T(carrier.sleep?.asleep)))) || Policies.policyOn(state, "quarantine")))
+            if (Js.T((Js.T((carrier.sick == null) || Js.T(carrier.sleep?.asleep))) || Policies.policyOn(state, "quarantine")))
             {
                 continue;
             }

@@ -448,7 +448,7 @@ public static partial class Animals
         {
             a.backOffUntil = state.tick + BACK_OFF;
         }
-        if (!Js.T(a.hunted))
+        if (!a.hunted)
         {
             a.hunted = true;
             Events.logEvent(state, $"{Js.Str(bear ? "A bear" : "Wolves")} attacked {Js.Str(s.name)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})!");

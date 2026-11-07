@@ -248,7 +248,7 @@ public static partial class Zombies
         var night = Js.NN(Time.nightNumber(state.tick));
         if (Time.ticksIntoNight(state.tick) == 0)
         {
-            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night)) * (Js.T(state.harsh) ? groupShare(state.survivors.length) : 1))));
+            state.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(state, JsMath.round(((zombiesForNight(night, state.survivors.length) * Director.threatScale(state)) * EndgameMod.siegeFactor(state, night)) * (state.harsh ? groupShare(state.survivors.length) : 1))));
             var siege = EndgameMod.siegeFactor(state, night) > 1;
             Events.logEvent(state, $"Night {Js.Str(night)} falls: {Js.Str(state.zombiesTonight)} zombies expected{Js.Str(siege ? " (a SIEGE night)" : "")}");
         }
@@ -771,7 +771,7 @@ public static partial class Zombies
         var noticed = (z.kind == "night") ? state.survivors : state.survivors.filter((s) => notices(state, z, s));
         var target = noticed.slice().sort((a, b) => Space.manhattan(z.pos, a.pos) - Space.manhattan(z.pos, b.pos)).find((s) => Pathfinding.canReach(grid, v, z.pos, goalsFor(s), moverOf(z)));
         z.targetId = target?.id ?? null;
-        if ((Js.T(target) && (z.variant == "screamer")) && !Js.T(z.screamed))
+        if ((Js.T(target) && (z.variant == "screamer")) && !z.screamed)
         {
             z.screamed = true;
             Events.logEvent(state, $"A screamer shrieked at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})!");

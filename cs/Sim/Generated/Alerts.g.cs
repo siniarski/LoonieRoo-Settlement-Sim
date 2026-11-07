@@ -62,7 +62,7 @@ public static partial class Alerts
         }
         foreach (var h in Js.Iter(state.herds))
         {
-            if (Js.T(h.heard))
+            if (h.heard)
             {
                 add("warn", $"A herd of {Js.Str(h.size)} is out there, heading for ({Js.Str(h.to.x)}, {Js.Str(h.to.y)})", h);
             }
@@ -105,11 +105,11 @@ public static partial class Alerts
             {
                 add("warn", $"{Js.Str(s.name)} is hungry", s.pos);
             }
-            if (Js.T(state.harsh) && (s.hydration == 0))
+            if (state.harsh && (s.hydration == 0))
             {
                 add("danger", $"{Js.Str(s.name)} is dying of thirst", s.pos);
             }
-            else if (Js.T(state.harsh) && (s.hydration < ((double)(Water.THIRSTY) / (2))))
+            else if (state.harsh && (s.hydration < ((double)(Water.THIRSTY) / (2))))
             {
                 add("warn", $"{Js.Str(s.name)} is thirsty", s.pos);
             }
@@ -117,7 +117,7 @@ public static partial class Alerts
             {
                 add("warn", $"{Js.Str(s.name)} is sick (medicine helps)", s.pos);
             }
-            if (Js.T(s.bleeding))
+            if (s.bleeding)
             {
                 add("warn", $"{Js.Str(s.name)} is bleeding (a bandage stops it)", s.pos);
             }
@@ -149,7 +149,7 @@ public static partial class Alerts
         {
             add("warn", $"{Js.Str(people.length - beds)} without a bed");
         }
-        if (Js.T(state.harsh))
+        if (state.harsh)
         {
             var clean = (FurnitureMod.ofKind(state, "well").length > 0) || FurnitureMod.ofKind(state, "collector").some((f) => f.loot > 0);
             if (!Js.T(clean))

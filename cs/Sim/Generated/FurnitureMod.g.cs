@@ -120,7 +120,7 @@ public static partial class FurnitureMod
     public static List<Furniture> markedForScavenge(SimState state)
     {
         var ix = index(state);
-        ix.marked ??= state.furniture.filter((f) => Js.T(f.scavenge));
+        ix.marked ??= state.furniture.filter((f) => f.scavenge);
         return ix.marked;
     }
 

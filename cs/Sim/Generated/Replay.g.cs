@@ -21,7 +21,7 @@ public static partial class Replay
                     throw new Exception($"replay: command at tick {Js.Str(entry.tick)} is earlier than tick {Js.Str(state.tick)} (log unsorted?)");
                 }
                 var result = Commands.applyCommand(state, entry.command);
-                if (!Js.T(result.ok))
+                if (!result.ok)
                 {
                     throw new Exception($"replay: command at tick {Js.Str(entry.tick)} was rejected: {Js.Str(result.reason)}");
                 }

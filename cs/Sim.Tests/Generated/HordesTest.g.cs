@@ -230,7 +230,7 @@ public partial class HordesTest
             }
             var loaded = Savefile.loadFile(Savefile.toSaveFile(state));
             expect(loaded.ok).toBe(true);
-            if (!Js.T(loaded.ok))
+            if (!loaded.ok)
             {
                 return;
             }

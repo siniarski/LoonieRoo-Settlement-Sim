@@ -42,7 +42,7 @@ public partial class GridTest
             var grid = Grids.createGrid(4, 3);
             expect(Grids.setTile(grid, 2, 1, "wall")).toBe(true);
             expect(Grids.getTile(grid, 2, 1)).toBe("wall");
-            expect(Js.Get(grid.tiles, (1 * 4) + 2)).toBe("wall");
+            expect(Js.Missing(grid.tiles, (1 * 4) + 2) ? null : (object?)(Js.Get(grid.tiles, (1 * 4) + 2))).toBe("wall");
             expect(Grids.getTile(grid, 9, 9)).toBeUndefined();
         }
 

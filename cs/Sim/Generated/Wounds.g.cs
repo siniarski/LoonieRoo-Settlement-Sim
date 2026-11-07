@@ -53,11 +53,11 @@ public static partial class Wounds
         {
             s.wound = null;
         }
-        if (Js.T(s.bleeding) && (state.tick >= s.bleedUntil))
+        if (s.bleeding && (state.tick >= s.bleedUntil))
         {
             s.bleeding = false;
         }
-        if (Js.T(s.bleeding) && ((state.tick % BLEED_EVERY) == 0))
+        if (s.bleeding && ((state.tick % BLEED_EVERY) == 0))
         {
             s.health = JsMath.max(0, s.health - 1);
             s.lastHurtBy = "bleeding";

@@ -56,7 +56,7 @@ public partial class NeighboursTest
             }
             expect(Caravans.caravansOf(state)).toEqual(Js.Arr([]));
             expect(b.food).toBe(12);
-            expect(Js.Get(a.ties, b.id)).toBeGreaterThan(0);
+            expect(Js.Missing(a.ties, b.id) ? null : (object?)(Js.Get(a.ties, b.id))).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "caravans > can be caught by the dead on the way, and lost, leaving what was left in the road")]

@@ -87,7 +87,7 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if (Js.T(bp.delivered))
+        if (bp.delivered)
         {
             Items.spawnItem(state, materialFor(bp.target), bp.x, bp.y);
         }

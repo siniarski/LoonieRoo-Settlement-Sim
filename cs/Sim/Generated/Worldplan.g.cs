@@ -118,7 +118,7 @@ public static partial class Worldplan
         var size = n.size;
         List<Point> ends(double ti)
         {
-            return streets.filter((s) => Js.T((s.town == ti) && Js.T(s.main))).flatMap((s) => Js.T(s.eastWest) ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
+            return streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
         }
         List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) }), new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) }];
         Point nearestEnd(double node, Point toward)
@@ -178,8 +178,8 @@ public static partial class Worldplan
             var t = Js.NN(Js.Get(towns, s.town));
             foreach (var side in Js.Iter((List<double>)[-1, 1]))
             {
-                double p = Js.T(s.eastWest) ? s.x0 : s.y0;
-                var end = Js.T(s.eastWest) ? (s.x1 + 1) : (s.y1 + 1);
+                double p = s.eastWest ? s.x0 : s.y0;
+                var end = s.eastWest ? (s.x1 + 1) : (s.y1 + 1);
                 var k = 0;
                 while (p < (end - 8))
                 {
@@ -188,10 +188,10 @@ public static partial class Worldplan
                         return NatureMod.roll(n.seed, (si * 31) + side, p, (0x7400 + j) + (k * 7));
                     }
                     var mid = p + 9;
-                    var __c2 = Js.T(s.eastWest); var mx = __c2 ? mid : (s.x0 + (side * 9)); var my = __c2 ? (s.y0 + (side * 9)) : mid;
+                    var __c2 = s.eastWest; var mx = __c2 ? mid : (s.x0 + (side * 9)); var my = __c2 ? (s.y0 + (side * 9)) : mid;
                     var share = ((double)(dist(mx, my, t.x, t.y)) / (t.radius));
                     string zone = "residential";
-                    if (((Js.T((share < 0.45) && Js.T(s.main))) && (Js.NN(Js.Get(civic, s.town)) < Js.Get(CIVIC_MAX, t.kind))) && (r(4) < 0.6))
+                    if ((((share < 0.45) && s.main) && (Js.NN(Js.Get(civic, s.town)) < Js.Get(CIVIC_MAX, t.kind))) && (r(4) < 0.6))
                     {
                         zone = "civic";
                     }
@@ -213,7 +213,7 @@ public static partial class Worldplan
                     }
                     TownLotsResult lotAt(double w, double d)
                     {
-                        return Js.T(s.eastWest) ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - 1) - d) : ((s.y0 + Towns.STREET) + 1)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - 1) - d) : ((s.x0 + Towns.STREET) + 1)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
+                        return s.eastWest ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - 1) - d) : ((s.y0 + Towns.STREET) + 1)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - 1) - d) : ((s.x0 + Towns.STREET) + 1)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
                     }
                     var placed = add(Js.With(Js.CopyAs<Lot>(lotAt(front2, deep)), __s3 => { __s3.zone = zone; __s3.town = s.town; })) ? front2 : ((((zone != "civic") && (zone != "industrial")) && add(Js.With(Js.CopyAs<Lot>(lotAt(12, 12)), __s4 => { __s4.zone = zone; __s4.town = s.town; }))) ? 12 : 0);
                     if (placed > 0)

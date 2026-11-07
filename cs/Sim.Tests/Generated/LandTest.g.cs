@@ -66,7 +66,7 @@ public partial class LandTest
             Commands.applyCommand(state, new Command { type = "designateFarm", x = Js.I(2), y = Js.I(0), crop = "wheat" });
             Commands.applyCommand(state, new Command { type = "designateFarm", x = Js.I(3), y = Js.I(0), crop = "herb" });
             Js.NN(Js.Get(state.survivors, 0)).priorities["farm"] = 3;
-            runUntil(state, (_) => state.farm.every((p) => Js.T(p.planted)), 300);
+            runUntil(state, (_) => state.farm.every((p) => p.planted), 300);
             Js.NN(Js.Get(state.survivors, 0)).priorities["farm"] = 0;
             for (var i = 0; i < (Farming.CROPS["wheat"].grow + 5); i++)
             {

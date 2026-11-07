@@ -32,8 +32,8 @@ public partial class SavefileTest
             var state = __d0.state;
             expect(state.commandLog.length).toBeGreaterThan(0);
             var loaded = Savefile.loadFile(Savefile.toSaveFile(state));
-            expect(Js.T(loaded.ok) && Js.T(loaded.kind)).toBe("save");
-            if (!Js.T(loaded.ok))
+            expect((loaded.ok ? (object?)(loaded.kind) : false)).toBe("save");
+            if (!loaded.ok)
             {
                 return;
             }
@@ -49,11 +49,11 @@ public partial class SavefileTest
         {
             var __d1 = played();
             var state = __d1.state;
-            var old = Js.JsonParse<TestOld>(Savefile.toSaveFile(state));
-            old.schemaVersion = States.SCHEMA_VERSION - 1;
+            var old = Js.JsonParse<JsRecord<object?>>(Savefile.toSaveFile(state));
+            old["schemaVersion"] = States.SCHEMA_VERSION - 1;
             var result = Savefile.loadFile(Js.Json_stringify(old));
             expect(result.ok).toBe(false);
-            expect((!Js.T(result.ok) ? (object?)(result.error) : false)).toMatch(new JsRegExp("different version", ""));
+            expect((!result.ok ? (object?)(result.error) : false)).toMatch(new JsRegExp("different version", ""));
             expect(Savefile.loadFile("not json")).toEqual(Js.Obj(("ok", (object?)(false)), ("error", (object?)("not a JSON file"))));
             expect(Savefile.loadFile("{\"hello\": 1}")).toEqual(Js.Obj(("ok", (object?)(false)), ("error", (object?)("not a LoonieRoo file"))));
         }
@@ -72,7 +72,7 @@ public partial class SavefileTest
             var text = Savefile.toSaveFile(world);
             expect(text.length).toBeLessThan(((double)(Js.Json_stringify(world).length) / (3)));
             var loaded = Savefile.loadFile(text);
-            expect(Js.T(loaded.ok) && Js.T(Js.Json_stringify(loaded.state))).toBe(Js.Json_stringify(world));
+            expect((loaded.ok ? (object?)(Js.Json_stringify(loaded.state)) : false)).toBe(Js.Json_stringify(world));
         }
 
         [Fact(DisplayName = "compact saves > still loads a save written without the encoding")]
@@ -82,7 +82,7 @@ public partial class SavefileTest
             var state = __d2.state;
             var plain = Js.Json_stringify(Js.Obj(("format", (object?)("loonieroo-save")), ("schemaVersion", (object?)(States.SCHEMA_VERSION)), ("state", (object?)(state))));
             var loaded = Savefile.loadFile(plain);
-            expect(Js.T(loaded.ok) && Js.T(Js.Json_stringify(loaded.state))).toBe(Js.Json_stringify(state));
+            expect((loaded.ok ? (object?)(Js.Json_stringify(loaded.state)) : false)).toBe(Js.Json_stringify(state));
         }
     }
 
@@ -97,8 +97,8 @@ public partial class SavefileTest
             var initial = __d3.initial;
             var state = __d3.state;
             var loaded = Savefile.loadFile(Savefile.toBugReport(initial, state, "Ash stood still"));
-            expect(Js.T(loaded.ok) && Js.T(loaded.kind)).toBe("bug");
-            if (!Js.T(loaded.ok))
+            expect((loaded.ok ? (object?)(loaded.kind) : false)).toBe("bug");
+            if (!loaded.ok)
             {
                 return;
             }
@@ -113,10 +113,10 @@ public partial class SavefileTest
             var start = States.cloneState(midGame);
             Commands.applyCommand(midGame, new Command { type = "designateBuild", x = Js.I(9), y = Js.I(0), structure = "door" });
             Tick.step(midGame, 100);
-            var report = Js.JsonParse<TestReport>(Savefile.toBugReport(start, midGame));
-            expect(report.commands).toHaveLength(1);
+            var report = Js.JsonParse<JsRecord<object?>>(Savefile.toBugReport(start, midGame));
+            expect(report["commands"]).toHaveLength(1);
             var loaded = Savefile.loadFile(Js.Json_stringify(report));
-            expect(Js.T(loaded.ok) && Js.T(Js.Json_stringify(loaded.state))).toBe(Js.Json_stringify(midGame));
+            expect((loaded.ok ? (object?)(Js.Json_stringify(loaded.state)) : false)).toBe(Js.Json_stringify(midGame));
         }
 
         [Fact(DisplayName = "bug reports > a report whose log does not replay is refused, not half-loaded")]
@@ -125,8 +125,8 @@ public partial class SavefileTest
             var __d5 = played();
             var initial = __d5.initial;
             var state = __d5.state;
-            var report = Js.JsonParse<TestReport>(Savefile.toBugReport(initial, state));
-            report.commands.reverse();
+            var report = Js.JsonParse<JsRecord<object?>>(Savefile.toBugReport(initial, state));
+            report["commands"] = System.Text.Json.Nodes.JsonNode.Parse(((System.Text.Json.JsonElement)report["commands"]!).GetRawText())!.AsArray().Reverse().Select(n => n?.DeepClone()).ToList();
             var loaded = Savefile.loadFile(Js.Json_stringify(report));
             expect(loaded.ok).toBe(false);
         }
@@ -151,7 +151,7 @@ public partial class SavefileTest
             var text = Savefile.toSaveFile(state);
             var loaded = Savefile.loadFile(text);
             expect(loaded.ok).toBe(true);
-            if (!Js.T(loaded.ok))
+            if (!loaded.ok)
             {
                 return;
             }

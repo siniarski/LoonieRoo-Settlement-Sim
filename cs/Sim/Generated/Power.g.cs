@@ -161,7 +161,7 @@ public static partial class Power
     /// <summary>Food and meals age, and rot. Harsh games only.</summary>
     public static void updateSpoilage(SimState state)
     {
-        if (!Js.T(state.harsh) || ((state.tick % SPOIL_CHECK_EVERY) != 0))
+        if (!state.harsh || ((state.tick % SPOIL_CHECK_EVERY) != 0))
         {
             return;
         }

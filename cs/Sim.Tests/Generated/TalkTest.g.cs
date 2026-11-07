@@ -79,7 +79,7 @@ public partial class TalkTest
             expect(Commands.applyCommand(state, new Command { type = "talk" }).ok).toBe(false);
             them.pos = new Point { x = Js.I(41), y = Js.I(41) };
             expect(Commands.applyCommand(state, new Command { type = "talk" })).toMatchObject(Js.Obj(("ok", (object?)(true))));
-            expect(Js.Get(them.opinions, you.id)).toBeGreaterThan(0);
+            expect(Js.Missing(them.opinions, you.id) ? null : (object?)(Js.Get(them.opinions, you.id))).toBeGreaterThan(0);
         }
     }
 
@@ -103,7 +103,7 @@ public partial class TalkTest
             Talk.updateTasks(state);
             expect(state.tasks).toEqual(Js.Arr([]));
             expect(them.thoughts.some((t) => t.kind == "wentHome")).toBe(true);
-            expect(Js.Get(them.opinions, you.id)).toBeGreaterThanOrEqual(25);
+            expect(Js.Missing(them.opinions, you.id) ? null : (object?)(Js.Get(them.opinions, you.id))).toBeGreaterThanOrEqual(25);
         }
 
         [Fact(DisplayName = "tasks > bury: their dead in a graveyard")]
@@ -202,7 +202,7 @@ public partial class TalkTest
             expect(a.story.knew).toEqual(Js.Arr([]));
             expect(Talk.talk(state, b)).toBeNull();
             expect(b.story.knew).toEqual(Js.Arr([a.id]));
-            expect(Js.Get(a.opinions, b.id)).toBeGreaterThanOrEqual(20);
+            expect(Js.Missing(a.opinions, b.id) ? null : (object?)(Js.Get(a.opinions, b.id))).toBeGreaterThanOrEqual(20);
         }
 
         [Fact(DisplayName = "more of their stories > once everything is told, they confess to the others")]
@@ -215,7 +215,7 @@ public partial class TalkTest
             them.story.told = StoryMod.storyLines(them.story).length;
             expect(Talk.talk(state, them)).toBeNull();
             expect(them.story.confessed).toBe(true);
-            expect(Js.Get(you.opinions, them.id)).toBeLessThan(0);
+            expect(Js.Missing(you.opinions, them.id) ? null : (object?)(Js.Get(you.opinions, them.id))).toBeLessThan(0);
             expect(them.thoughts.some((t) => t.kind == "confessed")).toBe(true);
         }
 
@@ -225,7 +225,7 @@ public partial class TalkTest
             var outcomes = new JsSet<string>();
             for (var n = 1; (n < 400) && (outcomes.size < 2); n++)
             {
-                if (Js.T(StoryMod.makeStory($"s{Js.Str(n)}").lost.dead))
+                if (StoryMod.makeStory($"s{Js.Str(n)}").lost.dead)
                 {
                     continue;
                 }

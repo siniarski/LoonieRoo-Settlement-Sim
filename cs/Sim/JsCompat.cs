@@ -336,7 +336,7 @@ public static class JsStringExtensions
             return b > a ? s.Substring(a, b - a) : "";
         }
         public string substring(int start, int? end = null) => s.slice(Math.Max(0, start), end is int e ? Math.Max(0, e) : null);
-        public List<string> split(string sep) => s.Split(sep).ToList();
+        public List<string> split(string sep) => sep.Length == 0 ? s.Select(c => c.ToString()).ToList() : s.Split(sep).ToList();
         public string padStart(int n, string pad = " ")
         {
             var o = s;
@@ -780,6 +780,17 @@ public static partial class Js
     /// <summary>JSON.stringify, for comparing (as the sim uses it) and for logs.</summary>
     public static string Json_stringify(object? x) => System.Text.Json.JsonSerializer.Serialize(x, StateJson.Options);
 
+    /// <summary>A file in the repository (src/scenarios/...): looked for from the working folder up.</summary>
+    public static string RepoFile(string relative)
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+        {
+            var f = Path.Combine(d.FullName, relative);
+            if (File.Exists(f)) return f;
+        }
+        throw new FileNotFoundException(relative);
+    }
+
     /// <summary>JSON.parse(text) as T: read as T (or as JSON nodes).</summary>
     public static V JsonParse<V>(string text) => System.Text.Json.JsonSerializer.Deserialize<V>(text, StateJson.Options)!;
 
@@ -877,6 +888,14 @@ public static partial class Js
     public static V Get<V>(Dictionary<string, V> r, double k) => Get(r, Str(k));
     public static string? Get(string s, double i) => i >= 0 && i < s.Length && i == Math.Floor(i) ? s[(int)i].ToString() : null;
 
+    /// <summary>a[k] === undefined: no such key, or past the list's end (or a null there).</summary>
+    public static bool Missing<V>(Dictionary<string, V> r, string k) => !r.TryGetValue(k, out var v) || v is null;
+    public static bool Missing<V>(Dictionary<string, V> r, double k) => Missing(r, Str(k));
+    public static bool Missing<T>(List<T> a, double i) => !(i >= 0 && i < a.Count && i == Math.Floor(i)) || a[(int)i] is null;
+    public static bool Missing<T>(T[] a, double i) => !(i >= 0 && i < a.Length && i == Math.Floor(i)) || a[(int)i] is null;
+    public static bool Missing(string s, double i) => !(i >= 0 && i < s.Length && i == Math.Floor(i));
+    public static bool Missing<T>(TypedArray<T> a, double i) where T : struct => !(i >= 0 && i < a.length && i == Math.Floor(i));
+
     public static int Idx(int i) => i;
     public static int Idx(double d) => (int)d;
     public static string Idx(string s) => s;
@@ -933,6 +952,11 @@ public static partial class Js
     {
         if (x is JsRecord<object?> r) return r;
         var o = new JsRecord<object?>();
+        if (x is System.Text.Json.Nodes.JsonObject jo)
+        {
+            foreach (var kv in jo) o[kv.Key] = kv.Value;
+            return o;
+        }
         if (x is System.Collections.IDictionary d)
         {
             foreach (System.Collections.DictionaryEntry kv in d) o[Convert.ToString(kv.Key, CultureInfo.InvariantCulture)!] = kv.Value;

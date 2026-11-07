@@ -94,7 +94,7 @@ public static partial class Forage
         {
             return false;
         }
-        var @short = Js.T(state.harsh) && (state.items.filter((i) => (((i.kind == "food") || (i.kind == "meal")) && (i.pos != null)) && (i.reservedBy == null)).length < state.survivors.length);
+        var @short = state.harsh && (state.items.filter((i) => (((i.kind == "food") || (i.kind == "meal")) && (i.pos != null)) && (i.reservedBy == null)).length < state.survivors.length);
         if (Js.T(!Js.T(@short) && (Js.T((s.satiety >= Food.HUNGRY) || Js.T(hasFood())))))
         {
             return false;

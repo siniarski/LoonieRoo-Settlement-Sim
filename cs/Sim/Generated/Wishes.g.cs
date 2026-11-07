@@ -63,7 +63,7 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "bed", targetId = null });
         }
-        if (Js.T(!Js.T(s.body) && (Js.T(((Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter")) || Js.T(state.settings.winter)))))
+        if (!Js.T(s.body) && (((Seasons.seasonOf(state.tick) == "autumn") || (Seasons.seasonOf(state.tick) == "winter")) || state.settings.winter))
         {
             @out.push(new() { kind = "coat", targetId = null });
         }
@@ -126,7 +126,7 @@ public static partial class Wishes
                 {
                     {
                     var o = state.survivors.find((x) => x.id == w.targetId);
-                    return (((o != null) && !Js.T(Js.T(o.sleep?.asleep))) && !Js.T(Js.T(s.sleep?.asleep))) && near(s, o);
+                    return (((o != null) && !Js.T(o.sleep?.asleep)) && !Js.T(s.sleep?.asleep)) && near(s, o);
                 }
                 }
             case "grave":
@@ -206,14 +206,14 @@ public static partial class Wishes
     public static void grant(SimState state, Survivor s, Wish w)
     {
         s.wish = null;
-        Mood.addThought(state, s, Js.T(w.promised) ? "promiseKept" : "wishMet");
-        Resolve.steel(s, Js.T(w.promised) ? PROMISE_RESOLVE : WISH_RESOLVE);
+        Mood.addThought(state, s, w.promised ? "promiseKept" : "wishMet");
+        Resolve.steel(s, w.promised ? PROMISE_RESOLVE : WISH_RESOLVE);
         var you = ControlMod.controlled(state);
-        if ((Js.T(Js.T(w.promised) && Js.T(you))) && (you != s))
+        if ((Js.T(w.promised && Js.T(you))) && (you != s))
         {
             s.opinions[Js.Idx(you.id)] = JsMath.min(100, (Js.Q(Js.Get(s.opinions, you.id), 0)) + PROMISE_OPINION);
         }
-        if (Js.T(w.promised))
+        if (w.promised)
         {
             Events.logEvent(state, $"A promise kept: {Js.Str(s.name)} got {Js.Str(describeWish(state, w))}");
         }
@@ -222,7 +222,7 @@ public static partial class Wishes
     public static void expire(SimState state, Survivor s, Wish w)
     {
         s.wish = null;
-        if (!Js.T(w.promised))
+        if (!w.promised)
         {
             return;
         }
@@ -243,7 +243,7 @@ public static partial class Wishes
         {
             return $"{Js.Str(s.name)} doesn't want anything just now";
         }
-        if (Js.T(s.wish.promised))
+        if (s.wish.promised)
         {
             return "already promised";
         }

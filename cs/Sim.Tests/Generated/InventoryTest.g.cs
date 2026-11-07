@@ -59,7 +59,7 @@ public partial class InventoryTest
             for (var i = 0; i < 10; i++)
             {
                 var wood = Items.spawnItem(state, "wood", 1, 2);
-                if (Js.T(Commands.applyCommand(state, new Command { type = "take", itemId = wood.id }).ok))
+                if (Commands.applyCommand(state, new Command { type = "take", itemId = wood.id }).ok)
                 {
                     took++;
                 }

@@ -186,6 +186,20 @@ public partial class HungryResult
     public Survivor s { get; set; }
 }
 
+public partial class TestBefore
+{
+    public string pos { get; set; }
+    public bool moving { get; set; }
+    public string needs { get; set; }
+    public string? jobId { get; set; }
+}
+
+public partial class TestOnJob
+{
+    public string id { get; set; }
+    public double since { get; set; }
+}
+
 public partial class WorldResult
 {
     public SimState state { get; set; }
@@ -219,16 +233,6 @@ public partial class PlayedResult
 {
     public SimState initial { get; set; }
     public SimState state { get; set; }
-}
-
-public partial class TestOld
-{
-    public double schemaVersion { get; set; }
-}
-
-public partial class TestReport
-{
-    public List<object> commands { get; set; }
 }
 
 public partial class RemoveWallResult

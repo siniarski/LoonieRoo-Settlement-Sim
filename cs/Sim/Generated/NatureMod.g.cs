@@ -88,8 +88,8 @@ public static partial class NatureMod
     /// <summary>The river's distance from (x, y), across it, in tiles (negative never).</summary>
     public static double riverDistance(Nature n, int x, int y)
     {
-        var along = Js.T(n.riverAlongX) ? x : y;
-        var across = Js.T(n.riverAlongX) ? y : x;
+        var along = n.riverAlongX ? x : y;
+        var across = n.riverAlongX ? y : x;
         var centre = n.riverBase + (28 * (noise(n.seed, along, 0, 40, 6) - 0.5));
         var width = 3 + (2 * noise(n.seed, along, 0, 23, 7));
         return JsMath.max(0, JsMath.abs(across - centre) - ((double)(width) / (2)));

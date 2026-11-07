@@ -60,7 +60,7 @@ public static partial class Water
     /// <summary>Drains hydration (harsh games only); dehydration hurts. Every tick, every survivor.</summary>
     public static void updateHydration(SimState state, Survivor s)
     {
-        if (!Js.T(state.harsh))
+        if (!state.harsh)
         {
             return;
         }
@@ -177,13 +177,13 @@ public static partial class Water
     /// <summary>Interrupt work for a drink (before movement), if there's water to go to.</summary>
     public static bool thirstInterrupts(SimState state, Survivor s)
     {
-        return ((Js.T(state.harsh) && isThirsty(s)) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
+        return ((state.harsh && isThirsty(s)) && (state.tick >= s.nextDrinkTick)) && !Js.T(s.drink);
     }
 
     /// <summary>Runs when standing still, after eating and before treatment. Returns true if drinking handled this tick.</summary>
     public static bool updateDrink(SimState state, Survivor s)
     {
-        if (Js.T(Js.T(s.sleep) || !Js.T(state.harsh)))
+        if (Js.T(Js.T(s.sleep) || !state.harsh))
         {
             return false;
         }

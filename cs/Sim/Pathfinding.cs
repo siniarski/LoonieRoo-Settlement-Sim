@@ -370,6 +370,7 @@ public static partial class Pathfinding
             else
             {
                 var dirty = new HashSet<int>(changed);
+                dirty.RemoveWhere(c => c < 0 || c >= r.cw * r.ch); // a change logged past the map (JS's typed arrays ignore writes out of range)
                 foreach (int c in dirty) FloodChunk(grid, r, c, rule, stack);
                 var relink = new HashSet<int>();
                 foreach (int c in dirty)

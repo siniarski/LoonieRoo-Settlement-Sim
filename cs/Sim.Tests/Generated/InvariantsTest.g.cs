@@ -164,28 +164,119 @@ public partial class InvariantsTest
         public static readonly JsSet<string> wandererEvents = new JsSet<string>();
 
         public static double mealsAtTables = 0;
-        /*TODO top-level ForOfStatement*/
+
+        [Theory(DisplayName = "stuck-state invariant > holds under random designations, orders, and wall edits (seed ...)")]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        [InlineData(5)]
+        public void T002_holds_under_random_designations_orders_and_wall_edits_seed(double seed)
+        {
+            var initial = ScenarioMod.loadScenario(new Scenario { seed = seed, map = MAP, rooms = [new() { x = Js.I(3), y = Js.I(3), purpose = "housing" }, new() { x = Js.I(14), y = Js.I(3), purpose = "storage" }, new() { x = Js.I(3), y = Js.I(11), purpose = "messhall" }] });
+            initial.craftTargets = new() { ["weapon"] = 1, ["bandage"] = 2, ["medicine"] = 0, ["ammo"] = 0, ["gun"] = 0, ["coat"] = 0, ["armour"] = 0, ["boots"] = 0, ["cart"] = 0, ["axe"] = 0, ["hammer"] = 0, ["medkit"] = 0 };
+            for (var y = 10; y <= 12; y++)
+            {
+                for (var x = 12; x <= 23; x++)
+                {
+                    initial.grid.explored[Js.Idx((y * initial.grid.width) + x)] = 0;
+                }
+            }
+            initial.tick = Js.I(12 * 200);
+            var state = States.cloneState(initial);
+            RngHolder driver = new RngHolder { rng = Rng.seedRng(seed * 7919) };
+            var stillWithGoal = new JsMap<string, double>();
+            var before = new JsMap<string, TestBefore>();
+            var idleWithWork = new JsMap<string, double>();
+            var onJob = new JsMap<string, TestOnJob>();
+            for (var t = 0; t < TICKS; t++)
+            {
+                var cmd = randomCommand(state, driver);
+                var ordered = ((cmd?.type == "moveSurvivor") && Commands.applyCommand(state, cmd).ok) ? cmd.survivorId : null;
+                if (Js.T(cmd) && (cmd.type != "moveSurvivor"))
+                {
+                    Commands.applyCommand(state, cmd);
+                }
+                var versionBefore = state.walkabilityVersion;
+                Tick.tick(state);
+                var pathCut = state.walkabilityVersion != versionBefore;
+                var problems = Invariants.checkInvariants(state);
+                expect(problems, $"tick {Js.Str(state.tick)}\n{Js.Str(DebugText.dumpText(state))}").toEqual(Js.Arr([]));
+                foreach (var s in Js.Iter(state.survivors))
+                {
+                    var where = $"{Js.Str(s.name)} at tick {Js.Str(state.tick)}: {Js.Str(s.note)}\n{Js.Str(DebugText.dumpText(state))}";
+                    if (Js.T(s.note))
+                    {
+                        notesSeen.add(Js.NN(Js.Get(s.note.split(" "), 0)));
+                    }
+                    if (s.note == "ate a meal at a table")
+                    {
+                        mealsAtTables += 1;
+                    }
+                    var prev = before.get(s.id);
+                    var needs = $"{Js.Str(Js.T(s.sleep) ? "sleep" : "")}{Js.Str(Js.T(s.meal) ? "meal" : "")}{Js.Str(Js.T(s.treatment) ? "treat" : "")}{Js.Str(Js.T(s.arming) ? "arm" : "")}";
+                    var movedAside = ((prev != null) && !prev.moving) && (prev.pos != $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}");
+                    var needKickedIn = ((prev != null) && (prev.needs != needs)) && (needs != "");
+                    var jobSwitched = (((prev != null) && (prev.jobId != null)) && (s.jobId != null)) && (prev.jobId != s.jobId);
+                    before.set(s.id, new() { pos = $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}", moving = s.move != null, needs = needs, jobId = s.jobId });
+                    var excused = (((Js.T((Js.T((s.id == ordered) || Js.T(movedAside))) || Js.T(needKickedIn))) || pathCut) is var __or0 && Js.T(__or0) ? __or0 : jobSwitched);
+                    var still = ((Js.T(s.goal) && !Js.T(s.move)) && !Js.T(excused)) ? ((Js.Q(stillWithGoal.get(s.id), 0)) + 1) : 0;
+                    stillWithGoal.set(s.id, still);
+                    expect(still, $"stuck with goal {Js.Str(Js.Json_stringify(s.goal))}: {Js.Str(where)}").toBeLessThanOrEqual(MAX_TICKS_WITH_GOAL_BUT_STILL);
+                    var idle = ((((((!Js.T(s.jobId) && !Js.T(s.goal)) && !Js.T(s.move)) && !Js.T(s.sleep)) && !Js.T(s.meal)) && !Js.T(s.arming)) && !Js.T(s.treatment)) && !Js.T(s.breakdown);
+                    var idleTicks = (Js.T(Js.T(idle) && Js.T(JobChoice.chooseJob(state, s)))) ? ((Js.Q(idleWithWork.get(s.id), 0)) + 1) : 0;
+                    idleWithWork.set(s.id, idleTicks);
+                    expect(idleTicks, $"idle with doable work: {Js.Str(where)}").toBeLessThanOrEqual(MAX_IDLE_WITH_DOABLE_JOB);
+                    var current = onJob.get(s.id);
+                    if (!Js.T(s.jobId))
+                    {
+                        onJob.delete(s.id);
+                    }
+                    else if (current?.id != s.jobId)
+                    {
+                        onJob.set(s.id, new() { id = s.jobId, since = state.tick });
+                    }
+                    else
+                    {
+                        expect(state.tick - current.since, $"on one job too long: {Js.Str(where)}").toBeLessThanOrEqual(MAX_TICKS_ON_ONE_JOB);
+                    }
+                }
+            }
+            foreach (var e in Js.Iter(state.events))
+            {
+                foreach (var outcome in Js.Iter((List<string>)["a wanderer", "joined", "turned away", "gave up", "walled out"]))
+                {
+                    if (e.message.includes(outcome))
+                    {
+                        wandererEvents.add(outcome);
+                    }
+                }
+            }
+            deaths += state.events.filter((e) => e.message.includes(" died of ")).length;
+            var replayed = Replay.replay(initial, state.commandLog, state.tick);
+            expect(Js.Json_stringify(replayed)).toBe(Js.Json_stringify(state));
+        }
 
         [Fact(DisplayName = "stuck-state invariant > saw survivors die along the way (death handling is exercised)")]
-        public void T002_saw_survivors_die_along_the_way_death_handling_is_exercised()
+        public void T003_saw_survivors_die_along_the_way_death_handling_is_exercised()
         {
             expect(deaths).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "stuck-state invariant > saw meals carried to a mess hall table")]
-        public void T003_saw_meals_carried_to_a_mess_hall_table()
+        public void T004_saw_meals_carried_to_a_mess_hall_table()
         {
             expect(mealsAtTables).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "stuck-state invariant > saw wanderers arrive, join, and get turned away")]
-        public void T004_saw_wanderers_arrive_join_and_get_turned_away()
+        public void T005_saw_wanderers_arrive_join_and_get_turned_away()
         {
             expect(Js.ListOf(wandererEvents).sort()).toEqual(Vitest.arrayContaining(Js.Arr(["a wanderer", "joined", "turned away"])));
         }
 
         [Fact(DisplayName = "stuck-state invariant > exercised every outcome across the seeds (guards against a vacuous run)")]
-        public void T005_exercised_every_outcome_across_the_seeds_guards_against_a_va()
+        public void T006_exercised_every_outcome_across_the_seeds_guards_against_a_va()
         {
             List<string> expected = ["took", "picked", "built", "removed", "delivered", "stored", "cleaned", "arrived", "going", "asleep", "no", "woke", "eating", "ate", "scavenged", "attacked", "killed", "sowed", "harvested", "treated", "armed", "repaired", "crafted", "brought", "relaxing", "having"];
             expect(expected.filter((n) => !notesSeen.has(n)), $"seen: {Js.Str(Js.ListOf(notesSeen).join(", "))}").toEqual(Js.Arr([]));

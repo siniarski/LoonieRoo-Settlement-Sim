@@ -84,7 +84,7 @@ public static partial class BodyMod
         }
         if ((s.endurance < BODY_MAX) && ((state.tick % 4) == 0))
         {
-            s.endurance = clamp(s.endurance + (Js.T(Js.T(s.sleep?.asleep)) ? 2 : 1));
+            s.endurance = clamp(s.endurance + (Js.T(s.sleep?.asleep) ? 2 : 1));
         }
         var outdoors = !Rooms.isIndoors(state, s.pos.x, s.pos.y);
         var coat = Clothing.wearing(state, s, "coat") != null;

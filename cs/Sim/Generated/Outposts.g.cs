@@ -88,7 +88,7 @@ public static partial class Outposts
         }
         foreach (var x in Js.Iter(state.expeditions))
         {
-            if (!Js.T(x.outpost))
+            if (!x.outpost)
             {
                 continue;
             }
@@ -132,7 +132,7 @@ public static partial class Outposts
         }
         foreach (var x in Js.Iter(state.expeditions))
         {
-            if (Js.T(x.outpost))
+            if (x.outpost)
             {
                 foreach (var s in Js.Iter(x.members))
                 {
@@ -146,7 +146,7 @@ public static partial class Outposts
     public static string? recallOutpost(SimState state, string id)
     {
         var x = state.expeditions.find((e) => e.id == id);
-        if (!Js.T(Js.T(x?.outpost)))
+        if (!Js.T(x?.outpost))
         {
             return "no such outpost";
         }

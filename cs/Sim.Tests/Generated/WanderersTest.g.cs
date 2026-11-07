@@ -180,7 +180,7 @@ public partial class WanderersTest
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(0), y = Js.I(0) });
             Tick.tick(state);
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
-            expect(Js.Get(state.wanderers, 0)).toMatchObject(Js.Obj(("x", (object?)(1)), ("y", (object?)(0))));
+            expect(Js.Missing(state.wanderers, 0) ? null : (object?)(Js.Get(state.wanderers, 0))).toMatchObject(Js.Obj(("x", (object?)(1)), ("y", (object?)(0))));
         }
 
         [Fact(DisplayName = "wanderers > names keep coming in order, so a joiner never reuses a starting name")]

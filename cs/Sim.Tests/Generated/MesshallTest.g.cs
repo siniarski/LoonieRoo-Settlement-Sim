@@ -56,7 +56,7 @@ public partial class MesshallTest
         {
             var state = setup(["#####", "#...#", "#...#", "##D##", ".s..."], [new() { x = Js.I(1), y = Js.I(1), purpose = "messhall" }]);
             var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
-            expect(status.requirements.filter((r) => !Js.T(r.met)).map((r) => r.label)).toEqual(Js.Arr(["at least 1 table"]));
+            expect(status.requirements.filter((r) => !r.met).map((r) => r.label)).toEqual(Js.Arr(["at least 1 table"]));
             Commands.applyCommand(state, new Command { type = "placeTable", x = Js.I(2), y = Js.I(1) });
             expect(Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).complete).toBe(true);
         }
@@ -113,7 +113,7 @@ public partial class MesshallTest
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(4), y = Js.I(6) });
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
             expect(s.carrying).toBeNull();
-            expect(Js.Get(state.items, 0)).toMatchObject(Js.Obj(("carriedBy", (object?)(null)), ("reservedBy", (object?)(null)), ("pos", (object?)(s.pos))));
+            expect(Js.Missing(state.items, 0) ? null : (object?)(Js.Get(state.items, 0))).toMatchObject(Js.Obj(("carriedBy", (object?)(null)), ("reservedBy", (object?)(null)), ("pos", (object?)(s.pos))));
         }
 
         [Fact(DisplayName = "mess hall > if the table goes while they walk, they eat where they stop, without the table")]

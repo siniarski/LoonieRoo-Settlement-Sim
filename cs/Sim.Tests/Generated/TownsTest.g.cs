@@ -47,7 +47,7 @@ public partial class TownsTest
         List<List<double>> queue = [];
         foreach (var e in Js.Iter(p.edges))
         {
-            if (!Js.T(e.door) || (Buildings.cellAt(p, e.bx, e.by) != Buildings.OUTSIDE))
+            if (!e.door || (Buildings.cellAt(p, e.bx, e.by) != Buildings.OUTSIDE))
             {
                 continue;
             }
@@ -66,7 +66,7 @@ public partial class TownsTest
                 var c = Buildings.cellAt(p, x + dx, y + dy);
                 var i = (((y + dy) * p.w) + x) + dx;
                 var edge = edgeOf(p, x, y, x + dx, y + dy);
-                if (Js.T(((c == Buildings.FLOOR) && !seen.has(i)) && (Js.T(!Js.T(edge) || Js.T(edge.door)))))
+                if (((c == Buildings.FLOOR) && !seen.has(i)) && (!Js.T(edge) || edge.door))
                 {
                     seen.add(i);
                     queue.push([x + dx, y + dy]);
@@ -153,7 +153,7 @@ public partial class TownsTest
                 {
                     expect(looks, $"house {Js.Str(n)}").toContain(look);
                 }
-                expect(p.edges.filter((e) => !Js.T(e.door)).length).toBeGreaterThan(0);
+                expect(p.edges.filter((e) => !e.door).length).toBeGreaterThan(0);
             }
         }
 
@@ -313,11 +313,11 @@ public partial class TownsTest
                 var seen = alongRoads(p, t0);
                 foreach (var s in Js.Iter(p.streets))
                 {
-                    expect(Js.Get(seen, (s.y0 * size) + s.x0), $"{Js.Str(name)}: street {Js.Str(Js.Json_stringify(s))}").toBe(1);
+                    expect(Js.Missing(seen, (s.y0 * size) + s.x0) ? null : (object?)(Js.Get(seen, (s.y0 * size) + s.x0)), $"{Js.Str(name)}: street {Js.Str(Js.Json_stringify(s))}").toBe(1);
                 }
                 foreach (var t in Js.Iter(p.towns))
                 {
-                    expect(Js.Get(seen, (t.y * size) + t.x), $"{Js.Str(name)}: town at {Js.Str(t.x)},{Js.Str(t.y)}").toBe(1);
+                    expect(Js.Missing(seen, (t.y * size) + t.x) ? null : (object?)(Js.Get(seen, (t.y * size) + t.x)), $"{Js.Str(name)}: town at {Js.Str(t.x)},{Js.Str(t.y)}").toBe(1);
                 }
             }
         }
@@ -339,8 +339,8 @@ public partial class TownsTest
                     {
                         for (var x = lot.x; x < (lot.x + lot.w); x++)
                         {
-                            expect(Js.Get(p.lotMask, (y * size) + x), name).toBe(lot.id + 1);
-                            expect(Js.Get(p.roadMask, (y * size) + x), name).toBe(0);
+                            expect(Js.Missing(p.lotMask, (y * size) + x) ? null : (object?)(Js.Get(p.lotMask, (y * size) + x)), name).toBe(lot.id + 1);
+                            expect(Js.Missing(p.roadMask, (y * size) + x) ? null : (object?)(Js.Get(p.roadMask, (y * size) + x)), name).toBe(0);
                             expect(NatureMod.isWater(p.nature, x, y), name).toBe(false);
                         }
                     }

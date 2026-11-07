@@ -97,7 +97,7 @@ public partial class NeedsTest
             {
                 tire(state, s);
             }
-            runUntil(state, (st) => st.survivors.every((s) => Js.T(Js.T(s.sleep?.asleep))));
+            runUntil(state, (st) => st.survivors.every((s) => Js.T(s.sleep?.asleep)));
             var beds = state.survivors.map((s) => Js.NN(s.sleep).bedId);
             expect(Js.Set(beds).size).toBe(2);
             expect(beds).not.toContain(null);

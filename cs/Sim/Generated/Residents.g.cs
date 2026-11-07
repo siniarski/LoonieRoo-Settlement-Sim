@@ -49,7 +49,7 @@ public static partial class Residents
     public static void syncResidents(SimState state, Settlement n)
     {
         var here = residentsOf(state, n);
-        var want = (Js.T(n.unfolded) && !Colonies.isFallen(n)) ? n.people : 0;
+        var want = (n.unfolded && !Colonies.isFallen(n)) ? n.people : 0;
         foreach (var r in Js.Iter(here.slice(want)))
         {
             state.residents.splice(state.residents.indexOf(r), 1);

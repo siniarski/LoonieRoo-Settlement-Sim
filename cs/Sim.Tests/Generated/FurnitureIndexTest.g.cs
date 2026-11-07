@@ -31,7 +31,7 @@ public partial class FurnitureIndexTest
                 else
                 {
                     var f = Js.NN(Js.Get(state.furniture, JsMath.floor(Hash.hashRoll(round, 6) * state.furniture.length)));
-                    FurnitureMod.setScavenge(state, f, !Js.T(f.scavenge));
+                    FurnitureMod.setScavenge(state, f, !f.scavenge);
                 }
                 if ((round % 20) != 0)
                 {

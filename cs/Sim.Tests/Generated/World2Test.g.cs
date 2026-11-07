@@ -75,7 +75,7 @@ public partial class World2Test
                 {
                     continue;
                 }
-                expect(Js.Get(state.grid.tiles, i)).not.toBe("water");
+                expect(Js.Missing(state.grid.tiles, i) ? null : (object?)(Js.Get(state.grid.tiles, i))).not.toBe("water");
             }
         }
     }

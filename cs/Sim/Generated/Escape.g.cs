@@ -16,7 +16,7 @@ public static partial class Escape
     public static string? escape(SimState state, string who)
     {
         var eg = state.endgame;
-        if (!Js.T(eg.helicopter))
+        if (!eg.helicopter)
         {
             return "no helicopter is waiting";
         }
@@ -46,7 +46,7 @@ public static partial class Escape
     public static void updateHelicopter(SimState state)
     {
         var eg = state.endgame;
-        if (!Js.T(eg.helicopter) || !Time.isNight(state.tick))
+        if (!eg.helicopter || !Time.isNight(state.tick))
         {
             return;
         }

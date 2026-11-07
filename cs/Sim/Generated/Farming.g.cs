@@ -46,13 +46,13 @@ public static partial class Farming
 
     public static bool isRipe(FarmPlot plot)
     {
-        return Js.T(plot.planted) && (plot.growth >= growTicks(plot));
+        return plot.planted && (plot.growth >= growTicks(plot));
     }
 
     /// <summary>Does this plot need a survivor right now (to sow, or to harvest)?</summary>
     public static bool needsWork(FarmPlot plot)
     {
-        return !Js.T(plot.planted) || isRipe(plot);
+        return !plot.planted || isRipe(plot);
     }
 
     public static FarmPlot addPlot(SimState state, int x, int y, string crop = "potato")

@@ -80,7 +80,7 @@ public partial class WishesTest
             Mood.addThought(state, s, "bloodUp");
             at(state, 10);
             expect(s.resolve).toBe(50 + Wishes.PROMISE_RESOLVE);
-            expect(Js.Get(s.opinions, you.id)).toBeGreaterThan(0);
+            expect(Js.Missing(s.opinions, you.id) ? null : (object?)(Js.Get(s.opinions, you.id))).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "wishes > promised and let run out: let down; unpromised and run out: nothing")]
@@ -98,7 +98,7 @@ public partial class WishesTest
             Commands.applyCommand(state, new Command { type = "promiseWish", survivorId = s.id });
             at(state, (state.tick + Wishes.WISH_TICKS) + 10);
             expect(s.resolve).toBe(50 - Wishes.BROKEN_RESOLVE);
-            expect(Js.Get(s.opinions, you.id)).toBeLessThan(0);
+            expect(Js.Missing(s.opinions, you.id) ? null : (object?)(Js.Get(s.opinions, you.id))).toBeLessThan(0);
             expect(state.events.some((e) => Js.T(new JsRegExp("promise broken", "").test(e.message)))).toBe(true);
         }
 

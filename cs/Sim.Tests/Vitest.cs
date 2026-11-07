@@ -7,7 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)] // the sim has module state (the clock's scale, caches); vitest isolates each file
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+[assembly: TestCaseOrderer("LoonieRoo.Sim.Tests.InOrder", "Sim.Tests")] // the sim has module state (the clock's scale, caches); vitest isolates each file
 
 namespace LoonieRoo.Sim.Tests;
 
@@ -27,6 +28,7 @@ public static class Vitest
         {
             case null: return null;
             case JsonNode n: return n.DeepClone();
+            case JsonElement je: return JsonNode.Parse(je.GetRawText());
             case string s: return JsonValue.Create(s);
             case bool b: return JsonValue.Create(b);
             case double or float or int or long or uint or short or byte or sbyte or ushort: return JsonValue.Create(Convert.ToDouble(x, System.Globalization.CultureInfo.InvariantCulture));
@@ -42,6 +44,12 @@ public static class Vitest
                 var o = new JsonObject();
                 foreach (DictionaryEntry kv in d) o[Convert.ToString(kv.Key, System.Globalization.CultureInfo.InvariantCulture)!] = ToJs(kv.Value);
                 return o;
+            }
+            case System.Collections.IEnumerable s when x.GetType().IsGenericType && x.GetType().GetGenericTypeDefinition() == typeof(JsSet<>):
+            {
+                // A Set compares without order (vitest's toEqual): sorted.
+                var items = s.Cast<object?>().Select(ToJs).OrderBy(n => n?.ToJsonString() ?? "", StringComparer.Ordinal).ToArray();
+                return new JsonArray(items);
             }
             case IEnumerable e:
             {
@@ -128,8 +136,10 @@ public sealed record Matcher(string kind, object? arg)
     }
 }
 
-public sealed class Expectation(object? actual, string? message, bool negated)
+public sealed class Expectation(object? actualIn, string? message, bool negated)
 {
+    // A value read from JSON (a loose record's field) is a JsonElement: as JSON nodes, so lists have a length and compare.
+    readonly object? actual = actualIn is JsonElement je ? JsonNode.Parse(je.GetRawText()) : actualIn;
     /// <summary>expect(x).not</summary>
     public Expectation not => new(actual, message, !negated);
 
@@ -256,4 +266,11 @@ public sealed class Expectation(object? actual, string? message, bool negated)
         bool ok = threw && (what is null || (what is string w ? msg?.Contains(w, StringComparison.Ordinal) == true : what is JsRegExp r ? r.test(msg ?? "") : true));
         Check(ok, $"to throw{(what is null ? "" : " " + what)}");
     }
+}
+
+/// <summary>Runs a class's facts in the order they're written (their translated names are numbered: T001_..., T002_...).</summary>
+public sealed class InOrder : Xunit.Sdk.ITestCaseOrderer
+{
+    public IEnumerable<TTestCase> OrderTestCases<TTestCase>(IEnumerable<TTestCase> testCases) where TTestCase : Xunit.Abstractions.ITestCase
+        => testCases.OrderBy(c => c.TestMethod.Method.Name, StringComparer.Ordinal);
 }

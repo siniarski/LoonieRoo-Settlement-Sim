@@ -53,7 +53,7 @@ public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
 public partial class Blueprint : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Blueprint v) => new(v.x, v.y);
+    public static implicit operator Point(Blueprint v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -100,7 +100,7 @@ public partial class BuildingsPlan
 public partial class Caravan : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Caravan v) => new(v.x, v.y);
+    public static implicit operator Point(Caravan v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     /// <summary>Who sent it (a settlement id).</summary>
     public string @from { get; set; } = "";
@@ -128,7 +128,7 @@ public partial class Character
 public partial class Command
 {
     /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>
-    public static implicit operator Point(Command v) => new(v.x!.Value, v.y!.Value);
+    public static implicit operator Point(Command v) => v is null ? null! : new(v.x!.Value, v.y!.Value);
     public string type { get; set; } = "";
     public int? x { get; set; }
     public int? y { get; set; }
@@ -230,7 +230,7 @@ public partial class Dog : Body, IHasId, IHasAt, IHasPos, IBody
 public partial class DormantZombie : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(DormantZombie v) => new(v.x, v.y);
+    public static implicit operator Point(DormantZombie v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -239,7 +239,7 @@ public partial class DormantZombie : IHasId
 public partial class Drink
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Drink v) => new(v.x, v.y);
+    public static implicit operator Point(Drink v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string source { get; set; } = "";
@@ -259,7 +259,7 @@ public partial class Endgame
 public partial class Errand : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Errand v) => new(v.x, v.y);
+    public static implicit operator Point(Errand v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string settlementId { get; set; } = "";
     public string kind { get; set; } = "";
@@ -286,7 +286,7 @@ public partial class Expedition : IHasId
 public partial class ExpeditionTarget
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(ExpeditionTarget v) => new(v.x, v.y);
+    public static implicit operator Point(ExpeditionTarget v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string label { get; set; } = "";
@@ -304,7 +304,7 @@ public partial class ExploreArea : IHasId
 public partial class FarmPlot : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(FarmPlot v) => new(v.x, v.y);
+    public static implicit operator Point(FarmPlot v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -324,7 +324,7 @@ public partial class Field
 public partial class Fire
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Fire v) => new(v.x, v.y);
+    public static implicit operator Point(Fire v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double left { get; set; }
@@ -333,7 +333,7 @@ public partial class Fire
 public partial class Furniture : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Furniture v) => new(v.x, v.y);
+    public static implicit operator Point(Furniture v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string kind { get; set; } = "";
     public int x { get; set; }
@@ -359,7 +359,7 @@ public partial class GameEvent
 public partial class Herd : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Herd v) => new(v.x, v.y);
+    public static implicit operator Point(Herd v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -423,7 +423,7 @@ public partial class Item : IHasId
 public partial class Job : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Job v) => new(v.x, v.y);
+    public static implicit operator Point(Job v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string type { get; set; } = "";
     public int x { get; set; }
@@ -473,7 +473,7 @@ public partial class LoggedCommand
 public partial class Lot
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Lot v) => new(v.x, v.y);
+    public static implicit operator Point(Lot v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public double id { get; set; }
     public int x { get; set; }
     public int y { get; set; }
@@ -505,7 +505,7 @@ public partial class LotLayout
 public partial class LotLayoutDecorItem
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(LotLayoutDecorItem v) => new(v.x, v.y);
+    public static implicit operator Point(LotLayoutDecorItem v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string look { get; set; } = "";
@@ -514,7 +514,7 @@ public partial class LotLayoutDecorItem
 public partial class MapNote : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(MapNote v) => new(v.x, v.y);
+    public static implicit operator Point(MapNote v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -565,7 +565,7 @@ public partial class Offer
 public partial class Order
 {
     /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>
-    public static implicit operator Point(Order v) => new(v.x!.Value, v.y!.Value);
+    public static implicit operator Point(Order v) => v is null ? null! : new(v.x!.Value, v.y!.Value);
     public string kind { get; set; } = "";
     public int? x { get; set; }
     public int? y { get; set; }
@@ -597,7 +597,7 @@ public partial class PlanEdge
 public partial class PlanFurniture
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(PlanFurniture v) => new(v.x, v.y);
+    public static implicit operator Point(PlanFurniture v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string look { get; set; } = "";
@@ -616,7 +616,7 @@ public partial class PlannerPlan
 public partial class PointOfInterest : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(PointOfInterest v) => new(v.x, v.y);
+    public static implicit operator Point(PointOfInterest v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     /// <summary>The end of the road.</summary>
     public string id { get; set; } = "";
     public int x { get; set; }
@@ -627,7 +627,7 @@ public partial class PointOfInterest : IHasId
 public partial class Prisoner : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Prisoner v) => new(v.x, v.y);
+    public static implicit operator Point(Prisoner v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     /// <summary>Where to look, if anywhere.</summary>
     public string id { get; set; } = "";
     public string name { get; set; } = "";
@@ -725,7 +725,7 @@ public partial class Room
 public partial class RoomDesignation : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(RoomDesignation v) => new(v.x, v.y);
+    public static implicit operator Point(RoomDesignation v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -759,7 +759,7 @@ public partial class SaveFile
 public partial class ScavRun : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(ScavRun v) => new(v.x, v.y);
+    public static implicit operator Point(ScavRun v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string @from { get; set; } = "";
     public int x { get; set; }
@@ -787,7 +787,7 @@ public partial class Scenario
 public partial class ScenarioEdgesItem
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(ScenarioEdgesItem v) => new(v.x, v.y);
+    public static implicit operator Point(ScenarioEdgesItem v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string side { get; set; } = "";
@@ -797,7 +797,7 @@ public partial class ScenarioEdgesItem
 public partial class ScenarioRoomsItem
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(ScenarioRoomsItem v) => new(v.x, v.y);
+    public static implicit operator Point(ScenarioRoomsItem v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public string purpose { get; set; } = "";
@@ -818,7 +818,7 @@ public partial class Settings
 public partial class Settlement : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Settlement v) => new(v.x, v.y);
+    public static implicit operator Point(Settlement v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string name { get; set; } = "";
     public int x { get; set; }
@@ -947,7 +947,7 @@ public partial class Street
 public partial class Succession
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Succession v) => new(v.x, v.y);
+    public static implicit operator Point(Succession v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string name { get; set; } = "";
     public string cause { get; set; } = "";
     public int x { get; set; }
@@ -1045,7 +1045,7 @@ public partial class SurvivorBreakdown
 public partial class SurvivorForage
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(SurvivorForage v) => new(v.x, v.y);
+    public static implicit operator Point(SurvivorForage v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double progress { get; set; }
@@ -1054,7 +1054,7 @@ public partial class SurvivorForage
 public partial class SurvivorLeisure
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(SurvivorLeisure v) => new(v.x, v.y);
+    public static implicit operator Point(SurvivorLeisure v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double progress { get; set; }
@@ -1077,7 +1077,7 @@ public partial class SurvivorTreatment
 public partial class Task : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Task v) => new(v.x, v.y);
+    public static implicit operator Point(Task v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string giverId { get; set; } = "";
     public string kind { get; set; } = "";
@@ -1104,7 +1104,7 @@ public partial class Timeline
 public partial class TimelineAlarmsItem
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(TimelineAlarmsItem v) => new(v.x, v.y);
+    public static implicit operator Point(TimelineAlarmsItem v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double untilTick { get; set; }
@@ -1113,7 +1113,7 @@ public partial class TimelineAlarmsItem
 public partial class TimelineHeli
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(TimelineHeli v) => new(v.x, v.y);
+    public static implicit operator Point(TimelineHeli v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double leaveTick { get; set; }
@@ -1123,7 +1123,7 @@ public partial class TimelineHeli
 public partial class Town
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Town v) => new(v.x, v.y);
+    public static implicit operator Point(Town v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public int x { get; set; }
     public int y { get; set; }
     public double radius { get; set; }
@@ -1134,7 +1134,7 @@ public partial class Town
 public partial class Trader : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Trader v) => new(v.x, v.y);
+    public static implicit operator Point(Trader v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -1172,7 +1172,7 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
 public partial class Wanderer : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(Wanderer v) => new(v.x, v.y);
+    public static implicit operator Point(Wanderer v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
     public string id { get; set; } = "";
     public string name { get; set; } = "";
     public int x { get; set; }

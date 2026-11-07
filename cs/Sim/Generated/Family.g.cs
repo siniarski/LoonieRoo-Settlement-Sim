@@ -66,7 +66,7 @@ public static partial class Family
                 growUp(state, s);
             }
         }
-        if (Js.T(state.harsh) && ((state.tick % Time.DAY_LENGTH) == ((double)(Time.DAY_LENGTH) / (2))))
+        if (state.harsh && ((state.tick % Time.DAY_LENGTH) == ((double)(Time.DAY_LENGTH) / (2))))
         {
             births(state);
         }

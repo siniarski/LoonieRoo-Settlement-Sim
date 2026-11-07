@@ -28,7 +28,7 @@ public static class Savefile
             int j = i + 1;
             while (j < values.Count && JsonNode.DeepEquals(values[j], values[i])) j++;
             out_.Add(values[i]?.DeepClone());
-            out_.Add(j - i);
+            out_.Add((double)(j - i)); // a JS number
             i = j;
         }
         return out_;
@@ -39,7 +39,8 @@ public static class Savefile
         var out_ = new JsonArray();
         for (int k = 0; k + 1 < encoded.Count; k += 2)
         {
-            var count = encoded[k + 1]!.GetValue<double>();
+            var c = encoded[k + 1]!.AsValue();
+            double count = c.TryGetValue<double>(out var cd) ? cd : c.TryGetValue<int>(out var ci) ? ci : 0;
             for (int n = 0; n < count; n++) out_.Add(encoded[k]?.DeepClone());
         }
         return out_;

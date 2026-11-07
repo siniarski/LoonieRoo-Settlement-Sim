@@ -80,7 +80,7 @@ public partial class RoomsTest
             var state = ScenarioMod.loadScenario(scenario([".......", .. map, "......."], [new() { x = Js.I(2), y = Js.I(2), purpose = "housing" }]));
             /*TODO return type*/object unmet()
             {
-                return Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements.filter((r) => !Js.T(r.met)).map((r) => r.label);
+                return Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements.filter((r) => !r.met).map((r) => r.label);
             }
             expect(unmet()).toEqual(Js.Arr(["has a door", "at least 1 bed"]));
             Commands.applyCommand(state, new Command { type = "placeDoor", x = Js.I(3), y = Js.I(1) });
@@ -99,7 +99,7 @@ public partial class RoomsTest
         {
             var state = ScenarioMod.loadScenario(scenario([".....", ".#D#.", ".#.#.", ".###.", "....."], [new() { x = Js.I(2), y = Js.I(2), purpose = "storage" }]));
             var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
-            expect(status.requirements.filter((r) => !Js.T(r.met)).map((r) => r.label)).toEqual(Js.Arr(["at least 4 tiles"]));
+            expect(status.requirements.filter((r) => !r.met).map((r) => r.label)).toEqual(Js.Arr(["at least 4 tiles"]));
             expect(Rooms.completeRooms(state, "storage").size).toBe(0);
         }
 
@@ -112,7 +112,7 @@ public partial class RoomsTest
             expect(state.roomDesignations).toHaveLength(1);
             var status = Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
             expect(status.complete).toBe(false);
-            expect(Js.Get(status.requirements, 0)).toEqual(Js.Obj(("label", (object?)("enclosed by walls")), ("met", (object?)(false))));
+            expect(Js.Missing(status.requirements, 0) ? null : (object?)(Js.Get(status.requirements, 0))).toEqual(Js.Obj(("label", (object?)("enclosed by walls")), ("met", (object?)(false))));
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(1), y = Js.I(3) });
             expect(Js.NN(Js.Get(Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements, 0)).met).toBe(true);
         }
@@ -133,7 +133,7 @@ public partial class RoomsTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 0, map = HOUSE, rooms = [new() { x = Js.I(3), y = Js.I(2), purpose = "housing" }] });
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(3), y = Js.I(2) });
             Rooms.reconcileRoomDesignations(state);
-            expect(Js.Get(state.roomDesignations, 0)).toMatchObject(Js.Obj(("x", (object?)(4)), ("y", (object?)(2)), ("purpose", (object?)("housing"))));
+            expect(Js.Missing(state.roomDesignations, 0) ? null : (object?)(Js.Get(state.roomDesignations, 0))).toMatchObject(Js.Obj(("x", (object?)(4)), ("y", (object?)(2)), ("purpose", (object?)("housing"))));
         }
 
         [Fact(DisplayName = "room designations and requirements > designateRoom works inside rooms only, and re-designating changes the purpose")]

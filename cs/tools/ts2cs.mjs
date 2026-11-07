@@ -426,12 +426,22 @@ function translate(mod) {
   /** The return type of the function whose return statement is being written. */
   let curRet = '';
 
+  /** Scenario files a test imports (JSON), as static fields. */
+  const jsonImports = [];
+  const jsonLocals = [];
   /** Names imported from outside what's translated (the browser UI): tests using them are left out. */
   const unavailable = new Set();
   for (const n of ast.body) {
     if (n.type !== 'ImportDeclaration') continue;
     if (n.source.value === 'vitest') continue;
     const from = moduleOf(n.source.value);
+    const json = n.source.value.match(/^\.\.\/src\/scenarios\/([\w-]+\.json)$/);
+    if (!from && json && n.specifiers.length === 1 && n.specifiers[0].type === 'ImportDefaultSpecifier') {
+      const local = n.specifiers[0].local.name;
+      jsonImports.push(`    public static readonly Scenario ${id(local)} = Js.JsonParse<Scenario>(File.ReadAllText(Js.RepoFile("src/scenarios/${json[1]}")));`);
+      jsonLocals.push(local);
+      continue;
+    }
     if (!from) {
       for (const s of n.specifiers) unavailable.add(s.local.name);
       continue;
@@ -489,7 +499,7 @@ function translate(mod) {
     if (e.type === 'Literal') return typeof e.value === 'boolean';
     if (e.type === 'ParenthesizedExpression') return isBoolish(e.expression);
     if (e.type === 'CallExpression' && exprType(e) === 'bool') return true;
-    if (e.type === 'Identifier' && exprType(e) === 'bool') return true;
+    if ((e.type === 'Identifier' || (e.type === 'MemberExpression' && !e.computed)) && exprType(e) === 'bool') return true;
     if (e.type === 'CallExpression' && e.callee.type === 'MemberExpression' && !e.callee.computed) return ['some', 'every', 'includes', 'has', 'startsWith', 'endsWith', 'isInteger', 'isFinite', 'isNaN', 'delete'].includes(e.callee.property.name);
     return false;
   }
@@ -613,6 +623,7 @@ function translate(mod) {
   const initOf = new Map();
   /** Module consts whose type comes from their value (new Map<...>() and the like). */
   const moduleInits = new Map();
+  for (const l of jsonLocals) moduleTypes.set(l, 'Scenario');
   for (const n of ast.body) {
     const d = n.type === 'ExportNamedDeclaration' ? n.declaration : n;
     if (d?.type !== 'VariableDeclaration') continue;
@@ -709,7 +720,8 @@ function translate(mod) {
         if (e.operator === 'typeof') return 'string';
         return null;
       case 'TSNonNullExpression': return strip(exprType(e.expression));
-      case 'TSAsExpression': return e.typeAnnotation.type === 'TSTypeReference' && e.typeAnnotation.typeName.name === 'const' ? exprType(e.expression) : ty(e.typeAnnotation, mod);
+      case 'TSAsExpression': if (e.typeAnnotation.type === 'TSTypeLiteral' && e.expression.type === 'CallExpression' && e.expression.callee.object?.name === 'JSON') return 'JsRecord<object?>';
+        return e.typeAnnotation.type === 'TSTypeReference' && e.typeAnnotation.typeName.name === 'const' ? exprType(e.expression) : ty(e.typeAnnotation, mod);
       case 'ParenthesizedExpression': return exprType(e.expression);
       case 'ConditionalExpression': {
         const a = exprType(e.consequent);
@@ -908,7 +920,7 @@ function translate(mod) {
           return v && !v.includes('TODO') && !/^object\??$/.test(v) ? `Js.AsRecord<${v}>(${ex(e.expression)})` : `Js.AsRecord(${ex(e.expression)})`;
         }
         if (e.expression.type === 'CallExpression' && e.expression.callee.type === 'MemberExpression' && e.expression.callee.object.name === 'JSON' && e.expression.callee.property.name === 'parse') {
-          const c = ty(t, mod);
+          const c = t.type === 'TSTypeLiteral' ? 'JsRecord<object?>' : ty(t, mod);
           if (c && !c.includes('TODO')) { e.expression.__parseAs = c.replace(/\?$/, ''); return ex(e.expression); }
         }
         if (t.type === 'TSTypeLiteral') {
@@ -944,6 +956,11 @@ function translate(mod) {
         const r = operand(e.right);
         const stringish = (x) => (x.type === 'Literal' && typeof x.value === 'string') || x.type === 'TemplateLiteral' || (x.type === 'MemberExpression' && !x.computed && ['id', 'name', 'kind', 'label', 'key', 'look', 'type'].includes(x.property.name));
         if (['<', '>', '<=', '>='].includes(op) && (stringish(e.left) || stringish(e.right))) return `string.CompareOrdinal(${ex(e.left)}, ${ex(e.right)}) ${op} 0`;
+        const isUndef = (x) => x.type === 'Identifier' && x.name === 'undefined';
+        if (['===', '!==', '==', '!='].includes(op) && (isUndef(e.left) || isUndef(e.right))) {
+          const other = isUndef(e.left) ? e.right : e.left;
+          if (other.type === 'MemberExpression' && other.computed) return `${op.startsWith('!') ? '!' : ''}Js.Missing(${ex(other.object)}, ${ex(other.property)})`;
+        }
         const looseL = /^object\??$/.test(exprType(e.left) ?? '');
         const looseR = /^object\??$/.test(exprType(e.right) ?? '');
         if ((looseL || looseR) && ['===', '==', '!==', '!='].includes(op)) return `${op.startsWith('!') ? '!' : ''}Js.Eq(${ex(e.left)}, ${ex(e.right)})`;
@@ -964,7 +981,7 @@ function translate(mod) {
         if (e.operator === '??' && e.left.type === 'MemberExpression' && e.left.computed) return `Js.At(${ex(e.left.object)}, ${ex(e.left.property)}, ${ex(e.right)})`;
         if (e.operator === '??') return `${operand(e.left)} ?? ${operand(e.right)}`;
         // a && b as a value, a a condition and b not: b, or a's false (as JS gives).
-        if (!bool && e.operator === '&&' && !isBoolish(e.right) && isBoolish(e.left) && exprType(e.right) && !['bool'].includes(strip(exprType(e.right)))) return `(${ex(e.left, true)} ? (object?)(${ex(e.right)}) : false)`;
+        if (!bool && e.operator === '&&' && !isBoolish(e.right) && isBoolish(e.left) && exprType(e.right) !== 'bool') return `(${ex(e.left, true)} ? (object?)(${ex(e.right)}) : false)`;
         if (!bool && e.operator === '&&' && !isBoolish(e.right) && !isBoolish(e.left) && !['int', 'double', 'string', 'bool'].includes(strip(exprType(e.left)) ?? 'x')) return `(${ex(e.left, true)} ? ${operand(e.right)} : null)`;
         if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) {
           const v = `__or${tmp++}`;
@@ -1094,6 +1111,10 @@ function translate(mod) {
   function call(e) {
     const c = e.callee;
     if (c.type === 'Identifier' && c.name === 'structuredClone' && !imports.has('structuredClone')) return `Js.DeepClone(${ex(e.arguments[0])})`;
+    if (isTest && c.type === 'Identifier' && c.name === 'expect' && e.arguments[0]?.type === 'MemberExpression' && e.arguments[0].computed) {
+      const m = e.arguments[0];
+      return `expect(Js.Missing(${ex(m.object)}, ${ex(m.property)}) ? null : (object?)(${ex(m)})${e.arguments[1] ? `, ${ex(e.arguments[1])}` : ''})`;
+    }
     if (isTest && ((c.type === 'MemberExpression' && isExpect(c.object)) || isExpect(e) || (c.type === 'MemberExpression' && c.object.type === 'Identifier' && c.object.name === 'expect'))) e.arguments.forEach(markLoose);
     if (isTest && c.type === 'MemberExpression' && c.object.type === 'Identifier' && c.object.name === 'expect' && !c.computed) return `Vitest.${c.property.name}(${e.arguments.map((a) => ex(a)).join(', ')})`;
     if ((c.type === 'ArrowFunctionExpression' || c.type === 'FunctionExpression') && e.arguments.length === 0) return `Js.Run(${lambda(c)})`;
@@ -1963,6 +1984,26 @@ function translate(mod) {
     }
     for (const n of nodes) {
       const tc = testCall(n);
+      // for (const seed of [1, 2, 3]) it(...): a theory, one case per value.
+      if (!tc && n.type === 'ForOfStatement' && n.left.type === 'VariableDeclaration' && n.left.declarations[0].id.type === 'Identifier' && n.right.type === 'ArrayExpression' && n.right.elements.every((x) => x?.type === 'Literal')) {
+        const inner = n.body.type === 'BlockStatement' ? n.body.body : [n.body];
+        const itc = inner.length === 1 ? testCall(inner[0]) : null;
+        if (itc?.kind === 'it') {
+          const v = n.left.declarations[0].id.name;
+          const vt = typeof n.right.elements[0].value === 'string' ? 'string' : 'double';
+          const label = [...path, itc.name].join(' > ');
+          const fbody = itc.fn.body.type === 'BlockStatement' ? itc.fn.body : { type: 'BlockStatement', body: [{ type: 'ExpressionStatement', expression: itc.fn.body }] };
+          pushScope([v]);
+          setType(v, vt, true);
+          curFn = 'test';
+          const b = block(fbody, ind + '    ', { fnRet: 'void' }).split('\n');
+          popScope();
+          b[0] = ind + b[0].trimStart();
+          b[b.length - 1] = ind + b[b.length - 1].trimStart();
+          out_.push('', `${ind}[Theory(DisplayName = ${str(label)})]`, ...n.right.elements.map((x) => `${ind}[InlineData(${ex(x)})]`), `${ind}public void ${factName(itc.name)}(${vt} ${id(v)})`, ...b);
+          continue;
+        }
+      }
       if (!tc) {
         out_.push(...declare([n], ind));
         continue;
@@ -2130,7 +2171,7 @@ function translate(mod) {
       '{',
     ];
     if (ctorBody.length) tl.push(`    static ${cls}()`, '    {', ...ctorBody, '    }');
-    tl.push(...members, '}', '');
+    tl.push(...jsonImports, ...members, '}', '');
     return tl.join('\n');
   }
   const lines = [

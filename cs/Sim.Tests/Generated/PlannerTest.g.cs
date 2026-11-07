@@ -85,7 +85,7 @@ public partial class PlannerTest
             expect(Planner.planFurnish(storage, 3, 3)).toEqual(Js.Obj(("commands", (object?)(Js.Arr([]))), ("notes", (object?)(Js.Arr(["Storage needs no furniture yet."])))));
             var noDoor = setup(HOUSE.map((row, y) => (y == 5) ? ".########." : row));
             var plan = Planner.planFurnish(noDoor, 3, 3);
-            expect(Js.Get(plan.notes, 0)).toBe("Needs a door: build one in its wall.");
+            expect(Js.Missing(plan.notes, 0) ? null : (object?)(Js.Get(plan.notes, 0))).toBe("Needs a door: build one in its wall.");
             expect(plan.commands).toHaveLength(2);
         }
 

@@ -27,7 +27,7 @@ public partial class CharacterTest
         {
             foreach (var j in Js.Iter(StoryMod.STORY_JOBS))
             {
-                expect(Js.Get(CharacterMod.PROFESSIONS, j), j).toBeDefined();
+                expect(Js.Missing(CharacterMod.PROFESSIONS, j) ? null : (object?)(Js.Get(CharacterMod.PROFESSIONS, j)), j).toBeDefined();
             }
         }
 
@@ -49,11 +49,11 @@ public partial class CharacterTest
         [Fact(DisplayName = "character creation > you start as who you made: name, past, skills, traits and kit in your bag")]
         public void T004_you_start_as_who_you_made_name_past_skills_traits_and_kit_in()
         {
-            var state = Worldgen.createWorld(4, 64, Js.CopyAs<Settings>(Difficulty.PRESETS["apocalypse"].settings), you(new Character { name = "Rook", job = job("a nurse"), traits = ["graceful", "gloomy"] }));
+            var state = Worldgen.createWorld(4, 64, Js.CopyAs<Settings>(Difficulty.PRESETS["apocalypse"].settings), new Character { name = "Rook", job = job("a nurse"), traits = ["graceful", "gloomy"] });
             var s = Js.NN(Js.Get(state.survivors, 0));
             expect(state.control?.survivorId).toBe(s.id);
             expect(s.name).toBe("Rook");
-            expect(Js.Get(StoryMod.STORY_JOBS, s.story.job)).toBe("a nurse");
+            expect(Js.Missing(StoryMod.STORY_JOBS, s.story.job) ? null : (object?)(Js.Get(StoryMod.STORY_JOBS, s.story.job))).toBe("a nurse");
             expect(s.traits).toEqual(Js.Arr(["graceful", "gloomy"]));
             expect(Skills.skillLevel(s, "doctor")).toBe(3);
             var bag = s.pack.map((id) => Js.NN(state.items.find((i) => i.id == id)).kind);

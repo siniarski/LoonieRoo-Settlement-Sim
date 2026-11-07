@@ -148,7 +148,7 @@ public static partial class Hordes
         {
             return;
         }
-        List<Survivor> prey = Js.T(h.night) ? (state.survivors).ToList() : state.survivors.filter((s) => zs.some((z) => Zombies.noticesSurvivor(state, z, s)));
+        List<Survivor> prey = h.night ? (state.survivors).ToList() : state.survivors.filter((s) => zs.some((z) => Zombies.noticesSurvivor(state, z, s)));
         var wasMode = h.mode;
         var was = h.goals;
         var wasIds = h.goalIds;
@@ -671,7 +671,7 @@ public static partial class Hordes
     /// <summary>A roaming horde with nobody of yours near goes back to being a herd marker (herds.ts).</summary>
     public static void demote(SimState state, Horde h)
     {
-        if (Js.T((h.mode != "roam") || Js.T(h.night)))
+        if ((h.mode != "roam") || h.night)
         {
             return;
         }

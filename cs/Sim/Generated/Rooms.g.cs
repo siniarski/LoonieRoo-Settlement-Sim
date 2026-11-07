@@ -272,7 +272,7 @@ public static partial class Rooms
         {
             requirements.push(new() { label = $"at least {Js.Str(MIN_STORAGE_TILES)} tiles", met = size >= MIN_STORAGE_TILES });
         }
-        return new RoomStatus { purpose = purpose, complete = requirements.every((r) => Js.T(r.met)), requirements = requirements, beds = beds, tables = tables, size = size };
+        return new RoomStatus { purpose = purpose, complete = requirements.every((r) => r.met), requirements = requirements, beds = beds, tables = tables, size = size };
     }
 
     /// <summary>Status for a designation (finds its room).</summary>
@@ -292,7 +292,7 @@ public static partial class Rooms
                 continue;
             }
             var room = roomAt(state, d.x, d.y);
-            if (Js.T(Js.T(room) && Js.T(evaluateRoom(state, room, purpose).complete)))
+            if (Js.T(room) && evaluateRoom(state, room, purpose).complete)
             {
                 result.add(room.index);
             }

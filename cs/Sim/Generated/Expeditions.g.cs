@@ -91,12 +91,12 @@ public static partial class Expeditions
         }
         var leg = JsMath.max(1, JsMath.floor(((double)((Space.manhattan(x.home, x.target) * Survivors.TICKS_PER_TILE)) / (2))));
         var e = state.tick - x.leftTick;
-        var driving = (e < leg) || (!Js.T(x.outpost) && (e >= (leg + SEARCH_TICKS)));
-        var f = (e < leg) ? ((double)(e) / (leg)) : ((Js.T(Js.T(x.outpost) || (e < (leg + SEARCH_TICKS)))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
+        var driving = (e < leg) || (!x.outpost && (e >= (leg + SEARCH_TICKS)));
+        var f = (e < leg) ? ((double)(e) / (leg)) : ((x.outpost || (e < (leg + SEARCH_TICKS))) ? 1 : JsMath.max(0, 1 - ((double)(((e - leg) - SEARCH_TICKS)) / (leg))));
         Point p = new Point { x = Js.I(JsMath.round(x.home.x + ((x.target.x - x.home.x) * f))), y = Js.I(JsMath.round(x.home.y + ((x.target.y - x.home.y) * f))) };
         v.pos = p;
         v.at = Motion.centre(p);
-        if (Js.T(x.outpost) && (e >= leg))
+        if (x.outpost && (e >= leg))
         {
             v.driverId = null;
             x.truckId = null;
@@ -178,7 +178,7 @@ public static partial class Expeditions
             back.push(s);
         }
         state.survivors.pushAll(back);
-        double room = (CARRY * back.length) * (Js.T(x.truck) ? 2 : 1);
+        double room = (CARRY * back.length) * (x.truck ? 2 : 1);
         double found = 0;
         foreach (var crate in Js.Iter(FurnitureMod.ofKind(state, "crate").filter((f) => (f.loot > 0) && near(f))))
         {

@@ -43,6 +43,6 @@ public static partial class StoryMod
     {
         var __d0 = story;
         var lost = __d0.lost;
-        return (List<string>)[$"I was {Js.Str(Js.Get(STORY_JOBS, story.job))} in {Js.Str(Js.Get(TOWNS, story.town))}. {Js.Str(Js.Get(PRIDES, story.pride))}.", Js.T(lost.dead) ? $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. They didn't make it, and I left them where they fell. They deserve a grave." : $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. I don't know where they are. I tell myself that's better.", Js.T(story.pet) ? $"I had a dog, {Js.Str(story.pet)}. I left {Js.Str(story.pet)} shut in at home. I think about that a lot." : "I still think about home. What's left of it.", $"{Js.Str(Js.Get(REGRETS, story.regret))}. I can't stop seeing that place."];
+        return (List<string>)[$"I was {Js.Str(Js.Get(STORY_JOBS, story.job))} in {Js.Str(Js.Get(TOWNS, story.town))}. {Js.Str(Js.Get(PRIDES, story.pride))}.", lost.dead ? $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. They didn't make it, and I left them where they fell. They deserve a grave." : $"My {Js.Str(lost.relation)}, {Js.Str(lost.name)}. I don't know where they are. I tell myself that's better.", Js.T(story.pet) ? $"I had a dog, {Js.Str(story.pet)}. I left {Js.Str(story.pet)} shut in at home. I think about that a lot." : "I still think about home. What's left of it.", $"{Js.Str(Js.Get(REGRETS, story.regret))}. I can't stop seeing that place."];
     }
 }

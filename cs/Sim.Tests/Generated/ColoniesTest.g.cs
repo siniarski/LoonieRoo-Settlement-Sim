@@ -55,7 +55,7 @@ public partial class ColoniesTest
                 dawn(state, day);
             }
             expect(helped()).toBe(true);
-            expect(Js.Get(rich.ties, poor.id)).not.toBe(0);
+            expect(Js.Missing(rich.ties, poor.id) ? null : (object?)(Js.Get(rich.ties, poor.id))).not.toBe(0);
         }
 
         [Fact(DisplayName = "settlements on their own > a crowded one splits, founding another")]

@@ -56,4 +56,6 @@ export const FIXUPS = [
   ["Tests/WanderersTest", "var names = [.. state.survivors.map((s) => s.name),", "List<string> names = [.. state.survivors.map((s) => s.name),", "names"],
   ["Tests/World2Test", "/*TODO return type*/object water(object s)", "double water(SimState s)", "a state's water tiles"],
   ["Tests/WorldgenTest", "/*TODO return type*/object things(object s)", "List<string> things(SimState s)", "a state's furniture, as text"],
+  ["Tests/CharacterTest", "you(new Character { name = \"Rook\", job = job(\"a nurse\"), traits = [\"graceful\", \"gloomy\"] })", "new Character { name = \"Rook\", job = job(\"a nurse\"), traits = [\"graceful\", \"gloomy\"] }", "every field given (and a nurse is job 0, which C# can't tell from not given)"],
+  ["Tests/SavefileTest", "report[\"commands\"].reverse();", "report[\"commands\"] = System.Text.Json.Nodes.JsonNode.Parse(((System.Text.Json.JsonElement)report[\"commands\"]!).GetRawText())!.AsArray().Reverse().Select(n => n?.DeepClone()).ToList();", "a list read from JSON, reversed"],
 ];

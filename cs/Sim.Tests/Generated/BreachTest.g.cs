@@ -154,7 +154,7 @@ public partial class BreachTest
             Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(1), y = Js.I(0) });
             expect(damageAt(state, 1, 0)).toBe(0);
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(1), y = Js.I(0) });
-            expect(Js.Get(state.grid.damage, 1)).toBe(0);
+            expect(Js.Missing(state.grid.damage, 1) ? null : (object?)(Js.Get(state.grid.damage, 1))).toBe(0);
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
         }
     }

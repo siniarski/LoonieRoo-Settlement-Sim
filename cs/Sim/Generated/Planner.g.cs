@@ -28,7 +28,7 @@ public static partial class Planner
         List<string> notes = [];
         foreach (var r in Js.Iter(status.requirements))
         {
-            if (Js.T(r.met))
+            if (r.met)
             {
                 continue;
             }

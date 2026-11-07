@@ -42,7 +42,7 @@ public partial class WindowsTest
             Commands.applyCommand(state, new Command { type = "takeControl", survivorId = s.id });
             var pane = Grids.edgeBetween(state.grid, 3, 2, 4, 2);
             expect(Commands.applyCommand(state, new Command { type = "swing", x = Js.I(4), y = Js.I(2) }).ok).toBe(true);
-            expect(Js.Get(state.grid.edges, pane)).toBe(Grids.EDGE_WINDOW_BROKEN);
+            expect(Js.Missing(state.grid.edges, pane) ? null : (object?)(Js.Get(state.grid.edges, pane))).toBe(Grids.EDGE_WINDOW_BROKEN);
         }
 
         [Fact(DisplayName = "windows > glass stops everyone walking; broken, you and the dead climb through, colonists use doors")]
@@ -89,7 +89,7 @@ public partial class WindowsTest
             {
                 Tick.tick(state);
             }
-            expect(Js.Get(state.grid.edges, pane)).toBe(Grids.EDGE_WINDOW_BROKEN);
+            expect(Js.Missing(state.grid.edges, pane) ? null : (object?)(Js.Get(state.grid.edges, pane))).toBe(Grids.EDGE_WINDOW_BROKEN);
             expect(state.events.some((e) => e.message.includes("smashed the window"))).toBe(true);
             for (var k = 0; (Js.T((k < 200) && Js.T(Js.Get(state.zombies, 0)))) && (Js.Get(state.zombies, 0).pos.x > 3); k++)
             {
@@ -104,7 +104,7 @@ public partial class WindowsTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP.map((r, y) => (y == 2) ? "...s..." : r), edges = room() });
             Commands.applyCommand(state, new Command { type = "takeControl", survivorId = Js.NN(Js.Get(state.survivors, 0)).id });
             expect(Commands.applyCommand(state, new Command { type = "use", x = Js.I(4), y = Js.I(2) }).ok).toBe(true);
-            expect(Js.Get(state.grid.edges, Grids.edgeBetween(state.grid, 3, 2, 4, 2))).toBe(Grids.EDGE_WINDOW_BROKEN);
+            expect(Js.Missing(state.grid.edges, Grids.edgeBetween(state.grid, 3, 2, 4, 2)) ? null : (object?)(Js.Get(state.grid.edges, Grids.edgeBetween(state.grid, 3, 2, 4, 2)))).toBe(Grids.EDGE_WINDOW_BROKEN);
         }
 
         [Fact(DisplayName = "windows > boarded up, nobody gets through until the boards are torn off, then the glass")]
@@ -118,13 +118,13 @@ public partial class WindowsTest
             Designations.completeBlueprint(state, bp);
             var pane = Grids.edgeBetween(state.grid, 3, 2, 4, 2);
             expect(state.grid.edgeBoarded).toContain(pane);
-            expect(Js.Get(state.grid.edges, pane)).toBe(Grids.EDGE_WINDOW);
+            expect(Js.Missing(state.grid.edges, pane) ? null : (object?)(Js.Get(state.grid.edges, pane))).toBe(Grids.EDGE_WINDOW);
             expect(Breach.damageEdge(state, pane, 399)).toBe(false);
             expect(Breach.damageEdge(state, pane, 1)).toBe(true);
             expect(state.grid.edgeBoarded).not.toContain(pane);
-            expect(Js.Get(state.grid.edges, pane)).toBe(Grids.EDGE_WINDOW);
+            expect(Js.Missing(state.grid.edges, pane) ? null : (object?)(Js.Get(state.grid.edges, pane))).toBe(Grids.EDGE_WINDOW);
             expect(Breach.damageEdge(state, pane, 100)).toBe(true);
-            expect(Js.Get(state.grid.edges, pane)).toBe(Grids.EDGE_WINDOW_BROKEN);
+            expect(Js.Missing(state.grid.edges, pane) ? null : (object?)(Js.Get(state.grid.edges, pane))).toBe(Grids.EDGE_WINDOW_BROKEN);
         }
 
         [Fact(DisplayName = "windows > climbing through a broken window is slower than walking through a doorway")]

@@ -76,7 +76,7 @@ public static partial class Colonies
         {
             foreach (var n in Js.Iter(state.settlements))
             {
-                if (!Js.T(n.unfolded) && someoneNear(state, n))
+                if (!n.unfolded && someoneNear(state, n))
                 {
                     unfold(state, n);
                 }
@@ -99,7 +99,7 @@ public static partial class Colonies
             {
                 return Hash.hashRoll(id, day, salt);
             }
-            var grown = Js.Get(GROWN, season) * (Js.T(state.settings.winter) ? 0.5 : 1);
+            var grown = Js.Get(GROWN, season) * (state.settings.winter ? 0.5 : 1);
             n.food = ((double)(JsMath.round((((n.food * (1 - SPOIL_SHARE)) + (n.people * grown)) - n.people) * 10)) / (10));
             if (n.food < 0)
             {
@@ -168,7 +168,7 @@ public static partial class Colonies
         {
             return "already raided today";
         }
-        var armed = state.survivors.filter((s) => (Js.T(s.weapon) && (s.childUntil == null)) && !Js.T(Js.T(s.sleep?.asleep)));
+        var armed = state.survivors.filter((s) => (Js.T(s.weapon) && (s.childUntil == null)) && !Js.T(s.sleep?.asleep));
         if (armed.length == 0)
         {
             return "nobody armed to send";

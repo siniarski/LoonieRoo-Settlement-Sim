@@ -323,7 +323,7 @@ public static partial class Invariants
             {
                 problems.push($"{Js.Str(f.id)} has loot {Js.Str(f.loot)}");
             }
-            if (Js.T(f.scavenge) && !((f.kind == "tree") || ((f.kind == "crate") && (f.loot > 0))))
+            if (f.scavenge && !((f.kind == "tree") || ((f.kind == "crate") && (f.loot > 0))))
             {
                 problems.push($"{Js.Str(f.id)} marked for scavenging with nothing to find");
             }
@@ -429,7 +429,7 @@ public static partial class Invariants
             {
                 problems.push($"farm plot {Js.Str(plot.id)} on non-floor ({Js.Str(key)})");
             }
-            if (((plot.growth < 0) || (plot.growth > Farming.growTicks(plot))) || (!Js.T(plot.planted) && (plot.growth != 0)))
+            if (((plot.growth < 0) || (plot.growth > Farming.growTicks(plot))) || (!plot.planted && (plot.growth != 0)))
             {
                 problems.push($"farm plot {Js.Str(plot.id)} has growth {Js.Str(plot.growth)}");
             }

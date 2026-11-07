@@ -203,7 +203,7 @@ public static partial class Buildings
 
     public static BuildingsPlan housePlan(Func<double, double> r, HouseOptions o)
     {
-        var garage = (Js.T(o.garage) && (r(1) < 0.4)) && (o.maxW >= 13);
+        var garage = (o.garage && (r(1) < 0.4)) && (o.maxW >= 13);
         var W = JsMath.min(o.maxW - (Js.T(garage) ? 4 : 0), between(r(2), 9, 13));
         var H = JsMath.min(o.maxH, between(r(3), 9, 11));
         var p = newPlan(W + (Js.T(garage) ? 4 : 0), H, "house", 1);
@@ -778,7 +778,7 @@ public static partial class Buildings
             {
                 return $"{Js.Str(e.ax)},{Js.Str(e.ay)},{Js.Str(e.bx)},{Js.Str(e.by)}";
             }
-            var outerWall = Js.MapOf(edges.filter((e) => !Js.T(e.door) && (cellOf(e.bx, e.by) != FLOOR)), (e) => key(e), (e) => e);
+            var outerWall = Js.MapOf(edges.filter((e) => !e.door && (cellOf(e.bx, e.by) != FLOOR)), (e) => key(e), (e) => e);
             foreach (var e in Js.Iter(outerWall.values()))
             {
                 var (dx, dy) = (e.bx - e.ax, e.by - e.ay);

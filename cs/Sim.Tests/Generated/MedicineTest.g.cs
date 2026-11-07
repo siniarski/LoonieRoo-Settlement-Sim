@@ -133,7 +133,7 @@ public partial class MedicineTest
             var state = setup(["#####", "#...#", "#...#", "##D##", ".s.s."], [new() { x = Js.I(1), y = Js.I(1), purpose = "infirmary" }]);
             var plan = Planner.planFurnish(state, 1, 1);
             expect(plan.commands).toHaveLength(1);
-            expect(Js.Get(plan.notes, 0)).toBe("Planned 1 infirmary bed (one per 4 survivors).");
+            expect(Js.Missing(plan.notes, 0) ? null : (object?)(Js.Get(plan.notes, 0))).toBe("Planned 1 infirmary bed (one per 4 survivors).");
         }
     }
 }

@@ -135,7 +135,7 @@ public partial class BalanceTest
             {
                 Tick.tick(state);
             }
-            expect(Js.Get(state.zombies, 0)).toMatchObject(Js.Obj(("health", (object?)(Zombies.zombieHealthForNight(2))), ("maxHealth", (object?)(Zombies.zombieHealthForNight(2)))));
+            expect(Js.Missing(state.zombies, 0) ? null : (object?)(Js.Get(state.zombies, 0))).toMatchObject(Js.Obj(("health", (object?)(Zombies.zombieHealthForNight(2))), ("maxHealth", (object?)(Zombies.zombieHealthForNight(2)))));
             while (Time.nightNumber(state.tick) != null)
             {
                 Tick.tick(state);

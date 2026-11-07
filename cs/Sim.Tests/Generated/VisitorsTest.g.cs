@@ -91,8 +91,8 @@ public partial class VisitorsTest
         {
             var state = night(false);
             runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).health < 1000, 400);
-            expect(Js.Get(state.grid.tiles, (3 * 11) + 5)).toBe("door");
-            expect(Js.Get(state.grid.damage, (3 * 11) + 5)).toBe(0);
+            expect(Js.Missing(state.grid.tiles, (3 * 11) + 5) ? null : (object?)(Js.Get(state.grid.tiles, (3 * 11) + 5))).toBe("door");
+            expect(Js.Missing(state.grid.damage, (3 * 11) + 5) ? null : (object?)(Js.Get(state.grid.damage, (3 * 11) + 5))).toBe(0);
             expect(Js.NN(Js.Get(state.survivors, 0)).infection).toBeNull();
         }
 

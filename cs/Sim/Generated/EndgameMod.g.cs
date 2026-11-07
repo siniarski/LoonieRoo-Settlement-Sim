@@ -105,7 +105,7 @@ public static partial class EndgameMod
                 Events.logEvent(state, $"A siege is coming in two nights (night {Js.Str(Time.dayOf(state.tick) + 2)}): a quarter more zombies. Get ready");
             }
         }
-        if (Js.T(eg.helicopter))
+        if (eg.helicopter)
         {
             return;
         }

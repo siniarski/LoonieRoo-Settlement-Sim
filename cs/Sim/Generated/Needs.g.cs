@@ -408,7 +408,7 @@ public static partial class Needs
         else if (Seasons.isCold(state, s))
         {
         }
-        else if (Js.T((s.health > 0) && Js.T(Js.T(s.sleep?.asleep))))
+        else if (Js.T((s.health > 0) && Js.T(s.sleep?.asleep)))
         {
             s.health = JsMath.min(Health.HEALTH_MAX, s.health + (Health.SLEEP_HEAL * (Medicine.inInfirmary(state, s) ? Medicine.INFIRMARY_HEAL_FACTOR : 1)));
         }
@@ -480,7 +480,7 @@ public static partial class Needs
             return true;
         }
         var sleep = s.sleep;
-        if (Js.T(sleep.asleep))
+        if (sleep.asleep)
         {
             return true;
         }
@@ -562,7 +562,7 @@ public static partial class Needs
         {
             return;
         }
-        if (!Js.T(Js.T(s.sleep?.asleep)))
+        if (!Js.T(s.sleep?.asleep))
         {
             s.rest = JsMath.max(0, s.rest - Rest.REST_DRAIN);
             return;
@@ -586,7 +586,7 @@ public static partial class Needs
     {
         foreach (var s in Js.Iter(state.survivors))
         {
-            if (((!Js.T(Js.T(s.sleep?.asleep)) || !Js.T(s.sleep.bedId)) || !Medicine.isGuard(s)) || Health.isCritical(s.health))
+            if (((!Js.T(s.sleep?.asleep) || !Js.T(s.sleep.bedId)) || !Medicine.isGuard(s)) || Health.isCritical(s.health))
             {
                 continue;
             }

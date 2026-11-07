@@ -77,7 +77,7 @@ public static partial class Talk
         {
             return $"{Js.Str(s.name)} is too far away to talk";
         }
-        if (Js.T(Js.T(s.sleep?.asleep)))
+        if (Js.T(s.sleep?.asleep))
         {
             return $"{Js.Str(s.name)} is asleep";
         }
@@ -103,7 +103,7 @@ public static partial class Talk
                 recognise(state, s);
             }
         }
-        else if (!Js.T(s.story.confessed))
+        else if (!s.story.confessed)
         {
             confess(state, s);
         }
@@ -127,11 +127,11 @@ public static partial class Talk
     {
         if (k == "bury")
         {
-            return Js.T(s.story.lost.dead);
+            return s.story.lost.dead;
         }
         if (k == "radio")
         {
-            return !Js.T(s.story.lost.dead);
+            return !s.story.lost.dead;
         }
         if (k == "pet")
         {
@@ -333,7 +333,7 @@ public static partial class Talk
                     {
                         return fail(state, giver, $"{Js.Str(giver.story.pet)} is gone.");
                     }
-                    return Js.T(dog.waiting) ? null : true;
+                    return dog.waiting ? null : true;
                 }
                 }
             case "burn":

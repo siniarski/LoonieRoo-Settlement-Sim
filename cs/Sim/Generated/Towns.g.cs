@@ -194,9 +194,9 @@ public static partial class Towns
             var y1 = y + (dy * steps);
             Street s = new Street { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
             streets.push(s);
-            for (var yy = s.y0; yy <= (s.y1 + (Js.T(s.eastWest) ? 1 : 0)); yy++)
+            for (var yy = s.y0; yy <= (s.y1 + (s.eastWest ? 1 : 0)); yy++)
             {
-                for (var xx = s.x0; xx <= (s.x1 + (Js.T(s.eastWest) ? 0 : 1)); xx++)
+                for (var xx = s.x0; xx <= (s.x1 + (s.eastWest ? 0 : 1)); xx++)
                 {
                     laid.add((yy * n.size) + xx);
                 }
@@ -231,8 +231,8 @@ public static partial class Towns
                 off += STREET_GAP + JsMath.floor(r(k++) * 6);
             }
         }
-        var __c0 = Js.T(t.eastWest); var ax = __c0 ? 1 : 0; var ay = __c0 ? 0 : 1;
-        var __c1 = Js.T(t.eastWest); var cx = __c1 ? 0 : 1; var cy = __c1 ? 1 : 0;
+        var __c0 = t.eastWest; var ax = __c0 ? 1 : 0; var ay = __c0 ? 0 : 1;
+        var __c1 = t.eastWest; var cx = __c1 ? 0 : 1; var cy = __c1 ? 1 : 0;
         grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * (0.9 + (r(1) * 0.2))), 0);
         grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * (0.9 + (r(2) * 0.2))), 0);
         grow(t.x + (cx * 2), t.y + (cy * 2), cx, cy, JsMath.floor(t.radius * (0.6 + (r(3) * 0.4))), 0);

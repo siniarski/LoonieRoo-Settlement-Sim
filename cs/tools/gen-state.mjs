@@ -371,8 +371,8 @@ for (const [name, fields] of [...classes].sort((a, b) => a[0].localeCompare(b[0]
   const inherited = base ? classes.get(base) : null;
   const heads = [...(base ? [base] : []), ...ifaces.filter((i) => !inherited || i === 'Body' ? true : !['IHasId', 'IHasAt', 'IHasPos', 'IBody'].includes(i))];
   lines.push(`public partial class ${name}${heads.length ? ' : ' + heads.join(', ') : ''}`, '{');
-  if (fields.get('x')?.type === 'int?' && fields.get('y')?.type === 'int?') lines.push(`    /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x!.Value, v.y!.Value);`);
-  if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => new(v.x, v.y);`);
+  if (fields.get('x')?.type === 'int?' && fields.get('y')?.type === 'int?') lines.push(`    /// <summary>A point, where it has one (TypeScript narrows to the members that do).</summary>`, `    public static implicit operator Point(${name} v) => v is null ? null! : new(v.x!.Value, v.y!.Value);`);
+  if (fields.get('x')?.type === 'int' && fields.get('y')?.type === 'int') lines.push(`    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>`, `    public static implicit operator Point(${name} v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)`);
   for (const [field, f] of fields) {
     if (inherited?.get(field)?.type === f.type) continue; // the base class has it
     if (f.doc) lines.push(`    /// <summary>${esc(f.doc)}</summary>`);

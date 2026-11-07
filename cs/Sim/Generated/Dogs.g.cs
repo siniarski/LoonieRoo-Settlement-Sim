@@ -61,7 +61,7 @@ public static partial class Dogs
         {
             foreach (var s in Js.Iter(state.survivors))
             {
-                if (!Js.T(Js.T(s.sleep?.asleep)) && state.dogs.some((d) => Space.manhattan(d.pos, s.pos) <= DOG_FOLLOW))
+                if (!Js.T(s.sleep?.asleep) && state.dogs.some((d) => Space.manhattan(d.pos, s.pos) <= DOG_FOLLOW))
                 {
                     Mood.addThought(state, s, "dog");
                 }
@@ -77,7 +77,7 @@ public static partial class Dogs
     public static void updateDog(SimState state, Dog dog)
     {
         dog.cooldown = JsMath.max(0, dog.cooldown - 1);
-        if (Js.T(dog.waiting))
+        if (dog.waiting)
         {
             var found = state.survivors.find((s) => Space.manhattan(s.pos, dog.pos) <= 2);
             if (!Js.T(found))
@@ -144,7 +144,7 @@ public static partial class Dogs
         double woke = 0;
         foreach (var s in Js.Iter(state.survivors))
         {
-            if ((!Js.T(Js.T(s.sleep?.asleep)) || !Medicine.isGuard(s)) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))
+            if ((!Js.T(s.sleep?.asleep) || !Medicine.isGuard(s)) || (Space.manhattan(s.pos, dog.pos) > (2 * DOG_SENSE)))
             {
                 continue;
             }

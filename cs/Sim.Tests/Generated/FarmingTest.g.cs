@@ -64,7 +64,7 @@ public partial class FarmingTest
             runUntil(state, (_) => Farming.isRipe(plot));
             expect(state.tick - sownAt).toBe(Farming.GROW_TICKS);
             runUntil(state, (_) => state.items.length == 1);
-            expect(Js.Get(state.items, 0)).toMatchObject(Js.Obj(("kind", (object?)("food"))));
+            expect(Js.Missing(state.items, 0) ? null : (object?)(Js.Get(state.items, 0))).toMatchObject(Js.Obj(("kind", (object?)("food"))));
             expect(Js.NN(Js.Get(state.survivors, 0)).note).toBe("harvested food at (3, 0)");
             runUntil(state, (_) => plot.planted, Farming.FARM_WORK + 100);
         }
@@ -77,7 +77,7 @@ public partial class FarmingTest
             {
                 Tick.tick(state);
             }
-            expect(Js.Get(state.farm, 0)).toMatchObject(Js.Obj(("planted", (object?)(false)), ("growth", (object?)(0))));
+            expect(Js.Missing(state.farm, 0) ? null : (object?)(Js.Get(state.farm, 0))).toMatchObject(Js.Obj(("planted", (object?)(false)), ("growth", (object?)(0))));
         }
 
         [Fact(DisplayName = "farming > building on a plot destroys it")]

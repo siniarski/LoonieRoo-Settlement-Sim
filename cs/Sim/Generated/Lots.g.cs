@@ -458,7 +458,7 @@ public static partial class Lots
                 }
                 continue;
             }
-            if (Js.T(e.door))
+            if (e.door)
             {
                 if (fall < 0.08)
                 {

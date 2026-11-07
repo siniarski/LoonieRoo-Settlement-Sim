@@ -83,7 +83,7 @@ public partial class EdgesTest
                 s.priorities[Js.Idx(k)] = 0;
             }
             var door = Grids.edgeBetween(state.grid, 2, 3, 2, 4);
-            expect(Js.Get(state.grid.edges, door)).toBe(Grids.EDGE_DOOR);
+            expect(Js.Missing(state.grid.edges, door) ? null : (object?)(Js.Get(state.grid.edges, door))).toBe(Grids.EDGE_DOOR);
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(2), y = Js.I(6) });
             var wasOpen = false;
             for (var t = 0; t < 60; t++)
@@ -125,7 +125,7 @@ public partial class EdgesTest
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = box(1, 1, 3, 3) });
             var back = Savefile.loadFile(Savefile.toSaveFile(state));
-            expect(Js.T(back.ok) && Js.T(back.state.grid.edges)).toEqual(state.grid.edges);
+            expect((back.ok ? (object?)(back.state.grid.edges) : false)).toEqual(state.grid.edges);
         }
 
         [Fact(DisplayName = "walls on tile edges > the dead batter an edge door down to get at someone inside")]
@@ -162,12 +162,12 @@ public partial class EdgesTest
             s.priorities["build"] = 1;
             var wall = Grids.edgeBetween(state.grid, 3, 2, 4, 2);
             state.grid.edgeDamage[Js.Idx(Js.Str(wall))] = 300;
-            for (var t = 0; (t < 600) && (Js.Get(state.grid.edgeDamage, Js.Str(wall)) != null); t++)
+            for (var t = 0; (t < 600) && (!Js.Missing(state.grid.edgeDamage, Js.Str(wall))); t++)
             {
                 Tick.tick(state);
             }
-            expect(Js.Get(state.grid.edgeDamage, Js.Str(wall))).toBeUndefined();
-            expect(Js.Get(state.grid.edges, wall)).toBe(1);
+            expect(Js.Missing(state.grid.edgeDamage, Js.Str(wall)) ? null : (object?)(Js.Get(state.grid.edgeDamage, Js.Str(wall)))).toBeUndefined();
+            expect(Js.Missing(state.grid.edges, wall) ? null : (object?)(Js.Get(state.grid.edges, wall))).toBe(1);
         }
 
         [Fact(DisplayName = "walls on tile edges > a colonist builds an edge wall you designate: wood brought, built from either side")]
@@ -189,7 +189,7 @@ public partial class EdgesTest
             {
                 Tick.tick(state);
             }
-            expect(Js.Get(state.grid.edges, wall)).toBe(1);
+            expect(Js.Missing(state.grid.edges, wall) ? null : (object?)(Js.Get(state.grid.edges, wall))).toBe(1);
             expect(state.blueprints).toHaveLength(0);
         }
 

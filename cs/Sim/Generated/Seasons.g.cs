@@ -50,7 +50,7 @@ public static partial class Seasons
         {
             return 0;
         }
-        if (Js.T(state.settings.winter) && ((state.tick % 2) == 1))
+        if (state.settings.winter && ((state.tick % 2) == 1))
         {
             return 0;
         }
@@ -81,7 +81,7 @@ public static partial class Seasons
     /// <summary>A winter night (any night, in a nuclear winter), or a blizzard.</summary>
     public static bool coldOutside(SimState state)
     {
-        return ((Js.T((seasonOf(state.tick) == "winter") || Js.T(state.settings.winter))) && Time.isNight(state.tick)) || (state.weather == "blizzard");
+        return (((seasonOf(state.tick) == "winter") || state.settings.winter) && Time.isNight(state.tick)) || (state.weather == "blizzard");
     }
 
     /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>

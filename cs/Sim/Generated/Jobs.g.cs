@@ -152,7 +152,7 @@ public static partial class Jobs
         var searching = Js.Set(state.jobs.filter((j) => j.type == "scavenge").map((j) => j.furnitureId));
         foreach (var f in Js.Iter(FurnitureMod.markedForScavenge(state)))
         {
-            if (((Js.T(f.scavenge) && ((f.kind == "crate") || (f.kind == "tree"))) && (f.loot > 0)) && !searching.has(f.id))
+            if (((f.scavenge && ((f.kind == "crate") || (f.kind == "tree"))) && (f.loot > 0)) && !searching.has(f.id))
             {
                 addJob(state, "scavenge", f.x, f.y, null, null, f.id);
             }
@@ -188,7 +188,7 @@ public static partial class Jobs
         var hunting = Js.Set(state.jobs.filter((j) => j.type == "hunt").map((j) => j.animalId));
         foreach (var a in Js.Iter(state.animals))
         {
-            if (Js.T(a.hunted) && !hunting.has(a.id))
+            if (a.hunted && !hunting.has(a.id))
             {
                 addJob(state, "hunt", a.pos.x, a.pos.y, null, null).animalId = a.id;
             }
@@ -238,7 +238,7 @@ public static partial class Jobs
 
     public static string wantedJobType(Blueprint bp)
     {
-        return (Js.T(bp.needsMaterial) && !Js.T(bp.delivered)) ? "haul" : "build";
+        return (bp.needsMaterial && !bp.delivered) ? "haul" : "build";
     }
 
     public static string? invalidReason(SimState state, Job job, StoreRooms stores)

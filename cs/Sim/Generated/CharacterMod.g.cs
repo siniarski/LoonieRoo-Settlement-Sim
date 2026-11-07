@@ -64,7 +64,7 @@ public static partial class CharacterMod
         {
             return "a trait twice";
         }
-        if (c.traits.some((t) => Js.Get(TRAIT_COST, t) == null))
+        if (c.traits.some((t) => Js.Missing(TRAIT_COST, t)))
         {
             return "a trait you can't choose";
         }

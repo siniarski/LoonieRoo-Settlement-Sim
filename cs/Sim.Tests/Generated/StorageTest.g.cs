@@ -122,11 +122,11 @@ public partial class StorageTest
             {
                 return Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0)));
             }
-            expect(status().requirements.find((r) => !Js.T(r.met))?.label).toBe("at least 1 bed");
+            expect(status().requirements.find((r) => !r.met)?.label).toBe("at least 1 bed");
             Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(10), y = Js.I(2), structure = "bed" });
             runUntil(state, (s) => s.furniture.length == 1);
             expect(status()).toMatchObject(Js.Obj(("complete", (object?)(true)), ("beds", (object?)(1))));
-            expect(Js.Get(Js.NN(Js.Get(DebugText.dumpText(state).split("\n"), 2)), 10)).toBe("b");
+            expect(Js.Missing(Js.NN(Js.Get(DebugText.dumpText(state).split("\n"), 2)), 10) ? null : (object?)(Js.Get(Js.NN(Js.Get(DebugText.dumpText(state).split("\n"), 2)), 10))).toBe("b");
         }
 
         [Fact(DisplayName = "beds and housing > removing a bed gives its wood back")]

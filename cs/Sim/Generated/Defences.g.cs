@@ -49,7 +49,7 @@ public static partial class Defences
     /// <summary>Can someone see this point? Always by day.</summary>
     public static bool seen(SimState state, Point p)
     {
-        if (!Js.T(state.harsh) || !Time.isNight(state.tick))
+        if (!state.harsh || !Time.isNight(state.tick))
         {
             return true;
         }

@@ -167,7 +167,7 @@ public partial class BedsTest
             Js.NN(Js.Get(state.survivors, 0)).priorities["guard"] = 1;
             Js.NN(Js.Get(state.survivors, 1)).priorities["guard"] = 2;
             expect(Planner.planFurnish(state, 1, 1).commands).toHaveLength(1);
-            expect(Js.Get(Planner.planFurnish(state, 1, 1).notes, 0)).toBe("Planned 1 bed for the guards (room holds 1, 2 guarding).");
+            expect(Js.Missing(Planner.planFurnish(state, 1, 1).notes, 0) ? null : (object?)(Js.Get(Planner.planFurnish(state, 1, 1).notes, 0))).toBe("Planned 1 bed for the guards (room holds 1, 2 guarding).");
         }
     }
 }
