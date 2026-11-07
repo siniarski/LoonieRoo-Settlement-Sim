@@ -132,7 +132,7 @@ public static partial class Doors
             var tile = JsMath.floor(((double)(e) / (2)));
             var x = (tile % grid.width) * Motion.SUB;
             var y = JsMath.floor(((double)(tile) / (grid.width))) * Motion.SUB;
-            var (x1, y1) = ((e % 2) == 0) ? [x + Motion.SUB, y] : [x, y + Motion.SUB];
+            var (x1, y1) = ((e % 2) == 0) ? (x + Motion.SUB, y) : (x, y + Motion.SUB);
             var r = Motion.BODY_RADIUS + ((double)(Motion.SUB) / (8));
             var inDoorway = bodies.some((c) =>
         {

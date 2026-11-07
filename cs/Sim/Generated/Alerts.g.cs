@@ -197,7 +197,7 @@ public static partial class Alerts
         {
             if (i.kind != "corpse")
             {
-                counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
+                counts.set(i.kind, (Js.Q(counts.get(i.kind), 0)) + 1);
             }
         }
         return (counts.entries()).ToList().sort((a, b) => Js.Or(b[Js.Idx(1)] - a[Js.Idx(1)], a[Js.Idx(0)].localeCompare(b[Js.Idx(0)])));

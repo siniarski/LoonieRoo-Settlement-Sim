@@ -146,6 +146,18 @@ public static class JsListExtensions
             return false;
         }
 
+        public bool some(Func<T, int, bool> f)
+        {
+            for (int i = 0; i < a.Count; i++) if (f(a[i], i)) return true;
+            return false;
+        }
+
+        public bool every(Func<T, int, bool> f)
+        {
+            for (int i = 0; i < a.Count; i++) if (!f(a[i], i)) return false;
+            return true;
+        }
+
         public bool every(Func<T, bool> f)
         {
             foreach (var x in a) if (!f(x)) return false;
@@ -260,6 +272,8 @@ public static class JsListExtensions
     extension<T>(T[] a)
     {
         public int length => a.Length;
+        /// <summary>typedArray.set(source, offset)</summary>
+        public void set(T[] source, int offset = 0) => Array.Copy(source, 0, a, offset, source.Length);
         public bool includes(T x) => Array.IndexOf(a, x) >= 0;
         public int indexOf(T x) => Array.IndexOf(a, x);
         public T[] fill(T v)
@@ -538,6 +552,12 @@ public static partial class Js
         string s => s.Length > 0,
         _ => true,
     };
+
+    /// <summary>x ?? n: a value that can't be null in C# stands as it is.</summary>
+    public static double Q(double a, double b) => a;
+    public static double Q(double? a, double b) => a ?? b;
+    public static int Q(int a, int b) => a;
+    public static int Q(int? a, int b) => a ?? b;
 
     /// <summary>a || b used as a value: a if truthy, else b.</summary>
     public static V Or<V>(V a, V b) => T((object?)a) ? a : b;

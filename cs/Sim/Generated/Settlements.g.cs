@@ -94,7 +94,7 @@ public static partial class Settlements
             {
                 continue;
             }
-            var t = s.ties[Js.Idx(o.id)] ?? 0;
+            var t = Js.Q(s.ties[Js.Idx(o.id)], 0);
             if (t >= ALLY)
             {
                 adjustReputation(state, o, JsMath.trunc(((double)(by) / (2))), false);
@@ -114,7 +114,7 @@ public static partial class Settlements
     /// <summary>How two settlements stand: allies, feuding, or neither.</summary>
     public static string? relation(Settlement a, Settlement b)
     {
-        var t = a.ties[Js.Idx(b.id)] ?? 0;
+        var t = Js.Q(a.ties[Js.Idx(b.id)], 0);
         return (t >= ALLY) ? "allies" : ((t <= FEUD) ? "feud" : null);
     }
 
@@ -124,7 +124,7 @@ public static partial class Settlements
         var before = relation(a, b);
         foreach (var (x, y) in Js.Iter((List<List<int>>)[[a, b], [b, a]]))
         {
-            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (x.ties[Js.Idx(y.id)] ?? 0) + by));
+            x.ties[Js.Idx(y.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(x.ties[Js.Idx(y.id)], 0)) + by));
         }
         return before;
     }

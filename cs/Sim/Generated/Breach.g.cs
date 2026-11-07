@@ -98,7 +98,7 @@ public static partial class Breach
 
     public static double edgeDamage(Grid grid, int e)
     {
-        return grid.edgeDamage[Js.Idx(Js.Str(e))] ?? 0;
+        return Js.Q(grid.edgeDamage[Js.Idx(Js.Str(e))], 0);
     }
     public static double edgeDamage(Grid grid, double e) => edgeDamage(grid, (int)e);
 

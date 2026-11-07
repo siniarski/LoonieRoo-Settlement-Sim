@@ -177,7 +177,7 @@ public static partial class TimelineMod
         updateHeli(state, t);
         var winding = (t.powerOffDay > 0) && (day < (t.powerOffDay + WIND_DOWN_DAYS));
         var you = focus(state);
-        if (((Js.T(winding) && Js.T(you)) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(state.world?.seed ?? 0, state.tick, 0xfa2) < FAR_CHANCE))
+        if (((Js.T(winding) && Js.T(you)) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), state.tick, 0xfa2) < FAR_CHANCE))
         {
             var a = (Hash.hashRoll(state.tick, 0xfa3) * JsMath.PI) * 2;
             var at = off(state, you, a, FAR_MIN + JsMath.floor(Hash.hashRoll(state.tick, 0xfa4) * ((FAR_MAX - FAR_MIN) + 1)));
@@ -200,7 +200,7 @@ public static partial class TimelineMod
             {
                 return;
             }
-            var a = (Hash.hashRoll(state.world?.seed ?? 0, 19986.0) * JsMath.PI) * 2;
+            var a = (Hash.hashRoll(Js.Q(state.world?.seed, 0), 19986.0) * JsMath.PI) * 2;
             var from = off(state, you, a, 60);
             var exit = off(state, you, a + JsMath.PI, 80);
             t.heli = new() { x = Js.I(from.x), y = Js.I(from.y), leaveTick = (state.tick + HELI_HOVER) + (60 * HELI_STEP), exit = exit };

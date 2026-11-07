@@ -133,7 +133,7 @@ public static partial class Books
             return;
         }
         var type = subject;
-        s.xp[Js.Idx(type)] = (s.xp[Js.Idx(type)] ?? 0) + Skills.XP_PER_LEVEL;
+        s.xp[Js.Idx(type)] = (Js.Q(s.xp[Js.Idx(type)], 0)) + Skills.XP_PER_LEVEL;
         s.note = $"read a book on {Js.Str(type)}";
     }
 

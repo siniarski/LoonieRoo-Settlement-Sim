@@ -154,7 +154,7 @@ public static partial class Towns
             {
                 return 0;
             }
-            var (px, py) = [JsMath.abs(dy), JsMath.abs(dx)];
+            var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
             bool crowded(int sx, int sy)
             {
                 for (var o = 2; o <= 9; o++)
@@ -213,7 +213,7 @@ public static partial class Towns
             {
                 return;
             }
-            var (px, py) = [JsMath.abs(dy), JsMath.abs(dx)];
+            var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
             var off = (STREET_GAP - 8) + JsMath.floor(r(k++) * 7);
             while (off < (steps - 4))
             {
@@ -231,8 +231,8 @@ public static partial class Towns
                 off += STREET_GAP + JsMath.floor(r(k++) * 6);
             }
         }
-        var (ax, ay) = Js.T(t.eastWest) ? [1, 0] : [0, 1];
-        var (cx, cy) = Js.T(t.eastWest) ? [0, 1] : [1, 0];
+        var (ax, ay) = Js.T(t.eastWest) ? (1, 0) : (0, 1);
+        var (cx, cy) = Js.T(t.eastWest) ? (0, 1) : (1, 0);
         grow(t.x, t.y, ax, ay, JsMath.floor(t.radius * (0.9 + (r(1) * 0.2))), 0);
         grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(t.radius * (0.9 + (r(2) * 0.2))), 0);
         grow(t.x + (cx * 2), t.y + (cy * 2), cx, cy, JsMath.floor(t.radius * (0.6 + (r(3) * 0.4))), 0);

@@ -2,42 +2,10 @@
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
-public partial class HousePlanLiving
-{
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
-}
-
-public partial class HousePlanKitchen
-{
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
-}
-
-public partial class HousePlanBath
-{
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
-}
-
 public partial class HousePlanRest
 {
     public int x0 { get; set; }
     public int x1 { get; set; }
-}
-
-public partial class ShopPlanFloor
-{
-    public int x0 { get; set; }
-    public int y0 { get; set; }
-    public int x1 { get; set; }
-    public int y1 { get; set; }
 }
 
 public partial class CompoundResult
@@ -68,13 +36,6 @@ public partial class IndexesEntry
     public JsMap<string, Furniture> byId { get; set; }
     public JsMap<string, List<Furniture>> byKind { get; set; }
     public List<Furniture>? marked { get; set; }
-}
-
-public partial class FlowFieldField
-{
-    public object key { get; set; }
-    public object dist { get; set; }
-    public object box { get; set; }
 }
 
 public partial class ContainerOfResult
@@ -147,16 +108,6 @@ public partial class PackFurnitureResult
 public partial class UnpackFurniturePacked
 {
     public List<object> rows { get; set; }
-}
-
-public partial class ToBugReportReport
-{
-    public string format { get; set; }
-    public object schemaVersion { get; set; }
-    public object note { get; set; }
-    public object initial { get; set; }
-    public object commands { get; set; }
-    public object tick { get; set; }
 }
 
 public partial class SeenEntry

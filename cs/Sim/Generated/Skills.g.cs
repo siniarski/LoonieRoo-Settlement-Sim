@@ -53,7 +53,7 @@ public static partial class Skills
 
     public static double skillLevel(Survivor s, string type)
     {
-        var @base = JsMath.floor(((double)((s.xp[Js.Idx(type)] ?? 0)) / (XP_PER_LEVEL)));
+        var @base = JsMath.floor(((double)((Js.Q(s.xp[Js.Idx(type)], 0))) / (XP_PER_LEVEL)));
         return JsMath.min(MAX_LEVEL, @base + (((type == "farm") && Js.T(hasTrait(s, "greenThumb"))) ? 5 : 0));
     }
 
@@ -79,7 +79,7 @@ public static partial class Skills
         {
             return 0;
         }
-        s.xp[Js.Idx(type)] = (s.xp[Js.Idx(type)] ?? 0) + 1;
+        s.xp[Js.Idx(type)] = (Js.Q(s.xp[Js.Idx(type)], 0)) + 1;
         return ((1 + (((state.tick % 20) < skillLevel(s, type)) ? 1 : 0)) + toolBonus(state, s, type)) + ((Js.T(Moodlets.boosted(s, "faster")) && ((state.tick % 4) == 0)) ? 1 : 0);
     }
 

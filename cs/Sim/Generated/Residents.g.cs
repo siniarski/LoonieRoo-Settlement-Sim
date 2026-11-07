@@ -193,7 +193,7 @@ public static partial class Residents
             return $"{Js.Str(r.name)} won't talk to you";
         }
         var carried = Js.T(you.carrying) ? Items.getItem(state, you.carrying) : null;
-        var worth = Js.T(carried) ? (TRADE_FOOD[Js.Idx(carried.kind)] ?? 0) : 0;
+        var worth = Js.T(carried) ? (Js.Q(TRADE_FOOD[Js.Idx(carried.kind)], 0)) : 0;
         if (Js.T(carried) && (worth > 0))
         {
             if (n.food < worth)

@@ -188,7 +188,7 @@ public static partial class Worldplan
                         return NatureMod.roll(n.seed, (si * 31) + side, p, (0x7400 + j) + (k * 7));
                     }
                     var mid = p + 9;
-                    var (mx, my) = Js.T(s.eastWest) ? [mid, s.y0 + (side * 9)] : [s.x0 + (side * 9), mid];
+                    var (mx, my) = Js.T(s.eastWest) ? (mid, s.y0 + (side * 9)) : (s.x0 + (side * 9), mid);
                     var share = ((double)(dist(mx, my, t.x, t.y)) / (t.radius));
                     object zone = "residential";
                     if ((((share < 0.45) && Js.T(s.main)) && (civic[Js.Idx(s.town)]! < CIVIC_MAX[Js.Idx(t.kind)])) && (r(4) < 0.6))

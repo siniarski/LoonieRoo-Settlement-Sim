@@ -227,8 +227,8 @@ public static partial class Commands
         }
         if (command.type == "designateHunt")
         {
-            var (x0, x1) = [JsMath.min(command.x0, command.x1), JsMath.max(command.x0, command.x1)];
-            var (y0, y1) = [JsMath.min(command.y0, command.y1), JsMath.max(command.y0, command.y1)];
+            var (x0, x1) = (JsMath.min(command.x0, command.x1), JsMath.max(command.x0, command.x1));
+            var (y0, y1) = (JsMath.min(command.y0, command.y1), JsMath.max(command.y0, command.y1));
             var marked = state.animals.filter((a) => ((((!Js.T(a.hunted) && (!Js.T(command.kinds) || command.kinds.includes(a.kind))) && (a.pos.x >= x0)) && (a.pos.x <= x1)) && (a.pos.y >= y0)) && (a.pos.y <= y1));
             foreach (var a in Js.Iter(marked))
             {

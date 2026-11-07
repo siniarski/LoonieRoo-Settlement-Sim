@@ -212,7 +212,7 @@ public static partial class Colonies
     public static void raidOrBeg(SimState state, Settlement n, Func<double, double> roll)
     {
         var others = state.settlements.filter((o) => ((o != n) && !Js.T(isFallen(o))) && (o.food > 0)).sort((a, b) => (JsMath.abs(a.x - n.x) + JsMath.abs(a.y - n.y)) - (JsMath.abs(b.x - n.x) + JsMath.abs(b.y - n.y)));
-        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((o.ties[Js.Idx(n.id)] ?? 0) >= 0));
+        var giver = others.find((o) => (o.food >= (o.people * WELL_FED_DAYS)) && ((Js.Q(o.ties[Js.Idx(n.id)], 0)) >= 0));
         if ((Js.T(giver) && (roll(5) < 0.5)) && !Caravans.caravansOf(state).some((c) => c.to == n.id))
         {
             var sent = JsMath.floor(((double)(giver.food) / (3)));

@@ -213,7 +213,7 @@ public static partial class Handiwork
         }
         else
         {
-            a.health = (a.health ?? 0) - damage;
+            a.health = (Js.Q(a.health, 0)) - damage;
             if (a.health > 0)
             {
                 Animals.provoke(state, a, s);

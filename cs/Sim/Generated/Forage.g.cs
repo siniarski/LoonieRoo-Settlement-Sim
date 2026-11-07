@@ -90,7 +90,7 @@ public static partial class Forage
             s.forage = null;
             return true;
         }
-        if ((Js.T(s.jobId) || !Js.T(forageTime(state))) || (state.tick < (s.nextForageTick ?? 0)))
+        if ((Js.T(s.jobId) || !Js.T(forageTime(state))) || (state.tick < (Js.Q(s.nextForageTick, 0))))
         {
             return false;
         }

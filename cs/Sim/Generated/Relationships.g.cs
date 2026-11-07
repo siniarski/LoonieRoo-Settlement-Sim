@@ -31,7 +31,7 @@ public static partial class Relationships
 
     public static double opinion(Survivor of, Survivor about)
     {
-        return of.opinions[Js.Idx(about.id)] ?? 0;
+        return Js.Q(of.opinions[Js.Idx(about.id)], 0);
     }
 
     public static void adjust(Survivor of, Survivor about, int by)

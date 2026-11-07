@@ -40,7 +40,7 @@ public static partial class CharacterMod
     /// <summary>Points left with this profession and these traits.</summary>
     public static double pointsLeft(Character c)
     {
-        return (START_POINTS + (professionOf(c.job)?.points ?? 0)) - c.traits.reduce((sum, t) => sum + (TRAIT_COST[Js.Idx(t)] ?? 0), 0);
+        return (START_POINTS + (Js.Q(professionOf(c.job)?.points, 0))) - c.traits.reduce((sum, t) => sum + (Js.Q(TRAIT_COST[Js.Idx(t)], 0)), 0);
     }
 
     /// <summary>Tidies a typed name: letters, spaces, hyphens, apostrophes; at most NAME_MAX.</summary>

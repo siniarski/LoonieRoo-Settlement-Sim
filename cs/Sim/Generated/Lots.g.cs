@@ -492,7 +492,7 @@ public static partial class Lots
             {
                 var d_2 = FurnitureMod.addFurniture(state, "decor", w.x, w.y);
                 d_2.look = f.look;
-                d_2.loot = TimelineMod.TANK_WATER[Js.Idx(f.look)] ?? 0;
+                d_2.loot = Js.Q(TimelineMod.TANK_WATER[Js.Idx(f.look)], 0);
             }
         });
         var d = ctx.distance(b.ox, b.oy);

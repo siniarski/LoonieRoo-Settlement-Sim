@@ -214,13 +214,13 @@ public static partial class Buildings
         var inner = W - 2;
         var split = 1 + JsMath.max(3, JsMath.floor(inner * 0.55));
         vwall(p, split, div, H - 1);
-        HousePlanLiving living = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
-        HousePlanKitchen kitchen = new() { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        HordeBox living = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
+        HordeBox kitchen = new() { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         floorAs(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "tiles");
         door(p, JsMath.floor(((double)((living.x0 + living.x1)) / (2))), H - 1);
         door(p, split, JsMath.floor(((double)(((living.y0 + living.y1) + 1)) / (2))));
         var bathW = (inner >= 10) ? 3 : 2;
-        HousePlanBath bath = new() { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
+        HordeBox bath = new() { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
         vwall(p, bathW + 1, 0, div);
         floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
         HousePlanRest rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
@@ -326,7 +326,7 @@ public static partial class Buildings
         {
             againstWall(p, 4, 1, W - 2, div - 1, ((i % 2) == 0) ? "pallet" : "crate", table, r(7 + i));
         }
-        ShopPlanFloor floor = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
+        HordeBox floor = new() { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
         if (kind == "office")
         {
             for (var y = floor.y0 + 1; y < floor.y1; y += 2)
@@ -723,7 +723,7 @@ public static partial class Buildings
             var x = i % w;
             var y = JsMath.floor(((double)(i) / (w)));
             var vertical = Js.Or(solid(at(x, y - 1)), solid(at(x, y + 1)));
-            var (ax, ay, bx, by) = Js.T(vertical) ? [x - 1, y, x + 1, y] : [x, y - 1, x, y + 1];
+            var (ax, ay, bx, by) = Js.T(vertical) ? (x - 1, y, x + 1, y) : (x, y - 1, x, y + 1);
             if (cells[Js.Idx(i)] == OUTSIDE)
             {
                 var inside = (((((cells[Js.Idx((ay * w) + ax)] == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? [ax, ay] : [bx, by];
@@ -781,8 +781,8 @@ public static partial class Buildings
             var outerWall = Js.MapOf(edges.filter((e) => !Js.T(e.door) && (cellOf(e.bx, e.by) != FLOOR)), (e) => key(e), (e) => e);
             foreach (var e in Js.Iter(outerWall.values()))
             {
-                var (dx, dy) = [e.bx - e.ax, e.by - e.ay];
-                var (sx, sy) = (dy != 0) ? [1, 0] : [0, 1];
+                var (dx, dy) = (e.bx - e.ax, e.by - e.ay);
+                var (sx, sy) = (dy != 0) ? (1, 0) : (0, 1);
                 var along = (dy != 0) ? e.ax : e.ay;
                 if ((along % 3) != 1)
                 {

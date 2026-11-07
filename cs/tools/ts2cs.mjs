@@ -25,6 +25,18 @@ const stateSrc = readFileSync('cs/Sim/State.g.cs', 'utf8');
 /** Classes that are bodies (they implement IBody). */
 const bodyClasses = new Set([...stateSrc.matchAll(/public partial class (\w+) : [^\n]*IBody/g)].map((m) => m[1]));
 
+/** A state class by its exact set of field names ("a,b,c" sorted), when only one class has that set. */
+const classByFields = new Map();
+{
+  const seen = new Map();
+  for (const m of stateSrc.matchAll(/public partial class (\w+)[^\n]*\n\{([\s\S]*?)\n\}/g)) {
+    const names = [...m[2].matchAll(/public [^\n]*? @?(\w+) \{ get; set; \}/g)].map((f) => f[1]).sort().join(',');
+    seen.set(names, (seen.get(names) ?? 0) + 1);
+    classByFields.set(names, m[1]);
+  }
+  for (const [k, n] of seen) if (n > 1) classByFields.delete(k);
+}
+
 /** Field name -> the C# types it has across the state classes. */
 const fieldTypes = new Map();
 for (const m of stateSrc.matchAll(/public ([\w<>?, \[\]]+) @?(\w+) \{ get; set; \}/g)) {
@@ -342,6 +354,8 @@ function translate(mod) {
 
   /** A class for an object literal's shape (fields typed from their values, as far as they show). */
   function objectLiteralClass(o, name) {
+    const keys = o.properties.map((p) => String(p.key.name ?? p.key.value)).sort().join(',');
+    if (classByFields.has(keys)) return classByFields.get(keys);
     const members = o.properties.map((p) => {
       const k = String(p.key.name ?? p.key.value);
       const v = p.value;
@@ -409,7 +423,11 @@ function translate(mod) {
   }
 
   /** var (a, b) = x; or, for one name, var a = x[0]; */
-  function destructure(elements, value) {
+  function destructure(elements, value, init) {
+    if (init && (init.type === 'ArrayExpression' || (init.type === 'ConditionalExpression' && init.consequent.type === 'ArrayExpression' && init.alternate.type === 'ArrayExpression'))) {
+      const tuple = (a) => `(${a.elements.map((x) => ex(x)).join(', ')})`;
+      value = init.type === 'ArrayExpression' ? tuple(init) : `${operand(init.test, true)} ? ${tuple(init.consequent)} : ${tuple(init.alternate)}`;
+    }
     const names = elements.map((x) => (x ? declName(x.name) : '_'));
     if (names.length === 1) return `var ${names[0]} = (${value})[0];`;
     return `var (${names.join(', ')}) = ${value};`;
@@ -484,6 +502,8 @@ function translate(mod) {
         const op = e.operator;
         const l = operand(e.left);
         const r = operand(e.right);
+        const stringish = (x) => (x.type === 'Literal' && typeof x.value === 'string') || x.type === 'TemplateLiteral' || (x.type === 'MemberExpression' && !x.computed && ['id', 'name', 'kind', 'label', 'key', 'look', 'type'].includes(x.property.name));
+        if (['<', '>', '<=', '>='].includes(op) && (stringish(e.left) || stringish(e.right))) return `string.CompareOrdinal(${ex(e.left)}, ${ex(e.right)}) ${op} 0`;
         if (op === '===' || op === '==') return `${l} == ${r}`;
         if (op === '!==' || op === '!=') return `${l} != ${r}`;
         if (op === '/') return `((double)(${l}) / (${r}))`;
@@ -494,6 +514,7 @@ function translate(mod) {
         return `${l} ${op} ${r}`;
       }
       case 'LogicalExpression': {
+        if (e.operator === '??' && e.right.type === 'Literal' && typeof e.right.value === 'number') return `Js.Q(${ex(e.left)}, ${ex(e.right)})`;
         if (e.operator === '??') return `${operand(e.left)} ?? ${operand(e.right)}`;
         if (!bool && e.operator === '||' && !isBoolish(e.left) && !isBoolish(e.right)) return `Js.Or(${ex(e.left)}, ${ex(e.right)})`;
         return `${operand(e.left, true)} ${e.operator} ${operand(e.right, true)}`;
@@ -795,7 +816,7 @@ function translate(mod) {
             continue;
           }
           if (d.id.type === 'ArrayPattern') {
-            lines.push(ind + destructure(d.id.elements, ex(d.init)));
+            lines.push(ind + destructure(d.id.elements, ex(d.init), d.init));
             continue;
           }
           const t = declType(d, s.kind);

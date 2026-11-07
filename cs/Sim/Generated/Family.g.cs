@@ -118,7 +118,7 @@ public static partial class Family
         var b = HEAD_START[Js.Idx((n + 3) % HEAD_START.length)]!;
         foreach (var t in Js.Iter((List<int>)[a, b]))
         {
-            s.xp[Js.Idx(t)] = (s.xp[Js.Idx(t)] ?? 0) + (2 * Skills.XP_PER_LEVEL);
+            s.xp[Js.Idx(t)] = (Js.Q(s.xp[Js.Idx(t)], 0)) + (2 * Skills.XP_PER_LEVEL);
         }
         Events.logEvent(state, $"{Js.Str(s.name)} has grown up (good at {Js.Str(a)} and {Js.Str(b)})");
     }

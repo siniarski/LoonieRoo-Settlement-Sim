@@ -88,7 +88,7 @@ public static partial class Zombies
 
     public static void edited(List<Zombie> list)
     {
-        edits.set(list, (edits.get(list) ?? 0) + 1);
+        edits.set(list, (Js.Q(edits.get(list), 0)) + 1);
     }
 
     public static readonly JsMap<List<Zombie>, BucketsEntry> buckets = new JsMap<List<Zombie>, BucketsEntry>();
@@ -99,7 +99,7 @@ public static partial class Zombies
         var list = state.zombies;
         var __d0 = state.grid;
         var width = __d0.width;
-        var edit = edits.get(list) ?? 0;
+        var edit = Js.Q(edits.get(list), 0);
         var b = buckets.get(list);
         if ((!Js.T(b) || (b.tick != state.tick)) || (b.edit != edit))
         {
@@ -337,7 +337,7 @@ public static partial class Zombies
         {
             return;
         }
-        var night = Time.nightNumber(state.tick) ?? 1;
+        var night = Js.Q(Time.nightNumber(state.tick), 1);
         var group = [addZombie(state, p.x, p.y, health)];
         ZombieKinds.giveVariant(group[Js.Idx(0)]!, night);
         for (var i = 1; i < n; i++)
@@ -702,7 +702,7 @@ public static partial class Zombies
                     }
                     foreach (var o in Js.Iter(buckets.get((ny * width) + nx) ?? []))
                     {
-                        if ((o == z) || (o.id < z.id))
+                        if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
                             continue;
                         }

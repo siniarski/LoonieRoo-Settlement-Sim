@@ -71,9 +71,9 @@ public static partial class Wishes
         {
             @out.push(new() { kind = "weapon", targetId = null });
         }
-        var friend = state.survivors.filter((o) => (o != s) && ((s.opinions[Js.Idx(o.id)] ?? 0) >= 10)).sort((a, b) => Js.Or((s.opinions[Js.Idx(b.id)] ?? 0) - (s.opinions[Js.Idx(a.id)] ?? 0), a.id.localeCompare(b.id)))[Js.Idx(0)];
+        var friend = state.survivors.filter((o) => (o != s) && ((Js.Q(s.opinions[Js.Idx(o.id)], 0)) >= 10)).sort((a, b) => Js.Or((Js.Q(s.opinions[Js.Idx(b.id)], 0)) - (Js.Q(s.opinions[Js.Idx(a.id)], 0)), a.id.localeCompare(b.id)))[Js.Idx(0)];
         var you = ControlMod.controlled(state);
-        var wanted = ((Js.T(you) && (you != s)) && ((s.opinions[Js.Idx(you.id)] ?? 0) >= 0)) ? you : friend;
+        var wanted = ((Js.T(you) && (you != s)) && ((Js.Q(s.opinions[Js.Idx(you.id)], 0)) >= 0)) ? you : friend;
         if (Js.T(wanted) && !Js.T(near(s, wanted)))
         {
             @out.push(new() { kind = "see", targetId = wanted.id });
@@ -210,7 +210,7 @@ public static partial class Wishes
         var you = ControlMod.controlled(state);
         if ((Js.T(w.promised) && Js.T(you)) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.min(100, (s.opinions[Js.Idx(you.id)] ?? 0) + PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.min(100, (Js.Q(s.opinions[Js.Idx(you.id)], 0)) + PROMISE_OPINION);
         }
         if (Js.T(w.promised))
         {
@@ -230,7 +230,7 @@ public static partial class Wishes
         var you = ControlMod.controlled(state);
         if (Js.T(you) && (you != s))
         {
-            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, (s.opinions[Js.Idx(you.id)] ?? 0) - PROMISE_OPINION);
+            s.opinions[Js.Idx(you.id)] = JsMath.max(-100, (Js.Q(s.opinions[Js.Idx(you.id)], 0)) - PROMISE_OPINION);
         }
         Events.logEvent(state, $"A promise broken: {Js.Str(s.name)} never got {Js.Str(describeWish(state, w))}");
     }

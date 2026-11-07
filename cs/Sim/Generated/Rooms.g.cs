@@ -243,14 +243,14 @@ public static partial class Rooms
     /// <summary>Requirements for a purpose. `room` is null when the anchor is outdoors.</summary>
     public static RoomStatus evaluateRoom(SimState state, Room? room, string purpose)
     {
-        var size = room?.tiles.length ?? 0;
+        var size = Js.Q(room?.tiles.length, 0);
         /*TODO return type*/object count(string kind)
         {
             return Js.T(room) ? FurnitureMod.ofKind(state, kind).filter((f) => labelAt(state, f.x, f.y) == room.index).length : 0;
         }
         var beds = count("bed");
         var tables = count("table");
-        List<Requirement> requirements = [new() { label = "enclosed by walls", met = room != null }, new() { label = "has a door", met = (room?.doors.length ?? 0) > 0 }];
+        List<Requirement> requirements = [new() { label = "enclosed by walls", met = room != null }, new() { label = "has a door", met = (Js.Q(room?.doors.length, 0)) > 0 }];
         if ((purpose == "housing") || (purpose == "barracks"))
         {
             requirements.push(new() { label = "at least 1 bed", met = beds >= 1 });

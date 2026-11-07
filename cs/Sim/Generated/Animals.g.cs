@@ -309,7 +309,7 @@ public static partial class Animals
 
     public static void predator(SimState state, Animal a)
     {
-        var hp = a.health ?? 0;
+        var hp = Js.Q(a.health, 0);
         var hurt = hp < (HEALTH[Js.Idx(a.kind)] * 0.3);
         var nearest = closestSurvivor(state, a.pos);
         if ((Js.T(hurt) && Js.T(nearest)) && (Space.manhattan(nearest.pos, a.pos) <= 8))
@@ -321,7 +321,7 @@ public static partial class Animals
             }
             return;
         }
-        if (((((a.backOffUntil ?? 0) > state.tick) && !Js.T(a.angryAt)) && Js.T(nearest)) && (Space.manhattan(nearest.pos, a.pos) <= 8))
+        if (((((Js.Q(a.backOffUntil, 0)) > state.tick) && !Js.T(a.angryAt)) && Js.T(nearest)) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
             var to_2 = stepAway(state, a, nearest.pos);
             if (Js.T(to_2))
@@ -395,7 +395,7 @@ public static partial class Animals
         {
             return nearest;
         }
-        var hunger = a.hunger ?? 0;
+        var hunger = Js.Q(a.hunger, 0);
         if (Js.T((a.kind == "wolf") ? (hunger >= WOLF_HUNGRY) : (hunger >= WOLF_STARVING)))
         {
             Animal? prey = null;
@@ -425,7 +425,7 @@ public static partial class Animals
 
     public static void attack(SimState state, Animal a, IBody target)
     {
-        if (state.tick < (a.nextBite ?? 0))
+        if (state.tick < (Js.Q(a.nextBite, 0)))
         {
             return;
         }

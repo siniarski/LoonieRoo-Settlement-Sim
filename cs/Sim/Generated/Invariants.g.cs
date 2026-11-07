@@ -68,7 +68,7 @@ public static partial class Invariants
             }
             if (Js.T(job.blueprintId))
             {
-                perBlueprint.set(job.blueprintId, (perBlueprint.get(job.blueprintId) ?? 0) + 1);
+                perBlueprint.set(job.blueprintId, (Js.Q(perBlueprint.get(job.blueprintId), 0)) + 1);
             }
         }
         foreach (var (bp, n) in Js.Iter(perBlueprint))
@@ -314,7 +314,7 @@ public static partial class Invariants
         {
             if (Js.T(j.furnitureId))
             {
-                scavengeJobs.set(j.furnitureId, (scavengeJobs.get(j.furnitureId) ?? 0) + 1);
+                scavengeJobs.set(j.furnitureId, (Js.Q(scavengeJobs.get(j.furnitureId), 0)) + 1);
             }
         }
         foreach (var f in Js.Iter(state.furniture))
@@ -327,7 +327,7 @@ public static partial class Invariants
             {
                 problems.push($"{Js.Str(f.id)} marked for scavenging with nothing to find");
             }
-            if ((scavengeJobs.get(f.id) ?? 0) > 1)
+            if ((Js.Q(scavengeJobs.get(f.id), 0)) > 1)
             {
                 problems.push($"{Js.Str(f.id)} has {Js.Str(scavengeJobs.get(f.id))} scavenge jobs");
             }
@@ -398,7 +398,7 @@ public static partial class Invariants
             }
             else
             {
-                guarded.set(j.zombieId, (guarded.get(j.zombieId) ?? 0) + 1);
+                guarded.set(j.zombieId, (Js.Q(guarded.get(j.zombieId), 0)) + 1);
             }
         }
         foreach (var (id, n) in Js.Iter(guarded))
@@ -414,7 +414,7 @@ public static partial class Invariants
         {
             if (Js.T(j.plotId))
             {
-                tendedPlots.set(j.plotId, (tendedPlots.get(j.plotId) ?? 0) + 1);
+                tendedPlots.set(j.plotId, (Js.Q(tendedPlots.get(j.plotId), 0)) + 1);
             }
         }
         foreach (var plot in Js.Iter(state.farm))
@@ -433,7 +433,7 @@ public static partial class Invariants
             {
                 problems.push($"farm plot {Js.Str(plot.id)} has growth {Js.Str(plot.growth)}");
             }
-            if ((tendedPlots.get(plot.id) ?? 0) > 1)
+            if ((Js.Q(tendedPlots.get(plot.id), 0)) > 1)
             {
                 problems.push($"farm plot {Js.Str(plot.id)} has {Js.Str(tendedPlots.get(plot.id))} jobs");
             }

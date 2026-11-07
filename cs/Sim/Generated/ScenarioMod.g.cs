@@ -207,7 +207,7 @@ public static partial class ScenarioMod
     public static SimState loadScenario(Scenario scenario)
     {
         var height = scenario.map.length;
-        var width = scenario.map[Js.Idx(0)]?.length ?? 0;
+        var width = Js.Q(scenario.map[Js.Idx(0)]?.length, 0);
         if ((height == 0) || (width == 0))
         {
             throw new Exception("loadScenario: map is empty");

@@ -187,7 +187,7 @@ public static partial class Talk
 
     public static void warm(Survivor of, Survivor about, int by)
     {
-        of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (of.opinions[Js.Idx(about.id)] ?? 0) + by));
+        of.opinions[Js.Idx(about.id)] = JsMath.max(-100, JsMath.min(100, (Js.Q(of.opinions[Js.Idx(about.id)], 0)) + by));
     }
     public static void warm(Survivor of, Survivor about, double by) => warm(of, about, (int)by);
 
