@@ -219,7 +219,7 @@ public static partial class ScenarioMod
             {
                 throw new Exception($"loadScenario: row {Js.Str(y)} has length {Js.Str(row.length)}, expected {Js.Str(width)}");
             }
-            Js.ListOf(row).forEach((@char, x) =>
+            Js.ListOf(Js.Chars(row)).forEach((@char, x) =>
         {
             if (Js.T(placeEntity(state, @char, x, y)))
             {

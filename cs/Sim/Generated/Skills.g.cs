@@ -96,7 +96,7 @@ public static partial class Skills
     public static string describeSkills(Survivor s)
     {
         var traits = s.traits.map((t) => TRAIT_INFO[Js.Idx(t)].label);
-        var skills = Js.ObjectKeys(s.xp).map((k) => [k, skillLevel(s, k)]).filter((__p0) =>
+        var skills = Js.ObjectKeys(s.xp).map((k) => (k, skillLevel(s, k))).filter((__p0) =>
         {
             var (_, level) = __p0;
             return level > 0;

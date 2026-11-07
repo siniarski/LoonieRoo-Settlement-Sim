@@ -43,7 +43,7 @@ public static partial class Alerts
         List<Alert> @out = [];
         /*TODO return type*/object add(string level, string text, Point? at = default)
         {
-            return @out.push(Js.With(Js.Clone(Js.T(at) ? new() { at = at } : new()), __s0 => { __s0.level = level; __s0.text = text; }));
+            return @out.push(Js.With(new Alert { level = level, text = text }, __s0 => { if (Js.T(at)) { __s0.at = at; } else {  } }));
         }
         var people = state.survivors;
         var near = state.zombies.filter((z) => people.some((s) => Space.manhattan(s.pos, z.pos) <= NEAR));
@@ -200,6 +200,6 @@ public static partial class Alerts
                 counts.set(i.kind, (Js.Q(counts.get(i.kind), 0)) + 1);
             }
         }
-        return Js.ListOf(counts.entries()).sort((a, b) => Js.Or(b[Js.Idx(1)] - a[Js.Idx(1)], a[Js.Idx(0)].localeCompare(b[Js.Idx(0)])));
+        return Js.ListOf(counts.entries()).sort((a, b) => Js.Or(b.Item2 - a.Item2, a.Item1.localeCompare(b.Item1)));
     }
 }

@@ -59,7 +59,7 @@ public static partial class Mapnotes
     }
 
     /// <summary>Each town's centre and name (generated worlds; none on hand-made maps).</summary>
-    public static /*TODO return type*/object townNames(SimState state)
+    public static List<TownName> townNames(SimState state)
     {
         if (!Js.T(state.world))
         {
@@ -67,6 +67,6 @@ public static partial class Mapnotes
         }
         var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
         var offset = JsMath.floor(Hash.hashRoll(state.world.seed, 0x7041) * TOWN_NAMES.length);
-        return plan.towns.map((t, i) => new() { x = Js.I(t.x), y = Js.I(t.y), name = Js.NN(TOWN_NAMES[Js.Idx((offset + i) % TOWN_NAMES.length)]) });
+        return plan.towns.map((t, i) => new TownName { x = Js.I(t.x), y = Js.I(t.y), name = Js.NN(TOWN_NAMES[Js.Idx((offset + i) % TOWN_NAMES.length)]) });
     }
 }

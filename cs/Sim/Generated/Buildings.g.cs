@@ -225,7 +225,7 @@ public static partial class Buildings
         floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
         HousePlanRest rest = new() { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
         var two = ((rest.x1 - rest.x0) + 1) >= 7;
-        var bedrooms = Js.T(two) ? Js.Run(() =>
+        List<HordeBox> bedrooms = Js.T(two) ? Js.Run<List<HordeBox>>(() =>
         {
             var mid = rest.x0 + JsMath.floor(((double)(((rest.x1 - rest.x0) + 1)) / (2)));
             vwall(p, mid, 0, div);
@@ -402,7 +402,7 @@ public static partial class Buildings
                 door(p, doorX, y + JsMath.floor(((double)(depth) / (2))));
                 fitOut(p, Js.NN(roles[Js.Idx(n % roles.length)]), x0, y, x1, y1, r, 60 + (n * 5));
                 n++;
-                y = y1 + 2;
+                y = Js.I(y1 + 2);
             }
         }
         return toEdges(p);

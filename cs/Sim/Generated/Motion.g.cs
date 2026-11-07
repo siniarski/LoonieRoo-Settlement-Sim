@@ -170,8 +170,8 @@ public static partial class Motion
     /// <summary>Move a body by (dx, dy) SUB units, stopping at walls: each axis on its own, so it slides along a wall rather than sticking to it. Big moves go in steps no longer than a radius, so nothing tunnels through a wall. Returns the new centre.</summary>
     public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double r = BODY_RADIUS)
     {
-        var x = at.x;
-        var y = at.y;
+        double x = at.x;
+        double y = at.y;
         var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.max(JsMath.abs(dx), JsMath.abs(dy))) / (r))));
         for (var i = 1; i <= steps; i++)
         {

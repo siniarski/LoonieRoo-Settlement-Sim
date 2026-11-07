@@ -156,7 +156,7 @@ public static partial class Wishes
     public static string describeWish(SimState state, Wish w)
     {
         var who = Js.T(w.targetId) ? state.survivors.find((x) => x.id == w.targetId) : null;
-        return new() { hotMeal = "a hot meal", bed = "a night in a real bed", coat = "a coat", weapon = "a weapon", see = (Js.T(who) && (state.control?.survivorId == who.id)) ? "a word with you" : $"to see {Js.Str(who?.name ?? "someone")}", grave = "to visit the graves", quiet = "a quiet day (no deaths, no attacks)", kill = "to put one of them down", company = "some company", comfort = "somewhere decent to sleep" }[Js.Idx(w.kind)];
+        return new JsRecord<string> { ["hotMeal"] = "a hot meal", ["bed"] = "a night in a real bed", ["coat"] = "a coat", ["weapon"] = "a weapon", ["see"] = (Js.T(who) && (state.control?.survivorId == who.id)) ? "a word with you" : $"to see {Js.Str(who?.name ?? "someone")}", ["grave"] = "to visit the graves", ["quiet"] = "a quiet day (no deaths, no attacks)", ["kill"] = "to put one of them down", ["company"] = "some company", ["comfort"] = "somewhere decent to sleep" }[Js.Str(w.kind)];
     }
 
     /// <summary>Every 10 ticks: check wishes; on the hour, maybe make new ones.</summary>

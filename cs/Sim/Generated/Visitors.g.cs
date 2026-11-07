@@ -82,7 +82,7 @@ public static partial class Visitors
         {
             var o = Rng.pick(state, left);
             left.splice(left.indexOf(o), 1);
-            offers.push(Js.Clone(o));
+            offers.push(Js.CopyAs<Offer>(o));
         }
         var from = Settlements.traderFrom(state);
         state.traders.push(new() { id = $"t{Js.Str(state.nextId++)}", x = Js.I(spot.x), y = Js.I(spot.y), leavesTick = state.tick + TRADER_PATIENCE, offers = offers, from = from?.id ?? null, traded = false });

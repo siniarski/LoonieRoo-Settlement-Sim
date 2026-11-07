@@ -9,6 +9,12 @@ namespace LoonieRoo.Sim;
 
 public static class JsListExtensions
 {
+    extension(JsSet<int> a)
+    {
+        /// <summary>has with a JS number: only a whole one can be in it.</summary>
+        public bool has(double x) => x == Math.Floor(x) && x >= int.MinValue && x <= int.MaxValue && a.has((int)x);
+    }
+
     extension(List<string> a)
     {
         /// <summary>includes with a value of unknown type: only a string can be in it.</summary>
@@ -659,6 +665,9 @@ public static partial class Js
     public static int BitNot(double x) => ~ToInt32(x);
 
     /// <summary>Array.from({ length: n }, (_, i) => f(i)).</summary>
+    /// <summary>Array.from(items, f): f of each item (and its index).</summary>
+    public static List<U> ArrayFromMap<T, U>(IEnumerable<T> items, Func<T, U> f) => items.Select(f).ToList();
+    public static List<U> ArrayFromMap<T, U>(IEnumerable<T> items, Func<T, int, U> f) => items.Select(f).ToList();
     public static List<V> ArrayFrom<V>(double n, Func<int, V> f) => ArrayFrom((int)n, f);
     public static List<V> ArrayFrom<V>(int n, Func<int, V> f)
     {
@@ -746,6 +755,9 @@ public static partial class Js
     /// <summary>new Array(n).fill(v).</summary>
     public static List<V> Filled<V>(double n, V v) => Enumerable.Repeat(v, (int)n).ToList();
 
+    /// <summary>[...s] for a string: its characters, as strings.</summary>
+    public static List<string> Chars(string s) => s.Select(c => c.ToString()).ToList();
+
     /// <summary>[a, b, ...c] as a list in its own right: the parts joined.</summary>
     public static List<V> ListOf<V>(params IEnumerable<V>[] parts) => parts.SelectMany(p => p).ToList();
 
@@ -821,6 +833,15 @@ public static partial class Js
     }
 
     /// <summary>x as Record&lt;string, unknown&gt;: a record as it is, or an object's properties by name (a copy).</summary>
+    /// <summary>x as Record&lt;string, V&gt;: a record of V as it is, or one made from its entries.</summary>
+    public static JsRecord<V> AsRecord<V>(object? x)
+    {
+        if (x is JsRecord<V> r) return r;
+        var o = new JsRecord<V>();
+        foreach (var kv in AsRecord(x)) o[kv.Key] = (V)kv.Value!;
+        return o;
+    }
+
     public static JsRecord<object?> AsRecord(object? x)
     {
         if (x is JsRecord<object?> r) return r;

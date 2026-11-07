@@ -25,7 +25,7 @@ public static partial class StoryMod
     public static Story makeStory(string id)
     {
         var n = Hash.idNumber(id);
-        T pick(List<T> list, double salt)
+        T pick<T>(List<T> list, double salt)
         {
             return Js.NN(list[Js.Idx(JsMath.floor(Hash.hashRoll(n, salt) * list.length))]);
         }

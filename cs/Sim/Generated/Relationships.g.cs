@@ -107,7 +107,7 @@ public static partial class Relationships
     /// <summary>"friends: Bea; rivals: Cal" for panels.</summary>
     public static string describeRelations(SimState state, Survivor s)
     {
-        /*TODO return type*/object names(Func<double, bool> pick)
+        List<string> names(Func<double, bool> pick)
         {
             return state.survivors.filter((o) => Js.T((o != s) && Js.T(pick(opinion(s, o))))).map((o) => o.name);
         }

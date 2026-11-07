@@ -189,6 +189,8 @@ function csType(t, hint, intField) {
         if (d && d.node.type === 'TSTypeAliasDeclaration' && kindOf(d.node.typeAnnotation) === 'record') return csType(d.node.typeAnnotation, hint, false) + q;
         if (HAND.has(refName(core))) return refName(core) + q;
       }
+      // { x, y } written out: a Point, as the translator reads it.
+      if (core.type === 'TSTypeLiteral' && (core.body ?? core.members ?? []).map((m) => m.key?.name).sort().join(',') === 'x,y') return 'Point' + q;
       return classFor(core, hint) + q;
     }
     case 'typed': return refName(core) + q; // TypedArrays.cs: JS's typed arrays, by the same names

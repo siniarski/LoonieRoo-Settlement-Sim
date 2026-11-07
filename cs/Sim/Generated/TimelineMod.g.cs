@@ -61,7 +61,7 @@ public static partial class TimelineMod
     public static void rollTimeline(SimState state, double seed)
     {
         var w = Js.NN(WINDOWS[Js.Idx(JsMath.max(0, JsMath.min(WINDOWS.length - 1, state.settings.progression)))]);
-        var roll = (__p0, key) =>
+        double roll(List<double> __p0, double key)
         {
             var (lo, hi) = __p0;
             return (hi == 0) ? 0 : (lo + JsMath.floor(Hash.hashRoll(seed, key) * ((hi - lo) + 1)));

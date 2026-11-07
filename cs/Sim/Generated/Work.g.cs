@@ -833,7 +833,7 @@ public static partial class Work
     public static void loadCart(SimState state, Survivor s, Item first)
     {
         var stores = Rooms.completeStoreRooms(state);
-        bool astray(/*TODO inline type*/object i)
+        bool astray(Item i)
         {
             var home = Rooms.homeFor(stores, i.kind);
             return (home.size > 0) && !home.has(Rooms.labelAt(state, i.pos.x, i.pos.y));

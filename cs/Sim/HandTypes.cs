@@ -16,3 +16,11 @@ public sealed class WorkStart
     public string targetId { get; set; } = "";
     public double duration { get; set; }
 }
+
+/// <summary>A town's centre and name (mapnotes.ts townNames).</summary>
+public sealed class TownName
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    public string name { get; set; } = "";
+}

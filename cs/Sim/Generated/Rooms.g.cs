@@ -59,7 +59,7 @@ public static partial class Rooms
             return cached.map;
         }
         var changed = Grids.takeChanges(state.grid);
-        var map = (Js.T(Js.T(cached) && Js.T(changed))) ? updateRooms(state.grid, cached.map, changed) : computeRooms(state.grid);
+        var map = (Js.T(Js.T(cached) && Js.T(changed))) ? updateRooms(state.grid, cached.map, changed.Select(v => (double)v).ToList()) : computeRooms(state.grid);
         cache.set(state.grid, new() { version = state.walkabilityVersion, map = map });
         return map;
     }
@@ -303,11 +303,11 @@ public static partial class Rooms
     public static StoreRooms completeStoreRooms(SimState state)
     {
         var storage = completeRooms(state, "storage");
-        /*TODO return type*/object refusing(string c)
+        JsSet<double> refusing(string c)
         {
             return Js.Set(state.roomDesignations.filter((d) => Js.T((d.purpose == "storage") && Js.T(d.refuses?.includes(c)))).map((d) => labelAt(state, d.x, d.y)));
         }
-        var storageFor = Js.AsRecord(Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
+        var storageFor = Js.AsRecord<JsSet<double>>(Js.Object_fromEntries(STORE_CATEGORIES.map((c) =>
         {
             var no = refusing(c);
             return (c, Js.Set(Js.ListOf(storage).filter((r) => !no.has(r))));

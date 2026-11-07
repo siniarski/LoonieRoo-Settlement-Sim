@@ -37,7 +37,7 @@ public static partial class Water
     public const int COLLECTOR_FILL_EVERY = 50;
 
     /// <summary>Water standing in a fitting with the mains off.</summary>
-    public static bool isTank(SimState state, IsTankF f)
+    public static bool isTank(SimState state, Furniture f)
     {
         return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !Js.T(TimelineMod.waterOn(state));
     }

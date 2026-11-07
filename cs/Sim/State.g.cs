@@ -16,15 +16,7 @@ public partial class Alert
     public string level { get; set; } = "";
     public string text { get; set; } = "";
     /// <summary>Where to look, if anywhere.</summary>
-    public AlertAt? at { get; set; }
-}
-
-public partial class AlertAt
-{
-    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(AlertAt v) => new(v.x, v.y);
-    public int x { get; set; }
-    public int y { get; set; }
+    public Point? at { get; set; }
 }
 
 public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
@@ -283,20 +275,12 @@ public partial class Expedition : IHasId
     public string id { get; set; } = "";
     public List<Survivor> members { get; set; } = new();
     public ExpeditionTarget target { get; set; } = new();
-    public ExpeditionHome home { get; set; } = new();
+    public Point home { get; set; } = new();
     public double returnTick { get; set; }
     public bool truck { get; set; }
     public bool outpost { get; set; }
     public string? truckId { get; set; }
     public double? leftTick { get; set; }
-}
-
-public partial class ExpeditionHome
-{
-    /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
-    public static implicit operator Point(ExpeditionHome v) => new(v.x, v.y);
-    public int x { get; set; }
-    public int y { get; set; }
 }
 
 public partial class ExpeditionTarget

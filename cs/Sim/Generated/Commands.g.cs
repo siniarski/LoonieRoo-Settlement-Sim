@@ -1202,11 +1202,11 @@ public static partial class Commands
         {
             return reject($"{Js.Str(survivor.name)} is a child");
         }
-        if (Js.Eq(survivor.priorities[Js.Idx(jobType)], priority))
+        if (Js.Eq(survivor.priorities[(string)jobType], priority))
         {
             return unchanged();
         }
-        survivor.priorities[Js.Idx(jobType)] = priority;
+        survivor.priorities[(string)jobType] = Js.Num(priority);
         survivor.nextSeekTick = 0;
         return changed();
     }

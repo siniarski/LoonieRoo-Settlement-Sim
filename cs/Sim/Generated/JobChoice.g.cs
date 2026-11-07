@@ -56,7 +56,7 @@ public static partial class JobChoice
             keys[Js.Idx(i)] = (Space.manhattan(from, Js.NN(open[Js.Idx(i)])) * 1048576) + i;
         }
         keys.sort();
-        return (keys).ToList();
+        return Js.ArrayFromMap(keys, (k) => Js.NN(open[Js.Idx(k % 1048576)]));
     }
 
     public static JobChoicePlan? planJob(SimState state, Survivor s, Job job)

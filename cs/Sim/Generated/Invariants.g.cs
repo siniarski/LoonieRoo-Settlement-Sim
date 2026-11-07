@@ -210,7 +210,7 @@ public static partial class Invariants
             }
             foreach (var slot in Js.Iter((List<string>)["body", "feet"]))
             {
-                var id = s[Js.Idx(slot)];
+                var id = Js.GetProp<string?>(s, slot);
                 var worn = Js.T(id) ? items.get(id) : null;
                 if (Js.T(id) && (((!Js.T(worn) || (worn.carriedBy != s.id)) || !Js.T(Clothing.isGarment(worn.kind))) || (Clothing.SLOT_OF[Js.Idx(worn.kind)] != slot)))
                 {
@@ -454,8 +454,8 @@ public static partial class Invariants
                 problems.push($"{Js.Str(name)} list out of step with the map");
             }
         }
-        listed(grid.dirt, grid.dirtList, "dirt");
-        listed(grid.damage, grid.damageList, "damage");
+        listed(grid.dirt.Select(v => (double)v).ToList(), grid.dirtList.Select(v => (double)v).ToList(), "dirt");
+        listed(grid.damage, grid.damageList.Select(v => (double)v).ToList(), "damage");
         for (var i = 0; i < grid.damage.length; i++)
         {
             var d = Js.NN(grid.damage[Js.Idx(i)]);

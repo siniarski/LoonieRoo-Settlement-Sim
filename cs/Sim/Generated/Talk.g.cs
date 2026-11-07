@@ -412,7 +412,7 @@ public static partial class Talk
         {
             warm(giver, you, TASK_OPINION);
         }
-        var done = new() { home = $"{Js.Str(giver.name)}'s old place has been seen to", bury = $"{Js.Str(giver.story.lost.name)} has a grave now. {Js.Str(giver.name)} can rest a little", pet = $"{Js.Str(giver.story.pet)} has been found", burn = $"The place {Js.Str(giver.name)} couldn't stop seeing is ash", radio = $"{Js.Str(giver.name)} is crying, and not from grief", medicine = $"{Js.Str(giver.name)}'s friend has their medicine" }[Js.Idx(task.kind)];
+        var done = new JsRecord<string> { ["home"] = $"{Js.Str(giver.name)}'s old place has been seen to", ["bury"] = $"{Js.Str(giver.story.lost.name)} has a grave now. {Js.Str(giver.name)} can rest a little", ["pet"] = $"{Js.Str(giver.story.pet)} has been found", ["burn"] = $"The place {Js.Str(giver.name)} couldn't stop seeing is ash", ["radio"] = $"{Js.Str(giver.name)} is crying, and not from grief", ["medicine"] = $"{Js.Str(giver.name)}'s friend has their medicine" }[Js.Str(task.kind)];
         Events.logEvent(state, $"{Js.Str(done)}.");
     }
 
@@ -421,7 +421,7 @@ public static partial class Talk
     {
         return state.tasks.filter((t) => t.giverId == s.id).map((t) =>
         {
-            var what = new() { home = "see their old place", bury = $"bury {Js.Str(s.story.lost.name)}", pet = $"find {Js.Str(s.story.pet)}", burn = "burn down the place", radio = $"call for {Js.Str(s.story.lost.name)} on a powered radio (at noon)", medicine = "take medicine to their friend" }[Js.Idx(t.kind)];
+            var what = new JsRecord<string> { ["home"] = "see their old place", ["bury"] = $"bury {Js.Str(s.story.lost.name)}", ["pet"] = $"find {Js.Str(s.story.pet)}", ["burn"] = "burn down the place", ["radio"] = $"call for {Js.Str(s.story.lost.name)} on a powered radio (at noon)", ["medicine"] = "take medicine to their friend" }[Js.Str(t.kind)];
             return $"asks you to {Js.Str(what)} at ({Js.Str(t.x)}, {Js.Str(t.y)})";
         });
     }

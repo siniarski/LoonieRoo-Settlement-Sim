@@ -22,6 +22,12 @@ public partial class PaneInFrontResult
     public Point to { get; set; }
 }
 
+public partial class PresetsEntry
+{
+    public string label { get; set; }
+    public Settings settings { get; set; }
+}
+
 public partial class CROPS
 {
     public double grow { get; set; }
@@ -154,7 +160,7 @@ public partial class FarmLotsLot
     public object facing { get; set; }
 }
 
-public partial class FarmLotsLotShape22
+public partial class FarmLotsLotShape23
 {
     public int x { get; set; }
     public int y { get; set; }

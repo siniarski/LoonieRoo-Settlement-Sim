@@ -131,11 +131,11 @@ public static partial class Inventory
     {
         var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : Clothing.SLOT_OF[Js.Idx(item.kind)];
         unpack(s, item.id);
-        var old = Js.T(s[Js.Idx(slot)]) ? Items.getItem(state, Js.NN(s[Js.Idx(slot)])) : null;
-        s[Js.Idx(slot)] = item.id;
+        var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.NN(Js.GetProp<string?>(s, slot))) : null;
+        Js.SetProp(s, slot, item.id);
         if (Js.T(old))
         {
-            s[Js.Idx(slot)] = item.id;
+            Js.SetProp(s, slot, item.id);
             if (stow(state, s, old) != null)
             {
                 Items.dropItem(state, old, where);

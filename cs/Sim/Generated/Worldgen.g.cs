@@ -62,7 +62,7 @@ public static partial class Worldgen
     }
     public static string? fenceAt(Layout l, double x, double y) => fenceAt(l, (int)x, (int)y);
 
-    public static readonly /*TODO const type*/object FOREST = Grids.GROUNDS.indexOf("forest");
+    public static readonly int FOREST = Grids.GROUNDS.indexOf("forest");
 
     public static void ground(SimState state, int x, int y, string g)
     {
