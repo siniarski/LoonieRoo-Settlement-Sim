@@ -107,7 +107,29 @@ of view) and measures them. What it showed (screenshots: `--shots`; numbers: exp
 **Zombie faces**: two blend shapes on the near LODs only, `jaw_open` and `angry`. Neutral is the basis with the jaw
 a little open and drifting; angry eases in over 0.25 s when the zombie has seen you, with a growl (the jaw working).
 The sim already knows when one has noticed you (Sight); the renderer only reads it. Faces below the near LODs are
-fixed: at 10 m a head is ~15 pixels.
+fixed: at 10 m a head is ~15 pixels. The lips are cut open (a band of faces deleted along the mouth line) with a dark
+cavity behind the teeth, so the jaw parts the lips instead of stretching skin.
+
+**Zombie face candidates** (sculpt.py FACE_VARIANTS, the lab's "faces" lineup and Zombie face picker): **slack** (newly
+dead, mostly intact), **gaunt** (hollow cheeks and temples, deep sockets, lips shrunk back off the teeth: half a
+snarl at rest), **bloated** (puffy cheeks and lids, a double chin, marbled purple-green skin), **torn** (a wound has
+taken the left side of the lower lip and cheek: teeth show), **feral** (heavy brow, long wide jaw, bloodshot eyes with
+yellowed irises, the jaw hanging further). Each is extra brushes and paint over the same head, with the same two
+keys; how far the jaw hangs at rest is the lab's (Slack in LookLab.cs). Up close they read as different people; at
+1.5 m mostly by colour (bloated) and the mouth (gaunt, torn). Not yet decided which (or a mix: a variant per zombie).
+
+**Clothes with volume** (clothes.py, `--clothes jacket|hoodie`, the lab's "clothes" lineup and Clothes picker): a
+garment is **its own mesh**, a shell cut from the body where it covers, smoothed so it bridges the body's dips (cloth
+drapes, skin doesn't), stood off the skin by its own thickness profile (a jacket's hem flaring off the hips, a
+hoodie's ribbed cuffs and waistband pulled in with the cloth bunched above them, loose jeans widening to the ankle
+with a turn-up), plus pieces a shell can't make (a stand collar, a hood lying on the back, a pouch pocket,
+drawstrings). Hems get a rim (Solidify, rim only; the cloth material is two-sided). The body under a garment is
+deleted (it never shows and can't poke through); weights for every piece come from one closed, auto-weighted body
+by nearest-surface transfer (heat weighting fails on open meshes: the mouth cut showed it). Body and garments share
+one 2048 atlas and normal map, painted per piece from a baked piece id. Triangles: the jacket outfit is 31k at LOD0
+(body 19.6k, jacket 6k, jeans 4.5k), the same total as the painted one, so volume costs the head nothing; it costs
+two draw calls more (three meshes), and the mid tier merges them (OutfitMerge). Painted clothes stay right for tight
+things (a T-shirt, socks); anything with a hem, a collar or looseness is a mesh.
 
 ### Clothing, hair, equipment
 

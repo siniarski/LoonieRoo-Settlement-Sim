@@ -210,6 +210,61 @@ def face_offset(co):
     return off
 
 
+# Zombie face variants (the look lab's face candidates): extra brushes over face_offset. Each keeps the
+# jaw_open and angry keys (they're offsets of whatever rest shape the variant leaves).
+#   slack    newly dead, mostly intact (face_offset alone)
+#   gaunt    wasted: hollow cheeks and temples, deep sockets, the lips shrunk back off the teeth
+#   bloated  swollen: puffy cheeks and lids, a heavy jaw and chin, thick lips
+#   torn     a wound has taken the left side of the lower lip and cheek: the teeth show through
+#   feral    a heavy brow, a long wide jaw, the nose flattened
+FACE_VARIANTS = ("slack", "gaunt", "bloated", "torn", "feral")
+TORN_C = Vector((0.026, -0.080, 1.560))  # the wound's centre (the subject's left, under the mouth corner)
+
+
+def variant_offset(co, variant):
+    off = Vector()
+    if variant == "slack" or co.z < 1.46 or co.y > 0.03:
+        return off
+    x, z = co.x, co.z
+    fwd = Vector((0, -1, 0))
+    front = smooth01((-co.y - 0.02) / 0.03)
+    mz, ez = MOUTH.z, EYE_L.z
+    g = _gauss
+    if variant == "gaunt":
+        for sx in (1, -1):
+            off += (Vector((-sx * 0.004, 0.009, 0))) * g((x - sx * 0.042) ** 2 + (z - (mz + 0.014)) ** 2, 0.017) * front
+            off += Vector((-sx * 0.005, 0, 0)) * g((x - sx * 0.066) ** 2 + (z - (ez + 0.025)) ** 2, 0.020) * smooth01((-co.y + 0.02) / 0.04)
+            eye = EYE_L if sx > 0 else EYE_R
+            d = co - eye
+            off += -fwd * 0.006 * g(d.x * d.x + d.z * d.z, 0.017) * front
+            off += Vector((-sx * 0.002, 0, 0)) * g((x - sx * 0.013) ** 2 + (z - (NOSE_TIP.z - 0.006)) ** 2, 0.008) * front
+        band = g(x * x, MOUTH_HALF * 0.9)
+        off += Vector((0, 0.007, 0.003)) * g((z - (mz + 0.007)) ** 2, 0.006) * band * front   # upper lip back and up
+        off += Vector((0, 0.007, -0.004)) * g((z - (mz - 0.008)) ** 2, 0.006) * band * front  # lower lip back and down
+    elif variant == "bloated":
+        for sx in (1, -1):
+            off += Vector((sx * 0.009, -0.007, -0.002)) * g((x - sx * 0.045) ** 2 + (z - (mz + 0.004)) ** 2, 0.028) * front
+            eye = EYE_L if sx > 0 else EYE_R
+            ring = abs((Vector((co.x - eye.x, 0, co.z - eye.z))).length - 0.016)
+            off += fwd * 0.005 * g(ring * ring, 0.006) * front                                  # swollen lids
+            off += Vector((sx * 0.004, 0, 0)) * g((x - sx * 0.013) ** 2 + (z - (NOSE_TIP.z - 0.006)) ** 2, 0.008) * front
+        off += Vector((0, -0.007, -0.008)) * g(x * x / 1.5 + (z - (CHIN_Z - 0.008)) ** 2 + (co.y + 0.055) ** 2, 0.026)  # double chin
+        off += fwd * 0.003 * g((z - mz) ** 2, 0.010) * g(x * x, MOUTH_HALF) * front
+    elif variant == "torn":
+        d = Vector(((x - TORN_C.x) / 1.3, 0, (z - TORN_C.z) / 0.9)).length
+        off += Vector((0, 0.013, 0)) * g(d * d, 0.013) * front
+        lip = g((z - (mz - 0.007)) ** 2, 0.006) * smooth01((x + 0.004) / 0.008) * g((x - 0.016) ** 2, 0.016)
+        off += Vector((0, 0.011, -0.003)) * lip * front
+    elif variant == "feral":
+        off += Vector((0, -0.006, -0.003)) * g((z - (ez + 0.020)) ** 2, 0.009) * g(x * x, 0.045) * front
+        for sx in (1, -1):
+            off += Vector((sx * 0.006, 0, -0.004)) * g((x - sx * 0.045) ** 2 + (z - (CHIN_Z + 0.04)) ** 2, 0.022)
+            off += Vector((sx * 0.003, 0.002, 0)) * g((x - sx * 0.011) ** 2 + (z - (NOSE_TIP.z - 0.004)) ** 2, 0.010) * front
+        off += Vector((0, -0.002, -0.008)) * g(x * x + (z - (CHIN_Z + 0.01)) ** 2, 0.020) * front
+        off += Vector((0, 0.005, 0.002)) * g(x * x + (z - NOSE_TIP.z) ** 2, 0.010) * front  # the tip flattened
+    return off
+
+
 def apply_offsets(obj, fn):
     for v in obj.data.vertices:
         v.co += fn(v.co)
@@ -280,6 +335,24 @@ def add_face_keys(obj, jaw_deg=24):
         ang.data[i].co = c + (Vector() if i in is_lower_teeth else angry_offset(c))
 
 
+def cut_mouth(obj):
+    """Open the lips: delete the thin band of faces at the slit's floor, so the jaw key parts the lips
+    instead of stretching skin (the mouth's inside is a cavity added with the teeth)."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    gone = [f for f in bm.faces
+            if (c := f.calc_center_median()) is not None and abs(c.z - MOUTH.z) < 0.0026
+            and abs(c.x) < MOUTH_HALF * 0.92 and MOUTH.y - 0.008 < c.y < MOUTH.y + 0.02]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+    return len(gone)
+
+
+MOUTH_BAG_C = Vector((0, MOUTH.y + 0.030, MOUTH.z - 0.006))
+MOUTH_BAG_HALF = (0.027, 0.022, 0.021)
+
+
 # ---------------------------------------------------------------- eyes and teeth (added after decimating)
 
 def add_eyes_and_teeth(obj, segs=12, rings=8, teeth=True):
@@ -293,12 +366,16 @@ def add_eyes_and_teeth(obj, segs=12, rings=8, teeth=True):
         bmesh.ops.translate(bm, vec=eye, verts=ret["verts"])
     lower = []
     if teeth:
+        # The mouth's inside, seen through the parted lips: a dark cavity behind the teeth.
+        ret = bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=rings, radius=1.0)
+        bmesh.ops.scale(bm, vec=Vector(MOUTH_BAG_HALF), verts=ret["verts"])
+        bmesh.ops.translate(bm, vec=MOUTH_BAG_C, verts=ret["verts"])
         for row, z, sign in (("upper", MOUTH.z + 0.0045, 1), ("lower", MOUTH.z - 0.0045, -1)):
             # An arch of small boxes following the lips' curve.
             for k in range(-3, 4):
                 ang = k * 0.32
                 x = math.sin(ang) * 0.020
-                y = MOUTH.y + 0.010 + (1 - math.cos(ang)) * 0.020
+                y = MOUTH.y + 0.002 + (1 - math.cos(ang)) * 0.020
                 ret = bmesh.ops.create_cube(bm, size=1.0)
                 size = (0.0058, 0.0040, 0.0075 if abs(k) < 2 else 0.0068)
                 bmesh.ops.scale(bm, vec=Vector(size), verts=ret["verts"])

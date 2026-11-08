@@ -55,6 +55,9 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   bakes each texel's rest position, so the same functions paint the texture and displace the high-poly mesh whose
   normals are baked. `scripts/build_lookdev.py`: the pipeline (sculpt, decimate the ladder, unwrap, bake position, AO
   and normals in Cycles, paint, skin with auto weights on the body bones, face keys, validate, export).
+- `scripts/clothes.py`: garments with volume for the look-development survivor (`build_lookdev.py --clothes
+  jacket|hoodie`): shells cut from the body, draped, lifted by a thickness profile, extra pieces (collar, hood,
+  pocket, drawstrings), rims; their relief and colour. Face variants: `--face gaunt|bloated|torn|feral`.
 - `scripts/garments.py`: the garments, by body region, with the hiding rules; `scripts/shapes.py`: mesh primitives.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

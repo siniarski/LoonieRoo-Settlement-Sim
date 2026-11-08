@@ -7,6 +7,8 @@
 //   pz         "Zomboid-like": 2.5k / 1.2k / 600, a 512 painted texture with strong baked shading
 //   plus       "Zomboid-plus": 30k / 12k / 6k / 3k / 1.2k / 600, a 2048 texture and a baked normal map
 //   lineup     the four top looks side by side (mannequin, pz 2.5k, plus 12k, plus 30k)
+//   faces      the zombie's five face candidates side by side (plus, near LOD)
+//   clothes    the survivor painted, in a jacket, in a hoodie (garment meshes with volume) side by side
 // Faces: the zombie's top LODs carry two blend shapes, jaw_open and angry. Neutral is a slack jaw;
 // angry (it has seen you) eases in over a quarter second with a growl. Lower LODs carry no face.
 //
@@ -15,14 +17,15 @@
 //
 //   Godot --path godot res://Characters/LookLab.tscn [-- options]
 //   --subject=zombie|survivor --cand=plus|pz|mannequin|lineup --lod=auto|0..5 --dist=M
-//   --face=neutral|angry|auto --move=idle|walk|lunge --light=day|dusk|night --wire
+//   --face=neutral|angry|auto --move=idle|walk|lunge --light=day|dusk|night --wire --turn=DEG
+//   --zface=slack|gaunt|bloated|torn|feral (the zombie's face) --clothes=painted|jacket|hoodie (the survivor's)
 //   --crowd=N [--crowdlod=auto|K]   N more of the candidate, walking, in a field ahead
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
 //   --report=DIR                     the budget sweep (candidates x LODs x crowd sizes), look.md, then quit
 //   --novsync                        frame times uncapped; --nopanel hides the panel in a --shot; --noaim looks level
 //
-// Keys: wheel or [ ] distance, 1-6 distance presets, F face, L LOD (auto, 0..), V wireframe, right-drag look.
+// Keys: wheel or [ ] distance, 1-6 distance presets, F face, L LOD (auto, 0..), V wireframe, T turn, right-drag look.
 
 using System;
 using System.Collections.Generic;
@@ -38,9 +41,19 @@ public partial class LookLab : Node3D
 {
     const string MannequinPath = "res://assets/characters/test_mannequin.glb";
     const string ClipsPath = "res://assets/characters/clips_ual.glb";
-    static string CandPath(string cand, string subject) => $"res://assets/characters/look/look_{cand}_{subject}.glb";
+    static string CandPath(string cand, string subject, string variant)
+    {
+        string plain = $"res://assets/characters/look/look_{cand}_{subject}.glb";
+        if (variant is "" or "slack" or "painted") return plain;
+        string path = plain.Replace(".glb", $"_{variant}.glb");
+        return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
+    }
 
-    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup" };
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes" };
+    static readonly string[] Faces = { "slack", "gaunt", "bloated", "torn", "feral" };
+    static readonly string[] ClothesSets = { "painted", "jacket", "hoodie" };
+    // How far each face's jaw hangs at rest (jaw_open), neutral.
+    static readonly Dictionary<string, double> Slack = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
     static readonly double[] Presets = { 1, 2, 3, 5, 10, 30 };
     const double EyeHeight = 1.65, Fov = 60;  // vertical FOV: ~91 degrees across at 16:9
 
@@ -52,7 +65,8 @@ public partial class LookLab : Node3D
         ["mannequin"] = new double[] { 0 },
     };
 
-    string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day";
+    string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day", faceVariant = "slack", clothesSet = "painted";
+    double turn;  // the subject turned from facing you, degrees
     int forcedLod = -1, crowdLod = -1, crowdCount;
     double dist = 3, lodBias = 1, sightRange = 12;
     bool godotLod, wire, aim = true;
@@ -78,8 +92,9 @@ public partial class LookLab : Node3D
     {
         public Node3D Root = null!;
         public string Cand = "";
-        public MeshInstance3D[] Lods = Array.Empty<MeshInstance3D>();
+        public MeshInstance3D[][] Lods = Array.Empty<MeshInstance3D[]>();  // each LOD's pieces (body, garments)
         public int[] Tris = Array.Empty<int>();
+        public string Subject = "", Variant = "";
         public AnimationPlayer Player = null!;
         public int Shown = -1;
         public double Angry, Phase;
@@ -103,6 +118,9 @@ public partial class LookLab : Node3D
         if (args.TryGetValue("light", out var li)) light = li;
         if (args.TryGetValue("crowd", out var cr)) crowdCount = int.Parse(cr);
         if (args.TryGetValue("crowdlod", out var cl)) crowdLod = cl == "auto" ? -1 : int.Parse(cl);
+        if (args.TryGetValue("zface", out var zf)) faceVariant = zf;
+        if (args.TryGetValue("clothes", out var cs)) clothesSet = cs;
+        if (args.TryGetValue("turn", out var tn)) turn = Num(tn);
         wire = args.ContainsKey("wire");
         hidePanel = args.ContainsKey("nopanel");
         if (args.ContainsKey("noaim")) aim = false;
@@ -133,25 +151,27 @@ public partial class LookLab : Node3D
         u.Free();
     }
 
-    Actor MakeActor(string which, Node parent)
+    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null)
     {
-        string path = which == "mannequin" ? MannequinPath : CandPath(which, subject);
+        subj ??= subject;
+        variant ??= subj == "zombie" ? faceVariant : clothesSet;
+        string path = which == "mannequin" ? MannequinPath : CandPath(which, subj, variant);
         var root = GD.Load<PackedScene>(path).Instantiate<Node3D>();
         parent.AddChild(root);
-        var a = new Actor { Root = root, Cand = which };
+        var a = new Actor { Root = root, Cand = which, Subject = subj, Variant = path.Contains("_" + variant + ".glb") || variant is "slack" or "painted" ? variant : "(none for " + which + ")" };
         if (which == "mannequin")
         {
             // The region meshes together are its one "LOD"; the stumps stay hidden.
             var meshes = FindAll<MeshInstance3D>(root).ToList();
             foreach (var mi in meshes) mi.Visible = !mi.Name.ToString().StartsWith("stump_");
-            a.Lods = new[] { meshes[0] };
+            a.Lods = new[] { meshes.Where(mi => mi.Visible).ToArray() };
             a.Tris = new[] { meshes.Where(mi => mi.Visible).Sum(Tris) };
             a.Player = Find<AnimationPlayer>(root)!;
         }
         else
         {
-            a.Lods = FindAll<MeshInstance3D>(root).OrderBy(mi => LodIndex(mi.Name)).ToArray();
-            a.Tris = a.Lods.Select(Tris).ToArray();
+            a.Lods = FindAll<MeshInstance3D>(root).GroupBy(mi => LodIndex(mi.Name)).OrderBy(g => g.Key).Select(g => g.ToArray()).ToArray();
+            a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
             var player = new AnimationPlayer();
             root.AddChild(player);  // root_node ".." = the instance, where "Armature/Skeleton3D:..." starts
             player.AddAnimationLibrary("", mannequinLib);
@@ -162,15 +182,18 @@ public partial class LookLab : Node3D
         return a;
     }
 
-    /// <summary>The character's textures as loaded: their sizes and the memory they take with mipmaps.</summary>
-    static (long bytes, string desc) Textures(MeshInstance3D mi)
+    /// <summary>The character's textures as loaded (each once: the pieces share an atlas): their sizes and
+    /// the memory they take with mipmaps.</summary>
+    static (long bytes, string desc) Textures(MeshInstance3D[] pieces)
     {
         long bytes = 0;
         var parts = new List<string>();
+        var seen = new HashSet<Rid>();
+        foreach (var mi in pieces)
         for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
             if (mi.Mesh.SurfaceGetMaterial(s) is BaseMaterial3D m)
                 foreach (var (name, tex) in new[] { ("albedo", m.AlbedoTexture), ("normal", m.NormalTexture) })
-                    if (tex?.GetImage() is Image img)
+                    if (tex != null && seen.Add(tex.GetRid()) && tex.GetImage() is Image img)
                     {
                         bytes += img.GetData().Length;
                         parts.Add($"{name} {img.GetWidth()} {img.GetFormat()}{(img.HasMipmaps() ? "+mips" : "")}");
@@ -201,17 +224,25 @@ public partial class LookLab : Node3D
     {
         foreach (var a in subjects) a.Root.QueueFree();
         subjects.Clear();
-        var list = cand == "lineup"
-            ? new (string c, int lod, string tag)[] { ("mannequin", 0, "mannequin"), ("pz", 0, "pz"), ("plus", 1, "plus"), ("plus", 0, "plus") }
-            : new (string c, int lod, string tag)[] { (cand, -1, cand) };
+        // (look, LOD pinned or -1 for auto, label, subject, variant)
+        (string c, int lod, string tag, string? subj, string? variant)[] list = cand switch
+        {
+            "lineup" => new (string c, int lod, string tag, string? subj, string? variant)[] { ("mannequin", 0, "mannequin", null, null), ("pz", 0, "pz", null, null), ("plus", 1, "plus", null, null), ("plus", 0, "plus", null, null) },
+            "faces" => Faces.Select(f => ("plus", 0, f, (string?)"zombie", (string?)f)).ToArray(),
+            "clothes" => ClothesSets.Select(c => ("plus", 0, c, (string?)"survivor", (string?)c)).ToArray(),
+            _ => new (string c, int lod, string tag, string? subj, string? variant)[] { (cand, -1, cand, null, null) },
+        };
+        bool row = list.Length > 1;
+        double spacing = cand == "faces" ? 0.62 : 1.05;
         for (int i = 0; i < list.Length; i++)
         {
-            var a = MakeActor(list[i].c, this);
-            if (cand == "lineup")
+            var a = MakeActor(list[i].c, this, list[i].subj, list[i].variant);
+            if (row)
             {
                 a.Shown = -2 - list[i].lod;  // pinned: -2 - lod
-                a.Root.Position = new Vector3((float)((i - (list.Length - 1) / 2.0) * 1.1), 0, 0);
-                a.Tag = new Label3D { Text = $"{list[i].tag} {a.Tris[list[i].lod] / 1000.0:0.#}k", PixelSize = 0.0015f, Position = new Vector3(0, 1.95f, 0), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled };
+                a.Root.Position = new Vector3((float)((i - (list.Length - 1) / 2.0) * spacing), 0, 0);
+                string label = cand == "lineup" ? $"{list[i].tag} {a.Tris[list[i].lod] / 1000.0:0.#}k" : list[i].tag;
+                a.Tag = new Label3D { Text = label, PixelSize = 0.0015f, Position = new Vector3(0, 1.95f, 0), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled };
                 a.Root.AddChild(a.Tag);
             }
             Play(a, 0);
@@ -224,7 +255,7 @@ public partial class LookLab : Node3D
     {
         foreach (var a in crowd) a.Root.QueueFree();
         crowd.Clear();
-        string which = cand == "lineup" ? "plus" : cand;
+        string which = cand is "lineup" or "faces" or "clothes" ? "plus" : cand;
         // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
         int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
         for (int i = 0; i < crowdCount; i++)
@@ -253,7 +284,7 @@ public partial class LookLab : Node3D
         bool walking = move != "idle";
         string clip = a.Cand == "mannequin" ? (walking ? "walk" : "idle") : walking ? "ual/ual_walk" : "ual/ual_idle";
         a.Player.Play(clip);
-        a.Player.SpeedScale = walking && subject == "zombie" ? 0.7f : 1f;  // the dead walk slower
+        a.Player.SpeedScale = walking && a.Subject == "zombie" ? 0.7f : 1f;  // the dead walk slower
         a.Player.Seek(phase * a.Player.CurrentAnimationLength, true);
     }
 
@@ -274,6 +305,7 @@ public partial class LookLab : Node3D
         {
             var p = a.Root.Position;
             a.Root.Position = new Vector3(p.X, 0, (float)z);
+            a.Root.RotationDegrees = new Vector3(0, (float)turn, 0);
             UpdateActor(a, -z, vpH, delta, face);
         }
         foreach (var a in crowd) UpdateActor(a, -a.Root.Position.Z, vpH, delta, "neutral", crowdLod);
@@ -307,16 +339,17 @@ public partial class LookLab : Node3D
             if (lod < 0) lod = at.Length - 1;
         }
         if (a.Cand != "mannequin")
-            for (int i = 0; i < a.Lods.Length; i++) a.Lods[i].Visible = i == lod;
+            for (int i = 0; i < a.Lods.Length; i++)
+                foreach (var piece in a.Lods[i]) piece.Visible = i == lod;
         if (a.Shown > -2) a.Shown = lod;
 
         // The face: it sees you (auto) when you're within sight range.
-        bool sees = faceMode == "angry" || (faceMode == "auto" && subject == "zombie" && distance < sightRange);
+        bool sees = faceMode == "angry" || (faceMode == "auto" && a.Subject == "zombie" && distance < sightRange);
         a.Angry = Math.Clamp(a.Angry + (sees ? 1 : -1) * delta / 0.25, 0, 1);
-        var mi = a.Lods[Math.Min(lod, a.Lods.Length - 1)];
-        if (a.Cand == "mannequin" || mi.FindBlendShapeByName("angry") < 0) return;
+        var mi = a.Lods[Math.Min(lod, a.Lods.Length - 1)].FirstOrDefault(m => m.FindBlendShapeByName("angry") >= 0);
+        if (a.Cand == "mannequin" || mi == null) return;
         double e = a.Angry * a.Angry * (3 - 2 * a.Angry);
-        double slack = 0.12 + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
+        double slack = Slack.GetValueOrDefault(a.Variant, 0.12) + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
         double growl = 0.62 + 0.22 * Math.Sin(time * 7.5 + a.Phase * 6) + 0.08 * Math.Sin(time * 17);
         SetShape(mi, "jaw_open", slack + (growl - slack) * e);
         SetShape(mi, "angry", e);
@@ -336,11 +369,14 @@ public partial class LookLab : Node3D
         if (a != null)
         {
             int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
-            sb.AppendLine($"subject   {subject} / {cand}{(a.Cand != "mannequin" && cand != "lineup" ? $" lod{lod}" : "")}");
+            bool single = cand is not ("lineup" or "faces" or "clothes");
+            sb.AppendLine($"subject   {a.Subject} / {cand}{(a.Cand != "mannequin" && single ? $" lod{lod}" : "")}  {(single && a.Cand != "mannequin" ? a.Variant : "")}");
             sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
-            if (cand != "lineup") sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
-            if (cand != "lineup") sb.AppendLine($"textures  {a.TexBytes / 1048576.0:0.0} MB: {a.TexDesc}");
-            sb.AppendLine($"face      {(subject == "zombie" ? $"{face}, angry {a.Angry:0.00}" : "-")}");
+            if (single) sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
+            if (single) sb.AppendLine($"textures  {a.TexBytes / 1048576.0:0.0} MB: {a.TexDesc}");
+            sb.AppendLine($"face      {(a.Subject == "zombie" ? $"{face}, angry {a.Angry:0.00}" : "-")}");
+            if (single && a.Lods.Length > 0 && a.Lods[0].Length > 1)
+                sb.AppendLine($"pieces    {string.Join("  ", a.Lods[Math.Min(lod, a.Lods.Length - 1)].Select(m => $"{m.Name.ToString().Split("_lod")[0]} {Tris(m):N0}"))}");
         }
         sb.AppendLine($"crowd     {crowd.Count}");
         sb.AppendLine($"on screen {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame):N0} tris  {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame)} draws  {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalObjectsInFrame)} objects");
@@ -421,7 +457,7 @@ public partial class LookLab : Node3D
     // ------------------------------------------------------------------ panel
 
     OptionButton candPick = null!, lodPick = null!, facePick = null!;
-    HSlider distSlider = null!;
+    HSlider distSlider = null!, turnSlider = null!;
 
     void BuildPanel()
     {
@@ -440,10 +476,13 @@ public partial class LookLab : Node3D
         facePick = Pick(grid, "Face", new[] { "auto", "neutral", "angry" }, face, v => face = v);
         Pick(grid, "Move", new[] { "idle", "walk", "lunge" }, move, v => { move = v; lungeZ = -8; foreach (var a in subjects.Concat(crowd)) Play(a, a.Phase); });
         Pick(grid, "Light", new[] { "day", "dusk", "night" }, light, v => { light = v; ApplyLight(); });
+        Pick(grid, "Zombie face", Faces, faceVariant, v => { faceVariant = v; Rebuild(); });
+        Pick(grid, "Clothes", ClothesSets, clothesSet, v => { clothesSet = v; Rebuild(); });
         var presets = new HBoxContainer();
         foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
         box.AddChild(presets);
         distSlider = Slider(box, "Distance m", 0.6, 60, 0.1, dist, v => dist = v);
+        turnSlider = Slider(box, "Turn °", -180, 180, 1, turn, v => turn = v);
         Slider(box, "LOD bias", 0.25, 4, 0.05, lodBias, v => lodBias = v);
         Slider(box, "Sight range m", 1, 30, 0.5, sightRange, v => sightRange = v);
         Slider(box, "Crowd", 0, 2000, 10, crowdCount, v => { crowdCount = (int)v; RebuildCrowd(); });
@@ -477,6 +516,7 @@ public partial class LookLab : Node3D
             else if (k.Keycode == Key.F) { face = face == "angry" ? "neutral" : "angry"; facePick.Select(face == "angry" ? 2 : 1); }
             else if (k.Keycode == Key.L) { forcedLod = forcedLod >= 5 ? -1 : forcedLod + 1; lodPick.Select(forcedLod + 1); }
             else if (k.Keycode == Key.V) { wire = !wire; ApplyView(); }
+            else if (k.Keycode == Key.T) { turn = turn switch { 0 => 35, 35 => 90, 90 => 180, _ => 0 }; turnSlider.SetValueNoSignal(turn); }
         }
         else if (e is InputEventMouseButton mb)
         {
@@ -551,6 +591,56 @@ public partial class LookLab : Node3D
         busy = true;
         panelLayer.Visible = false;
         DirAccess.MakeDirRecursiveAbsolute(dir);
+        // Zombie faces side by side, neutral and angry; then each close up.
+        cand = "faces";
+        Rebuild();
+        foreach (var fm in new[] { "neutral", "angry" })
+        {
+            dist = 1.5;
+            face = fm;
+            foreach (var x in subjects) x.Angry = fm == "angry" ? 1 : 0;
+            await Frames(8);
+            await Shot($"{dir}/faces_{fm}.png");
+        }
+        cand = "plus";
+        subject = "zombie";
+        foreach (var fv in Faces)
+        {
+            faceVariant = fv;
+            Rebuild();
+            foreach (var fm in new[] { "neutral", "angry" })
+            {
+                dist = 0.7;
+                face = fm;
+                foreach (var x in subjects) x.Angry = fm == "angry" ? 1 : 0;
+                await Frames(8);
+                await Shot($"{dir}/face_{fv}_{fm}.png");
+            }
+        }
+        faceVariant = "slack";
+        // Clothes side by side, facing and turned; then each closer, turned.
+        cand = "clothes";
+        Rebuild();
+        foreach (var t in new[] { 0.0, 35.0, 90.0 })
+        {
+            dist = 2.6;
+            turn = t;
+            await Frames(8);
+            await Shot($"{dir}/clothes_{t:0}.png");
+        }
+        cand = "plus";
+        subject = "survivor";
+        foreach (var cs in ClothesSets)
+        {
+            clothesSet = cs;
+            Rebuild();
+            dist = 1.3;
+            turn = 35;
+            await Frames(8);
+            await Shot($"{dir}/clothes_{cs}_close.png");
+        }
+        clothesSet = "painted";
+        turn = 0;
         foreach (var subj in new[] { "zombie", "survivor" })
         {
             subject = subj;

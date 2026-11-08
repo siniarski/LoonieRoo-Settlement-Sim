@@ -86,9 +86,11 @@ def regions(p, o):
     m["iris"] = m["eye"] * sstep(0.0062, 0.0050, np.hypot(x - front, z - S.EYE_L.z)) * (y < S.EYE_L.y - 0.006)
     m["pupil"] = m["eye"] * sstep(0.0028, 0.0020, np.hypot(x - front, z - S.EYE_L.z)) * (y < S.EYE_L.y - 0.006)
     inner = (np.abs(z - S.MOUTH.z) < 0.012) & (ax < 0.028) & (y > -0.096) & (y < -0.06) & (z > 1.5)
-    m["teeth"] = (inner & (y > S.MOUTH.y + 0.002) & (y < -0.070)).astype(float)
+    m["teeth"] = (inner & (y > S.MOUTH.y - 0.003) & (y < -0.070)).astype(float)
     # The mouth's inside: the slit's floor, behind the lips' front.
-    m["mouth"] = sstep(-0.087, -0.083, y) * sstep(0.005, 0.002, np.abs(z - S.MOUTH.z)) * sstep(S.MOUTH_HALF, S.MOUTH_HALF * 0.7, ax)
+    bag = np.linalg.norm((p - np.array(S.MOUTH_BAG_C)) / np.array(S.MOUTH_BAG_HALF), axis=1)
+    m["mouth"] = np.clip(sstep(-0.087, -0.083, y) * sstep(0.005, 0.002, np.abs(z - S.MOUTH.z)) * sstep(S.MOUTH_HALF, S.MOUTH_HALF * 0.7, ax)
+                         + (bag < 1.08), 0, 1) * (1 - m["teeth"])
     m["lips"] = sstep(0.009, 0.006, np.abs(z - S.MOUTH.z)) * sstep(S.MOUTH_HALF * 1.1, S.MOUTH_HALF * 0.8, ax) * (y < -0.07)
     head = sstep(1.50, 1.52, z) * (ax < 0.11)
     hairline = np.where(y < -0.02, S.EYE_L.z + 0.050 + 0.012 * (ax / 0.07) ** 2, 1.585 - 0.03 * sstep(0.0, 0.08, y))
@@ -153,7 +155,13 @@ def albedo(p, ao, o, style):
 
     # Skin: mottled; the dead's greyer, bruised, with veins and dark sockets.
     skin = o["skin"] * (0.88 + 0.24 * n2[:, None])
+    face = o.get("face", "slack")
     if dead:
+        if face == "gaunt":    # yellowed, waxy, the skin tight over the bone
+            skin = skin * rgb(1.08, 1.04, 0.92)
+        elif face == "bloated":  # marbled purple and green, livid where the blood has pooled
+            marble = sstep(0.03, 0.0, np.abs(fbm(p, 30, 4) - 0.5)) * 0.6
+            skin = mix(skin * rgb(0.95, 1.02, 0.85), rgb(0.30, 0.22, 0.32), marble + sstep(0.5, 0.8, n1) * 0.4)
         bruise = sstep(0.62, 0.78, n1) * 0.7
         skin = mix(skin, rgb(0.32, 0.26, 0.34), bruise)
         veins = sstep(0.025, 0.0, np.abs(fbm(p, 55, 3) - 0.5)) * 0.45
@@ -164,7 +172,15 @@ def albedo(p, ao, o, style):
         flush = sstep(0.04, 0.0, np.hypot(ax - 0.045, z - 1.61)) * 0.25 * (y < -0.04)
         skin = mix(skin, rgb(0.72, 0.38, 0.34), flush)
     lips = rgb(0.36, 0.24, 0.26) if dead else rgb(0.55, 0.32, 0.30)
+    if face == "gaunt":
+        lips = rgb(0.30, 0.16, 0.15)  # shrunk back: what shows is gum
     col = mix(skin, lips, m["lips"] * 0.8)
+    if face == "torn":
+        # The wound: raw at the edge, dark deep in, ragged.
+        d = np.hypot((x - S.TORN_C.x) / 1.3, (z - S.TORN_C.z) / 0.9)
+        edge = 0.016 + 0.004 * (fbm(p, 120, 2) - 0.5)
+        raw = sstep(edge + 0.003, edge - 0.002, d) * (y < -0.04)
+        col = mix(col, mix(rgb(0.42, 0.08, 0.06), rgb(0.10, 0.02, 0.02), sstep(edge, 0.004, d)), raw * (1 - m["teeth"]))
     col = mix(col, rgb(0.06, 0.02, 0.02), m["mouth"])
     col = mix(col, o["hair"] * (0.7 + 0.6 * n3[:, None]), m["brows"] * 0.9)
     hair_amt = m["hair"] * (sstep(0.35, 0.55, fbm(p, 30, 3)) if dead else 1.0)  # the dead's hair thin and patchy
@@ -202,6 +218,9 @@ def albedo(p, ao, o, style):
     # Eyes and teeth.
     sclera = rgb(0.62, 0.62, 0.52) if dead else rgb(0.82, 0.80, 0.76)
     iris = rgb(0.55, 0.56, 0.50) if dead else rgb(0.25, 0.33, 0.30)  # the dead's clouded over
+    if face == "feral":  # bloodshot, the iris yellowed
+        sclera = mix(np.broadcast_to(rgb(0.62, 0.40, 0.33), (len(p), 3)), rgb(0.50, 0.08, 0.06), sstep(0.5, 0.7, n3) * 0.6)
+        iris = rgb(0.62, 0.55, 0.30)
     eye = mix(sclera, iris, m["iris"])
     eye = mix(eye, rgb(0.42, 0.42, 0.38) if dead else rgb(0.02, 0.02, 0.02), m["pupil"])
     col = mix(col, eye, m["eye"])
