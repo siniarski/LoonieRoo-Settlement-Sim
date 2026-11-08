@@ -11,6 +11,11 @@
 // Looks, picked by a hash of the body's id (stable, no RNG): the dead get one of the five faces with
 // matted hair; the living a clothes set (painted, jacket, hoodie), a hair style and colour; raiders a
 // jacket and a buzz cut.
+//
+// The dormant dead (state.dormant: bare positions till someone comes within Herds.WAKE_RADIUS) are drawn
+// too, so they don't pop into being as they wake: most lying still, some standing (a hash of the id), from
+// the sim's bucketed index (Dormant.near: the cells round you, not the whole list). When one wakes, the
+// real zombie that gets up where it lay takes over its model (same look, same facing): it gets up.
 
 using System;
 using System.Collections.Generic;
@@ -102,8 +107,31 @@ public sealed class People
             string action = state.tick < z.staggerUntil ? "hit" : z.windup > 0 ? "attack" : "";
             Add(z.id, raider ? "survivor/jacket/buzz/0" : DeadLook(z.id), z, PoseIntents.ofZombie(state, z), !raider && z.targetId != null, action);
         }
+        var dormantNow = new Dictionary<string, Point>();
+        foreach (var d in Dormant.near(state, eye.X, eye.Z, MODEL_RANGE, false))
+        {
+            var b = DormantBody(d);
+            dormantNow[d.id] = new Point(d.x, d.y);
+            Add(d.id, DeadLook(d.id), b, DormantLies(d.id) ? LYING : STANDING, false, "");
+        }
         wanted.Sort((a, b) => a.dist2.CompareTo(b.dist2));
         if (wanted.Count > MAX_MODELS) wanted.RemoveRange(MAX_MODELS, wanted.Count - MAX_MODELS);
+
+        // One that woke: the zombie standing where it lay takes its model over, so it gets up rather than swapping.
+        foreach (var (id, at) in lastDormant)
+        {
+            if (dormantNow.ContainsKey(id) || !byBody.TryGetValue(id, out var m)) continue;
+            foreach (var w in wanted)
+            {
+                if (w.body is not Zombie z || byBody.ContainsKey(z.id) || Math.Max(Math.Abs(z.pos.x - at.x), Math.Abs(z.pos.y - at.y)) > 1) continue;
+                byBody.Remove(id);
+                m.bodyId = z.id;
+                byBody[z.id] = m;
+                break;
+            }
+        }
+        lastDormant = dormantNow;
+        foreach (var id in dormantBodies.Keys.Where((id) => !dormantNow.ContainsKey(id)).ToList()) dormantBodies.Remove(id);
 
         // Hand back the models of bodies that left.
         var keep = new HashSet<string>(wanted.Select((w) => w.id));
@@ -137,6 +165,26 @@ public sealed class People
             drawn.Add(w.id);
         }
         return drawn;
+    }
+
+    // --- the dormant dead ---
+
+    static readonly PoseIntent LYING = new() { stance = "lie" }, STANDING = new();
+    Dictionary<string, Point> lastDormant = new();
+    readonly Dictionary<string, Zombie> dormantBodies = new();
+
+    /// <summary>Most of the dormant lie where they fell; some stand (a hash of the id, stable between runs).</summary>
+    public static bool DormantLies(string id) => Hash01(id, 17) < 0.65;
+
+    /// <summary>A stand-in body (not in state) for a dormant one, so it's placed and posed like the rest.</summary>
+    Zombie DormantBody(DormantZombie d)
+    {
+        if (!dormantBodies.TryGetValue(d.id, out var z))
+        {
+            var placed = Motion.placedAt(new Point(d.x, d.y));
+            dormantBodies[d.id] = z = new Zombie { id = d.id, pos = new Point(d.x, d.y), at = placed.at, was = placed.was };
+        }
+        return z;
     }
 
     List<Model> Free(string look)

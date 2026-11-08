@@ -165,7 +165,7 @@ public static partial class Worldgen
                 {
                     continue;
                 }
-                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y) });
+                Dormant.add(state, new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y) });
             }
         }
     }

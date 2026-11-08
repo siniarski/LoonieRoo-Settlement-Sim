@@ -72,6 +72,15 @@ public sealed class Bodies
             if (s.id != youId && Vehicles.vehicleOf(state, s) == null) Person("survivor", s, s.sleep?.asleep == true);
         foreach (var r in state.residents) Person("resident", r, false);
         foreach (var z in state.zombies) Person(z.kind == "raider" ? "raider" : "zombie", z, false);
+        // The dormant dead past the models' budget: lying or standing still, as People poses them.
+        foreach (var d in Dormant.near(state, eye.X, eye.Z, 48, false))
+        {
+            if (modelled.Contains(d.id) || !Near(d.x + 0.5, d.y + 0.5)) continue;
+            bool lying = People.DormantLies(d.id);
+            var n = Next("zombie");
+            n.Position = new Vector3(d.x + 0.5f, Terrain.Height(d.x + 0.5f, d.y + 0.5f) + (lying ? 0.3f : 0.875f), d.y + 0.5f);
+            n.Rotation = lying ? new Vector3(Mathf.Pi / 2, 0, 0) : Vector3.Zero;
+        }
         animals.Update(state, alpha, eye);
         foreach (var v in Vehicles.vehiclesOf(state))
         {

@@ -509,7 +509,7 @@ public static partial class Lots
             var p = Js.NN(Js.Get(floors, JsMath.floor(((double)(r(310 + k)) * (floors.length)))));
             if (inside(p.x, p.y))
             {
-                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });
+                Dormant.add(state, new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });
             }
         }
     }
