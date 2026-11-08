@@ -211,12 +211,7 @@ public static class WorldMesh
     static void Thing(SurfaceTool st, Furniture f)
     {
         float x = f.x + 0.5f, z = f.y + 0.5f;
-        if (f.kind == "tree")
-        {
-            Box(st, new(x - 0.12f, 0, z - 0.12f), new(x + 0.12f, 2.2f, z + 0.12f), new Color(0.3f, 0.22f, 0.15f));
-            Box(st, new(x - 0.8f, 1.6f, z - 0.8f), new(x + 0.8f, 4.2f, z + 0.8f), new Color(0.13f, 0.22f, 0.12f));
-            return;
-        }
+        if (f.kind == "tree") return; // Trees.cs draws them
         var (w, h, colour) = FURNITURE.GetValueOrDefault(f.kind, (0.45f, 0.45f, "#5a5a58"));
         float r = w / 2;
         Box(st, new(x - r, 0, z - r), new(x + r, h, z + r), Ctx.Css(colour));

@@ -35,12 +35,14 @@ public sealed partial class FirstPerson : Node3D
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
     readonly People people;
+    readonly Trees trees;
     /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
     public int Modelled { get; private set; }
     /// <summary>When it last changed: walkability, open doors and windows, boards, furniture.</summary>
     (int, int, int, int, int, int) worldKey = (-1, 0, 0, 0, 0, 0);
     int sinceCheck;
     public int ChunkCount => chunks.Count;
+    public int TreeCount => trees.Count;
 
     public FirstPerson()
     {
@@ -55,6 +57,7 @@ public sealed partial class FirstPerson : Node3D
         AddChild(new WorldEnvironment { Environment = env });
         bodies = new Bodies(this);
         people = new People(this);
+        trees = new Trees(this);
     }
 
     /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
@@ -85,6 +88,7 @@ public sealed partial class FirstPerson : Node3D
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
         Light(state);
         Chunks(state, eye);
+        trees.Update(state, eye, look);
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
         bodies.Update(state, alpha, eye, you.id, modelled);

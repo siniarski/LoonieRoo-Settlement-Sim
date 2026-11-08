@@ -66,5 +66,9 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   jacket|hoodie`): shells cut from the body, draped, lifted by a thickness profile, extra pieces (collar, hood,
   pocket, drawstrings), rims; their relief and colour. Face variants: `--face gaunt|bloated|torn|feral`.
 - `scripts/garments.py`: the garments, by body region, with the hiding rules; `scripts/shapes.py`: mesh primitives.
+- `scripts/build_trees.py`: the trees and undergrowth for first person (docs/trees.md): five species in three
+  LODs, a bush and a fern, vertex colours, alpha-cut leaf cards near, the leaf atlas painted by numpy (~4 s):
+  `"$B" --background --factory-startup --python art/scripts/build_trees.py -- --glb godot/assets/trees/trees.glb
+  --tex godot/assets/trees/leaves.png [--preview lineup.png]`, then re-import in Godot.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

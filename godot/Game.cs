@@ -14,6 +14,7 @@
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
+//   --at=X,Y                               put the survivor you control on tile X, Y (for screenshots; not a command)
 
 using System;
 using System.Collections.Generic;
@@ -131,6 +132,13 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         else Replace(new LoadResult { ok = true, state = Worldgen.createWorld(seed, size, settings), kind = "save" }, $"a new {size}×{size} world");
         if (args.TryGetValue("zoom", out var zoom)) view.camera.zoom = double.Parse(zoom);
         if (args.TryGetValue("ticks", out var t)) Tick.step(state, int.Parse(t));
+        if (args.TryGetValue("at", out var atArg) && ControlMod.controlled(state) is { } me)
+        {
+            var xy = atArg.Split(',');
+            me.pos = new Point(int.Parse(xy[0]), int.Parse(xy[1]));
+            me.at = Motion.centre(me.pos);
+            me.was = Motion.centre(me.pos);
+        }
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
         view.showDebug = args.ContainsKey("debug");
@@ -362,7 +370,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (Input.MouseMode != mode) Input.MouseMode = mode;
         QueueRedraw();
         string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}"
-            + (fpScene ? $"\n3D ms/frame    {fpMs:0.00} · {firstPerson.Modelled} people as models · {firstPerson.ChunkCount} chunks\nrender         cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.00} ms · gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.00} ms" : "");
+            + (fpScene ? $"\n3D ms/frame    {fpMs:0.00} · {firstPerson.Modelled} people as models · {firstPerson.ChunkCount} chunks · {firstPerson.TreeCount} trees\nrender         cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.00} ms · gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.00} ms" : "");
         hud.Update(state, perf);
         worldMap.Update(state);
         tabs.Update(state);
