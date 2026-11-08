@@ -35,7 +35,7 @@ public partial class SoloHarness
     }
 
     /// <summary>Walk a path to a tile next to (or onto) a target, and use it on arrival. You move freely (motion.ts): steer toward the centre of the next tile on the path, opening a closed door that's next in the way (a colonist's path goes through doors; you have to open them).</summary>
-    public static void goUse(SimState state, Survivor s, Bot bot, string key, Point target, bool onto = false, string act = "use")
+    public static void goUse(SimState state, Survivor s, Bot bot, string key, Point target, bool onto = false, string act = "use", bool run = false)
     {
         var c = Js.NN(state.control);
         void stop()
@@ -51,7 +51,7 @@ public partial class SoloHarness
         if (Js.T(Js.T(onto) ? ((at.x == target.x) && (at.y == target.y) ? (object?)(settled) : false) : ((JsMath.abs(at.x - target.x) + JsMath.abs(at.y - target.y)) <= 1)))
         {
             stop();
-            if (!Js.T(c.busy))
+            if (!Js.T(c.busy) && act != null)
             {
                 cmd(state, new Command { type = act, x = Js.I(target.x), y = Js.I(target.y) });
             }
@@ -83,16 +83,71 @@ public partial class SoloHarness
         var goal = Motion.centre(next);
         var dx = (JsMath.abs(goal.x - s.at.x) > ((double)(Motion.SUB) / (10))) ? JsMath.sign(goal.x - s.at.x) : 0;
         var dy = (JsMath.abs(goal.y - s.at.y) > ((double)(Motion.SUB) / (10))) ? JsMath.sign(goal.y - s.at.y) : 0;
-        if ((c.dx != dx) || (c.dy != dy))
+        if ((c.dx != dx) || (c.dy != dy) || ((c.running == true) != run))
         {
-            cmd(state, new Command { type = "steer", dx = dx, dy = dy });
+            cmd(state, new Command { type = "steer", dx = dx, dy = dy, run = run });
         }
+    }
+
+    /// <summary>Back off from this many of the dead at once (within PACK_RADIUS, or hunting you within HUNT_RADIUS) instead of fighting them; from two under half health.</summary>
+    public const int PACK = 3;
+
+    public const int PACK_RADIUS = 4;
+
+    public const int HUNT_RADIUS = 8;
+
+    /// <summary>A place to break off to, with the way there: out of sight of every one of `pack` if it can be, further from them than from you, reached by a path that keeps a tile clear of them; the best of a ring 5-12 tiles out (paths tried for the best few). Null when cornered.</summary>
+    public static (Point to, List<Point> path)? hideFrom(SimState state, Survivor s, List<Point> pack)
+    {
+        var options = new List<(double score, Point t, double d)>();
+        for (var dy = -12; dy <= 12; dy++)
+        {
+            for (var dx = -12; dx <= 12; dx++)
+            {
+                var d = JsMath.max(JsMath.abs(dx), JsMath.abs(dy));
+                if (d < 5)
+                {
+                    continue;
+                }
+                var t = new Point { x = Js.I(s.pos.x + dx), y = Js.I(s.pos.y + dy) };
+                if (!Grids.inBounds(state.grid, t.x, t.y) || !Grids.isWalkable(state.grid, t.x, t.y))
+                {
+                    continue;
+                }
+                var theirs = pack.Select((z) => dist(z, t)).Min();
+                if (theirs <= d + 1)
+                {
+                    continue;  // they'd be there first, or it's past them
+                }
+                var seen = pack.Count((z) => Sight.sightLine(state.grid, z, t));
+                // Out of sight above all; then the most ground between them and it for the least walking.
+                // The map's edge is a dead end to be pinned against.
+                var edge = JsMath.min(JsMath.min(t.x, t.y), JsMath.min(state.grid.width - 1 - t.x, state.grid.height - 1 - t.y));
+                options.Add(((-100 * seen) + theirs - (0.5 * d) - (3 * JsMath.max(0, 4 - edge)), t, d));
+            }
+        }
+        // Best first; ties by place, so the choice never hangs on sort stability.
+        options.Sort((a, b) => (a.score != b.score) ? b.score.CompareTo(a.score) : ((a.t.y != b.t.y) ? a.t.y.CompareTo(b.t.y) : a.t.x.CompareTo(b.t.x)));
+        foreach (var (_, t, d) in options.Take(8))
+        {
+            var path = Pathfinding.findPathToAny(state.grid, s.pos, [t]);
+            if (path == null || path.length == 0 || path.length > (2 * d) + 6)
+            {
+                continue;
+            }
+            if (path.Skip(2).Any((q) => pack.Any((z) => dist(z, q) <= 1)))
+            {
+                continue;  // the way out runs past them
+            }
+            return (t, path);
+        }
+        return null;
     }
 
     public static void decide(SimState state, Survivor s, Bot bot, Point home, Point bed)
     {
         var c = Js.NN(state.control);
-        if ((Js.T(Js.T(s.move) && Js.T(bot.goal))) && !new List<string> { "fight", "flee", "idle" }.includes(bot.goal))
+        if ((Js.T(Js.T(s.move) && Js.T(bot.goal))) && !new List<string> { "fight", "flee", "idle", "back off" }.includes(bot.goal))
         {
             var key = bot.pathFor;
             if (Js.T(bot.path.length))
@@ -128,6 +183,50 @@ public partial class SoloHarness
         }
         var zs = state.zombies.map((q) => new { id = q.id, pos = Motion.tileOf(q.at), body = q }).filter((q) => dist(q.pos, s.pos) <= 6).sort((a, b) => dist(a.pos, s.pos) - dist(b.pos, s.pos));
         var z = Js.Get(zs, 0);
+        // Pack sense: three or more of them close (or hurt with any about) is a fight not to take. Break off to
+        // somewhere out of their sight (a corner, a wall, a building) at a run, not straight away from them; pick
+        // a new place every 20 ticks or on arriving while they're still close.
+        // The pack: the dead within PACK_RADIUS, and those further off (HUNT_RADIUS) already coming for you.
+        var pack = state.zombies.filter((q) => (q.kind != "raider") && ((dist(Motion.tileOf(q.at), s.pos) <= PACK_RADIUS) || ((q.targetId == s.id) && (dist(Motion.tileOf(q.at), s.pos) <= HUNT_RADIUS)))).map((q) => Motion.tileOf(q.at));
+        var hurt = Js.T(z) && (s.health <= ((double)(Health.HEALTH_MAX) * (0.3)));
+        var backingOff = (bot.goal == "back off") && (pack.length >= 2);
+        var outnumbered = (pack.length >= PACK) || ((pack.length >= 2) && (s.health < ((double)(Health.HEALTH_MAX) * (0.5))));
+        if (outnumbered || hurt || backingOff)
+        {
+            var from = (pack.length > 0) ? pack : zs.map((q) => q.pos);
+            var arrived = Js.T(bot.hide) && (s.pos.x == bot.hide.x) && (s.pos.y == bot.hide.y);
+            if (!Js.T(bot.hide) || arrived || ((state.tick - bot.hideAt) >= 20))
+            {
+                var found = hideFrom(state, s, from);
+                bot.hide = found?.to;
+                bot.hideAt = state.tick;
+                if (found is var (to, path))
+                {
+                    bot.path = path;
+                    bot.pathFor = $"hide{Js.Str(to.x)},{Js.Str(to.y)}";
+                }
+            }
+            if (Js.T(bot.hide))
+            {
+                if (bot.goal != "back off")
+                {
+                    bot.fled++;
+                }
+                if (c.sneaking == true)
+                {
+                    cmd(state, new Command { type = "sneak", on = false });
+                }
+                bot.goal = "back off";
+                goUse(state, s, bot, $"hide{Js.Str(bot.hide.x)},{Js.Str(bot.hide.y)}", bot.hide, true, null, true);
+                return;
+            }
+            // Nowhere to break off to: cornered, so fight (or, hurt, run straight as before).
+        }
+        else if (bot.goal == "back off")
+        {
+            bot.goal = "";
+            bot.hide = null;
+        }
         var sneak = state.zombies.some((q) => dist(q.pos, s.pos) <= 10) && !(Js.T(z) && (dist(z.pos, s.pos) <= 1));
         if ((c.sneaking == true) != sneak)
         {
@@ -153,8 +252,23 @@ public partial class SoloHarness
         if (Js.T(z) && (s.health <= ((double)(Health.HEALTH_MAX) * (0.3))))
         {
             bot.fled++;
-            var dx = (JsMath.sign(s.pos.x - z.pos.x) is var __or1 && Js.T(__or1) ? __or1 : 1);
-            var dy = JsMath.sign(s.pos.y - z.pos.y);
+            // Nowhere to hide: the open step that leaves the most room to the nearest of them (not straight into a wall).
+            double dx = 0, dy = 0, room = double.NegativeInfinity;
+            foreach (var (ox, oy) in new[] { (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1) })
+            {
+                var t = new Point { x = Js.I(s.pos.x + ox), y = Js.I(s.pos.y + oy) };
+                if (!Grids.inBounds(state.grid, t.x, t.y) || !Grids.isWalkable(state.grid, t.x, t.y) || !Pathfinding.crossable(state.grid, s.pos.x, s.pos.y, t.x, t.y, "survivor"))
+                {
+                    continue;
+                }
+                var r = zs.Select((q) => (double)((q.pos.x - t.x) * (q.pos.x - t.x) + (q.pos.y - t.y) * (q.pos.y - t.y))).Min();
+                if (r > room)
+                {
+                    room = r;
+                    dx = ox;
+                    dy = oy;
+                }
+            }
             if ((c.dx != dx) || (c.dy != dy))
             {
                 cmd(state, new Command { type = "steer", dx = dx, dy = dy });
@@ -529,4 +643,6 @@ public partial class Bot
     public double stuck { get; set; }
     public double treated { get; set; }
     public double amputated { get; set; }
+    public Point? hide { get; set; }
+    public double hideAt { get; set; }
 }

@@ -397,7 +397,7 @@ public static partial class Colonies
             }
             foreach (var p in Js.Iter(rest.slice(-3)))
             {
-                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });
+                Dormant.add(state, new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y) });
             }
             return;
         }

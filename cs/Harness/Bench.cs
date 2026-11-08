@@ -176,6 +176,41 @@ public class Bench
         File.WriteAllText(OutPath("bench"), string.Join("\n", out_) + "\n");
     }
 
+    /// <summary>What waking the dormant dead costs as they grow (Herds.wakeDormant every 10 ticks, Noise's wake on every
+    /// noise): a 1024 world with N dormant at hashed places and 3 or 200 survivors; each call timed once the nearby
+    /// ones are up (steady state, nothing left to wake).</summary>
+    [Fact(DisplayName = "dormant")]
+    public void Dormant()
+    {
+        var out_ = new List<string>();
+        foreach (var n in new[] { 1_000, 10_000, 100_000 })
+            foreach (var colonists in new[] { 3, 200 })
+            {
+                var state = Worldgen.createWorld(7, 1024);
+                var start = state.survivors[0].pos;
+                for (int i = state.survivors.Count; i < colonists; i++)
+                {
+                    Survivors.addSurvivor(state, Math.Clamp(start.x + i % 20 * 3 - 30, 0, 1023), Math.Clamp(start.y + i / 20 * 3 - 15, 0, 1023));
+                }
+                state.dormant = [];
+                for (int i = 0; i < n; i++)
+                    state.dormant.Add(new DormantZombie { id = $"d{state.nextId++}", x = (int)Math.Floor(Hash.hashRoll(i, 11) * 1024), y = (int)Math.Floor(Hash.hashRoll(i, 12) * 1024) });
+                Herds.wakeDormant(state);
+                Noise.makeNoise(state, start, "fighting");
+                state.zombies = [];
+                var sw = new Stopwatch();
+                const int calls = 200;
+                sw.Restart();
+                for (int t = 0; t < calls; t++) Herds.wakeDormant(state);
+                double wake = sw.Elapsed.TotalMilliseconds * 1000 / calls;
+                sw.Restart();
+                for (int t = 0; t < calls; t++) Noise.makeNoise(state, state.survivors[t % state.survivors.Count].pos, "fighting");
+                double noise = sw.Elapsed.TotalMilliseconds * 1000 / calls;
+                out_.Add($"dormant {state.dormant.Count,6} survivors {colonists,3} | wakeDormant {wake,8:0.0} us/call | fighting noise {noise,8:0.0} us/call");
+            }
+        File.WriteAllText(OutPath("dormant"), string.Join("\n", out_) + "\n");
+    }
+
     [Fact(DisplayName = "stress")]
     public void Stress()
     {

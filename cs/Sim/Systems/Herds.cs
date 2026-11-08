@@ -172,57 +172,18 @@ public static partial class Herds
         }
     }
 
-    /// <summary>Dormant zombies near a survivor get up.</summary>
+    /// <summary>Dormant zombies near a survivor get up. The dormant are bucketed (Dormant.cs): this looks at the cells round each survivor, not every dormant zombie against every survivor, and wakes them in the list's order as walking the list did.</summary>
     public static void wakeDormant(SimState state)
     {
         double woke = 0;
         Point? where = null;
-        var cells = new JsMap<double, List<Point>>();
-        double cell(double x, double y)
+        foreach (var d in Dormant.nearAny(state, state.survivors.Select((s) => (Point)s.pos), WAKE_RADIUS))
         {
-            return ((double)(JsMath.floor(((double)(y) / (WAKE_RADIUS)))) * (100003)) + JsMath.floor(((double)(x) / (WAKE_RADIUS)));
-        }
-        foreach (var s in Js.Iter(state.survivors))
-        {
-            var k = cell(s.pos.x, s.pos.y);
-            var at = cells.get(k);
-            if (Js.T(at))
-            {
-                at.push(s.pos);
-            }
-            else
-            {
-                cells.set(k, [s.pos]);
-            }
-        }
-        bool near(Point d)
-        {
-            for (var dy = -1; dy <= 1; dy++)
-            {
-                for (var dx = -1; dx <= 1; dx++)
-                {
-                    foreach (var p in Js.Iter(cells.get(cell(d.x + ((double)(dx) * (WAKE_RADIUS)), d.y + ((double)(dy) * (WAKE_RADIUS)))) ?? []))
-                    {
-                        if (Space.manhattan(p, d) <= WAKE_RADIUS)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-        foreach (var d in Js.Iter((state.dormant).ToList()))
-        {
-            if (!near(d))
-            {
-                continue;
-            }
             if (state.zombies.length >= Zombies.MAX_ZOMBIES)
             {
                 break;
             }
-            state.dormant.splice(state.dormant.indexOf(d), 1);
+            Dormant.remove(state, d);
             var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
             if (!Js.T(p) || !Grids.inBounds(state.grid, p.x, p.y))
             {

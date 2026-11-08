@@ -20,7 +20,7 @@ public static partial class Noise
     public static void makeNoise(SimState state, Point p, string kind)
     {
         var r = Js.Get(NOISE, kind);
-        var woke = wakeDormantNear(state, (d) => Space.manhattan(d, p) <= r);
+        var woke = wakeDormantNear(state, p, r);
         if (woke > 0)
         {
             Events.logEvent(state, $"The {Js.Str(kind)} at ({Js.Str(p.x)}, {Js.Str(p.y)}) woke {Js.Str((woke == 1) ? Js.Str("a zombie") : Js.Str($"{Js.Str(woke)} zombies"))}");
@@ -59,21 +59,17 @@ public static partial class Noise
         return JsMath.max(0, JsMath.min(size - 1, v));
     }
 
-    /// <summary>Dormant zombies matching `near` get up as static zombies. Returns how many.</summary>
-    public static double wakeDormantNear(SimState state, Func<Point, bool> near)
+    /// <summary>Dormant zombies within r (Manhattan) of p get up as static zombies, in the list's order (Dormant.cs buckets them). Returns how many.</summary>
+    public static double wakeDormantNear(SimState state, Point p0, double r)
     {
         double woke = 0;
-        foreach (var d in Js.Iter((state.dormant).ToList()))
+        foreach (var d in Dormant.near(state, p0.x, p0.y, r))
         {
-            if (!near(d))
-            {
-                continue;
-            }
             if (state.zombies.length >= Zombies.MAX_ZOMBIES)
             {
                 break;
             }
-            state.dormant.splice(state.dormant.indexOf(d), 1);
+            Dormant.remove(state, d);
             var p = (Grids.getTile(state.grid, d.x, d.y) == "floor") ? d : Space.nearestTile(state.grid, d, (x, y) => Grids.getTile(state.grid, x, y) == "floor");
             if (!Js.T(p) || !Grids.inBounds(state.grid, p.x, p.y))
             {
