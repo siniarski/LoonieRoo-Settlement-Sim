@@ -4,7 +4,8 @@
 //   one     a single zombie a few tiles off
 //   crowd   CROWD_SIZE of them in a ring around the camp
 // A plain world otherwise (settings: NORMAL, alone, normal days), so what you test is the game;
-// but no neighbours (on a map this small their compound would unfold right beside you).
+// but no neighbours (on a map this small their compound would unfold right beside you), and none of
+// the world's own strays up and about (Worldgen.startStrays): the arena's dead are the ones it says.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -19,6 +20,7 @@ public static partial class Arena
     {
         var state = Worldgen.createWorld(seed, ARENA_SIZE, Js.With(Js.CopyAs<Settings>(Difficulty.NORMAL), __s0 => { __s0.start = "solo"; }));
         state.settlements = [];
+        state.zombies = [];
         var you = Js.NN(Js.Get(state.survivors, 0)).pos;
         var count = (kind == "one") ? 1 : CROWD_SIZE;
         var radius = (kind == "one") ? 5 : 8;

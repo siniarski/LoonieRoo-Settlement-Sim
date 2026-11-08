@@ -90,6 +90,49 @@ public partial class HerdsTest
                 expect(JsMath.hypot(d.x - start.x, d.y - start.y)).toBeGreaterThan(NatureMod.START_CLEAR_RADIUS + 16);
             }
         }
+
+        [Fact(DisplayName = "dormant zombies > a new world has the dead up and about round the start from the first tick, outside its calm")]
+        public void T005_a_new_world_has_strays_awake_round_the_start()
+        {
+            for (var seed = 1; seed <= 4; seed++)
+            {
+                var world = Worldgen.createWorld(seed, 128);
+                var start = Js.NN(Js.Get(world.survivors, 0)).pos;
+                expect(world.zombies.length).toBe(Difficulty.zombieScale(world, Worldgen.START_STRAYS));
+                foreach (var z in Js.Iter(world.zombies))
+                {
+                    expect(z.kind).toBe("static");
+                    var r = JsMath.sqrt(JsMath.pow(z.pos.x - start.x, 2) + JsMath.pow(z.pos.y - start.y, 2));
+                    expect(r).toBeGreaterThanOrEqual(Worldgen.START_STRAY_NEAR);
+                    expect(r).toBeLessThan(Worldgen.START_STRAY_FAR + 12);
+                }
+                var harder = Worldgen.createWorld(seed, 128, Js.Get(Difficulty.PRESETS, "apocalypse").settings);
+                expect(harder.zombies.length).toBeGreaterThan(world.zombies.length);
+            }
+        }
+
+        [Fact(DisplayName = "dormant zombies > the dead lie out in the open too (roads, fields), drawn the same whatever order chunks come in")]
+        public void T006_strays_in_the_open_are_stateless()
+        {
+            var a = Worldgen.createWorld(3, 128);
+            var start = Js.NN(Js.Get(a.survivors, 0)).pos;
+            var l = Worldgen.layout(3, 128);
+            var open = a.dormant.filter((d) => !Worldgen.onLot(l, d.x, d.y));
+            expect(open.length).toBeGreaterThan(0);
+            foreach (var d in Js.Iter(open))
+            {
+                expect(JsMath.sqrt(JsMath.pow(d.x - start.x, 2) + JsMath.pow(d.y - start.y, 2))).toBeGreaterThanOrEqual(Worldgen.STRAY_CALM);
+            }
+            // The same chunk drawn into another world, alone: the same strays in it.
+            var b = States.createState(new NewStateOptions { seed = 3, width = 128, height = 128 });
+            b.settings = Js.CopyAs<Settings>(a.settings);
+            var cx = JsMath.floor((double)(open[0].x) / Worldgen.CHUNK);
+            var cy = JsMath.floor((double)(open[0].y) / Worldgen.CHUNK);
+            Worldgen.generateChunk(b, l, cx, cy);
+            string key(DormantZombie d) => $"{d.x},{d.y}";
+            bool inChunk(DormantZombie d) => (JsMath.floor((double)(d.x) / Worldgen.CHUNK) == cx) && (JsMath.floor((double)(d.y) / Worldgen.CHUNK) == cy) && !Worldgen.onLot(l, d.x, d.y);
+            expect(b.dormant.filter(inChunk).map(key).join(" ")).toBe(a.dormant.filter(inChunk).map(key).join(" "));
+        }
     }
 
     /// <summary>herds</summary>

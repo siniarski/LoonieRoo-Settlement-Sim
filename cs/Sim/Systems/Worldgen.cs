@@ -135,8 +135,69 @@ public static partial class Worldgen
                 }
             }
         }
+        strays(state, l, x0, y0);
     }
     public static void generateChunk(SimState state, Layout l, double cx, double cy) => generateChunk(state, l, Js.I(cx), Js.I(cy));
+
+    /// <summary>No dead asleep nearer the start than this (tiles, straight line), in ruins or out in the open (was START_CLEAR_RADIUS + 24 for ruins, and none in the open).</summary>
+    public const int STRAY_CALM = NatureMod.START_CLEAR_RADIUS + 14;
+
+    /// <summary>Chance a road tile has one of the dead lying in it (dormant till someone comes near), at 100% zombies.</summary>
+    public const double ROAD_STRAY_CHANCE = 0.003;
+
+    /// <summary>The same on open ground off the roads and lots (fields, forest, waste ground).</summary>
+    public const double OPEN_STRAY_CHANCE = 0.0005;
+
+    /// <summary>The dead out in the open, drawn with the chunk (stateless rolls: chunk order doesn't matter): dormant positions, woken by Herds like the ruins' sleepers.</summary>
+    public static void strays(SimState state, Layout l, double x0, double y0)
+    {
+        var scale = (double)(state.settings.zombies) / (100);
+        for (var y = y0; y < (y0 + CHUNK); y++)
+        {
+            for (var x = x0; x < (x0 + CHUNK); x++)
+            {
+                if ((!Grids.inBounds(state.grid, x, y) || onLot(l, x, y)) || NatureMod.nearStart(l, x, y, STRAY_CALM))
+                {
+                    continue;
+                }
+                var chance = ((double)(isRoad(l, x, y) ? ROAD_STRAY_CHANCE : OPEN_STRAY_CHANCE)) * (scale);
+                if ((NatureMod.roll(l.seed, x, y, 0x7a10) >= chance) || (Js.Get(state.grid.tiles, Grids.tileIndex(state.grid, x, y)) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y)))
+                {
+                    continue;
+                }
+                state.dormant.push(new() { id = $"d{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y) });
+            }
+        }
+    }
+
+    /// <summary>The dead already up and about when the world is made, at 100% zombies: within sight of the start but outside its calm (START_STRAY_NEAR to START_STRAY_FAR tiles).</summary>
+    public const int START_STRAYS = 3;
+
+    public const int START_STRAY_NEAR = 22;
+
+    public const int START_STRAY_FAR = 34;
+
+    /// <summary>Awake static zombies round the start (stateless rolls from the seed), on open floor out of the start's calm. They wander till they notice someone.</summary>
+    public static void startStrays(SimState state, Layout l)
+    {
+        var n = Difficulty.zombieScale(state, START_STRAYS);
+        for (var k = 0; k < n; k++)
+        {
+            var angle = ((double)(((double)(Hash.hashRoll(l.seed, 0x7a20, k)) * (JsMath.PI))) * (2));
+            var r = START_STRAY_NEAR + ((double)(Hash.hashRoll(l.seed, 0x7a21, k)) * (START_STRAY_FAR - START_STRAY_NEAR));
+            Point aim = new Point { x = Js.I(JsMath.round(l.start.x + ((double)(JsMath.cos(angle)) * (r)))), y = Js.I(JsMath.round(l.start.y + ((double)(JsMath.sin(angle)) * (r)))) };
+            if (!Grids.inBounds(state.grid, aim.x, aim.y))
+            {
+                continue;
+            }
+            var p = Space.nearestTile(state.grid, aim, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !NatureMod.nearStart(l, x, y, START_STRAY_NEAR), 200);
+            if (!Js.T(p))
+            {
+                continue;
+            }
+            ZombieKinds.giveVariant(Zombies.addZombie(state, p.x, p.y, Zombies.ZOMBIE_HEALTH, "static"), 1);
+        }
+    }
 
     /// <summary>What drawing a lot needs to know about the world.</summary>
     public static LotContext lotContext(Layout l)
@@ -315,6 +376,7 @@ public static partial class Worldgen
         state.world = new WorldInfo { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(((double)(chunks) * (chunks)), 0) };
         ensureGeneratedAround(state, l.start);
         startCamp(state, l);
+        startStrays(state, l);
         if (Js.T(you) && (CharacterMod.characterProblem(you) == null))
         {
             CharacterMod.applyCharacter(state, Js.NN(Js.Get(state.survivors, 0)), you);
