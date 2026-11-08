@@ -14,6 +14,7 @@
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
+//   --eye=X,Y,H                            first person: look from tile point (X, Y), H m up, not your eyes (a debug view)
 
 using System;
 using System.Collections.Generic;
@@ -139,6 +140,11 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         view.colonyMode = args.ContainsKey("colony");
         if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
         if (args.TryGetValue("pitch", out var pt)) pitchArg = double.Parse(pt) * Math.PI / 180;
+        if (args.TryGetValue("eye", out var ey))
+        {
+            var e = ey.Split(',');
+            firstPerson.EyeAt = new Vector3(float.Parse(e[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(e[2], System.Globalization.CultureInfo.InvariantCulture), float.Parse(e[1], System.Globalization.CultureInfo.InvariantCulture));
+        }
         if (args.TryGetValue("build", out var cat)) Tools.chooseCategory(view, cat == "" ? "structure" : cat);
         if (args.TryGetValue("menu", out var m)) view.menu = m == "" ? "main" : m;
         if (direct)

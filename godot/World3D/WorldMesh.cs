@@ -1,5 +1,6 @@
 // The world in 3D for first person: one mesh per CHUNK x CHUNK tiles, built from the grid (ground,
-// tile walls, edge walls, doors, windows, barricades, ceilings over indoor floors) and furniture.
+// tile walls, edge walls, doors, windows, barricades, ceilings over indoor tiles) and furniture.
+// What's indoors, and the roofs over it, is Roofs.cs's: a ceiling goes over each of its Indoor tiles.
 // Reads state only (rule 5). 1 tile = 1 m; grid x is +X and grid y is +Z; the ground is y = 0.
 // Plain boxes in vertex colours for now: the look of the world is its own job.
 
@@ -20,16 +21,13 @@ public static class WorldMesh
     const float SILL_H = 0.9f;
     const float LINTEL_H = 2.1f;
 
-    static readonly Color WALL = new(0.62f, 0.6f, 0.56f);
+    internal static readonly Color WALL = new(0.62f, 0.6f, 0.56f);
     static readonly Color DOOR = new(0.42f, 0.28f, 0.16f);
     static readonly Color DOOR_LOCKED = new(0.3f, 0.2f, 0.12f);
     static readonly Color PLANK = Ctx.Css(COLOURS.plank);
     static readonly Color GLASS = new(0.25f, 0.32f, 0.36f, 0.35f);
     static readonly Color CEILING = new(0.5f, 0.49f, 0.46f);
     static readonly Color WATER = Ctx.Css(COLOURS.tiles["water"]);
-
-    /// <summary>Ground kinds that are a building's floor, so get a ceiling over them (Grids.GROUNDS).</summary>
-    static readonly HashSet<string> INDOORS = new() { "boards", "tiles" };
 
     /// <summary>Furniture as a box: width, height, and colour (by kind; the rest a small grey box).</summary>
     static readonly Dictionary<string, (float w, float h, string colour)> FURNITURE = new()
@@ -59,6 +57,7 @@ public static class WorldMesh
                 if (look.edgeOpen.Contains(i * 2 + 1)) h = h * 31 + 3;
                 if (look.edgeBoarded.Contains(i * 2)) h = h * 31 + 4;
                 if (look.edgeBoarded.Contains(i * 2 + 1)) h = h * 31 + 5;
+                if (look.indoor.Contains(i)) h = h * 31 + 6;
             }
         if (look.furniture.TryGetValue((cx, cy), out var list))
             foreach (var f in list) h = h * 31 + f.kind.GetHashCode() * 13 + f.x * 7 + f.y;
@@ -70,6 +69,8 @@ public static class WorldMesh
     {
         public readonly HashSet<int> open = new(), edgeOpen = new(), edgeBoarded = new(), locked = new(), edgeLocked = new();
         public readonly Dictionary<(int, int), List<Furniture>> furniture = new();
+        /// <summary>Tiles with a ceiling over them (Roofs.Indoor).</summary>
+        public HashSet<int> indoor = new();
 
         public void Refresh(SimState state)
         {
@@ -106,7 +107,7 @@ public static class WorldMesh
                 if (tile == "wall") Box(st, new(x, 0, y), new(x + 1, WALL_H, y + 1), WALL);
                 else if (tile == "barricade") Box(st, new(x + 0.05f, 0, y + 0.05f), new(x + 0.95f, 1.0f, y + 0.95f), PLANK);
                 else if (tile == "door") TileDoor(st, g, x, y, look.open.Contains(i), look.locked.Contains(i));
-                if (INDOORS.Contains(ground) && tile != "wall") Quad(st, new(x, WALL_H, y), new(x + 1, WALL_H, y), new(x + 1, WALL_H, y + 1), new(x, WALL_H, y + 1), CEILING, Vector3.Down);
+                if (look.indoor.Contains(i) && tile != "wall") Ceiling(st, state, x, y);
                 // This tile's two edges: north (along x at z = y) and west (along z at x = x).
                 for (int side = 0; side < 2; side++)
                 {
@@ -126,6 +127,13 @@ public static class WorldMesh
             mesh.SurfaceSetMaterial(1, glass);
         }
         return mesh;
+    }
+
+    /// <summary>A ceiling over an indoor tile at the walls' top, seen from below.</summary>
+    static void Ceiling(SurfaceTool st, SimState state, int x, int y)
+    {
+        float h = Roofs.Ground(state, x, y) + WALL_H;
+        Quad(st, new(x, h, y), new(x + 1, h, y), new(x + 1, h, y + 1), new(x, h, y + 1), CEILING, Vector3.Down);
     }
 
     static void Ground(SurfaceTool st, int x, int y, string tile, string ground)
