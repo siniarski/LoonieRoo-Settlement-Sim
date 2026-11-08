@@ -44,13 +44,14 @@ public partial class LookLab : Node3D
     static string CandPath(string cand, string subject, string variant)
     {
         string plain = $"res://assets/characters/look/look_{cand}_{subject}.glb";
-        if (variant is "" or "slack" or "painted") return plain;
+        if (variant is "" or DefaultFace or "painted") return plain;
         string path = plain.Replace(".glb", $"_{variant}.glb");
         return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
     }
 
     static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes" };
-    static readonly string[] Faces = { "slack", "gaunt", "bloated", "torn", "feral" };
+    static readonly string[] Faces = { "feral", "slack", "gaunt", "bloated", "torn" };
+    const string DefaultFace = "feral";  // chosen 2026-11-08; the others are kept to compare
     static readonly string[] ClothesSets = { "painted", "jacket", "hoodie" };
     // How far each face's jaw hangs at rest (jaw_open), neutral.
     static readonly Dictionary<string, double> Slack = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
@@ -65,7 +66,7 @@ public partial class LookLab : Node3D
         ["mannequin"] = new double[] { 0 },
     };
 
-    string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day", faceVariant = "slack", clothesSet = "painted";
+    string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day", faceVariant = DefaultFace, clothesSet = "painted";
     double turn;  // the subject turned from facing you, degrees
     int forcedLod = -1, crowdLod = -1, crowdCount;
     double dist = 3, lodBias = 1, sightRange = 12;
@@ -158,7 +159,7 @@ public partial class LookLab : Node3D
         string path = which == "mannequin" ? MannequinPath : CandPath(which, subj, variant);
         var root = GD.Load<PackedScene>(path).Instantiate<Node3D>();
         parent.AddChild(root);
-        var a = new Actor { Root = root, Cand = which, Subject = subj, Variant = path.Contains("_" + variant + ".glb") || variant is "slack" or "painted" ? variant : "(none for " + which + ")" };
+        var a = new Actor { Root = root, Cand = which, Subject = subj, Variant = path.Contains("_" + variant + ".glb") || variant is DefaultFace or "painted" ? variant : "(none for " + which + ")" };
         if (which == "mannequin")
         {
             // The region meshes together are its one "LOD"; the stumps stay hidden.
@@ -617,7 +618,7 @@ public partial class LookLab : Node3D
                 await Shot($"{dir}/face_{fv}_{fm}.png");
             }
         }
-        faceVariant = "slack";
+        faceVariant = DefaultFace;
         // Clothes side by side, facing and turned; then each closer, turned.
         cand = "clothes";
         Rebuild();

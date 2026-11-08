@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b5xqcr0rqos0l"
-path="res://.godot/imported/look_plus_zombie_feral.glb-49a2da4961ce1931e0197bfac3d913e9.scn"
+uid="uid://bbu05acvv5su8"
+path="res://.godot/imported/look_plus_zombie_slack.glb-296f03ee8a82850ff2a83b2a89af8ef7.scn"
 
 [deps]
 
-source_file="res://assets/characters/look/look_plus_zombie_feral.glb"
-dest_files=["res://.godot/imported/look_plus_zombie_feral.glb-49a2da4961ce1931e0197bfac3d913e9.scn"]
+source_file="res://assets/characters/look/look_plus_zombie_slack.glb"
+dest_files=["res://.godot/imported/look_plus_zombie_slack.glb-296f03ee8a82850ff2a83b2a89af8ef7.scn"]
 
 [params]
 

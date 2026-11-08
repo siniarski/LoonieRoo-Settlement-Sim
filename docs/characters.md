@@ -116,14 +116,19 @@ snarl at rest), **bloated** (puffy cheeks and lids, a double chin, marbled purpl
 taken the left side of the lower lip and cheek: teeth show), **feral** (heavy brow, long wide jaw, bloodshot eyes with
 yellowed irises, the jaw hanging further). Each is extra brushes and paint over the same head, with the same two
 keys; how far the jaw hangs at rest is the lab's (Slack in LookLab.cs). Up close they read as different people; at
-1.5 m mostly by colour (bloated) and the mouth (gaunt, torn). Not yet decided which (or a mix: a variant per zombie).
+1.5 m mostly by colour (bloated) and the mouth (gaunt, torn). **Decided: feral** (the player, 2026-11-08): it's the
+default zombie face (paint.OUTFITS); the other four stay as files to compare. The faces are uncanny as they are: a
+focused session on faces is wanted later (a real sculpt or a CC0 base, not more brushes).
 
 **Clothes with volume** (clothes.py, `--clothes jacket|hoodie`, the lab's "clothes" lineup and Clothes picker): a
 garment is **its own mesh**, a shell cut from the body where it covers, smoothed so it bridges the body's dips (cloth
 drapes, skin doesn't), stood off the skin by its own thickness profile (a jacket's hem flaring off the hips, a
 hoodie's ribbed cuffs and waistband pulled in with the cloth bunched above them, loose jeans widening to the ankle
 with a turn-up), plus pieces a shell can't make (a stand collar, a hood lying on the back, a pouch pocket,
-drawstrings). Hems get a rim (Solidify, rim only; the cloth material is two-sided). The body under a garment is
+drawstrings). Then it **hangs** (clothes.py `hang`): loose cloth doesn't follow the body all the way. Below the chest
+a jacket or hoodie drops straight to the hem (points move out, never in, to an ellipse as wide as the chest; a
+hoodie's ribbed waistband pulls back in), and a loose jeans leg becomes a plain tube from the calf down, with a level
+hem resting over the shoe instead of wrapping it (the shoe's front is left out of the leg's shell). Hems get a rim (Solidify, rim only; the cloth material is two-sided). The body under a garment is
 deleted (it never shows and can't poke through); weights for every piece come from one closed, auto-weighted body
 by nearest-surface transfer (heat weighting fails on open meshes: the mouth cut showed it). Body and garments share
 one 2048 atlas and normal map, painted per piece from a baked piece id. Triangles: the jacket outfit is 31k at LOD0

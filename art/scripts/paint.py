@@ -65,7 +65,8 @@ OUTFITS = {
     # neck: the collar's height at the front; hem: the shirt's bottom; shoe: the shoe's top.
     "zombie": {"shirt": rgb(0.30, 0.36, 0.42), "sleeve": 0.34, "neck": 1.415, "hem": 0.93,
                "trousers": rgb(0.17, 0.21, 0.30), "shoes": rgb(0.55, 0.53, 0.50), "shoe": 0.10,
-               "skin": rgb(0.40, 0.42, 0.37), "hair": rgb(0.16, 0.13, 0.10), "dead": True},
+               "skin": rgb(0.40, 0.42, 0.37), "hair": rgb(0.16, 0.13, 0.10), "dead": True,
+               "face": "feral"},  # chosen 2026-11-08 from the five candidates (sculpt.py FACE_VARIANTS)
     "survivor": {"shirt": rgb(0.30, 0.31, 0.22), "sleeve": 0.73, "neck": 1.44, "hem": 0.90,
                  "trousers": rgb(0.24, 0.22, 0.19), "shoes": rgb(0.20, 0.14, 0.09), "shoe": 0.18,
                  "skin": rgb(0.70, 0.52, 0.42), "hair": rgb(0.20, 0.15, 0.11), "dead": False},

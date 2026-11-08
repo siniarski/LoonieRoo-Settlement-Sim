@@ -78,7 +78,8 @@ def hoodie_cover(p):
 
 def jeans_mask(p):
     x, y, z, ax, arm, neck = _parts(p)
-    return sstep(0.04, 0.05, z) * sstep(1.0, 0.99, z) * (ax < 0.22)
+    toes = sstep(0.11, 0.09, z) * sstep(-0.03, -0.05, y)  # the shoe's front stays out of the leg
+    return sstep(0.04, 0.05, z) * sstep(1.0, 0.99, z) * (ax < 0.22) * (1 - toes)
 
 
 def jeans_lift(p):
@@ -92,6 +93,57 @@ def jeans_lift(p):
 def jeans_cover(p):
     x, y, z, ax, arm, neck = _parts(p)
     return sstep(0.09, 0.11, z) * sstep(0.975, 0.965, z) * (ax < 0.21)
+
+
+# ---------------------------------------------------------------- hang (after the lift)
+# Loose cloth doesn't follow the body all the way: it hangs. These move the lifted shell (co) by where
+# each point sits on the body (rest).
+
+def _ellipse_r(dx, dy, rx, ry):
+    th = np.arctan2(dy, dx)
+    return rx * ry / np.sqrt((ry * np.cos(th)) ** 2 + (rx * np.sin(th)) ** 2)
+
+
+def _torso_hang(co, rest, rx, ry, top=1.20, rib=None):
+    """Below the chest the cloth drops straight to the hem instead of following the waist in: points
+    move out (never in) to an ellipse about as wide as the chest. rib = (z0, z1): a waistband pulls in."""
+    x, y, z, ax, arm, neck = _parts(rest)
+    w = sstep(top, top - 0.12, z) * (1 - arm)
+    if rib:
+        w = w * (1 - 0.65 * sstep(rib[1], rib[0], z))
+    out = co.copy()
+    dx, dy = co[:, 0], co[:, 1] - 0.005
+    r = np.hypot(dx, dy) + 1e-9
+    re = _ellipse_r(dx, dy, rx, ry)
+    k = (r + np.maximum(0, re - r) * w) / r
+    out[:, 0], out[:, 1] = dx * k, dy * k + 0.005
+    return out
+
+
+def jacket_hang(co, rest):
+    return _torso_hang(co, rest, 0.162, 0.132)
+
+
+def hoodie_hang(co, rest):
+    return _torso_hang(co, rest, 0.168, 0.138, rib=(0.88, 0.92))
+
+
+def jeans_hang(co, rest):
+    """A loose leg falls straight from the calf: round the shin it becomes a plain tube (no taper to the
+    ankle, nothing wrapping over the shoe) and the hem is level."""
+    z = rest[:, 2]
+    out = co.copy()
+    sx = np.where(rest[:, 0] >= 0, 1.0, -1.0)
+    ax_x, ax_y = sx * 0.090, 0.008
+    dx, dy = co[:, 0] - ax_x, co[:, 1] - ax_y
+    r = np.hypot(dx, dy) + 1e-9
+    R = 0.064 + 0.005 * sstep(0.30, 0.10, z) + 0.004 * sstep(0.095, 0.085, z)  # widening a touch; the turn-up
+    w = sstep(0.40, 0.20, z)
+    nr = r + (R - r) * w
+    out[:, 0], out[:, 1] = ax_x + dx / r * nr, ax_y + dy / r * nr
+    low = z < 0.085
+    out[low, 2] = 0.058 + (co[low, 2] - 0.058) * 0.15  # a level hem
+    return out
 
 
 # ---------------------------------------------------------------- extra pieces (bmesh, Blender space)
@@ -151,7 +203,7 @@ def hoodie_extras(bm):
             bm.faces.new((ra[k], ra[(k + 1) % tube], rb[(k + 1) % tube], rb[k]))
     _ellipsoid(bm, (0, 0.112, 1.335), (0.115, 0.026, 0.095))
     # The pouch pocket.
-    _ellipsoid(bm, (0, -0.108, 1.02), (0.095, 0.007, 0.048), segs=20, rings=8)
+    _ellipsoid(bm, (0, -0.131, 1.02), (0.095, 0.007, 0.048), segs=20, rings=8)  # on the hanging front (hoodie_hang)
     # Drawstrings.
     for sx in (1, -1):
         _tube(bm, [Vector((sx * 0.024, -0.072, 1.420)), Vector((sx * 0.027, -0.118, 1.350)), Vector((sx * 0.030, -0.138, 1.270))], 0.0032)
@@ -162,9 +214,9 @@ def jeans_extras(bm):
 
 
 GARMENTS = {
-    "jacket": {"mask": jacket_mask, "lift": jacket_lift, "cover": jacket_cover, "extras": jacket_extras, "tris": 6000},
-    "hoodie": {"mask": hoodie_mask, "lift": hoodie_lift, "cover": hoodie_cover, "extras": hoodie_extras, "tris": 7000},
-    "jeans": {"mask": jeans_mask, "lift": jeans_lift, "cover": jeans_cover, "extras": jeans_extras, "tris": 4500},
+    "jacket": {"mask": jacket_mask, "lift": jacket_lift, "cover": jacket_cover, "extras": jacket_extras, "hang": jacket_hang, "tris": 6000},
+    "hoodie": {"mask": hoodie_mask, "lift": hoodie_lift, "cover": hoodie_cover, "extras": hoodie_extras, "hang": hoodie_hang, "tris": 7000},
+    "jeans": {"mask": jeans_mask, "lift": jeans_lift, "cover": jeans_cover, "extras": jeans_extras, "hang": jeans_hang, "tris": 4500},
 }
 OUTFITS = {"jacket": ["jacket", "jeans"], "hoodie": ["hoodie", "jeans"]}
 
@@ -212,8 +264,12 @@ def shell(skin_obj, name):
     bpy.ops.object.modifier_apply(modifier=m.name)
     obj.data.update()
     co, n = _np_verts(obj), _np_normals(obj)
-    obj.data.vertices.foreach_set("co", (co + n * g["lift"](rest)[:, None]).ravel())
+    lifted = co + n * g["lift"](rest)[:, None]
+    obj.data.vertices.foreach_set("co", g["hang"](lifted, rest).ravel())
     obj.data.update()
+    m = obj.modifiers.new("Settle", "SMOOTH")  # blend where the hang starts
+    m.factor, m.iterations = 0.5, 3
+    bpy.ops.object.modifier_apply(modifier=m.name)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     g["extras"](bm)

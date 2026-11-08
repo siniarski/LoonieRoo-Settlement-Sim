@@ -15,7 +15,7 @@
 #
 #   blender --background --factory-startup --python art/scripts/build_lookdev.py -- \
 #       --subject zombie|survivor --out godot/assets/characters/look [--only plus|pz] [--tex 2048]
-#       [--face slack|gaunt|bloated|torn|feral] [--clothes jacket|hoodie]
+#       [--face feral|slack|gaunt|bloated|torn (feral unless said)] [--clothes jacket|hoodie]
 #       [--blend art/blend/look_zombie.blend] [--preview DIR]
 #
 # Writes <out>/look_<cand>_<subject>[_<face or clothes>].glb, its meshes named <piece>_lod<i> (body,
@@ -390,8 +390,9 @@ def build_candidate(cand, subject, base, high, garments, arm, src, out_dir, size
     for p in problems:
         print("VALIDATE:", p)
 
-    tag = outfit.get("face", "slack") if subject == "zombie" else outfit.get("clothes", "")
-    tag = "" if tag in ("slack", "") else "_" + tag
+    # The default face (paint.OUTFITS) is the plain file; another face or a clothes set is a suffix.
+    tag = outfit.get("face", "") if subject == "zombie" else outfit.get("clothes", "")
+    tag = "" if tag in ("", paint.OUTFITS[subject].get("face", "")) else "_" + tag
     path = os.path.join(out_dir, f"look_{cand}_{subject}{tag}.glb")
     bpy.ops.object.select_all(action="DESELECT")
     for o in meshes + [arm]:

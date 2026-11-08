@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c4nk13817tcmy"
-path="res://.godot/imported/look_plus_zombie_feral_albedo_plus.jpg-be8be5821881cb7fa0475d759b18bf67.ctex"
+uid="uid://cfq6io24jxwdy"
+path="res://.godot/imported/look_plus_zombie_slack_normal.jpg-2b84f342ee37be3f1f4f0aca5ad7f7e4.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "d38be5b4bec67b0b24bfe2ae27ee7225"
+"md5": "19bfb9cf4aec07fd5d5bb6e78f4f91ba"
 }
 
 [deps]
 
-source_file="res://assets/characters/look/look_plus_zombie_feral_albedo_plus.jpg"
-dest_files=["res://.godot/imported/look_plus_zombie_feral_albedo_plus.jpg-be8be5821881cb7fa0475d759b18bf67.ctex"]
+source_file="res://assets/characters/look/look_plus_zombie_slack_normal.jpg"
+dest_files=["res://.godot/imported/look_plus_zombie_slack_normal.jpg-2b84f342ee37be3f1f4f0aca5ad7f7e4.ctex"]
 
 [params]
 
