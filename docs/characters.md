@@ -104,6 +104,18 @@ In the lab (2026-11-08): the mannequin is region meshes with stump caps at the j
   1. **CC0 / free libraries for the bulk**, retargeted on import: Quaternius's animation libraries (CC0), Mixamo (free with an Adobe account; usable in games, raw files not redistributable). Locomotion and generic combat should come from here or from mocap, not hand-keyframing.
   2. **Blender-authored with AI help** for what libraries don't have (door variants, barricading, boosts, zombie grabs): Claude scripts poses and keys through MCP or Python, and the player judges and corrects. Expect blocking-quality first passes; keyframing good motion through scripts is the weakest link of the whole pipeline.
   3. Optional later: video-to-mocap tools for specific actions (a new dependency: ask first).
+- **Retargeting, built (2026-11-08)**: baked in Blender (art/scripts/retarget.py, a bone map per library in
+  art/scripts/bonemaps/), not Godot's import-time BoneMap, so the clips land on our exact rig, pass the validator, and
+  need no import setup. Each mapped bone takes the source bone's world rotation relative to its rest, applied to ours,
+  then swung (least rotation) to point where the source bone points: rest differences would otherwise carry into the
+  pose (the library's shoulders rest 31° back; without the swing our hands sat 10 cm forward in a pistol aim). Hips
+  are placed so the point between the hip joints follows the source's, scaled by leg length (the hips bone sits at
+  different heights relative to the hip joints on the two rigs, so following it moved the feet 1-3.5 cm with every
+  pelvis tilt). First library: Quaternius's Universal Animation Library, Standard (CC0, 43 clips: locomotion, crouch,
+  pistol, punches, sword, sitting, kneeling repair, push, pick-up, death, hits, swim, drive...) in
+  godot/assets/characters/clips_ual.glb, our ankles within ~1 cm of the source's in every clip. The lab's Library
+  tab plays them. Not done yet: putting library locomotion into the blend space (the cycles start in their own phase,
+  not ours), and the library's 10 cm shorter toe bone means feet roll off the toe a little differently.
 
 ### First-person later
 
