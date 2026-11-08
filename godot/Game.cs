@@ -103,6 +103,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // The sim formats numbers JS's way; keep the UI (and CSS colour strings) culture-free too.
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--selftest") >= 0 && SelfTestQuitOnUnimported()) return;
 
         ctx = new Ctx(this);
         painter = new Painter(ctx);
