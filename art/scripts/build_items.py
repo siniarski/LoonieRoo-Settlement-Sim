@@ -344,6 +344,211 @@ KINDS = {
 }
 
 
+# --- variants: a few more models for the commonest kinds, named "<kind>_v1", "<kind>_v2"... The game picks one
+# per item by a hash of its id (render side only: the sim knows only the kind). Each keeps its kind's size
+# and reads as the same kind at a glance. Weapons keep the club's grip (x -0.29, 3.5 cm up): held in hand,
+# the game puts the hand there.
+
+def food_v1(g):
+    """A loaf of bread and a jar of preserves."""
+    box(g, (0.24, 0.12, 0.08), (0, -0.04, 0), lin(170, 118, 62), taper=0.85, top=lin(140, 88, 42))
+    box(g, (0.2, 0.1, 0.02), (0, -0.04, 0.075), lin(150, 100, 50), taper=0.7)
+    cyl(g, 0.04, 0.09, (0.04, 0.09, 0), lin(120, 30, 46), seg=10)
+    cyl(g, 0.042, 0.02, (0.04, 0.09, 0.09), lin(200, 190, 160), metal=0.5, seg=10)
+
+
+def food_v2(g):
+    """A sack of rice, tied at the neck, and a box of pasta beside it."""
+    box(g, (0.2, 0.14, 0.16), (0, 0, 0), lin(196, 178, 140), taper=0.8, top=lin(176, 160, 120))
+    box(g, (0.05, 0.05, 0.05), (0, 0, 0.16), lin(176, 160, 120), taper=0.6)
+    box(g, (0.1, 0.004, 0.06), (0, -0.072, 0.04), lin(60, 100, 150))
+    box(g, (0.2, 0.06, 0.04), (0.06, 0.12, 0), lin(40, 70, 140), rz=20, top=lin(220, 200, 60))
+
+
+def food_v3(g):
+    """Three short tins of beans, two side by side and one on them, and one more on its side."""
+    blue = lin(46, 84, 150)
+    for x, y, z in ((-0.042, 0, 0), (0.042, 0.01, 0), (0.0, 0.005, 0.072)):
+        cyl(g, 0.04, 0.07, (x, y, z), blue, caps=STEEL, seg=10)
+        cyl(g, 0.041, 0.02, (x, y, z + 0.025), WHITE, seg=10)
+    cyl(g, 0.04, 0.07, (0.02, -0.11, 0.04), lin(170, 120, 40), caps=STEEL, seg=10, axis="x", rz=70)
+
+
+def meal_v1(g):
+    """A bowl of soup with a spoon in it and a crust of bread."""
+    cyl(g, 0.06, 0.06, (0, 0, 0), lin(200, 196, 186), seg=12, r2=0.09)
+    cyl(g, 0.082, 0.004, (0, 0, 0.05), lin(170, 110, 50), seg=12)
+    box(g, (0.14, 0.012, 0.006), (0.05, 0.0, 0.07), STEEL, metal=1, ry=-25)
+    box(g, (0.1, 0.06, 0.04), (0.06, -0.12, 0), lin(170, 118, 62), rz=30, taper=0.8)
+
+
+def bandage_v1(g):
+    """A box of plasters, open, a few spilled, and a roll of tape."""
+    box(g, (0.12, 0.08, 0.04), (0, 0, 0), WHITE, top=lin(190, 40, 40))
+    box(g, (0.12, 0.004, 0.03), (0, 0.04, 0.04), WHITE, rx=-40)
+    for k in range(3):
+        box(g, (0.07, 0.02, 0.002), (0.13 + 0.01 * k, -0.04 + 0.025 * k, 0), lin(220, 180, 140), rz=15 * k)
+    cyl(g, 0.03, 0.025, (-0.1, 0.06, 0), WHITE, seg=10, caps=CREAM)
+
+
+def medicine_v1(g):
+    """A brown glass bottle of cough syrup and a blister pack's box."""
+    cyl(g, 0.032, 0.11, (0, 0, 0), lin(90, 50, 20), seg=10)
+    cyl(g, 0.016, 0.02, (0, 0, 0.11), lin(90, 50, 20), seg=8)
+    cyl(g, 0.019, 0.02, (0, 0, 0.13), WHITE, seg=8)
+    box(g, (0.05, 0.002, 0.05), (0, -0.032, 0.03), WHITE)
+    box(g, (0.12, 0.07, 0.025), (0.08, 0.07, 0), lin(60, 140, 160), rz=-20, top=WHITE)
+
+
+def medicine_v2(g):
+    """A white tub of tablets with a blue label, and two loose strips."""
+    cyl(g, 0.04, 0.09, (0, 0, 0), WHITE, seg=10)
+    cyl(g, 0.041, 0.04, (0, 0, 0.025), lin(50, 90, 170), seg=10)
+    cyl(g, 0.043, 0.02, (0, 0, 0.09), WHITE, seg=10)
+    for k in range(2):
+        box(g, (0.09, 0.04, 0.004), (0.09, -0.04 + 0.06 * k, 0.002 * k), STEEL, metal=0.8, rz=25 - 40 * k)
+
+
+def weapon_v1(g):
+    """A length of pipe with a taped grip and a bend near the end."""
+    cyl(g, 0.02, 0.58, (0.0, 0, 0.035), STEEL_D, metal=1, seg=8, axis="x", caps=BLACK)
+    cyl(g, 0.02, 0.18, (0.36, 0.03, 0.035), STEEL_D, metal=1, seg=8, axis="x", rz=20, caps=BLACK)
+    cyl(g, 0.024, 0.16, (-0.29, 0, 0.035), lin(150, 150, 140), seg=8, axis="x")
+    cyl(g, 0.026, 0.03, (0.29, 0.0, 0.035), STEEL, metal=1, seg=8, axis="x")
+
+
+def weapon_v2(g):
+    """A crowbar: a bar with a claw at one end and a flat tip at the other."""
+    red = lin(150, 30, 26)
+    cyl(g, 0.014, 0.7, (0.0, 0, 0.035), red, metal=0.6, seg=6, axis="x", caps=STEEL_D)
+    box(g, (0.07, 0.03, 0.012), (0.36, 0, 0.03), STEEL_D, metal=1, ry=-50)
+    box(g, (0.05, 0.034, 0.012), (0.39, 0, 0.075), STEEL_D, metal=1, ry=-120)
+    box(g, (0.06, 0.028, 0.008), (-0.37, 0, 0.03), STEEL_D, metal=1, ry=12)
+
+
+def cloth_v1(g):
+    """A blanket rolled up and tied with string."""
+    cyl(g, 0.07, 0.42, (0, 0, 0.07), lin(120, 40, 36), seg=10, axis="x", caps=lin(150, 60, 50))
+    for x in (-0.12, 0.12):
+        cyl(g, 0.072, 0.012, (x, 0, 0.07), ROPE, seg=10, axis="x")
+
+
+def cloth_v2(g):
+    """A heap of rags in different colours."""
+    rags = ((0, 0, 0, 10, lin(140, 130, 110)), (0.06, 0.04, 0.02, -25, lin(70, 80, 100)),
+            (-0.05, 0.03, 0.035, 50, lin(150, 140, 60)), (0.02, -0.05, 0.045, -70, lin(110, 60, 56)))
+    for k, (x, y, z, a, c) in enumerate(rags):
+        box(g, (0.2 - 0.02 * k, 0.12, 0.025), (x, y, z), c, rz=a, taper=0.8)
+
+
+def coat_v1(g):
+    """A navy anorak laid flat: its sleeves out, the hood at the top, the zip down the middle."""
+    c = lin(46, 56, 80)
+    box(g, (0.46, 0.4, 0.05), (0, 0, 0), c)
+    for y in (-0.1, 0.1):
+        box(g, (0.36, 0.09, 0.035), (0.02, y * 2.0, 0.0), mul(c, 0.9), rz=y * 60)
+    box(g, (0.14, 0.2, 0.05), (0.29, 0, 0.0), mul(c, 0.8), taper=0.8)
+    box(g, (0.44, 0.012, 0.004), (0, 0, 0.05), STEEL_D, metal=1)
+
+
+def boots_v1(g):
+    """A pair of green wellingtons standing side by side, one a little turned: a sole and toe, a tall leg."""
+    green = lin(52, 74, 46)
+    for (x, y, a) in ((0, -0.065, 0), (0.02, 0.07, 14)):
+        sub = Geo()
+        box(sub, (0.27, 0.1, 0.025), (0.02, 0, 0), BLACK)
+        box(sub, (0.24, 0.095, 0.07), (0.03, 0, 0.025), mul(green, 0.85), taper=0.85)
+        cyl(sub, 0.052, 0.32, (-0.05, 0, 0.025), green, seg=8, r2=0.056, caps=mul(green, 0.5))
+        m = place((x, y, 0), a)
+        base = len(g.v)
+        g.v.extend(m @ v for v in sub.v)
+        g.f.extend(([base + i for i in idx], c, mt) for idx, c, mt in sub.f)
+
+
+def ammo_v1(g):
+    """A box of shotgun shells, open, red shells standing in it and one spilled."""
+    box(g, (0.12, 0.08, 0.05), (0, 0, 0), lin(190, 170, 120), top=lin(130, 40, 30))
+    for k in range(3):
+        for j in (-0.018, 0.018):
+            cyl(g, 0.01, 0.03, (-0.03 + 0.03 * k, j, 0.05), lin(170, 36, 30), seg=6, caps=BRASS)
+    cyl(g, 0.01, 0.07, (0.1, -0.06, 0.01), lin(170, 36, 30), seg=6, axis="x", rz=40, caps=BRASS)
+
+
+def book_v1(g):
+    """A paperback lying open, face down, its spine up like a little roof."""
+    c = lin(170, 70, 40)
+    box(g, (0.11, 0.17, 0.004), (-0.05, 0, 0.0), c, ry=-12)
+    box(g, (0.11, 0.17, 0.004), (0.05, 0, 0.0), c, ry=12)
+    box(g, (0.2, 0.16, 0.01), (0, 0, 0.0), CREAM)
+    box(g, (0.012, 0.17, 0.006), (0, 0, 0.022), mul(c, 0.7))
+
+
+def book_v2(g):
+    """A stack of three books, each a little turned."""
+    for k, (c, a) in enumerate(((lin(30, 60, 100), 0), (lin(130, 30, 30), 12), (lin(60, 60, 60), -8))):
+        box(g, (0.23 - 0.02 * k, 0.16 - 0.01 * k, 0.035), (0, 0, 0.035 * k), c, rz=a, top=c)
+        box(g, (0.005, 0.15 - 0.01 * k, 0.029), (0.11 - 0.01 * k, 0, 0.035 * k + 0.003), CREAM, rz=a)
+
+
+def scrap_v1(g):
+    """A hubcap and a coil of copper wire."""
+    cyl(g, 0.17, 0.02, (0, 0, 0), STEEL, metal=1, seg=12, r2=0.12, caps=lin(180, 182, 186))
+    cyl(g, 0.04, 0.025, (0, 0, 0.02), STEEL_D, metal=1, seg=8)
+    for k in range(3):
+        cyl(g, 0.08 - 0.008 * k, 0.008, (0.2, 0.1, 0.008 * k), lin(180, 100, 50), metal=1, seg=10)
+
+
+def scrap_v2(g):
+    """Two lengths of angle iron and loose bolts, rusted."""
+    for k, a in enumerate((5, 35)):
+        box(g, (0.45, 0.04, 0.004), (0, 0.05 * k, 0), RUST, metal=0.6, rz=a)
+        box(g, (0.45, 0.004, 0.04), (0, 0.05 * k - 0.02, 0), mul(RUST, 0.85), metal=0.6, rz=a)
+    for x, y in ((0.15, -0.1), (0.19, -0.07), (-0.12, -0.1)):
+        cyl(g, 0.008, 0.04, (x, y, 0.008), STEEL_D, metal=1, seg=6, axis="x", rz=x * 300)
+        cyl(g, 0.013, 0.008, (x, y, 0.0), STEEL_D, metal=1, seg=6)
+
+
+def wood_v1(g):
+    """Split firewood: three logs, two side by side and one across."""
+    for y in (-0.06, 0.06):
+        cyl(g, 0.055, 0.42, (0, y, 0.055), BARK, seg=6, axis="x", caps=WOOD_L)
+    cyl(g, 0.05, 0.4, (0.02, 0, 0.15), BARK, seg=6, axis="x", rz=25, caps=WOOD_L)
+
+
+def wood_v2(g):
+    """Two planks nailed to crosspieces: a broken bit of pallet."""
+    for y in (-0.08, 0.08):
+        box(g, (0.7, 0.1, 0.02), (0, y, 0.025), WOOD_L, top=lin(196, 160, 110))
+    box(g, (0.1, 0.32, 0.025), (-0.2, 0, 0), WOOD_D)
+    box(g, (0.1, 0.2, 0.025), (0.22, -0.05, 0), WOOD_D, rz=10)
+
+
+VARIANTS = {
+    "food": [food_v1, food_v2, food_v3], "meal": [meal_v1], "bandage": [bandage_v1],
+    "medicine": [medicine_v1, medicine_v2], "weapon": [weapon_v1, weapon_v2], "cloth": [cloth_v1, cloth_v2],
+    "coat": [coat_v1], "boots": [boots_v1], "ammo": [ammo_v1], "book": [book_v1, book_v2],
+    "scrap": [scrap_v1, scrap_v2], "wood": [wood_v1, wood_v2],
+}
+
+
+# --- the hand: a gloved fist round a handle and a sleeved forearm, for what you hold in first person
+# (godot/World3D/Held.cs), a stand-in until the first-person arms rig (docs/characters.md). The handle runs
+# along X through the origin (where an item's grip goes), the knuckles up (+Z); the forearm runs from the
+# wrist out along -Y (in the game the mesh's +Z, towards you).
+
+GLOVE = lin(62, 54, 44)
+SLEEVE = lin(58, 64, 56)
+
+
+def hand(g):
+    box(g, (0.085, 0.07, 0.08), (0, 0, -0.04), GLOVE, taper=0.92, top=mul(GLOVE, 1.15))
+    for k in range(4):
+        box(g, (0.019, 0.012, 0.022), (-0.03 + 0.02 * k, 0.035, 0.0), mul(GLOVE, 0.8))
+    box(g, (0.05, 0.022, 0.022), (0.02, 0.02, 0.025), mul(GLOVE, 1.08), rz=-15)
+    cyl(g, 0.034, 0.08, (0, -0.03, 0), GLOVE, seg=8, rx=90, caps=GLOVE)
+    cyl(g, 0.045, 0.32, (0, -0.1, 0), SLEEVE, seg=8, rx=90, r2=0.052, caps=mul(SLEEVE, 0.8))
+
+
 # --- out to Blender, the glTF and a preview ---
 
 def material():
@@ -383,7 +588,7 @@ def preview(path, objs):
     scene.display.shading.color_type = "VERTEX"
     scene.display.shading.light = "STUDIO"
     scene.render.resolution_x, scene.render.resolution_y = 1600, 900
-    cols = 7
+    cols = 9
     for k, ob in enumerate(objs):
         ob.location = ((k % cols) * 1.3, (k // cols) * 1.3, 0)
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
@@ -405,7 +610,12 @@ def main():
         bpy.data.objects.remove(ob)
     mat = material()
     objs = []
+    models = []
     for name, fn in KINDS.items():
+        models.append((name, fn))
+        models += [(f"{name}_v{k + 1}", v) for k, v in enumerate(VARIANTS.get(name, []))]
+    models.append(("hand", hand))
+    for name, fn in models:
         g = Geo()
         fn(g)
         objs.append(to_object(name, g, mat))

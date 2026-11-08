@@ -3,7 +3,7 @@
 // the game turns them into `aim` and `steer` commands. Chunks of the world (WorldMesh) are built
 // near you and rebuilt only when what they show changes, a few a frame at most (rule 14).
 // People are the character models (People.cs), the nearest MAX_MODELS of them; the rest, animals
-// and cars are drawn by Bodies.cs, things on the ground by Items.cs.
+// and cars are drawn by Bodies.cs, things on the ground by Items.cs, what you hold by Held.cs.
 
 using System;
 using System.Collections.Generic;
@@ -35,6 +35,7 @@ public sealed partial class FirstPerson : Node3D
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
     readonly ItemModels items;
+    readonly Held held;
     readonly People people;
     readonly Trees trees;
     readonly Roofs roofs;
@@ -47,6 +48,7 @@ public sealed partial class FirstPerson : Node3D
     int sinceCheck;
     public int ChunkCount => chunks.Count;
     public int TreeCount => trees.Count;
+    public int ItemCount => items.Count;
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
 
@@ -63,6 +65,7 @@ public sealed partial class FirstPerson : Node3D
         AddChild(new WorldEnvironment { Environment = env });
         bodies = new Bodies(this);
         items = new ItemModels(this);
+        held = new Held(camera, items);
         people = new People(this);
         trees = new Trees(this);
         roofs = new Roofs(this);
@@ -101,7 +104,7 @@ public sealed partial class FirstPerson : Node3D
         var you = ControlMod.controlled(state);
         if (you == null) return;
         Terrain.Use(state);
-        var (eye, _, _) = Eye(state, you, alpha);
+        var (eye, inCar, _) = Eye(state, you, alpha);
         float ground = Terrain.Height(eye.X, eye.Z);
         if (float.IsNaN(eyeGround) || Math.Abs(ground - eyeGround) > EYE_SNAP) eyeGround = ground;
         else eyeGround += (ground - eyeGround) * (float)Math.Min(1, delta * EYE_EASE);
@@ -117,6 +120,7 @@ public sealed partial class FirstPerson : Node3D
         Modelled = modelled.Count;
         bodies.Update(state, alpha, eye, you.id, modelled);
         items.Update(state, eye);
+        held.Update(state, you, alpha, delta, inCar || EyeAt != null);
         sounds.Update(state, alpha, you);
     }
 
