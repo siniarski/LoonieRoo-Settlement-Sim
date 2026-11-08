@@ -36,13 +36,16 @@ public sealed partial class FirstPerson : Node3D
     readonly Bodies bodies;
     readonly People people;
     readonly Trees trees;
+    readonly Roofs roofs;
     /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
     public int Modelled { get; private set; }
-    /// <summary>When it last changed: walkability, open doors and windows, boards, furniture.</summary>
-    (int, int, int, int, int, int) worldKey = (-1, 0, 0, 0, 0, 0);
+    /// <summary>When it last changed: walkability, open doors and windows, boards, furniture, what's indoors.</summary>
+    (int, int, int, int, int, int, int) worldKey = (-1, 0, 0, 0, 0, 0, 0);
     int sinceCheck;
     public int ChunkCount => chunks.Count;
     public int TreeCount => trees.Count;
+    /// <summary>--eye: look from here (m) instead of your eyes, to see a place from outside or above (a debug view).</summary>
+    public Vector3? EyeAt;
 
     public FirstPerson()
     {
@@ -58,6 +61,8 @@ public sealed partial class FirstPerson : Node3D
         bodies = new Bodies(this);
         people = new People(this);
         trees = new Trees(this);
+        roofs = new Roofs(this);
+        look.indoor = roofs.Indoor;
     }
 
     /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
@@ -84,9 +89,11 @@ public sealed partial class FirstPerson : Node3D
         var you = ControlMod.controlled(state);
         if (you == null) return;
         var (eye, _, _) = Eye(state, you, alpha);
+        if (EyeAt is { } at) eye = at;
         camera.Position = eye;
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
-        Light(state);
+        roofs.Update(state, eye, RADIUS);
+        Light(state, eye, delta);
         Chunks(state, eye);
         trees.Update(state, eye, look);
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
@@ -94,7 +101,10 @@ public sealed partial class FirstPerson : Node3D
         bodies.Update(state, alpha, eye, you.id, modelled);
     }
 
-    void Light(SimState state)
+    /// <summary>How much of the open sky's ambient light reaches you: less under a roof, eased so doorways don't flicker.</summary>
+    float ambient = 1;
+
+    void Light(SimState state, Vector3 eye, double delta)
     {
         double dark = Sim.Time.darkness(state.tick);
         float day = (float)(1 - dark);
@@ -109,7 +119,10 @@ public sealed partial class FirstPerson : Node3D
         env.BackgroundColor = sky;
         env.FogLightColor = sky;
         env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.08f, 0.09f, 0.13f), (float)dark);
-        env.AmbientLightEnergy = 0.5f;
+        int tile = (int)Math.Floor(eye.Z) * state.grid.width + (int)Math.Floor(eye.X);
+        float want = roofs.Indoor.Contains(tile) ? 0.45f : 1;
+        ambient += (want - ambient) * (float)Math.Min(1, delta * 3);
+        env.AmbientLightEnergy = 0.5f * ambient;
         // What you can make out round you in the dark.
         near.LightEnergy = (float)(0.5 * dark);
     }
@@ -117,7 +130,7 @@ public sealed partial class FirstPerson : Node3D
     void Chunks(SimState state, Vector3 eye)
     {
         var g = state.grid;
-        var key = (state.walkabilityVersion, Sum(g.edgeOpen), Sum(g.open), g.edgeBoarded.Count, state.furniture.Count, g.edgeLocked.Count + g.locked.Count);
+        var key = (state.walkabilityVersion, Sum(g.edgeOpen), Sum(g.open), g.edgeBoarded.Count, state.furniture.Count, g.edgeLocked.Count + g.locked.Count, roofs.Version);
         bool changed = key != worldKey || ++sinceCheck >= 120;
         if (changed)
         {
