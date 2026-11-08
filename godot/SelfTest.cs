@@ -1,7 +1,7 @@
 // `--selftest`: drives the running game with real input events (through Godot's input pipeline,
 // so the HUD's buttons and the game's handlers both see them) and checks what they did: walking,
-// pausing, the build bar and a wall placed with the mouse, the map, the menu, a HUD button, and a
-// save to a slot and back. Prints PASS/FAIL per step and quits with the number of failures as the
+// pausing, the build bar and a wall placed with the mouse, the map, the menu, a HUD button, a
+// save to a slot and back, and new games (group and solo) from the menu landing in first person. Prints PASS/FAIL per step and quits with the number of failures as the
 // exit code. The Godot side's equivalent of driving the browser game with Playwright.
 
 using System;
@@ -190,16 +190,66 @@ public partial class Game
         await Frames(2);
         Check("Load slot 3 brings the save back", state.tick == savedTick, $"tick {state.tick}, saved at {savedTick}");
 
+        // New game from the menu, from the Colony tab of this one: a group start (the default
+        // preset), then a solo one. Each lands in first person on your survivor, paused, Space to play.
+        await NewGameFromMenu("Survivor", "group");
+        await NewGameFromMenu("Apocalypse", "solo");
+
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);
     }
 
-    static Button? FindButton(Node root, string text)
+    /// <summary>B (the Colony tab), the HUD's Menu button, New game, a preset, Next, Start: checks you're in first person on your survivor.</summary>
+    async Task NewGameFromMenu(string preset, string start)
+    {
+        await Tap(Godot.Key.B);
+        var menuButton = FindButton(hud, "☰ Menu");
+        if (menuButton != null) await Click(menuButton.GetGlobalRect().GetCenter());
+        await Frames(2);
+        foreach (var text in new[] { "New game", preset, "Next: who you are", "Start" })
+        {
+            var b = FindButton(menu, text, prefix: text == preset);
+            if (b == null) { Check($"New game ({start}): the menu has \"{text}\"", false); return; }
+            await Click(b.GetGlobalRect().GetCenter());
+            await Frames(2);
+        }
+        await Frames(3);
+        var you = ControlMod.controlled(state);
+        Check($"New game ({start}) from the menu is first person on your survivor",
+            state.settings.start == start && you != null && you.id == state.survivors[0].id && view.menu == null && !view.colonyMode && !view.buildOpen && view.firstPerson && firstPerson.Visible,
+            $"start {state.settings.start}, playing {you?.id ?? "nobody"}, menu {view.menu ?? "none"}, colony {view.colonyMode}, first person {view.firstPerson}");
+        Check($"New game ({start}) starts paused with the banner up", view.paused && FindLabel(hud, "PAUSED") != null);
+        // SELFTEST_SHOT=prefix: save what the new start looks like (prefix-group.png, prefix-solo.png).
+        if (OS.GetEnvironment("SELFTEST_SHOT") is { Length: > 0 } shot)
+        {
+            await Frames(5);
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            GetViewport().GetTexture().GetImage().SavePng($"{shot}-{start}.png");
+        }
+        int tick = state.tick;
+        await Tap(Godot.Key.Space);
+        await Frames(10);
+        Check($"New game ({start}): Space plays", !view.paused && state.tick > tick, $"tick {tick} -> {state.tick}");
+        await Tap(Godot.Key.Space);
+    }
+
+    /// <summary>A visible label whose text starts with `text`.</summary>
+    static Label? FindLabel(Node root, string text)
     {
         foreach (var child in root.GetChildren())
         {
-            if (child is Button b && b.Text == text && b.IsVisibleInTree()) return b;
-            var found = FindButton(child, text);
+            if (child is Label l && l.Text.StartsWith(text) && l.IsVisibleInTree()) return l;
+            if (FindLabel(child, text) is { } found) return found;
+        }
+        return null;
+    }
+
+    static Button? FindButton(Node root, string text, bool prefix = false)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is Button b && (prefix ? b.Text.StartsWith(text) : b.Text == text) && b.IsVisibleInTree()) return b;
+            var found = FindButton(child, text, prefix);
             if (found != null) return found;
         }
         return null;

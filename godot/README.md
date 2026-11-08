@@ -33,7 +33,7 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - `--arena=one|crowd`: a debug arena (the dead round you); `--play`: on a group start, play its first survivor (to see the others in first person)
 - `--animals=N` or `--animals=wolf:3,deer`: animals spawned round you (the `spawnAnimal` command): N of them, the kinds in turn (deer, rabbit, wolf, bear, dog), or kinds with counts; `--animal-range=M` how far out the nearest stand (3.5 m; at 1.6 a wolf or bear bites at once). With `--paused` they hold still for a look: `--animals=deer,wolf,bear,dog,rabbit --paused --look=137`
 - `--shot=out.png --frames=N`: save a screenshot after N frames and quit
-- `--selftest`: the self-test (22 checks; saves go to a separate folder, never your slots); `./check.sh --all` runs it
+- `--selftest`: the self-test (28 checks; saves go to a separate folder, never your slots; `SELFTEST_SHOT=prefix` in the environment saves a picture of each new game it starts from the menu, prefix-group.png and prefix-solo.png); `./check.sh --all` runs it
 
 Logs: `%APPDATA%\Godot\app_userdata\LoonieRoo\logs`. Saves: `...\LoonieRoo\saves`. Exports and bug reports: `Documents\LoonieRoo`.
 
