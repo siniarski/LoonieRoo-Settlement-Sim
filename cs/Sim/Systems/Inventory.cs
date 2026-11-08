@@ -229,7 +229,7 @@ public static partial class Inventory
                 Items.dropItem(state, old, where);
             }
         }
-        return Clothing.isGarment(item.kind) ? $"put on the {Js.Str(item.kind)}" : ((slot == "tool") ? $"took the {Js.Str(item.kind)} in hand" : $"took up the {Js.Str(item.kind)}");
+        return Clothing.isGarment(item.kind) ? $"put on the {Items.nameOf(item)}" : ((slot == "tool") ? $"took the {Items.nameOf(item)} in hand" : $"took up the {Items.nameOf(item)}");
     }
 
     /// <summary>Everything in the bag falls where you fall (death, or leaving).</summary>

@@ -43,7 +43,7 @@ public sealed partial class Hud : Control
 
     // top bar
     Label clock = null!;
-    Button pauseButton = null!, buildButton = null!, prioritiesButton = null!, overviewButton = null!, colonyButton = null!;
+    Button pauseButton = null!, buildButton = null!, prioritiesButton = null!, overviewButton = null!, colonyButton = null!, bagButton = null!;
     readonly List<(int speed, Button button)> speedButtons = new();
     // left column
     readonly Label status = Kit.Label("", Kit.Dim, 12);
@@ -176,7 +176,8 @@ public sealed partial class Hud : Control
         var menuButton = Kit.Button("☰ Menu", () => files.OpenMenu(), tip: "Saves, loading, a new game (Esc)");
         overviewButton = Kit.Button("O Overview", () => view.showOverview = !view.showOverview);
         colonyButton = Kit.Button("M Map", () => view.openTab("map"), tip: "The map, and the colony's management in its Colony tab (M)");
-        foreach (var b in new[] { buildButton, prioritiesButton, menuButton, overviewButton, colonyButton }) bar.AddChild(b);
+        bagButton = Kit.Button("Tab Bag", () => view.showInventory = !view.showInventory, tip: "Your bag, what you wear, and the container beside you (Tab)");
+        foreach (var b in new[] { buildButton, prioritiesButton, menuButton, overviewButton, colonyButton, bagButton }) bar.AddChild(b);
         return panel;
     }
 
@@ -200,13 +201,15 @@ public sealed partial class Hud : Control
         }
         bool solo = view.survivorMode(you != null);
         colonyButton.Visible = view.firstPerson;
+        bagButton.Visible = !view.firstPerson && you != null && view.colonyMode && view.menu == null;
+        Kit.SetActive(bagButton, view.showInventory);
         foreach (var b in new[] { buildButton, prioritiesButton, overviewButton }) b.Visible = !solo;
 
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
                     ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
-                    : "M or Esc: back to first person · F on someone selected: play them instead · K hide"
+                    : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
                 : "K: keys"
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
         controlLine.Show(controlText != "", controlText, (r) => r.Text(controlText, Kit.Gold, 600));

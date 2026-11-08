@@ -40,8 +40,11 @@ public sealed class View
     public bool colonyMode;
     /// <summary>Set by the game each frame: you're seeing through your survivor's eyes (no menu, map or colony tab).</summary>
     public bool firstPerson;
-    /// <summary>Tab in first person: the bag, what's beside you, and your card, with the mouse let go.</summary>
+    /// <summary>Tab in first person (or in the Colony tab): the bag, what's beside you, and your card, with the mouse let go.</summary>
     public bool showInventory;
+
+    /// <summary>The inventory can be open: in first person, or in the Colony tab while you play someone (not under the menu or the map).</summary>
+    public bool inventoryAllowed(bool controlling) => menu == null && (firstPerson || (controlling && colonyMode && !showMap));
     /// <summary>The container the inventory is open on (one you used), or null: then whatever is beside you.</summary>
     public string? openContainer;
     /// <summary>First person: where you're looking (radians; yaw 0 is east, pi/2 south, as the grid; pitch up is positive).</summary>

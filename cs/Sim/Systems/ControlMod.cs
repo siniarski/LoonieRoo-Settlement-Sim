@@ -661,7 +661,7 @@ public static partial class ControlMod
         if ((slot == "carrying") && Inventory.fitsInPack(state, s, item))
         {
             Inventory.stow(state, s, item);
-            return $"put the {Js.Str(item.kind)} in your bag";
+            return $"put the {Items.nameOf(item)} in your bag";
         }
         var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.GetProp<string?>(s, slot)!) : null;
         var where = Js.NN(item.pos);
@@ -672,7 +672,7 @@ public static partial class ControlMod
         {
             Items.dropItem(state, old, where);
         }
-        return (slot == "carrying") ? $"picked up the {Js.Str(item.kind)}" : $"took the {Js.Str(item.kind)}";
+        return (slot == "carrying") ? $"picked up the {Items.nameOf(item)}" : $"took the {Items.nameOf(item)}";
     }
 
     public static string? search(Survivor s, Control c, Furniture crate)
