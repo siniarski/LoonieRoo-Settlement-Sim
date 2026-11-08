@@ -1,0 +1,28 @@
+{
+ "kind": "dog",
+ "height": 0.669,
+ "length": 1.047,
+ "lods": [
+  5000,
+  1600,
+  500
+ ],
+ "clips": {
+  "idle": {
+   "length": 4.0,
+   "speed": 0.0
+  },
+  "walk": {
+   "length": 0.7,
+   "speed": 0.787
+  },
+  "run": {
+   "length": 0.43333333333333335,
+   "speed": 2.703
+  },
+  "attack": {
+   "length": 0.8,
+   "speed": 0.0
+  }
+ }
+}

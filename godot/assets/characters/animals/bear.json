@@ -1,0 +1,28 @@
+{
+ "kind": "bear",
+ "height": 1.002,
+ "length": 1.535,
+ "lods": [
+  5000,
+  1600,
+  500
+ ],
+ "clips": {
+  "idle": {
+   "length": 4.0,
+   "speed": 0.0
+  },
+  "walk": {
+   "length": 1.2,
+   "speed": 0.57
+  },
+  "run": {
+   "length": 0.7,
+   "speed": 2.347
+  },
+  "attack": {
+   "length": 1.0,
+   "speed": 0.0
+  }
+ }
+}

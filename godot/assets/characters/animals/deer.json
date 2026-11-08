@@ -1,0 +1,24 @@
+{
+ "kind": "deer",
+ "height": 1.431,
+ "length": 1.353,
+ "lods": [
+  5000,
+  1600,
+  500
+ ],
+ "clips": {
+  "idle": {
+   "length": 4.0,
+   "speed": 0.0
+  },
+  "walk": {
+   "length": 1.0,
+   "speed": 0.957
+  },
+  "run": {
+   "length": 0.6,
+   "speed": 3.418
+  }
+ }
+}

@@ -80,5 +80,20 @@ public partial class CommandsTest
             cmd.x = Js.I(4);
             expect(Js.Get(state.commandLog, 0)?.command).toEqual(Js.Obj(("type", (object?)("placeWall")), ("x", (object?)(0)), ("y", (object?)(0))));
         }
+
+        [Fact(DisplayName = "commands > spawns animals and dogs on open ground, and nothing else")]
+        public void T008_spawns_animals_and_dogs_on_open_ground()
+        {
+            var state = fresh();
+            int x = 0;
+            foreach (var kind in new[] { "deer", "rabbit", "wolf", "bear", "dog" })
+                expect(Commands.applyCommand(state, new Command { type = "spawnAnimal", kind = kind, x = Js.I(x++), y = Js.I(0) }).changed).toBe(true);
+            expect(state.animals.map((a) => a.kind).join(",")).toBe("deer,rabbit,wolf,bear");
+            expect(state.dogs).toHaveLength(1);
+            Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(0), y = Js.I(2) });
+            expect(Commands.applyCommand(state, new Command { type = "spawnAnimal", kind = "wolf", x = Js.I(0), y = Js.I(2) }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "spawnAnimal", kind = "dragon", x = Js.I(1), y = Js.I(2) }).ok).toBe(false);
+            expect(state.animals).toHaveLength(4);
+        }
     }
 }
