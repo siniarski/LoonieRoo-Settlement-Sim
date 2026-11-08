@@ -175,6 +175,12 @@ public partial class Game
         await Tap(Godot.Key.Escape);
         await Frames(2);
         Check("Esc opens the menu", view.menu == "main" && menu.Visible, view.menu ?? "none");
+        // The volume slider sets the master bus (and is put back as it was: it's the player's setting).
+        var volume = FindNamed<HSlider>(menu, "Volume");
+        float had = Audio.Volume.Level;
+        if (volume != null) volume.Value = 40;
+        Check("The menu's volume slider sets the volume", volume != null && Math.Abs(Audio.Volume.Level - 0.4f) < 0.01f && Math.Abs(AudioServer.GetBusVolumeDb(0) - Mathf.LinearToDb(0.16f)) < 0.1f, $"level {Audio.Volume.Level:0.00}, bus {AudioServer.GetBusVolumeDb(0):0.0} dB");
+        Audio.Volume.Set(had);
         var slot = FindButton(menu, "3");
         if (slot != null) await Click(slot.GetGlobalRect().GetCenter());
         Check("Save to slot 3", Saves.slotLabel("3") != null);
@@ -190,6 +196,8 @@ public partial class Game
         Load("3");
         await Frames(2);
         Check("Load slot 3 brings the save back", state.tick == savedTick, $"tick {state.tick}, saved at {savedTick}");
+
+        await SoundTest();
 
         // New game from the menu, from the Colony tab of this one: a group start (the default
         // preset), then a solo one. Each lands in first person on your survivor, paused, Space to play.
@@ -232,6 +240,63 @@ public partial class Game
         await Frames(10);
         Check($"New game ({start}): Space plays", !view.paused && state.tick > tick, $"tick {tick} -> {state.tick}");
         await Tap(Godot.Key.Space);
+    }
+
+    /// <summary>Sound: the made sounds aren't silent (written to user://sounds-preview to listen to), and a zombie
+    /// put beside you snarls when it sees you, and a blow on it and the killing blow sound from where it is.</summary>
+    async Task SoundTest()
+    {
+        var sounds = firstPerson.sounds;
+        DirAccess.MakeDirRecursiveAbsolute("user://sounds-preview");
+        var levels = new List<string>();
+        bool loud = true;
+        foreach (var kind in new[] { "moan_idle", "moan_notice", "hit", "kill" })
+        {
+            var set = sounds.Kind(kind);
+            for (int i = 0; i < set.Length; i++)
+            {
+                if (set[i] is not AudioStreamWav w) continue;
+                w.SaveToWav($"user://sounds-preview/{kind}_{i}.wav");
+                var data = w.Data;
+                var f = new float[data.Length / 2];
+                for (int j = 0; j < f.Length; j++) f[j] = (short)(data[2 * j] | (data[2 * j + 1] << 8)) / 32768f;
+                double rms = Audio.Synth.Rms(f);
+                loud &= rms > 0.05;
+                if (i == 0) levels.Add($"{kind} {f.Length / (double)Audio.Synth.RATE:0.0}s rms {rms:0.00}");
+            }
+        }
+        Check("The made sounds aren't silent", loud, string.Join(", ", levels));
+
+        view.paused = false;
+        var you = ControlMod.controlled(state)!;
+        int notice0 = sounds.Played["notice"], hit0 = sounds.Played["hit"], kill0 = sounds.Played["kill"];
+        // Two tiles the way you look, on floor.
+        var dir = state.control!.aim ?? state.control.facing;
+        var spot = Space.nearestTile(state.grid, new Point { x = you.pos.x + Math.Sign(dir.x) * 2, y = you.pos.y + Math.Sign(dir.y) * 2 }, (x, y) => Grids.getTile(state.grid, x, y) == "floor" && (x != you.pos.x || y != you.pos.y));
+        var z = Zombies.addZombie(state, spot!.x, spot.y, 100, "static");
+        for (int i = 0; i < 120 && z.targetId != you.id; i++) await Frames(1);
+        await Frames(2);
+        var zAt = new Vector3(z.at.x / (float)Motion.SUB, 0, z.at.y / (float)Motion.SUB);
+        var heard = new Vector3(sounds.LastAt.X, 0, sounds.LastAt.Z);
+        Check("A zombie that sees you snarls, from where it is", z.targetId == you.id && sounds.Played["notice"] > notice0 && heard.DistanceTo(zAt) < 1.5f, $"target {z.targetId ?? "none"}, notices {sounds.Played["notice"] - notice0}, {heard.DistanceTo(zAt):0.00} m off");
+        Zombies.damageZombie(state, z, 1, you);
+        await Frames(2);
+        Check("A blow landing on it thuds", sounds.Played["hit"] > hit0);
+        Zombies.damageZombie(state, z, 1000, you);
+        await Frames(2);
+        Check("The killing blow thuds where it stood", sounds.Played["kill"] > kill0, $"kills heard {sounds.Played["kill"] - kill0}");
+        view.paused = true;
+    }
+
+    static T? FindNamed<T>(Node root, string name) where T : Node
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is T t && child.Name == name) return t;
+            var found = FindNamed<T>(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /// <summary>A visible label whose text starts with `text`.</summary>
