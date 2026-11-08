@@ -621,6 +621,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.L: if (view.hover != null) Command(new Command { type = "shout", order = "loot", x = view.hover.x, y = view.hover.y }); break;
             case Key.C: Command(new Command { type = "sneak", on = c.sneaking != true }); break;
             case Key.T: Command(new Command { type = "talk" }); break;
+            case Key.U: Command(new Command { type = "boot" }); break;   // the boot of the car beside you (vehicleActions.ts)
+            case Key.I: Command(new Command { type = "hood" }); break;   // its bonnet
             case Key.V:
             case Key.H: Command(new Command { type = "shout", order = key == Key.V ? "follow" : "hold" }); break;
             case Key.E:

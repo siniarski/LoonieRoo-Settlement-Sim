@@ -135,6 +135,12 @@ public static partial class Vehicles
         {
             return "someone is driving it";
         }
+        return fillFromCan(state, s, v) ?? enterVehicle(state, s, v);
+    }
+
+    /// <summary>A fuel can from your bag into the tank, if there's one and room. Returns what happened, or null.</summary>
+    public static string? fillFromCan(SimState state, Survivor s, Vehicle v)
+    {
         var can = s.pack.map((id) => Items.getItem(state, id)).find((i) => i?.kind == "fuel");
         if (Js.T(can) && (v.fuel <= (FUEL_MAX - ((double)(FUEL_PER_CAN) / (2)))))
         {
@@ -142,6 +148,16 @@ public static partial class Vehicles
             Inventory.unpack(s, can.id);
             Items.removeItem(state, can);
             return "filled the tank";
+        }
+        return null;
+    }
+
+    /// <summary>In behind the wheel (the end of getting in: vehicleActions.ts).</summary>
+    public static string enterVehicle(SimState state, Survivor s, Vehicle v)
+    {
+        if (Js.T(v.driverId))
+        {
+            return "someone is driving it";
         }
         v.driverId = s.id;
         s.move = null;

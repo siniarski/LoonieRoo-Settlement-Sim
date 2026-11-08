@@ -6,7 +6,8 @@
 //              comes back at rest. Under WINDED: swings come later and land softer, and no running.
 //   panic      rises with the dead close by (faster alone, or with little resolve; slower
 //              when steeled), and with every hit taken; ebbs when none are near. Over
-//              PANICKING: some swings miss, and it weighs on mood.
+//              PANICKING: some swings miss, and it weighs on mood. A hit, or the dead turning up
+//              while calm (under CALM), is a startle (startledAt: the renderer's flinch).
 //   body heat  falls fast while exposed (seasons.ts isCold: a winter night or blizzard outdoors,
 //              no coat, no warmth; or soaked through outdoors at night), recovers otherwise.
 //              Under COLD: the "cold" thought; under FREEZING: health goes too.
@@ -125,6 +126,10 @@ public static partial class BodyMod
             s.panic = clamp(s.panic - 4);
             return;
         }
+        if (s.panic < CALM)
+        {
+            startle(state, s);  // the dead, out of nowhere
+        }
         var alone = !state.survivors.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= PANIC_RANGE));
         var factor = ((double)((alone ? 1.5 : 1)) * ((Resolve.isSteeled(s) ? 0.5 : (Resolve.isBreaking(s) ? 1.5 : 1))));
         s.panic = clamp(s.panic + JsMath.round(((double)(((double)(near) * (PANIC_PER_ZOMBIE))) * (factor))));
@@ -144,6 +149,15 @@ public static partial class BodyMod
     public static void exert(Survivor s, double cost)
     {
         s.endurance = clamp(s.endurance - cost);
+    }
+
+    /// <summary>Under this, calm: the dead turning up startle (the renderer's flinch: pose intent).</summary>
+    public const int CALM = 10;
+
+    /// <summary>A startle: a hit taken, or the dead noticed out of calm. Only the tick is kept (pose intent's flinch).</summary>
+    public static void startle(SimState state, Survivor s)
+    {
+        s.startledAt = state.tick;
     }
 
     public static void frighten(Survivor s, int by)

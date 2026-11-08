@@ -8,11 +8,11 @@ Hands: wrist from where its grip puts it (mean / worst while the hand is on). Fe
 |---|--:|--:|--:|--:|--:|--:|
 | in: 0.10 open the door | 0.2 / 2.5 | - | - | - | - | - |
 | in: 0.10 reach the handle | 0.0 / 0.0 | - | - | - | - | - |
-| in: 0.20 open the door | 5.3 / 7.2 | - | - | - | - | - |
+| in: 0.20 open the door | 5.2 / 7.1 | - | - | - | - | - |
 | in: 0.70 swivel, legs in | - | 0.0 / 0.0 | - | - | - | - |
 | in: 0.80 close the door | - | 0.0 / 0.0 | - | - | - | - |
 | in: 0.80 swivel, legs in | - | 0.0 / 0.0 | - | - | - | - |
-| in: 0.90 close the door | 1.7 / 12.5 | 0.0 / 0.0 | - | - | - | - |
+| in: 0.90 close the door | 1.8 / 12.5 | 0.0 / 0.0 | - | - | - | - |
 | in: 1.00 hands to the wheel | - | 0.0 / 0.0 | - | - | - | - |
 | in: 1.00 seated | 0.0 / 0.0 | 0.0 / 0.0 | - | - | - | - |
 | seated | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | -0.3 |
@@ -22,9 +22,13 @@ Hands: wrist from where its grip puts it (mean / worst while the hand is on). Fe
 | seated, steer +60 | 0.0 / 0.0 | 1.5 / 1.5 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | -0.3 |
 | out: 0.10 open the door | 0.1 / 0.9 | - | - | - | - | - |
 | out: 0.10 reach the handle | 0.0 / 0.0 | - | - | - | - | - |
-| out: 0.20 open the door | 3.4 / 4.7 | - | - | - | - | - |
+| out: 0.20 open the door | 3.0 / 4.1 | - | - | - | - | - |
 | out: 0.70 swivel, legs in | - | 0.0 / 0.0 | - | - | - | - |
 | out: 0.80 close the door | - | 0.0 / 0.0 | - | - | - | - |
 | out: 0.80 swivel, legs in | - | 0.0 / 0.0 | - | - | - | - |
-| out: 0.90 close the door | 3.3 / 13.8 | 0.0 / 0.0 | - | - | - | - |
+| out: 0.90 close the door | 3.5 / 13.8 | 0.0 / 0.0 | - | - | - | - |
 | out: 1.00 hands to the wheel | - | 0.0 / 0.0 | - | - | - | - |
+| openBoot | 0.0 / 0.0 | 0.0 / 0.0 | - | - | - | - |
+| closeBoot | 0.7 / 6.5 | 0.7 / 6.5 | - | - | - | - |
+| openHood | 0.0 / 0.0 | 0.0 / 0.0 | - | - | - | - |
+| closeHood | 0.0 / 0.2 | 0.0 / 0.2 | - | - | - | - |

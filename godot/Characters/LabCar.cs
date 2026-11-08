@@ -70,6 +70,7 @@ public partial class Lab
         public readonly int[] Foot = new int[2], Thigh = new int[2];
         public int Hips;
         public float Sit, LegW, Lean, ReclineW;   // weights this frame
+        public float Bend;                         // a forward bend (to a lid's edge: LabCarLids.cs)
         public Vector3 SeatAt;                     // world: where the hip joints go
         public float Yaw;                          // the body's facing on the seat (car frame, deg)
         public readonly float[] Pitch = new float[2];  // each foot's toes-up pitch (deg)
@@ -90,6 +91,7 @@ public partial class Lab
             else StartCar(mode == "out" ? 1 : 0, mode == "out" ? -1 : 1);
         }
         if (args.TryGetValue("carat", out var at)) { carHoldAt = Num(at); carP = carHoldAt; carDir = 0; }
+        SetupLids(args);
         if (args.TryGetValue("cartest", out var dir)) _ = RunCarTest(dir);
     }
 
@@ -101,6 +103,7 @@ public partial class Lab
         row.AddChild(Btn("Sit in it", () => StartCar(1, 0)));
         row.AddChild(Btn("No car", EndCar));
         box.AddChild(row);
+        BuildLidRow(box);
         Slider(box, "Action time s", 1.5, 12, 0.1, carDuration, v => carDuration = v);
         Slider(box, "Scrub (holds)", 0, 1, 0.005, 0, v => { if (!carActive) StartCar(v, 0); carHoldAt = v; carP = v; carDir = 0; });
         Slider(box, "Steer °", -90, 90, 1, steer, v => steer = v);
@@ -130,6 +133,7 @@ public partial class Lab
 
     void EndCar()
     {
+        lidAction = null;
         carActive = false;
         carDir = 0;
         car?.QueueFree();
@@ -216,6 +220,7 @@ public partial class Lab
         gripInner = GripAt("grip_door_inner", new Vector3(-0.15f, 0.78f, -0.78f), Vector3.Right, new Vector3(0, -0.3f, 1));
         carDoor.AddChild(gripOuter);
         carDoor.AddChild(gripInner);
+        BuildLids(car, paint, trim);
         if (seat == null) BuildSeatRig();
     }
 
@@ -370,6 +375,8 @@ public partial class Lab
             seat.Pole[i].GlobalPosition = seat.SeatAt + bodyBasis * new Vector3(i == 0 ? 0.25f : -0.25f, 0.6f, 1.0f);
         seat.Legs.Influence = seat.LegW;
         seat.Pose.Active = seat.Legs.Active = seat.Align.Active = seat.Sit > 0 || seat.LegW > 0;
+        UpdateLid(delta);  // a lid being opened or shut overrides the stand point (LabCarLids.cs)
+        seat.Pose.Active |= seat.Bend > 0;
         UpdatePedals();
     }
 
@@ -408,6 +415,7 @@ public partial class Lab
     /// <summary>The hands' grips and weights while getting in, seated, or getting out; true when the car has them.</summary>
     bool CarHands()
     {
+        if (LidHands()) return true;
         if (!carActive || handIk == null || car == null) return false;
         double p = carP;
         double outer = Keys(p, (0, 0), (0.06, 1), (0.17, 1), (0.22, 0));  // lets go at ~22 deg
@@ -459,6 +467,12 @@ public partial class Lab
             Turn(skel, "Neck", left, pitch * 0.4f);  // a turn about the left axis by +a tips the face down by a
             Turn(skel, "Head", left, pitch * 0.6f);
         }
+        if (r.Bend > 0.001f)
+        {
+            var leftAxis = (inv.Basis * (new Basis(Vector3.Up, Mathf.DegToRad(r.Yaw)) * Vector3.Right)).Normalized();
+            foreach (var (bone, share) in new[] { ("Spine", 0.45f), ("Chest", 0.35f), ("UpperChest", 0.2f) })
+                Turn(skel, bone, leftAxis, Mathf.DegToRad(35) * r.Bend * share);  // about the left axis by +a: bowing forward
+        }
         if (r.Lean > 0.001f)
         {
             var forward = (inv.Basis * (new Basis(Vector3.Up, Mathf.DegToRad(r.Yaw)) * Vector3.Back)).Normalized();
@@ -498,6 +512,7 @@ public partial class Lab
     string CarReadout()
     {
         if (!carActive || seat == null) return "";
+        if (LidOn) return LidReadout();
         var s = $"car      {carPhase}, {carP:0.00}";
         if (carP >= 0.999)
         {
@@ -601,6 +616,24 @@ public partial class Lab
             if (shot < outShots.Length && carP <= outShots[shot]) await Shot(System.IO.Path.Combine(dir, $"out-{outShots[shot++] * 100:00}.png"));
         }
         foreach (var (ph, h) in byPhase) Line(Row("out: " + ph, h, null));
+        // The boot and the bonnet (LabCarLids.cs): open, then shut, each hand on the edge while it's on.
+        camYaw = 90; camPitch = 8; camSize = 3.0; camFocusY = 0.9f;
+        foreach (var lid in new[] { "boot", "hood" })
+            for (int pass = 0; pass < 2; pass++)
+            {
+                StartLid(lid);
+                string name = lidAction!;
+                var lh = new[] { new List<float>(), new List<float>() };
+                bool shotLid = false;
+                while (lidAction != null)
+                {
+                    await Frames(1);
+                    for (int k = 0; k < 2; k++) { float e = handIk!.Error(k); if (e >= 0) lh[k].Add(e); }
+                    if (!shotLid && lidP >= 0.5) { shotLid = true; await Shot(System.IO.Path.Combine(dir, name + ".png")); }
+                }
+                Line(Row(name, lh, null));
+                await Frames(10);
+            }
         System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "cartest.md"), report.ToString());
         GD.Print("cartest: done");
         GetTree().Quit();

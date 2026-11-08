@@ -1044,6 +1044,10 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public double panic { get; set; }
     public double bodyHeat { get; set; }
     public double wetness { get; set; }
+    /// <summary>Limbs gone for good, with side and level: "armLeft:elbow", "legRight:knee" (wounds.ts amputate).</summary>
+    public List<string> lostLimbs { get; set; } = new();
+    /// <summary>The tick of the last startle (a hit taken, the dead noticed out of calm), for the renderer's flinch.</summary>
+    public double? startledAt { get; set; }
 }
 
 public partial class SurvivorBreakdown
@@ -1176,6 +1180,8 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public double health { get; set; }
     public string? driverId { get; set; }
     public string? kind { get; set; }
+    public bool bootOpen { get; set; }
+    public bool hoodOpen { get; set; }
 }
 
 public partial class Wanderer : IHasId

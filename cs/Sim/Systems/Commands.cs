@@ -71,12 +71,20 @@ public static partial class Commands
             Js.NN(state.control).sneaking = command.on;
             return changed();
         }
-        if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim"))
+        if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim") || (command.type == "boot") || (command.type == "hood"))
         {
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
             {
                 return reject("nobody is under control");
+            }
+            if (command.type is "boot" or "hood")
+            {
+                // Open or shut the boot or the bonnet of the car beside you (vehicleActions.ts).
+                var (lid, why) = Vehicles.toggleLid(state, s, command.type);
+                if (Js.T(why)) return reject(why);
+                s.note = lid;
+                return changed();
             }
             if (command.type == "aim")
             {
