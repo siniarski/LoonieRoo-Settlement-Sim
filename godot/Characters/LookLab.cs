@@ -9,6 +9,7 @@
 //   lineup     the four top looks side by side (mannequin, pz 2.5k, plus 12k, plus 30k)
 //   faces      the zombie's five face candidates side by side (plus, near LOD)
 //   clothes    the survivor painted, in a jacket, in a hoodie (garment meshes with volume) side by side
+//   hair       the survivor with each hair style side by side (hair meshes, attached and tinted)
 // Faces: the zombie's top LODs carry two blend shapes, jaw_open and angry. Neutral is a slack jaw;
 // angry (it has seen you) eases in over a quarter second with a growl. Lower LODs carry no face.
 //
@@ -18,7 +19,8 @@
 //   Godot --path godot res://Characters/LookLab.tscn [-- options]
 //   --subject=zombie|survivor --cand=plus|pz|mannequin|lineup --lod=auto|0..5 --dist=M
 //   --face=neutral|angry|auto --move=idle|walk|lunge --light=day|dusk|night --wire --turn=DEG
-//   --zface=slack|gaunt|bloated|torn|feral (the zombie's face) --clothes=painted|jacket|hoodie (the survivor's)
+//   --zface=feral|slack|gaunt|bloated|torn (the zombie's face) --clothes=painted|jacket|hoodie (the survivor's)
+//   --hair=none|buzz|crop|sidepart|long|receding --haircolour=black|brown|blond|red|grey --beard
 //   --crowd=N [--crowdlod=auto|K]   N more of the candidate, walking, in a field ahead
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
@@ -49,10 +51,20 @@ public partial class LookLab : Node3D
         return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
     }
 
-    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes" };
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair" };
     static readonly string[] Faces = { "feral", "slack", "gaunt", "bloated", "torn" };
     const string DefaultFace = "feral";  // chosen 2026-11-08; the others are kept to compare
     static readonly string[] ClothesSets = { "painted", "jacket", "hoodie" };
+    // Hair (art/scripts/build_hair.py): each style its own mesh, attached to the character's skeleton and
+    // tinted (the texture is grey). A survivor's scalp is painted skin: "none" is shaved bald.
+    static readonly string[] HairStyles = { "none", "buzz", "crop", "sidepart", "long", "receding" };
+    static readonly Dictionary<string, Color> HairColours = new()
+    {
+        ["black"] = new Color(0.10f, 0.09f, 0.085f), ["brown"] = new Color(0.34f, 0.24f, 0.16f), ["blond"] = new Color(0.78f, 0.64f, 0.42f),
+        ["red"] = new Color(0.58f, 0.27f, 0.13f), ["grey"] = new Color(0.64f, 0.62f, 0.60f),
+    };
+    static string HairPath(string style) => $"res://assets/characters/look/hair/hair_{style}.glb";
+    readonly Dictionary<string, StandardMaterial3D> hairMats = new();
     // How far each face's jaw hangs at rest (jaw_open), neutral.
     static readonly Dictionary<string, double> Slack = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
     static readonly double[] Presets = { 1, 2, 3, 5, 10, 30 };
@@ -68,6 +80,9 @@ public partial class LookLab : Node3D
 
     string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day", faceVariant = DefaultFace, clothesSet = "painted";
     double turn;  // the subject turned from facing you, degrees
+    string hairStyle = "crop", hairColour = "brown";  // the survivor's; zombies keep their painted hair
+    bool beard;
+    double forceJaw = -1;  // --jaw=V holds jaw_open (for checking the key)
     int forcedLod = -1, crowdLod = -1, crowdCount;
     double dist = 3, lodBias = 1, sightRange = 12;
     bool godotLod, wire, aim = true;
@@ -122,6 +137,10 @@ public partial class LookLab : Node3D
         if (args.TryGetValue("zface", out var zf)) faceVariant = zf;
         if (args.TryGetValue("clothes", out var cs)) clothesSet = cs;
         if (args.TryGetValue("turn", out var tn)) turn = Num(tn);
+        if (args.TryGetValue("hair", out var hs)) hairStyle = hs;
+        if (args.TryGetValue("haircolour", out var hc)) hairColour = hc;
+        beard = args.ContainsKey("beard");
+        if (args.TryGetValue("jaw", out var jw)) forceJaw = Num(jw);
         wire = args.ContainsKey("wire");
         hidePanel = args.ContainsKey("nopanel");
         if (args.ContainsKey("noaim")) aim = false;
@@ -152,7 +171,7 @@ public partial class LookLab : Node3D
         u.Free();
     }
 
-    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null)
+    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null)
     {
         subj ??= subject;
         variant ??= subj == "zombie" ? faceVariant : clothesSet;
@@ -179,8 +198,50 @@ public partial class LookLab : Node3D
             player.AddAnimationLibrary("ual", ualLib);
             a.Player = player;
         }
+        if (which != "mannequin")
+        {
+            foreach (var style in new[] { hair ?? (subj == "zombie" ? "none" : hairStyle), beard ? "beard" : "none" })
+                if (style != "none") AttachHair(a, style);
+            a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
+        }
         (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);
         return a;
+    }
+
+    /// <summary>A hair style's meshes onto the character's skeleton (as the lab's Dresser does garments),
+    /// each into its LOD's group, with the tinted hair material.</summary>
+    void AttachHair(Actor a, string style)
+    {
+        if (!ResourceLoader.Exists(HairPath(style))) return;
+        var skel = Find<Skeleton3D>(a.Root)!;
+        var scene = GD.Load<PackedScene>(HairPath(style)).Instantiate<Node3D>();
+        var groups = a.Lods.Select(g => g.ToList()).ToList();
+        foreach (var mi in FindAll<MeshInstance3D>(scene).ToList())
+        {
+            mi.GetParent().RemoveChild(mi);
+            mi.Owner = null;
+            mi.Name = $"{style}_{mi.Name}";
+            skel.AddChild(mi);
+            mi.Skeleton = new NodePath("..");
+            mi.MaterialOverride = HairMaterial(mi, style);
+            int lod = Math.Min(LodIndex(mi.Name), groups.Count - 1);
+            groups[lod].Add(mi);
+        }
+        scene.QueueFree();
+        a.Lods = groups.Select(g => g.ToArray()).ToArray();
+    }
+
+    StandardMaterial3D HairMaterial(MeshInstance3D mi, string style)
+    {
+        string key = style + "/" + hairColour;
+        if (!hairMats.TryGetValue(key, out var mat))
+        {
+            mat = (StandardMaterial3D)((BaseMaterial3D)mi.Mesh.SurfaceGetMaterial(0)).Duplicate();
+            mat.AlbedoColor = HairColours.GetValueOrDefault(hairColour, HairColours["brown"]);
+            mat.Roughness = 0.6f;
+            hairMats[key] = mat;
+        }
+        return mat;
     }
 
     /// <summary>The character's textures as loaded (each once: the pieces share an atlas): their sizes and
@@ -231,13 +292,16 @@ public partial class LookLab : Node3D
             "lineup" => new (string c, int lod, string tag, string? subj, string? variant)[] { ("mannequin", 0, "mannequin", null, null), ("pz", 0, "pz", null, null), ("plus", 1, "plus", null, null), ("plus", 0, "plus", null, null) },
             "faces" => Faces.Select(f => ("plus", 0, f, (string?)"zombie", (string?)f)).ToArray(),
             "clothes" => ClothesSets.Select(c => ("plus", 0, c, (string?)"survivor", (string?)c)).ToArray(),
+            "hair" => HairStyles.Select(h => ("plus", 0, h, (string?)"survivor", (string?)h)).ToArray(),
             _ => new (string c, int lod, string tag, string? subj, string? variant)[] { (cand, -1, cand, null, null) },
         };
         bool row = list.Length > 1;
-        double spacing = cand == "faces" ? 0.62 : 1.05;
+        double spacing = cand is "faces" or "hair" ? 0.62 : 1.05;
         for (int i = 0; i < list.Length; i++)
         {
-            var a = MakeActor(list[i].c, this, list[i].subj, list[i].variant);
+            var a = cand == "hair"
+                ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant)
+                : MakeActor(list[i].c, this, list[i].subj, list[i].variant);
             if (row)
             {
                 a.Shown = -2 - list[i].lod;  // pinned: -2 - lod
@@ -256,7 +320,7 @@ public partial class LookLab : Node3D
     {
         foreach (var a in crowd) a.Root.QueueFree();
         crowd.Clear();
-        string which = cand is "lineup" or "faces" or "clothes" ? "plus" : cand;
+        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand;
         // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
         int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
         for (int i = 0; i < crowdCount; i++)
@@ -351,9 +415,10 @@ public partial class LookLab : Node3D
         if (a.Cand == "mannequin" || mi == null) return;
         double e = a.Angry * a.Angry * (3 - 2 * a.Angry);
         double slack = Slack.GetValueOrDefault(a.Variant, 0.12) + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
-        double growl = 0.62 + 0.22 * Math.Sin(time * 7.5 + a.Phase * 6) + 0.08 * Math.Sin(time * 17);
-        SetShape(mi, "jaw_open", slack + (growl - slack) * e);
+        double growl = 0.75 + 0.20 * Math.Sin(time * 7.5 + a.Phase * 6) + 0.05 * Math.Sin(time * 17);
+        SetShape(mi, "jaw_open", forceJaw >= 0 ? forceJaw : slack + (growl - slack) * e);
         SetShape(mi, "angry", e);
+        if (OS.GetCmdlineUserArgs().Contains("--traceface") && frame % 30 == 0) GD.Print($"face {mi.Name} lod{lod} angry {e:0.00} jaw {mi.GetBlendShapeValue(mi.FindBlendShapeByName("jaw_open")):0.00} visible {mi.IsVisibleInTree()}");
     }
 
     static void SetShape(MeshInstance3D mi, string name, double v)
@@ -370,7 +435,7 @@ public partial class LookLab : Node3D
         if (a != null)
         {
             int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
-            bool single = cand is not ("lineup" or "faces" or "clothes");
+            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair");
             sb.AppendLine($"subject   {a.Subject} / {cand}{(a.Cand != "mannequin" && single ? $" lod{lod}" : "")}  {(single && a.Cand != "mannequin" ? a.Variant : "")}");
             sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
             if (single) sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
@@ -479,6 +544,9 @@ public partial class LookLab : Node3D
         Pick(grid, "Light", new[] { "day", "dusk", "night" }, light, v => { light = v; ApplyLight(); });
         Pick(grid, "Zombie face", Faces, faceVariant, v => { faceVariant = v; Rebuild(); });
         Pick(grid, "Clothes", ClothesSets, clothesSet, v => { clothesSet = v; Rebuild(); });
+        Pick(grid, "Hair", HairStyles, hairStyle, v => { hairStyle = v; Rebuild(); });
+        Pick(grid, "Hair colour", HairColours.Keys.ToArray(), hairColour, v => { hairColour = v; Rebuild(); });
+        Pick(grid, "Beard", new[] { "none", "beard" }, beard ? "beard" : "none", v => { beard = v == "beard"; Rebuild(); });
         var presets = new HBoxContainer();
         foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
         box.AddChild(presets);
@@ -641,6 +709,34 @@ public partial class LookLab : Node3D
             await Shot($"{dir}/clothes_{cs}_close.png");
         }
         clothesSet = "painted";
+        turn = 0;
+        // Hair: every style side by side, facing and turned; then each close, turned, in a few colours.
+        cand = "hair";
+        foreach (var t in new[] { 0.0, 60.0, 180.0 })
+        {
+            turn = t;
+            Rebuild();
+            dist = 1.5;
+            await Frames(8);
+            await Shot($"{dir}/hair_{t:0}.png");
+        }
+        cand = "plus";
+        subject = "survivor";
+        string[] colours = { "black", "brown", "blond", "red", "grey" };
+        for (int i = 1; i < HairStyles.Length; i++)
+        {
+            hairStyle = HairStyles[i];
+            hairColour = colours[i % colours.Length];
+            beard = i == 3;
+            Rebuild();
+            dist = 0.8;
+            turn = 30;
+            await Frames(8);
+            await Shot($"{dir}/hair_{hairStyle}_close.png");
+        }
+        hairStyle = "crop";
+        hairColour = "brown";
+        beard = false;
         turn = 0;
         foreach (var subj in new[] { "zombie", "survivor" })
         {

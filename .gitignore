@@ -7,3 +7,5 @@ art/blend/
 __pycache__/
 # Personal Claude Code settings (this machine's MCP approvals).
 .claude/settings.local.json
+# Blender's save backups.
+*.blend1

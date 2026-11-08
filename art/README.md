@@ -55,6 +55,10 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   bakes each texel's rest position, so the same functions paint the texture and displace the high-poly mesh whose
   normals are baked. `scripts/build_lookdev.py`: the pipeline (sculpt, decimate the ladder, unwrap, bake position, AO
   and normals in Cycles, paint, skin with auto weights on the body bones, face keys, validate, export).
+- `models/base_skin.blend`: the stored base skin (body and head with the eyes and mouth open), the source the
+  look builds load: edit it in Blender and save; `scripts/make_skin.py` made it once (rerunning it starts over).
+- `scripts/hair.py`, `scripts/build_hair.py`: hair styles as their own meshes (buzz, crop, sidepart, long,
+  receding, beard), each exported alone to `godot/assets/characters/look/hair/`.
 - `scripts/clothes.py`: garments with volume for the look-development survivor (`build_lookdev.py --clothes
   jacket|hoodie`): shells cut from the body, draped, lifted by a thickness profile, extra pieces (collar, hood,
   pocket, drawstrings), rims; their relief and colour. Face variants: `--face gaunt|bloated|torn|feral`.

@@ -110,7 +110,7 @@ def regions(p, o):
     for sx, eye in ((1, S.EYE_L), (-1, S.EYE_R)):
         lat = (x - eye.x) * sx
         dz = z - eye.z - 0.0012 * lat / 0.014
-        qe = np.hypot(lat / 0.014, dz / np.where(dz > 0, 0.0042, 0.0038))
+        qe = np.hypot(lat / 0.014, dz / np.where(dz > 0, 0.0050, 0.0042))
         q = np.where(np.abs(x - eye.x) < 0.03, np.minimum(q, qe), q)
     m["lash"] = sstep(1.35, 1.05, q) * sstep(0.85, 1.0, q) * (1 - m["eye"]) * (y < -0.06) * np.where(z > S.EYE_L.z, 1.0, 0.45)
     # Garments.
@@ -199,7 +199,9 @@ def albedo(p, ao, o, style):
     col = mix(col, rgb(0.06, 0.02, 0.02), m["mouth"])
     col = mix(col, o["hair"] * (0.7 + 0.6 * n3[:, None]), m["brows"] * 0.9)
     col = mix(col, rgb(0.10, 0.07, 0.06), m["lash"] * 0.85)
-    hair_amt = m["hair"] * (sstep(0.35, 0.55, fbm(p, 30, 3)) if dead else 1.0)  # the dead's hair thin and patchy
+    # The dead's hair is painted, thin and patchy; a survivor's scalp is skin with a stubble shadow (their
+    # hair is a mesh, build_hair.py: painted hair would show through round its edges).
+    hair_amt = m["hair"] * (sstep(0.35, 0.55, fbm(p, 30, 3)) if dead else 0.22)
     col = mix(col, o["hair"] * (0.75 + 0.5 * fbm(p * np.array([1, 1, 0.25]), 160, 2)[:, None]), hair_amt)
 
     # Garments: weave, wear (faded on the raised parts), dirt rising from the ground.

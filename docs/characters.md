@@ -132,6 +132,33 @@ about three vertices at 3 mm, and decimation softens it further); a crease down 
 UV seam in the baked maps). That is about the limit of brushes on a remeshed blob: the focused face session should
 start from a real sculpted (or CC0) head with proper edge loops round the eyes and mouth.
 
+**The skin is now a stored model** (2026-11-08): `art/models/base_skin.blend` (object "skin", ~157k triangles, the
+head ~43k, 4.2 MB compressed; kept in git as a small hand-edited .blend), made once by `art/scripts/make_skin.py` and
+from then on the source: the builds load it (build_lookdev.py `load_skin`) instead of generating a head, and it's
+edited by hand in Blender, or by Claude through the Blender MCP server when Blender is open (or a headless edit
+script when it isn't). What make_skin added: real openings. Each eye opening and the mouth are cut as holes whose
+edges are snapped onto clean curves (the eye's almond, 28 x 9 mm; the lips' meeting line), the rings round them
+relaxed, and each edge rolled inward (a lid's thickness tucked onto the eyeball; the inner lips running back 6 mm
+to the teeth); the body away from the head thinned by a weighted collapse. The lids now cover the top of the iris
+(no staring), and the jaw parts the lips: jaw_weight splits sharply at the lip line between the corners. The
+weight source and the garments are cut from a copy with the holes filled. Variant faces are still brushes over it.
+
+### Hair (2026-11-08)
+
+Hair is **its own mesh per style**, made by `art/scripts/build_hair.py` (styles in hair.py) and exported alone on the
+shared rig (`godot/assets/characters/look/hair/hair_<style>.glb`, 0.3-0.8 MB each, its own 1024 grey colour map and
+normal map with strand grooves), so any style goes on any body and outfit: the lab attaches it to the character's
+skeleton (as the Dresser does garments) and tints it per character (one mesh, every colour). Each is a shell cut
+from the scalp where the hair grows (a hairline over the forehead rising at the temples, round the ears, down to
+the nape; sideburns), smoothed, lifted by the style's thickness profile and **tapered towards the skin at its edge**
+(to 30% over 12 mm: no step or rim at a hairline), with LODs at the plus ratios. Styles: buzz (2.5 mm, 1.5k
+triangles), crop (3k), sidepart (a quiff swept from a part over the left eye, 4k), long (a curtain falling to the
+shoulders from behind the ears, the only one with rimmed free ends, 6.4k), receding (an M-shaped hairline, thin at
+the crown, 3k), and a short full beard (2k) that goes with any of them. A survivor's scalp is painted skin with a
+stubble shadow (painted hair showed through round the meshes); zombies keep their painted, patchy hair for now.
+Not yet: under-hat variants, ponytails and buns, strand cards (alpha) for wispy edges, matted versions for the
+dead.
+
 **Clothes with volume** (clothes.py, `--clothes jacket|hoodie`, the lab's "clothes" lineup and Clothes picker): a
 garment is **its own mesh**, a shell cut from the body where it covers, smoothed so it bridges the body's dips (cloth
 drapes, skin doesn't), stood off the skin by its own thickness profile (a jacket's hem flaring off the hips, a

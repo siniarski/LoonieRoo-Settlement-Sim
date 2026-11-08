@@ -248,12 +248,12 @@ def face_offset(co):
 
 
 def eye_opening(co, sx, eye):
-    """Where a point sits against an eye's opening: q < 1 inside the almond (28 x 8 mm, the outer
+    """Where a point sits against an eye's opening: q < 1 inside the almond (28 x 9 mm, the outer
     corner a little higher), 1 on its edge, growing outwards."""
     lat = (co.x - eye.x) * sx  # + towards the outer corner
     half_w = 0.0140
     dz = co.z - eye.z - 0.0012 * lat / half_w
-    half_h = 0.0042 if dz > 0 else 0.0038  # the upper lid covers the top of the iris
+    half_h = 0.0050 if dz > 0 else 0.0042  # the upper lid covers the top of the iris
     return math.hypot(lat / half_w, dz / half_h)
 
 
@@ -348,7 +348,12 @@ def jaw_weight(co):
     under the jaw part of it, nothing above the mouth line or behind the ears."""
     if co.y > 0.03 or co.z > MOUTH.z + 0.002 or co.z < 1.44:
         return 0.0
-    below = smooth01((MOUTH.z + 0.002 - co.z) / 0.006)
+    # Between the corners the lips are cut apart (make_skin.py): the lower lip goes with the jaw whole, the
+    # upper stays. Beyond the corners the skin is whole, so the turn fades in across the mouth line.
+    split = smooth01((abs(co.x) - MOUTH_HALF * 0.85) / (MOUTH_HALF * 0.3))
+    sharp = 1.0 if co.z < MOUTH.z else 0.0
+    soft = smooth01((MOUTH.z + 0.002 - co.z) / 0.006)
+    below = sharp + (soft - sharp) * split
     front = smooth01((0.02 - co.y) / 0.05)
     neck = smooth01((co.z - 1.47) / 0.05)  # the throat stretches, the neck below stays
     return below * front * neck
@@ -362,19 +367,19 @@ def angry_offset(co):
         return off
     ez, mz = EYE_L.z, MOUTH.z
     for sx in (1, -1):
-        inner = Vector((sx * 0.014, -0.086, ez + 0.024))
+        inner = Vector((sx * 0.014, -0.094, ez + 0.020))  # on the face as it is (make_skin: the stored skin)
         off += Vector((-sx * 0.004, -0.002, -0.008)) * falloff((co - inner).length, 0.020)
-        outer = Vector((sx * 0.046, -0.072, ez + 0.026))
+        outer = Vector((sx * 0.044, -0.082, ez + 0.022))
         off += Vector((0, 0, 0.002)) * falloff((co - outer).length, 0.015)
-        cheek = Vector((sx * 0.040, -0.080, ez - 0.026))
+        cheek = Vector((sx * 0.038, -0.088, ez - 0.024))
         off += Vector((0, -0.002, 0.004)) * falloff((co - cheek).length, 0.020)
-        nose_side = Vector((sx * 0.012, -0.098, ez - 0.022))
+        nose_side = Vector((sx * 0.012, -0.104, ez - 0.022))
         off += Vector((sx * 0.001, 0, 0.004)) * falloff((co - nose_side).length, 0.012)
-        corner = Vector((sx * MOUTH_HALF, -0.082, mz))
+        corner = Vector((sx * MOUTH_HALF, -0.088, mz))
         off += Vector((sx * 0.004, 0.004, -0.002)) * falloff((co - corner).length, 0.012)
-        lip = Vector((sx * 0.011, -0.094, mz + 0.008))  # the upper lip either side of the middle: the canines show
+        lip = Vector((sx * 0.011, -0.099, mz + 0.007))  # the upper lip either side of the middle: the canines show
         off += Vector((0, -0.001, 0.007)) * falloff((co - lip).length, 0.012)
-    lower = Vector((0, -0.092, mz - 0.008))
+    lower = Vector((0, -0.099, mz - 0.007))
     off += Vector((0, -0.002, -0.004)) * falloff((co - lower).length, 0.014)
     return off
 

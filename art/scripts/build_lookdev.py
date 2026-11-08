@@ -26,6 +26,7 @@ import os
 import sys
 import time
 
+import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
@@ -91,21 +92,37 @@ def tris(obj):
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 
 
+SKIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "base_skin.blend")
+
+
+def load_skin(name):
+    """The stored base skin (art/models/base_skin.blend, made by make_skin.py and edited since): the body
+    and head with the eyes and the mouth open."""
+    with bpy.data.libraries.load(os.path.abspath(SKIN)) as (src, dst):
+        dst.objects = ["skin"]
+    o = dst.objects[0]
+    o.name = o.data.name = name
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
 def base_mesh(outfit, garments):
-    """The sculpt: metaballs -> 3 mm remesh -> smoothed -> the face pushed in (and its variant). Returns
-    (base, closed): base has the mouth cut, the painted cloth lifted off the skin and the body under any
-    garments deleted; closed is the whole skin before that (the weight source and the garments' source)."""
-    o = sculpt.body_balls().build("base", 0.008)
-    sculpt.remesh(o, 0.003)  # 3 mm: fine enough for the lids and lips
-    sculpt.smooth(o, 0.5, 6)
-    sculpt.smooth_head(o)
+    """The stored skin with the face's variant brushed on. Returns (base, closed): base with the painted
+    cloth lifted off the skin and the body under any garments deleted; closed the whole skin with the
+    openings filled (heat weighting needs a closed surface; the garments are cut from it)."""
+    o = load_skin("base")
     face = outfit.get("face", "slack")
-    sculpt.apply_offsets(o, lambda c: sculpt.face_offset(c) + sculpt.variant_offset(c, face))
+    if face != "slack":
+        sculpt.apply_offsets(o, lambda c: sculpt.variant_offset(c, face))
     for p in o.data.polygons:
         p.use_smooth = True
     closed = copy_obj(o, "closed")
-    if outfit["dead"]:  # the zombie's jaw opens (jaw_open); a survivor's mouth stays shut
-        print(f"mouth cut: {sculpt.cut_mouth(o)} faces")
+    bm = bmesh.new()
+    bm.from_mesh(closed.data)
+    bmesh.ops.holes_fill(bm, edges=bm.edges[:], sides=0)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(closed.data)
+    bm.free()
     co, n = verts(o), normals(o)
     set_verts(o, co + n * paint.cloth_lift(co, outfit)[:, None])
     if garments:
