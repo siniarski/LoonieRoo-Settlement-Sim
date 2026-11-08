@@ -1,6 +1,7 @@
-// Everything that moves near you in first person that isn't a character model (People.cs): animals,
-// dogs, cars, things lying on the ground, and people past the models' budget or range, as
-// placeholders (capsules and boxes) from a pool of nodes reused every frame.
+// Everything that moves near you in first person that isn't a character model (People.cs): cars,
+// things lying on the ground, and people past the models' budget or range, as placeholders (capsules
+// and boxes) from a pool of nodes reused every frame. Animals and dogs are models (Animals.cs), drawn
+// from here.
 
 using System;
 using System.Collections.Generic;
@@ -16,17 +17,17 @@ public sealed class Bodies
     readonly Dictionary<string, (Mesh mesh, Material material)> kinds = new();
     readonly Dictionary<string, List<MeshInstance3D>> pools = new();
     readonly Dictionary<string, int> used = new();
+    readonly AnimalModels animals;
 
     public Bodies(Node3D parent)
     {
         this.parent = parent;
+        animals = new AnimalModels(parent);
         var person = new CapsuleMesh { Radius = 0.25f, Height = 1.75f };
         Kind("survivor", person, new Color(0.62f, 0.56f, 0.46f));
         Kind("resident", person, new Color(0.48f, 0.5f, 0.44f));
         Kind("zombie", person, new Color(0.36f, 0.42f, 0.3f));
         Kind("raider", person, new Color(0.45f, 0.2f, 0.17f));
-        Kind("animal", new BoxMesh { Size = new Vector3(0.35f, 0.7f, 1.1f) }, new Color(0.4f, 0.32f, 0.22f));
-        Kind("dog", new BoxMesh { Size = new Vector3(0.25f, 0.5f, 0.75f) }, new Color(0.3f, 0.24f, 0.18f));
         // The sim's car is a 0.43 m circle: drawn a little bigger than that, not the lab's 4.2 m car.
         Kind("car", new BoxMesh { Size = new Vector3(1.0f, 1.3f, 1.9f) }, new Color(0.3f, 0.34f, 0.38f));
         Kind("item", new BoxMesh { Size = new Vector3(0.22f, 0.14f, 0.22f) }, new Color(0.6f, 0.6f, 0.55f));
@@ -72,18 +73,7 @@ public sealed class Bodies
             if (s.id != youId && Vehicles.vehicleOf(state, s) == null) Person("survivor", s, s.sleep?.asleep == true);
         foreach (var r in state.residents) Person("resident", r, false);
         foreach (var z in state.zombies) Person(z.kind == "raider" ? "raider" : "zombie", z, false);
-        foreach (var a in state.animals)
-        {
-            var p = worldPos(a, alpha);
-            if (!Near(p.x, p.y)) continue;
-            Next("animal").Position = new Vector3((float)p.x, 0.35f, (float)p.y);
-        }
-        foreach (var d in state.dogs)
-        {
-            var p = worldPos(d, alpha);
-            if (!Near(p.x, p.y)) continue;
-            Next("dog").Position = new Vector3((float)p.x, 0.25f, (float)p.y);
-        }
+        animals.Update(state, alpha, eye);
         foreach (var v in Vehicles.vehiclesOf(state))
         {
             var p = worldPos(v.at, v.was, alpha);

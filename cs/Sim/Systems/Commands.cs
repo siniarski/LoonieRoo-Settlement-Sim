@@ -678,6 +678,23 @@ public static partial class Commands
                     Zombies.addZombie(state, Js.NN(x), Js.NN(y));
                     return changed();
                 }
+            case "spawnAnimal":
+                {
+                    // A debug spawn (the game's --animals): deer, rabbit, wolf, bear or dog on open ground.
+                    var kind = command.kind ?? "deer";
+                    if ((kind != "deer") && (kind != "rabbit") && (kind != "wolf") && (kind != "bear") && (kind != "dog"))
+                    {
+                    return reject($"no animal called {Js.Str(kind)}");
+                }
+                    if (!Animals.ground(state, Js.NN(x), Js.NN(y)))
+                    {
+                    return reject($"({Js.Str(x)}, {Js.Str(y)}) is not open ground");
+                }
+                    if (kind == "dog") Dogs.addDog(state, Js.NN(x), Js.NN(y));
+                    else if (kind == "deer") Animals.addDeer(state, Js.NN(x), Js.NN(y));
+                    else Animals.addAnimal(state, kind, Js.NN(x), Js.NN(y));
+                    return changed();
+                }
             case "spawnVehicle":
                 {
                     if (!Vehicles.parkable(state, new Point { x = Js.I(Js.NN(x)), y = Js.I(Js.NN(y)) }))

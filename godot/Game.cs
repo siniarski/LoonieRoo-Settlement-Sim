@@ -14,6 +14,9 @@
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
+//   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn,
+//                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
+//                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
 
 using System;
 using System.Collections.Generic;
@@ -133,6 +136,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (args.TryGetValue("ticks", out var t)) Tick.step(state, int.Parse(t));
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
+        if (args.TryGetValue("animals", out var an)) SpawnAnimals(an, args.TryGetValue("animal-range", out var ar) ? double.Parse(ar, CultureInfo.InvariantCulture) : 3.5);
         view.showDebug = args.ContainsKey("debug");
         view.showMap = args.ContainsKey("map");
         view.showOverview = args.ContainsKey("overview");
@@ -158,6 +162,29 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     }
 
     const string SOLO_TOAST = "Alone. The mouse looks, WASD walks, click to swing, right-click or E to use. Tab: inventory. M: the map and the colony.";
+
+    /// <summary>--animals: "N" (that many, the kinds in turn) or "wolf:3,deer" round you, from `near` m out, on open ground.</summary>
+    void SpawnAnimals(string spec, double near)
+    {
+        string[] kinds = { "deer", "rabbit", "wolf", "bear", "dog" };
+        var list = new List<string>();
+        if (int.TryParse(spec, out int n)) for (int i = 0; i < n; i++) list.Add(kinds[i % kinds.Length]);
+        else
+            foreach (var part in spec.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = part.Split(':');
+                for (int i = 0, c = kv.Length > 1 ? int.Parse(kv[1]) : 1; i < c; i++) list.Add(kv[0]);
+            }
+        var you = state.control != null ? state.survivors.Find((s) => s.id == state.control.survivorId) : null;
+        var at = you?.pos ?? (state.survivors.Count > 0 ? state.survivors[0].pos : new Point { x = state.grid.width / 2, y = state.grid.height / 2 });
+        for (int i = 0; i < list.Count; i++)
+        {
+            // Spread round a circle, every other one further out; the nearest open tile if that's not.
+            double a = i * 2.39996, r = near + (i % 3) * 1.6;
+            int x0 = at.x + (int)Math.Round(Math.Cos(a) * r), y0 = at.y + (int)Math.Round(Math.Sin(a) * r);
+            for (int k = 0; k < 9 && !Command(new Command { type = "spawnAnimal", kind = list[i], x = x0 + k % 3 - 1, y = y0 + k / 3 - 1 }); k++) { }
+        }
+    }
 
     static double RandomSeed() => Math.Floor(Random.Shared.NextDouble() * 1e9);
 

@@ -59,6 +59,11 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   look builds load: edit it in Blender and save; `scripts/make_skin.py` made it once (rerunning it starts over).
 - `scripts/edit_skin.py`: scripted edits to the stored skin (`blender art/models/base_skin.blend --background
   --python art/scripts/edit_skin.py -- --edits cheeks,lips`), recorded on the object so they apply once.
+- `scripts/animals.py`, `scripts/build_animals.py`: the wild animals and dogs (deer, rabbit, wolf, bear, dog) for
+  first person: a quadruped rig, metaball bodies, a 3-step LOD ladder, vertex colours, idle / walk / run clips and an
+  attack for the biters; `<kind>.glb` and `<kind>.json` (clip lengths and ground speeds) into
+  `godot/assets/characters/animals/` (all five in ~8 s: `"$B" --background --factory-startup --python
+  art/scripts/build_animals.py -- --out godot/assets/characters/animals [--kinds wolf] [--preview DIR]`).
 - `scripts/hair.py`, `scripts/build_hair.py`: hair styles as their own meshes (buzz, crop, sidepart, long,
   receding, ponytail, matted, beard) with strand cards, their under-hat versions, and the beanie, each exported
   alone to `godot/assets/characters/look/hair/`.

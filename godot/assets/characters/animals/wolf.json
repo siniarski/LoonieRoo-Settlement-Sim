@@ -1,0 +1,28 @@
+{
+ "kind": "wolf",
+ "height": 1.009,
+ "length": 1.613,
+ "lods": [
+  5000,
+  1600,
+  500
+ ],
+ "clips": {
+  "idle": {
+   "length": 4.0,
+   "speed": 0.0
+  },
+  "walk": {
+   "length": 0.9,
+   "speed": 0.834
+  },
+  "run": {
+   "length": 0.6,
+   "speed": 2.65
+  },
+  "attack": {
+   "length": 0.8,
+   "speed": 0.0
+  }
+ }
+}
