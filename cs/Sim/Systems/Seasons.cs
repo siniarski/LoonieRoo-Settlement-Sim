@@ -62,13 +62,13 @@ public static partial class Seasons
         return growth;
     }
 
-    /// <summary>Lightning strikes something that burns near a survivor (a hash picks what).</summary>
     /// <summary>Does lightning strike on `tick`? A pure read (the game's sound asks it too, for thunder).</summary>
     public static bool lightningAt(SimState state, int tick)
     {
         return ((state.weather == "storm") && ((tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(tick, 0x57) < LIGHTNING_CHANCE);
     }
 
+    /// <summary>Lightning strikes something that burns near a survivor (a hash picks what).</summary>
     public static void lightning(SimState state)
     {
         var s = Js.Get(state.survivors, JsMath.floor(((double)(Hash.hashRoll(state.tick, 1)) * (state.survivors.length))));

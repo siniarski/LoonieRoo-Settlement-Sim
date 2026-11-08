@@ -395,7 +395,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // First person unless the M screen is up (the menu goes over it).
         bool fpScene = you != null && !view.mScreen(true);
         view.firstPerson = fpScene && view.menu == null;
-        if (!view.firstPerson) view.showInventory = false;
+        if (!view.inventoryAllowed(you != null)) view.showInventory = false;
         if (fpScene && !wasFirstPerson)
         {
             // Look the way they were aiming.
@@ -767,6 +767,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             if (controlling) view.closeMScreen();
             else view.showMap = true;
+            return;
+        }
+        // The Colony tab: Tab opens your bag (unless the build bar has Tab), Esc shuts it.
+        if (!view.firstPerson && controlling && ((key == Key.Tab && !view.buildOpen) || (key == Key.Escape && view.showInventory)))
+        {
+            view.showInventory = key == Key.Tab && !view.showInventory;
             return;
         }
         if (key == Key.Escape && !view.firstPerson && view.tool == null && !view.buildOpen && !view.showOverview && (controlling || view.selectedId == null))

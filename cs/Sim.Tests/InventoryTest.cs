@@ -237,4 +237,67 @@ public partial class InventoryTest
             expect(count(state, crate.id, "coat")).toBe(1);
         }
     }
+
+    /// <summary>item names</summary>
+    public class D003_item_names
+    {
+
+        [Fact(DisplayName = "item names > every kind has a name, and a knife or a gun is called what it is")]
+        public void T013_every_kind_has_a_name()
+        {
+            foreach (var kind in Js.ObjectKeys(Inventory.ITEM_WEIGHT))
+            {
+                expect(Items.NAMES.ContainsKey(kind)).toBe(true);
+            }
+            var state = setup(0);
+            var knife = Items.spawnItem(state, "weapon", 1, 2);
+            var gun = Items.spawnItem(state, "gun", 1, 2);
+            expect(Items.NAMES["weapon"]).toContain(Items.nameOf(knife));
+            expect(Items.NAMES["gun"]).toContain(Items.nameOf(gun));
+            expect(Items.nameOf(knife)).not.toBe("weapon");
+        }
+
+        [Fact(DisplayName = "item names > a name comes from the item's id: the same every time, after a save, and spread over the kind's names")]
+        public void T014_names_are_deterministic_and_saved()
+        {
+            var state = setup(0);
+            var foods = new List<Item>();
+            for (var i = 0; i < 40; i++)
+            {
+                foods.push(Items.spawnItem(state, "food", 1, 2));
+            }
+            var names = foods.map((f) => Items.nameOf(f));
+            expect(Js.Set(names).size).toBeGreaterThan(4);
+            var loaded = Js.NN(Savefile.loadFile(Savefile.toSaveFile(state)).state);
+            expect(foods.map((f) => Items.nameOf(Js.NN(Items.getItem(loaded, f.id))))).toEqual(names);
+            // An item from an old save has only its id and kind: that's all a name needs.
+            expect(Items.nameOf(new Item { id = foods[0].id, kind = "food" })).toBe(names[0]);
+        }
+
+        [Fact(DisplayName = "item names > books by their subject, bodies by whose, stacks by a shared name or else the kind")]
+        public void T015_books_bodies_stacks()
+        {
+            expect(Items.nameOf(new Item { id = "i1", kind = "book", tag = "farm" })).toBe("book on farming");
+            expect(Items.nameOf(new Item { id = "i2", kind = "book", tag = "gunsmithing" })).toBe("book on gunsmithing");
+            expect(Items.nameOf(new Item { id = "i3", kind = "corpse", tag = "Ana" })).toBe("Ana's body");
+            var a = new Item { id = "i10", kind = "wood" };
+            var b = new Item { id = "i11", kind = "wood" };
+            expect(Items.stackName([a, b])).toBe("planks");
+            var foods = new List<Item>();
+            for (var i = 0; i < 20; i++) foods.push(new Item { id = $"i{100 + i}", kind = "food" });
+            expect(Items.stackName(foods)).toBe("tinned food");
+        }
+
+        [Fact(DisplayName = "item names > what you're told uses the name")]
+        public void T016_messages_use_the_name()
+        {
+            var (state, s, crate) = withBag("weapon", "coat");
+            var knife = Js.NN(Items.getItem(state, Js.At(s.pack, 0, "none")));
+            var coat = Js.NN(Items.getItem(state, Js.At(s.pack, 1, "none")));
+            expect(Commands.applyCommand(state, new Command { type = "useItem", itemId = knife.id }).ok).toBe(true);
+            expect(s.note).toBe($"took up the {Items.nameOf(knife)}");
+            expect(Commands.applyCommand(state, new Command { type = "useItem", itemId = coat.id }).ok).toBe(true);
+            expect(s.note).toBe($"put on the {Items.nameOf(coat)}");
+        }
+    }
 }
