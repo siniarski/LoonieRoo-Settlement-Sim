@@ -121,6 +121,8 @@ public partial class VehiclesTest
             var s = __d3.s;
             var car = __d3.car;
             var z = Zombies.addZombie(state, 16, 3, 200, "static");
+            // Already after you, so it comes straight down the lane at the car (left to wander, it can stand a tile to the side as the car goes by).
+            z.targetId = s.id;
             getIn(state);
             Commands.applyCommand(state, new Command { type = "steer", dx = 0, dy = -1 });
             run(state, 40);

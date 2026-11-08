@@ -103,7 +103,7 @@ public static partial class Motion
         e.at = new Point { x = Js.I(from.x + JsMath.trunc(((double)(((double)((to.x - from.x)) * (m.progress))) / (m.duration)))), y = Js.I(from.y + JsMath.trunc(((double)(((double)((to.y - from.y)) * (m.progress))) / (m.duration)))) };
     }
 
-    /// <summary>For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are allowed (a zombie keeps its old tile as pos until a step lands, so it can be a tile off).</summary>
+    /// <summary>For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are allowed (a zombie pushed in a crowd can be a tile off until its next move catches its pos up).</summary>
     public static void followTile(Body e, double slack = 0)
     {
         var t = tileOf(e.at);

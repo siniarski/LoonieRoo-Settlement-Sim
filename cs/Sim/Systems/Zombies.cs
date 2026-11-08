@@ -11,6 +11,13 @@
 // if it can and through walls if it must, battering whatever is in the way
 // (breach.ts). With no survivors at all they wander. At dawn they all
 // shamble off. Guards (jobs.ts) hunt them down.
+//
+// Moving (2026-11-08): zombies are free movers. They own `at` and `pos` is the tile under it.
+// With a target within CHASE_RANGE and a straight walk to them (walkLine: no wall, shut door,
+// window or water on the line), a zombie comes straight at where they are (chase), sliding along
+// walls. Otherwise it follows its tile path smoothed: straight at the furthest of the next
+// LOOKAHEAD waypoints it can walk to (aimAhead), and tile by tile only where the next step
+// needs it (stepTile: battering, a raider opening a door, climbing through a broken window).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -471,89 +478,49 @@ public static partial class Zombies
             }
         }
         var speed = JsMath.ceil(((double)(Motion.SUB) / (Js.Get(ZombieKinds.VARIANTS, z.variant).ticksPerTile)));
-        if (closeIn(state, z, speed))
+        if (enter(state, z))
         {
             return;
         }
-        var home = Motion.centre(z.pos);
-        if ((z.at.x != home.x) || (z.at.y != home.y))
-        {
-            var goal = Js.At(z.path, 0, z.pos);
-            if (!Pathfinding.isPassable(state.grid, goal.x, goal.y, moverOf(z)) || !Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, goal.x, goal.y, moverOf(z)))
-            {
-                z.path = [];
-                glide(z, home, speed);
-                return;
-            }
-            if (!glide(z, Motion.centre(goal), climbing(state, z.pos, goal) ? JsMath.ceil(((double)(speed) / (2))) : speed))
-            {
-                return;
-            }
-            if (Js.T(Js.Get(z.path, 0)))
-            {
-                z.path.shift();
-            }
-            z.pos = new Point { x = Js.I(goal.x), y = Js.I(goal.y) };
-            if (springTrap(state, z))
-            {
-                return;
-            }
-            Defences.fallInPit(state, z);
-        }
+        var target = chaseTarget(state, z);
         var horde = Hordes.getHorde(state, z.hordeId);
+        var planned = false;
         if (Js.T(horde) && (z.path.length == 0))
         {
-            var step = Hordes.hordeStep(state, z, horde);
-            z.path = Js.T(step) ? ((List<Point>)[step]) : ((List<Point>)[]);
+            if (!Js.T(target))
+            {
+                var step = Hordes.hordeStep(state, z, horde);
+                z.path = Js.T(step) ? ((List<Point>)[step]) : ((List<Point>)[]);
+            }
         }
-        else if (((state.tick >= z.nextThinkTick) || (z.path.length == 0)) && (budget.plans > 0))
+        else if (((state.tick >= z.nextThinkTick) || ((z.path.length == 0) && !Js.T(target))) && (budget.plans > 0))
         {
             budget.plans -= 1;
             plan(state, z);
             z.nextThinkTick = state.tick + REPATH_EVERY;
+            planned = true;
+            target = chaseTarget(state, z);
         }
-        var next = Js.Get(z.path, 0);
-        if (!Js.T(next))
+        if (Js.T(target))
         {
+            chase(state, z, target, speed);
             return;
         }
-        if (!Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, next.x, next.y, moverOf(z)))
+        if (planned)
         {
-            var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
-            if ((e >= 0) && (z.cooldown == 0))
-            {
-                Breach.damageEdge(state, e, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
-                z.cooldown = ZOMBIE_ATTACK_EVERY;
-            }
-            return;
+            aimAhead(state, z);
         }
-        if (!Pathfinding.isPassable(state.grid, next.x, next.y, moverOf(z)))
-        {
-            if (Breach.isStructure(Grids.getTile(state.grid, next.x, next.y)) && (Space.manhattan(z.pos, next) == 1))
-            {
-                if (z.cooldown == 0)
-                {
-                    if (((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE)) && FireMod.ignite(state, next.x, next.y))
-                    {
-                        Events.logEvent(state, $"Raiders firebombed the {Js.Str(Grids.getTile(state.grid, next.x, next.y))} at ({Js.Str(next.x)}, {Js.Str(next.y)})");
-                    }
-                    Breach.damageStructure(state, next.x, next.y, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
-                    z.cooldown = ZOMBIE_ATTACK_EVERY;
-                }
-                return;
-            }
-            z.path = [];
-            return;
-        }
-        if (z.kind == "raider")
-        {
-            Doors.passThrough(state, next.x, next.y, false, z.pos);
-        }
-        glide(z, Motion.centre(next), climbing(state, z.pos, next) ? JsMath.ceil(((double)(speed) / (2))) : speed);
+        followPath(state, z, speed);
     }
 
-    /// <summary>Closing in: within this of its target, in the open, a zombie leaves the tile path and comes straight on.</summary>
-    public const int CLOSE_IN = 640;
+    /// <summary>Chasing: a zombie with a target this near (SUB units, centre to centre: as far as static zombies notice anyone) and a straight walk to them comes straight at where they are, not along its tile path.</summary>
+    public const int CHASE_RANGE = AGGRO_RADIUS * Motion.SUB;
+
+    /// <summary>Following a path, a zombie heads for the furthest of this many waypoints ahead that it can walk straight to, rather than visiting every tile centre.</summary>
+    public const int LOOKAHEAD = 12;
+
+    /// <summary>A waypoint this near (SUB units) counts as reached.</summary>
+    public const int ARRIVED = 64;
 
     /// <summary>Zombies push apart to this far, centre to centre.</summary>
     public static readonly double CROWD = ((double)(2) * (Motion.BODY_RADIUS));
@@ -573,80 +540,243 @@ public static partial class Zombies
         return false;
     }
 
-    /// <summary>Close in on the target: near enough, with a clear line, come straight at where they are (not their tile), stopping just inside reach. Returns true if it took the tick.</summary>
-    public static bool closeIn(SimState state, Zombie z, double speed)
+    /// <summary>The pos follows the tile under `at` (free movers own `at`); stepping onto a new tile can spring a trap or drop it in a pit. True if a trap took it.</summary>
+    public static bool enter(SimState state, Zombie z)
     {
-        var target = Js.T(z.targetId) ? Lookup.findById(state.survivors, z.targetId) : null;
-        if (!Js.T(target))
+        var tile = Motion.tileOf(z.at);
+        if ((tile.x == z.pos.x) && (tile.y == z.pos.y))
         {
             return false;
         }
-        var d2 = Motion.distance2(target.at, z.at);
-        if ((d2 > ((double)(CLOSE_IN) * (CLOSE_IN))) || !clearLine(state, z.pos, target.pos))
-        {
-            return false;
-        }
-        var d = JsMath.sqrt(d2);
-        var step = JsMath.min(speed, JsMath.max(0, JsMath.floor(d - (Motion.REACH - 16))));
-        if (step == 0)
+        z.pos = tile;
+        if (springTrap(state, z))
         {
             return true;
         }
-        var v = Motion.toward(target.at.x - z.at.x, target.at.y - z.at.y, step);
-        z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
-        var tile = Motion.tileOf(z.at);
-        if ((tile.x != z.pos.x) || (tile.y != z.pos.y))
-        {
-            z.pos = tile;
-            z.path = [];
-            if (springTrap(state, z))
-            {
-                return true;
-            }
-            Defences.fallInPit(state, z);
-        }
-        return true;
+        Defences.fallInPit(state, z);
+        return false;
     }
 
-    /// <summary>Every tile on the line between two tiles is open to a zombie (Bresenham).</summary>
-    public static bool clearLine(SimState state, Point a, Point b)
+    /// <summary>The mover a zombie's straight lines are checked for: raiders open doors as they reach them, so their straight lines stop at shut ones (and go by the path, which opens them).</summary>
+    public static string lineMover(Zombie z)
     {
-        var __d3 = a;
-        var x = __d3.x;
-        var y = __d3.y;
-        var dx = JsMath.abs(b.x - x);
-        var dy = -JsMath.abs(b.y - y);
-        var sx = (x < b.x) ? 1 : -1;
-        var sy = (y < b.y) ? 1 : -1;
-        double err = dx + dy;
-        for (; ; )
+        return (z.kind == "raider") ? Pathfinding.ZOMBIE : moverOf(z);
+    }
+
+    /// <summary>The survivor this zombie is after, if near enough (CHASE_RANGE) with a straight walk to them.</summary>
+    public static Survivor? chaseTarget(SimState state, Zombie z)
+    {
+        var target = Js.T(z.targetId) ? Lookup.findById(state.survivors, z.targetId) : null;
+        if (!Js.T(target) || (Motion.distance2(target.at, z.at) > ((double)(CHASE_RANGE) * (CHASE_RANGE))))
         {
-            if (!Pathfinding.isPassable(state.grid, x, y, "zombie") && !((x == b.x) && (y == b.y)))
+            return null;
+        }
+        return walkLine(state.grid, z.at, target.at, lineMover(z), true) ? target : null;
+    }
+
+    /// <summary>Come straight at where the target is (not their tile), sliding along walls, stopping just inside reach. The tile path is dropped: once the line is lost, it plans afresh.</summary>
+    public static void chase(SimState state, Zombie z, Survivor target, double speed)
+    {
+        var d = JsMath.sqrt(Motion.distance2(target.at, z.at));
+        var step = JsMath.min(speed, JsMath.max(0, JsMath.floor(d - (Motion.REACH - 16))));
+        if (step == 0)
+        {
+            return;
+        }
+        var v = Motion.toward(target.at.x - z.at.x, target.at.y - z.at.y, step);
+        z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+        z.path = [];
+        enter(state, z);
+    }
+
+    /// <summary>Skip waypoints: head for the furthest of the next LOOKAHEAD it can walk straight to (dropping those before it).</summary>
+    public static void aimAhead(SimState state, Zombie z)
+    {
+        var last = JsMath.min(LOOKAHEAD, z.path.length) - 1;
+        for (var j = last; j >= 1; j--)
+        {
+            if (walkLine(state.grid, z.at, Motion.centre(Js.NN(Js.Get(z.path, j))), lineMover(z), false))
             {
-                return false;
-            }
-            if ((x == b.x) && (y == b.y))
-            {
-                return true;
-            }
-            var e2 = ((double)(2) * (err));
-            var px = x;
-            var py = y;
-            if (e2 >= dy)
-            {
-                err += dy;
-                x += sx;
-            }
-            if (e2 <= dx)
-            {
-                err += dx;
-                y += sy;
-            }
-            if (!Pathfinding.walksAcross(state.grid, new Point { x = Js.I(px), y = Js.I(py) }, new Point { x = Js.I(x), y = Js.I(y) }, "zombie"))
-            {
-                return false;
+                z.path = z.path.slice(j);
+                return;
             }
         }
+    }
+
+    /// <summary>Follow the tile path: straight at the next waypoint while it can walk there (sliding along walls), and tile by tile where it can't (a door or a wall to batter, a broken window to climb).</summary>
+    public static void followPath(SimState state, Zombie z, double speed)
+    {
+        // A waypoint it's already standing on is behind it (a crowd keeps it off the centre).
+        while ((z.path.length > 1) && (Js.NN(Js.Get(z.path, 0)).x == z.pos.x) && (Js.NN(Js.Get(z.path, 0)).y == z.pos.y))
+        {
+            z.path.shift();
+        }
+        var next = Js.Get(z.path, 0);
+        if (!Js.T(next))
+        {
+            return;
+        }
+        var aim = Motion.centre(next);
+        if (walkLine(state.grid, z.at, aim, lineMover(z), false))
+        {
+            var dx = aim.x - z.at.x;
+            var dy = aim.y - z.at.y;
+            var v = ((((double)(dx) * (dx)) + ((double)(dy) * (dy))) <= ((double)(speed) * (speed))) ? new Point { x = Js.I(dx), y = Js.I(dy) } : Motion.toward(dx, dy, speed);
+            z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+            var was = z.pos;
+            var reached = Motion.distance2(z.at, aim) <= ((double)(ARRIVED) * (ARRIVED));
+            if (reached)
+            {
+                z.path.shift();
+            }
+            if (enter(state, z))
+            {
+                return;
+            }
+            if (reached || (was.x != z.pos.x) || (was.y != z.pos.y))
+            {
+                aimAhead(state, z);
+            }
+            return;
+        }
+        stepTile(state, z, next, speed);
+    }
+
+    /// <summary>A step to the next tile the old way, from the centre of its own: battering what's shut, opening doors (raiders), climbing.</summary>
+    public static void stepTile(SimState state, Zombie z, Point next, double speed)
+    {
+        var home = Motion.centre(z.pos);
+        var adjacent = Space.manhattan(z.pos, next) == 1;
+        var open = adjacent && Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, next.x, next.y, moverOf(z)) && Pathfinding.isPassable(state.grid, next.x, next.y, moverOf(z));
+        // Battering needs only to be at the thing (a crowd at a door jostles), so near the tile's centre will do.
+        if (adjacent && !open && (Motion.distance2(z.at, home) <= ((double)(ARRIVED) * (ARRIVED))))
+        {
+            stepBlocked(state, z, next);
+            return;
+        }
+        if ((z.at.x != home.x) || (z.at.y != home.y))
+        {
+            // Part way across already (climbing in through a window, say): carry on, if the way is still open.
+            var onTheWay = open && ((next.x != z.pos.x) ? ((z.at.y == home.y) && (JsMath.sign(z.at.x - home.x) == (next.x - z.pos.x))) : ((z.at.x == home.x) && (JsMath.sign(z.at.y - home.y) == (next.y - z.pos.y))));
+            if (!onTheWay)
+            {
+                var v = Motion.toward(home.x - z.at.x, home.y - z.at.y, JsMath.min(speed, JsMath.sqrt(Motion.distance2(home, z.at))));
+                z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+                if (!adjacent)
+                {
+                    z.path = [];
+                }
+                enter(state, z);
+                return;
+            }
+        }
+        if (!adjacent)
+        {
+            z.path = [];
+            return;
+        }
+        if (stepBlocked(state, z, next))
+        {
+            return;
+        }
+        var from = z.pos;
+        if (glide(z, Motion.centre(next), climbing(state, from, next) ? JsMath.ceil(((double)(speed) / (2))) : speed))
+        {
+            z.path.shift();
+        }
+        enter(state, z);
+    }
+
+    /// <summary>The next tile can't be walked into from here: batter what's in the way (or give up the path). Raiders open doors. True if it took the tick.</summary>
+    public static bool stepBlocked(SimState state, Zombie z, Point next)
+    {
+        if (!Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, next.x, next.y, moverOf(z)))
+        {
+            var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
+            if ((e >= 0) && (z.cooldown == 0))
+            {
+                Breach.damageEdge(state, e, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
+                z.cooldown = ZOMBIE_ATTACK_EVERY;
+            }
+            return true;
+        }
+        if (!Pathfinding.isPassable(state.grid, next.x, next.y, moverOf(z)))
+        {
+            if (Breach.isStructure(Grids.getTile(state.grid, next.x, next.y)))
+            {
+                if (z.cooldown == 0)
+                {
+                    if (((z.kind == "raider") && (Hash.hashRoll(Hash.idNumber(z.id), state.tick) < FireMod.FIREBOMB_CHANCE)) && FireMod.ignite(state, next.x, next.y))
+                    {
+                        Events.logEvent(state, $"Raiders firebombed the {Js.Str(Grids.getTile(state.grid, next.x, next.y))} at ({Js.Str(next.x)}, {Js.Str(next.y)})");
+                    }
+                    Breach.damageStructure(state, next.x, next.y, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
+                    z.cooldown = ZOMBIE_ATTACK_EVERY;
+                }
+                return true;
+            }
+            z.path = [];
+            return true;
+        }
+        if (z.kind == "raider")
+        {
+            Doors.passThrough(state, next.x, next.y, false, z.pos);
+        }
+        return false;
+    }
+
+    /// <summary>Can a zombie walk the straight line between two points (SUB units)? Every tile the centre line passes through is open to `mover` and every edge it crosses is crossable (a broken window isn't: climbing goes by the path, tile by tile). Where the line runs exactly through a corner, both tiles beside it must be open. `endMayBeBlocked`: the far end's own tile isn't checked (someone standing in a doorway). Exact integer maths (in doubles): crossing times compared by cross-multiplying.</summary>
+    public static bool walkLine(Grid grid, Point a, Point b, string mover, bool endMayBeBlocked)
+    {
+        var t = Motion.tileOf(a);
+        var end = Motion.tileOf(b);
+        double dx = b.x - a.x;
+        double dy = b.y - a.y;
+        var sx = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0);
+        var sy = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0);
+        var x = t.x;
+        var y = t.y;
+        bool open(int px, int py, int qx, int qy)
+        {
+            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKind(grid, Grids.edgeBetween(grid, px, py, qx, qy)) == Grids.EDGE_WINDOW_BROKEN))
+            {
+                return false;
+            }
+            return (Js.T(endMayBeBlocked) && (qx == end.x) && (qy == end.y)) || Pathfinding.isPassable(grid, qx, qy, mover);
+        }
+        var guard = JsMath.abs(end.x - x) + JsMath.abs(end.y - y);
+        while (((x != end.x) || (y != end.y)) && (guard-- >= 0))
+        {
+            // How far along the line the next x and y boundaries are, as |dx| * |dy| fractions.
+            double nx = (sx == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sx > 0) ? (x + 1) : x) * (Motion.SUB)) - a.x)) * (JsMath.abs(dy)));
+            double ny = (sy == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sy > 0) ? (y + 1) : y) * (Motion.SUB)) - a.y)) * (JsMath.abs(dx)));
+            if (nx < ny)
+            {
+                if (!open(x, y, x + sx, y))
+                {
+                    return false;
+                }
+                x += sx;
+            }
+            else if (ny < nx)
+            {
+                if (!open(x, y, x, y + sy))
+                {
+                    return false;
+                }
+                y += sy;
+            }
+            else
+            {
+                if (!open(x, y, x + sx, y) || !open(x, y, x, y + sy) || !open(x + sx, y, x + sx, y + sy) || !open(x, y + sy, x + sx, y + sy))
+                {
+                    return false;
+                }
+                x += sx;
+                y += sy;
+            }
+        }
+        return true;
     }
 
     /// <summary>Crowds: zombies closer than CROWD push apart (half each, along the line between them), in a fixed order, sliding along walls. Only neighbours in nearby tiles are compared.</summary>
