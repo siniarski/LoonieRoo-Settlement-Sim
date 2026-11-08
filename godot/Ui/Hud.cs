@@ -1,7 +1,7 @@
 // The HUD (src/ui/hud.ts, card.ts, bag.ts, overview.ts): the top bar, the status line, alerts, the
 // toast, the colony's panels (wanderers, traders, crafting, expeditions, neighbours, prisoners, a
 // survivor's story, succession, the helicopter), the survivor table, the character card and its
-// conditions, the bag and loot, the overview, the debug panel and the paused banner. Reads state;
+// conditions, the overview, the debug panel and the paused banner. Reads state;
 // changes go out as sim commands or view-state changes.
 
 using System;
@@ -65,8 +65,6 @@ public sealed partial class Hud : Control
     readonly UiPanel priorities = new("#333a35", "rgba(20, 23, 21, 0.92)");
     readonly UiPanel card = new("#3a423c", "rgba(20, 23, 21, 0.94)");
     readonly UiPanel conditions = new("#3a423c", "rgba(20, 23, 21, 0.9)");
-    readonly UiPanel bag = new("#3a423c", "rgba(20, 23, 21, 0.94)");
-    readonly UiPanel loot = new("#3a423c", "rgba(20, 23, 21, 0.94)");
     readonly UiPanel overview = new("#6c9a78", "rgba(20, 23, 21, 0.97)");
     readonly UiPanel debug = new("#333a35", "rgba(10, 12, 11, 0.85)", 11);
     readonly UiPanel pausedBanner = new("rgba(255, 196, 92, 0.95)", "rgba(255, 196, 92, 0.95)", 13);
@@ -76,7 +74,6 @@ public sealed partial class Hud : Control
     int frames;
     /// <summary>First person: the dot in the middle of the screen.</summary>
     readonly Crosshair crosshair = new();
-    readonly UiPanel inventoryTitle = new("#c9b88a");
     int overviewFrame;
 
     public Hud(View view, IGameFiles files)
@@ -108,7 +105,7 @@ public sealed partial class Hud : Control
         }
         priorities.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         card.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        foreach (var c in new Control[] { loot, bag, minimap }) c.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        foreach (var c in new Control[] { minimap }) c.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
 
         // Bottom left: the survivor table over the character card.
         var bottomLeft = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, GrowVertical = GrowDirection.Begin };
@@ -120,13 +117,11 @@ public sealed partial class Hud : Control
         AddChild(bottomLeft);
         Pin(bottomLeft, 0, 1, 12, -12, GrowDirection.End, GrowDirection.Begin);
 
-        // Top right: conditions (under the M screen's tabs); bottom right: loot, the bag, the minimap.
+        // Top right: conditions (under the M screen's tabs); bottom right: the minimap (the bag and containers are the inventory screen, Inventory.cs).
         Pin(conditions, 1, 0, -12, 52, GrowDirection.Begin, GrowDirection.End);
         AddChild(conditions);
         var bottomRight = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         bottomRight.AddThemeConstantOverride("separation", 6);
-        bottomRight.AddChild(loot);
-        bottomRight.AddChild(bag);
         bottomRight.AddChild(minimap);
         AddChild(bottomRight);
         Pin(bottomRight, 1, 1, -12, -12, GrowDirection.Begin, GrowDirection.Begin);
@@ -147,10 +142,6 @@ public sealed partial class Hud : Control
 
         AddChild(crosshair);
         crosshair.SetAnchorsPreset(LayoutPreset.Center);
-        AddChild(inventoryTitle);
-        Pin(inventoryTitle, 0.5f, 0, 0, 12, GrowDirection.Both, GrowDirection.End);
-        inventoryTitle.Show(true, "t", (r) => r.Text("Inventory · Tab or Esc to close · 1-9 use", Kit.Title));
-        inventoryTitle.Visible = false;
     }
 
     static void Pin(Control c, float ax, float ay, float x, float y, Control.GrowDirection gx, Control.GrowDirection gy)
@@ -243,11 +234,9 @@ public sealed partial class Hud : Control
         UpdatePriorities(state, solo);
         UpdateConditions(state);
         UpdateCard(state);
-        UpdateBag(state);
         bool stowed = view.firstPerson && !view.showInventory;
-        if (stowed) { card.Visible = false; bag.Visible = false; loot.Visible = false; }
+        if (stowed) card.Visible = false;
         crosshair.Visible = view.firstPerson && !view.showInventory && view.menu == null;
-        inventoryTitle.Visible = view.firstPerson && view.showInventory;
         UpdateWanderers(state, solo);
         UpdateCrafting(state, solo);
         UpdateExpeditions(state, solo);
@@ -797,71 +786,6 @@ public sealed partial class Hud : Control
             stat("Social", s.social, s.social < Wellbeing.LOW);
             stat("Comfort", s.comfort, s.comfort < Wellbeing.LOW);
             stat("Panic", s.panic, s.panic > BodyMod.PANICKING);
-        });
-    }
-
-    // --- the bag and the loot list (bag.ts) --------------------------------------------------------
-
-    static string kg(double tenths) => (tenths / 10).ToString("0.0");
-    static string Capitalise(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
-
-    /// <summary>The container beside you, if any: a car's boot, or a crate with things in it.</summary>
-    static (string id, string title)? Beside(SimState state, Survivor s)
-    {
-        if (Vehicles.vehicleOf(state, s) != null) return null;
-        var car = Vehicles.vehicleNear(state, s.at, Motion.SUB * 1.5);
-        if (car != null)
-        {
-            double load = state.items.Where((i) => i.inside == car.id).Sum((i) => Inventory.ITEM_WEIGHT[i.kind]);
-            return (car.id, $"{(car.kind == "truck" ? "Truck's" : "Car's")} boot  {kg(load)} / {kg(Vehicles.bootMax(car))} kg");
-        }
-        for (int dy = -1; dy <= 1; dy++)
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                var f = FurnitureMod.furnitureAt(state, s.pos.x + dx, s.pos.y + dy);
-                if (f?.kind == "crate" && state.items.Any((i) => i.inside == f.id)) return (f.id, Capitalise(FurnitureMod.containerName(f)));
-            }
-        return null;
-    }
-
-    void UpdateBag(SimState state)
-    {
-        var s = ControlMod.controlled(state);
-        if (s == null) { bag.Visible = false; loot.Visible = false; return; }
-        var box = Beside(state, s);
-        double weight = Inventory.packWeight(state, s);
-        var items = s.pack.Select((id) => Items.getItem(state, id)).Where((i) => i != null).Select((i) => i!).ToList();
-        bag.Show(true, $"{weight}|{string.Join(",", items.Select((i) => i.id))}|{box?.id}", (r) =>
-        {
-            r.Text($"Bag  {kg(weight)} / {kg(Inventory.PACK_MAX)} kg", Kit.Title);
-            r.Add(new BarFill(Math.Min(1, weight / Inventory.PACK_MAX), Ctx.Css(weight > Inventory.PACK_MAX * 0.85 ? "#ffb347" : "#c8c8a0")) { CustomMinimumSize = new Vector2(240, 5) });
-            for (int i = 0; i < items.Count; i++)
-            {
-                var item = items[i];
-                var row = r.Row();
-                row.Text(i < 9 ? $"{i + 1}" : " ", Kit.Dim);
-                row.Text(item.kind).CustomMinimumSize = new Vector2(90, 0);
-                row.Text(kg(Inventory.ITEM_WEIGHT[item.kind]), Kit.Dim);
-                row.Button("use", () => Command(new Command { type = "useItem", itemId = item.id }));
-                row.Button("drop", () => Command(new Command { type = "drop", itemId = item.id }));
-                if (box is { } b) row.Button("stash", () => Command(new Command { type = "stash", itemId = item.id, containerId = b.id }));
-            }
-            if (items.Count == 0) r.Text("empty: pick things up, or search a container", Ctx.Css("#8f998f"));
-        });
-        if (box is not { } bx || Inventory.containerOf(state, bx.id) == null) { loot.Visible = false; return; }
-        var inside = state.items.Where((i) => i.inside == bx.id).ToList();
-        loot.Show(true, $"{bx.id}|{bx.title}|{string.Join(",", inside.Select((i) => i.id))}", (r) =>
-        {
-            r.Text(bx.title, Kit.Title);
-            foreach (var item in inside)
-            {
-                var row = r.Row();
-                row.Text(item.kind).CustomMinimumSize = new Vector2(90, 0);
-                row.Text(kg(Inventory.ITEM_WEIGHT[item.kind]), Kit.Dim);
-                row.Button("take", () => Command(new Command { type = "take", itemId = item.id }));
-            }
-            if (inside.Count == 0) r.Text("empty: stash things from your bag", Ctx.Css("#8f998f"));
-            else r.Button("take all", () => Command(new Command { type = "takeAll", containerId = bx.id }));
         });
     }
 

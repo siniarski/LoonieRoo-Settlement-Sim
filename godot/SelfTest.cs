@@ -106,6 +106,7 @@ public partial class Game
         Check("Tab opens the inventory", view.showInventory && Input.MouseMode == Input.MouseModeEnum.Visible);
         await Tap(Godot.Key.Tab);
         Check("Tab closes it", !view.showInventory);
+        await InventorySteps();
 
         // Space pauses; ticks stop.
         await Tap(Godot.Key.Space);

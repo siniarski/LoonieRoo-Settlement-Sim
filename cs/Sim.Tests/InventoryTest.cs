@@ -103,4 +103,138 @@ public partial class InventoryTest
             expect(book.carriedBy).toBeNull();
         }
     }
+
+    /// <summary>You and a searched crate beside you: `kinds` in your bag, nothing in the crate.</summary>
+    public static (SimState state, Survivor s, Furniture crate) withBag(params string[] kinds)
+    {
+        var state = setup(0);
+        var s = Js.NN(Js.Get(state.survivors, 0));
+        var crate = Js.NN(state.furniture.find((f) => f.look == "counter"));
+        foreach (var kind in kinds)
+        {
+            var item = Items.spawnItem(state, kind, 1, 2);
+            expect(Commands.applyCommand(state, new Command { type = "take", itemId = item.id }).ok).toBe(true);
+        }
+        return (state, s, crate);
+    }
+
+    static double count(SimState state, string containerId, string kind) => Inventory.contents(state, new Furniture { id = containerId }).filter((i) => i.kind == kind).length;
+
+    /// <summary>the inventory screen's moves: one, a stack (every one of a kind), or everything</summary>
+    public class D006_moves
+    {
+        [Fact(DisplayName = "inventory moves > stash one, a stack, or everything; take a stack back")]
+        public void T007_stash_one_a_stack_or_everything()
+        {
+            var (state, s, crate) = withBag("food", "food", "food", "bandage", "book");
+            var food = s.pack.filter((id) => Items.getItem(state, id).kind == "food");
+            expect(Commands.applyCommand(state, new Command { type = "stash", itemId = food[0], containerId = crate.id }).ok).toBe(true);
+            expect(count(state, crate.id, "food")).toBe(1);
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "food" }).ok).toBe(true);
+            expect(count(state, crate.id, "food")).toBe(3);
+            expect(s.pack).toHaveLength(2);
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "food" }).reason).toBe("no food in your bag");
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id }).ok).toBe(true);
+            expect(s.pack).toHaveLength(0);
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id }).reason).toBe("your bag is empty");
+            expect(Commands.applyCommand(state, new Command { type = "takeAll", containerId = crate.id, kind = "food" }).ok).toBe(true);
+            expect(s.pack).toHaveLength(3);
+            expect(count(state, crate.id, "food")).toBe(0);
+            expect(count(state, crate.id, "book")).toBe(1);
+            expect(Commands.applyCommand(state, new Command { type = "takeAll", containerId = crate.id, kind = "food" }).reason).toBe("no food in it");
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "inventory moves > a stack goes in as far as it fits, and the rest stays in the bag")]
+        public void T008_a_stack_goes_in_as_far_as_it_fits()
+        {
+            var (state, s, crate) = withBag("wood", "wood", "wood", "wood");
+            // Fill the crate to within two planks of its hold.
+            for (var i = 0; i < 8; i++)
+            {
+                var plank = Items.spawnItem(state, "wood", 3, 2);
+                plank.pos = null;
+                plank.inside = crate.id;
+            }
+            expect(Inventory.load(state, crate.id)).toBe(240);
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "wood" }).ok).toBe(true);
+            expect(Inventory.load(state, crate.id)).toBe(Inventory.CRATE_HOLD);
+            expect(s.pack).toHaveLength(2);
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "wood" }).reason).toBe("it won't fit");
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "inventory moves > a container must be beside you, both ways")]
+        public void T009_a_container_must_be_beside_you()
+        {
+            var (state, s, crate) = withBag("food");
+            Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id });
+            s.pos = new Point { x = 4, y = 2 };
+            expect(Commands.applyCommand(state, new Command { type = "takeAll", containerId = crate.id, kind = "food" }).reason).toBe("not beside you");
+            s.pos = new Point { x = 1, y = 1 };
+            var food = Items.spawnItem(state, "food", 1, 2);
+            Commands.applyCommand(state, new Command { type = "take", itemId = food.id });
+            s.pos = new Point { x = 0, y = 2 };
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id }).reason).toBe("not beside you");
+            expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = "nothing" }).reason).toBe("not beside you");
+        }
+
+        [Fact(DisplayName = "inventory moves > wear and wield from the bag, take it off into the bag, or drop it")]
+        public void T010_wear_wield_take_off_drop()
+        {
+            var (state, s, crate) = withBag("coat", "weapon", "axe");
+            var coat = s.pack.find((id) => Items.getItem(state, id).kind == "coat");
+            var knife = s.pack.find((id) => Items.getItem(state, id).kind == "weapon");
+            var axe = s.pack.find((id) => Items.getItem(state, id).kind == "axe");
+            expect(Commands.applyCommand(state, new Command { type = "useItem", itemId = coat }).ok).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "useItem", itemId = knife }).ok).toBe(true);
+            expect(Commands.applyCommand(state, new Command { type = "useItem", itemId = axe }).ok).toBe(true);
+            expect(s.body).toBe(coat);
+            expect(s.weapon).toBe(knife);
+            expect(s.tool).toBe(axe);
+            expect(s.pack).toHaveLength(0);
+            expect(Commands.applyCommand(state, new Command { type = "unequip", itemId = coat }).ok).toBe(true);
+            expect(s.body).toBeNull();
+            expect(s.pack).toEqual(Js.Arr([coat]));
+            expect(Commands.applyCommand(state, new Command { type = "unequip", itemId = coat }).reason).toBe("you don't have it on");
+            expect(Commands.applyCommand(state, new Command { type = "drop", itemId = knife }).ok).toBe(true);
+            expect(s.weapon).toBeNull();
+            expect(Items.getItem(state, knife).pos).not.toBeNull();
+            expect(Items.getItem(state, knife).carriedBy).toBeNull();
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "inventory moves > taking something off with a full bag fails and leaves it on")]
+        public void T011_taking_off_with_a_full_bag_fails()
+        {
+            var (state, s, crate) = withBag("armour");
+            var armour = Js.At(s.pack, 0, "none");
+            Commands.applyCommand(state, new Command { type = "useItem", itemId = armour });
+            for (var i = 0; i < 4; i++)
+            {
+                var wood = Items.spawnItem(state, "wood", 1, 2);
+                Commands.applyCommand(state, new Command { type = "take", itemId = wood.id });
+            }
+            expect(Commands.applyCommand(state, new Command { type = "unequip", itemId = armour }).reason).toBe("your bag is too full");
+            expect(s.body).toBe(armour);
+            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
+        }
+
+        [Fact(DisplayName = "inventory moves > the moves are logged and replay to the same state")]
+        public void T012_the_moves_replay()
+        {
+            var (state, s, crate) = withBag("food", "food", "coat");
+            var coat = s.pack.find((id) => Items.getItem(state, id).kind == "coat");
+            Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "food" });
+            Commands.applyCommand(state, new Command { type = "useItem", itemId = coat });
+            Commands.applyCommand(state, new Command { type = "unequip", itemId = coat });
+            Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id });
+            Commands.applyCommand(state, new Command { type = "takeAll", containerId = crate.id, kind = "food" });
+            var types = state.commandLog.map((e) => e.command.type);
+            expect(types).toContain("stashAll");
+            expect(types).toContain("unequip");
+            expect(s.pack).toHaveLength(2);
+            expect(count(state, crate.id, "coat")).toBe(1);
+        }
+    }
 }
