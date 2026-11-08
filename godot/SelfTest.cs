@@ -301,9 +301,10 @@ public partial class Game
     {
         var sounds = firstPerson.sounds;
         DirAccess.MakeDirRecursiveAbsolute("user://sounds-preview");
+        sounds.bank.Wait();
         var levels = new List<string>();
         bool loud = true;
-        foreach (var kind in new[] { "moan_idle", "moan_notice", "hit", "kill" })
+        foreach (var kind in Audio.Bank.KINDS.Select((k) => k.name))
         {
             var set = sounds.Kind(kind);
             for (int i = 0; i < set.Length; i++)
@@ -339,6 +340,7 @@ public partial class Game
         await Frames(2);
         Check("The killing blow thuds where it stood", sounds.Played["kill"] > kill0, $"kills heard {sounds.Played["kill"] - kill0}");
         view.paused = true;
+        await SoundSteps();
     }
 
     static T? FindNamed<T>(Node root, string name) where T : Node

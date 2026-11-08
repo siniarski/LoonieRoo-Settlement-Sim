@@ -15,7 +15,7 @@ public static class Synth
     public const int RATE = 22050;
 
     /// <summary>A small seeded generator (the renderer's own; the sim's RNG is never touched).</summary>
-    sealed class Lcg
+    internal sealed class Lcg
     {
         uint s;
         public Lcg(uint seed) { s = seed * 2654435761u + 1; }
@@ -48,6 +48,28 @@ public static class Synth
         int vFrom = (int)(r.Next() * VOWELS.Length), vTo = (vFrom + 1 + (int)(r.Next() * (VOWELS.Length - 1))) % VOWELS.Length;
         double throat = r.Range(0.85, 0.97); // a bigger or smaller throat: all formants scaled
 
+        var outp = Sing(r, n, f0Start, f0Peak, f0End, attack, fry, breath, vibRate, vibDepth, VOWELS[vFrom], VOWELS[vTo], throat, 4500);
+        return Normalise(outp, angry ? 0.9f : 0.75f);
+    }
+
+    /// <summary>A screamer's shriek: the same voice, high and strained ("ee" opening to "ah"), long, all breath and rattle at the end.</summary>
+    public static float[] Scream(int seed)
+    {
+        var r = new Lcg((uint)(seed * 104723 + 7));
+        double dur = r.Range(1.6, 2.2);
+        int n = (int)(dur * RATE);
+        double f0Start = r.Range(330, 420);
+        var ee = new[] { (360.0, 90.0), (2300.0, 160.0), (3000.0, 220.0) };
+        var outp = Sing(r, n, f0Start, f0Start * r.Range(1.25, 1.4), r.Range(180, 230), 0.05, r.Range(0.45, 0.6), 0.1,
+            r.Range(6, 8), r.Range(0.03, 0.05), ee, VOWELS[2], r.Range(1.0, 1.1), 7000);
+        return Normalise(outp, 0.95f);
+    }
+
+    /// <summary>A voice: a pulse at a sliding pitch (up to a peak in the first fifth, then sagging), built harmonic by
+    /// harmonic up to maxHz and shaped by three formants drifting from one vowel to another; vocal fry, breath, an envelope.</summary>
+    static float[] Sing(Lcg r, int n, double f0Start, double f0Peak, double f0End, double attack, double fry, double breath,
+        double vibRate, double vibDepth, (double f, double b)[] from, (double f, double b)[] to, double throat, double maxHz)
+    {
         const int MAXH = 64;
         var phase = new double[MAXH + 1];
         var amp = new double[MAXH + 1];
@@ -65,14 +87,14 @@ public static class Synth
             if ((i & 63) == 0)
             {
                 double w = t * t * (3 - 2 * t);
-                harmonics = Math.Min(MAXH, (int)(4500 / f0));
+                harmonics = Math.Min(MAXH, (int)(maxHz / f0));
                 for (int k = 1; k <= harmonics; k++)
                 {
                     double f = k * f0, g = 0.015;
                     for (int j = 0; j < 3; j++)
                     {
-                        double ff = throat * (VOWELS[vFrom][j].f * (1 - w) + VOWELS[vTo][j].f * w);
-                        double bw = VOWELS[vFrom][j].b * (1 - w) + VOWELS[vTo][j].b * w;
+                        double ff = throat * (from[j].f * (1 - w) + to[j].f * w);
+                        double bw = from[j].b * (1 - w) + to[j].b * w;
                         double x = (f - ff) / (bw / 2);
                         g += (j == 0 ? 1 : j == 1 ? 0.6 : 0.25) / (1 + x * x);
                     }
@@ -102,7 +124,7 @@ public static class Synth
             if (t > 0.55) env *= Math.Pow(1 - (t - 0.55) / 0.45, 1.6);
             outp[i] = (float)(v * env);
         }
-        return Normalise(outp, angry ? 0.9f : 0.75f);
+        return outp;
     }
 
     /// <summary>A blow landing on a body: a thump, a slap and a crack. `heavy`: the killing blow (lower, longer).</summary>
@@ -134,9 +156,9 @@ public static class Synth
         return Normalise(outp, heavy ? 0.95f : 0.85f);
     }
 
-    static double Smooth(double x) => x * x * (3 - 2 * x);
+    internal static double Smooth(double x) => x * x * (3 - 2 * x);
 
-    static float[] Normalise(float[] s, float peak)
+    internal static float[] Normalise(float[] s, float peak)
     {
         float max = 0;
         foreach (var v in s) max = Math.Max(max, Math.Abs(v));

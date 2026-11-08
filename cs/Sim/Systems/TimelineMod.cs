@@ -175,16 +175,33 @@ public static partial class TimelineMod
             }
         }
         updateHeli(state, t);
+        var far = farNoiseAt(state, state.tick);
+        if (far is var (at, shots))
+        {
+            Noise.makeNoise(state, at, shots ? "gunfire" : "scream");
+            Events.logEvent(state, $"{Js.Str(shots ? Js.Str("Gunshots") : Js.Str("A scream"))}, far off to the {Js.Str(compass(focus(state)!, at))}.");
+        }
+    }
+
+    /// <summary>The far-off noise on `tick`, if there is one: where, and gunshots (else a scream). A pure read (the game's
+    /// sound asks it too, for the tick just run).</summary>
+    public static (Point at, bool shots)? farNoiseAt(SimState state, int tick)
+    {
+        var t = state.timeline;
+        if (!Js.T(t))
+        {
+            return null;
+        }
+        var day = Time.dayOf(tick);
         var winding = (t.powerOffDay > 0) && (day < (t.powerOffDay + WIND_DOWN_DAYS));
         var you = focus(state);
-        if (((Js.T(Js.T(winding) && Js.T(you))) && ((state.tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), state.tick, 0xfa2) < FAR_CHANCE))
+        if (((Js.T(Js.T(winding) && Js.T(you))) && ((tick % Time.TICKS_PER_HOUR) == 0)) && (Hash.hashRoll(Js.Q(state.world?.seed, 0), tick, 0xfa2) < FAR_CHANCE))
         {
-            var a = ((double)(((double)(Hash.hashRoll(state.tick, 0xfa3)) * (JsMath.PI))) * (2));
-            var at = off(state, you, a, FAR_MIN + JsMath.floor(((double)(Hash.hashRoll(state.tick, 0xfa4)) * (((FAR_MAX - FAR_MIN) + 1)))));
-            var shots = Hash.hashRoll(state.tick, 0xfa5) < 0.6;
-            Noise.makeNoise(state, at, shots ? "gunfire" : "scream");
-            Events.logEvent(state, $"{Js.Str(shots ? Js.Str("Gunshots") : Js.Str("A scream"))}, far off to the {Js.Str(compass(you, at))}.");
+            var a = ((double)(((double)(Hash.hashRoll(tick, 0xfa3)) * (JsMath.PI))) * (2));
+            var at = off(state, you, a, FAR_MIN + JsMath.floor(((double)(Hash.hashRoll(tick, 0xfa4)) * (((FAR_MAX - FAR_MIN) + 1)))));
+            return (at, Hash.hashRoll(tick, 0xfa5) < 0.6);
         }
+        return null;
     }
 
     public static void updateHeli(SimState state, Timeline t)
