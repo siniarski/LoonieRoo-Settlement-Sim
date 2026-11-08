@@ -5,3 +5,5 @@ cs/Harness/out/
 # Blender files made by art/scripts (rebuild them; the scripts are the source).
 art/blend/
 __pycache__/
+# Personal Claude Code settings (this machine's MCP approvals).
+.claude/settings.local.json
