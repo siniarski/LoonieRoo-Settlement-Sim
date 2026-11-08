@@ -30,7 +30,8 @@
 //   --lose=armLeft:elbow,legRight:knee   (arm cuts hand|elbow|shoulder, leg cuts foot|knee|hip)
 //   --speed=M --crouch=0..1 --stance=rest|prone --style=0..1 --view=iso|side|front|top --still   start that way
 //   --clip=ual_walk [--clipat=SECONDS]   play a retarget library clip (LabLibrary.cs), held at a time
-//   --tab=Move|Body|Clothes|Ground|Crowd|Hands|Library --zoom=SIZE --novsync (frame times uncapped)
+//   --car=in|out|seated [--carat=P --steer= --throttle= --brake= --roof] --cartest=DIR   a car (LabCar.cs)
+//   --tab=Move|Body|Clothes|Ground|Crowd|Hands|Library|Car --zoom=SIZE --novsync (frame times uncapped)
 //   --demo                  run the demo (every transition in turn, looping); --trace prints the state twice a second
 //
 // Keys: 1-4 idle/walk/jog/run, C crouch, X prone, Z rest on the back, right-drag orbit, wheel zoom.
@@ -118,6 +119,7 @@ public partial class Lab : Node3D
         SetupLibrary(args);
         SetupIk(args);
         SetupHands(args);
+        SetupCar(args);
         SetupBody(args);
         SetupClothes(args);
         if (args.TryGetValue("zoom", out var zm)) camSize = Num(zm);
@@ -267,6 +269,7 @@ public partial class Lab : Node3D
     {
         if (tree == null) return;
         if (demo) RunDemo(delta);
+        UpdateCar(delta);  // the car's action sets the root, its speed and the seat (LabCar.cs)
         if (LegsLost() > 0 && pose == Pose.Stand) { pose = Pose.Prone; SyncPanel(); }  // can't stand: crawl
         string state = playback.GetCurrentNode();
         string goal = NodeOf(pose);
@@ -314,7 +317,7 @@ public partial class Lab : Node3D
 
         readout.Text = $"state    {state}\nspeed    {speed:0.00} m/s ({Gait(state, speed, crouch, LegsLost() == 2 ? 1 : crawlStyle)})\ncrouch   {crouch:0.00}\n" +
                        $"cadence  {rate:0.00} cycles/s\nstride   {(speed > 0.01 ? speed / rate : 0):0.00} m/cycle\n" +
-                       $"fps      {Engine.GetFramesPerSecond():0}" + (HandReadout() is { Length: > 0 } h ? "\n" + h : "") + (BodyReadout() is { Length: > 0 } b ? "\n" + b : "") + (ClothesReadout() is { Length: > 0 } c2 ? "\n" + c2 : "") + (LibraryReadout() is { Length: > 0 } lb ? "\n" + lb : "");
+                       $"fps      {Engine.GetFramesPerSecond():0}" + (HandReadout() is { Length: > 0 } h ? "\n" + h : "") + (BodyReadout() is { Length: > 0 } b ? "\n" + b : "") + (ClothesReadout() is { Length: > 0 } c2 ? "\n" + c2 : "") + (LibraryReadout() is { Length: > 0 } lb ? "\n" + lb : "") + (CarReadout() is { Length: > 0 } cr ? "\n" + cr : "");
 
         traceTime += delta;
         if (trace && traceTime >= 0.5)
@@ -434,6 +437,7 @@ public partial class Lab : Node3D
         BuildCrowdTab(Tab("Crowd"));
         BuildHandsTab(Tab("Hands"));
         BuildLibraryTab(Tab("Library"));
+        BuildCarTab(Tab("Car"));
 
         // Always shown: the camera and the readout.
         var camRow = new HBoxContainer();

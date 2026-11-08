@@ -46,6 +46,8 @@ editor: open the scene and press F6 (Run Current Scene). The panel's tabs:
   and draw calls.
 - **Hands:** a weapon (pistol, rifle, knife, bat) held by hand IK; guns ready or aimed at eye level (F), aim pitch,
   raise time; a door to open quietly or fast.
+- **Car:** a mock-up car (LabCar.cs): Get in, Get out, Sit in it, action time, a scrub slider (holds the action at a
+  progress), steer, throttle, brake, the roof (hidden to see in).
 - **Library:** the clips retargeted from a third-party library onto our rig (assets/characters/clips_ual.glb, made
   by art/scripts/retarget.py; LabLibrary.cs): pick one (or Prev/Next), clip speed; it plays over everything, in place.
 
@@ -56,6 +58,7 @@ humanoid profile), `--shot=out.png --frames=N`, `--speed= --crouch= --stance=res
 `--weapon=rifle --aim=10 --raised --door=quiet --nohandik`, `--panic= --fatigue= --cold= --pain= --startle --zombie --view=face`,
 `--outfit=shirt,jacket,trousers,boots --dirt= --blood= --torn= --wet= --randomoutfit=SEED --twin` (a mid-tier copy beside the character), `--midbare` (the crowd's mid tier undressed), `--clip=ual_walk --clipat=0.4` (a library clip, held at 0.4 s), `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
 `--iktest=DIR` (feet on the kerb, hill and stairs, facing round, IK on and off) and `--handtest=DIR` (every weapon
-and the door); experiments/ik-test has a run of each.
+and the door) and `--cartest=DIR` (getting in, seated with steering and pedals, getting out); experiments/ik-test
+has a run of each. The car from the command line: `--car=in|out|seated --carat=0.54 --steer=30 --throttle=0.5 --brake= --roof`.
 
 `Characters/Bench.tscn` is the animation benchmark (experiments/anim-bench/README.md has how to run it and the results).

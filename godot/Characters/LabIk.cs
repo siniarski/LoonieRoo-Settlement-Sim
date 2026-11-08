@@ -87,7 +87,8 @@ public partial class Lab
 
     void UpdateIk(string state)
     {
-        if (footIk != null) footIk.Enabled = ikOn && state == "upright";
+        // Off while the car's seat has the legs (LabCar.cs: its own leg IK onto the pedals).
+        if (footIk != null) footIk.Enabled = ikOn && state == "upright" && !(carActive && seat != null && seat.LegW > 0);
     }
 
     // ------------------------------------------------------------------ the IK test

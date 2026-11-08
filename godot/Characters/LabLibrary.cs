@@ -106,6 +106,14 @@ public partial class Lab
         }
     }
 
+    /// <summary>A library clip blended over the lab's tree by an amount (the car's seated clip), without restarting it.</summary>
+    void LibraryBlend(string clip, double amount)
+    {
+        if (libClip != clip) PlayLibrary(clip);
+        libHold = false;
+        tree.Set("parameters/lib/blend_amount", amount);
+    }
+
     void UpdateLibrary() => tree.Set("parameters/libRate/scale", libHold ? 0.0 : libRate);
 
     string LibraryReadout() => libClip == null ? "" : $"clip     {libClip}" + (libHold ? " (held)" : "");

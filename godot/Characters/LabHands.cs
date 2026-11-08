@@ -263,7 +263,8 @@ public partial class Lab
         bool gun = weapon is "pistol" or "rifle";
         aimAmount = Approach(aimAmount, raised && gun && upright ? 1 : 0, delta / Math.Max(raiseTime, 0.01));
         handIk.Enabled = handIkOn;
-        if (doorApproach != null && doorGrip != null)
+        if (CarHands()) { }  // the car's handles and wheel (LabCar.cs)
+        else if (doorApproach != null && doorGrip != null)
         {
             handIk.Grip[0] = null; handIk.Weight[0] = 0;
             handIk.Grip[1] = doorGrip; handIk.Weight[1] = (float)doorHand;

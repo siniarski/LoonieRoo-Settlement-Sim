@@ -1,5 +1,6 @@
 // Hand IK (docs/characters.md, "IK at runtime"): hands onto grips (a weapon's, a door handle), on
 // top of whatever clip plays. Presentation only. Per character, after the foot IK:
+//   ShoulderReach     a grip beyond the straight arm brings the shoulder (clavicle) forward, up to 25 deg
 //   ArmIK.Left/Right  Godot's TwoBoneIK3D (upper arm, forearm, hand): the wrist to where the grip
 //                     puts it; the elbow to a pole down, out and back from the shoulder.
 //   HandAlign         turns each hand so its palm and fingers match the grip's, and records where
@@ -23,7 +24,9 @@ public sealed class HandIK
     readonly TwoBoneIK3D[] arm = new TwoBoneIK3D[2];
     readonly Node3D[] target = new Node3D[2], pole = new Node3D[2];
     readonly HandAlign align;
+    readonly ShoulderReach reach;
     public readonly Node3D?[] Grip = new Node3D?[2];  // 0 left, 1 right
+    public Vector3 Target(int i) => target[i].GlobalPosition;
     public readonly float[] Weight = new float[2];
     public bool Enabled = true;
 
@@ -31,6 +34,8 @@ public sealed class HandIK
     {
         this.character = character;
         align = new HandAlign { Name = "HandAlign", Ik = this };
+        reach = new ShoulderReach { Name = "ShoulderReach", Ik = this };
+        skel.AddChild(reach);  // before the arms' IK
         for (int i = 0; i < 2; i++)
         {
             string s = i == 0 ? "Left" : "Right";
@@ -67,7 +72,7 @@ public sealed class HandIK
             arm[i].Active = on;
             if (on) arm[i].Influence = Weight[i];
         }
-        align.Active = Enabled;
+        align.Active = reach.Active = Enabled;
         PlaceTargets();
     }
 
@@ -87,6 +92,53 @@ public sealed class HandIK
 
     /// <summary>How far each wrist is from its target, in metres (after the IK); -1 for a free hand.</summary>
     public float Error(int i) => Enabled && Grip[i] != null && Weight[i] > 0.999f ? align.FinalWrist[i].DistanceTo(WristFor(Grip[i]!)) : -1;
+}
+
+/// <summary>Before the arms' IK: a grip beyond the straight arm brings the shoulder forward (the
+/// clavicle turns towards it, up to MaxDeg), as people reach, so the arm gets there. Grips in reach
+/// are left alone (the weapon holds don't change).</summary>
+public partial class ShoulderReach : SkeletonModifier3D
+{
+    public HandIK Ik = null!;
+    const float MaxDeg = 25, Slack = 0.995f;
+    int[]? clav, upper, lower, hand;
+
+    public override void _ProcessModificationWithDelta(double delta)
+    {
+        var skel = GetSkeleton();
+        if (skel == null) return;
+        if (clav == null)
+        {
+            clav = new int[2]; upper = new int[2]; lower = new int[2]; hand = new int[2];
+            for (int i = 0; i < 2; i++)
+            {
+                string s = i == 0 ? "Left" : "Right";
+                clav[i] = skel.FindBone(s + "Shoulder"); upper[i] = skel.FindBone(s + "UpperArm");
+                lower[i] = skel.FindBone(s + "LowerArm"); hand[i] = skel.FindBone(s + "Hand");
+            }
+        }
+        var inv = skel.GlobalTransform.AffineInverse();
+        for (int i = 0; i < 2; i++)
+        {
+            if (Ik.Grip[i] == null || Ik.Weight[i] < 0.001f) continue;
+            var t = inv * Ik.Target(i);
+            var c = skel.GetBoneGlobalPose(clav[i]!).Origin;
+            var s = skel.GetBoneGlobalPose(upper![i]).Origin;
+            float arm = skel.GetBoneGlobalRest(lower![i]).Origin.DistanceTo(skel.GetBoneGlobalRest(upper[i]).Origin)
+                      + skel.GetBoneGlobalRest(hand![i]).Origin.DistanceTo(skel.GetBoneGlobalRest(lower[i]).Origin);
+            float over = s.DistanceTo(t) - arm * Slack;
+            if (over <= 0) continue;
+            // Turn the clavicle (about its root) so the shoulder joint swings towards the target.
+            var from = (s - c).Normalized();
+            var to = (t - c).Normalized();
+            var axis = from.Cross(to);
+            if (axis.LengthSquared() < 1e-8f) continue;
+            float want = Math.Min(over / Math.Max(c.DistanceTo(s), 0.05f), Mathf.DegToRad(MaxDeg)) * Ik.Weight[i];
+            var g = skel.GetBoneGlobalPose(clav[i]).Basis.Orthonormalized();
+            var local = (g.Inverse() * axis.Normalized()).Normalized();
+            skel.SetBonePoseRotation(clav[i], skel.GetBonePoseRotation(clav[i]) * new Quaternion(local, want));
+        }
+    }
 }
 
 /// <summary>A skeleton modifier that runs a callback: for work that needs this frame's pose mid-update.</summary>
