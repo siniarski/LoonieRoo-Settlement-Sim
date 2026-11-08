@@ -1,2 +1,4 @@
 .godot/
 *.png
+# Assets are tracked; other PNGs here are screenshots.
+!assets/**/*.png
