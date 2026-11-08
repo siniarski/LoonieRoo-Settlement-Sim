@@ -69,7 +69,8 @@ public sealed class FootIK
     public static (float y, Vector3 normal) Ground(Node3D from, Vector3 at)
     {
         var space = from.GetWorld3D().DirectSpaceState;
-        var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(at + Vector3.Up * 1.2f, at + Vector3.Down * 2.5f));
+        // Layer 1 only: the ground. A ragdoll's bodies (layer 2) follow the clip even when not simulating.
+        var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(at + Vector3.Up * 1.2f, at + Vector3.Down * 2.5f, 1));
         if (hit.Count == 0) return (at.Y, Vector3.Up);
         return (((Vector3)hit["position"]).Y, ((Vector3)hit["normal"]).Normalized());
     }

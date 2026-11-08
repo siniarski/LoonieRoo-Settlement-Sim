@@ -17,6 +17,14 @@ Machine: Intel Core Ultra 7 265K, RTX 5070 (a fast desktop: a low-end target is 
 - `windowed-15-tracks.md`: the merged mesh again, clips trimmed to the 15 channels that move.
 - `windowed-update-rates.md`: the animation update rate (every 2nd, 3rd, 4th frame at ~60+ fps).
 
+## The horde (VAT on MultiMesh)
+
+`godot/Characters/HordeBench.tscn` (HordeBench.cs, Vat.cs, vat.gdshader): `"$G" --path godot res://Characters/HordeBench.tscn -- --counts=5000,10000,20000 [--shadows] --out=...`.
+Results in `horde.md` and `horde-shadows.md`. Four outfits baked (walk, idle, run, zombie_crawl; 159 ms, 10.9 MB), the horde
+0.9 m apart, mostly shambling: 5,000 / 10,000 / 20,000 in 2.9 / 5.5 / 10.8 ms (shadows 7.8 / 13.4 / 26.1), 5 draw calls, render CPU
+~0.1 ms at any count. All GPU (~0.5 µs per character at ~2,800 triangles): a far LOD mesh is the next lever. Against the skeleton
+tiers above (2,000 merged and throttled ~15 ms), VAT is ~15x cheaper per character.
+
 ## What it says
 
 Per character per frame (2,000 merged characters, minus the same 2,000 not animated):

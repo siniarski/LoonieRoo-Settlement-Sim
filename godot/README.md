@@ -48,6 +48,7 @@ editor: open the scene and press F6 (Run Current Scene). The panel's tabs:
   raise time; a door to open quietly or fast.
 - **Car:** a mock-up car (LabCar.cs): Get in, Get out, Sit in it, action time, a scrub slider (holds the action at a
   progress), steer, throttle, brake, the roof (hidden to see in).
+- **Ragdoll:** knock back or forward (impulse slider), a hit (upper body), get up (or by itself once at rest).
 - **Library:** the clips retargeted from a third-party library onto our rig (assets/characters/clips_ual.glb, made
   by art/scripts/retarget.py; LabLibrary.cs): pick one (or Prev/Next), clip speed; it plays over everything, in place.
 
@@ -56,9 +57,9 @@ Z rest on the back, F aim, right-drag orbit, wheel zoom. From the command line (
 humanoid profile), `--shot=out.png --frames=N`, `--speed= --crouch= --stance=rest|prone --style= --view=`,
 `--lose=armLeft:elbow,legRight:knee`, `--ground=hill --slope=25 --noik`, `--crowd=1000 --lod=auto --rate=20`,
 `--weapon=rifle --aim=10 --raised --door=quiet --nohandik`, `--panic= --fatigue= --cold= --pain= --startle --zombie --view=face`,
-`--outfit=shirt,jacket,trousers,boots --dirt= --blood= --torn= --wet= --randomoutfit=SEED --twin` (a mid-tier copy beside the character), `--midbare` (the crowd's mid tier undressed), `--clip=ual_walk --clipat=0.4` (a library clip, held at 0.4 s), `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
+`--outfit=shirt,jacket,trousers,boots --dirt= --blood= --torn= --wet= --randomoutfit=SEED --twin` (a mid-tier copy beside the character), `--midbare` (the crowd's mid tier undressed), `--clip=ual_walk --clipat=0.4` (a library clip, held at 0.4 s), `--ragdoll=back|front|hit --noautoup`, `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
 `--iktest=DIR` (feet on the kerb, hill and stairs, facing round, IK on and off) and `--handtest=DIR` (every weapon
-and the door) and `--cartest=DIR` (getting in, seated with steering and pedals, getting out); experiments/ik-test
+and the door) `--cartest=DIR` (getting in, seated with steering and pedals, getting out) and `--ragtest=DIR` (knocked down both ways, up again, a hit); experiments/ik-test
 has a run of each. The car from the command line: `--car=in|out|seated --carat=0.54 --steer=30 --throttle=0.5 --brake= --roof`.
 
-`Characters/Bench.tscn` is the animation benchmark (experiments/anim-bench/README.md has how to run it and the results).
+`Characters/Bench.tscn` is the animation benchmark and `Characters/HordeBench.tscn` the horde one (vertex animation textures on MultiMesh); experiments/anim-bench/README.md has how to run them and the results.
