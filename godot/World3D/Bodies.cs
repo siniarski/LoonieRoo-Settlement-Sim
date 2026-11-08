@@ -1,7 +1,7 @@
-// Everything that moves near you in first person that isn't a character model (People.cs): cars,
-// things lying on the ground, and people past the models' budget or range, as placeholders (capsules
-// and boxes) from a pool of nodes reused every frame. Animals and dogs are models (Animals.cs), drawn
-// from here.
+// Everything that moves near you in first person that isn't a character model (People.cs): cars and
+// people past the models' budget or range, as placeholders (capsules and boxes) from a pool of nodes
+// reused every frame. Animals and dogs are models (Animals.cs), drawn from here; things lying on the
+// ground are models too (Items.cs, drawn by FirstPerson).
 
 using System;
 using System.Collections.Generic;
@@ -30,7 +30,6 @@ public sealed class Bodies
         Kind("raider", person, new Color(0.45f, 0.2f, 0.17f));
         // The sim's car is a 0.43 m circle: drawn a little bigger than that, not the lab's 4.2 m car.
         Kind("car", new BoxMesh { Size = new Vector3(1.0f, 1.3f, 1.9f) }, new Color(0.3f, 0.34f, 0.38f));
-        Kind("item", new BoxMesh { Size = new Vector3(0.22f, 0.14f, 0.22f) }, new Color(0.6f, 0.6f, 0.55f));
     }
 
     void Kind(string name, Mesh mesh, Color colour)
@@ -82,16 +81,6 @@ public sealed class Bodies
             var n = Next("car");
             n.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + 0.65f, (float)p.y);
             n.Basis = Basis.LookingAt(new Vector3((float)dir[0], 0, (float)dir[1]), Vector3.Up);
-        }
-        foreach (var i in state.items)
-        {
-            if (i.pos == null || i.carriedBy != null || i.inside != null) continue;
-            float x = i.pos.x + 0.5f, z = i.pos.y + 0.5f;
-            if (!Near(x, z)) continue;
-            // Several on one tile spread out a little, by id.
-            float j = (i.id.GetHashCode() & 0xff) / 255f - 0.5f;
-            float ix = x + j * 0.5f, iz = z - j * 0.4f;
-            Next("item").Position = new Vector3(ix, Terrain.Height(ix, iz) + 0.07f, iz);
         }
         // Hide what wasn't used this frame.
         foreach (var (kind, pool) in pools)

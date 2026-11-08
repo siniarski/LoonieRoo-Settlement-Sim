@@ -2,8 +2,8 @@
 // seen from their eyes. Reads state only (rule 5): the camera's yaw and pitch are view state, and
 // the game turns them into `aim` and `steer` commands. Chunks of the world (WorldMesh) are built
 // near you and rebuilt only when what they show changes, a few a frame at most (rule 14).
-// People are the character models (People.cs), the nearest MAX_MODELS of them; the rest, animals,
-// cars and things on the ground are placeholders (Bodies.cs).
+// People are the character models (People.cs), the nearest MAX_MODELS of them; the rest, animals
+// and cars are drawn by Bodies.cs, things on the ground by Items.cs.
 
 using System;
 using System.Collections.Generic;
@@ -34,6 +34,7 @@ public sealed partial class FirstPerson : Node3D
     readonly WorldMesh.Lookups look = new();
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
+    readonly ItemModels items;
     readonly People people;
     readonly Trees trees;
     readonly Roofs roofs;
@@ -59,6 +60,7 @@ public sealed partial class FirstPerson : Node3D
         env.TonemapMode = Godot.Environment.ToneMapper.Filmic;
         AddChild(new WorldEnvironment { Environment = env });
         bodies = new Bodies(this);
+        items = new ItemModels(this);
         people = new People(this);
         trees = new Trees(this);
         roofs = new Roofs(this);
@@ -111,6 +113,7 @@ public sealed partial class FirstPerson : Node3D
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
         bodies.Update(state, alpha, eye, you.id, modelled);
+        items.Update(state, eye);
     }
 
     /// <summary>How much of the open sky's ambient light reaches you: less under a roof, eased so doorways don't flicker.</summary>

@@ -18,6 +18,7 @@
 //   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn,
 //                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
+//   --lineup                               one of every item kind on the ground in front of you (for screenshots; not a command)
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
 
@@ -144,6 +145,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             me.at = Motion.centre(me.pos);
             me.was = Motion.centre(me.pos);
         }
+        if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
         if (args.TryGetValue("animals", out var an)) SpawnAnimals(an, args.TryGetValue("animal-range", out var ar) ? double.Parse(ar, CultureInfo.InvariantCulture) : 3.5);
