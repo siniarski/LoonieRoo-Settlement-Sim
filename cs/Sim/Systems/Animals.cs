@@ -444,6 +444,7 @@ public static partial class Animals
         s.note = $"attacked by a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})";
         Mood.addThought(state, s, "attacked");
         BodyMod.frighten(s, BodyMod.HIT_PANIC);
+        BodyMod.startle(state, s);
         if (!Js.T(a.angryAt))
         {
             a.backOffUntil = state.tick + BACK_OFF;

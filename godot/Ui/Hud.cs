@@ -206,7 +206,7 @@ public sealed partial class Hud : Control
 
         string controlText = you != null
             ? view.showKeys
-                ? "G colony · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide"
+                ? "G colony · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide"
                 : "K: keys"
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
         controlLine.Show(controlText != "", controlText, (r) => r.Text(controlText, Kit.Gold, 600));

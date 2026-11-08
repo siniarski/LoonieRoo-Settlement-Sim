@@ -32,6 +32,14 @@ public partial class VehiclesTest
         }
     }
 
+    /// <summary>Use the car at (3, 3) and wait out getting in (vehicleActions.ts). Returns whether "use" was taken.</summary>
+    public static bool getIn(SimState state)
+    {
+        var ok = Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) }).ok;
+        run(state, Vehicles.GET_IN_TICKS);
+        return ok;
+    }
+
     /// <summary>vehicles</summary>
     public class D001_vehicles
     {
@@ -44,7 +52,7 @@ public partial class VehiclesTest
             var s = __d0.s;
             var car = __d0.car;
             state.dormant = [new() { id = "d1", x = Js.I(20), y = Js.I(6) }];
-            expect(Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) }).ok).toBe(true);
+            expect(getIn(state)).toBe(true);
             expect(Vehicles.vehicleOf(state, s)).toBe(car);
             Commands.applyCommand(state, new Command { type = "steer", dx = 0, dy = -1 });
             run(state, 30);
@@ -61,7 +69,7 @@ public partial class VehiclesTest
             var state = __d1.state;
             var s = __d1.s;
             var car = __d1.car;
-            Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(state);
             Commands.applyCommand(state, new Command { type = "steer", dx = 1, dy = 0 });
             run(state, 10);
             expect(car.heading).toBe(0);
@@ -72,6 +80,8 @@ public partial class VehiclesTest
             run(state, 40);
             expect(car.speed).toBeLessThanOrEqual(0);
             expect(Commands.applyCommand(state, new Command { type = "use", x = Js.I(car.pos.x), y = Js.I(car.pos.y) }).ok).toBe(true);
+            expect(Vehicles.vehicleOf(state, s)).toBe(car);  // getting out takes a moment (vehicleActions.ts)
+            run(state, Vehicles.GET_OUT_TICKS);
             expect(Vehicles.vehicleOf(state, s)).toBeUndefined();
             expect(JsMath.max(JsMath.abs(s.pos.x - car.pos.x), JsMath.abs(s.pos.y - car.pos.y))).toBe(1);
         }
@@ -83,7 +93,7 @@ public partial class VehiclesTest
             var __d2 = field(map);
             var state = __d2.state;
             var car = __d2.car;
-            Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(state);
             Commands.applyCommand(state, new Command { type = "steer", dx = 0, dy = -1 });
             double fastest = 0;
             for (var i = 0; i < 120; i++)
@@ -97,7 +107,7 @@ public partial class VehiclesTest
             expect(state.events.some((e) => e.message.includes("crashed"))).toBe(true);
             var dry = field();
             dry.car.fuel = 0;
-            Commands.applyCommand(dry.state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(dry.state);
             Commands.applyCommand(dry.state, new Command { type = "steer", dx = 0, dy = -1 });
             run(dry.state, 20);
             expect(dry.car.pos).toEqual(Js.Obj(("x", (object?)(3)), ("y", (object?)(3))));
@@ -111,7 +121,7 @@ public partial class VehiclesTest
             var s = __d3.s;
             var car = __d3.car;
             var z = Zombies.addZombie(state, 16, 3, 200, "static");
-            Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(state);
             Commands.applyCommand(state, new Command { type = "steer", dx = 0, dy = -1 });
             run(state, 40);
             expect(state.zombies.includes(z)).toBe(false);
@@ -148,7 +158,7 @@ public partial class VehiclesTest
             var __d5 = field();
             var state = __d5.state;
             var s = __d5.s;
-            Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(state);
             Commands.applyCommand(state, new Command { type = "takeControl", survivorId = null });
             Tick.tick(state);
             expect(Vehicles.vehicleOf(state, s)).toBeUndefined();
@@ -201,7 +211,7 @@ public partial class VehiclesTest
                 {
                     state_1.grid.ground.fill(Grids.GROUNDS.indexOf("road"));
                 }
-                Commands.applyCommand(state_1, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+                getIn(state_1);
                 Commands.applyCommand(state_1, new Command { type = "steer", dx = 0, dy = -1 });
                 double fastest = 0;
                 for (var i = 0; i < 25; i++)
@@ -217,7 +227,7 @@ public partial class VehiclesTest
             var state = __d7.state;
             var car = __d7.car;
             FurnitureMod.addFurniture(state, "tree", 12, 3);
-            Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) });
+            getIn(state);
             Commands.applyCommand(state, new Command { type = "steer", dx = 0, dy = -1 });
             run(state, 80);
             expect(car.pos.x).toBeLessThan(12);

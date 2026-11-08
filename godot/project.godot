@@ -17,6 +17,12 @@ window/stretch/mode="disabled"
 
 project/assembly_name="LoonieRoo"
 
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
 [rendering]
+
+limits/global_shader_variables/buffer_size=131072
 
 environment/defaults/default_clear_color=Color(0.05, 0.06, 0.055, 1)

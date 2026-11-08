@@ -1,0 +1,271 @@
+{
+  "garments": {
+    "shirt": {
+      "slot": "shirt",
+      "layer": 1,
+      "color": [
+        0.55,
+        0.6,
+        0.65
+      ],
+      "pieces": [
+        {
+          "mesh": "shirt__torso",
+          "region": "torso",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "shirt__upperarm_Left",
+          "region": "upperarm_Left",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "shirt__upperarm_Right",
+          "region": "upperarm_Right",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "jacket": {
+      "slot": "jacket",
+      "layer": 2,
+      "color": [
+        0.27,
+        0.31,
+        0.22
+      ],
+      "pieces": [
+        {
+          "mesh": "jacket__torso",
+          "region": "torso",
+          "full": false,
+          "hides_lower": true
+        },
+        {
+          "mesh": "jacket__upperarm_Left",
+          "region": "upperarm_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "jacket__forearm_Left",
+          "region": "forearm_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "jacket__upperarm_Right",
+          "region": "upperarm_Right",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "jacket__forearm_Right",
+          "region": "forearm_Right",
+          "full": true,
+          "hides_lower": true
+        }
+      ]
+    },
+    "trousers": {
+      "slot": "legs",
+      "layer": 1,
+      "color": [
+        0.2,
+        0.25,
+        0.36
+      ],
+      "pieces": [
+        {
+          "mesh": "trousers__torso",
+          "region": "torso",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "trousers__thigh_Left",
+          "region": "thigh_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "trousers__shin_Left",
+          "region": "shin_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "trousers__thigh_Right",
+          "region": "thigh_Right",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "trousers__shin_Right",
+          "region": "shin_Right",
+          "full": true,
+          "hides_lower": true
+        }
+      ]
+    },
+    "shorts": {
+      "slot": "legs",
+      "layer": 1,
+      "color": [
+        0.42,
+        0.37,
+        0.27
+      ],
+      "pieces": [
+        {
+          "mesh": "shorts__torso",
+          "region": "torso",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "shorts__thigh_Left",
+          "region": "thigh_Left",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "shorts__thigh_Right",
+          "region": "thigh_Right",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "cap": {
+      "slot": "head",
+      "layer": 1,
+      "color": [
+        0.5,
+        0.13,
+        0.1
+      ],
+      "pieces": [
+        {
+          "mesh": "cap__head",
+          "region": "head",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "backpack": {
+      "slot": "back",
+      "layer": 3,
+      "color": [
+        0.3,
+        0.32,
+        0.2
+      ],
+      "pieces": [
+        {
+          "mesh": "backpack__back",
+          "region": "back",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "gloves": {
+      "slot": "hands",
+      "layer": 2,
+      "color": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "pieces": [
+        {
+          "mesh": "gloves__hand_Left",
+          "region": "hand_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "gloves__forearm_Left",
+          "region": "forearm_Left",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "gloves__hand_Right",
+          "region": "hand_Right",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "gloves__forearm_Right",
+          "region": "forearm_Right",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "boots": {
+      "slot": "feet",
+      "layer": 2,
+      "color": [
+        0.26,
+        0.18,
+        0.12
+      ],
+      "pieces": [
+        {
+          "mesh": "boots__foot_Left",
+          "region": "foot_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "boots__shin_Left",
+          "region": "shin_Left",
+          "full": false,
+          "hides_lower": false
+        },
+        {
+          "mesh": "boots__foot_Right",
+          "region": "foot_Right",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "boots__shin_Right",
+          "region": "shin_Right",
+          "full": false,
+          "hides_lower": false
+        }
+      ]
+    },
+    "shoes": {
+      "slot": "feet",
+      "layer": 2,
+      "color": [
+        0.16,
+        0.16,
+        0.17
+      ],
+      "pieces": [
+        {
+          "mesh": "shoes__foot_Left",
+          "region": "foot_Left",
+          "full": true,
+          "hides_lower": true
+        },
+        {
+          "mesh": "shoes__foot_Right",
+          "region": "foot_Right",
+          "full": true,
+          "hides_lower": true
+        }
+      ]
+    }
+  }
+}

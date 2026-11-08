@@ -6,7 +6,8 @@
 //
 // A bite that infects is remembered by limb. Within amputateWindow() of the
 // bite, the limb can come off (the amputate command): the infection goes with
-// it, at a heavy cost in health and for good (lostArm or lostLeg).
+// it, at a heavy cost in health and for good (lostArm or lostLeg; lostLimbs says which side and
+// where: "armLeft:elbow", for the renderer and one-handed rules).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -76,6 +77,19 @@ public static partial class Wounds
         return (s.wound?.limb == "leg") || Skills.hasTrait(s, "lostLeg");
     }
 
+    /// <summary>Which limb comes off, with side and level ("armLeft:elbow", "legRight:knee"): the side
+    /// by a hash (no RNG draw), the other one if that side is already gone; arms below the elbow, legs
+    /// below the knee (where a bite on the forearm or the calf is taken off).</summary>
+    public static string lostLimb(SimState state, Survivor s, string limb)
+    {
+        var side = (Hash.hashRoll(Hash.idNumber(s.id), state.tick, 0x51de) < 0.5) ? "Left" : "Right";
+        if (s.lostLimbs.some((l) => l.StartsWith(limb + side)))
+        {
+            side = (side == "Left") ? "Right" : "Left";
+        }
+        return $"{limb}{side}:{((limb == "arm") ? "elbow" : "knee")}";
+    }
+
     public static bool canAmputate(Survivor s)
     {
         return ((s.infection != null) && (s.infection < amputateWindow())) && (s.bitten != null);
@@ -100,6 +114,7 @@ public static partial class Wounds
         {
             s.traits.push(trait);
         }
+        s.lostLimbs.push(lostLimb(state, s, limb));
         Events.logEvent(state, $"{Js.Str(s.name)}'s bitten {Js.Str(limb)} came off. The infection went with it");
         return null;
     }

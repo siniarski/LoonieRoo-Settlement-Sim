@@ -842,6 +842,7 @@ public static partial class Zombies
         Mood.addThought(state, s, "attacked");
         Mood.addThought(state, s, "shaken");
         BodyMod.frighten(s, BodyMod.HIT_PANIC);
+        BodyMod.startle(state, s);
         if (z.kind != "raider")
         {
             var was = s.infection;

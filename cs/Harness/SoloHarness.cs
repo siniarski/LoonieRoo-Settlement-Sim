@@ -117,6 +117,10 @@ public partial class SoloHarness
         {
             return;
         }
+        if (Js.T(c.busy) && Vehicles.isCarAction(c.busy.what))
+        {
+            return;  // getting in or out takes a moment (vehicleActions.ts)
+        }
         var car = Vehicles.vehicleOf(state, s);
         if (Js.T(car))
         {
@@ -351,7 +355,7 @@ public partial class SoloHarness
         if (Js.T(crate))
         {
             var ride = ((dist(crate, s.pos) > 30) && !Time.isNight(state.tick)) ? Vehicles.vehiclesOf(state).find((v) => (((v.driverId == null) && (v.fuel > 300)) && (v.health > 0)) && (dist(v.pos, s.pos) <= 1)) : null;
-            if (Js.T(((Js.T(Js.T(ride) && (Js.T((Js.T(Js.T(c.dx) || Js.T(c.dy))) ? cmd(state, new Command { type = "steer", dx = 0, dy = 0 }) : true)))) && cmd(state, new Command { type = "use", x = Js.I(ride.pos.x), y = Js.I(ride.pos.y) }).ok) && Js.T(Vehicles.vehicleOf(state, s))))
+            if (Js.T(((Js.T(Js.T(ride) && (Js.T((Js.T(Js.T(c.dx) || Js.T(c.dy))) ? cmd(state, new Command { type = "steer", dx = 0, dy = 0 }) : true)))) && cmd(state, new Command { type = "use", x = Js.I(ride.pos.x), y = Js.I(ride.pos.y) }).ok) && (Js.T(Vehicles.vehicleOf(state, s)) || c.busy?.what == "getIn")))
             {
                 bot.drove++;
                 bot.driveTo = new Point { x = Js.I(crate.x), y = Js.I(crate.y) };

@@ -98,6 +98,13 @@ public static partial class ControlMod
         var c = Js.NN(state.control);
         if (Js.T(Vehicles.vehicleOf(state, s)))
         {
+            if (c.busy?.what == "getOut")
+            {
+                // Getting out: the car rolls to a stop meanwhile (vehicleActions.ts).
+                Vehicles.drive(state, s, 0, 0);
+                s.note = Vehicles.carActionTick(state, s, c) ?? s.note;
+                return;
+            }
             c.busy = null;
             Vehicles.drive(state, s, c.dx, c.dy);
             return;
@@ -138,6 +145,12 @@ public static partial class ControlMod
     public static void updateBusy(SimState state, Survivor s, Control c)
     {
         var busy = Js.NN(c.busy);
+        if (Vehicles.isCarAction(busy.what))
+        {
+            // Seconds of handling, counted in ticks whatever the day length (vehicleActions.ts).
+            s.note = Vehicles.carActionTick(state, s, c) ?? s.note;
+            return;
+        }
         if (busy.what == "sleep")
         {
             { sleepTick(state, s, c, busy); return; }
@@ -470,9 +483,10 @@ public static partial class ControlMod
     public static string? use(SimState state, Survivor s, Point target)
     {
         var c = Js.NN(state.control);
-        if (Js.T(Vehicles.vehicleOf(state, s)))
+        var inCar = Vehicles.vehicleOf(state, s);
+        if (Js.T(inCar))
         {
-            return Vehicles.leaveVehicle(state, s);
+            return Vehicles.startCarAction(state, s, inCar, "getOut");
         }
         if (Js.T(Js.T(s.move) || !nextTo(s.pos, target)))
         {
@@ -482,7 +496,11 @@ public static partial class ControlMod
         if (Js.T(car))
         {
             c.busy = null;
-            return Vehicles.useVehicle(state, s, car);
+            if (Js.T(car.driverId))
+            {
+                return "someone is driving it";
+            }
+            return Vehicles.fillFromCan(state, s, car) ?? Vehicles.startCarAction(state, s, car, "getIn");
         }
         var face = towards(s.pos, target);
         if (Js.T(face))
