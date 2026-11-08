@@ -66,7 +66,7 @@ public sealed class Bodies
             var p = worldPos(b, alpha);
             if (!Near(p.x, p.y)) return;
             var n = Next(kind);
-            n.Position = new Vector3((float)p.x, lying ? 0.3f : 0.875f, (float)p.y);
+            n.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + (lying ? 0.3f : 0.875f), (float)p.y);
             n.Rotation = lying ? new Vector3(Mathf.Pi / 2, 0, 0) : Vector3.Zero;
         }
         foreach (var s in state.survivors)
@@ -80,7 +80,7 @@ public sealed class Bodies
             if (!Near(p.x, p.y)) continue;
             var dir = Js.Get(Vehicles.HEADING_DIRS, v.heading)!;
             var n = Next("car");
-            n.Position = new Vector3((float)p.x, 0.65f, (float)p.y);
+            n.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + 0.65f, (float)p.y);
             n.Basis = Basis.LookingAt(new Vector3((float)dir[0], 0, (float)dir[1]), Vector3.Up);
         }
         foreach (var i in state.items)
@@ -90,7 +90,8 @@ public sealed class Bodies
             if (!Near(x, z)) continue;
             // Several on one tile spread out a little, by id.
             float j = (i.id.GetHashCode() & 0xff) / 255f - 0.5f;
-            Next("item").Position = new Vector3(x + j * 0.5f, 0.07f, z - j * 0.4f);
+            float ix = x + j * 0.5f, iz = z - j * 0.4f;
+            Next("item").Position = new Vector3(ix, Terrain.Height(ix, iz) + 0.07f, iz);
         }
         // Hide what wasn't used this frame.
         foreach (var (kind, pool) in pools)

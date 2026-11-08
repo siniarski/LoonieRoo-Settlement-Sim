@@ -236,7 +236,7 @@ public sealed class People
     void Pose(Model m, Wanted w, double alpha, double delta, double dist, float vpHeight)
     {
         var p = worldPos(w.body, alpha);
-        m.root.Position = new Vector3((float)p.x, 0, (float)p.y);
+        m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y), (float)p.y);
         bool dead = w.look.StartsWith("zombie");
         // Speed eased, so a tick without a step doesn't flick the walk to idle and back.
         m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 8);

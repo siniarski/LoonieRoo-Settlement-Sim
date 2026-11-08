@@ -240,8 +240,11 @@ public sealed class Trees
         return node;
     }
 
+    /// <summary>Set a little into the ground, so the foot doesn't float on the downhill side.</summary>
+    const float SINK = 0.12f;
+
     static Transform3D Place(float x, float z, float yaw, float size) =>
-        new(new Basis(Vector3.Up, yaw).Scaled(new Vector3(size, size, size)), new Vector3(x, Terrain.Height(x, z), z));
+        new(new Basis(Vector3.Up, yaw).Scaled(new Vector3(size, size, size)), new Vector3(x, Terrain.Height(x, z) - SINK, z));
 
     /// <summary>A tree's tint (rgb, about 1) and its sway phase (a, 0..1).</summary>
     static Color Tint(int x, int y)

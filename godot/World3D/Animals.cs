@@ -181,7 +181,7 @@ public sealed class AnimalModels
     {
         var kind = kinds[w.kind];
         var p = worldPos(w.at, w.was, alpha);
-        m.root.Position = new Vector3((float)p.x, 0, (float)p.y);
+        m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y), (float)p.y);
         double dx = w.at.x - w.was.x, dy = w.at.y - w.was.y;
         double speed = Math.Sqrt(dx * dx + dy * dy) / Motion.SUB * PoseIntents.TICKS_PER_SECOND;
         // Eased slowly: animals move a tile and stand, and the walk should carry through the pauses.

@@ -34,7 +34,7 @@ public sealed class Roofs
     /// <summary>Lots this far (m) beyond the chunks first person keeps are known, so their ceilings are in before the chunk is built.</summary>
     const int MARGIN = 24;
 
-    // Heights (m) over the ground under the building (Ground): the walls' top is WorldMesh.WALL_H.
+    // Heights (m) over the building's floor (Terrain.Floor: a generated building sits on one level): the walls' top is WorldMesh.WALL_H.
     const float EAVE_OVERHANG = 0.35f, GABLE_OVERHANG = 0.3f, SLAB = 0.12f, PARAPET = 0.55f, CAP = 0.06f;
     /// <summary>Rise per metre across: 32 degrees for houses, steeper for barns and churches.</summary>
     const float PITCH = 0.62f, PITCH_STEEP = 0.9f;
@@ -77,9 +77,6 @@ public sealed class Roofs
     public int RoofCount { get; private set; }
 
     public Roofs(Node3D parent) => this.parent = parent;
-
-    /// <summary>The ground's height (m) at a tile: flat for now; the heightmap goes here.</summary>
-    public static float Ground(SimState state, int x, int y) => 0;
 
     public void Update(SimState state, Vector3 eye, int keepRadius)
     {
@@ -258,7 +255,7 @@ public sealed class Roofs
         var g = state.grid;
         var st = Begin();
         float floor = float.MaxValue;
-        foreach (int i in b.tiles) floor = Math.Min(floor, Ground(state, i % g.width, i / g.width));
+        foreach (int i in b.tiles) floor = Math.Min(floor, Terrain.Floor(i % g.width, i / g.width));
         float top = floor + WorldMesh.WALL_H;
         var rects = Rectangles(g, b.tiles);
         if (PITCHED.Contains(b.kind))
@@ -415,7 +412,10 @@ public sealed class Roofs
     static void FlatBuilt(SimState state, SurfaceTool st, List<int> tiles)
     {
         var g = state.grid;
-        float top = WorldMesh.WALL_H + Ground(state, tiles[0] % g.width, tiles[0] / g.width);
+        // Over the highest floor in the room (on a slope the walls step up with it).
+        float floor = float.MinValue;
+        foreach (int i in tiles) floor = Math.Max(floor, Terrain.Floor(i % g.width, i / g.width));
+        float top = WorldMesh.WALL_H + floor;
         const float lip = 0.15f;
         // Over the walls too, where they're whole tiles (barricades, the planner's walls, old maps).
         var under = new HashSet<int>(tiles);

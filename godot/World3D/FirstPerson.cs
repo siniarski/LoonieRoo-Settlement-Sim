@@ -44,7 +44,7 @@ public sealed partial class FirstPerson : Node3D
     int sinceCheck;
     public int ChunkCount => chunks.Count;
     public int TreeCount => trees.Count;
-    /// <summary>--eye: look from here (m) instead of your eyes, to see a place from outside or above (a debug view).</summary>
+    /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
 
     public FirstPerson()
@@ -66,19 +66,26 @@ public sealed partial class FirstPerson : Node3D
     }
 
     /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
+    /// <summary>Where the eye is (m: on the ground under you, as it is there) and which way it looks. Update eases the ground's height.</summary>
     public static (Vector3 eye, bool inCar, double carYaw) Eye(SimState state, Survivor you, double alpha)
     {
+        Terrain.Use(state);
         var car = Vehicles.vehicleOf(state, you);
         if (car != null)
         {
             var c = worldPos(car.at, car.was, alpha);
             var (hx, hy) = (Js.Get(Vehicles.HEADING_DIRS, car.heading)![0], Js.Get(Vehicles.HEADING_DIRS, car.heading)![1]);
-            return (new Vector3((float)c.x, EYE_CAR, (float)c.y), true, Math.Atan2(hy, hx));
+            return (new Vector3((float)c.x, Terrain.Height((float)c.x, (float)c.y) + EYE_CAR, (float)c.y), true, Math.Atan2(hy, hx));
         }
         var p = worldPos(you, alpha);
         float h = you.sleep?.asleep == true ? EYE_ASLEEP : state.control?.sneaking == true ? EYE_SNEAK : EYE;
-        return (new Vector3((float)p.x, h, (float)p.y), false, 0);
+        return (new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + h, (float)p.y), false, 0);
     }
+
+    /// <summary>The ground under the eye, eased: walking over a rise or a kerb lifts the view smoothly.</summary>
+    float eyeGround = float.NaN;
+    /// <summary>How fast the eye's ground catches up (per second), and a jump past which it snaps (a teleport, a load).</summary>
+    const float EYE_EASE = 9, EYE_SNAP = 1.5f;
 
     /// <summary>A grid direction (yaw: 0 east, +pi/2 south) and pitch (up positive) as a look vector.</summary>
     public static Vector3 LookDir(double yaw, double pitch) =>
@@ -88,8 +95,13 @@ public sealed partial class FirstPerson : Node3D
     {
         var you = ControlMod.controlled(state);
         if (you == null) return;
+        Terrain.Use(state);
         var (eye, _, _) = Eye(state, you, alpha);
-        if (EyeAt is { } at) eye = at;
+        float ground = Terrain.Height(eye.X, eye.Z);
+        if (float.IsNaN(eyeGround) || Math.Abs(ground - eyeGround) > EYE_SNAP) eyeGround = ground;
+        else eyeGround += (ground - eyeGround) * (float)Math.Min(1, delta * EYE_EASE);
+        eye.Y += eyeGround - ground;
+        if (EyeAt is { } at) eye = at with { Y = Terrain.Height(at.X, at.Z) + at.Y };
         camera.Position = eye;
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
         roofs.Update(state, eye, RADIUS);
@@ -158,14 +170,15 @@ public sealed partial class FirstPerson : Node3D
             }
             long sig = WorldMesh.Signature(state, x, y, look);
             if (have && c.sig == sig) continue;
-            var mesh = WorldMesh.Build(state, x, y, look, solid, glass);
-            if (have) c.node.Mesh = mesh;
-            else
+            var (mesh, groundMesh) = WorldMesh.Build(state, x, y, look, solid, glass);
+            if (!have)
             {
                 c.node = new MeshInstance3D();
                 AddChild(c.node);
-                c.node.Mesh = mesh;
+                c.node.AddChild(new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
             }
+            c.node.Mesh = mesh;
+            c.node.GetChild<MeshInstance3D>(0).Mesh = groundMesh;
             chunks[(x, y)] = (c.node, sig);
             built++;
         }
@@ -187,12 +200,18 @@ public sealed partial class FirstPerson : Node3D
         return s;
     }
 
-    /// <summary>The ground point the eye looks at, within `reach` metres along the ground, or null.</summary>
+    /// <summary>The ground point the eye looks at, within `reach` metres along the ground, or null: the look
+    /// marched out in short steps until it goes under the ground (Terrain).</summary>
     public static Vector2? GroundAt(Vector3 eye, double yaw, double pitch, double reach)
     {
         if (pitch > -0.05) return null;
-        double along = eye.Y / Math.Tan(-pitch);
-        if (along > reach) return null;
-        return new Vector2((float)(eye.X + Math.Cos(yaw) * along), (float)(eye.Z + Math.Sin(yaw) * along));
+        double drop = Math.Tan(-pitch), cos = Math.Cos(yaw), sin = Math.Sin(yaw);
+        const double STEP = 0.05;
+        for (double along = STEP; along <= reach; along += STEP)
+        {
+            float x = (float)(eye.X + cos * along), z = (float)(eye.Z + sin * along);
+            if (eye.Y - drop * along <= Terrain.Height(x, z)) return new Vector2(x, z);
+        }
+        return null;
     }
 }

@@ -18,7 +18,8 @@
 //   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn,
 //                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
-//   --eye=X,Y,H                            first person: look from tile point (X, Y), H m up, not your eyes (a debug view)
+//   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
+//   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
 
 using System;
 using System.Collections.Generic;
@@ -157,6 +158,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             var e = ey.Split(',');
             firstPerson.EyeAt = new Vector3(float.Parse(e[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(e[2], System.Globalization.CultureInfo.InvariantCulture), float.Parse(e[1], System.Globalization.CultureInfo.InvariantCulture));
         }
+        if (args.ContainsKey("flat")) World3D.Terrain.ForceFlat = true;
         if (args.TryGetValue("build", out var cat)) Tools.chooseCategory(view, cat == "" ? "structure" : cat);
         if (args.TryGetValue("menu", out var m)) view.menu = m == "" ? "main" : m;
         if (direct)
