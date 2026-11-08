@@ -4,7 +4,8 @@
 // middle, neighbours' settlements, places of interest, cars you've seen, your people, and you
 // (ringed). Your own notes (Mapnotes): click the map to pin one, right-click a pin to take it off.
 // Neighbours' errands are ringed in orange; caravans on ground you've seen are small carts. Wheel to
-// zoom, drag to pan, double-click to look there in the game. M or Escape closes.
+// zoom, drag to pan, double-click to look there in the game. M or Escape closes. The Colony tab
+// beside it (ScreenTabs) is the colony's management.
 // Reads state only; notes go through commands.
 
 using System;
@@ -59,8 +60,7 @@ public sealed partial class WorldMap : Control
         var head = new HBoxContainer { Position = new Vector2(12, 8) };
         head.AddThemeConstantOverride("separation", 12);
         head.AddChild(Kit.Label("Map", Kit.Title, 15));
-        head.AddChild(Kit.Label("click: pin a note · right-click a pin: remove · wheel: zoom · drag: pan · double-click: look there · M or Esc: close", Ctx.Css("#8f998f"), 12));
-        head.AddChild(Kit.Button("Close", () => view.showMap = false));
+        head.AddChild(Kit.Label("click: pin a note · right-click a pin: remove · wheel: zoom · drag: pan · double-click: look there · M or Esc: back", Ctx.Css("#8f998f"), 12));
         AddChild(head);
         AddChild(note);
         note.TextSubmitted += (text) =>
@@ -98,7 +98,7 @@ public sealed partial class WorldMap : Control
                 var t = ToTile(left.Position.X, left.Position.Y);
                 view.camera = new Cam(t.x, t.y, view.camera.zoom);
                 CloseNote();
-                view.showMap = false;
+                view.openTab("colony"); // the top-down view, looking there
             }
             else if (left.Pressed) drag = (left.Position.X, left.Position.Y, false);
             else

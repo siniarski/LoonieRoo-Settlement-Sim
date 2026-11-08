@@ -22,9 +22,12 @@ public partial class Game
     const int TEST_DEVICE = 7777;
     bool selfTesting;
 
-    public override void _Input(InputEvent e)
+    /// <summary>While the test runs, drops the real cursor's events. Returns whether it did.</summary>
+    bool DropForeignMouse(InputEvent e)
     {
-        if (selfTesting && e is InputEventMouse && e.Device != TEST_DEVICE) GetViewport().SetInputAsHandled();
+        if (!selfTesting || e is not InputEventMouse || e.Device == TEST_DEVICE) return false;
+        GetViewport().SetInputAsHandled();
+        return true;
     }
 
     async Task Frames(int n)
@@ -73,8 +76,12 @@ public partial class Game
     {
         selfTesting = true;
         await Frames(5);
-        // Walking: W held moves you north.
+        // First person: the 3D view is up, with the world built round you.
+        Check("Playing someone is first person", view.firstPerson && firstPerson.Visible && firstPerson.ChunkCount > 0, $"chunks {firstPerson.ChunkCount}");
+        // Walking: looking north, W held moves you north.
         view.paused = false;
+        view.yaw = -Math.PI / 2;
+        view.pitch = 0;
         var you = ControlMod.controlled(state)!;
         int y0 = you.at.y;
         SendKey(Godot.Key.W, true);
@@ -82,7 +89,23 @@ public partial class Game
         SendKey(Godot.Key.W, false);
         await Frames(3);
         you = ControlMod.controlled(state)!;
-        Check("W walks north", you.at.y < y0, $"at.y {y0} -> {you.at.y}");
+        Check("Looking north, W walks north", you.at.y < y0, $"at.y {y0} -> {you.at.y}");
+        // The mouse turns you: a quarter turn right, and the aim follows (east).
+        Input.ParseInputEvent(new InputEventMouseMotion { Device = TEST_DEVICE, Relative = new Vector2((float)(Math.PI / 2 / LOOK_PER_PX), 0) });
+        await Frames(3);
+        var aim = state.control!.aim;
+        Check("The mouse turns you and your aim", aim != null && aim.x == ControlMod.AIM_MAX && aim.y == 0, $"yaw {view.yaw:0.00}, aim {aim?.x},{aim?.y}");
+        int x0 = ControlMod.controlled(state)!.at.x;
+        SendKey(Godot.Key.W, true);
+        await Frames(20);
+        SendKey(Godot.Key.W, false);
+        await Frames(3);
+        Check("Looking east, W walks east", ControlMod.controlled(state)!.at.x > x0, $"at.x {x0} -> {ControlMod.controlled(state)!.at.x}");
+        // Tab: the inventory, with the mouse let go; Tab again puts it away.
+        await Tap(Godot.Key.Tab);
+        Check("Tab opens the inventory", view.showInventory && Input.MouseMode == Input.MouseModeEnum.Visible);
+        await Tap(Godot.Key.Tab);
+        Check("Tab closes it", !view.showInventory);
 
         // Space pauses; ticks stop.
         await Tap(Godot.Key.Space);
@@ -90,9 +113,9 @@ public partial class Game
         await Frames(10);
         Check("Space pauses", view.paused && state.tick == tick, $"tick {tick} -> {state.tick}");
 
-        // B (under control, brings the colony out) opens the build bar; 1 arms the wall; a shift-click builds it at once.
+        // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
-        Check("B opens the build bar", view.buildOpen && view.colonyMode && hud.buildBar.Visible);
+        Check("B opens the Colony tab and the build bar", view.buildOpen && view.colonyMode && !view.firstPerson && hud.buildBar.Visible);
         await Tap(Godot.Key.Key1);
         Check("1 arms the wall", view.tool == "wall", view.tool ?? "none");
         var at = ControlMod.controlled(state)!.pos;
@@ -130,14 +153,24 @@ public partial class Game
         Check("Clicking 2x sets the speed", two != null && view.speed == 2 && !view.paused, $"speed {view.speed}, paused {view.paused}");
         await Tap(Godot.Key.Space);
 
-        // M opens the map; Esc closes it.
-        await Tap(Godot.Key.M);
-        Check("M opens the map", view.showMap && worldMap.Visible);
+        // Esc in the Colony tab: back to first person.
         await Tap(Godot.Key.Escape);
-        Check("Esc closes the map", !view.showMap && !worldMap.Visible);
+        await Frames(1);
+        Check("Esc in the Colony tab goes back to first person", view.firstPerson && !view.colonyMode);
 
-        // Esc clears the selection, then opens the menu; Save to slot 3 from it; Resume.
-        await Tap(Godot.Key.Escape);
+        // M opens the map; its Colony tab switches over; M goes back to first person.
+        await Tap(Godot.Key.M);
+        await Frames(1);
+        Check("M opens the map", view.showMap && worldMap.Visible && tabs.Visible);
+        var colonyTab = FindButton(tabs, "Colony");
+        if (colonyTab != null) await Click(colonyTab.GetGlobalRect().GetCenter());
+        await Frames(1);
+        Check("The Colony tab shows the colony", !view.showMap && view.colonyMode && !view.firstPerson && !worldMap.Visible);
+        await Tap(Godot.Key.M);
+        await Frames(1);
+        Check("M goes back to first person", view.firstPerson && !view.showMap && !view.colonyMode);
+
+        // Esc opens the menu; Save to slot 3 from it; Resume.
         await Tap(Godot.Key.Escape);
         await Frames(2);
         Check("Esc opens the menu", view.menu == "main" && menu.Visible, view.menu ?? "none");

@@ -73,6 +73,10 @@ public sealed partial class Hud : Control
     public readonly BuildBar buildBar;
     public readonly Minimap minimap;
     string? lastControlled;
+    int frames;
+    /// <summary>First person: the dot in the middle of the screen.</summary>
+    readonly Crosshair crosshair = new();
+    readonly UiPanel inventoryTitle = new("#c9b88a");
     int overviewFrame;
 
     public Hud(View view, IGameFiles files)
@@ -116,8 +120,8 @@ public sealed partial class Hud : Control
         AddChild(bottomLeft);
         Pin(bottomLeft, 0, 1, 12, -12, GrowDirection.End, GrowDirection.Begin);
 
-        // Top right: conditions; bottom right: loot, the bag, the minimap.
-        Pin(conditions, 1, 0, -12, 12, GrowDirection.Begin, GrowDirection.End);
+        // Top right: conditions (under the M screen's tabs); bottom right: loot, the bag, the minimap.
+        Pin(conditions, 1, 0, -12, 52, GrowDirection.Begin, GrowDirection.End);
         AddChild(conditions);
         var bottomRight = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         bottomRight.AddThemeConstantOverride("separation", 6);
@@ -129,7 +133,7 @@ public sealed partial class Hud : Control
 
         // Right: the debug panel; middle top: the overview; bottom middle: the build bar and the paused banner.
         AddChild(debug);
-        Pin(debug, 1, 0, -12, 60, GrowDirection.Begin, GrowDirection.End);
+        Pin(debug, 1, 0, -12, 96, GrowDirection.Begin, GrowDirection.End);
         AddChild(overview);
         Pin(overview, 0.5f, 0, 0, 58, GrowDirection.Both, GrowDirection.End);
         var bottom = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
@@ -140,6 +144,13 @@ public sealed partial class Hud : Control
         bottom.AddChild(buildBar);
         AddChild(bottom);
         Pin(bottom, 0.5f, 1, 0, -12, GrowDirection.Both, GrowDirection.Begin);
+
+        AddChild(crosshair);
+        crosshair.SetAnchorsPreset(LayoutPreset.Center);
+        AddChild(inventoryTitle);
+        Pin(inventoryTitle, 0.5f, 0, 0, 12, GrowDirection.Both, GrowDirection.End);
+        inventoryTitle.Show(true, "t", (r) => r.Text("Inventory · Tab or Esc to close · 1-9 use", Kit.Title));
+        inventoryTitle.Visible = false;
     }
 
     static void Pin(Control c, float ax, float ay, float x, float y, Control.GrowDirection gx, Control.GrowDirection gy)
@@ -173,7 +184,7 @@ public sealed partial class Hud : Control
         prioritiesButton = Kit.Button("P Priorities", () => view.showPriorities = !view.showPriorities);
         var menuButton = Kit.Button("☰ Menu", () => files.OpenMenu(), tip: "Saves, loading, a new game (Esc)");
         overviewButton = Kit.Button("O Overview", () => view.showOverview = !view.showOverview);
-        colonyButton = Kit.Button("G Colony", () => view.toggleColonyMode(), tip: "Colony management: build, priorities, overview, neighbours (G)");
+        colonyButton = Kit.Button("M Map", () => view.openTab("map"), tip: "The map, and the colony's management in its Colony tab (M)");
         foreach (var b in new[] { buildButton, prioritiesButton, menuButton, overviewButton, colonyButton }) bar.AddChild(b);
         return panel;
     }
@@ -190,23 +201,21 @@ public sealed partial class Hud : Control
         var you = ControlMod.controlled(state);
         // Taking control of someone starts in survivor mode.
         var nowControlled = you?.id;
+        bool seenFrame = lastControlled != null || frames++ > 0;
         if (nowControlled != lastControlled)
         {
-            if (nowControlled != null)
-            {
-                view.colonyMode = true;
-                view.toggleColonyMode(); // off, closing build and the overview
-            }
+            if (nowControlled != null && seenFrame) view.closeMScreen(); // into first person (not on the first frame: the command line may open a tab)
             lastControlled = nowControlled;
         }
         bool solo = view.survivorMode(you != null);
-        colonyButton.Visible = you != null;
-        Kit.SetActive(colonyButton, view.colonyMode);
+        colonyButton.Visible = view.firstPerson;
         foreach (var b in new[] { buildButton, prioritiesButton, overviewButton }) b.Visible = !solo;
 
         string controlText = you != null
             ? view.showKeys
-                ? "G colony · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (mouse) · T talk · 1-9 use from bag · M map · F let go · K hide"
+                ? view.firstPerson
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    : "M or Esc: back to first person · F on someone selected: play them instead · K hide"
                 : "K: keys"
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
         controlLine.Show(controlText != "", controlText, (r) => r.Text(controlText, Kit.Gold, 600));
@@ -235,6 +244,10 @@ public sealed partial class Hud : Control
         UpdateConditions(state);
         UpdateCard(state);
         UpdateBag(state);
+        bool stowed = view.firstPerson && !view.showInventory;
+        if (stowed) { card.Visible = false; bag.Visible = false; loot.Visible = false; }
+        crosshair.Visible = view.firstPerson && !view.showInventory && view.menu == null;
+        inventoryTitle.Visible = view.firstPerson && view.showInventory;
         UpdateWanderers(state, solo);
         UpdateCrafting(state, solo);
         UpdateExpeditions(state, solo);
@@ -907,6 +920,18 @@ public sealed partial class Hud : Control
         yield return $"    goal {(s.goal != null ? $"{at(s.goal)}, {remaining} tiles left" : "—")}  ·  {cache}";
         yield return $"    {Card.moodTitle(state, s)}  ·  {Skills.describeSkills(s)}  ·  wearing {(Clothing.describeClothing(state, s) is var c && c != "" ? c : "nothing much")}";
         yield return $"    {s.note ?? ""}";
+    }
+}
+
+/// <summary>First person: a small dot where you're looking.</summary>
+public sealed partial class Crosshair : Control
+{
+    public Crosshair() { MouseFilter = MouseFilterEnum.Ignore; }
+
+    public override void _Draw()
+    {
+        DrawCircle(Vector2.Zero, 3.2f, new Color(0, 0, 0, 0.6f));
+        DrawCircle(Vector2.Zero, 2f, new Color(0.95f, 0.92f, 0.85f, 0.85f));
     }
 }
 

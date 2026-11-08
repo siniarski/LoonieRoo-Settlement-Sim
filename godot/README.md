@@ -3,7 +3,9 @@
 The game: the sim (`cs/Sim`, pure C#, no Godot) drawn and played in Godot 4.6 .NET. NOTES.md "Start here" has the controls and the map of everything.
 
 - `Game.cs`: the loop (10 ticks a second times the speed, fixed timestep, interpolated between ticks), input turned into sim commands, the camera, saves and autosave, the command line.
-- `Render/`: the drawing. `Ctx.cs` is a small Canvas 2D-style context over Godot's CanvasItem calls (the renderer was ported from the browser's canvas code); `Camera.cs` holds the projection (top-down now: swap it for isometric); `Draw.cs`, `DrawThings.cs`, `DrawPeople.cs`; `Palette.cs`.
+- **The views.** Playing a survivor, the game is **first person** (`World3D/`). **M** is the map screen, top-down, with two tabs (`Ui/ScreenTabs.cs`): **Map** (`Ui/WorldMap.cs`) and **Colony** (the colony's management: build, priorities, the overview, neighbours, drawn by `Render/` in 2D top-down). With nobody under your control, the Colony view is the game. There is no isometric view.
+- `World3D/`: first person. `FirstPerson.cs` (the camera at your eyes, the sun, sky, fog and night; chunks of the world built near you), `WorldMesh.cs` (a 16x16-tile chunk as one mesh: ground, tile and edge walls, doors open or shut, windows, boards, barricades, ceilings over indoor floors, furniture as boxes; rebuilt only when what it shows changes, 4 a frame at most), `Bodies.cs` (people, the dead, animals, cars and things on the ground as placeholder capsules and boxes). 1 tile = 1 m.
+- `Render/`: the 2D top-down drawing (the Colony tab). `Ctx.cs` is a small Canvas 2D-style context over Godot's CanvasItem calls (the renderer was ported from the browser's canvas code); `Camera.cs` holds the top-down projection; `Draw.cs`, `DrawThings.cs`, `DrawPeople.cs`; `Palette.cs`.
 - `Ui/`: the HUD and its panels (`Hud.cs`, `Card.cs`), the build tools (`Tools.cs`), the menu (`Menu.cs`), saves (`Saves.cs`), the minimap and the map (`Minimap.cs`, `WorldMap.cs`), the view state (`View.cs`), and a small panel kit (`Ui.cs`).
 - `SelfTest.cs`: `--selftest` drives the running game with real input events and checks what they did.
 
@@ -23,9 +25,10 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 
 - `--seed=N --size=N --start=solo|group`: a new world (a solo start, 128 tiles, a random seed by default); `--load=save.json` a save file instead
 - `--ticks=N`: run N ticks first
-- `--zoom=Z --paused --debug --map --overview --build=category --menu=main|new|character|load|howto`: the view to start in
+- `--zoom=Z --paused --debug --map --colony --overview --build=category --menu=main|new|character|load|howto`: the view to start in (`--map` and `--colony` open the M screen's tabs)
+- `--look=DEG --pitch=DEG`: first person, which way you look at the start (0 east, 90 south, 270 north; pitch up positive)
 - `--shot=out.png --frames=N`: save a screenshot after N frames and quit
-- `--selftest`: the self-test (15 checks; saves go to a separate folder, never your slots); `./check.sh --all` runs it
+- `--selftest`: the self-test (22 checks; saves go to a separate folder, never your slots); `./check.sh --all` runs it
 
 Logs: `%APPDATA%\Godot\app_userdata\LoonieRoo\logs`. Saves: `...\LoonieRoo\saves`. Exports and bug reports: `Documents\LoonieRoo`.
 

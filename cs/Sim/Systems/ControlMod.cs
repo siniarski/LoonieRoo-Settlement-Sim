@@ -70,9 +70,15 @@ public static partial class ControlMod
             return "same";
         }
         c.aim = new Point { x = Js.I(x), y = Js.I(y) };
-        var big = JsMath.max(JsMath.abs(x), JsMath.abs(y));
-        c.facing = new Point { x = Js.I((((double)(12) * (JsMath.abs(x))) >= ((double)(5) * (big))) ? JsMath.sign(x) : 0), y = Js.I((((double)(12) * (JsMath.abs(y))) >= ((double)(5) * (big))) ? JsMath.sign(y) : 0) };
+        c.facing = eightWay(x, y);
         return null;
+    }
+
+    /// <summary>The eight-way direction nearest (x, y), which isn't (0, 0).</summary>
+    public static Point eightWay(double x, double y)
+    {
+        var big = JsMath.max(JsMath.abs(x), JsMath.abs(y));
+        return new Point { x = Js.I((((double)(12) * (JsMath.abs(x))) >= ((double)(5) * (big))) ? JsMath.sign(x) : 0), y = Js.I((((double)(12) * (JsMath.abs(y))) >= ((double)(5) * (big))) ? JsMath.sign(y) : 0) };
     }
     public static string? aim(Control c, double x, double y) => aim(c, Js.I(x), Js.I(y));
 
@@ -106,7 +112,7 @@ public static partial class ControlMod
                 return;
             }
             c.busy = null;
-            Vehicles.drive(state, s, c.dx, c.dy);
+            Vehicles.drive(state, s, JsMath.sign(c.dx), JsMath.sign(c.dy));
             return;
         }
         s.move = null;
@@ -116,7 +122,7 @@ public static partial class ControlMod
             c.busy = null;
             if (!Js.T(c.aim))
             {
-                c.facing = new Point { x = Js.I(c.dx), y = Js.I(c.dy) };
+                c.facing = eightWay(c.dx, c.dy);
             }
             var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s);
             if (Js.T(run))

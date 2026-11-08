@@ -28,7 +28,7 @@
 //   --check                 print the skeleton check and quit (exit code 1 on a mismatch)
 //   --shot=out.png --frames=N   save a screenshot after N frames and quit
 //   --lose=armLeft:elbow,legRight:knee   (arm cuts hand|elbow|shoulder, leg cuts foot|knee|hip)
-//   --speed=M --crouch=0..1 --stance=rest|prone --style=0..1 --view=iso|side|front|top --still   start that way
+//   --speed=M --crouch=0..1 --stance=rest|prone --style=0..1 --view=quarter|side|front|top --still   start that way
 //   --clip=ual_walk [--clipat=SECONDS]   play a retarget library clip (LabLibrary.cs), held at a time
 //   --car=in|out|seated [--carat=P --steer= --throttle= --brake= --roof] --cartest=DIR   a car (LabCar.cs)
 //   --action=swing|stab|fire|reload [--actionat=P]   a weapon action (LabActions.cs)
@@ -450,7 +450,7 @@ public partial class Lab : Node3D
         var followBox = new CheckBox { Text = "Follow", ButtonPressed = follow };
         followBox.Toggled += on => follow = on;
         camRow.AddChild(followBox);
-        foreach (var v in new[] { "iso", "side", "front", "top" })
+        foreach (var v in new[] { "quarter", "side", "front", "top" })
             camRow.AddChild(Btn(v, () => { worldCam = false; SetView(v); }));
         outer.AddChild(camRow);
         Slider(outer, "Zoom", 1.5, 40, 0.1, camSize, v => camSize = v);

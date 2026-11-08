@@ -1,5 +1,6 @@
 // Camera maths: world (tile) coordinates <-> screen pixels (src/render/camera.ts, interp.ts).
-// The only place the top-down projection lives; an isometric view would swap these functions.
+// The top-down projection of the 2D views (the colony tab under M, and the game with nobody under
+// your control). First person is World3D/; there is no isometric view, by decision (2026-11-08).
 
 using System;
 using LoonieRoo.Sim;

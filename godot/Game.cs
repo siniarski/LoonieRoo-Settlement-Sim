@@ -1,13 +1,19 @@
 // The game (src/app.ts, src/ui/input.ts, src/ui/loop.ts): runs the C# sim (cs/Sim) at a fixed
-// timestep, draws it (Render/), shows the HUD, menu and map (Ui/), and turns input into sim
-// commands. The sim is only ever changed through Commands.applyCommand and Tick.step (rule 5).
+// timestep, draws it, shows the HUD, menu and map (Ui/), and turns input into sim commands. The
+// sim is only ever changed through Commands.applyCommand and Tick.step (rule 5).
+//
+// The views (2026-11-08): playing a survivor, you see through their eyes (World3D/, first person:
+// the mouse looks, WASD walks the way you face, Tab the inventory). M is the map screen, top-down,
+// with two tabs: Map (Ui/WorldMap) and Colony (the colony's management, drawn in 2D top-down by
+// Render/). With nobody under your control, the Colony view is the game. No isometric view.
 //
 // Command line (after `--`), to skip the menu:
 //   --seed=N --size=N --start=solo|group   a new world (a solo start, 128 tiles, a random seed by default)
 //   --load=path.json                       a save file instead
 //   --ticks=N                              run N ticks before showing it
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
-//   --zoom=Z --paused --debug --map --overview --build=category   the view to start with
+//   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
+//   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
 
 using System;
 using System.Collections.Generic;
@@ -34,6 +40,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     const double KEY_PAN_PX_PER_SEC = 600;
     /// <summary>Directions the mouse aim snaps to (keeps the command log small).</summary>
     const int AIM_STEPS = 32;
+    /// <summary>First person: directions the aim snaps to (1.4 degrees), and the walk (5.6 degrees).</summary>
+    const int FP_AIM_STEPS = 256, FP_STEER_STEPS = 64;
+    /// <summary>First person: radians of look per pixel of mouse travel.</summary>
+    const double LOOK_PER_PX = 0.0025;
+    /// <summary>First person: you use what you look at on the ground this near (m), else what's in front of you.</summary>
+    const double USE_REACH = 1.6, LOOK_REACH = 40;
     /// <summary>A right-button press that moves less than this is a click, not a pan.</summary>
     const double CLICK_SLOP_PX = 4;
 
@@ -51,6 +63,13 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     Hud hud = null!;
     Menu menu = null!;
     WorldMap worldMap = null!;
+    ScreenTabs tabs = null!;
+    World3D.FirstPerson firstPerson = null!;
+    /// <summary>Last frame was first person (to pick up the survivor's aim on the way in).</summary>
+    bool wasFirstPerson;
+    bool selftest;
+    /// <summary>--look=degrees (0 east, 90 south) and --pitch=degrees: where first person looks at the start.</summary>
+    double? lookArg, pitchArg;
     FileDialog? fileDialog;
 
     // input
@@ -79,19 +98,23 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
         ctx = new Ctx(this);
         painter = new Painter(ctx);
+        firstPerson = new World3D.FirstPerson { Visible = false };
+        AddChild(firstPerson);
         var layer = new CanvasLayer();
         AddChild(layer);
         hud = new Hud(view, this);
         layer.AddChild(hud);
         worldMap = new WorldMap(view, Command);
         layer.AddChild(worldMap);
+        tabs = new ScreenTabs(view);
+        layer.AddChild(tabs);
         menu = new Menu(view, this);
         layer.AddChild(menu);
 
         var args = ParseArgs();
         if (args.TryGetValue("shot", out var shot)) shotPath = shot;
         if (args.TryGetValue("frames", out var f)) shotFrames = int.Parse(f);
-        bool selftest = args.ContainsKey("selftest");
+        selftest = args.ContainsKey("selftest");
         if (selftest)
         {
             Saves.DIR = "user://selftest-saves";
@@ -109,13 +132,16 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         view.showDebug = args.ContainsKey("debug");
         view.showMap = args.ContainsKey("map");
         view.showOverview = args.ContainsKey("overview");
+        view.colonyMode = args.ContainsKey("colony");
+        if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
+        if (args.TryGetValue("pitch", out var pt)) pitchArg = double.Parse(pt) * Math.PI / 180;
         if (args.TryGetValue("build", out var cat)) Tools.chooseCategory(view, cat == "" ? "structure" : cat);
         if (args.TryGetValue("menu", out var m)) view.menu = m == "" ? "main" : m;
         if (direct)
         {
             view.inGame = true;
             view.paused = args.ContainsKey("paused");
-            if (state.control != null) view.Toast("Alone. WASD to walk, click to swing, right-click or E to use. Space to pause.");
+            if (state.control != null) view.Toast(SOLO_TOAST);
             if (selftest) _ = SelfTest();
         }
         else
@@ -126,6 +152,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             view.paused = true;
         }
     }
+
+    const string SOLO_TOAST = "Alone. The mouse looks, WASD walks, click to swing, right-click or E to use. Tab: inventory. M: the map and the colony.";
 
     static double RandomSeed() => Math.Floor(Random.Shared.NextDouble() * 1e9);
 
@@ -210,7 +238,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         var world = Worldgen.createWorld(seed ?? RandomSeed(), size, settings, you);
         if (!Replace(new LoadResult { ok = true, state = world, kind = "save" }, $"a new {size}×{size} world")) return;
         Play();
-        if (settings.start == "solo") view.Toast("Alone. WASD to walk, click to swing, right-click or E to use. Space to play.");
+        if (settings.start == "solo") view.Toast(SOLO_TOAST + " Space to play.");
     }
 
     public void Arena(string kind)
@@ -301,17 +329,36 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         UpdateInput(frameMs);
         if (view.selectedId != null && !state.survivors.Exists((x) => x.id == view.selectedId)) view.selectedId = null;
         alpha = Math.Min(1, accumulatorMs / MS_PER_TICK);
-        // The camera follows whoever you're steering.
         var you = ControlMod.controlled(state);
-        if (you != null)
+        // First person unless the M screen is up (the menu goes over it).
+        bool fpScene = you != null && !view.mScreen(true);
+        view.firstPerson = fpScene && view.menu == null;
+        if (!view.firstPerson) view.showInventory = false;
+        if (fpScene && !wasFirstPerson)
         {
-            var w = worldPos(you, alpha);
+            // Look the way they were aiming.
+            var d = state.control!.aim ?? state.control.facing;
+            view.yaw = lookArg ?? Math.Atan2(d.y, d.x);
+            view.pitch = pitchArg ?? 0;
+            lookArg = pitchArg = null;
+        }
+        wasFirstPerson = fpScene;
+        firstPerson.Visible = fpScene;
+        if (fpScene)
+        {
+            firstPerson.Update(state, alpha, view.yaw, view.pitch);
+            // The top-down camera keeps up with you, so the Colony tab opens where you are.
+            var w = worldPos(you!, alpha);
             view.camera = new Cam(w.x, w.y, view.camera.zoom);
         }
+        bool capture = view.firstPerson && !view.showInventory && (selftest || GetWindow().HasFocus());
+        var mode = capture ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
+        if (Input.MouseMode != mode) Input.MouseMode = mode;
         QueueRedraw();
         string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}";
         hud.Update(state, perf);
         worldMap.Update(state);
+        tabs.Update(state);
 
         frame++;
         if (shotPath != null && frame == shotFrames) _ = SaveShot();
@@ -330,6 +377,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     {
         var sw = Stopwatch.StartNew();
         ctx.Begin();
+        if (firstPerson.Visible) return; // the 3D view is the picture
         painter.draw(state, view.camera, Vp, new DrawOptions
         {
             hover = view.hover,
@@ -394,32 +442,101 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (Input.IsPhysicalKeyPressed(Key.A) || Input.IsPhysicalKeyPressed(Key.Left)) dx -= 1;
         if (Input.IsPhysicalKeyPressed(Key.D) || Input.IsPhysicalKeyPressed(Key.Right)) dx += 1;
         bool shift = Input.IsKeyPressed(Key.Shift);
-        // Under direct control the keys walk, and the sim only hears about it when they change.
         var c = state.control;
-        if (c != null)
+        // Under direct control the keys walk, and the sim only hears about it when they change.
+        if (view.firstPerson)
         {
-            bool run = shift && (dx != 0 || dy != 0);
-            if (c.dx != dx || c.dy != dy || (c.running == true) != run) Command(new Command { type = "steer", dx = dx, dy = dy, run = run });
-            // Look at the mouse: the direction from you to it, in AIM_STEPS steps round, sent only when it changes.
-            var at = ControlMod.controlled(state)?.at;
-            if (mouse is { } m && at != null)
-            {
-                var w = screenToWorld(view.camera, Vp, m.X, m.Y);
-                double ax = w.x * Motion.SUB - at.x, ay = w.y * Motion.SUB - at.y;
-                if (ax * ax + ay * ay > Math.Pow(Motion.SUB / 4.0, 2))
-                {
-                    double step = Math.Round(Math.Atan2(ay, ax) / (2 * Math.PI) * AIM_STEPS);
-                    double a = step * 2 * Math.PI / AIM_STEPS;
-                    int x = (int)Math.Round(Math.Cos(a) * ControlMod.AIM_MAX), y = (int)Math.Round(Math.Sin(a) * ControlMod.AIM_MAX);
-                    if (c.aim == null || c.aim.x != x || c.aim.y != y) Command(new Command { type = "aim", x = x, y = y });
-                }
-            }
+            FirstPersonInput(c!, dx, -dy, shift);
             return;
         }
+        // Playing someone, in the Colony tab: they stand still, and the keys move the view.
+        if (c != null && (c.dx != 0 || c.dy != 0)) Command(new Command { type = "steer", dx = 0, dy = 0 });
         if (dx == 0 && dy == 0) return;
         double distance = KEY_PAN_PX_PER_SEC * frameMs / 1000;
         // panByScreen moves the world with the drag; keys move the camera, so negate.
         view.camera = panByScreen(view.camera, -dx * distance, -dy * distance);
+    }
+
+    /// <summary>First person: strafe and forward (-1, 0, 1) walk the way you face; in a car they drive it.</summary>
+    void FirstPersonInput(Sim.Control c, int strafe, int forward, bool shift)
+    {
+        var you = ControlMod.controlled(state);
+        if (you == null) return;
+        bool inCar = Vehicles.vehicleOf(state, you) != null;
+        int dx, dy;
+        if (inCar) (dx, dy) = (strafe, -forward);
+        else if (strafe == 0 && forward == 0) (dx, dy) = (0, 0);
+        else
+        {
+            // Forward is the yaw; right of it a quarter turn clockwise (the grid's y runs south).
+            double fx = Math.Cos(view.yaw), fy = Math.Sin(view.yaw);
+            double mx = fx * forward - fy * strafe, my = fy * forward + fx * strafe;
+            double a = Math.Round(Math.Atan2(my, mx) / (2 * Math.PI) * FP_STEER_STEPS) * 2 * Math.PI / FP_STEER_STEPS;
+            (dx, dy) = ((int)Math.Round(Math.Cos(a) * ControlMod.AIM_MAX), (int)Math.Round(Math.Sin(a) * ControlMod.AIM_MAX));
+        }
+        bool run = shift && (dx != 0 || dy != 0);
+        if (c.dx != dx || c.dy != dy || (c.running == true) != run) Command(new Command { type = "steer", dx = dx, dy = dy, run = run });
+        if (inCar) return;
+        double step = Math.Round(view.yaw / (2 * Math.PI) * FP_AIM_STEPS) * 2 * Math.PI / FP_AIM_STEPS;
+        int x = (int)Math.Round(Math.Cos(step) * ControlMod.AIM_MAX), y = (int)Math.Round(Math.Sin(step) * ControlMod.AIM_MAX);
+        if (c.aim == null || c.aim.x != x || c.aim.y != y) Command(new Command { type = "aim", x = x, y = y });
+    }
+
+    /// <summary>First person: the tile just in front of you, the way you look.</summary>
+    Point FrontTile(Survivor you)
+    {
+        var (eye, _, _) = World3D.FirstPerson.Eye(state, you, alpha);
+        foreach (double d in new[] { 0.8, 1.2 })
+        {
+            var t = new Point((int)Math.Floor(eye.X + Math.Cos(view.yaw) * d), (int)Math.Floor(eye.Z + Math.Sin(view.yaw) * d));
+            if (t.x != you.pos.x || t.y != you.pos.y) return t;
+        }
+        return you.pos;
+    }
+
+    /// <summary>First person: the ground tile under the crosshair, within reach (m), or null.</summary>
+    Point? LookedAt(Survivor you, double reach)
+    {
+        var (eye, _, _) = World3D.FirstPerson.Eye(state, you, alpha);
+        var g = World3D.FirstPerson.GroundAt(eye, view.yaw, view.pitch, reach);
+        return g is { } p ? new Point((int)Math.Floor(p.X), (int)Math.Floor(p.Y)) : null;
+    }
+
+    /// <summary>E or right-click in first person: what you look at on the ground beside you, else what's in front, else underfoot.</summary>
+    void UseAhead()
+    {
+        var you = ControlMod.controlled(state);
+        if (you == null) return;
+        var at = you.pos;
+        var looked = LookedAt(you, USE_REACH);
+        if (looked != null && Math.Abs(looked.x - at.x) <= 1 && Math.Abs(looked.y - at.y) <= 1 && (looked.x != at.x || looked.y != at.y)
+            && Command(new Command { type = "use", x = looked.x, y = looked.y })) return;
+        var front = FrontTile(you);
+        if (!Command(new Command { type = "use", x = front.x, y = front.y })) Command(new Command { type = "use", x = at.x, y = at.y });
+    }
+
+    /// <summary>First person takes the mouse before the HUD does: it looks, swings and uses.</summary>
+    public override void _Input(InputEvent e)
+    {
+        if (DropForeignMouse(e)) return;
+        if (!view.firstPerson || view.showInventory || Input.MouseMode != Input.MouseModeEnum.Captured) return;
+        if (e is InputEventMouseMotion mm)
+        {
+            view.yaw = (view.yaw + mm.Relative.X * LOOK_PER_PX) % (2 * Math.PI);
+            view.pitch = Math.Clamp(view.pitch - mm.Relative.Y * LOOK_PER_PX, -1.45, 1.45);
+            GetViewport().SetInputAsHandled();
+        }
+        else if (e is InputEventMouseButton mb && mb.Pressed)
+        {
+            var you = ControlMod.controlled(state);
+            if (you != null && mb.ButtonIndex == MouseButton.Left)
+            {
+                var t = FrontTile(you);
+                Command(new Command { type = "swing", x = t.x, y = t.y });
+            }
+            else if (mb.ButtonIndex == MouseButton.Right) UseAhead();
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -429,7 +546,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             OnKey(k);
             return;
         }
-        if (view.menu != null || view.showMap) return;
+        if (view.menu != null || view.showMap || view.firstPerson) return;
         if (e is InputEventMouseMotion mm) OnMouseMove(mm.Position);
         else if (e is InputEventMouseButton mb)
         {
@@ -515,11 +632,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             if (Tools.getTool(view.tool).paints) painting = tile;
             return;
         }
-        if (state.control != null)
-        {
-            Command(new Command { type = "swing", x = tile.x, y = tile.y });
-            return;
-        }
         // Select mode: pick a survivor; with someone picked, a click on a bed gives it to them; anywhere else clears the selection.
         var who = Survivors.survivorAt(state, tile.x, tile.y)?.id;
         var f = who == null ? FurnitureMod.furnitureAt(state, tile.x, tile.y) : null;
@@ -547,11 +659,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             Tools.disarm(view);
             return;
         }
-        if (state.control != null)
-        {
-            Command(new Command { type = "use", x = tile.x, y = tile.y });
-            return;
-        }
         if (view.selectedId != null && OnMap(tile)) Command(new Command { type = "moveSurvivor", survivorId = view.selectedId, x = tile.x, y = tile.y });
     }
 
@@ -564,25 +671,44 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             if (key == Key.Escape && view.inGame) ToggleMenu();
             return;
         }
+        var c = state.control;
+        bool controlling = ControlMod.controlled(state) != null;
         if (view.showMap)
         {
-            if (key is Key.Escape or Key.M) view.showMap = false;
+            // M or Escape: back to first person, or (playing nobody) to the colony view.
+            if (key is Key.Escape or Key.M)
+            {
+                if (controlling) view.closeMScreen();
+                else view.showMap = false;
+            }
             return;
         }
-        var c = state.control;
-        if (key == Key.Escape && view.tool == null && !view.buildOpen && view.selectedId == null && !view.showOverview)
+        if (view.firstPerson)
         {
-            ToggleMenu();
-            return;
+            switch (key)
+            {
+                case Key.Tab: view.showInventory = !view.showInventory; return;
+                case Key.Escape when view.showInventory: view.showInventory = false; return;
+                case Key.Escape: ToggleMenu(); return;
+                case Key.M: view.openTab("map"); return;
+                // The colony's keys (build, priorities, overview) open its tab first.
+                case Key.B or Key.P or Key.O: view.openTab("colony"); view.firstPerson = false; break;
+            }
         }
-        // Playing one survivor: the colony's keys (build, priorities, overview) bring its management out first.
-        if (view.survivorMode(c != null) && key is Key.B or Key.P or Key.O) view.colonyMode = true;
-        if (key == Key.G && c != null)
+        else if (key == Key.M)
         {
-            view.toggleColonyMode();
+            if (controlling) view.closeMScreen();
+            else view.showMap = true;
             return;
         }
-        if (Tools.handleBuildKey(view, key, k.ShiftPressed))
+        if (key == Key.Escape && !view.firstPerson && view.tool == null && !view.buildOpen && !view.showOverview && (controlling || view.selectedId == null))
+        {
+            // The Colony tab: back to first person; playing nobody, the menu.
+            if (controlling) view.closeMScreen();
+            else ToggleMenu();
+            return;
+        }
+        if (!view.firstPerson && Tools.handleBuildKey(view, key, k.ShiftPressed))
         {
             if (view.tool == null) painting = null;
             return;
@@ -592,7 +718,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.Space: view.paused = !view.paused; return;
             case Key.Quoteleft: view.showDebug = !view.showDebug; return;
             case Key.P: view.showPriorities = !view.showPriorities; return;
-            case Key.M: view.showMap = !view.showMap; return;
             case Key.N: view.showMinimap = !view.showMinimap; return;
             case Key.O: view.showOverview = !view.showOverview; return;
             case Key.K: view.showKeys = !view.showKeys; return;
@@ -601,12 +726,14 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.Minus or Key.KpSubtract: view.speed = view.speed == 4 ? 2 : 1; return;
             case Key.Home: view.camera = centredOn(state.grid.width, state.grid.height, view.camera.zoom); return;
             case Key.F:
-                if (c != null) Command(new Command { type = "takeControl", survivorId = null });
+                // In the Colony tab, F on someone else plays them instead; otherwise it lets go (or takes the selected).
+                if (c != null && !view.firstPerson && view.selectedId != null && view.selectedId != c.survivorId) Command(new Command { type = "takeControl", survivorId = view.selectedId });
+                else if (c != null) Command(new Command { type = "takeControl", survivorId = null });
                 else if (view.selectedId != null) Command(new Command { type = "takeControl", survivorId = view.selectedId });
                 return;
         }
         var you = ControlMod.controlled(state);
-        if (c == null || you == null) return;
+        if (c == null || you == null || !view.firstPerson) return;
         var at = you.pos;
         switch (key)
         {
@@ -618,17 +745,20 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
                 break;
             }
             case Key.R: Command(new Command { type = "work", x = at.x + c.facing.x, y = at.y + c.facing.y }); break;
-            case Key.L: if (view.hover != null) Command(new Command { type = "shout", order = "loot", x = view.hover.x, y = view.hover.y }); break;
+            case Key.L:
+            {
+                // "Loot that room": the room where you look.
+                var t = LookedAt(you, LOOK_REACH) ?? FrontTile(you);
+                Command(new Command { type = "shout", order = "loot", x = t.x, y = t.y });
+                break;
+            }
             case Key.C: Command(new Command { type = "sneak", on = c.sneaking != true }); break;
             case Key.T: Command(new Command { type = "talk" }); break;
             case Key.U: Command(new Command { type = "boot" }); break;   // the boot of the car beside you (vehicleActions.ts)
             case Key.I: Command(new Command { type = "hood" }); break;   // its bonnet
             case Key.V:
             case Key.H: Command(new Command { type = "shout", order = key == Key.V ? "follow" : "hold" }); break;
-            case Key.E:
-                // The tile in front, else the one underfoot.
-                if (!Command(new Command { type = "use", x = at.x + c.facing.x, y = at.y + c.facing.y })) Command(new Command { type = "use", x = at.x, y = at.y });
-                break;
+            case Key.E: UseAhead(); break;
         }
     }
 }

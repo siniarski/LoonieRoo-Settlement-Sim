@@ -96,9 +96,10 @@ public static partial class Commands
                 var __d0 = command;
                 var dx = __d0.dx;
                 var dy = __d0.dy;
-                if (!new List<double?> { dx, dy }.every((d) => ((d == -1) || (d == 0)) || (d == 1)))
+                // Any direction (first person steers by the camera): whole numbers up to AIM_MAX a side; -1, 0, 1 is the eight ways.
+                if (!new List<double?> { dx, dy }.every((d) => (d != null) && JsNumber.isInteger(d) && (JsMath.abs(Js.NN(d)) <= ControlMod.AIM_MAX)))
                 {
-                    return reject("steer takes -1, 0 or 1");
+                    return reject("steer takes whole numbers from -AIM_MAX to AIM_MAX");
                 }
                 var run = command.run == true;
                 if (((Js.NN(state.control).dx == dx) && (Js.NN(state.control).dy == dy)) && ((Js.NN(state.control).running == true) == run))

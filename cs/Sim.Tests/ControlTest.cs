@@ -87,6 +87,25 @@ public partial class ControlTest
             expect(s.pos.y).toBe(0);
         }
 
+        [Fact(DisplayName = "direct control > steer takes any direction (first person): the same speed, the facing the nearest of eight")]
+        public void T004b_steer_takes_any_direction()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["......", "......", "..s...", "......", "......"] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            cmd(state, new Command { type = "takeControl", survivorId = s.id });
+            var start = Js.Clone(s.at);
+            cmd(state, new Command { type = "steer", dx = 59, dy = -24 });
+            run(state, 2);
+            var moved = JsMath.sqrt((JsMath.pow((s.at.x - start.x), 2)) + (JsMath.pow((s.at.y - start.y), 2)));
+            expect(JsMath.abs(moved - ((double)(((double)(2) * (Motion.SUB))) / (Survivors.TICKS_PER_TILE)))).toBeLessThan(2);
+            // East a bit north: more east than north, and some north.
+            expect(s.at.x - start.x).toBeGreaterThan(start.y - s.at.y);
+            expect(start.y - s.at.y).toBeGreaterThan(0);
+            expect(Js.NN(state.control).facing).toEqual(Js.Obj(("x", (object?)(1)), ("y", (object?)(0))));
+            expect(Commands.applyCommand(state, new Command { type = "steer", dx = ControlMod.AIM_MAX + 1, dy = 0 }).ok).toBe(false);
+            expect(Commands.applyCommand(state, new Command { type = "steer", dx = 0.5, dy = 0 }).ok).toBe(false);
+        }
+
         [Fact(DisplayName = "direct control > swinging at a zombie next to you hits it, and not faster than a guard could")]
         public void T005_swinging_at_a_zombie_next_to_you_hits_it_and_not_faster_than()
         {

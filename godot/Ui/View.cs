@@ -36,8 +36,14 @@ public sealed class View
     public bool showMap;
     public bool showOverview;
     public bool showKeys;
-    /// <summary>Under direct control, the colony's management (G). Off, you see only what your survivor would.</summary>
+    /// <summary>Under direct control, the Colony tab of the M screen: the colony's management in the 2D top-down view. Off, you're in first person.</summary>
     public bool colonyMode;
+    /// <summary>Set by the game each frame: you're seeing through your survivor's eyes (no menu, map or colony tab).</summary>
+    public bool firstPerson;
+    /// <summary>Tab in first person: the bag, what's beside you, and your card, with the mouse let go.</summary>
+    public bool showInventory;
+    /// <summary>First person: where you're looking (radians; yaw 0 is east, pi/2 south, as the grid; pitch up is positive).</summary>
+    public double yaw, pitch;
     /// <summary>The survivor list: folded, short, or full.</summary>
     public string roster = "short";
 
@@ -47,18 +53,27 @@ public sealed class View
         toastUntil = Godot.Time.GetTicksMsec() + ms;
     }
 
-    /// <summary>Playing one survivor with the colony's management put away (G brings it back).</summary>
+    /// <summary>Playing one survivor with the colony's management put away (its tab under M brings it out).</summary>
     public bool survivorMode(bool controlling) => controlling && !colonyMode;
 
-    /// <summary>G under direct control: the colony's management out, or put away (closing build and the overview).</summary>
-    public void toggleColonyMode()
+    /// <summary>The M screen is up: the map, or (playing someone) the colony tab.</summary>
+    public bool mScreen(bool controlling) => showMap || (controlling && colonyMode);
+
+    /// <summary>The M screen's tabs: "map" or "colony".</summary>
+    public void openTab(string tab)
     {
-        colonyMode = !colonyMode;
-        if (!colonyMode)
-        {
-            buildOpen = false;
-            tool = null;
-            showOverview = false;
-        }
+        showMap = tab == "map";
+        colonyMode = tab == "colony";
+        showInventory = false;
+    }
+
+    /// <summary>Back to first person: the M screen shut, the colony's management put away (closing build and the overview).</summary>
+    public void closeMScreen()
+    {
+        showMap = false;
+        colonyMode = false;
+        buildOpen = false;
+        tool = null;
+        showOverview = false;
     }
 }
