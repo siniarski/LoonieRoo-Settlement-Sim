@@ -19,4 +19,6 @@ project/assembly_name="LoonieRoo"
 
 [rendering]
 
+limits/global_shader_variables/buffer_size=131072
+
 environment/defaults/default_clear_color=Color(0.05, 0.06, 0.055, 1)

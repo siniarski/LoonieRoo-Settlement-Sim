@@ -29,7 +29,7 @@
 //   --shot=out.png --frames=N   save a screenshot after N frames and quit
 //   --lose=armLeft:elbow,legRight:knee   (arm cuts hand|elbow|shoulder, leg cuts foot|knee|hip)
 //   --speed=M --crouch=0..1 --stance=rest|prone --style=0..1 --view=iso|side|front|top --still   start that way
-//   --tab=Move|Body|Ground|Crowd|Hands --zoom=SIZE --novsync (frame times uncapped)
+//   --tab=Move|Body|Clothes|Ground|Crowd|Hands --zoom=SIZE --novsync (frame times uncapped)
 //   --demo                  run the demo (every transition in turn, looping); --trace prints the state twice a second
 //
 // Keys: 1-4 idle/walk/jog/run, C crouch, X prone, Z rest on the back, right-drag orbit, wheel zoom.
@@ -117,6 +117,7 @@ public partial class Lab : Node3D
         SetupIk(args);
         SetupHands(args);
         SetupBody(args);
+        SetupClothes(args);
         if (args.TryGetValue("zoom", out var zm)) camSize = Num(zm);
         SetupCrowd(args);
         BuildPanel();
@@ -308,7 +309,7 @@ public partial class Lab : Node3D
 
         readout.Text = $"state    {state}\nspeed    {speed:0.00} m/s ({Gait(state, speed, crouch, LegsLost() == 2 ? 1 : crawlStyle)})\ncrouch   {crouch:0.00}\n" +
                        $"cadence  {rate:0.00} cycles/s\nstride   {(speed > 0.01 ? speed / rate : 0):0.00} m/cycle\n" +
-                       $"fps      {Engine.GetFramesPerSecond():0}" + (HandReadout() is { Length: > 0 } h ? "\n" + h : "") + (BodyReadout() is { Length: > 0 } b ? "\n" + b : "");
+                       $"fps      {Engine.GetFramesPerSecond():0}" + (HandReadout() is { Length: > 0 } h ? "\n" + h : "") + (BodyReadout() is { Length: > 0 } b ? "\n" + b : "") + (ClothesReadout() is { Length: > 0 } c2 ? "\n" + c2 : "");
 
         traceTime += delta;
         if (trace && traceTime >= 0.5)
@@ -424,6 +425,7 @@ public partial class Lab : Node3D
         Slider(box, "Hill slope °", 5, 40, 1, slopeDeg, v => { slopeDeg = v; if (ground == Ground.Hill) BuildGround(); });
         box.AddChild(new Label { Text = "Kerb 15 cm; stairs 18 cm rise, 28 cm going.\nThe character walks round a 3 m circle across them.", Modulate = new Color(1, 1, 1, 0.6f) });
 
+        BuildClothesTab(Tab("Clothes"));
         BuildCrowdTab(Tab("Crowd"));
         BuildHandsTab(Tab("Hands"));
 
@@ -487,6 +489,7 @@ public partial class Lab : Node3D
             armPick[i]?.Select(armCut[i]);
             legPick[i]?.Select(legCut[i]);
         }
+        ApplyClothes();
     }
 
     void Cut(string side, string[] regions, string[] stumps, int level)

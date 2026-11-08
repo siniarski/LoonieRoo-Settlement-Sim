@@ -21,6 +21,8 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 - `scripts/rig.py`: the shared rig. Profile bone names, parents and rest orientations; our proportions (1.75 m).
 - `scripts/validate.py`: the rules every character file meets (profile skeleton, applied transforms, at most
   4 weights per vertex and normalised, no unweighted vertices, triangle budget, clip names, no root motion).
-- `scripts/build_test_mannequin.py`: a segmented mannequin with idle, walk and run, all by script.
+- `scripts/build_test_mannequin.py`: the segmented mannequin (regions, stumps, a face, 27 clips), all by script; with
+  `--garments godot/assets/characters/garments.glb` it also exports the garments (and garments.json beside them).
+- `scripts/garments.py`: the garments, by body region, with the hiding rules; `scripts/shapes.py`: mesh primitives.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

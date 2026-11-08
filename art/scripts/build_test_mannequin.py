@@ -5,6 +5,7 @@
 #   blender --background --factory-startup --python art/scripts/build_test_mannequin.py -- \
 #       --blend art/blend/test_mannequin.blend --glb godot/assets/characters/test_mannequin.glb \
 #       [--glb_merged godot/assets/characters/test_mannequin_merged.glb] [--render preview.png]
+#       [--garments godot/assets/characters/garments.glb]   (and garments.json beside it)
 #
 # Clips are made in place (no root motion: the sim moves characters). They're described as
 # world-space rotations per bone (relative to the T-pose rest), converted to each bone's local
@@ -19,6 +20,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import garments  # noqa: E402
 import rig  # noqa: E402
 import validate  # noqa: E402
 
@@ -40,49 +42,7 @@ def clear_scene():
 
 # ---------------------------------------------------------------- mesh
 
-def _cone(bm, a, b, r1, r2, segments=12, flat=1.0, flat_axis="y"):
-    """A capped tapered cylinder from a to b (Blender space). flat < 1 squashes it along flat_axis (front-back by default)."""
-    d = b - a
-    ret = bmesh.ops.create_cone(bm, cap_ends=True, segments=segments, radius1=r1, radius2=r2, depth=d.length)
-    verts = ret["verts"]
-    rot = Vector((0, 0, 1)).rotation_difference(d.normalized()).to_matrix().to_4x4()
-    m = Matrix.Translation((a + b) / 2) @ rot
-    bmesh.ops.transform(bm, matrix=m, verts=verts)
-    if flat != 1.0:
-        c = (a + b) / 2
-        for v in verts:
-            setattr(v.co, flat_axis, getattr(c, flat_axis) + (getattr(v.co, flat_axis) - getattr(c, flat_axis)) * flat)
-    return verts
-
-
-def _box(bm, c, size):
-    ret = bmesh.ops.create_cube(bm, size=1.0)
-    bmesh.ops.scale(bm, vec=Vector(size), verts=ret["verts"])
-    bmesh.ops.translate(bm, vec=c, verts=ret["verts"])
-    return ret["verts"]
-
-
-def _sphere(bm, c, r, segs=10, rings=6, squash=None):
-    ret = bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=rings, radius=r)
-    if squash:
-        bmesh.ops.scale(bm, vec=Vector(squash), verts=ret["verts"])
-    bmesh.ops.translate(bm, vec=c, verts=ret["verts"])
-    return ret["verts"]
-
-
-def _material(name, rgb):
-    mat = bpy.data.materials.get(name)
-    if mat:
-        return mat
-    mat = bpy.data.materials.new(name)
-    mat.diffuse_color = (*rgb, 1)
-    if mat.node_tree is None:
-        mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs["Base Color"].default_value = (*rgb, 1)
-        bsdf.inputs["Roughness"].default_value = 0.8
-    return mat
+from shapes import box as _box, cone as _cone, material as _material, sphere as _sphere  # noqa: E402
 
 
 # Body regions (docs/characters.md, "The base body" and "Missing limbs"): each is its own mesh
@@ -523,11 +483,15 @@ def make_clips(arm_obj):
 
 # ---------------------------------------------------------------- export, preview
 
-def export_glb(path):
+def export_glb(path, objects, animations=True):
+    """Export the rig and these meshes (only)."""
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objects + [o for o in bpy.data.objects if o.type == "ARMATURE"]:
+        o.select_set(True)
     bpy.ops.export_scene.gltf(
-        filepath=path, export_format="GLB", export_yup=True,
-        export_animations=True, export_animation_mode="ACTIONS",
+        filepath=path, export_format="GLB", export_yup=True, use_selection=True,
+        export_animations=animations, export_animation_mode="ACTIONS",
         export_force_sampling=True, export_frame_range=False,
         # Drop channels that never change (fingers, scale, most translations): the exporter
         # otherwise keeps all 56 bones x 3 channels in every clip, and each costs at runtime.
@@ -573,6 +537,9 @@ def main():
     clear_scene()
     arm = rig.build_armature()
     objs = build_mesh(arm)
+    clothes, meta = garments.build_garments(arm)
+    for o in objs + clothes:
+        garments.rest_uv(o)
     make_clips(arm)
     problems = validate.validate_scene(budget_tris=8000)
     for p in problems:
@@ -586,12 +553,19 @@ def main():
         bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a["blend"]))
     if "render" in a:
         render_preview(os.path.abspath(a["render"]), arm)
+    print(f"garments: {len(meta)} in {len(clothes)} region pieces, {sum(len(p.vertices) - 2 for o in clothes for p in o.data.polygons)} tris in all")
     if "glb" in a:
-        export_glb(os.path.abspath(a["glb"]))
+        export_glb(os.path.abspath(a["glb"]), objs)
         print("exported", a["glb"])
+    if "garments" in a:
+        export_glb(os.path.abspath(a["garments"]), clothes, animations=False)
+        garments.write_meta(meta, os.path.splitext(os.path.abspath(a["garments"]))[0] + ".json")
+        print("exported", a["garments"])
     if "glb_merged" in a:
+        for o in clothes:
+            bpy.data.objects.remove(o)
         merge_body(objs)
-        export_glb(os.path.abspath(a["glb_merged"]))
+        export_glb(os.path.abspath(a["glb_merged"]), [o for o in bpy.data.objects if o.type == "MESH"])
         print("exported", a["glb_merged"])
 
 

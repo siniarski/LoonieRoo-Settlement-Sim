@@ -142,6 +142,7 @@ public partial class Lab
         {
             foreach (var mi in FindAllNodes<MeshInstance3D>(node))
                 if (mi.Name.ToString().StartsWith("stump_")) mi.Visible = false;
+            DressCrowd(node, crowd.IndexOf(m));  // near: each in a random outfit
             crowdTreeRoot ??= CrowdTreeRoot();
             var tree = new AnimationTree { TreeRoot = crowdTreeRoot };
             tree.AddAnimationLibrary("", lib);
