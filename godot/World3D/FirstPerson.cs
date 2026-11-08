@@ -2,7 +2,8 @@
 // seen from their eyes. Reads state only (rule 5): the camera's yaw and pitch are view state, and
 // the game turns them into `aim` and `steer` commands. Chunks of the world (WorldMesh) are built
 // near you and rebuilt only when what they show changes, a few a frame at most (rule 14).
-// Bodies are placeholders for now (capsules and boxes), not the character models.
+// People are the character models (People.cs), the nearest MAX_MODELS of them; the rest, animals,
+// cars and things on the ground are placeholders (Bodies.cs).
 
 using System;
 using System.Collections.Generic;
@@ -33,6 +34,9 @@ public sealed partial class FirstPerson : Node3D
     readonly WorldMesh.Lookups look = new();
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
+    readonly People people;
+    /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
+    public int Modelled { get; private set; }
     /// <summary>When it last changed: walkability, open doors and windows, boards, furniture.</summary>
     (int, int, int, int, int, int) worldKey = (-1, 0, 0, 0, 0, 0);
     int sinceCheck;
@@ -50,6 +54,7 @@ public sealed partial class FirstPerson : Node3D
         env.TonemapMode = Godot.Environment.ToneMapper.Filmic;
         AddChild(new WorldEnvironment { Environment = env });
         bodies = new Bodies(this);
+        people = new People(this);
     }
 
     /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
@@ -71,7 +76,7 @@ public sealed partial class FirstPerson : Node3D
     public static Vector3 LookDir(double yaw, double pitch) =>
         new((float)(Math.Cos(yaw) * Math.Cos(pitch)), (float)Math.Sin(pitch), (float)(Math.Sin(yaw) * Math.Cos(pitch)));
 
-    public void Update(SimState state, double alpha, double yaw, double pitch)
+    public void Update(SimState state, double alpha, double yaw, double pitch, double delta)
     {
         var you = ControlMod.controlled(state);
         if (you == null) return;
@@ -80,7 +85,9 @@ public sealed partial class FirstPerson : Node3D
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
         Light(state);
         Chunks(state, eye);
-        bodies.Update(state, alpha, eye, you.id);
+        var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
+        Modelled = modelled.Count;
+        bodies.Update(state, alpha, eye, you.id, modelled);
     }
 
     void Light(SimState state)

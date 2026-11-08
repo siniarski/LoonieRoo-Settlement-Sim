@@ -1,6 +1,6 @@
-// Everyone and everything that moves, near you, in first person: survivors, residents, the dead,
-// raiders, animals, dogs, cars, and things lying on the ground. Placeholders (capsules and boxes)
-// from a pool of nodes reused every frame, until the character models come in (docs/characters.md).
+// Everything that moves near you in first person that isn't a character model (People.cs): animals,
+// dogs, cars, things lying on the ground, and people past the models' budget or range, as
+// placeholders (capsules and boxes) from a pool of nodes reused every frame.
 
 using System;
 using System.Collections.Generic;
@@ -52,7 +52,7 @@ public sealed class Bodies
         return node;
     }
 
-    public void Update(SimState state, double alpha, Vector3 eye, string youId)
+    public void Update(SimState state, double alpha, Vector3 eye, string youId, HashSet<string> modelled)
     {
         used.Clear();
         float range2 = 48 * 48;
@@ -61,6 +61,7 @@ public sealed class Bodies
         // People stand on the ground (a capsule's centre at half its height); asleep, they lie down.
         void Person(string kind, Body b, bool lying)
         {
+            if (modelled.Contains(b is Survivor s ? s.id : b is Zombie z ? z.id : b is Resident r ? r.id : "")) return;
             var p = worldPos(b, alpha);
             if (!Near(p.x, p.y)) return;
             var n = Next(kind);

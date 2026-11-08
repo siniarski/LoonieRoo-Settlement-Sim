@@ -9,8 +9,8 @@
 //
 // Command line (after `--`), to skip the menu:
 //   --seed=N --size=N --start=solo|group   a new world (a solo start, 128 tiles, a random seed by default)
-//   --load=path.json                       a save file instead
-//   --ticks=N                              run N ticks before showing it
+//   --load=path.json                       a save file instead; --arena=one|crowd a debug arena (the dead round you)
+//   --ticks=N                              run N ticks before showing it; --play then takes control of the first survivor
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
@@ -83,7 +83,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     (double wx, double wy, string last)? edgePainting;
 
     // perf (ms, smoothed), for the debug panel
-    double fps, tickMs, simMs, drawMs, worstTickMs;
+    double fps, tickMs, simMs, drawMs, worstTickMs, fpMs;
 
     // command line
     string? shotPath;
@@ -99,6 +99,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         ctx = new Ctx(this);
         painter = new Painter(ctx);
         firstPerson = new World3D.FirstPerson { Visible = false };
+        RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         AddChild(firstPerson);
         var layer = new CanvasLayer();
         AddChild(layer);
@@ -125,10 +126,13 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         double size = args.TryGetValue("size", out var z) ? double.Parse(z) : Worldgen.WORLD_SIZE;
         var settings = CopySettings(Difficulty.NORMAL);
         settings.start = args.GetValueOrDefault("start", "solo");
-        if (args.TryGetValue("load", out var load)) Replace(Savefile.loadFile(System.IO.File.ReadAllText(load)), "the file");
+        if (args.TryGetValue("arena", out var arena)) { Replace(new LoadResult { ok = true, state = LoonieRoo.Sim.Arena.createArena(seed, arena == "" ? "crowd" : arena), kind = "save" }, "a debug arena"); direct = true; }
+        else if (args.TryGetValue("load", out var load)) Replace(Savefile.loadFile(System.IO.File.ReadAllText(load)), "the file");
         else Replace(new LoadResult { ok = true, state = Worldgen.createWorld(seed, size, settings), kind = "save" }, $"a new {size}×{size} world");
         if (args.TryGetValue("zoom", out var zoom)) view.camera.zoom = double.Parse(zoom);
         if (args.TryGetValue("ticks", out var t)) Tick.step(state, int.Parse(t));
+        // --play: a group start, playing its first survivor (to look at the others in first person).
+        if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
         view.showDebug = args.ContainsKey("debug");
         view.showMap = args.ContainsKey("map");
         view.showOverview = args.ContainsKey("overview");
@@ -141,7 +145,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             view.inGame = true;
             view.paused = args.ContainsKey("paused");
-            if (state.control != null) view.Toast(SOLO_TOAST);
+            if (state.control != null && state.settings.start == "solo") view.Toast(SOLO_TOAST);
             if (selftest) _ = SelfTest();
         }
         else
@@ -346,7 +350,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         firstPerson.Visible = fpScene;
         if (fpScene)
         {
-            firstPerson.Update(state, alpha, view.yaw, view.pitch);
+            var fsw = Stopwatch.StartNew();
+            firstPerson.Update(state, alpha, view.yaw, view.pitch, delta);
+            fpMs = fpMs * 0.9 + fsw.Elapsed.TotalMilliseconds * 0.1;
             // The top-down camera keeps up with you, so the Colony tab opens where you are.
             var w = worldPos(you!, alpha);
             view.camera = new Cam(w.x, w.y, view.camera.zoom);
@@ -355,7 +361,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         var mode = capture ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
         if (Input.MouseMode != mode) Input.MouseMode = mode;
         QueueRedraw();
-        string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}";
+        string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}"
+            + (fpScene ? $"\n3D ms/frame    {fpMs:0.00} · {firstPerson.Modelled} people as models · {firstPerson.ChunkCount} chunks\nrender         cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.00} ms · gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.00} ms" : "");
         hud.Update(state, perf);
         worldMap.Update(state);
         tabs.Update(state);
