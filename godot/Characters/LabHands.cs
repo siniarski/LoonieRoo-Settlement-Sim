@@ -86,6 +86,7 @@ public partial class Lab
         box.AddChild(raisedBox);
         Slider(box, "Aim pitch °", -45, 45, 1, aimPitch, v => aimPitch = v);
         Slider(box, "Raise time s", 0.05, 1, 0.01, raiseTime, v => raiseTime = v);
+        BuildActionRow(box);
         var door = new HBoxContainer();
         door.AddChild(Btn("Door: quietly", () => StartDoor("quiet")));
         door.AddChild(Btn("Door: fast", () => StartDoor("fast")));
@@ -256,6 +257,7 @@ public partial class Lab
     {
         if (handIk == null) return;
         UpdateDoor(delta);
+        UpdateAction(delta);
         bool upright = state == "upright";
         foreach (var (kind, node) in weaponNodes) node.Visible = kind == weapon;
         double wantWeapon = weapon != "none" && upright ? 1 : 0;
@@ -272,7 +274,7 @@ public partial class Lab
         else if (weapon != "none")
         {
             var w = weaponNodes[weapon];
-            handIk.Grip[0] = w.GetNodeOrNull<Node3D>("grip_left");
+            handIk.Grip[0] = ActionLeftGrip() ?? w.GetNodeOrNull<Node3D>("grip_left");
             handIk.Grip[1] = w.GetNodeOrNull<Node3D>("grip_right");
             handIk.Weight[0] = handIk.Weight[1] = (float)Smooth(weaponWeight);
         }
@@ -306,6 +308,7 @@ public partial class Lab
                 Turn(skel, "Head", left, Mathf.DegToRad(8) * (float)a);      // and down to the sights
             }
         }
+        ActionBody(skel, xf, charBasis);  // a swing's or stab's twist (LabActions.cs)
         int uc = skel.FindBone("UpperChest");
         if (!readyLocal.TryGetValue(weapon, out var local))
         {
@@ -314,6 +317,7 @@ public partial class Lab
         }
         var hold = xf * skel.GetBoneGlobalPose(uc) * local;
         if (a > 0.001) hold = hold.InterpolateWith(AimedHold(skel, xf, charBasis), (float)a);
+        hold = ActionHold(hold);  // a swing, stab, recoil or reload (LabActions.cs)
         node.GlobalTransform = hold;
         handIk.PlaceTargets();
     }
@@ -392,6 +396,31 @@ public partial class Lab
                         await Shot(System.IO.Path.Combine(dir, name + "-side.png"));
                     }
                 }
+        // Weapon actions (LabActions.cs): each hand's error over the whole action, and a shot mid-way.
+        foreach (var (kind, act, aimed, shotAt) in new[] { ("bat", "swing", false, 0.55), ("knife", "stab", false, 0.5), ("pistol", "fire", true, 0.12),
+                     ("pistol", "reload", false, 0.47), ("rifle", "fire", true, 0.12), ("rifle", "reload", false, 0.47) })
+        {
+            weapon = kind;
+            raised = aimed;
+            aimPitch = 0;
+            targetSpeed = speed = 0;
+            camYaw = 35; camPitch = 12;
+            await Frames(45);
+            StartAction(act);
+            var e = new List<float>[] { new(), new() };
+            bool shot = false;
+            while (action != null)
+            {
+                await Frames(1);
+                for (int k = 0; k < 2; k++) { float v = handIk!.Error(k); if (v >= 0) e[k].Add(v); }
+                if (!shot && actionP >= shotAt) { shot = true; await Shot(System.IO.Path.Combine(dir, $"{kind}-{act}.png")); }
+            }
+            string F(double v) => (v * 100).ToString("0.0", CultureInfo.InvariantCulture);
+            string Cells(List<float> l) => l.Count == 0 ? "- | -" : $"{F(Average(l))} | {F(Max(l))}";
+            string line = $"| {kind}-{act} | {Cells(e[0])} | {Cells(e[1])} | |";
+            report.AppendLine(line);
+            GD.Print(line);
+        }
         raised = false;
         weapon = "none";
         camYaw = 300; camPitch = 15; camSize = 3; camFocusY = 1.0f;

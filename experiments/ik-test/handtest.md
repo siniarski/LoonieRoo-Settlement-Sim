@@ -24,5 +24,11 @@ Aimed guns also give the sight error: how far the sight line passes from the aim
 | knife-walk-ready | - | - | 0.0 | 0.0 |  |
 | bat-stand-ready | 0.0 | 0.0 | 0.0 | 0.0 |  |
 | bat-walk-ready | 0.0 | 0.0 | 0.0 | 0.0 |  |
+| bat-swing | 0.1 | 1.3 | 0.0 | 0.0 | |
+| knife-stab | - | - | 0.0 | 0.0 | |
+| pistol-fire | 0.0 | 0.0 | 0.0 | 0.0 | |
+| pistol-reload | 0.0 | 0.0 | 0.0 | 0.0 | |
+| rifle-fire | 0.0 | 0.0 | 0.0 | 0.0 | |
+| rifle-reload | 0.0 | 0.0 | 0.0 | 0.0 | |
 | door-quiet | - | - | 0.0 | 0.0 | |
 | door-fast | - | - | 0.0 | 0.0 | |

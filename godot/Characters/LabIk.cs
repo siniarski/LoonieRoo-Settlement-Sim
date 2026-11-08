@@ -39,7 +39,8 @@ public partial class Lab
         if (args.TryGetValue("slope", out var sl)) slopeDeg = Num(sl);
         if (args.ContainsKey("noik")) ikOn = false;
         BuildGround();
-        footIk = new FootIK(actor, Find<Skeleton3D>(actor)!, this);
+        footIk = new FootIK(actor, Find<Skeleton3D>(actor)!, this) { ToeRay = !args.ContainsKey("notoe"), Lock = !args.ContainsKey("nolock") };
+        if (args.TryGetValue("walktest", out var wdir)) CallDeferred(nameof(StartWalkTest), wdir);
     }
 
     void BuildGround()
@@ -109,11 +110,11 @@ public partial class Lab
             foreach (var f in new[] { 0, 90, 180 }) cases.Add(new Case($"{g}-walk-{f}".ToLowerInvariant(), g, f, true));
         }
         var report = new StringBuilder();
-        report.AppendLine($"Foot IK test: kerb {KerbHeight * 100:0} cm, hill {slopeDeg:0} deg, stairs {Rise * 100:0} cm rise x {Going * 100:0} cm going (standing on a riser line). Sole error in cm (+ floats, - sinks): the ankle's height over the ground under it, less the ankle height on that slope.");
+        report.AppendLine($"Foot IK test: kerb {KerbHeight * 100:0} cm, hill {slopeDeg:0} deg, stairs {Rise * 100:0} cm rise x {Going * 100:0} cm going (standing on a riser line). Sole error in cm (+ floats, - sinks): the ankle's height over the ground under it, less the ankle height on that slope. Toe: how deep the deeper toe tip goes into the ground under it at worst (a toe into the next riser), cm; 0 = never.");
         report.AppendLine("Facing: degrees clockwise from uphill / onto the sidewalk. Stand: mean of each foot. Walk: the planted (lower) foot over two cycles, mean and worst.");
         report.AppendLine();
-        report.AppendLine("| case | IK | left | right | walk mean | walk worst sink | walk worst float |");
-        report.AppendLine("|---|---|--:|--:|--:|--:|--:|");
+        report.AppendLine("| case | IK | left | right | walk mean | walk worst sink | walk worst float | toe |");
+        report.AppendLine("|---|---|--:|--:|--:|--:|--:|--:|");
         GD.Print(report.ToString().TrimEnd());
         move = false;
         follow = true;
@@ -139,11 +140,11 @@ public partial class Lab
                 footIk!.Enabled = on;
                 RootHeight(testPosition.Value, 0, snap: true);
                 await Frames(40);
-                var (l, r, mean, sink, flt) = await Measure(c.Walk ? 130 : 30);
+                var (l, r, mean, sink, flt, toe) = await Measure(c.Walk ? 130 : 30);
                 string F(double v) => (v * 100).ToString("0.0", CultureInfo.InvariantCulture);
                 string line = c.Walk
-                    ? $"| {c.Name} | {(on ? "on" : "off")} | | | {F(mean)} | {F(sink)} | {F(flt)} |"
-                    : $"| {c.Name} | {(on ? "on" : "off")} | {F(l)} | {F(r)} | | | |";
+                    ? $"| {c.Name} | {(on ? "on" : "off")} | | | {F(mean)} | {F(sink)} | {F(flt)} | {F(toe)} |"
+                    : $"| {c.Name} | {(on ? "on" : "off")} | {F(l)} | {F(r)} | | | | {F(toe)} |";
                 report.AppendLine(line);
                 GD.Print(line);
                 if (on) await Shot(System.IO.Path.Combine(dir, c.Name + ".png"));
@@ -156,11 +157,108 @@ public partial class Lab
 
     Vector3? testPosition;
 
-    async Task<(double left, double right, double mean, double sink, double flt)> Measure(int frames)
+    // ------------------------------------------------------------------ the walk test
+
+    void StartWalkTest(string dir) => _ = RunWalkTest(dir);
+
+    /// <summary>A real walk (the root moves, not in place): how far a planted foot slides along the
+    /// ground in each step, with the foot lock off and on, at several speeds, round a circle, and up
+    /// and down the stairs and over the kerb.</summary>
+    async Task RunWalkTest(string dir)
+    {
+        System.IO.Directory.CreateDirectory(dir);
+        var report = new StringBuilder();
+        report.AppendLine("Walk test: the character walks (the root moves at the speed; the clip's cadence comes from the speed, as in the game). For each foot in contact (the clip's ankle within 1 cm of its floor: the clip's own contact frames), how far the drawn foot slides along the ground until the clip lifts it: mean and worst per step, cm. Sole: the planted foot's mean height error, cm (+ floats, - sinks). Toe: worst toe into the ground, cm.");
+        report.AppendLine();
+        report.AppendLine("| case | lock | steps | slide mean | slide worst | sole | toe |");
+        report.AppendLine("|---|---|--:|--:|--:|--:|--:|");
+        GD.Print(report.ToString().TrimEnd());
+        follow = true; worldCam = false; camPitch = 8; camSize = 2.6; camFocusY = 0.5f; camYaw = 90;
+        var cases = new List<(string name, Ground g, double speed, bool circle)>
+        {
+            ("flat 1.0 m/s", Ground.Sidewalk, 1.0, false), ("flat 1.37 (walk)", Ground.Sidewalk, 1.37, false),
+            ("flat 1.9", Ground.Sidewalk, 1.9, false), ("flat 2.4 (jog)", Ground.Sidewalk, 2.4, false),
+            ("flat 3.5 (run)", Ground.Sidewalk, 3.5, false), ("circle r 3 m, 1.37", Ground.Sidewalk, 1.37, true),
+            ("over the kerb, 1.37", Ground.Sidewalk, 1.37, false), ("up the stairs, 1.37", Ground.Stairs, 1.37, false),
+            ("down the stairs, 1.37", Ground.Stairs, -1.37, false),
+        };
+        var skel = Find<Skeleton3D>(actor)!;
+        foreach (var (name, g, spd, circle) in cases)
+            foreach (bool lockOn in new[] { false, true })
+            {
+                if (ground != g) { ground = g; BuildGround(); await Frames(3); }
+                footIk!.Lock = lockOn;
+                footIk.Enabled = false; footIk.Enabled = ikOn = true;
+                bool kerb = name.StartsWith("over");
+                bool flat = name.StartsWith("flat") || circle;
+                // Flat cases walk along the street (x), the rest across the feature (+z, or -z coming down).
+                float z0 = g == Ground.Stairs ? (spd > 0 ? FeatureStart - 1.5f : FeatureStart + Steps * Going + 1.2f) : kerb ? FeatureStart - 2.0f : FeatureStart - 3f;
+                double speedAbs = Math.Abs(spd);
+                var dirV = flat ? Vector3.Right : (spd > 0 ? Vector3.Back : Vector3.Forward);
+                var start = flat ? new Vector3(-4, 0, z0) : new Vector3(0, 0, z0);
+                double distance = g == Ground.Stairs ? Steps * Going + 2.0 : 4.0;
+                move = circle;
+                if (circle) { testPosition = null; angle = 0; }
+                else { testPosition = start; heading = Math.Atan2(dirV.Z, dirV.X); }
+                targetSpeed = speed = speedAbs;
+                RootHeight(start, 0, snap: true);
+                await Frames(30);  // into its stride
+                var slides = new List<double>();
+                double soleSum = 0, toe = 0; int soleN = 0;
+                var seg = new double[2]; var on = new bool[2]; var last = new Vector3[2];
+                double travelled = 0, t = 0;
+                bool shot = false;
+                while (circle ? t < 4.0 : travelled < distance)
+                {
+                    await Frames(1);
+                    double dt = GetProcessDeltaTime();  // the frame the animation just advanced by
+                    if (!circle)
+                    {
+                        travelled += speedAbs * dt;
+                        testPosition = start + dirV * (float)travelled;
+                    }
+                    t += dt;
+                    for (int k = 0; k < 2; k++)
+                    {
+                        var f = footIk.Feet[k];
+                        var a = f.FinalAnkle;
+                        float h = a.Y - f.GroundY - FootIK.AnkleHeight / Math.Max(0.5f, f.GroundNormal.Y);
+                        bool planted = f.AnimHeight < FootIK.PlantHeight;  // the clip's own contact frames
+                        if (planted)
+                        {
+                            if (on[k]) seg[k] += new Vector2(a.X - last[k].X, a.Z - last[k].Z).Length();
+                            soleSum += h; soleN++;
+                        }
+                        else if (on[k]) { slides.Add(seg[k]); seg[k] = 0; }
+                        on[k] = planted;
+                        last[k] = a;
+                        var (ty, _) = FootIK.Ground(actor, f.FinalToe);
+                        toe = Math.Max(toe, ty - (f.FinalToe.Y - FootIK.ToeHeight));
+                        if (trace && ty - (f.FinalToe.Y - FootIK.ToeHeight) > 0.2) GD.Print($"walk toe: {name} lock {lockOn} foot {k} t {t:0.00} tip {f.FinalToe} ground {ty} ankle {a} planted {f.Planted} lockpos {f.LockPos} root {actor.GlobalPosition}");
+                    }
+                    if (lockOn && !shot && (circle ? t > 2 : travelled > distance * 0.5))
+                    {
+                        shot = true;
+                        await Shot(System.IO.Path.Combine(dir, name.Split(',')[0].Replace(" ", "-").Replace(".", "").Replace("/", "") + ".png"));
+                    }
+                }
+                string F(double v) => (v * 100).ToString("0.0", CultureInfo.InvariantCulture);
+                double mean = slides.Count > 0 ? slides.Average() : 0, worst = slides.Count > 0 ? slides.Max() : 0;
+                string line = $"| {name} | {(lockOn ? "on" : "off")} | {slides.Count} | {F(mean)} | {F(worst)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(toe)} |";
+                report.AppendLine(line);
+                GD.Print(line);
+            }
+        System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "walktest.md"), report.ToString());
+        GD.Print("walktest: done");
+        GetTree().Quit();
+    }
+
+    async Task<(double left, double right, double mean, double sink, double flt, double toe)> Measure(int frames)
     {
         var skel = Find<Skeleton3D>(actor)!;
         int[] feet = { skel.FindBone("LeftFoot"), skel.FindBone("RightFoot") };
-        double l = 0, r = 0, sum = 0, sink = 0, flt = double.MinValue;
+        int[] toes = { skel.FindBone("LeftToes"), skel.FindBone("RightToes") };
+        double l = 0, r = 0, sum = 0, sink = 0, flt = double.MinValue, toe = 0;
         for (int i = 0; i < frames; i++)
         {
             await Frames(1);
@@ -173,6 +271,17 @@ public partial class Lab
                 var ankle = ikOn ? f.FinalAnkle : (skel.GlobalTransform * skel.GetBoneGlobalPose(feet[k])).Origin;
                 var (gy, n) = ikOn ? (f.GroundY, f.GroundNormal) : FootIK.Ground(actor, ankle);
                 e[k] = ankle.Y - gy - FootIK.AnkleHeight / Math.Max(0.5f, n.Y);
+                // The toe tip (as drawn with the IK; the clip's without), into the ground under it.
+                Vector3 tip;
+                if (ikOn) tip = f.FinalToe;
+                else
+                {
+                    var t = skel.GlobalTransform * skel.GetBoneGlobalPose(toes[k]);
+                    tip = t.Origin + t.Basis.Y.Normalized() * FootIK.ToeLength;
+                }
+                var (ty, _) = FootIK.Ground(actor, tip);
+                toe = Math.Max(toe, ty - (tip.Y - FootIK.ToeHeight));
+                if (trace && ty - (tip.Y - FootIK.ToeHeight) > 0.05) GD.Print($"toe: foot {k} tip {tip} ground {ty} ankle {f.FinalAnkle}");
             }
             l += e[0]; r += e[1];
             double planted = Math.Min(e[0], e[1]);
@@ -180,7 +289,7 @@ public partial class Lab
             sink = Math.Min(sink, planted);
             flt = Math.Max(flt, planted);
         }
-        return (l / frames, r / frames, sum / frames, sink, flt);
+        return (l / frames, r / frames, sum / frames, sink, flt, toe);
     }
 
     async Task Frames(int n)
