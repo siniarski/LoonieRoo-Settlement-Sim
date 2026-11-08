@@ -154,6 +154,11 @@ public sealed partial class Menu : Control
         r.Button("New game", () => Go("new"));
         r.Button("Load", () => Go("load"));
         r.Button("How to play", () => Go("howto"));
+        var sound = r.Row();
+        sound.Text("Volume", Kit.Dim);
+        var slider = sound.Add(new HSlider { MinValue = 0, MaxValue = 100, Step = 5, Value = Audio.Volume.Level * 100, CustomMinimumSize = new Vector2(160, 0), FocusMode = FocusModeEnum.None, Name = "Volume" });
+        slider.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        slider.ValueChanged += (v) => Audio.Volume.Set((float)v / 100);
         if (view.inGame)
         {
             var saves = r.Row();

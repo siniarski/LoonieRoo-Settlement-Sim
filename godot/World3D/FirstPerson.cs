@@ -37,6 +37,8 @@ public sealed partial class FirstPerson : Node3D
     readonly People people;
     readonly Trees trees;
     readonly Roofs roofs;
+    /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
+    public readonly Audio.Sounds sounds = new();
     /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
     public int Modelled { get; private set; }
     /// <summary>When it last changed: walkability, open doors and windows, boards, furniture, what's indoors.</summary>
@@ -62,6 +64,7 @@ public sealed partial class FirstPerson : Node3D
         people = new People(this);
         trees = new Trees(this);
         roofs = new Roofs(this);
+        AddChild(sounds);
         look.indoor = roofs.Indoor;
     }
 
@@ -111,6 +114,7 @@ public sealed partial class FirstPerson : Node3D
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
         bodies.Update(state, alpha, eye, you.id, modelled);
+        sounds.Update(state, alpha, you);
     }
 
     /// <summary>How much of the open sky's ambient light reaches you: less under a roof, eased so doorways don't flicker.</summary>
