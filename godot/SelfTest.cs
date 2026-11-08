@@ -30,6 +30,41 @@ public partial class Game
         return true;
     }
 
+    /// <summary>Before the self-test builds anything: every asset Godot imports (res://**/*.import) has its imported
+    /// file in .godot/imported. A fresh checkout has none, and a model that won't load throws in _Ready, so the
+    /// test would never start; this says so and quits instead. Returns whether it quit.</summary>
+    bool SelfTestQuitOnUnimported()
+    {
+        var missing = new List<string>();
+        FindUnimported("res://", missing);
+        if (missing.Count == 0) return false;
+        GD.Print($"FAIL  Assets imported  ({missing.Count} not imported, first {string.Join(", ", missing.Take(3))})");
+        GD.Print("selftest: FAILED, assets not imported: run `godot --headless --path godot --import` once (./check.sh --all does)");
+        // _Ready stops here: nothing is built, so nothing may run or draw until the quit lands.
+        SetProcess(false);
+        SetProcessInput(false);
+        SetProcessUnhandledInput(false);
+        Visible = false;
+        GetTree().Quit(1);
+        return true;
+    }
+
+    static void FindUnimported(string dir, List<string> missing)
+    {
+        foreach (var sub in DirAccess.GetDirectoriesAt(dir))
+            if (!sub.StartsWith('.')) FindUnimported(dir + sub + "/", missing);
+        foreach (var f in DirAccess.GetFilesAt(dir))
+        {
+            if (!f.EndsWith(".import")) continue;
+            var cfg = new ConfigFile();
+            if (cfg.Load(dir + f) != Error.Ok || !cfg.HasSection("remap")) continue;
+            if (cfg.HasSectionKey("remap", "valid") && !(bool)cfg.GetValue("remap", "valid")) continue;
+            // One path per platform's format (path.s3tc, path.etc2): any one imported will do.
+            var paths = cfg.GetSectionKeys("remap").Where(k => k == "path" || k.StartsWith("path.")).Select(k => (string)cfg.GetValue("remap", k)).ToList();
+            if (paths.Count > 0 && !paths.Any(FileAccess.FileExists)) missing.Add(dir + f[..^".import".Length]);
+        }
+    }
+
     async Task Frames(int n)
     {
         for (int i = 0; i < n; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -72,9 +107,24 @@ public partial class Game
         if (!ok) failures.Add(name);
     }
 
+    /// <summary>Runs the test; a step that throws fails it and quits (instead of leaving the window up until check.sh's timeout).</summary>
     async Task SelfTest()
     {
+        try { await SelfTestSteps(); }
+        catch (Exception ex)
+        {
+            GD.PrintErr(ex.ToString());
+            GD.Print($"selftest: FAILED, a step threw: {ex.GetType().Name}: {ex.Message}");
+            GetTree().Quit(failures.Count + 1);
+        }
+    }
+
+    async Task SelfTestSteps()
+    {
         selfTesting = true;
+        // Godot merges mouse motions queued in one frame into one event, keeping the first one's device:
+        // a real movement could ride in on the test's event past DropForeignMouse. One event each, then.
+        Input.UseAccumulatedInput = false;
         await Frames(5);
         // First person: the 3D view is up, with the world built round you.
         Check("Playing someone is first person", view.firstPerson && firstPerson.Visible && firstPerson.ChunkCount > 0, $"chunks {firstPerson.ChunkCount}");
@@ -91,7 +141,10 @@ public partial class Game
         you = ControlMod.controlled(state)!;
         Check("Looking north, W walks north", you.at.y < y0, $"at.y {y0} -> {you.at.y}");
         // The mouse turns you: a quarter turn right, and the aim follows (east).
+        // A stray real movement in the same frame (device 0, as the real mouse's) must change nothing: with
+        // input accumulation on, Godot would merge it into the test's event and turn you 0.02 too far.
         Input.ParseInputEvent(new InputEventMouseMotion { Device = TEST_DEVICE, Relative = new Vector2((float)(Math.PI / 2 / LOOK_PER_PX), 0) });
+        Input.ParseInputEvent(new InputEventMouseMotion { Device = 0, Relative = new Vector2(8, 0) });
         await Frames(3);
         var aim = state.control!.aim;
         Check("The mouse turns you and your aim", aim != null && aim.x == ControlMod.AIM_MAX && aim.y == 0, $"yaw {view.yaw:0.00}, aim {aim?.x},{aim?.y}");

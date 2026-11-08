@@ -11,9 +11,15 @@ dotnet test cs/Sim.Tests -c Release --no-build -v q -nologo
 
 if [ "${1:-}" = "--all" ]; then
   GODOT="${GODOT:-/c/Program Files/Godot_v4.6.1-stable_mono_win64/Godot_v4.6.1-stable_mono_win64_console.exe}"
+  [ -x "$GODOT" ] || { echo "no Godot at $GODOT (set GODOT)"; exit 1; }
   dotnet build godot/LoonieRoo.csproj -v q -nologo
-  out=$(timeout 180 "$GODOT" --path godot -- --selftest 2>&1 || true)
-  echo "$out" | grep -E '^(PASS|FAIL|selftest)' || { echo "no self-test output: is Godot at $GODOT?"; exit 1; }
-  echo "$out" | grep -q '^selftest: all passed' || exit 1
+  # Import the assets first: a fresh checkout or worktree has no godot/.godot/imported, and new models
+  # from a merge need importing too. ~9 s the first time, ~3 s when there's nothing new.
+  timeout 600 "$GODOT" --headless --path godot --import >/dev/null 2>&1 || { echo "importing the assets failed: run $GODOT --headless --path godot --import to see why"; exit 1; }
+  code=0
+  out=$(timeout 180 "$GODOT" --path godot -- --selftest 2>&1) || code=$?
+  echo "$out" | grep -E '^(PASS|FAIL|selftest)' || true
+  [ "$code" = 124 ] && { echo "self-test timed out after 180 s (the last PASS/FAIL above is where it stopped)"; exit 1; }
+  echo "$out" | grep -q '^selftest: all passed' || { echo "$out" | grep -q '^selftest' || echo "no self-test result (exit $code): see the Godot log"; exit 1; }
 fi
 echo "check: green"
