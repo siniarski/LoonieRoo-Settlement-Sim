@@ -285,8 +285,17 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         var world = Worldgen.createWorld(seed ?? RandomSeed(), size, settings, you);
         if (!Replace(new LoadResult { ok = true, state = world, kind = "save" }, $"a new {size}×{size} world")) return;
         Play();
-        if (settings.start == "solo") view.Toast(SOLO_TOAST + " Space to play.");
+        // Every start is first person on your survivor: a group start plays the one you made (the
+        // first; the other two are colonists). Through a command, so a bug report replays it.
+        if (state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
+        // The old game's M screen, tool or inventory don't carry over (the HUD only shuts them when
+        // whom you play changes, and a new world's first survivor can have the old one's id).
+        view.closeMScreen();
+        view.showInventory = false;
+        view.Toast((settings.start == "solo" ? SOLO_TOAST : GROUP_TOAST) + " Space to play.");
     }
+
+    const string GROUP_TOAST = "You and two others. The mouse looks, WASD walks, click to swing, right-click or E to use. Tab: inventory. M: the map and the colony (F there plays someone else).";
 
     public void Arena(string kind)
     {
