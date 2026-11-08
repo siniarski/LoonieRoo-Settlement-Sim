@@ -28,6 +28,15 @@ map and the exported clips are committed):
 It prints each clip with how far our ankles stray from the source's (scaled to our legs). The .blend has both rigs
 side by side (the source 1.2 m to our left) with the source clips kept, for a look in Blender.
 
+The look-development characters (docs/characters.md "The look"; ~45 s a subject, both subjects in parallel are fine):
+
+```bash
+"$B" --background --factory-startup --python art/scripts/build_lookdev.py --     --subject zombie --out godot/assets/characters/look [--only plus|pz] [--preview DIR] [--blend art/blend/look_zombie.blend]
+```
+
+It writes look_plus_<subject>.glb (30k / 12k / 6k / 3k / 1.2k / 600 triangles, 2048 colour and normal maps) and
+look_pz_<subject>.glb (2.5k / 1.2k / 600, a 512 painted colour map), for the look lab (godot/Characters/LookLab.tscn).
+
 Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 `--path godot res://Characters/Lab.tscn -- --check` (skeleton vs the humanoid profile) or `-- --shot=out.png`.
 
@@ -40,6 +49,12 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   `--garments godot/assets/characters/garments.glb` it also exports the garments (and garments.json beside them).
 - `scripts/retarget.py`: a clip library onto our rig, baked (rest-relative world rotations, swung to the source
   bones' directions; hips placed by the hip joints, scaled by leg length); `scripts/bonemaps/*.json` the bone maps.
+- `scripts/sculpt.py`: the look-development body: metaball masses -> voxel remesh -> the face pushed in by brushes
+  (pure functions of the rest position); the zombie's face keys (jaw_open, angry); eyes and teeth.
+- `scripts/paint.py`: colours and cloth relief as numpy functions of the rest position (outfits by region); the build
+  bakes each texel's rest position, so the same functions paint the texture and displace the high-poly mesh whose
+  normals are baked. `scripts/build_lookdev.py`: the pipeline (sculpt, decimate the ladder, unwrap, bake position, AO
+  and normals in Cycles, paint, skin with auto weights on the body bones, face keys, validate, export).
 - `scripts/garments.py`: the garments, by body region, with the hiding rules; `scripts/shapes.py`: mesh primitives.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

@@ -62,4 +62,16 @@ humanoid profile), `--shot=out.png --frames=N`, `--speed= --crouch= --stance=res
 and the door) `--cartest=DIR` (getting in, seated with steering and pedals, getting out) and `--ragtest=DIR` (knocked down both ways, up again, a hit); experiments/ik-test
 has a run of each. The car from the command line: `--car=in|out|seated --carat=0.54 --steer=30 --throttle=0.5 --brake= --roof`, `--lid=boot|hood [--lidopen] --lidat=0.5`.
 
+## The look lab
+
+`Characters/LookLab.tscn` (LookLab.cs) compares the candidate looks in first person (eye height 1.65 m, 60 degrees
+vertical field of view) at the distances that matter: a subject (zombie or survivor) as the mannequin, `pz`
+(Zomboid-like, 2.5k) or `plus` (Zomboid-plus, 30k down to 600), or the four side by side (lineup); LOD auto by height
+on screen or forced; the zombie's face neutral, angry or auto (angry within sight range); idle, walk or lunge (walks at
+you from 8 m); day, dusk or night (a torch); wireframe; a crowd of up to 2,000. The readout has the character's
+triangles and its textures' memory, what's on screen, and CPU and GPU frame times. Command line (after `--`):
+`--subject= --cand= --lod= --dist= --face= --move= --light= --crowd= --crowdlod= --wire --nopanel --noaim`,
+`--shot=out.png`, `--shots=DIR` (the comparison set), `--report=DIR` (the budget sweep: experiments/look-lab/look.md).
+Keys: wheel or [ ] distance, 1-6 presets, F face, L LOD, V wireframe, right-drag to look round.
+
 `Characters/Bench.tscn` is the animation benchmark and `Characters/HordeBench.tscn` the horde one (vertex animation textures on MultiMesh); experiments/anim-bench/README.md has how to run them and the results.

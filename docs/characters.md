@@ -2,8 +2,8 @@
 
 Written 2026-11-08, from the player's brief (a ChatGPT-drafted prompt: "AI-Assisted Character, Animation & Interaction Pipeline") and these decisions:
 
-- **Camera.** 3D in the end. Solo play: third-person / isometric 3D (Zomboid-like). Colony management: bird's-eye. **First-person is later**, not closed off: nothing below assumes it can't come.
-- **Art target: stylised low-poly.** ~3-8k triangles per dressed character at full detail, small textures, damage and dirt as shader masks, hair as meshes. This is also the fidelity at which AI-made assets have the best chance of being usable.
+- **Camera.** 3D. **Solo play is first-person** (decided 2026-11-08, replacing third-person / isometric); colony management is bird's-eye.
+- **Art target: "Zomboid-plus"** (2026-11-08, see "The look" below): Zomboid's grounded proportions, muted worn clothes and readable silhouettes, with the detail first person needs up close: a baked normal map, a real face, ~10-15k triangles near. (It was "stylised low-poly, ~3-8k" while the camera was isometric.) Damage and dirt as shader masks, hair as meshes.
 - **Tooling.** Blender (the player installs it) driven two ways: the Blender MCP server for interactive work and inspection, and headless Python scripts (`blender --background --python`) for anything repeatable (building, validating, exporting). Assets interchange as glTF (`.glb`); the `.blend` files are kept.
 - **LOD** is a first-class requirement (the scale target is Zomboid-sized: up to ~100k zombies in the world, hundreds visible at the colony zoom).
 
@@ -63,6 +63,52 @@ Rules: one armature named `Armature`, `Root` at the floor between the feet, `Hip
 - Body variation: two bases (masc/fem) sharing UVs and skeleton, plus a few **shape keys** (heavy, thin). Shape keys must be transferred to every garment, so start with *one* base and add shapes only when the clothing pipeline is proven.
 - Skinning: max **4 influences per vertex**, normalised, no unweighted vertex (the validator enforces it).
 
+### The look (2026-11-08, the look lab)
+
+The player likes Project Zomboid's models and textures, but they're made to be seen from an isometric camera ~10 m up;
+ours will be seen in first person, a zombie at arm's length filling half the screen. The direction is **"Zomboid-plus"**:
+keep what works (believable adult proportions, not chibi; muted, worn, dirty clothes; a silhouette that reads at a
+glance) and add what first person needs (a normal map for folds, hems and skin; a modelled face with eyes and teeth;
+smooth silhouettes near).
+
+To decide budgets on something real, not the segmented mannequin, there is a **look-development body**, made by script
+(art/scripts/sculpt.py, paint.py, build_lookdev.py): one continuous adult form (metaballs, voxel-remeshed), the face
+pushed in by brushes, a high-poly copy with cloth folds and hems, and from it two candidates as LOD ladders on the
+shared rig: **pz** (2.5k / 1.2k / 600, a 512 painted texture with strong baked shading, no normal map: Zomboid's way)
+and **plus** (30k / 12k / 6k / 3k / 1.2k / 600, a 2048 colour map and a baked normal map). Two subjects, a zombie
+(torn T-shirt and jeans, grey bruised skin, blood from the mouth, clouded eyes) and a survivor (jacket, trousers,
+boots). It is a blockout, not final art: the face is plain and the hands are mittens; a person sculpting over it (or a
+CC0 base) is the next step for the real thing.
+
+The look lab (godot/Characters/LookLab.tscn) shows them in first person (eye height 1.65 m, 60 degrees vertical field
+of view) and measures them. What it showed (screenshots: `--shots`; numbers: experiments/look-lab/look.md):
+
+- **What a face gets on screen.** At 60 degrees vertical FOV, 720p, a 1.75 m body is ~730 px tall at 1.5 m and the
+  head ~140 px at 1 m (arm's length); ~15 px at 10 m. At 1440p double that. So even up close a face is a few hundred
+  pixels: a 2048 atlas gives it plenty; detail goes into the silhouette and the normal map, not more texels.
+- **Up close (1-3 m) the 2.5k "pz" reads as Zomboid**: faceted head, jaw and shoulders, painted shading; the snarl
+  barely works on it (too few vertices round the mouth). **12k and 30k look alike** at 2.5 m (the lineup); 30k only
+  shows at arm's length (the jaw line and lips). At 10 m pz, plus 6k and plus 30k are hard to tell apart; at 30 m
+  even the 600-triangle LOD holds.
+- **The GPU can afford it; the CPU is the limit** (the sweep, experiments/look-lab/look.md: RTX 5070, 1280x720,
+  shadows on). GPU time follows triangles drawn (with the shadow passes, ~4x the visible count): 1,000 at 30k 16 ms,
+  at 12k 7.3, at 6k 3.3, at 3k 2.0, at 1.2k 1.1; 100 at 30k 2.1 ms. But frame time with a crowd is ~35 ms per 1,000
+  characters whatever the LOD: one AnimationPlayer and skeleton each (as the anim bench found). The mannequin (14
+  meshes each) is 3x worse again (58k draw calls for 1,000). So: near characters can be generous (30 at 30k is
+  ~0.6 ms GPU here; budget for a low-end GPU at ~10x), the mid tier must be throttled players, and crowds VAT.
+- **Texture memory is the next limit**: the plus character's two 2048 maps take 32 MB as imported (uncompressed RGB8
+  with mipmaps), pz's 512 map 1 MB. 30 zombie outfits at that would be ~1 GB: textures must be VRAM-compressed
+  (BC1/BC7, 4-8x smaller) and share atlases by garment, and the mid and far tiers use 1024 / 512 mips.
+- **Budgets, revised for first person:** near (under ~5 m, up to ~30) **10-15k** dressed (the ~12k step is where the
+  look stops improving at 2-5 m; 30k only for a character in your face, which can be the same 12k with the normal map
+  doing the work); a 2048 atlas for the body and a 1024 for the head, normal map; mid (5-25 m) **3-6k**; far **600-1.2k**
+  (VAT). LOD by height on screen: plus switches at 700 / 340 / 170 / 85 / 40 px (LookLab.cs LodAt).
+
+**Zombie faces**: two blend shapes on the near LODs only, `jaw_open` and `angry`. Neutral is the basis with the jaw
+a little open and drifting; angry eases in over 0.25 s when the zombie has seen you, with a growl (the jaw working).
+The sim already knows when one has noticed you (Sight); the renderer only reads it. Faces below the near LODs are
+fixed: at 10 m a head is ~15 pixels.
+
 ### Clothing, hair, equipment
 
 - Garments are modelled on the base body in Blender and **skinned by weight transfer** from the body (Data Transfer modifier, scripted), then cleaned up. This is the step AI scripting does well and repeatably.
@@ -119,13 +165,13 @@ In the lab (2026-11-08): the mannequin is region meshes with stump caps at the j
   tab plays them. Not done yet: putting library locomotion into the blend space (the cycles start in their own phase,
   not ours), and the library's 10 cm shorter toe bone means feet roll off the toe a little differently.
 
-### First-person later
+### First person
 
-When it comes: a separate **arms rig** (the same arm bone names, so arm clips can be shared) with its own FOV-friendly clips, timed from the same sim progress as the third-person clips so intent and timing stay identical. The full body stays for shadows and for others. Nothing in the plan above blocks this.
+First person is the solo view (2026-11-08). The player's own body: a separate **arms rig** (the same arm bone names, so arm clips can be shared) with its own FOV-friendly clips, timed from the same sim progress as the third-person clips so intent and timing stay identical. The full body stays for shadows and for others. Nothing in the plan above blocks this.
 
 ### States on the body and face (2026-11-08, in the lab)
 
-Survivors show how they are; zombies mostly don't need to (a fixed slack face, no state layers: cheap, as they must be in numbers). The sim already has the numbers: BodyMod's panic and endurance (0..100, PANICKING 60, WINDED 25) and body heat, Health and Wounds for pain; a startle would be a sim event (a zombie suddenly noticed, a hit taken). The pose intent carries them as 0..1 weights, and the renderer turns them into layers over whatever clip plays:
+Survivors show how they are; zombies have two faces only, **neutral** (slack, the jaw a little open) and **angry** (it has seen you: brows down, the upper lip pulled off the teeth, the jaw open in a growl), as two blend shapes (jaw_open, angry) on the near LODs; no face below them (2026-11-08, the look lab). The sim already has the numbers: BodyMod's panic and endurance (0..100, PANICKING 60, WINDED 25) and body heat, Health and Wounds for pain; a startle would be a sim event (a zombie suddenly noticed, a hit taken). The pose intent carries them as 0..1 weights, and the renderer turns them into layers over whatever clip plays:
 
 | state | body | face | movement (the sim's call; the lab shows it) |
 |---|---|---|---|
@@ -177,7 +223,7 @@ LOD has four layers, and the sim already has the outermost one (dormant zombies,
 
 - Tiers are picked by **screen size and a count budget**, not distance alone, and use hysteresis so characters don't flicker between tiers. The iso/bird's-eye camera puts most characters at mid or far most of the time, so mid and far are not an afterthought: they're the common case.
 - **VAT**: a Blender (or Godot tool) script bakes the few crowd clips (zombie idle, shamble, run, attack, fall) per merged zombie outfit into textures. Zombies use a limited set of **pre-built outfit combinations** (say 20-40) so a horde is a handful of MultiMeshes.
-- Mesh LOD: Godot generates LODs for skinned meshes on import; the art budgets are near ~5-8k tris dressed, mid ~1.5-3k, far ~500-800.
+- Mesh LOD: Godot generates LODs for skinned meshes on import, but the ladders are made in Blender (build_lookdev.py) so the counts are ours; the art budgets (first person, 2026-11-08, "The look") are near ~10-15k tris dressed, mid ~3-6k, far ~600-1.2k.
 - **Measured** (2026-11-08, `godot/Characters/Bench.tscn`, results in experiments/anim-bench/README.md, fast desktop): per character per frame an AnimationTree costs ~18 µs, an AnimationPlayer ~12 µs, a player updated every 4th frame ~3.6 µs; the cost is per animated skeleton, not per track (168 -> 15 channels changed little). Separate meshes cost more than animation: 2,000 characters of 14 meshes took 77 ms unanimated, merged 8 ms. So: near ~30-40 characters with trees and separate meshes, mid ~200-300 merged and throttled, far VAT on MultiMesh. **VAT measured** (2026-11-08, godot/Characters/Vat.cs and vat.gdshader, the scene HordeBench.tscn, experiments/anim-bench/horde.md): an outfit's merged mesh baked with four clips at 30 fps (positions only, RGBA float; flat normals from derivatives in the shader; colours and conditions as at mid range, per instance), four outfits 159 ms and 10.9 MB; drawn by one MultiMesh per outfit with clip, phase, speed and seed in the instance's custom data and dirt/blood/torn/wet in its colour: 5,000 in 2.9 ms, 10,000 in 5.5, 20,000 in 10.8 (shadows on: 7.8, 13.4, 26.1), five draw calls, the CPU ~0.1 ms whatever the count: it's all GPU, ~0.5 µs a character at ~2,800 triangles. A far LOD mesh (500-800 triangles, as budgeted) would take most of that; half-float textures would halve the memory.
 
 ## 8. Godot structure

@@ -1,0 +1,686 @@
+// The look lab (docs/characters.md "The look"): the candidate character looks seen the way the game
+// will mostly see them, in first person, at the distances that matter (a zombie at arm's length, across
+// a room, down a street), with their triangle and texture budgets on screen and measured.
+//
+// Candidates (art/scripts/build_lookdev.py, each a ladder of LOD meshes on the shared rig):
+//   mannequin  the segmented test mannequin (~2k triangles, flat colour): where we are
+//   pz         "Zomboid-like": 2.5k / 1.2k / 600, a 512 painted texture with strong baked shading
+//   plus       "Zomboid-plus": 30k / 12k / 6k / 3k / 1.2k / 600, a 2048 texture and a baked normal map
+//   lineup     the four top looks side by side (mannequin, pz 2.5k, plus 12k, plus 30k)
+// Faces: the zombie's top LODs carry two blend shapes, jaw_open and angry. Neutral is a slack jaw;
+// angry (it has seen you) eases in over a quarter second with a growl. Lower LODs carry no face.
+//
+// LOD is picked by the character's height on screen (auto), or forced. Godot's own mesh LOD is off
+// (the viewport's threshold 0) so the counts are the ladder's, unless "Godot LOD" is ticked.
+//
+//   Godot --path godot res://Characters/LookLab.tscn [-- options]
+//   --subject=zombie|survivor --cand=plus|pz|mannequin|lineup --lod=auto|0..5 --dist=M
+//   --face=neutral|angry|auto --move=idle|walk|lunge --light=day|dusk|night --wire
+//   --crowd=N [--crowdlod=auto|K]   N more of the candidate, walking, in a field ahead
+//   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
+//   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
+//   --report=DIR                     the budget sweep (candidates x LODs x crowd sizes), look.md, then quit
+//   --novsync                        frame times uncapped; --nopanel hides the panel in a --shot; --noaim looks level
+//
+// Keys: wheel or [ ] distance, 1-6 distance presets, F face, L LOD (auto, 0..), V wireframe, right-drag look.
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Godot;
+
+namespace LoonieRoo.Game.Characters;
+
+public partial class LookLab : Node3D
+{
+    const string MannequinPath = "res://assets/characters/test_mannequin.glb";
+    const string ClipsPath = "res://assets/characters/clips_ual.glb";
+    static string CandPath(string cand, string subject) => $"res://assets/characters/look/look_{cand}_{subject}.glb";
+
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup" };
+    static readonly double[] Presets = { 1, 2, 3, 5, 10, 30 };
+    const double EyeHeight = 1.65, Fov = 60;  // vertical FOV: ~91 degrees across at 16:9
+
+    // Auto LOD: the lowest screen height (pixels) at which each LOD is shown.
+    static readonly Dictionary<string, double[]> LodAt = new()
+    {
+        ["plus"] = new double[] { 700, 340, 170, 85, 40, 0 },
+        ["pz"] = new double[] { 260, 110, 0 },
+        ["mannequin"] = new double[] { 0 },
+    };
+
+    string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day";
+    int forcedLod = -1, crowdLod = -1, crowdCount;
+    double dist = 3, lodBias = 1, sightRange = 12;
+    bool godotLod, wire, aim = true;
+    CanvasLayer panelLayer = null!;
+
+    Camera3D cam = null!;
+    double lookYaw, lookPitch;
+    bool looking;
+    DirectionalLight3D sun = null!;
+    SpotLight3D torch = null!;
+    WorldEnvironment env = null!;
+    readonly List<Actor> subjects = new(), crowd = new();
+    Node3D crowdRoot = null!;
+    AnimationLibrary mannequinLib = null!, ualLib = null!;
+    Label readout = null!;
+    double lungeZ = -8, time;
+    string? shotPath;
+    int shotFrames = 30, frame;
+    bool busy, hidePanel;  // busy: a sweep (shots, report) drives the lab
+
+    /// <summary>One character on stage: the instance, its LOD meshes, its player, its face.</summary>
+    sealed class Actor
+    {
+        public Node3D Root = null!;
+        public string Cand = "";
+        public MeshInstance3D[] Lods = Array.Empty<MeshInstance3D>();
+        public int[] Tris = Array.Empty<int>();
+        public AnimationPlayer Player = null!;
+        public int Shown = -1;
+        public double Angry, Phase;
+        public Label3D? Tag;
+        public long TexBytes;
+        public string TexDesc = "";
+    }
+
+    public override void _Ready()
+    {
+        RenderingServer.SetDebugGenerateWireframes(true);
+        var args = ParseArgs();
+        args.TryGetValue("shot", out shotPath);
+        if (args.TryGetValue("frames", out var f)) shotFrames = int.Parse(f);
+        if (args.TryGetValue("subject", out var s)) subject = s;
+        if (args.TryGetValue("cand", out var c)) cand = c;
+        if (args.TryGetValue("lod", out var l)) forcedLod = l == "auto" ? -1 : int.Parse(l);
+        if (args.TryGetValue("dist", out var d)) dist = Num(d);
+        if (args.TryGetValue("face", out var fc)) face = fc;
+        if (args.TryGetValue("move", out var mv)) move = mv;
+        if (args.TryGetValue("light", out var li)) light = li;
+        if (args.TryGetValue("crowd", out var cr)) crowdCount = int.Parse(cr);
+        if (args.TryGetValue("crowdlod", out var cl)) crowdLod = cl == "auto" ? -1 : int.Parse(cl);
+        wire = args.ContainsKey("wire");
+        hidePanel = args.ContainsKey("nopanel");
+        if (args.ContainsKey("noaim")) aim = false;
+        if (args.ContainsKey("novsync")) { DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled); Engine.MaxFps = 0; }
+
+        LoadLibraries();
+        BuildStage();
+        BuildPanel();
+        RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
+        Rebuild();
+        ApplyLight();
+        ApplyView();
+        if (args.TryGetValue("shots", out var sd)) _ = RunShots(sd);
+        else if (args.TryGetValue("report", out var rd)) _ = RunReport(rd);
+    }
+
+    // ------------------------------------------------------------------ characters
+
+    void LoadLibraries()
+    {
+        var m = GD.Load<PackedScene>(MannequinPath).Instantiate<Node3D>();
+        mannequinLib = Find<AnimationPlayer>(m)!.GetAnimationLibrary("");
+        foreach (var n in new[] { "idle", "walk" }) mannequinLib.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
+        m.Free();
+        var u = GD.Load<PackedScene>(ClipsPath).Instantiate<Node3D>();
+        ualLib = Find<AnimationPlayer>(u)!.GetAnimationLibrary("");
+        foreach (var n in new[] { "ual_idle", "ual_walk" }) ualLib.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
+        u.Free();
+    }
+
+    Actor MakeActor(string which, Node parent)
+    {
+        string path = which == "mannequin" ? MannequinPath : CandPath(which, subject);
+        var root = GD.Load<PackedScene>(path).Instantiate<Node3D>();
+        parent.AddChild(root);
+        var a = new Actor { Root = root, Cand = which };
+        if (which == "mannequin")
+        {
+            // The region meshes together are its one "LOD"; the stumps stay hidden.
+            var meshes = FindAll<MeshInstance3D>(root).ToList();
+            foreach (var mi in meshes) mi.Visible = !mi.Name.ToString().StartsWith("stump_");
+            a.Lods = new[] { meshes[0] };
+            a.Tris = new[] { meshes.Where(mi => mi.Visible).Sum(Tris) };
+            a.Player = Find<AnimationPlayer>(root)!;
+        }
+        else
+        {
+            a.Lods = FindAll<MeshInstance3D>(root).OrderBy(mi => LodIndex(mi.Name)).ToArray();
+            a.Tris = a.Lods.Select(Tris).ToArray();
+            var player = new AnimationPlayer();
+            root.AddChild(player);  // root_node ".." = the instance, where "Armature/Skeleton3D:..." starts
+            player.AddAnimationLibrary("", mannequinLib);
+            player.AddAnimationLibrary("ual", ualLib);
+            a.Player = player;
+        }
+        (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);
+        return a;
+    }
+
+    /// <summary>The character's textures as loaded: their sizes and the memory they take with mipmaps.</summary>
+    static (long bytes, string desc) Textures(MeshInstance3D mi)
+    {
+        long bytes = 0;
+        var parts = new List<string>();
+        for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+            if (mi.Mesh.SurfaceGetMaterial(s) is BaseMaterial3D m)
+                foreach (var (name, tex) in new[] { ("albedo", m.AlbedoTexture), ("normal", m.NormalTexture) })
+                    if (tex?.GetImage() is Image img)
+                    {
+                        bytes += img.GetData().Length;
+                        parts.Add($"{name} {img.GetWidth()} {img.GetFormat()}{(img.HasMipmaps() ? "+mips" : "")}");
+                    }
+        return (bytes, parts.Count > 0 ? string.Join(", ", parts) : "none (flat colour)");
+    }
+
+    static int LodIndex(StringName name)
+    {
+        var s = name.ToString();
+        int i = s.LastIndexOf("lod", StringComparison.Ordinal);
+        return i >= 0 && int.TryParse(s[(i + 3)..], out var n) ? n : 0;
+    }
+
+    static int Tris(MeshInstance3D mi)
+    {
+        int t = 0;
+        for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+        {
+            var arrays = mi.Mesh.SurfaceGetArrays(s);
+            var idx = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+            t += idx.Length > 0 ? idx.Length / 3 : arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array().Length / 3;
+        }
+        return t;
+    }
+
+    void Rebuild()
+    {
+        foreach (var a in subjects) a.Root.QueueFree();
+        subjects.Clear();
+        var list = cand == "lineup"
+            ? new (string c, int lod, string tag)[] { ("mannequin", 0, "mannequin"), ("pz", 0, "pz"), ("plus", 1, "plus"), ("plus", 0, "plus") }
+            : new (string c, int lod, string tag)[] { (cand, -1, cand) };
+        for (int i = 0; i < list.Length; i++)
+        {
+            var a = MakeActor(list[i].c, this);
+            if (cand == "lineup")
+            {
+                a.Shown = -2 - list[i].lod;  // pinned: -2 - lod
+                a.Root.Position = new Vector3((float)((i - (list.Length - 1) / 2.0) * 1.1), 0, 0);
+                a.Tag = new Label3D { Text = $"{list[i].tag} {a.Tris[list[i].lod] / 1000.0:0.#}k", PixelSize = 0.0015f, Position = new Vector3(0, 1.95f, 0), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled };
+                a.Root.AddChild(a.Tag);
+            }
+            Play(a, 0);
+            subjects.Add(a);
+        }
+        RebuildCrowd();
+    }
+
+    void RebuildCrowd()
+    {
+        foreach (var a in crowd) a.Root.QueueFree();
+        crowd.Clear();
+        string which = cand == "lineup" ? "plus" : cand;
+        // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
+        int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
+        for (int i = 0; i < crowdCount; i++)
+        {
+            var a = MakeActor(which, crowdRoot);
+            int row = i / perRow, col = i % perRow;
+            double z = 4 + row * 1.5;
+            double half = z * Math.Tan(Mathf.DegToRad(45)) * 0.9;
+            double x = -half + (col + 0.5) / perRow * 2 * half + (Hash(i) - 0.5) * 0.6;
+            a.Root.Position = new Vector3((float)x, 0, (float)-z);
+            a.Root.RotationDegrees = new Vector3(0, (float)((Hash(i + 7) - 0.5) * 60), 0);
+            a.Phase = Hash(i + 3);
+            Play(a, a.Phase);
+            crowd.Add(a);
+        }
+    }
+
+    static double Hash(int i)
+    {
+        double v = Math.Sin(i * 12.9898 + 78.233) * 43758.5453;
+        return v - Math.Floor(v);
+    }
+
+    void Play(Actor a, double phase)
+    {
+        bool walking = move != "idle";
+        string clip = a.Cand == "mannequin" ? (walking ? "walk" : "idle") : walking ? "ual/ual_walk" : "ual/ual_idle";
+        a.Player.Play(clip);
+        a.Player.SpeedScale = walking && subject == "zombie" ? 0.7f : 1f;  // the dead walk slower
+        a.Player.Seek(phase * a.Player.CurrentAnimationLength, true);
+    }
+
+    // ------------------------------------------------------------------ each frame
+
+    public override void _Process(double delta)
+    {
+        time += delta;
+        // Lunge: walk at the camera from 8 m to arm's length, then start again.
+        if (move == "lunge")
+        {
+            lungeZ += (subject == "zombie" ? 0.9 : 1.3) * delta;
+            if (lungeZ > -0.7) lungeZ = -8;
+        }
+        double z = move == "lunge" ? lungeZ : -dist;
+        double vpH = GetViewport().GetVisibleRect().Size.Y;
+        foreach (var a in subjects)
+        {
+            var p = a.Root.Position;
+            a.Root.Position = new Vector3(p.X, 0, (float)z);
+            UpdateActor(a, -z, vpH, delta, face);
+        }
+        foreach (var a in crowd) UpdateActor(a, -a.Root.Position.Z, vpH, delta, "neutral", crowdLod);
+        double pitch = lookPitch;
+        if (aim)  // look at the subject: the face up close, the chest further off
+        {
+            double target = -z < 2.5 ? 1.62 : 1.25;
+            pitch += Mathf.RadToDeg(Math.Atan2(target - EyeHeight, Math.Max(-z, 0.3)));
+        }
+        cam.Rotation = new Vector3((float)Mathf.DegToRad(pitch), (float)Mathf.DegToRad(lookYaw), 0);
+        GetViewport().MeshLodThreshold = godotLod ? 1 : 0;
+        readout.Text = Readout(-z, vpH);
+        frame++;
+        if (shotPath != null && frame == shotFrames && !busy) _ = SaveShotAndQuit(shotPath);
+    }
+
+    double ScreenHeight(double distance, double vpH) =>
+        vpH * 1.75 / (2 * Math.Max(distance, 0.1) * Math.Tan(Mathf.DegToRad(Fov / 2)));
+
+    void UpdateActor(Actor a, double distance, double vpH, double delta, string faceMode, int lodOverride = -1)
+    {
+        int lod;
+        if (a.Shown <= -2) lod = -2 - a.Shown;
+        else if (lodOverride >= 0) lod = Math.Min(lodOverride, a.Lods.Length - 1);
+        else if (forcedLod >= 0 && !crowd.Contains(a)) lod = Math.Min(forcedLod, a.Lods.Length - 1);
+        else
+        {
+            var at = LodAt[a.Cand];
+            double h = ScreenHeight(distance, vpH) * lodBias;
+            lod = Array.FindIndex(at, t => h >= t);
+            if (lod < 0) lod = at.Length - 1;
+        }
+        if (a.Cand != "mannequin")
+            for (int i = 0; i < a.Lods.Length; i++) a.Lods[i].Visible = i == lod;
+        if (a.Shown > -2) a.Shown = lod;
+
+        // The face: it sees you (auto) when you're within sight range.
+        bool sees = faceMode == "angry" || (faceMode == "auto" && subject == "zombie" && distance < sightRange);
+        a.Angry = Math.Clamp(a.Angry + (sees ? 1 : -1) * delta / 0.25, 0, 1);
+        var mi = a.Lods[Math.Min(lod, a.Lods.Length - 1)];
+        if (a.Cand == "mannequin" || mi.FindBlendShapeByName("angry") < 0) return;
+        double e = a.Angry * a.Angry * (3 - 2 * a.Angry);
+        double slack = 0.12 + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
+        double growl = 0.62 + 0.22 * Math.Sin(time * 7.5 + a.Phase * 6) + 0.08 * Math.Sin(time * 17);
+        SetShape(mi, "jaw_open", slack + (growl - slack) * e);
+        SetShape(mi, "angry", e);
+    }
+
+    static void SetShape(MeshInstance3D mi, string name, double v)
+    {
+        int i = mi.FindBlendShapeByName(name);
+        if (i >= 0) mi.SetBlendShapeValue(i, (float)v);
+    }
+
+    string Readout(double distance, double vpH)
+    {
+        var vp = GetViewport().GetViewportRid();
+        var sb = new StringBuilder();
+        var a = subjects.FirstOrDefault();
+        if (a != null)
+        {
+            int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
+            sb.AppendLine($"subject   {subject} / {cand}{(a.Cand != "mannequin" && cand != "lineup" ? $" lod{lod}" : "")}");
+            sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
+            if (cand != "lineup") sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
+            if (cand != "lineup") sb.AppendLine($"textures  {a.TexBytes / 1048576.0:0.0} MB: {a.TexDesc}");
+            sb.AppendLine($"face      {(subject == "zombie" ? $"{face}, angry {a.Angry:0.00}" : "-")}");
+        }
+        sb.AppendLine($"crowd     {crowd.Count}");
+        sb.AppendLine($"on screen {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame):N0} tris  {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame)} draws  {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalObjectsInFrame)} objects");
+        sb.AppendLine($"memory    textures {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TextureMemUsed) / 1048576.0:0.0} MB  buffers {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.BufferMemUsed) / 1048576.0:0.0} MB");
+        sb.AppendLine($"frame     cpu {Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000:0.00} ms  render cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp):0.00}  gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp):0.00} ms");
+        sb.Append($"fps       {Engine.GetFramesPerSecond():0}");
+        return sb.ToString().Replace("\r\n", "\n");  // AppendLine is CRLF on Windows: a Label shows two lines
+    }
+
+    // ------------------------------------------------------------------ stage
+
+    void BuildStage()
+    {
+        env = new WorldEnvironment { Environment = new Godot.Environment
+        {
+            BackgroundMode = Godot.Environment.BGMode.Color,
+            AmbientLightSource = Godot.Environment.AmbientSource.Color,
+            TonemapMode = Godot.Environment.ToneMapper.Filmic,
+            SsaoEnabled = true,
+            FogEnabled = true,
+        } };
+        AddChild(env);
+        sun = new DirectionalLight3D { ShadowEnabled = true };
+        sun.DirectionalShadowMaxDistance = 60;
+        AddChild(sun);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new PlaneMesh { Size = new Vector2(300, 300) },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.20f, 0.20f, 0.19f), Roughness = 0.95f },
+        });
+        // Kerbs and a wall, for scale and to catch the light.
+        foreach (var x in new[] { -3.2f, 3.2f })
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(0.3f, 0.15f, 200) },
+                Position = new Vector3(x, 0.075f, -100),
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.42f, 0.41f, 0.39f), Roughness = 1 },
+            });
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.3f, 3, 200) },
+            Position = new Vector3(5.5f, 1.5f, -100),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.36f, 0.30f, 0.26f), Roughness = 1 },
+        });
+        cam = new Camera3D { Fov = (float)Fov, Near = 0.05f, Far = 400, Position = new Vector3(0, (float)EyeHeight, 0) };
+        AddChild(cam);
+        torch = new SpotLight3D { SpotRange = 30, SpotAngle = 24, LightEnergy = 2.5f, RotationDegrees = new Vector3(3, 0, 0), ShadowEnabled = true, Position = new Vector3(0.25f, -0.25f, 0) };
+        cam.AddChild(torch);
+        crowdRoot = new Node3D();
+        AddChild(crowdRoot);
+    }
+
+    void ApplyLight()
+    {
+        var e = env.Environment;
+        (Color bg, Color amb, float ambE, Color sunC, float sunE, Vector3 sunRot, bool torchOn, float fog) = light switch
+        {
+            "dusk" => (new Color(0.30f, 0.22f, 0.20f), new Color(0.45f, 0.40f, 0.45f), 0.35f, new Color(1.0f, 0.62f, 0.40f), 0.9f, new Vector3(-8, -60, 0), false, 0.010f),
+            "night" => (new Color(0.01f, 0.012f, 0.02f), new Color(0.25f, 0.30f, 0.45f), 0.06f, new Color(0.5f, 0.6f, 0.9f), 0.05f, new Vector3(-50, 30, 0), true, 0.03f),
+            _ => (new Color(0.55f, 0.58f, 0.60f), new Color(0.60f, 0.63f, 0.66f), 0.55f, new Color(1, 0.97f, 0.92f), 1.1f, new Vector3(-50, 35, 0), false, 0.006f),
+        };
+        e.BackgroundColor = bg;
+        e.AmbientLightColor = amb;
+        e.AmbientLightEnergy = ambE;
+        e.FogLightColor = bg;
+        e.FogDensity = fog;
+        sun.LightColor = sunC;
+        sun.LightEnergy = sunE;
+        sun.RotationDegrees = sunRot;
+        torch.Visible = torchOn;
+    }
+
+    void ApplyView()
+    {
+        GetViewport().DebugDraw = wire ? Viewport.DebugDrawEnum.Wireframe : Viewport.DebugDrawEnum.Disabled;
+    }
+
+    // ------------------------------------------------------------------ panel
+
+    OptionButton candPick = null!, lodPick = null!, facePick = null!;
+    HSlider distSlider = null!;
+
+    void BuildPanel()
+    {
+        var layer = panelLayer = new CanvasLayer();
+        AddChild(layer);
+        var panel = new PanelContainer { Position = new Vector2(12, 12), Theme = new Theme { DefaultFontSize = 13 } };
+        layer.AddChild(panel);
+        var box = new VBoxContainer { CustomMinimumSize = new Vector2(360, 0) };
+        panel.AddChild(new MarginContainer().Also(m => { foreach (var side in new[] { "left", "right", "top", "bottom" }) m.AddThemeConstantOverride("margin_" + side, 8); m.AddChild(box); }));
+        box.AddChild(new Label { Text = "LOOK LAB" });
+        var grid = new GridContainer { Columns = 2 };
+        box.AddChild(grid);
+        Pick(grid, "Subject", new[] { "zombie", "survivor" }, subject, v => { subject = v; Rebuild(); });
+        candPick = Pick(grid, "Look", Cands, cand, v => { cand = v; Rebuild(); });
+        lodPick = Pick(grid, "LOD", new[] { "auto", "0", "1", "2", "3", "4", "5" }, forcedLod < 0 ? "auto" : forcedLod.ToString(), v => forcedLod = v == "auto" ? -1 : int.Parse(v));
+        facePick = Pick(grid, "Face", new[] { "auto", "neutral", "angry" }, face, v => face = v);
+        Pick(grid, "Move", new[] { "idle", "walk", "lunge" }, move, v => { move = v; lungeZ = -8; foreach (var a in subjects.Concat(crowd)) Play(a, a.Phase); });
+        Pick(grid, "Light", new[] { "day", "dusk", "night" }, light, v => { light = v; ApplyLight(); });
+        var presets = new HBoxContainer();
+        foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
+        box.AddChild(presets);
+        distSlider = Slider(box, "Distance m", 0.6, 60, 0.1, dist, v => dist = v);
+        Slider(box, "LOD bias", 0.25, 4, 0.05, lodBias, v => lodBias = v);
+        Slider(box, "Sight range m", 1, 30, 0.5, sightRange, v => sightRange = v);
+        Slider(box, "Crowd", 0, 2000, 10, crowdCount, v => { crowdCount = (int)v; RebuildCrowd(); });
+        var toggles = new HBoxContainer();
+        var wireBox = new CheckBox { Text = "Wireframe (V)", ButtonPressed = wire, FocusMode = Control.FocusModeEnum.None };
+        wireBox.Toggled += on => { wire = on; ApplyView(); };
+        toggles.AddChild(wireBox);
+        var lodBox = new CheckBox { Text = "Godot LOD", ButtonPressed = godotLod, FocusMode = Control.FocusModeEnum.None };
+        lodBox.Toggled += on => godotLod = on;
+        toggles.AddChild(lodBox);
+        var aimBox = new CheckBox { Text = "Look at it", ButtonPressed = aim, FocusMode = Control.FocusModeEnum.None };
+        aimBox.Toggled += on => aim = on;
+        toggles.AddChild(aimBox);
+        box.AddChild(toggles);
+        readout = new Label();
+        readout.AddThemeFontOverride("font", new SystemFont { FontNames = new[] { "Consolas", "Courier New", "monospace" } });
+        readout.AddThemeFontSizeOverride("font_size", 12);
+        box.AddChild(readout);
+        box.AddChild(new Label { Text = "wheel / [ ] distance, 1-6 presets, F face, L LOD, V wireframe\nright-drag to look round", Modulate = new Color(1, 1, 1, 0.6f) });
+    }
+
+    void SetDist(double d) { dist = d; distSlider.SetValueNoSignal(d); }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (e is InputEventKey { Pressed: true, Echo: false } k)
+        {
+            if (k.Keycode >= Key.Key1 && k.Keycode <= Key.Key6) SetDist(Presets[k.Keycode - Key.Key1]);
+            else if (k.Keycode == Key.Bracketleft) SetDist(Math.Max(0.6, dist / 1.15));
+            else if (k.Keycode == Key.Bracketright) SetDist(Math.Min(60, dist * 1.15));
+            else if (k.Keycode == Key.F) { face = face == "angry" ? "neutral" : "angry"; facePick.Select(face == "angry" ? 2 : 1); }
+            else if (k.Keycode == Key.L) { forcedLod = forcedLod >= 5 ? -1 : forcedLod + 1; lodPick.Select(forcedLod + 1); }
+            else if (k.Keycode == Key.V) { wire = !wire; ApplyView(); }
+        }
+        else if (e is InputEventMouseButton mb)
+        {
+            if (mb.ButtonIndex == MouseButton.Right) looking = mb.Pressed;
+            if (mb.Pressed && mb.ButtonIndex == MouseButton.WheelUp) SetDist(Math.Max(0.6, dist / 1.1));
+            if (mb.Pressed && mb.ButtonIndex == MouseButton.WheelDown) SetDist(Math.Min(60, dist * 1.1));
+        }
+        else if (e is InputEventMouseMotion mm && looking)
+        {
+            lookYaw -= mm.Relative.X * 0.2;
+            lookPitch = Math.Clamp(lookPitch - mm.Relative.Y * 0.2, -80, 80);
+        }
+    }
+
+    HSlider Slider(VBoxContainer box, string name, double min, double max, double step, double value, Action<double> changed)
+    {
+        var row = new HBoxContainer();
+        row.AddChild(new Label { Text = name, CustomMinimumSize = new Vector2(120, 0) });
+        var s = new HSlider { MinValue = min, MaxValue = max, Step = step, Value = value, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(150, 0), FocusMode = Control.FocusModeEnum.None };
+        var label = new Label { Text = value.ToString("0.##", CultureInfo.InvariantCulture), CustomMinimumSize = new Vector2(44, 0) };
+        s.ValueChanged += v => { label.Text = v.ToString("0.##", CultureInfo.InvariantCulture); changed(v); };
+        row.AddChild(s);
+        row.AddChild(label);
+        box.AddChild(row);
+        return s;
+    }
+
+    static OptionButton Pick(GridContainer grid, string name, string[] items, string selected, Action<string> changed)
+    {
+        grid.AddChild(new Label { Text = name, CustomMinimumSize = new Vector2(70, 0) });
+        var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(140, 0) };
+        foreach (var it in items) pick.AddItem(it);
+        pick.Selected = Math.Max(0, Array.IndexOf(items, selected));
+        pick.ItemSelected += v => changed(items[v]);
+        grid.AddChild(pick);
+        return pick;
+    }
+
+    static Button Btn(string text, Action pressed)
+    {
+        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
+        b.Pressed += pressed;
+        return b;
+    }
+
+    // ------------------------------------------------------------------ sweeps
+
+    async Task Frames(int n)
+    {
+        for (int i = 0; i < n; i++) await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+    }
+
+    async Task Shot(string path)
+    {
+        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        GetViewport().GetTexture().GetImage().SavePng(path);
+        GD.Print($"shot: {path}");
+    }
+
+    async Task SaveShotAndQuit(string path)
+    {
+        busy = true;
+        if (hidePanel) panelLayer.Visible = false;
+        await Shot(path);
+        GetTree().Quit();
+    }
+
+    /// <summary>The comparison set: each look at 1, 3, 10 and 30 m (auto LOD), the zombie's face neutral
+    /// and angry up close, the lineup, and wireframes of the near LODs.</summary>
+    async Task RunShots(string dir)
+    {
+        busy = true;
+        panelLayer.Visible = false;
+        DirAccess.MakeDirRecursiveAbsolute(dir);
+        foreach (var subj in new[] { "zombie", "survivor" })
+        {
+            subject = subj;
+            foreach (var c in new[] { "mannequin", "pz", "plus" })
+            {
+                cand = c;
+                Rebuild();
+                foreach (var d in new[] { 1.0, 3.0, 10.0, 30.0 })
+                {
+                    dist = d;
+                    var faces = subj == "zombie" && d <= 3 && c != "mannequin" ? new[] { "neutral", "angry" } : new[] { "neutral" };
+                    foreach (var fm in faces)
+                    {
+                        face = fm;
+                        foreach (var x in subjects) x.Angry = fm == "angry" ? 1 : 0;
+                        await Frames(6);
+                        await Shot($"{dir}/{subj}_{c}_{d:0}m_{fm}.png");
+                    }
+                }
+            }
+            cand = "lineup";
+            Rebuild();
+            foreach (var d in new[] { 2.5, 8.0 })
+            {
+                dist = d;
+                face = "neutral";
+                await Frames(6);
+                await Shot($"{dir}/{subj}_lineup_{d:0.#}m.png");
+            }
+        }
+        subject = "zombie";
+        wire = true;
+        ApplyView();
+        foreach (var (c, lod) in new[] { ("pz", 0), ("plus", 0), ("plus", 1), ("plus", 2) })
+        {
+            cand = c;
+            forcedLod = lod;
+            dist = 1.6;
+            Rebuild();
+            await Frames(6);
+            await Shot($"{dir}/wire_{c}_lod{lod}.png");
+        }
+        GetTree().Quit();
+    }
+
+    /// <summary>The budget sweep: a crowd of each look at each forced LOD, at several sizes; the frame
+    /// times and what's on screen, written to DIR/look.md.</summary>
+    async Task RunReport(string dir)
+    {
+        busy = true;
+        DirAccess.MakeDirRecursiveAbsolute(dir);
+        DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+        Engine.MaxFps = 0;
+        var vp = GetViewport().GetViewportRid();
+        var sb = new StringBuilder();
+        sb.AppendLine("# Look lab budget sweep");
+        sb.AppendLine();
+        sb.AppendLine($"Godot {Engine.GetVersionInfo()["string"]}, {OS.GetProcessorName()}, {RenderingServer.GetVideoAdapterName()}, " +
+                      $"{GetViewport().GetVisibleRect().Size.X}x{GetViewport().GetVisibleRect().Size.Y}, light {light}, shadows on, vsync off. " +
+                      "A crowd walking (AnimationPlayer each, every frame) in a field 4-120 m ahead; the subject hidden. Means over 90 frames after 30 to settle.");
+        sb.AppendLine();
+        sb.AppendLine("| look | LOD | tris each | crowd | on screen tris | draws | frame ms | gpu ms | render cpu ms | fps |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+        subject = "zombie";
+        move = "walk";
+        foreach (var (c, lods) in new[] { ("mannequin", new[] { 0 }), ("pz", new[] { 0, 1, 2 }), ("plus", new[] { 0, 1, 2, 3, 4, 5 }) })
+            foreach (var lod in lods)
+                foreach (var n in new[] { 100, 400, 1000 })
+                {
+                    cand = c;
+                    crowdCount = n;
+                    crowdLod = lod;
+                    Rebuild();
+                    foreach (var x in subjects) x.Root.Visible = false;
+                    await Frames(30);
+                    double cpu = 0, gpu = 0, rcpu = 0, tris = 0, draws = 0, ms = 0;
+                    const int N = 90;
+                    ulong last = Time.GetTicksUsec();
+                    for (int i = 0; i < N; i++)
+                    {
+                        await Frames(1);
+                        ulong now = Time.GetTicksUsec();
+                        ms += (now - last) / 1000.0;
+                        last = now;
+                        gpu += RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp);
+                        rcpu += RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp);
+                        tris += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame);
+                        draws += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame);
+                    }
+                    int each = crowd.Count > 0 ? crowd[0].Tris[Math.Min(lod, crowd[0].Tris.Length - 1)] : 0;
+                    string line = $"| {c} | {lod} | {each:N0} | {n} | {tris / N:N0} | {draws / N:0} | {ms / N:0.00} | {gpu / N:0.00} | {rcpu / N:0.00} | {1000 / (ms / N):0} |";
+                    sb.AppendLine(line);
+                    GD.Print(line);
+                }
+        crowdCount = 0;
+        RebuildCrowd();
+        sb.AppendLine();
+        sb.AppendLine("Texture memory with one of each look loaded: see the lab's readout (it counts what's on the GPU).");
+        using (var f = FileAccess.Open($"{dir}/look.md", FileAccess.ModeFlags.Write)) f.StoreString(sb.ToString());
+        GD.Print($"report: {dir}/look.md");
+        GetTree().Quit();
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    static T? Find<T>(Node n) where T : Node
+    {
+        if (n is T t) return t;
+        foreach (var c in n.GetChildren())
+            if (Find<T>(c) is T found) return found;
+        return null;
+    }
+
+    static IEnumerable<T> FindAll<T>(Node n) where T : Node
+    {
+        if (n is T t) yield return t;
+        foreach (var c in n.GetChildren())
+            foreach (var x in FindAll<T>(c)) yield return x;
+    }
+
+    static double Num(string s) => double.Parse(s, CultureInfo.InvariantCulture);
+
+    static Dictionary<string, string> ParseArgs()
+    {
+        var args = new Dictionary<string, string>();
+        foreach (var a in OS.GetCmdlineUserArgs())
+        {
+            var kv = a.TrimStart('-').Split('=', 2);
+            args[kv[0]] = kv.Length > 1 ? kv[1] : "";
+        }
+        return args;
+    }
+}
