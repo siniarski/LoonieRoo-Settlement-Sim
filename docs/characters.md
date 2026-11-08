@@ -120,6 +120,18 @@ keys; how far the jaw hangs at rest is the lab's (Slack in LookLab.cs). Up close
 default zombie face (paint.OUTFITS); the other four stay as files to compare. The faces are uncanny as they are: a
 focused session on faces is wanted later (a real sculpt or a CC0 base, not more brushes).
 
+**The head reshaped to an average male face** (2026-11-08, against average-face composites viewed online and
+anthropometric means; the measurements are in sculpt.py's landmark comment): an upright forehead (a forehead mass;
+the crown at 1.75), a wider, flatter face (the old one was a narrow muzzle), cheekbones that barely show, a shorter,
+narrower nose (root at eye level, tip 40 mm under it, 35 mm across the wings), the mouth 52 mm wide and 22 mm under
+the nose, a soft chin; eyelids as an almond opening (28 x 8 mm, the outer corner higher) in the face's own surface,
+with a soft orbital hollow and painted lash lines, in place of eyeballs in deep round sockets; the head smoothed on its
+own before the features go in; the base remeshed at 3 mm (was 4). Teeth are painted only inside their own boxes (a
+looser region had painted the skin round the mouth white). Left as found: the eyes still read wide (an 8 mm opening is
+about three vertices at 3 mm, and decimation softens it further); a crease down the side of the face at 3/4 (likely a
+UV seam in the baked maps). That is about the limit of brushes on a remeshed blob: the focused face session should
+start from a real sculpted (or CC0) head with proper edge loops round the eyes and mouth.
+
 **Clothes with volume** (clothes.py, `--clothes jacket|hoodie`, the lab's "clothes" lineup and Clothes picker): a
 garment is **its own mesh**, a shell cut from the body where it covers, smoothed so it bridges the body's dips (cloth
 drapes, skin doesn't), stood off the skin by its own thickness profile (a jacket's hem flaring off the hips, a

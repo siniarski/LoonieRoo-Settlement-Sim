@@ -20,16 +20,20 @@ from mathutils import Matrix, Quaternion, Vector
 MB_SCALE = 0.575
 
 # Face landmarks (Blender space), used by the brushes, the paint and the shape keys. The rig puts the
-# Head bone at 1.56 m and the crown at 1.75: eyes at ~1.645, the mouth at ~1.565, the chin at 1.52.
-HEAD_C = Vector((0, 0.008, 1.640))      # the cranium's centre
-EYE_L = Vector((0.031, -0.062, 1.646))  # eyeball centres (left = +X)
-EYE_R = Vector((-0.031, -0.062, 1.646))
-EYE_RADIUS = 0.0122
-MOUTH = Vector((0, -0.088, 1.566))      # the middle of the lips' meeting line
-MOUTH_HALF = 0.023                      # half the mouth's width
-NOSE_TIP = Vector((0, -0.110, 1.598))
-JAW_HINGE = Vector((0, -0.002, 1.605))  # the jaw turns about the X axis through here
-CHIN_Z = 1.522
+# Head bone at 1.56 m and the crown at 1.75. Proportions from average adult male faces (composites and
+# anthropometric means, 2026-11-08): pupils 63 mm apart, eye openings ~28 x 10 mm, the nose 50 mm from
+# its root to its base and 35 mm across the wings, the mouth 52 mm wide and 22 mm under the nose,
+# 48 mm from the mouth to the chin; a fairly upright forehead, cheekbones that barely show from the front.
+HEAD_C = Vector((0, 0.012, 1.655))      # the cranium's centre
+EYE_L = Vector((0.0315, -0.074, 1.646))  # eyeball centres (left = +X); the cornea's front about flush with the lids
+EYE_R = Vector((-0.0315, -0.074, 1.646))
+EYE_RADIUS = 0.0120
+MOUTH = Vector((0, -0.081, 1.574))      # the middle of the lips' meeting line, at the slit's floor (the lips stand ~1 cm in front)
+MOUTH_HALF = 0.026                      # half the mouth's width
+NOSE_TIP = Vector((0, -0.114, 1.606))
+SUBNASALE_Z = 1.596                     # where the nose meets the upper lip
+JAW_HINGE = Vector((0, -0.002, 1.612))  # the jaw turns about the X axis through here
+CHIN_Z = 1.526
 HEAD_TOP = 1.750
 
 
@@ -119,12 +123,15 @@ def body_balls():
 def head_balls(b):
     """The head's masses only (cranium, face, jaw, ears): the features are brushes (face_offset)."""
     c = HEAD_C
-    b.ellipsoid(c, (0.074, 0.096, 0.100))                                          # cranium
-    b.ellipsoid((0, c.y - 0.040, c.z - 0.045), (0.060, 0.060, 0.060))             # face
-    b.ellipsoid((0, c.y - 0.050, CHIN_Z + 0.030), (0.045, 0.042, 0.030))          # jaw and chin
+    b.ellipsoid(c, (0.074, 0.095, 0.095))                                          # cranium
+    b.ellipsoid((0, -0.036, 1.690), (0.058, 0.050, 0.042))                        # forehead (upright)
+    b.ellipsoid((0, -0.036, 1.616), (0.060, 0.052, 0.050))                        # face
+    b.ellipsoid((0, -0.044, CHIN_Z + 0.034), (0.048, 0.046, 0.028))               # jaw
+    b.ellipsoid((0, -0.068, CHIN_Z + 0.020), (0.026, 0.016, 0.020))               # chin
     for sx in (1, -1):
-        b.ellipsoid((sx * 0.046, c.y - 0.020, CHIN_Z + 0.045), (0.018, 0.040, 0.030))  # jaw angle
-        b.ellipsoid((sx * 0.075, c.y + 0.004, EYE_L.z - 0.010), (0.006, 0.015, 0.027), stiff=3)  # ear
+        b.ellipsoid((sx * 0.050, -0.040, 1.630), (0.018, 0.028, 0.017))           # cheekbone mass
+        b.ellipsoid((sx * 0.048, 0.000, CHIN_Z + 0.050), (0.015, 0.036, 0.030))   # jaw angle
+        b.ellipsoid((sx * 0.074, 0.008, 1.632), (0.0055, 0.013, 0.029), stiff=3)  # ear
 
 
 def remesh(obj, voxel):
@@ -141,6 +148,22 @@ def smooth(obj, factor=0.5, repeat=8):
     m.factor, m.iterations = factor, repeat
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.modifier_apply(modifier=m.name)
+
+
+def smooth_head(obj, repeat=24):
+    """Soften the head alone (where its masses meet they leave creases down the cheeks), before the
+    face's features go in."""
+    g = obj.vertex_groups.new(name="_head")
+    for v in obj.data.vertices:
+        w = smooth01((v.co.z - 1.50) / 0.04)
+        if w > 0:
+            g.add([v.index], w, "REPLACE")
+    m = obj.modifiers.new("SmoothHead", "SMOOTH")
+    m.factor, m.iterations, m.vertex_group = 0.5, repeat, "_head"
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_apply(modifier=m.name)
+    if obj.vertex_groups.get("_head"):
+        obj.vertex_groups.remove(obj.vertex_groups["_head"])
 
 
 def decimate(obj, tris):
@@ -177,37 +200,75 @@ def face_offset(co):
     if co.z < 1.49 or co.y > 0.0:
         return off
     x, z = co.x, co.z
+    ez = EYE_L.z
     fwd = Vector((0, -1, 0))
+    g = _gauss
     front = smooth01((-co.y - 0.03) / 0.03)  # only the front of the head
-    # Brow ridge: a soft bar over the eyes, strongest over their inner halves.
-    off += fwd * 0.008 * _gauss((z - (EYE_L.z + 0.022)) ** 2, 0.008) * _gauss(x * x, 0.045) * front
-    # Nose: bridge growing to the tip, then tucked in to the base; wider at the tip and wings.
-    if NOSE_TIP.z - 0.020 < z < EYE_L.z + 0.012:
-        t = (EYE_L.z + 0.012 - z) / (EYE_L.z + 0.012 - NOSE_TIP.z)  # 0 between the eyes, 1 at the tip
-        height = 0.006 + 0.018 * min(t, 1) ** 1.3 if t <= 1 else 0.024 * smooth01((NOSE_TIP.z - 0.020 - z) / -0.020)
-        width = 0.006 + 0.008 * min(t, 1.2)
-        off += fwd * height * _gauss(x * x, width) * front
+    # Brow ridge: low and soft over the eyes; the root of the nose (nasion) a touch back between them.
+    off += fwd * 0.004 * g((z - (ez + 0.019)) ** 2, 0.008) * g(x * x, 0.040) * front
+    off += -fwd * 0.003 * g(x * x + (z - (ez + 0.006)) ** 2, 0.009) * front
+    # Nose: from the nasion (about eye level) straight down and out to the tip, then back in under it to
+    # where it meets the lip. Narrow along the bridge, widest at the tip.
+    root = ez + 0.010
+    if SUBNASALE_Z - 0.004 < z < root:
+        t = (root - z) / (root - NOSE_TIP.z)  # 0 at the root, 1 at the tip
+        if t <= 1:
+            height, width = 0.003 + 0.016 * t ** 1.15, 0.0048 + 0.0040 * t
+        else:  # under the tip: the columella, back to the lip
+            u = smooth01((z - (SUBNASALE_Z - 0.004)) / (NOSE_TIP.z - SUBNASALE_Z + 0.004))
+            height, width = 0.019 * u, 0.0088
+        off += fwd * height * g(x * x, width) * front
     for sx in (1, -1):
-        # Nose wings either side of the tip.
-        off += fwd * 0.006 * _gauss((x - sx * 0.013) ** 2 + (z - (NOSE_TIP.z - 0.006)) ** 2, 0.007) * front
-        # Cheekbones, and under them a hollow (deeper in the dead).
-        off += fwd * 0.006 * _gauss((x - sx * 0.046) ** 2 + (z - (EYE_L.z - 0.030)) ** 2, 0.016) * front
-        off += -fwd * 0.004 * _gauss((x - sx * 0.040) ** 2 + (z - (MOUTH.z + 0.010)) ** 2, 0.012) * front
-        # Eye sockets: back towards the eyeball, more above (the brow overhangs).
+        # The wings either side of the tip (35 mm across), with the nostrils under them.
+        wing = Vector((sx * 0.0135, 0, NOSE_TIP.z - 0.005))
+        off += fwd * 0.0065 * g((x - wing.x) ** 2 + (z - wing.z) ** 2, 0.0068) * front
+        off += -fwd * 0.0025 * g((x - sx * 0.0075) ** 2 + (z - (SUBNASALE_Z + 0.002)) ** 2, 0.0035) * front
+        # The orbit: a soft hollow under the brow, above the upper lid, and a faint one under the eye.
         eye = EYE_L if sx > 0 else EYE_R
-        d = co - eye
-        off += -fwd * 0.015 * _gauss(d.x * d.x + (d.z * 1.2) ** 2, 0.016) * front
-        # Nostrils.
-        off += -fwd * 0.003 * _gauss((x - sx * 0.007) ** 2 + (z - (NOSE_TIP.z - 0.014)) ** 2, 0.0035) * front
-    # Lips: the upper and lower lip forward, the meeting line pushed in, a groove under the lower lip.
-    across = _gauss(x * x, MOUTH_HALF * 0.85)
-    off += fwd * 0.006 * _gauss((z - (MOUTH.z + 0.006)) ** 2, 0.006) * across * front
-    off += fwd * 0.006 * _gauss((z - (MOUTH.z - 0.007)) ** 2, 0.006) * across * front
-    off += -fwd * 0.008 * _gauss((z - MOUTH.z) ** 2, 0.0022) * _gauss(x * x, MOUTH_HALF) * front
-    off += -fwd * 0.003 * _gauss(x * x + (z - (MOUTH.z - 0.020)) ** 2, 0.009) * front
-    # Chin forward a touch.
-    off += fwd * 0.005 * _gauss(x * x + (z - (CHIN_Z + 0.012)) ** 2, 0.016) * front
-    return off
+        off += -fwd * 0.0022 * g((x - eye.x) ** 2 * 0.6 + (z - (ez + 0.011)) ** 2, 0.010) * front
+        off += -fwd * 0.0010 * g((x - eye.x * 1.05) ** 2 * 0.5 + (z - (ez - 0.012)) ** 2, 0.008) * front
+        # Cheekbones: barely there from the front; a soft fold from the nose wing to the mouth corner.
+        off += fwd * 0.002 * g((x - sx * 0.050) ** 2 + (z - (ez - 0.020)) ** 2, 0.020) * front
+        t = min(1.0, max(0.0, (wing.z - z) / (wing.z - MOUTH.z)))
+        fold_x = sx * (0.019 + 0.012 * t)
+        if MOUTH.z - 0.008 < z < wing.z:
+            off += -fwd * 0.0012 * g((x - fold_x) ** 2, 0.0025) * front
+    # Lips: the upper and lower lip forward of the mouth line (the lower a little fuller), the line
+    # itself pushed in, the corners tucked in, a groove under the lower lip, the chin forward.
+    across = g(x * x, MOUTH_HALF * 0.8)
+    off += fwd * 0.0045 * g((z - (MOUTH.z + 0.0055)) ** 2, 0.0050) * across * front
+    off += fwd * 0.0055 * g((z - (MOUTH.z - 0.0065)) ** 2, 0.0055) * across * front
+    off += -fwd * 0.007 * g((z - MOUTH.z) ** 2, 0.0020) * g(x * x, MOUTH_HALF) * front
+    for sx in (1, -1):
+        off += -fwd * 0.003 * g((x - sx * MOUTH_HALF) ** 2 + (z - MOUTH.z) ** 2, 0.004) * front
+    off += fwd * 0.0015 * g(x * x + (z - (MOUTH.z + 0.012)) ** 2, 0.004) * front  # the philtrum
+    off += -fwd * 0.003 * g(x * x + (z - (MOUTH.z - 0.019)) ** 2, 0.009) * front
+    off += fwd * 0.002 * g(x * x + (z - (CHIN_Z + 0.016)) ** 2, 0.020) * front
+    return off + lid_offset(co)
+
+
+def eye_opening(co, sx, eye):
+    """Where a point sits against an eye's opening: q < 1 inside the almond (28 x 8 mm, the outer
+    corner a little higher), 1 on its edge, growing outwards."""
+    lat = (co.x - eye.x) * sx  # + towards the outer corner
+    half_w = 0.0140
+    dz = co.z - eye.z - 0.0012 * lat / half_w
+    half_h = 0.0042 if dz > 0 else 0.0038  # the upper lid covers the top of the iris
+    return math.hypot(lat / half_w, dz / half_h)
+
+
+def lid_offset(co):
+    """Eyelids: the skin stays on the face's surface (the eyeball sits just behind it, its front about
+    flush with the lids' margins); inside the almond of the opening it's pushed back so the eye shows;
+    round the opening the lids' margins curve in a little onto the eye."""
+    for sx, eye in ((1, EYE_L), (-1, EYE_R)):
+        if abs(co.x - eye.x) > 0.03 or abs(co.z - eye.z) > 0.025 or co.y > eye.y + 0.004:
+            continue
+        q = eye_opening(co, sx, eye)
+        if q < 1:
+            return Vector((0, 0.008 * smooth01((1 - q) / 0.25 + 0.2), 0))
+        return Vector((0, 0.0028 * math.exp(-((q - 1) / 0.7) ** 2), 0))
+    return Vector()
 
 
 # Zombie face variants (the look lab's face candidates): extra brushes over face_offset. Each keeps the
@@ -355,6 +416,18 @@ MOUTH_BAG_HALF = (0.027, 0.022, 0.021)
 
 # ---------------------------------------------------------------- eyes and teeth (added after decimating)
 
+def teeth_boxes():
+    """The teeth: (row, centre, full size, turn about Z) for an arch of small boxes behind the lips. The
+    paint picks teeth out by these exact boxes (a looser region painted the skin round the mouth white)."""
+    out = []
+    for row, z in (("upper", MOUTH.z + 0.0045), ("lower", MOUTH.z - 0.0045)):
+        for k in range(-3, 4):
+            ang = k * 0.32
+            c = Vector((math.sin(ang) * 0.020, MOUTH.y + 0.002 + (1 - math.cos(ang)) * 0.020, z))
+            out.append((row, c, (0.0058, 0.0040, 0.0075 if abs(k) < 2 else 0.0068), ang))
+    return out
+
+
 def add_eyes_and_teeth(obj, segs=12, rings=8, teeth=True):
     """Eyeballs (in the sockets) and two rows of teeth (behind the lips), joined into the body mesh so
     they share its atlas. Remembers the lower teeth's vertex indices (for the jaw key) as a property."""
@@ -370,19 +443,13 @@ def add_eyes_and_teeth(obj, segs=12, rings=8, teeth=True):
         ret = bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=rings, radius=1.0)
         bmesh.ops.scale(bm, vec=Vector(MOUTH_BAG_HALF), verts=ret["verts"])
         bmesh.ops.translate(bm, vec=MOUTH_BAG_C, verts=ret["verts"])
-        for row, z, sign in (("upper", MOUTH.z + 0.0045, 1), ("lower", MOUTH.z - 0.0045, -1)):
-            # An arch of small boxes following the lips' curve.
-            for k in range(-3, 4):
-                ang = k * 0.32
-                x = math.sin(ang) * 0.020
-                y = MOUTH.y + 0.002 + (1 - math.cos(ang)) * 0.020
-                ret = bmesh.ops.create_cube(bm, size=1.0)
-                size = (0.0058, 0.0040, 0.0075 if abs(k) < 2 else 0.0068)
-                bmesh.ops.scale(bm, vec=Vector(size), verts=ret["verts"])
-                bmesh.ops.rotate(bm, cent=Vector(), matrix=Matrix.Rotation(-ang, 3, "Z"), verts=ret["verts"])
-                bmesh.ops.translate(bm, vec=Vector((x, y, z)), verts=ret["verts"])
-                if row == "lower":
-                    lower += ret["verts"]
+        for row, c, size, ang in teeth_boxes():
+            ret = bmesh.ops.create_cube(bm, size=1.0)
+            bmesh.ops.scale(bm, vec=Vector(size), verts=ret["verts"])
+            bmesh.ops.rotate(bm, cent=Vector(), matrix=Matrix.Rotation(-ang, 3, "Z"), verts=ret["verts"])
+            bmesh.ops.translate(bm, vec=c, verts=ret["verts"])
+            if row == "lower":
+                lower += ret["verts"]
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bm.verts.index_update()
     lower_idx = [v.index for v in lower if v.is_valid]

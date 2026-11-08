@@ -86,8 +86,13 @@ def regions(p, o):
     front = np.where(np.abs(p[:, 0] - S.EYE_L.x) < np.abs(p[:, 0] - S.EYE_R.x), S.EYE_L.x, S.EYE_R.x)
     m["iris"] = m["eye"] * sstep(0.0062, 0.0050, np.hypot(x - front, z - S.EYE_L.z)) * (y < S.EYE_L.y - 0.006)
     m["pupil"] = m["eye"] * sstep(0.0028, 0.0020, np.hypot(x - front, z - S.EYE_L.z)) * (y < S.EYE_L.y - 0.006)
-    inner = (np.abs(z - S.MOUTH.z) < 0.012) & (ax < 0.028) & (y > -0.096) & (y < -0.06) & (z > 1.5)
-    m["teeth"] = (inner & (y > S.MOUTH.y - 0.003) & (y < -0.070)).astype(float)
+    teeth = np.zeros(len(p), bool)
+    for _row, c, size, ang in S.teeth_boxes():  # inside one of the boxes (in its own turned frame)
+        d = p - np.array(c)
+        u = d[:, 0] * np.cos(ang) - d[:, 1] * np.sin(ang)  # the box was turned by -ang: turn back by +ang
+        v = d[:, 0] * np.sin(ang) + d[:, 1] * np.cos(ang)
+        teeth |= (np.abs(u) < size[0] / 2 + 6e-4) & (np.abs(v) < size[1] / 2 + 6e-4) & (np.abs(d[:, 2]) < size[2] / 2 + 6e-4)
+    m["teeth"] = teeth.astype(float)
     # The mouth's inside: the slit's floor, behind the lips' front.
     bag = np.linalg.norm((p - np.array(S.MOUTH_BAG_C)) / np.array(S.MOUTH_BAG_HALF), axis=1)
     m["mouth"] = np.clip(sstep(-0.087, -0.083, y) * sstep(0.005, 0.002, np.abs(z - S.MOUTH.z)) * sstep(S.MOUTH_HALF, S.MOUTH_HALF * 0.7, ax)
@@ -97,8 +102,17 @@ def regions(p, o):
     hairline = np.where(y < -0.02, S.EYE_L.z + 0.050 + 0.012 * (ax / 0.07) ** 2, 1.585 - 0.03 * sstep(0.0, 0.08, y))
     ears = sstep(0.066, 0.072, ax) * sstep(0.04, 0.02, np.abs(z - (S.EYE_L.z - 0.01)))
     m["hair"] = head * sstep(hairline - 0.002, hairline + 0.004, z) * (1 - ears)
-    brow_z = S.EYE_L.z + 0.020
-    m["brows"] = sstep(0.0050, 0.0030, np.abs(z - brow_z - 0.004 * (ax / 0.045))) * sstep(0.050, 0.044, ax) * sstep(0.008, 0.012, ax) * (y < -0.06)
+    brow_z = S.EYE_L.z + 0.017
+    arch = 0.003 * np.exp(-((ax - 0.030) / 0.012) ** 2)  # highest above the outer iris
+    m["brows"] = sstep(0.0034, 0.0020, np.abs(z - brow_z - arch)) * sstep(0.048, 0.042, ax) * sstep(0.009, 0.013, ax) * (y < -0.06)
+    # The lash line round each eye's opening (sculpt.eye_opening, here in numpy), heavier on top.
+    q = np.full(len(p), 9.0)
+    for sx, eye in ((1, S.EYE_L), (-1, S.EYE_R)):
+        lat = (x - eye.x) * sx
+        dz = z - eye.z - 0.0012 * lat / 0.014
+        qe = np.hypot(lat / 0.014, dz / np.where(dz > 0, 0.0042, 0.0038))
+        q = np.where(np.abs(x - eye.x) < 0.03, np.minimum(q, qe), q)
+    m["lash"] = sstep(1.35, 1.05, q) * sstep(0.85, 1.0, q) * (1 - m["eye"]) * (y < -0.06) * np.where(z > S.EYE_L.z, 1.0, 0.45)
     # Garments.
     arm = sstep(0.19, 0.21, ax) * sstep(1.36, 1.38, z)
     torso = 1 - arm
@@ -184,6 +198,7 @@ def albedo(p, ao, o, style):
         col = mix(col, mix(rgb(0.42, 0.08, 0.06), rgb(0.10, 0.02, 0.02), sstep(edge, 0.004, d)), raw * (1 - m["teeth"]))
     col = mix(col, rgb(0.06, 0.02, 0.02), m["mouth"])
     col = mix(col, o["hair"] * (0.7 + 0.6 * n3[:, None]), m["brows"] * 0.9)
+    col = mix(col, rgb(0.10, 0.07, 0.06), m["lash"] * 0.85)
     hair_amt = m["hair"] * (sstep(0.35, 0.55, fbm(p, 30, 3)) if dead else 1.0)  # the dead's hair thin and patchy
     col = mix(col, o["hair"] * (0.75 + 0.5 * fbm(p * np.array([1, 1, 0.25]), 160, 2)[:, None]), hair_amt)
 
@@ -219,9 +234,9 @@ def albedo(p, ao, o, style):
     # Eyes and teeth.
     sclera = rgb(0.62, 0.62, 0.52) if dead else rgb(0.82, 0.80, 0.76)
     iris = rgb(0.55, 0.56, 0.50) if dead else rgb(0.25, 0.33, 0.30)  # the dead's clouded over
-    if face == "feral":  # bloodshot, the iris yellowed
-        sclera = mix(np.broadcast_to(rgb(0.62, 0.40, 0.33), (len(p), 3)), rgb(0.50, 0.08, 0.06), sstep(0.5, 0.7, n3) * 0.6)
-        iris = rgb(0.62, 0.55, 0.30)
+    if face == "feral":  # yellowed and threaded with red, the iris filmed over (dull: not a glow)
+        sclera = mix(np.broadcast_to(rgb(0.56, 0.50, 0.40), (len(p), 3)), rgb(0.42, 0.12, 0.10), sstep(0.55, 0.75, n3) * 0.45)
+        iris = rgb(0.50, 0.48, 0.38)
     eye = mix(sclera, iris, m["iris"])
     eye = mix(eye, rgb(0.42, 0.42, 0.38) if dead else rgb(0.02, 0.02, 0.02), m["pupil"])
     col = mix(col, eye, m["eye"])

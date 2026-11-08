@@ -92,12 +92,13 @@ def tris(obj):
 
 
 def base_mesh(outfit, garments):
-    """The sculpt: metaballs -> 4 mm remesh -> smoothed -> the face pushed in (and its variant). Returns
+    """The sculpt: metaballs -> 3 mm remesh -> smoothed -> the face pushed in (and its variant). Returns
     (base, closed): base has the mouth cut, the painted cloth lifted off the skin and the body under any
     garments deleted; closed is the whole skin before that (the weight source and the garments' source)."""
     o = sculpt.body_balls().build("base", 0.008)
-    sculpt.remesh(o, 0.004)
+    sculpt.remesh(o, 0.003)  # 3 mm: fine enough for the lids and lips
     sculpt.smooth(o, 0.5, 6)
+    sculpt.smooth_head(o)
     face = outfit.get("face", "slack")
     sculpt.apply_offsets(o, lambda c: sculpt.face_offset(c) + sculpt.variant_offset(c, face))
     for p in o.data.polygons:
