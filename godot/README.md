@@ -28,3 +28,29 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - `--selftest`: the self-test (15 checks; saves go to a separate folder, never your slots); `./check.sh --all` runs it
 
 Logs: `%APPDATA%\Godot\app_userdata\LoonieRoo\logs`. Saves: `...\LoonieRoo\saves`. Exports and bug reports: `Documents\LoonieRoo`.
+
+## The character lab
+
+`Characters/Lab.tscn` (Lab.cs and its parts: LabIk.cs, LabCrowd.cs, LabHands.cs; FootIK.cs, HandIK.cs) is the 3D
+character test bed (docs/characters.md): the test mannequin on a 1 m grid, driven through an AnimationTree. In the
+editor: open the scene and press F6 (Run Current Scene). The panel's tabs:
+- **Move:** gaits, speed, acceleration, crouch, prone and crawl (army to zombie), rest on the back, crossfade, slow
+  motion, move round a circle or in place, the Demo (every transition in turn).
+- **Body:** survivor states (panic, fatigue, cold, pain sliders; Startle; Zombie skips them), a face view, and
+  missing limbs (a cut per limb).
+- **Ground:** flat, a 15 cm kerb, a hill (slope slider), stairs (18 cm rise); foot IK on or off.
+- **Crowd:** up to 2,000 more humanoids; LOD near (14 meshes + AnimationTree), mid (1 mesh + AnimationPlayer at a
+  chosen rate: every frame, 30, 20 or 15 fps) or auto (near within a radius up to a budget, mid beyond); frame time
+  and draw calls.
+- **Hands:** a weapon (pistol, rifle, knife, bat) held by hand IK; guns ready or aimed at eye level (F), aim pitch,
+  raise time; a door to open quietly or fast.
+
+Below the tabs: camera follow, views and zoom, and the readout. Keys: 1-4 idle/walk/jog/run, C crouch, X prone,
+Z rest on the back, F aim, right-drag orbit, wheel zoom. From the command line (after `--`): `--check` (skeleton vs the
+humanoid profile), `--shot=out.png --frames=N`, `--speed= --crouch= --stance=rest|prone --style= --view=`,
+`--lose=armLeft:elbow,legRight:knee`, `--ground=hill --slope=25 --noik`, `--crowd=1000 --lod=auto --rate=20`,
+`--weapon=rifle --aim=10 --raised --door=quiet --nohandik`, `--panic= --fatigue= --cold= --pain= --startle --zombie --view=face`, `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
+`--iktest=DIR` (feet on the kerb, hill and stairs, facing round, IK on and off) and `--handtest=DIR` (every weapon
+and the door); experiments/ik-test has a run of each.
+
+`Characters/Bench.tscn` is the animation benchmark (experiments/anim-bench/README.md has how to run it and the results).

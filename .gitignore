@@ -2,3 +2,6 @@
 .DS_Store
 # The C# harness's reports (cs/Harness).
 cs/Harness/out/
+# Blender files made by art/scripts (rebuild them; the scripts are the source).
+art/blend/
+__pycache__/

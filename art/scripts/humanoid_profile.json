@@ -1,0 +1,1238 @@
+{
+  "bones": [
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Root",
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "parent": "",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Hips",
+      "origin": [
+        0.0,
+        0.75,
+        0.0
+      ],
+      "parent": "Root",
+      "tail": "Spine"
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Spine",
+      "origin": [
+        0.0,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "Hips",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Chest",
+      "origin": [
+        0.0,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "Spine",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "UpperChest",
+      "origin": [
+        0.0,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "Chest",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Neck",
+      "origin": [
+        0.0,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "UpperChest",
+      "tail": "Head"
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "Head",
+      "origin": [
+        0.0,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "Neck",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "group": "Face",
+      "name": "LeftEye",
+      "origin": [
+        0.0500000007450581,
+        0.150000005960464,
+        0.0
+      ],
+      "parent": "Head",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "group": "Face",
+      "name": "RightEye",
+      "origin": [
+        -0.0500000007450581,
+        0.150000005960464,
+        0.0
+      ],
+      "parent": "Head",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "group": "Face",
+      "name": "Jaw",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0500000007450581
+      ],
+      "parent": "Head",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "LeftShoulder",
+      "origin": [
+        0.0500000007450581,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "UpperChest",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "LeftUpperArm",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "LeftShoulder",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "LeftLowerArm",
+      "origin": [
+        0.0,
+        0.25,
+        0.0
+      ],
+      "parent": "LeftUpperArm",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "LeftHand",
+      "origin": [
+        0.0,
+        0.25,
+        0.0
+      ],
+      "parent": "LeftLowerArm",
+      "tail": "LeftMiddleProximal"
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        -1.0,
+        -0.577000021934509,
+        0.815999984741211,
+        0.0,
+        0.815999984741211,
+        0.577000021934509,
+        0.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftThumbMetacarpal",
+      "origin": [
+        -0.025000000372529,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "LeftHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftThumbProximal",
+      "origin": [
+        0.0,
+        0.0430000014603138,
+        0.0
+      ],
+      "parent": "LeftThumbMetacarpal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftThumbDistal",
+      "origin": [
+        0.0,
+        0.0430000014603138,
+        0.0
+      ],
+      "parent": "LeftThumbProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftIndexProximal",
+      "origin": [
+        -0.025000000372529,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "LeftHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftIndexIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "LeftIndexProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftIndexDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "LeftIndexIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftMiddleProximal",
+      "origin": [
+        0.0,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "LeftHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftMiddleIntermediate",
+      "origin": [
+        0.0,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "LeftMiddleProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftMiddleDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "LeftMiddleIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftRingProximal",
+      "origin": [
+        0.025000000372529,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "LeftHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftRingIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "LeftRingProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftRingDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "LeftRingIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftLittleProximal",
+      "origin": [
+        0.0500000007450581,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "LeftHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftLittleIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "LeftLittleProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "LeftHand",
+      "name": "LeftLittleDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "LeftLittleIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        -1.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "RightShoulder",
+      "origin": [
+        -0.0500000007450581,
+        0.100000001490116,
+        0.0
+      ],
+      "parent": "UpperChest",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "RightUpperArm",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "RightShoulder",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "RightLowerArm",
+      "origin": [
+        0.0,
+        0.25,
+        0.0
+      ],
+      "parent": "RightUpperArm",
+      "tail": ""
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "RightHand",
+      "origin": [
+        0.0,
+        0.25,
+        0.0
+      ],
+      "parent": "RightLowerArm",
+      "tail": "RightMiddleProximal"
+    },
+    {
+      "basis": [
+        0.0,
+        0.0,
+        1.0,
+        0.577000021934509,
+        0.815999984741211,
+        0.0,
+        -0.815999984741211,
+        0.577000021934509,
+        0.0
+      ],
+      "group": "RightHand",
+      "name": "RightThumbMetacarpal",
+      "origin": [
+        0.025000000372529,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "RightHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightThumbProximal",
+      "origin": [
+        0.0,
+        0.0430000014603138,
+        0.0
+      ],
+      "parent": "RightThumbMetacarpal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightThumbDistal",
+      "origin": [
+        0.0,
+        0.0430000014603138,
+        0.0
+      ],
+      "parent": "RightThumbProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightIndexProximal",
+      "origin": [
+        0.025000000372529,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "RightHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightIndexIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "RightIndexProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightIndexDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "RightIndexIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightMiddleProximal",
+      "origin": [
+        0.0,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "RightHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightMiddleIntermediate",
+      "origin": [
+        0.0,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "RightMiddleProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightMiddleDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "RightMiddleIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightRingProximal",
+      "origin": [
+        -0.025000000372529,
+        0.0750000029802322,
+        0.0
+      ],
+      "parent": "RightHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightRingIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "RightRingProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightRingDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "RightRingIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightLittleProximal",
+      "origin": [
+        -0.0500000007450581,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "RightHand",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightLittleIntermediate",
+      "origin": [
+        0.0,
+        0.0500000007450581,
+        0.0
+      ],
+      "parent": "RightLittleProximal",
+      "tail": ""
+    },
+    {
+      "basis": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "RightHand",
+      "name": "RightLittleDistal",
+      "origin": [
+        0.0,
+        0.025000000372529,
+        0.0
+      ],
+      "parent": "RightLittleIntermediate",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "LeftUpperLeg",
+      "origin": [
+        0.100000001490116,
+        0.0,
+        0.0
+      ],
+      "parent": "Hips",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "LeftLowerLeg",
+      "origin": [
+        0.0,
+        0.375,
+        0.0
+      ],
+      "parent": "LeftUpperLeg",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "LeftFoot",
+      "origin": [
+        0.0,
+        0.375,
+        0.0
+      ],
+      "parent": "LeftLowerLeg",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "LeftToes",
+      "origin": [
+        0.0,
+        0.150000005960464,
+        0.0
+      ],
+      "parent": "LeftFoot",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "group": "Body",
+      "name": "RightUpperLeg",
+      "origin": [
+        -0.100000001490116,
+        0.0,
+        0.0
+      ],
+      "parent": "Hips",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "RightLowerLeg",
+      "origin": [
+        0.0,
+        0.375,
+        0.0
+      ],
+      "parent": "RightUpperLeg",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "group": "Body",
+      "name": "RightFoot",
+      "origin": [
+        0.0,
+        0.375,
+        0.0
+      ],
+      "parent": "RightLowerLeg",
+      "tail": ""
+    },
+    {
+      "basis": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "group": "Body",
+      "name": "RightToes",
+      "origin": [
+        0.0,
+        0.150000005960464,
+        0.0
+      ],
+      "parent": "RightFoot",
+      "tail": ""
+    }
+  ],
+  "root": "Root",
+  "scale_base": "Hips"
+}

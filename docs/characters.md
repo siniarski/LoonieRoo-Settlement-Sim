@@ -71,6 +71,24 @@ Rules: one armature named `Armature`, `Root` at the floor between the feet, `Hip
 - **Conditions are shader parameters, not new meshes**: one character shader with per-instance values (`blood`, `dirt`, `wear`, `wetness`, `infection`, `decay`, skin tint) blended through shared mask textures; torn and holed clothes are an alpha-clip mask; wounds and bruises are a small decal mask per body region. Per-instance uniforms keep many differently-damaged characters on one material. These already exist as sim numbers (Clothing condition, Wounds, Infection, BodyMod wetness) to drive them.
 - **Draw calls**: a dressed character is ~10 meshes. At near range that's fine. For mid and far range, the outfit is **merged once into a single mesh** whenever it changes (same skeleton, atlas textures), see LOD below.
 
+### Missing limbs (survivors after amputation, zombies falling apart)
+
+The sim already has them: `Wounds.amputate` gives a survivor `lostArm` or `lostLeg` for good, and `crawler` zombies exist. The rules for the visual side:
+
+- **The skeleton never changes.** Every character keeps all 56 bones, so every clip, the retargeting, the ragdoll and the attachment points keep working. A missing limb is a mesh and animation matter only. (Shrinking the lost bones to zero scale is the common hack: it breaks attachments, IK and the ragdoll, so it's a fallback for a far LOD at most.)
+- **Mesh: cut points with stump caps.** The body regions get cuts at fixed amputation points: mid-forearm, above the elbow, below the knee, above the knee (and the hand, the foot). Each cut has a small **stump cap** mesh (raw, bandaged, healed; torn for zombies), weighted to the bone above the cut. Losing a limb hides the regions below the cut and shows the cap. This is the same region-hiding as clothing, so it costs nothing new.
+- **Clothing follows the cut.** A sleeve or trouser leg over a lost limb is cut at the same point: garments carry the same region split (or a per-region mask in the shader), plus a pinned-sleeve / knotted-trouser variant for survivors. Gloves and shoes on a missing hand or foot are simply not drawn (and the sim shouldn't let you wear them).
+- **Animation: layers and sets, not copies of everything.**
+  - One arm: an upper-body layer holds the stump (held close, slight guard) over every clip; two-handed actions (rifles, axes, carrying a body, climbing a ladder normally) are off or use one-handed variants. Left or right comes from mirroring, so one set of clips serves both sides.
+  - One leg: walking needs its own small locomotion set (crutch, or a hop and limp; a prosthetic later is the normal set with a limp layer). No crutch: crawling (the army crawl above, or a sitting scoot).
+  - No legs (zombies): the crawl set (zombie_crawl in the lab) is the whole locomotion; the sim's `crawler` already moves slowly and slips under barricades.
+  - IK: hand IK targets that need the lost hand are dropped; weapons and items attach to the remaining hand's socket.
+- **Ragdoll.** The physical bones below the cut are disabled (and the parent's mass reduced), so a one-armed body falls as one.
+- **LOD.** The merged mid/far mesh is rebuilt when a limb is lost (it already is on outfit changes); zombie crowd outfits include a few legless and armless variants with their own VAT clips (crawl, one-armed shamble).
+- **The sim needs more detail than it has.** `lostArm` / `lostLeg` don't say which side or where the cut is. For the visuals (and for one-handed rules) the pose intent needs side and level: e.g. `lostLimbs: ["armLeft:elbow", "legRight:knee"]`. A sim change, made when the visuals need it. Zombies could lose limbs in fights (a hash roll per heavy hit), which is where most crawlers would come from.
+
+In the lab (2026-11-08): the mannequin is region meshes with stump caps at the joints (wrist, elbow, shoulder; ankle, knee, hip); the Missing limbs pickers hide the regions below a cut and show the cap; a lost hand or forearm turns on that arm's stump layer (a Blend2 filtered to the arm's bones, over every state); any lost leg means crawling (no crutch clips yet), both legs the zombie drag. Not yet: mid-limb cuts, clothing, ragdoll.
+
 ## 4. Animation in Godot
 
 - **Libraries**: one `AnimationLibrary` per set on the shared skeleton: `loco` (idle, walk, run, sprint, sneak, crouch-walk, backwards, turns, limp variants), `combat`, `interact`, `traversal`, `zombie`, `paired`. Clip names `set/verb_variant`, e.g. `interact/door_open_quiet`, `paired/boost_helper`.
@@ -80,7 +98,7 @@ Rules: one armature named `Armature`, `Root` at the floor between the feet, `Hip
   - an **upper-body layer** (Blend2 with a bone filter from `Spine` up) for carrying, aiming, holding a torch, while the legs walk;
   - **additive layers** for injury (limp, held arm), exhaustion (breathing, slump) and zombie twitches: cheap variety without new clips.
 - **Variation without new clips**: mirroring (left/right limp from one clip), additive offsets, per-character playback rate ±5%, a small set of idle fidgets chosen by `hashRoll` of id (stable per character).
-- **IK at runtime** (near range only, Godot's SkeletonModifier3D stack: look-at, two-bone IK for arms and legs): foot placement on stairs and slopes, hands onto door handles / steering wheel / ladder rungs / a weapon's off-hand grip, head look-at. Phase 1 confirms which of Godot 4.6's IK modifiers are usable for each.
+- **IK at runtime** (near range only, Godot's SkeletonModifier3D stack: look-at, two-bone IK for arms and legs): foot placement on stairs and slopes, hands onto door handles / steering wheel / ladder rungs / a weapon's off-hand grip, head look-at. Built for feet (2026-11-08, godot/Characters/FootIK.cs): a probe modifier (rays under the animated feet, targets that keep the clip's foot height over the real ground, the hips dropped for the lower foot), Godot's TwoBoneIK3D (thigh and shin, knee to a pole ahead), an align modifier (soles tilted to the ground, capped at 40°). The lab's IK test (`--iktest=DIR`, results in experiments/ik-test/iktest.md): standing on a 15 cm kerb and a 25° hill facing eight ways, soles within 0.6 cm (up to 15 cm off without IK); walking up, down and across, the planted foot never sinks. Note Skeleton3D restores its poses after the modifiers: read the final pose inside a modifier, not from the bone afterwards. Stairs (18 cm rise, 28 cm going): standing within 0.6 cm facing four ways, walking up, down and across without sinking; toes can still poke into the next riser (only the ankle is ray-tested: a toe ray is to do). **Hands** (godot/Characters/HandIK.cs): TwoBoneIK3D per arm to where a grip puts the wrist, elbows to poles down and out, then each hand turned to the grip (a grip is a node: origin at the palm's centre, X the palm's normal, Y the fingers); weights blend the clip's arm and the grip (a reach is a weight 0 -> 1). Test props in the lab: pistol (both hands), rifle (butt in the shoulder, both hands), knife (one hand), bat (both hands, over the right shoulder), aimed by a pitch; guns also **aimed at eye level** (2026-11-08): the rear sight on the line from the eye along the aim (the right eye for the rifle, with a cheek weld: the head tipped onto the stock; between the eyes for the pistol held out in both hands), the pitch shared by the spine (60%), neck and head; raising blends the ready hold into the aimed one over the raise time. This runs inside the skeleton update before the arm IK (a modifier), so the gun sits on this frame's body, slump and breathing included; ready holds ride the upper chest the same way. A door whose lever the character reaches, presses and pushes, quietly (slow, follows the door in, lets go at 30 deg) or fast (a shove, lets go at 14 deg). Hand test (`--handtest=DIR`, experiments/ik-test/handtest.md): every hand on its grip to under 1 mm, standing and walking, aim -30/0/+30, and through both door openings. Found by it: the rifle's handguard was out of reach of the mannequin's arms (5-8 cm short): the arms are now an adult's (0.30 + 0.28 m) and the handguard 48 cm from the butt.
 - **Where the clips come from** (be realistic):
   1. **CC0 / free libraries for the bulk**, retargeted on import: Quaternius's animation libraries (CC0), Mixamo (free with an Adobe account; usable in games, raw files not redistributable). Locomotion and generic combat should come from here or from mocap, not hand-keyframing.
   2. **Blender-authored with AI help** for what libraries don't have (door variants, barricading, boosts, zombie grabs): Claude scripts poses and keys through MCP or Python, and the player judges and corrects. Expect blocking-quality first passes; keyframing good motion through scripts is the weakest link of the whole pipeline.
@@ -89,6 +107,20 @@ Rules: one armature named `Armature`, `Root` at the floor between the feet, `Hip
 ### First-person later
 
 When it comes: a separate **arms rig** (the same arm bone names, so arm clips can be shared) with its own FOV-friendly clips, timed from the same sim progress as the third-person clips so intent and timing stay identical. The full body stays for shadows and for others. Nothing in the plan above blocks this.
+
+### States on the body and face (2026-11-08, in the lab)
+
+Survivors show how they are; zombies mostly don't need to (a fixed slack face, no state layers: cheap, as they must be in numbers). The sim already has the numbers: BodyMod's panic and endurance (0..100, PANICKING 60, WINDED 25) and body heat, Health and Wounds for pain; a startle would be a sim event (a zombie suddenly noticed, a hit taken). The pose intent carries them as 0..1 weights, and the renderer turns them into layers over whatever clip plays:
+
+| state | body | face | movement (the sim's call; the lab shows it) |
+|---|---|---|---|
+| panic (stiff) | shoulders up, arms held close and bent (less swing), quick shallow breaths, the head glancing round | brows worried, eyes wide, mouth tight | quicker to speed up |
+| fatigue (sluggish) | slumped, head down, arms hanging slack, slow heavy heaves | heavy lids, slack mouth, slow blinks | slower to speed up, lower top speed, slower to crouch |
+| cold | hunched, arms in, shivering | tight mouth | |
+| pain | (a limp is a clip's job) | brows down, eyes narrowed, grimace | |
+| startle | a ~1 s flinch: shoulders and head jerk back, arms thrown up | brows up, eyes wide, mouth open | |
+
+How: postures and breathing are **additive clips** (Godot's Add2 adds their difference from the rest pose, so they sit on any clip); arm holds **replace** the clip's arms through a bone filter (Blend2); breathing, shivering and the panicked glance are additive loops with their own rate. The face is **blend shapes** (shape keys from Blender: brows up / frown / worry, eyes wide / heavy, mouth open / frown / tight), mixed per frame from the states, plus blinking (often when panicked, slow when tired). All of it is near-tier only: faces aren't visible further out, and mid-tier characters keep the merged mesh's single clip.
 
 ## 5. Interactions, anchors and approaches
 
@@ -127,7 +159,7 @@ LOD has four layers, and the sim already has the outermost one (dormant zombies,
 - Tiers are picked by **screen size and a count budget**, not distance alone, and use hysteresis so characters don't flicker between tiers. The iso/bird's-eye camera puts most characters at mid or far most of the time, so mid and far are not an afterthought: they're the common case.
 - **VAT**: a Blender (or Godot tool) script bakes the few crowd clips (zombie idle, shamble, run, attack, fall) per merged zombie outfit into textures. Zombies use a limited set of **pre-built outfit combinations** (say 20-40) so a horde is a handful of MultiMeshes.
 - Mesh LOD: Godot generates LODs for skinned meshes on import; the art budgets are near ~5-8k tris dressed, mid ~1.5-3k, far ~500-800.
-- Measure it: a crowd benchmark (1,000 / 5,000 / 20,000 animated characters on screen) belongs in `experiments/godot-bench` before the zombie art is made at scale, the same way the stress harness came before scale work in the sim.
+- **Measured** (2026-11-08, `godot/Characters/Bench.tscn`, results in experiments/anim-bench/README.md, fast desktop): per character per frame an AnimationTree costs ~18 µs, an AnimationPlayer ~12 µs, a player updated every 4th frame ~3.6 µs; the cost is per animated skeleton, not per track (168 -> 15 channels changed little). Separate meshes cost more than animation: 2,000 characters of 14 meshes took 77 ms unanimated, merged 8 ms. So: near ~30-40 characters with trees and separate meshes, mid ~200-300 merged and throttled, far VAT on MultiMesh. Still to measure: VAT at 5,000-20,000.
 
 ## 8. Godot structure
 
@@ -148,7 +180,7 @@ art/                      Blender sources and scripts (not in the Godot project)
   README.md               how to run each script headless
 ```
 
-The 3D world renderer (terrain, buildings, the projection in Camera.cs) is its own project ("the look", NOTES.md "Next" item 4). Until it exists, characters are developed in a **character lab** scene (`godot/Characters/Lab.tscn`, or a separate Godot project under `experiments/` if keeping the game untouched is preferred): a floor, a door, a bed, a car mock-up, a camera at the iso angle, and debug UI to set a pose intent by hand. It can also replay a sim run's movers from a save to check that animation follows sim movement.
+The 3D world renderer (terrain, buildings, the projection in Camera.cs) is its own project ("the look", NOTES.md "Next" item 4). Until it exists, characters are developed in a **character lab** scene (`godot/Characters/Lab.tscn`; since 2026-11-08 a floor with a 1 m grid, the iso camera and the test mannequin walking, running and idling). To come: a door, a bed, a car mock-up, and debug UI to set a pose intent by hand. It can also replay a sim run's movers from a save to check that animation follows sim movement.
 
 ## 9. AI-assisted production: what Claude can and can't do well
 
@@ -187,8 +219,10 @@ Claude Code skills to make later, once each workflow has been done by hand once:
 
 **Phase 6: expand**, driven by the 3D renderer's progress and playtests: more garments and zombie outfits, the LOD tiers in the real game, first-person when it's wanted.
 
-## Open decisions
+## Decided (2026-11-08)
 
-- Git LFS for `.blend` and large textures (git-lfs is installed; using it changes how the repo is cloned).
-- Character lab inside `godot/` or as a separate project under `experiments/`.
-- Whether third-party CC0/Mixamo base meshes are acceptable as starting points, or everything is built from scratch.
+- **No Git LFS, ever** (asked again 2026-11-08: still no; sizes below). The scripts in art/scripts are the source for generated assets; their .blend files are build outputs and stay out of git. A hand-made .blend that must be kept goes in git only if it is small (saved with Blender's compression, a few MB at most); anything bigger lives outside the repo, with the script or export that matters committed. Exported .glb files (small, low-poly) are committed so the game builds without Blender.
+  - Sizes: the mannequin's .blend is 0.3 MB as Blender saves it (compressed, the default) and 2.3 MB uncompressed. A finished stylised character with its clips: ~1-5 MB; textures packed into a .blend add ~1-10 MB each (keep them as separate PNGs instead). GitHub refuses files over 100 MB and warns over 50 MB; a repository is comfortable under ~1-2 GB. Git stores every committed version of a binary whole (compressed .blend files hardly delta), so 50 assets x 3 MB x 10 commits each is ~1.5 GB. Without LFS that's fine if .blend files are committed at milestones, not every save, and textures stay out of them. If it ever outgrows that, `git lfs migrate` can move the history over later (it rewrites history), so nothing is closed off.
+- **Base meshes are our own** (body, garments, hair, gear: built by script and refined in Blender), so they fit the rig, the regions and the stump cuts exactly.
+- **Animation clips may come from free third-party libraries** (CC0 first, e.g. Quaternius) retargeted onto our rig, with our own scripted clips for what they lack.
+- **Animation update rate by LOD tier:** full rate near, 20 or 15 fps (staggered) mid, baked far (the bench numbers in section 7).
