@@ -42,6 +42,8 @@ public sealed class View
     public bool firstPerson;
     /// <summary>Tab in first person: the bag, what's beside you, and your card, with the mouse let go.</summary>
     public bool showInventory;
+    /// <summary>The container the inventory is open on (one you used), or null: then whatever is beside you.</summary>
+    public string? openContainer;
     /// <summary>First person: where you're looking (radians; yaw 0 is east, pi/2 south, as the grid; pitch up is positive).</summary>
     public double yaw, pitch;
     /// <summary>The survivor list: folded, short, or full.</summary>

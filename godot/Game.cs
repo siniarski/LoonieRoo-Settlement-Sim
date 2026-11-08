@@ -67,6 +67,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     Ctx ctx = null!;
     Painter painter = null!;
     Hud hud = null!;
+    InventoryScreen inventory = null!;
     Menu menu = null!;
     WorldMap worldMap = null!;
     ScreenTabs tabs = null!;
@@ -111,6 +112,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         AddChild(layer);
         hud = new Hud(view, this);
         layer.AddChild(hud);
+        inventory = new InventoryScreen(view, (cmd) => Commands.applyCommand(state, cmd));
+        layer.AddChild(inventory);
         worldMap = new WorldMap(view, Command);
         layer.AddChild(worldMap);
         tabs = new ScreenTabs(view);
@@ -407,6 +410,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}"
             + (fpScene ? $"\n3D ms/frame    {fpMs:0.00} · {firstPerson.Modelled} people as models · {firstPerson.ChunkCount} chunks · {firstPerson.TreeCount} trees\nrender         cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.00} ms · gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.00} ms" : "");
         hud.Update(state, perf);
+        inventory.Update(state);
         worldMap.Update(state);
         tabs.Update(state);
 
@@ -559,9 +563,11 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (you == null) return;
         var at = you.pos;
         var looked = LookedAt(you, USE_REACH);
+        // A searched container opens the inventory on it, beside yours.
         if (looked != null && Math.Abs(looked.x - at.x) <= 1 && Math.Abs(looked.y - at.y) <= 1 && (looked.x != at.x || looked.y != at.y)
-            && Command(new Command { type = "use", x = looked.x, y = looked.y })) return;
+            && (inventory.OpenAt(state, looked) || Command(new Command { type = "use", x = looked.x, y = looked.y }))) return;
         var front = FrontTile(you);
+        if (inventory.OpenAt(state, front)) return;
         if (!Command(new Command { type = "use", x = front.x, y = front.y })) Command(new Command { type = "use", x = at.x, y = at.y });
     }
 

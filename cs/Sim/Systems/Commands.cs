@@ -43,7 +43,7 @@ public static partial class Commands
             s.note = done;
             return Js.T(Js.NN(state.control).busy) ? changed() : reject(done);
         }
-        if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash"))
+        if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash") || (command.type == "stashAll") || (command.type == "unequip"))
         {
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
@@ -1243,7 +1243,10 @@ public static partial class Commands
         return (JsMath.abs(p.x - s.pos.x) <= 1) && (JsMath.abs(p.y - s.pos.y) <= 1);
     }
 
-    /// <summary>The bag's commands (inventory.ts). Returns why not, or null when done.</summary>
+    /// <summary>The bag's commands (inventory.ts): take (one, from the ground or a container beside you), takeAll (a container's
+    /// contents, or every one of `kind`), drop (from the bag, or what you wear), stash (one into a container beside you),
+    /// stashAll (the bag, or every one of `kind`), useItem (eat, treat, wear or wield from the bag), unequip (off into the bag).
+    /// Returns why not, or null when done.</summary>
     public static string? bagCommand(SimState state, Survivor s, Command command)
     {
         if (command.type == "takeAll")
@@ -1253,10 +1256,10 @@ public static partial class Commands
             {
                 return "not beside you";
             }
-            var inside = Inventory.contents(state, new Furniture { id = command.containerId });
+            var inside = Inventory.contents(state, new Furniture { id = command.containerId }).filter((i) => !Js.T(command.kind) || (i.kind == command.kind));
             if (inside.length == 0)
             {
-                return "nothing in it";
+                return Js.T(command.kind) ? $"no {Js.Str(command.kind)} in it" : "nothing in it";
             }
             double took = 0;
             foreach (var item_11 in Js.Iter(inside))
@@ -1268,10 +1271,27 @@ public static partial class Commands
             }
             return (took > 0) ? null : "your bag is too full";
         }
+        if (command.type == "stashAll")
+        {
+            var box = Inventory.containerOf(state, command.containerId);
+            if (!Js.T(box) || !besideYou(s, box.at))
+            {
+                return "not beside you";
+            }
+            return Inventory.stashAll(state, s, command.containerId, command.kind);
+        }
         var item = Items.getItem(state, command.itemId);
         if (!Js.T(item))
         {
             return "no such thing";
+        }
+        if (command.type == "unequip")
+        {
+            return Inventory.unequip(state, s, item);
+        }
+        if ((command.type == "drop") && Js.T(Inventory.slotOf(s, item.id)))
+        {
+            return Inventory.dropWorn(state, s, item);
         }
         if (command.type == "take")
         {
@@ -1320,7 +1340,7 @@ public static partial class Commands
             s.note = (item.kind == "medicine") ? "taking medicine" : "bandaging";
             return null;
         }
-        if (((item.kind == "weapon") || (item.kind == "gun")) || Clothing.isGarment(item.kind))
+        if (Js.T(Inventory.slotFor(item.kind)))
         {
             s.note = Inventory.equipFromPack(state, s, item, s.pos);
             return null;
