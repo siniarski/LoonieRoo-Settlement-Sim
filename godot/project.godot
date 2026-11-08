@@ -18,7 +18,6 @@ config/features=PackedStringArray("4.6", "C#")
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/stretch/mode="disabled"
 
 [dotnet]
 
