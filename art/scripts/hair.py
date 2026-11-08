@@ -126,8 +126,82 @@ def _hang_long(bm):
         edges = [g for g in ret["geom"] if isinstance(g, bmesh.types.BMEdge) and g.is_boundary]
 
 
+def _tapered_tube(bm, pts, radii, segs=10):
+    """A tube along pts with a radius at each, capped at the start (in the head) and pinched at the end."""
+    rings = []
+    for i, c in enumerate(pts):
+        d = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+        side = d.cross(Vector((0, 0, 1)) if abs(d.z) < 0.9 else Vector((1, 0, 0))).normalized()
+        up = d.cross(side)
+        rings.append([bm.verts.new(c + (side * math.cos(2 * math.pi * k / segs) + up * math.sin(2 * math.pi * k / segs)) * radii[i])
+                      for k in range(segs)])
+    for ra, rb in zip(rings, rings[1:]):
+        for k in range(segs):
+            bm.faces.new((ra[k], ra[(k + 1) % segs], rb[(k + 1) % segs], rb[k]))
+    bm.faces.new(rings[0][::-1])
+
+
+def _ponytail(bm):
+    """Hair pulled back to a tie at the back of the head, the tail hanging down the back of the neck."""
+    pts = [Vector((0, 0.098, 1.662)), Vector((0, 0.118, 1.652)), Vector((0, 0.128, 1.620)),
+           Vector((0, 0.124, 1.575)), Vector((0, 0.110, 1.525)), Vector((0, 0.096, 1.480))]
+    _tapered_tube(bm, pts, [0.014, 0.016, 0.019, 0.017, 0.012, 0.003])
+    _tapered_tube(bm, [Vector((0, 0.104, 1.661)), Vector((0, 0.118, 1.655))], [0.0125, 0.0125], segs=10)  # the tie
+
+
 def _no_extras(bm):
     pass
+
+
+# ---------------------------------------------------------------- more styles: ponytail, matted (the dead's)
+
+def ponytail_mask(p):
+    return scalp(p, front=0.046, sideburn=False)
+
+
+def ponytail_lift(p):
+    x, y, z, ax = _parts(p)
+    return 0.0028 + 0.0018 * sstep(1.66, 1.72, z)  # pulled tight back
+
+
+def matted_mask(p):
+    """The dead's: what's left, in clumps, with bare patches between."""
+    keep = sstep(0.40, 0.46, fbm(p, 22, 3))
+    return scalp(p, front=0.050) * keep
+
+
+def matted_lift(p):
+    x, y, z, ax = _parts(p)
+    clumps = fbm(p * np.array([1.0, 1.0, 0.5]), 45, 3)
+    return 0.003 + 0.007 * clumps + 0.003 * sstep(0.0, 0.08, y)  # longer and heavier at the back
+
+
+# ---------------------------------------------------------------- the beanie (a hat), and hair under it
+
+BRIM_Z = 1.660  # the beanie's lower edge at the front; it sits a little lower at the back
+
+
+def beanie_mask(p):
+    x, y, z, ax = _parts(p)
+    edge = BRIM_Z - 0.030 * sstep(-0.02, 0.08, y)
+    ears = sstep(0.064, 0.069, ax) * sstep(0.030, 0.025, np.abs(z - 1.630)) * sstep(0.020, 0.015, np.abs(y - 0.008))
+    return sstep(edge - 0.002, edge + 0.002, z) * (1 - ears)
+
+
+def beanie_lift(p):
+    """Knit stands 6 mm off the head, the rolled brim 5 mm more."""
+    x, y, z, ax = _parts(p)
+    edge = BRIM_Z - 0.030 * sstep(-0.02, 0.08, y)
+    return 0.006 + 0.005 * sstep(edge + 0.030, edge + 0.024, z)
+
+
+def under_hat(p, lift):
+    """A style worn under the beanie: flattened to 1.5 mm where the hat covers it; what shows below the
+    brim (the sides and back, a long curtain, a tail) as it was."""
+    x, y, z, ax = _parts(p)
+    edge = BRIM_Z - 0.030 * sstep(-0.02, 0.08, y)
+    covered = sstep(edge - 0.004, edge + 0.004, z)
+    return lift * (1 - covered) + np.minimum(lift, 0.0015) * covered
 
 
 STYLES = {
@@ -137,7 +211,12 @@ STYLES = {
     "long": {"mask": long_mask, "lift": long_lift, "extras": _hang_long, "tris": 6000, "drape": 8},
     "receding": {"mask": receding_mask, "lift": receding_lift, "extras": _no_extras, "tris": 3000, "drape": 6},
     "beard": {"mask": beard_mask, "lift": beard_lift, "extras": _no_extras, "tris": 2000, "drape": 3},
+    "ponytail": {"mask": ponytail_mask, "lift": ponytail_lift, "extras": _ponytail, "tris": 3500, "drape": 6, "cards": True},
+    "matted": {"mask": matted_mask, "lift": matted_lift, "extras": _no_extras, "tris": 3500, "drape": 4, "cards": True},
 }
+for _k in ("crop", "sidepart", "long", "receding"):
+    STYLES[_k]["cards"] = True  # wispy strand cards along the front hairline
+HATS = {"beanie": {"mask": beanie_mask, "lift": beanie_lift, "extras": _no_extras, "tris": 2500, "drape": 6}}
 
 
 # ---------------------------------------------------------------- relief and colour (numpy)
@@ -163,8 +242,38 @@ def albedo(style, p, ao):
     flow = np.stack([x * 6.0, y * 6.0, z * 0.8], axis=1)
     if style == "sidepart":
         flow = np.stack([x * 0.9, y * 6.0, z * 6.0], axis=1)
+    if style == "beanie":  # knit: vertical ribs, a turned-up brim
+        ribs = 0.5 + 0.5 * np.sin(np.arctan2(x, y) * 90)
+        v = 0.55 + 0.25 * ribs + 0.1 * fbm(p, 200, 2)
+        return np.clip(np.stack([v, v, v], axis=1) * (0.5 + 0.5 * ao)[:, None], 0, 1)
     strands = fbm(flow, 220, 3)
     v = 0.55 + 0.45 * strands
+    if style == "matted":  # clotted, dirty
+        v = v * (0.6 + 0.4 * fbm(p, 30, 3))
     v = v * (0.75 + 0.25 * fbm(p, 20, 2))
     col = np.stack([v, v, v], axis=1) * (0.45 + 0.55 * ao)[:, None]
     return np.clip(col, 0, 1)
+
+
+# ---------------------------------------------------------------- strand cards (wispy edges)
+
+def card_texture(size=256):
+    """RGBA for the strand cards: four strips side by side (u 0..1 in quarters), each a bunch of tapering
+    strands (alpha) growing from the root (v 0) to wispy tips (v 1); grey, tinted like the hair."""
+    rng = np.random.default_rng(7)
+    img = np.zeros((size, size, 4), np.float32)
+    v = np.linspace(0, 1, size)[:, None]
+    u = np.linspace(0, 1, size)[None, :]
+    alpha = np.zeros((size, size))
+    for strip in range(4):
+        for _ in range(34):
+            cu = (strip + rng.uniform(0.08, 0.92)) / 4
+            length = rng.uniform(0.55, 1.0)
+            width = rng.uniform(0.004, 0.008) * (1 - 0.7 * np.clip(v / length, 0, 1))
+            wave = 0.006 * np.sin(v * rng.uniform(6, 12) + rng.uniform(0, 6))
+            a = np.exp(-((u - cu - wave) / width) ** 2) * (v < length)
+            alpha = np.maximum(alpha, a)
+    shade = 0.75 + 0.2 * np.clip(1 - v, 0, 1)  # about the hair's own grey, so the tint matches
+    img[..., 0] = img[..., 1] = img[..., 2] = shade * np.ones_like(u)
+    img[..., 3] = np.clip(alpha * 1.6, 0, 1) * np.clip((1 - v) * 3, 0, 1) ** 0.5  # thinning to the tips
+    return img

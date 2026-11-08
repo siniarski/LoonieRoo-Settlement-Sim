@@ -20,7 +20,8 @@
 //   --subject=zombie|survivor --cand=plus|pz|mannequin|lineup --lod=auto|0..5 --dist=M
 //   --face=neutral|angry|auto --move=idle|walk|lunge --light=day|dusk|night --wire --turn=DEG
 //   --zface=feral|slack|gaunt|bloated|torn (the zombie's face) --clothes=painted|jacket|hoodie (the survivor's)
-//   --hair=none|buzz|crop|sidepart|long|receding --haircolour=black|brown|blond|red|grey --beard
+//   --hair=none|buzz|crop|sidepart|long|receding|ponytail|matted --haircolour=black|brown|blond|red|grey --beard
+//   --hat=none|beanie --hatcolour=charcoal|olive|navy|red (the hair under it swaps to its under-hat version)
 //   --crowd=N [--crowdlod=auto|K]   N more of the candidate, walking, in a field ahead
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
@@ -57,13 +58,20 @@ public partial class LookLab : Node3D
     static readonly string[] ClothesSets = { "painted", "jacket", "hoodie" };
     // Hair (art/scripts/build_hair.py): each style its own mesh, attached to the character's skeleton and
     // tinted (the texture is grey). A survivor's scalp is painted skin: "none" is shaved bald.
-    static readonly string[] HairStyles = { "none", "buzz", "crop", "sidepart", "long", "receding" };
+    static readonly string[] HairStyles = { "none", "buzz", "crop", "sidepart", "long", "receding", "ponytail", "matted" };
+    static readonly string[] Hats = { "none", "beanie" };
+    static readonly Dictionary<string, Color> HatColours = new()
+    {
+        ["charcoal"] = new Color(0.22f, 0.22f, 0.23f), ["olive"] = new Color(0.32f, 0.33f, 0.20f), ["navy"] = new Color(0.15f, 0.18f, 0.28f), ["red"] = new Color(0.45f, 0.12f, 0.10f),
+    };
     static readonly Dictionary<string, Color> HairColours = new()
     {
         ["black"] = new Color(0.10f, 0.09f, 0.085f), ["brown"] = new Color(0.34f, 0.24f, 0.16f), ["blond"] = new Color(0.78f, 0.64f, 0.42f),
         ["red"] = new Color(0.58f, 0.27f, 0.13f), ["grey"] = new Color(0.64f, 0.62f, 0.60f),
     };
-    static string HairPath(string style) => $"res://assets/characters/look/hair/hair_{style}.glb";
+    // A style under a hat is its own file (flattened where the hat covers it, no fringe cards).
+    static string HairPath(string style, bool underHat) =>
+        $"res://assets/characters/look/hair/{(style == "beanie" ? "hat_beanie" : "hair_" + style + (underHat && style != "beard" ? "_hat" : ""))}.glb";
     readonly Dictionary<string, StandardMaterial3D> hairMats = new();
     // How far each face's jaw hangs at rest (jaw_open), neutral.
     static readonly Dictionary<string, double> Slack = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
@@ -80,9 +88,10 @@ public partial class LookLab : Node3D
 
     string subject = "zombie", cand = "plus", face = "auto", move = "idle", light = "day", faceVariant = DefaultFace, clothesSet = "painted";
     double turn;  // the subject turned from facing you, degrees
-    string hairStyle = "crop", hairColour = "brown";  // the survivor's; zombies keep their painted hair
+    string hairStyle = "crop", hairColour = "brown", hat = "none", hatColour = "charcoal";  // the survivor's; a zombie's is matted
     bool beard;
-    double forceJaw = -1;  // --jaw=V holds jaw_open (for checking the key)
+    double forceJaw = -1;
+    bool noNormal, noAlbedo;  // --nonormal, --noalbedo: the body's maps off one at a time, to find what a mark is  // --jaw=V holds jaw_open (for checking the key)
     int forcedLod = -1, crowdLod = -1, crowdCount;
     double dist = 3, lodBias = 1, sightRange = 12;
     bool godotLod, wire, aim = true;
@@ -140,9 +149,13 @@ public partial class LookLab : Node3D
         if (args.TryGetValue("hair", out var hs)) hairStyle = hs;
         if (args.TryGetValue("haircolour", out var hc)) hairColour = hc;
         beard = args.ContainsKey("beard");
+        if (args.TryGetValue("hat", out var ht)) hat = ht;
+        if (args.TryGetValue("hatcolour", out var htc)) hatColour = htc;
         if (args.TryGetValue("jaw", out var jw)) forceJaw = Num(jw);
         wire = args.ContainsKey("wire");
         hidePanel = args.ContainsKey("nopanel");
+        noNormal = args.ContainsKey("nonormal");
+        noAlbedo = args.ContainsKey("noalbedo");
         if (args.ContainsKey("noaim")) aim = false;
         if (args.ContainsKey("novsync")) { DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled); Engine.MaxFps = 0; }
 
@@ -200,21 +213,30 @@ public partial class LookLab : Node3D
         }
         if (which != "mannequin")
         {
-            foreach (var style in new[] { hair ?? (subj == "zombie" ? "none" : hairStyle), beard ? "beard" : "none" })
-                if (style != "none") AttachHair(a, style);
+            foreach (var style in new[] { hair ?? (subj == "zombie" ? "matted" : hairStyle), beard ? "beard" : "none", hat })
+                if (style != "none") AttachHair(a, style, hat != "none");
             a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
         }
         (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);
+        if (noNormal || noAlbedo)
+            foreach (var mi in a.Lods.SelectMany(g => g))
+                if (mi.MaterialOverride == null && mi.Mesh.SurfaceGetMaterial(0) is BaseMaterial3D bm)
+                {
+                    var m = (BaseMaterial3D)bm.Duplicate();
+                    if (noNormal) m.NormalEnabled = false;
+                    if (noAlbedo) { m.AlbedoTexture = null; m.AlbedoColor = new Color(0.7f, 0.7f, 0.7f); }
+                    mi.MaterialOverride = m;
+                }
         return a;
     }
 
     /// <summary>A hair style's meshes onto the character's skeleton (as the lab's Dresser does garments),
     /// each into its LOD's group, with the tinted hair material.</summary>
-    void AttachHair(Actor a, string style)
+    void AttachHair(Actor a, string style, bool underHat)
     {
-        if (!ResourceLoader.Exists(HairPath(style))) return;
+        if (!ResourceLoader.Exists(HairPath(style, underHat))) return;
         var skel = Find<Skeleton3D>(a.Root)!;
-        var scene = GD.Load<PackedScene>(HairPath(style)).Instantiate<Node3D>();
+        var scene = GD.Load<PackedScene>(HairPath(style, underHat)).Instantiate<Node3D>();
         var groups = a.Lods.Select(g => g.ToList()).ToList();
         foreach (var mi in FindAll<MeshInstance3D>(scene).ToList())
         {
@@ -231,14 +253,18 @@ public partial class LookLab : Node3D
         a.Lods = groups.Select(g => g.ToArray()).ToArray();
     }
 
+    /// <summary>The mesh's own material (the hair's, or the strand cards' cut-out one), tinted: hair by the
+    /// hair colour, a hat by the hat colour. Shared per material and colour.</summary>
     StandardMaterial3D HairMaterial(MeshInstance3D mi, string style)
     {
-        string key = style + "/" + hairColour;
+        var src = (BaseMaterial3D)mi.Mesh.SurfaceGetMaterial(0);
+        var tint = style == "beanie" ? HatColours.GetValueOrDefault(hatColour, HatColours["charcoal"]) : HairColours.GetValueOrDefault(hairColour, HairColours["brown"]);
+        string key = src.ResourceName + src.GetInstanceId() + "/" + tint.ToHtml();
         if (!hairMats.TryGetValue(key, out var mat))
         {
-            mat = (StandardMaterial3D)((BaseMaterial3D)mi.Mesh.SurfaceGetMaterial(0)).Duplicate();
-            mat.AlbedoColor = HairColours.GetValueOrDefault(hairColour, HairColours["brown"]);
-            mat.Roughness = 0.6f;
+            mat = (StandardMaterial3D)src.Duplicate();
+            mat.AlbedoColor = tint;
+            mat.Roughness = style == "beanie" ? 0.95f : 0.6f;
             hairMats[key] = mat;
         }
         return mat;
@@ -547,6 +573,8 @@ public partial class LookLab : Node3D
         Pick(grid, "Hair", HairStyles, hairStyle, v => { hairStyle = v; Rebuild(); });
         Pick(grid, "Hair colour", HairColours.Keys.ToArray(), hairColour, v => { hairColour = v; Rebuild(); });
         Pick(grid, "Beard", new[] { "none", "beard" }, beard ? "beard" : "none", v => { beard = v == "beard"; Rebuild(); });
+        Pick(grid, "Hat", Hats, hat, v => { hat = v; Rebuild(); });
+        Pick(grid, "Hat colour", HatColours.Keys.ToArray(), hatColour, v => { hatColour = v; Rebuild(); });
         var presets = new HBoxContainer();
         foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
         box.AddChild(presets);

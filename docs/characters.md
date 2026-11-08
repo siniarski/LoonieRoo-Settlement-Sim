@@ -156,8 +156,21 @@ triangles), crop (3k), sidepart (a quiff swept from a part over the left eye, 4k
 shoulders from behind the ears, the only one with rimmed free ends, 6.4k), receding (an M-shaped hairline, thin at
 the crown, 3k), and a short full beard (2k) that goes with any of them. A survivor's scalp is painted skin with a
 stubble shadow (painted hair showed through round the meshes); zombies keep their painted, patchy hair for now.
-Not yet: under-hat variants, ponytails and buns, strand cards (alpha) for wispy edges, matted versions for the
-dead.
+Added the same day: **ponytail** (pulled tight back to a tie, the tail hanging down the back of the neck),
+**matted** (the dead's: clumps with bare patches, heavier at the back; the zombie's default, tinted per zombie like
+any hair), **strand cards** on crop, sidepart, long, receding, ponytail and matted (near LODs only: small cut-out
+quads with a 256 strand texture, rooted inside the hair and hanging past its edge, so the hairline breaks up
+instead of ending in a shell's edge; their length per style, darker on the matted; alpha MASK in the glTF, alpha
+scissor in Godot), a **beanie** (hat_beanie.glb: knit ribs, a rolled brim; tinted like the hair) and an **under-hat
+version of every style** (hair_<style>_hat.glb: flattened to 1.5 mm where the hat covers it, the sides, back,
+curtain and tail as they were, no fringe cards); the lab swaps the hair to it when a hat is on. Maps are 512 JPEG
+(the cards PNG for their alpha): the 16 files are 6.9 MB together.
+
+**The stored skin, edited** (art/scripts/edit_skin.py: named edits applied to the .blend and recorded on it, so a
+rerun skips what's done): `cheeks` (the turn from the face's front to its side relaxed: it was sharp enough that the
+sun's shadow edge sat on it as a hard line down the face at 3/4; found by turning the albedo and the normal map off
+in the lab, `--noalbedo --nonormal`: the line stayed, so it was the shape), `lips` and `lips2` (fuller lips with a
+Cupid's bow and a ridge at the upper lip's border; the lips' cut edge smoothed along its length).
 
 **Clothes with volume** (clothes.py, `--clothes jacket|hoodie`, the lab's "clothes" lineup and Clothes picker): a
 garment is **its own mesh**, a shell cut from the body where it covers, smoothed so it bridges the body's dips (cloth

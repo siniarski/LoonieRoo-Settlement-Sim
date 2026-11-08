@@ -72,7 +72,8 @@ on screen or forced; the zombie's face neutral, angry or auto (angry within sigh
 you from 8 m); day, dusk or night (a torch); wireframe; a crowd of up to 2,000. The readout has the character's
 triangles and its textures' memory, what's on screen, and CPU and GPU frame times. Command line (after `--`):
 `--subject= --cand= --lod= --dist= --face= --move= --light= --crowd= --crowdlod= --wire --nopanel --noaim`,
-`--zface= --clothes= --turn= --hair= --haircolour= --beard --jaw=V` (hold the jaw open) `--traceface`,
+`--zface= --clothes= --turn= --hair= --haircolour= --beard --hat=beanie --hatcolour= --jaw=V` (hold the jaw open)
+`--traceface --nonormal --noalbedo` (the body's maps off, to tell a texture mark from a shape),
 `--shot=out.png`, `--shots=DIR` (the comparison set), `--report=DIR` (the budget sweep: experiments/look-lab/look.md).
 Keys: wheel or [ ] distance, 1-6 presets, F face, L LOD, V wireframe, right-drag to look round.
 
