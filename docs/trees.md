@@ -77,8 +77,39 @@ how trees are drawn now, and why.
 | At arm's length to a pine, birch, ferns (30,40; 9 people as models too) | 677 | 0.16 | 0.37 ms | 0.62 ms |
 | Deep forest, a 512 world (400,400) | 1287 | 0.06 | 0.45 ms | 0.74 ms |
 
-The worst case (all 49 chunks forest: ~3,700 trees) should be about 2 ms of GPU by the same rate. Assets:
-trees.glb 0.3 MB, leaves.png 0.2 MB (VRAM-compressed with mipmaps on import).
+Assets: trees.glb 0.3 MB, leaves.png 0.2 MB (VRAM-compressed with mipmaps on import).
+
+## Benchmark: is the LOD worth it, and do far trees need more?
+
+`godot/World3D/TreeBench.tscn` (`Godot --path godot res://World3D/TreeBench.tscn -- [--runs=lods@3,near@3,...]
+[--frames=360] [--out=bench.md]`): a 256 world where every open tile is forest ground with a tree on 30% of them
+(the worst case: every chunk in range is forest), first person in the middle at noon, the camera turning a full
+circle, vsync off. Modes: `lods` (the game's), `noshadow` (the mid LOD casts no shadow), `near` / `mid` / `far`
+(one LOD everywhere); `@R` is the trees' chunk radius (3 is the game's, ~56 m; 7 is ~120 m).
+
+RTX 5070, Core Ultra 7 265K, 2026-11-08:
+
+| mode | radius | trees | frame ms | p95 | render cpu | render gpu | draw calls | primitives |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| lods | 3 | 3585 | 1.02 | 1.27 | 0.24 | 0.73 | 527 | 2.13M |
+| near (no LOD) | 3 | 3585 | 1.57 | 1.90 | 0.31 | 1.28 | 1002 | 5.93M |
+| noshadow | 3 | 3585 | 0.94 | 1.23 | 0.22 | 0.66 | 472 | 1.80M |
+| mid everywhere | 3 | 3585 | 0.92 | 1.21 | 0.26 | 0.63 | 699 | 1.84M |
+| far everywhere | 3 | 3585 | 0.58 | 0.89 | 0.17 | 0.27 | 295 | 0.20M |
+| lods | 5 | 9167 | 1.06 | 1.48 | 0.39 | 0.76 | 746 | 2.22M |
+| near (no LOD) | 5 | 9167 | 2.03 | 2.46 | 0.43 | 1.73 | 1396 | 8.92M |
+| lods | 7 | 17112 | 1.10 | 1.54 | 0.48 | 0.79 | 1021 | 2.34M |
+| lods, 1080p | 3 | 3585 | 1.21 | 1.48 | 0.25 | 0.91 | 534 | 2.13M |
+| near, 1080p | 3 | 3585 | 1.80 | 2.12 | 0.35 | 1.50 | 1018 | 6.02M |
+| lods, 1080p | 7 | 17112 | 1.29 | 1.74 | 0.50 | 0.99 | 1024 | 2.34M |
+
+(Primitives include the shadow passes.) **Read:** the LODs halve the trees' GPU time and draw calls and cut the
+triangles to a third (0.73 against 1.28 ms GPU at the game's radius; 0.76 against 1.73 at radius 5). **Far trees
+need nothing more:** going from 3,585 to 17,112 trees (radius 3 to 7) adds 0.06 ms of GPU and 0.24 ms of CPU,
+because the far LOD is 10-86 triangles and casts no shadow, so impostors would save almost nothing. What's left
+is the near LOD (0-24 m to a chunk's centre, so trees up to ~35 m away) and its shadows: if trees ever need to
+be cheaper (the low-end goal), the levers are a finer LOD grid (8 x 8-tile cells, so fewer trees get the near
+LOD), a mid-LOD shadow proxy, or a lighter near LOD; dropping the mid LOD's shadows saves only 0.07 ms.
 
 ## Left for later
 

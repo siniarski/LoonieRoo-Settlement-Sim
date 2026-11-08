@@ -24,6 +24,11 @@ public sealed class Trees
     const int CHUNK = WorldMesh.CHUNK;
     /// <summary>Chunks this far (in chunks) from yours have trees (FirstPerson's chunk radius).</summary>
     const int RADIUS = 3;
+
+    /// <summary>Knobs for the tree bench (TreeBench.cs), not the game: the chunk radius, one LOD everywhere
+    /// (-1: the LODs by range), whether the mid LOD casts shadows.</summary>
+    public static int BenchRadius = RADIUS, BenchLod = -1;
+    public static bool BenchMidShadows = true;
     const int BUILDS_PER_FRAME = 4;
     /// <summary>Frames between looks at whether a built chunk's trees changed.</summary>
     const int CHECK_EVERY = 30;
@@ -107,8 +112,8 @@ public sealed class Trees
         int maxX = (g.width - 1) / CHUNK, maxY = (g.height - 1) / CHUNK;
         bool check = ++frame % CHECK_EVERY == 0;
         var want = new List<(int d, int x, int y)>();
-        for (int y = Math.Max(0, ccy - RADIUS); y <= Math.Min(maxY, ccy + RADIUS); y++)
-            for (int x = Math.Max(0, ccx - RADIUS); x <= Math.Min(maxX, ccx + RADIUS); x++)
+        for (int y = Math.Max(0, ccy - BenchRadius); y <= Math.Min(maxY, ccy + BenchRadius); y++)
+            for (int x = Math.Max(0, ccx - BenchRadius); x <= Math.Min(maxX, ccx + BenchRadius); x++)
                 want.Add((Math.Max(Math.Abs(x - ccx), Math.Abs(y - ccy)), x, y));
         want.Sort((a, b) => a.d.CompareTo(b.d));
         int built = 0;
@@ -126,7 +131,7 @@ public sealed class Trees
         }
         var drop = new List<(int, int)>();
         foreach (var (k, c) in chunks)
-            if (Math.Max(Math.Abs(k.Item1 - ccx), Math.Abs(k.Item2 - ccy)) > RADIUS + 1) drop.Add(k);
+            if (Math.Max(Math.Abs(k.Item1 - ccx), Math.Abs(k.Item2 - ccy)) > BenchRadius + 1) drop.Add(k);
         foreach (var k in drop)
         {
             foreach (var n in chunks[k].nodes) n.QueueFree();
@@ -197,15 +202,16 @@ public sealed class Trees
             if (treeAt[s].Count == 0) continue;
             for (int l = 0; l < 3; l++)
             {
+                if (BenchLod >= 0 && l != BenchLod) continue;
                 var items = new List<(Transform3D, Color)>();
                 foreach (var (_, t, c) in treeAt[s]) items.Add((t, c));
                 var node = Instances(trees[s, l], items);
-                var (begin, end) = LOD_RANGE[l];
+                var (begin, end) = BenchLod >= 0 ? (0f, 0f) : LOD_RANGE[l];
                 node.VisibilityRangeBegin = begin;
                 node.VisibilityRangeBeginMargin = begin > 0 ? LOD_MARGIN : 0;
                 node.VisibilityRangeEnd = end;
                 node.VisibilityRangeEndMargin = end > 0 ? LOD_MARGIN : 0;
-                node.CastShadow = l < 2 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
+                node.CastShadow = l == 0 || (l == 1 && BenchMidShadows) ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
                 nodes.Add(node);
             }
         }
