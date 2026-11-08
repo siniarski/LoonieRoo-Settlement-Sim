@@ -75,5 +75,11 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   LODs, a bush and a fern, vertex colours, alpha-cut leaf cards near, the leaf atlas painted by numpy (~4 s):
   `"$B" --background --factory-startup --python art/scripts/build_trees.py -- --glb godot/assets/trees/trees.glb
   --tex godot/assets/trees/leaves.png [--preview lineup.png]`, then re-import in Godot.
+- `scripts/build_items.py`: the things lying on the ground in first person, one low-poly model per item kind (the
+  sim's 21: wood, food, meal, bandage, medicine, medkit, weapon, cloth, coat, armour, boots, gun, ammo, corpse, book,
+  cart, axe, hammer, sample, scrap, fuel), 36-232 triangles each, boxes and cylinders in vertex colours (alpha is
+  metalness), one mesh per kind named after it (~1 s): `"$B" --background --factory-startup --python
+  art/scripts/build_items.py -- --glb godot/assets/items/items.glb [--preview lineup.png]`, then re-import in Godot.
+  A new item kind wants a function here (until then it's a grey box).
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.
