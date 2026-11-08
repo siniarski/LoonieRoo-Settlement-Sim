@@ -91,7 +91,7 @@ public sealed class Dresser
 {
     readonly Dictionary<string, MeshInstance3D> pieces = new();  // mesh name -> piece
     readonly Dictionary<string, MeshInstance3D> body = new();    // region -> body mesh
-    static readonly string[] BodyRegions = { "torso", "head", "upperarm_Left", "forearm_Left", "hand_Left", "upperarm_Right", "forearm_Right", "hand_Right", "thigh_Left", "shin_Left", "foot_Left", "thigh_Right", "shin_Right", "foot_Right" };
+    public static readonly string[] BodyRegions = { "torso", "head", "upperarm_Left", "forearm_Left", "hand_Left", "upperarm_Right", "forearm_Right", "hand_Right", "thigh_Left", "shin_Left", "foot_Left", "thigh_Right", "shin_Right", "foot_Right" };
 
     public Dresser(Node3D character, Skeleton3D skel)
     {
@@ -123,28 +123,40 @@ public sealed class Dresser
         return all;
     }
 
-    /// <summary>Show the outfit: garments by layer, body regions they cover hidden, cut regions hidden.</summary>
-    public void Apply(Outfit o, ISet<string> cut)
+    /// <summary>What shows of an outfit: the body regions left bare and the garment pieces on view
+    /// (garments by layer, body regions they cover hidden, cut regions hidden).</summary>
+    public static (List<string> body, List<(GarmentDef g, GarmentPiece p)> pieces) Plan(Outfit o, ISet<string> cut)
     {
         var worn = o.Worn.Values.Where(Garments.Defs.ContainsKey).Select(id => Garments.Defs[id]).ToList();
         var inRegion = worn.SelectMany(g => g.Pieces.Select(p => (g, p))).GroupBy(x => x.p.Region).ToDictionary(x => x.Key, x => x.ToList());
+        var bare = BodyRegions.Where(r => !cut.Contains(r) && !(inRegion.TryGetValue(r, out var list) && list.Any(x => x.p.Full))).ToList();
+        var shown = worn.SelectMany(g => g.Pieces.Select(p => (g, p)))
+            .Where(x => !cut.Contains(x.p.Region) && !inRegion[x.p.Region].Any(y => y.g.Layer > x.g.Layer && (y.p.Full || y.p.HidesLower)))
+            .ToList();
+        return (bare, shown);
+    }
+
+    /// <summary>A garment's pattern seed (before the character's own), so two garments don't tear alike.</summary>
+    public static int GarmentSeed(string id) => id.Sum(ch => ch) % 97;
+
+    /// <summary>Show the outfit (Plan), with its colours and conditions.</summary>
+    public void Apply(Outfit o, ISet<string> cut)
+    {
+        var (bare, shown) = Plan(o, cut);
         foreach (var (region, mesh) in body)
         {
-            bool covered = inRegion.TryGetValue(region, out var list) && list.Any(x => x.p.Full);
-            mesh.Visible = !cut.Contains(region) && !covered;
+            mesh.Visible = bare.Contains(region);
             mesh.SetInstanceShaderParameter("tint", new Color(Garments.Skin, 0));
             mesh.SetInstanceShaderParameter("wear", new Vector4((float)(o.Dirt * 0.6), (float)(o.Blood * 0.6), 0, (float)o.Wet));
         }
         foreach (var m in pieces.Values) m.Visible = false;
-        foreach (var g in worn)
-            foreach (var p in g.Pieces)
-            {
-                if (!pieces.TryGetValue(p.Mesh, out var m)) continue;
-                bool under = inRegion[p.Region].Any(x => x.g.Layer > g.Layer && (x.p.Full || x.p.HidesLower));
-                m.Visible = !cut.Contains(p.Region) && !under;
-                m.SetInstanceShaderParameter("tint", new Color(o.ColorOf(g.Id), g.Id.Sum(ch => ch) % 97 + Seed));
-                m.SetInstanceShaderParameter("wear", new Vector4((float)o.Dirt, (float)o.Blood, (float)o.Torn, (float)o.Wet));
-            }
+        foreach (var (g, p) in shown)
+        {
+            if (!pieces.TryGetValue(p.Mesh, out var m)) continue;
+            m.Visible = true;
+            m.SetInstanceShaderParameter("tint", new Color(o.ColorOf(g.Id), GarmentSeed(g.Id) + Seed));
+            m.SetInstanceShaderParameter("wear", new Vector4((float)o.Dirt, (float)o.Blood, (float)o.Torn, (float)o.Wet));
+        }
     }
 
     public float Seed;  // per character, so two people's shirts don't tear alike

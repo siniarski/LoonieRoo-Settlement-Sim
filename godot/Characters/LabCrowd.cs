@@ -1,7 +1,8 @@
 // The character lab, part three: a crowd for stress testing, with the LOD tiers of
 // docs/characters.md section 7 (and the numbers from the anim bench, experiments/anim-bench):
 //   near  the 14-mesh region build with an AnimationTree, updated every frame
-//   mid   the merged one-mesh build with an AnimationPlayer, updated at the chosen rate
+//   mid   one mesh with an AnimationPlayer, updated at the chosen rate; dressed in the same random
+//         outfit as near, merged into that one mesh (OutfitMerge.cs), or bare (--midbare)
 //         (every frame, or 30/20/15 fps staggered across frames)
 //   auto  near within the near radius (at most the near budget, nearest first), mid beyond;
 //         re-sorted four times a second, with a metre of hysteresis so nobody flickers
@@ -33,6 +34,7 @@ public partial class Lab
     }
 
     readonly List<Member> crowd = new();
+    bool midDressed = true;
     int crowdCount, lodMode = 2, rateIndex = 2, nearBudget = 40, ratePhase;
     double nearRadius = 8, crowdRebuildAt = -1, lodTimer, frameMsSmooth;
     PackedScene? regionScene, mergedScene;
@@ -57,18 +59,22 @@ public partial class Lab
         lodRow.AddChild(ratePick);
         box.AddChild(lodRow);
         Slider(box, "Near budget", 0, 200, 1, nearBudget, v => nearBudget = (int)v);
+        var dressBox = new CheckBox { Text = "Dress the mid tier (one merged mesh)", ButtonPressed = midDressed };
+        dressBox.Toggled += on => { midDressed = on; crowdRebuildAt = Time.GetTicksMsec(); };
+        box.AddChild(dressBox);
         Slider(box, "Near radius m", 2, 40, 0.5, nearRadius, v => nearRadius = v);
         crowdStats = new Label();
         crowdStats.AddThemeFontOverride("font", new SystemFont { FontNames = new[] { "Consolas", "Courier New", "monospace" } });
         crowdStats.AddThemeFontSizeOverride("font_size", 13);
         box.AddChild(crowdStats);
-        box.AddChild(new Label { Text = "near: 14 meshes + AnimationTree, every frame\nmid: 1 mesh + AnimationPlayer at the mid rate\nZoom out (wheel) to see them all.", Modulate = new Color(1, 1, 1, 0.6f) });
+        box.AddChild(new Label { Text = "near: 14 meshes + clothes + AnimationTree, every frame\nmid: 1 merged mesh + AnimationPlayer at the mid rate\nZoom out (wheel) to see them all.", Modulate = new Color(1, 1, 1, 0.6f) });
     }
 
     void SetupCrowd(Dictionary<string, string> args)
     {
         if (args.TryGetValue("crowd", out var c)) crowdCount = int.Parse(c);
         if (args.TryGetValue("lod", out var l)) lodMode = Math.Max(0, Array.IndexOf(LodModes, l));
+        if (args.ContainsKey("midbare")) midDressed = false;
         if (args.TryGetValue("rate", out var r)) rateIndex = Math.Max(0, Array.IndexOf(Rates, int.Parse(r)));
         if (crowdCount > 0) RebuildCrowd();
     }
@@ -154,6 +160,7 @@ public partial class Lab
         }
         else
         {
+            if (midDressed) DressMid(node, crowd.IndexOf(m));  // mid: the same random outfit, merged
             player.Play(clip);
             player.Seek(m.Phase, true);
             player.SpeedScale = (float)Lerp(StandRates, m.Gait);
@@ -200,13 +207,14 @@ public partial class Lab
         }
         frameMsSmooth = frameMsSmooth * 0.95 + delta * 1000 * 0.05;
         if (trace && crowd.Count > 0 && (ulong)Time.GetTicksMsec() % 2000 < 17)
-            GD.Print($"crowd: {crowd.Count} ({crowd.Count(m => m.Tier == 0)} near) frame {frameMsSmooth:0.0} ms, draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}");
+            GD.Print($"crowd: {crowd.Count} ({crowd.Count(m => m.Tier == 0)} near) frame {frameMsSmooth:0.0} ms, draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}, merged {OutfitMerge.Merges} meshes in {OutfitMerge.MergeMs:0.0} ms (sources read once in {OutfitMerge.LoadMs:0} ms)");
         if (crowdStats != null)
         {
             int near = crowd.Count(m => m.Tier == 0), mid = crowd.Count - near;
             crowdStats.Text = $"humanoids  {crowd.Count + 1} ({near} near, {mid} mid, +you)\n" +
                               $"frame      {frameMsSmooth:0.0} ms ({Engine.GetFramesPerSecond():0} fps)\n" +
-                              $"draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}";
+                              $"draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}\n" +
+                              $"merged     {OutfitMerge.Merges} meshes, {OutfitMerge.MergeMs:0.0} ms in all";
         }
     }
 

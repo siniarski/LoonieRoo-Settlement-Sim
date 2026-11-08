@@ -39,9 +39,9 @@ editor: open the scene and press F6 (Run Current Scene). The panel's tabs:
 - **Body:** survivor states (panic, fatigue, cold, pain sliders; Startle; Zombie skips them), a face view, and
   missing limbs (a cut per limb).
 - **Clothes:** a garment and colour per slot (shirt, jacket, legs, feet, hands, head, back), dirt, blood, torn,
-  wet, a random outfit (the near crowd is dressed at random too).
+  wet, a random outfit; Mid twin shows the same outfit merged into one mesh beside the character (OutfitMerge.cs).
 - **Ground:** flat, a 15 cm kerb, a hill (slope slider), stairs (18 cm rise); foot IK on or off.
-- **Crowd:** up to 2,000 more humanoids; LOD near (14 meshes + AnimationTree), mid (1 mesh + AnimationPlayer at a
+- **Crowd:** up to 2,000 more humanoids in random outfits; LOD near (14 meshes + clothes + AnimationTree), mid (1 merged mesh + AnimationPlayer at a
   chosen rate: every frame, 30, 20 or 15 fps) or auto (near within a radius up to a budget, mid beyond); frame time
   and draw calls.
 - **Hands:** a weapon (pistol, rifle, knife, bat) held by hand IK; guns ready or aimed at eye level (F), aim pitch,
@@ -54,7 +54,7 @@ Z rest on the back, F aim, right-drag orbit, wheel zoom. From the command line (
 humanoid profile), `--shot=out.png --frames=N`, `--speed= --crouch= --stance=rest|prone --style= --view=`,
 `--lose=armLeft:elbow,legRight:knee`, `--ground=hill --slope=25 --noik`, `--crowd=1000 --lod=auto --rate=20`,
 `--weapon=rifle --aim=10 --raised --door=quiet --nohandik`, `--panic= --fatigue= --cold= --pain= --startle --zombie --view=face`,
-`--outfit=shirt,jacket,trousers,boots --dirt= --blood= --torn= --wet= --randomoutfit=SEED`, `--clip=ual_walk --clipat=0.4` (a library clip, held at 0.4 s), `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
+`--outfit=shirt,jacket,trousers,boots --dirt= --blood= --torn= --wet= --randomoutfit=SEED --twin` (a mid-tier copy beside the character), `--midbare` (the crowd's mid tier undressed), `--clip=ual_walk --clipat=0.4` (a library clip, held at 0.4 s), `--tab=Crowd --zoom=30 --novsync --trace`, and the tests
 `--iktest=DIR` (feet on the kerb, hill and stairs, facing round, IK on and off) and `--handtest=DIR` (every weapon
 and the door); experiments/ik-test has a run of each.
 

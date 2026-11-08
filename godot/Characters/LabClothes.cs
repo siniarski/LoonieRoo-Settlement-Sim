@@ -1,10 +1,10 @@
 // The character lab, part six: clothes (Wardrobe.cs). A garment per slot with a colour, the
-// outfit's condition (dirt, blood, torn, wet), a random outfit; the near tier of the crowd gets
-// random outfits too (the mid tier's merged mesh is still bare: merging an outfit into one mesh is
-// still to do).
+// outfit's condition (dirt, blood, torn, wet), a random outfit; the crowd gets random outfits too,
+// near as pieces, mid merged into one mesh (OutfitMerge.cs). The mid twin shows the merge beside
+// the character.
 //
 //   --outfit=shirt,jacket,trousers,boots,gloves,cap,backpack --dirt= --blood= --torn= --wet=
-//   --randomoutfit=SEED
+//   --randomoutfit=SEED --twin
 
 using System;
 using System.Collections.Generic;
@@ -32,6 +32,7 @@ public partial class Lab
         if (args.TryGetValue("blood", out var b)) outfit.Blood = Num(b);
         if (args.TryGetValue("torn", out var t)) outfit.Torn = Num(t);
         if (args.TryGetValue("wet", out var w)) outfit.Wet = Num(w);
+        if (args.ContainsKey("twin")) SetTwin(true);
         ApplyClothes();
     }
 
@@ -66,6 +67,9 @@ public partial class Lab
         var row = new HBoxContainer();
         row.AddChild(Btn("Random outfit", () => { outfit = Outfit.Random(outfitRng); ApplyClothes(); SyncClothes(); }));
         row.AddChild(Btn("Undress", () => { outfit = new Outfit(); ApplyClothes(); SyncClothes(); }));
+        var twinBox = new CheckBox { Text = "Mid twin", ButtonPressed = twin != null };
+        twinBox.Toggled += SetTwin;
+        row.AddChild(twinBox);
         box.AddChild(row);
         SyncClothes();
     }
@@ -99,17 +103,56 @@ public partial class Lab
         return cut;
     }
 
-    void ApplyClothes() => dresser?.Apply(outfit, CutRegions());
+    void ApplyClothes()
+    {
+        dresser?.Apply(outfit, CutRegions());
+        ApplyTwin();
+    }
 
-    string ClothesReadout() => outfit.Worn.Count == 0 ? "" : $"wearing  {string.Join(", ", Garments.Slots.Where(outfit.Worn.ContainsKey).Select(s => outfit.Worn[s]))}";
+    string ClothesReadout() => (outfit.Worn.Count == 0 ? "" : $"wearing  {string.Join(", ", Garments.Slots.Where(outfit.Worn.ContainsKey).Select(s => outfit.Worn[s]))}") +
+                               (twin != null ? (outfit.Worn.Count == 0 ? "" : "\n") + twinInfo : "");
 
-    /// <summary>A crowd member of the near tier, dressed at random (stable per member).</summary>
+    /// <summary>A crowd member's outfit: random, stable per member (the same at near and mid).</summary>
+    static Outfit CrowdOutfit(int index) => Outfit.Random(new RandomNumberGenerator { Seed = (ulong)(index * 7919 + 13) });
+
+    /// <summary>A crowd member of the near tier: the outfit's pieces on its skeleton.</summary>
     static void DressCrowd(Node3D node, int index)
     {
-        var rng = new RandomNumberGenerator { Seed = (ulong)(index * 7919 + 13) };
         var d = new Dresser(node, Find<Skeleton3D>(node)!) { Seed = index % 50 };
-        var o = Outfit.Random(rng);
+        var o = CrowdOutfit(index);
         d.KeepOnly(o);
         d.Apply(o, new HashSet<string>());
     }
+
+    /// <summary>A crowd member of the mid tier: the same outfit merged into its one mesh.</summary>
+    static void DressMid(Node3D node, int index) =>
+        OutfitMerge.Dress(Find<MeshInstance3D>(node)!, CrowdOutfit(index), new HashSet<string>(), index % 50);
+
+    // The mid twin (--twin, or the Clothes tab): a mid-tier copy of the lab's character, 1.2 m to its
+    // left, in the same outfit merged into one mesh, standing idle: near and mid side by side.
+    Node3D? twin;
+
+    void SetTwin(bool on)
+    {
+        twin?.QueueFree();
+        twin = null;
+        if (!on) return;
+        twin = GD.Load<PackedScene>(MergedMannequin).Instantiate<Node3D>();
+        actor.AddChild(twin);
+        twin.Position = new Vector3(1.2f, 0, 0);  // the character's left (it faces +Z): screen right from the front
+        var player = Find<AnimationPlayer>(twin)!;
+        player.GetAnimationLibrary("").GetAnimation("idle").LoopMode = Animation.LoopModeEnum.Linear;
+        player.Play("idle");
+        ApplyTwin();
+    }
+
+    void ApplyTwin()
+    {
+        if (twin == null) return;
+        OutfitMerge.Dress(Find<MeshInstance3D>(twin)!, outfit, CutRegions(), 0);
+        var m = (ArrayMesh)Find<MeshInstance3D>(twin)!.Mesh;
+        twinInfo = $"mid twin {OutfitMerge.Triangles(m)} tris, 1 surface; near {dresser?.VisiblePieces ?? 0} garment pieces";
+    }
+
+    string twinInfo = "";
 }

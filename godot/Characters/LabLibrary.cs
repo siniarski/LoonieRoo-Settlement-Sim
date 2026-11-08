@@ -29,7 +29,9 @@ public partial class Lab
     // After the lab's layers: lib (Blend2) = [layers, seek -> rate -> clip].
     string BuildLibraryLayer(AnimationNodeBlendTree root, string last)
     {
-        root.AddNode("libClip", new AnimationNodeAnimation());
+        // Never left without a clip: an AnimationNodeAnimation with none stops the whole tree (the
+        // character stood in its rest pose) even at blend 0. "idle" until a library clip is picked.
+        root.AddNode("libClip", new AnimationNodeAnimation { Animation = "idle" });
         root.AddNode("libRate", new AnimationNodeTimeScale());
         root.AddNode("libSeek", new AnimationNodeTimeSeek());
         root.AddNode("lib", new AnimationNodeBlend2());
