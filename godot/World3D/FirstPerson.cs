@@ -37,6 +37,8 @@ public sealed partial class FirstPerson : Node3D
     readonly ItemModels items;
     readonly FurnitureModels furniture;
     readonly Held held;
+    /// <summary>What you hold (the self-test).</summary>
+    public Held Held => held;
     readonly People people;
     /// <summary>The people drawn (the self-test reads their footfalls).</summary>
     public People People => people;

@@ -188,6 +188,7 @@ public partial class Game
         float after = World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 1).eye.Y;
         Check("Space jumps: the eye rises and lands, and the game plays on", Leaps.isLeap(leap) && top > ground + 0.1f && Math.Abs(after - ground) < 0.05f && !view.halted && state.tick > tick,
             $"{leap}, eye {ground:0.00} -> top {top:0.00} -> {after:0.00}, tick {tick} -> {state.tick}");
+        await HeldSteps();
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
@@ -271,9 +272,11 @@ public partial class Game
 
         // Play on a little, then load slot 3 back: the clock goes back to when it was saved.
         await Frames(20);
+        int played = state.tick;
         Load("3");
         await Frames(2);
-        Check("Load slot 3 brings the save back", state.tick == savedTick, $"tick {state.tick}, saved at {savedTick}");
+        // The game plays on at once after a load, and the frame's leftover time can run a tick in those 2 frames.
+        Check("Load slot 3 brings the save back", played > savedTick + 1 && state.tick >= savedTick && state.tick <= savedTick + 1, $"tick {played} -> {state.tick}, saved at {savedTick}");
 
         await SoundTest();
 
@@ -288,6 +291,41 @@ public partial class Game
     }
 
     /// <summary>B (the Colony tab), the HUD's Menu button, New game, a preset, Next, Start: checks you're in first person on your survivor.</summary>
+    /// <summary>What you hold: a club in your right hand, a click swings it, a rifle takes both hands.
+    /// The items are put in your hands directly (setup, like the sound test's zombie), then taken away.</summary>
+    async Task HeldSteps()
+    {
+        var you = ControlMod.controlled(state)!;
+        var held = firstPerson.Held;
+        string? had = you.weapon;
+        Item Arm(string kind)
+        {
+            var item = Sim.Items.spawnItem(state, kind, you.pos.x, you.pos.y);
+            item.pos = null;
+            item.carriedBy = you.id;
+            you.weapon = item.id;
+            return item;
+        }
+        var club = Arm("weapon");
+        await Frames(30);
+        Check("A club in hand is drawn in your right hand, one-handed", held.Right.StartsWith("weapon") && held.RightHand && !held.TwoHanded, $"right '{held.Right}', two-handed {held.TwoHanded}");
+        var rest = held.RightAt;
+        double swung = state.control!.swungTick ?? -1;
+        await Click(GetViewport().GetVisibleRect().GetCenter());
+        float far = 0;
+        for (int i = 0; i < 8; i++) { await Frames(1); far = Math.Max(far, held.RightAt.DistanceTo(rest)); }
+        Check("A click swings the club: the hand moves through the blow", (state.control!.swungTick ?? -1) > swung && far > 0.15f, $"swungTick {swung} -> {state.control!.swungTick}, moved {far:0.00} m");
+        for (int i = 0; i < 40 && held.RightAt.DistanceTo(rest) > 0.03f; i++) await Frames(1);
+        Check("And comes back to rest", held.RightAt.DistanceTo(rest) < 0.03f, $"{held.RightAt.DistanceTo(rest):0.000} m off");
+        Sim.Items.removeItem(state, club);
+        var gun = Arm("gun");
+        await Frames(30);
+        Check("A rifle is held in both hands", held.Right.StartsWith("gun") && held.TwoHanded && held.RightHand && held.LeftHand, $"right '{held.Right}', two-handed {held.TwoHanded}");
+        Sim.Items.removeItem(state, gun);
+        you.weapon = had;
+        await Frames(2);
+    }
+
     async Task NewGameFromMenu(string preset, string start)
     {
         await Tap(Godot.Key.B);

@@ -531,22 +531,53 @@ VARIANTS = {
 }
 
 
-# --- the hand: a gloved fist round a handle and a sleeved forearm, for what you hold in first person
-# (godot/World3D/Held.cs), a stand-in until the first-person arms rig (docs/characters.md). The handle runs
-# along X through the origin (where an item's grip goes), the knuckles up (+Z); the forearm runs from the
-# wrist out along -Y (in the game the mesh's +Z, towards you).
+# --- the hand: a gloved hand round a handle and a sleeved forearm, for what you hold in first person
+# (godot/World3D/Held.cs; the left hand is the same model mirrored). The handle runs along X through the
+# origin (where an item's grip goes), the back of the hand on top (+Z); the fingers come over the front
+# (+Y) and curl under the handle, the thumb wraps under from the -Y side; the forearm runs from the wrist
+# out along -Y (in the game the mesh's +Z, towards you). Index finger and thumb towards +X (the item's
+# working end). Made for a grip about 2.5 cm round (a club's tape); thinner handles sit loose.
 
-GLOVE = lin(62, 54, 44)
-SLEEVE = lin(58, 64, 56)
+GLOVE = lin(70, 58, 44)
+GLOVE_D = lin(48, 40, 32)
+SLEEVE = lin(62, 70, 60)
+SLEEVE_D = lin(44, 50, 44)
+
+
+def bar(g, a, b, w, h, col, taper=1.0):
+    """A box from point a to point b (both at the same x), w wide (x) and h thick, its section centred on
+    the line: a finger bone, a palm."""
+    dy, dz = b[1] - a[1], b[2] - a[2]
+    length = math.sqrt(dy * dy + dz * dz)
+    rx = math.degrees(math.atan2(-dy, dz))
+    box(g, (w, h, length), a, col, rx=rx, taper=taper)
 
 
 def hand(g):
-    box(g, (0.085, 0.07, 0.08), (0, 0, -0.04), GLOVE, taper=0.92, top=mul(GLOVE, 1.15))
-    for k in range(4):
-        box(g, (0.019, 0.012, 0.022), (-0.03 + 0.02 * k, 0.035, 0.0), mul(GLOVE, 0.8))
-    box(g, (0.05, 0.022, 0.022), (0.02, 0.02, 0.025), mul(GLOVE, 1.08), rz=-15)
-    cyl(g, 0.034, 0.08, (0, -0.03, 0), GLOVE, seg=8, rx=90, caps=GLOVE)
-    cyl(g, 0.045, 0.32, (0, -0.1, 0), SLEEVE, seg=8, rx=90, r2=0.052, caps=mul(SLEEVE, 0.8))
+    ring = 0.036  # the fingers' centre line round the handle
+    def at(x, deg, r=ring):
+        a = math.radians(deg)
+        return (x, r * math.sin(a), r * math.cos(a))
+    # The back of the hand: from the wrist to the knuckles, over the handle.
+    bar(g, (0, -0.085, 0.022), (0, -0.004, ring - 0.002), 0.084, 0.03, GLOVE)
+    # The heel of the palm, behind the handle, and the palm's pad under the knuckles.
+    bar(g, (0, -0.06, 0.012), (0, -0.034, -0.026), 0.078, 0.032, GLOVE_D)
+    # Four fingers, three bones each, curled round: index at +X, the little finger shorter.
+    for k, (x, w, end) in enumerate(((0.03, 0.02, 215), (0.01, 0.021, 220), (-0.01, 0.02, 212), (-0.029, 0.017, 195))):
+        joints = [at(x, -6), at(x, 70), at(x, 145), at(x, end, ring - 0.004)]
+        for j in range(3):
+            c = GLOVE if j < 2 else GLOVE_D
+            bar(g, joints[j], joints[j + 1], w * (1 - 0.08 * j), 0.019 - 0.002 * j, c)
+        # The knuckle, a little proud on top.
+        box(g, (w * 0.9, 0.016, 0.01), (x, -0.004, ring + 0.004), mul(GLOVE, 1.15))
+    # The thumb: from the palm's side, under the handle, its tip over the middle finger.
+    bar(g, (0.04, -0.045, -0.004), (0.046, -0.012, -0.038), 0.024, 0.022, GLOVE)
+    bar(g, (0.046, -0.012, -0.038), (0.042, 0.02, -0.036), 0.021, 0.019, GLOVE_D)
+    # The wrist, the glove's cuff, then the sleeve (its own cuff), tapering out to the elbow.
+    cyl(g, 0.029, 0.05, (0, -0.07, 0.008), GLOVE, seg=8, rx=90, caps=GLOVE)
+    cyl(g, 0.035, 0.03, (0, -0.095, 0.008), GLOVE_D, seg=10, rx=90, caps=GLOVE_D)
+    cyl(g, 0.045, 0.035, (0, -0.115, 0.008), SLEEVE_D, seg=10, rx=90, caps=SLEEVE_D)
+    cyl(g, 0.043, 0.32, (0, -0.145, 0.008), SLEEVE, seg=10, rx=90, r2=0.054, caps=mul(SLEEVE, 0.8))
 
 
 # --- out to Blender, the glTF and a preview ---
