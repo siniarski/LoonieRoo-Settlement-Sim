@@ -5,6 +5,8 @@
 //   character  who you are (CharacterMod): a name, a profession, traits for points; Start
 //   load       the save slots, the autosave, and a file
 //   howto      How to play
+//   options    Graphics: view and detail distance, far trees, shadows, character models, resolution, anti-aliasing
+//              (Graphics.cs: saved to the player's settings file and applied at once)
 // It only calls the actions the game hands it.
 
 using System;
@@ -131,6 +133,7 @@ public sealed partial class Menu : Control
             case "new": NewGame(r); break;
             case "character": CharacterScreen(r); break;
             case "howto": HowTo(r); break;
+            case "options": OptionsScreen(r); break;
             default: LoadScreen(r); break;
         }
     }
@@ -154,6 +157,7 @@ public sealed partial class Menu : Control
         r.Button("New game", () => Go("new"));
         r.Button("Load", () => Go("load"));
         r.Button("How to play", () => Go("howto"));
+        r.Button("Options", () => Go("options"));
         var sound = r.Row();
         sound.Text("Volume", Kit.Dim);
         var slider = sound.Add(new HSlider { MinValue = 0, MaxValue = 100, Step = 5, Value = Audio.Volume.Level * 100, CustomMinimumSize = new Vector2(160, 0), FocusMode = FocusModeEnum.None, Name = "Volume" });
@@ -169,10 +173,11 @@ public sealed partial class Menu : Control
         }
     }
 
-    void Choose<T>(GridContainer grid, string label, IEnumerable<(T value, string text)> options, T value, Action<T> set)
+    OptionButton Choose<T>(GridContainer grid, string label, IEnumerable<(T value, string text)> options, T value, Action<T> set, string? name = null)
     {
         grid.AddChild(Kit.Label(label, Kit.Dim, 14));
         var select = new OptionButton { FocusMode = FocusModeEnum.None };
+        if (name != null) select.Name = name;
         var list = options.ToList();
         for (int i = 0; i < list.Count; i++)
         {
@@ -181,6 +186,7 @@ public sealed partial class Menu : Control
         }
         select.ItemSelected += (i) => set(list[(int)i].value);
         grid.AddChild(select);
+        return select;
     }
 
     void NewGame(Rows r)
@@ -278,6 +284,32 @@ public sealed partial class Menu : Control
             actions.NewGame(size, Copy(settings), n, new Character { name = you.name, job = you.job, traits = new(you.traits) });
         }, disabled: CharacterMod.characterProblem(you) != null));
         r.Button("Back", () => Go("new"));
+    }
+
+    /// <summary>The graphics options (Graphics.cs): each choice applies at once and is saved.</summary>
+    void OptionsScreen(Rows r)
+    {
+        r.Text("Options", Kit.Title).AddThemeFontSizeOverride("font_size", 18);
+        r.Text("Graphics", Kit.Gold);
+        var grid = r.Add(new GridContainer { Columns = 2 });
+        grid.AddThemeConstantOverride("h_separation", 12);
+        var o = Graphics.Current;
+        void Set(Action<Graphics.Options> change) { Graphics.Set(change); shown = ""; }
+        Choose(grid, "View distance", Graphics.VIEWS.Select((v) => (v, v == 0 ? "Near only (about 60 m)" : $"{v} m")), Graphics.View, (v) => Set((x) => x.view = v), "View");
+        Choose(grid, "Detail distance", Graphics.DETAILS.Select((d) => (d, $"{d * 16 + 8} m{(d == 3 ? " (normal)" : "")}")), Graphics.Detail, (v) => Set((x) => x.detail = v), "Detail");
+        Choose(grid, "Far trees", new[] { ("off", "Off"), ("simple", "Simple"), ("detailed", "Detailed") }, o.farTrees, (v) => Set((x) => x.farTrees = v), "FarTrees");
+        Choose(grid, "Shadows", new[] { ("off", "Off"), ("low", "Low (24 m)"), ("medium", "Medium (40 m)"), ("high", "High (80 m)") }, o.shadows, (v) => Set((x) => x.shadows = v), "Shadows");
+        Choose(grid, "Character models", Graphics.MODELS.Select((n) => (n, $"Nearest {n}")), o.models, (v) => Set((x) => x.models = v), "Models");
+        Choose(grid, "3D resolution", Graphics.SCALES.Select((s) => (s, $"{s}%")), o.scale, (v) => Set((x) => x.scale = v), "Scale");
+        Choose(grid, "Anti-aliasing", new[] { ("off", "Off"), ("fxaa", "FXAA"), ("msaa", "MSAA 4x") }, o.aa, (v) => Set((x) => x.aa = v), "AA");
+        var notes = new List<string>();
+        if (Graphics.ViewOverride != null) notes.Add($"--view={Graphics.ViewOverride}");
+        if (Graphics.DetailOverride != null) notes.Add($"--detail={Graphics.DetailOverride}");
+        if (notes.Count > 0) r.Text($"The command line's {string.Join(" and ", notes)} hold{(notes.Count == 1 ? "s" : "")} for this run; picking another saves yours.", Ctx.Css("#8f998f"), 600);
+        r.Text("Further and more detailed costs more each frame; less helps a slow machine. Far trees past 350 m are always simple. Changes apply at once (a new distance fills in over a few seconds).", Ctx.Css("#8f998f"), 600);
+        var row = r.Row();
+        row.Button("Defaults", () => { Graphics.Reset(); shown = ""; });
+        row.Button("Back", () => Go("main"));
     }
 
     void HowTo(Rows r)

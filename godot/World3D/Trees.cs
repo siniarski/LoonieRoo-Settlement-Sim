@@ -25,7 +25,8 @@ public sealed class Trees
     /// <summary>Chunks this far (in chunks) from yours have trees (FirstPerson's chunk radius).</summary>
     const int RADIUS = 3;
 
-    /// <summary>Knobs for the tree bench (TreeBench.cs), not the game: the chunk radius, one LOD everywhere
+    /// <summary>Knobs: the chunk radius (the game sets it to FirstPerson.Radius, the options' Detail distance; the tree
+    /// bench, TreeBench.cs, to its own), and for the bench alone one LOD everywhere
     /// (-1: the LODs by range), whether the mid LOD casts shadows.</summary>
     public static int BenchRadius = RADIUS, BenchLod = -1;
     public static bool BenchMidShadows = true;

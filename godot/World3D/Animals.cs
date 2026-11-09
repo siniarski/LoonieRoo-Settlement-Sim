@@ -25,7 +25,8 @@ namespace LoonieRoo.Game.World3D;
 
 public sealed class AnimalModels
 {
-    public const int MAX_MODELS = 40;
+    /// <summary>The options' Character models (Ui/Graphics.cs).</summary>
+    public static int MAX_MODELS = 40;
     const int MAKES_PER_FRAME = 4;
     /// <summary>Further than this (m), an animal isn't drawn (as Bodies' range).</summary>
     const float RANGE = 48;
