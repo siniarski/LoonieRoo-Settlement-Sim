@@ -502,11 +502,17 @@ public partial class SoloHarness
     {
         var c = Js.NN(state.control);
         var shot = (Js.T(Weapons.loadedGun(state, s)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, a.pos);
-        if (Js.T(Js.T(shot) || (dist(a.pos, s.pos) <= 1)))
+        // Animals move freely (Walkers.cs): swing once it's within real reach, aimed at where it is (as at the dead).
+        var reach = Motion.inReach(s, a, Motion.SWING_REACH, state.grid);
+        if (Js.T(Js.T(shot) || reach))
         {
             if (Js.T(Js.T(c.dx) || Js.T(c.dy)))
             {
                 cmd(state, new Command { type = "steer", dx = 0, dy = 0 });
+            }
+            if (reach)
+            {
+                cmd(state, new Command { type = "aim", x = Js.I((JsMath.max(-64, JsMath.min(64, JsMath.round(((double)((a.at.x - s.at.x)) / (4))))) is var __or0 && Js.T(__or0) ? __or0 : 1)), y = Js.I(JsMath.max(-64, JsMath.min(64, JsMath.round(((double)((a.at.y - s.at.y)) / (4)))))) });
             }
             if (cmd(state, new Command { type = "swing", x = Js.I(a.pos.x), y = Js.I(a.pos.y) }).ok)
             {

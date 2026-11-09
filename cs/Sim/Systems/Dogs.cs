@@ -5,6 +5,8 @@
 // DOG_SENSE it barks (once in a while: it wakes the guards) and goes for it,
 // biting for DOG_BITE. Zombies with nobody else to hit go for the dog.
 // Being near a dog cheers people up.
+// Dogs move freely (Walkers.cs: straight at the zombie or whoever they follow, at any angle, sliding
+// along walls; A* round what's in the way), DOG_TICKS_PER_TILE a tile, biting by reach between `at`s.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -19,6 +21,7 @@ public static partial class Dogs
 
     public const int DOG_BITE_EVERY = 10;
 
+    /// <summary>How fast a dog goes: ticks a tile.</summary>
     public const int DOG_TICKS_PER_TILE = 3;
 
     public const int DOG_FOLLOW = 3;
@@ -53,9 +56,10 @@ public static partial class Dogs
             var dog = addDog(state, spot.x, spot.y);
             Events.logEvent(state, $"A stray dog, {Js.Str(dog.name)}, has wandered in at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
         }
+        var budget = new WalkBudget { plans = PLANS_PER_TICK };
         foreach (var dog in Js.Iter(state.dogs))
         {
-            updateDog(state, dog);
+            updateDog(state, dog, budget);
         }
         if (((state.tick % PET_EVERY) == 0) && (state.dogs.length > 0))
         {
@@ -74,7 +78,13 @@ public static partial class Dogs
         return state.dogs.find((d) => d.id == id);
     }
 
-    public static void updateDog(SimState state, Dog dog)
+    /// <summary>A* plans dogs may make in one tick, all told (rule 14).</summary>
+    public const int PLANS_PER_TICK = 2;
+
+    /// <summary>Following someone, a dog walks until it's this near them (SUB units, centre to centre).</summary>
+    public const int DOG_HEEL = 320;
+
+    public static void updateDog(SimState state, Dog dog, WalkBudget budget)
     {
         dog.cooldown = JsMath.max(0, dog.cooldown - 1);
         if (dog.waiting)
@@ -87,16 +97,9 @@ public static partial class Dogs
             dog.waiting = false;
             Events.logEvent(state, $"{Js.Str(found.name)} found {Js.Str(dog.name)}, waiting at the house");
         }
-        if (Js.T(dog.move))
-        {
-            dog.move.progress += 1;
-            if (dog.move.progress < dog.move.duration)
-            {
-                return;
-            }
-            dog.pos = dog.move.to;
-            dog.move = null;
-        }
+        // A free mover (Walkers.cs): if something moved it by tile, `at` follows.
+        dog.move = null;
+        Motion.followTile(dog);
         var zombie = Js.Get(state.zombies.filter((z) => Space.manhattan(z.pos, dog.pos) <= DOG_SENSE).sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos)), 0);
         if (Js.T(zombie) && ((state.tick - dog.barkedTick) >= BARK_EVERY))
         {
@@ -110,32 +113,30 @@ public static partial class Dogs
             }
             return;
         }
-        if ((state.tick >= dog.nextThinkTick) || (dog.path.length == 0))
-        {
-            dog.nextThinkTick = state.tick + 15;
-            dog.path = plan(state, dog, zombie);
-        }
-        var next = dog.path.shift();
-        if (Js.T(next))
-        {
-            dog.move = new Movement { from = Js.Clone(dog.pos), to = next, progress = 0, duration = DOG_TICKS_PER_TILE };
-        }
-    }
-
-    /// <summary>Towards a zombie if there is one, else to the nearest survivor if they're getting away.</summary>
-    public static List<Point> plan(SimState state, Dog dog, Zombie? zombie)
-    {
+        var speed = Walkers.speedOf(DOG_TICKS_PER_TILE);
         if (Js.T(zombie))
         {
-            return Pathfinding.findPathToAny(state.grid, dog.pos, Grids.neighbours4(state.grid, zombie.pos.x, zombie.pos.y)) ?? [];
+            dog.goal = null;
+            Walkers.walkTo(state, dog, zombie.at, speed, Pathfinding.SURVIVOR, budget, Motion.REACH - 16);
+            return;
         }
+        // Else after the nearest survivor once they're more than DOG_FOLLOW tiles off, until it's at their heel.
         var owner = Js.Get(state.survivors.slice().sort((a, b) => Space.manhattan(a.pos, dog.pos) - Space.manhattan(b.pos, dog.pos)), 0);
-        if (!Js.T(owner) || (Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW))
+        if (!Js.T(owner))
         {
-            return (List<Point>)[];
+            dog.goal = null;
+            return;
         }
-        var path = Pathfinding.findPathToAny(state.grid, dog.pos, Grids.neighbours4(state.grid, owner.pos.x, owner.pos.y)) ?? [];
-        return path.slice(0, 15);
+        if (!Js.T(dog.goal) && (Space.manhattan(owner.pos, dog.pos) <= DOG_FOLLOW))
+        {
+            return;
+        }
+        dog.goal = Js.CopyAs<Point>(owner.at);
+        var was = dog.at;
+        if (Walkers.walkTo(state, dog, owner.at, speed, Pathfinding.SURVIVOR, budget, DOG_HEEL) || ((dog.at.x == was.x) && (dog.at.y == was.y) && (dog.path.length == 0)))
+        {
+            dog.goal = null;
+        }
     }
 
     public static void bark(SimState state, Dog dog, Zombie z)
