@@ -17,44 +17,70 @@ public static partial class Worldplan
     /// <summary>A chunk's size, for the per-chunk index (a literal, not worldgen's CHUNK: see CLAUDE.md rule 12; a test checks they match).</summary>
     public const int PLAN_CHUNK = 32;
 
-    public static readonly JsMap<string, WorldPlan> cache = new JsMap<string, WorldPlan>();
+    /// <summary>Each world's regions (WorldRegions), by seed, size and map: the plan is derived, never saved.</summary>
+    public static readonly JsMap<string, WorldRegions> cache = new JsMap<string, WorldRegions>();
 
-    public static WorldPlan planWorld(double seed, double size, string map)
+    static string Key(double seed, double size, string map) => $"{Js.Str(seed)}|{Js.Str(size)}|{Js.Str(map)}";
+
+    /// <summary>A world's plan, region by region (docs/worldplan-regions.md).</summary>
+    public static WorldRegions regions(double seed, double size, string map)
     {
-        var key = $"{Js.Str(seed)}|{Js.Str(size)}|{Js.Str(map)}";
+        var key = Key(seed, size, map);
         var hit = cache.get(key);
         if (Js.T(hit))
         {
             return hit;
         }
-        var plan = makePlan(NatureMod.natureFor(seed, size, map));
-        if (cache.size > 6)
-        {
-            cache.delete(cache.keys()[0]);
-        }
-        cache.set(key, plan);
-        return plan;
+        var made = new WorldRegions(seed, size, map);
+        remember(seed, size, map, made);
+        return made;
     }
 
-    /// <summary>Keeps a plan made elsewhere (the game makes big worlds' plans on a worker thread: makePlan is pure) as
-    /// planWorld would have, so createWorld finds it.</summary>
-    public static void remember(double seed, double size, string map, WorldPlan plan)
+    /// <summary>The whole plan of a world of one region (no bigger than WorldRegions.R): the tests', the small tools'.
+    /// A bigger world has no whole plan: ask its regions.</summary>
+    public static WorldPlan planWorld(double seed, double size, string map)
     {
-        var key = $"{Js.Str(seed)}|{Js.Str(size)}|{Js.Str(map)}";
+        var r = regions(seed, size, map);
+        if (!r.Single) throw new InvalidOperationException($"planWorld: a {size} world is planned by region (Worldplan.regions)");
+        return r.Region(0, 0);
+    }
+
+    /// <summary>Keeps a world's regions made elsewhere (the game makes a big world's first ones on a worker thread:
+    /// prepare), so createWorld finds them.</summary>
+    public static void remember(double seed, double size, string map, WorldRegions made)
+    {
+        var key = Key(seed, size, map);
         if (Js.T(cache.get(key))) return;
         if (cache.size > 6)
         {
             cache.delete(cache.keys()[0]);
         }
-        cache.set(key, plan);
+        cache.set(key, made);
     }
 
-    public static WorldPlan makePlan(Nature n)
+    /// <summary>A world's regions with the ones round the start planned (what createWorld asks for first): pure, so the
+    /// game can run it on a worker thread and remember the result.</summary>
+    public static WorldRegions prepare(double seed, double size, string map)
+    {
+        var r = new WorldRegions(seed, size, map);
+        var s = r.nature.start;
+        foreach (var (dx, dy) in new[] { (0, 0), (-200, 0), (200, 0), (0, -200), (0, 200) }) r.RegionAt(s.x + dx, s.y + dy);
+        return r;
+    }
+
+    /// <summary>The whole map's plan as one region (worlds no bigger than WorldRegions.R).</summary>
+    public static WorldPlan makePlan(Nature n) => makeRegion(n, Win.Whole(n.size), null, null);
+
+    /// <summary>A region's plan (docs/worldplan-regions.md): its towns (sited inside it, or given), their streets, the
+    /// roads among them, the given roads from its neighbours (`links`: the parts crossing it are drawn and lots
+    /// follow them), its lots (wholly inside it), and its masks, all over its window. Over the whole map with no
+    /// links, the plan as it always was.</summary>
+    public static WorldPlan makeRegion(Nature n, Win w, List<Town>? given, List<List<PointD>>? links)
     {
         var size = n.size;
-        var land = Towns.landGrid(n);
-        var towns = Towns.siteTowns(n, land);
-        var roadMask = new Uint8Array(((double)(size) * (size)));
+        var towns = given ?? Towns.siteTowns(n, Towns.landGrid(n, w), w);
+        double W = w.W, H = w.H;
+        var roadMask = new Uint8Array(((double)(W) * (H)));
         var streets = towns.flatMap((t, i) => Towns.growStreets(n, t, i));
         foreach (var s in Js.Iter(streets))
         {
@@ -62,27 +88,38 @@ public static partial class Worldplan
             {
                 for (var x = s.x0; x <= (s.x1 + (Js.T(s.eastWest) ? 0 : (Towns.STREET - 1))); x++)
                 {
-                    if ((((x >= 0) && (y >= 0)) && (x < size)) && (y < size))
+                    if ((((x >= w.x0) && (y >= w.y0)) && (x < w.x1)) && (y < w.y1))
                     {
-                        roadMask[Js.Idx(((double)(y) * (size)) + x)] = 2;
+                        roadMask[Js.Idx(((double)(y - w.y0) * (W)) + (x - w.x0))] = 2;
                     }
                 }
             }
         }
-        var roads = layRoads(n, towns, streets, roadMask);
+        var roads = layRoads(n, towns, streets, roadMask, w);
+        if (links != null)
+        {
+            foreach (var line in links)
+            {
+                Roads.drawLine(roadMask, w, line, 1);
+                roads.push(line);
+            }
+        }
         List<Lot> lots = [];
-        var lotMask = new Int32Array(((double)(size) * (size)));
+        var lotMask = new Int32Array(((double)(W) * (H)));
+        // Lots stay a tile in from the map's edge (as always) and wholly inside the region.
+        int loX = w.edgeL ? 1 : w.x0, loY = w.edgeT ? 1 : w.y0;
+        double hiX = w.edgeR ? size - 1 : w.x1, hiY = w.edgeB ? size - 1 : w.y1;
         bool add(Lot lot)
         {
             for (var y = lot.y; y < (lot.y + lot.h); y++)
             {
                 for (var x = lot.x; x < (lot.x + lot.w); x++)
                 {
-                    if ((((x < 1) || (y < 1)) || (x >= (size - 1))) || (y >= (size - 1)))
+                    if ((((x < loX) || (y < loY)) || (x >= hiX)) || (y >= hiY))
                     {
                         return false;
                     }
-                    var i = ((double)(y) * (size)) + x;
+                    var i = ((double)(y - w.y0) * (W)) + (x - w.x0);
                     if (((((Js.Get(roadMask, i) != 0) || (Js.Get(lotMask, i) != 0)) || NatureMod.isWater(n, x, y)) || NatureMod.onFenceLine(n, x, y)) || NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 2))
                     {
                         return false;
@@ -90,12 +127,12 @@ public static partial class Worldplan
                 }
             }
             var id = lots.length;
-            lots.push(Js.With(new Lot { id = id }, __s0 => Js.AssignSet(__s0, lot)));
+            lots.push(Js.With(new Lot { id = (double)w.index * WorldRegions.LOTS_PER_REGION + id }, __s0 => Js.AssignSet(__s0, lot)));
             for (var y = lot.y; y < (lot.y + lot.h); y++)
             {
                 for (var x = lot.x; x < (lot.x + lot.w); x++)
                 {
-                    lotMask[Js.Idx(((double)(y) * (size)) + x)] = id + 1;
+                    lotMask[Js.Idx(((double)(y - w.y0) * (W)) + (x - w.x0))] = id + 1;
                 }
             }
             return true;
@@ -103,20 +140,22 @@ public static partial class Worldplan
         townLots(n, towns, streets, (__f0) => add(__f0));
         farmLots(n, towns, roads, (__f0) => add(__f0));
         fieldLots(n, towns, (__f0) => add(__f0));
-        cabinLots(n, roads, (__f0) => add(__f0));
-        var chunks = JsMath.ceil(((double)(size) / (PLAN_CHUNK)));
-        List<List<double>> lotsByChunk = Js.ArrayFrom<List<double>>(((double)(chunks) * (chunks)), (int _i) => []);
+        cabinLots(n, roads, (__f0) => add(__f0), w);
+        // Lots by plan chunk, over the region's chunks (a region is whole chunks: R is a multiple of PLAN_CHUNK).
+        int cx0 = w.x0 / PLAN_CHUNK, cy0 = w.y0 / PLAN_CHUNK;
+        double chunks = JsMath.ceil(((double)(w.x1) / (PLAN_CHUNK))) - cx0, rows = JsMath.ceil(((double)(w.y1) / (PLAN_CHUNK))) - cy0;
+        List<List<double>> lotsByChunk = Js.ArrayFrom<List<double>>(((double)(chunks) * (rows)), (int _i) => []);
         foreach (var l in Js.Iter(lots))
         {
             for (var cy = JsMath.floor(((double)(l.y) / (PLAN_CHUNK))); cy <= JsMath.floor(((double)(((l.y + l.h) - 1)) / (PLAN_CHUNK))); cy++)
             {
                 for (var cx = JsMath.floor(((double)(l.x) / (PLAN_CHUNK))); cx <= JsMath.floor(((double)(((l.x + l.w) - 1)) / (PLAN_CHUNK))); cx++)
                 {
-                    Js.NN(Js.Get(lotsByChunk, ((double)(cy) * (chunks)) + cx)).push(l.id);
+                    Js.NN(Js.Get(lotsByChunk, ((double)(cy - cy0) * (chunks)) + (cx - cx0))).push(l.id);
                 }
             }
         }
-        return new WorldPlan { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk };
+        return new WorldPlan { nature = n, towns = towns, streets = streets, roads = roads, roadMask = roadMask, lots = lots, lotMask = lotMask, lotsByChunk = lotsByChunk, window = w, chunkX0 = cx0, chunkY0 = cy0, chunksW = (int)chunks };
     }
 
     public static double dist(double ax, double ay, double bx, double by)
@@ -125,14 +164,23 @@ public static partial class Worldplan
     }
 
     /// <summary>Roads between towns (and the start), and a few out to the map's edge.</summary>
-    public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask)
+    public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask) => layRoads(n, towns, streets, mask, Win.Whole(n.size));
+
+    /// <summary>The main-street ends of town `ti` (its index in `towns`), where country roads leave it.</summary>
+    public static List<Point> streetEnds(List<Street> streets, double ti) =>
+        streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
+
+    /// <summary>The same inside a window: the start's node only if the start is in it; roads to the map's edge only on
+    /// the sides of it that are the map's edge.</summary>
+    public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask, Win w)
     {
         var size = n.size;
         List<Point> ends(double ti)
         {
             return streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
         }
-        List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) }), new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) }];
+        List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) })];
+        if (w.Holds(n.start.x, n.start.y + 8)) nodes.push(new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) });
         Point nearestEnd(double node, Point toward)
         {
             if (node >= towns.length)
@@ -157,22 +205,27 @@ public static partial class Worldplan
             {
                 return;
             }
-            List<Point> edges = new List<Point> { new Point { x = Js.I(0), y = Js.I(t.y) }, new Point { x = Js.I(size - 1), y = Js.I(t.y) }, new Point { x = Js.I(t.x), y = Js.I(0) }, new Point { x = Js.I(t.x), y = Js.I(size - 1) } };
+            List<Point> edges = [];
+            if (w.edgeL) edges.push(new Point { x = Js.I(0), y = Js.I(t.y) });
+            if (w.edgeR) edges.push(new Point { x = Js.I(size - 1), y = Js.I(t.y) });
+            if (w.edgeT) edges.push(new Point { x = Js.I(t.x), y = Js.I(0) });
+            if (w.edgeB) edges.push(new Point { x = Js.I(t.x), y = Js.I(size - 1) });
+            if (edges.length == 0) return;
             var edge = edges.reduce((a, b) => (dist(b.x, b.y, t.x, t.y) < dist(a.x, a.y, t.x, t.y)) ? b : a);
             links.push([nearestEnd(i, edge), edge]);
         });
-        var cost = Roads.costGrid(n, towns);
+        var cost = Roads.costGrid(n, towns, w);
         List<List<PointD>> roads = [];
         foreach (var (a, b) in Js.Iter(links))
         {
-            var line = Roads.route(n, cost, a, b);
+            var line = Roads.route(n, cost, a, b, w);
             if (!Js.T(line))
             {
                 continue;
             }
             roads.push(line);
-            Roads.reuse(cost, size, line);
-            Roads.drawLine(mask, size, line, 1);
+            Roads.reuse(cost, w, line);
+            Roads.drawLine(mask, w, line, 1);
         }
         return roads;
     }
@@ -354,12 +407,14 @@ public static partial class Worldplan
         });
     }
 
-    public static void cabinLots(Nature n, List<List<PointD>> roads, Func<Lot, bool> add)
+    public static void cabinLots(Nature n, List<List<PointD>> roads, Func<Lot, bool> add) => cabinLots(n, roads, add, Win.Whole(n.size));
+
+    /// <summary>The same over a window: the map's 48-tile lattice, the cells starting inside it.</summary>
+    public static void cabinLots(Nature n, List<List<PointD>> roads, Func<Lot, bool> add, Win w)
     {
-        var size = n.size;
-        for (var gy = 0; gy < size; gy += 48)
+        for (var gy = (int)Math.Ceiling(w.y0 / 48.0) * 48; gy < w.y1; gy += 48)
         {
-            for (var gx = 0; gx < size; gx += 48)
+            for (var gx = (int)Math.Ceiling(w.x0 / 48.0) * 48; gx < w.x1; gx += 48)
             {
                 double r(double j)
                 {

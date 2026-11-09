@@ -2,7 +2,8 @@
 // generates at a glance. Ground by its colour, water, trees darker, walls, doors and windows on their edges,
 // towns' circles (from the world plan) outlined, settlements boxed in yellow, the start ringed in red, and the
 // dormant dead as dark red dots. Per world: <out>/<map>_<seed>.png (1 px a tile), <map>_<seed>_small.jpg
-// (half size; the full-size PNGs are 6 MB and not in git) and two close-ups at 3 px a tile: the biggest town and the start.
+// (half size; the full-size PNGs are 6 MB and not in git), two close-ups at 3 px a tile: the biggest town and the start,
+// and on a world of several regions the corner where the first four meet (2 px a tile). Sizes other than 2000 in the name.
 //
 //   Godot --path godot res://World3D/MapShot.tscn -- [--size=2000] [--worlds=mainland:1,mainland:2,island:4] [--out=DIR]
 
@@ -77,22 +78,25 @@ public partial class MapShot : Node
                 img.SetPixel(f.x, f.y, f.kind == "tree" ? tree : thing);
         foreach (var d in state.dormant)
             if (d.x >= 0 && d.y >= 0 && d.x < size && d.y < size) img.SetPixel(d.x, d.y, new Color(0.55f, 0.05f, 0.05f));
-        var plan = Worldplan.planWorld(seed, size, map);
-        foreach (var town in plan.towns) Ring(img, town.x, town.y, town.radius, new Color(1, 1, 1, 1), 0.55f);
+        var regions = Worldplan.regions(seed, size, map);
+        var towns = regions.AllTowns();
+        foreach (var town in towns) Ring(img, town.x, town.y, town.radius, new Color(1, 1, 1, 1), 0.55f);
         foreach (var s in state.settlements) Box(img, (int)s.x, (int)s.y, 6, new Color(1, 0.85f, 0.1f));
-        var start = plan.nature.start;
+        var start = regions.nature.start;
         Ring(img, start.x, start.y, 10, new Color(1, 0.1f, 0.1f), 1);
         Ring(img, start.x, start.y, 11, new Color(1, 0.1f, 0.1f), 1);
-        string name = $"{map}_{seed}";
+        string name = size == 2000 ? $"{map}_{seed}" : $"{map}_{seed}_{size}";
         img.SavePng(System.IO.Path.Combine(outDir, name + ".png"));
         var small = (Image)img.Duplicate();
         small.Resize(size / 2, size / 2, Image.Interpolation.Lanczos);
         small.SaveJpg(System.IO.Path.Combine(outDir, name + "_small.jpg"), 0.88f);
         // Close-ups: the biggest town, and the start.
-        var big = plan.towns.OrderByDescending((t) => t.radius).FirstOrDefault();
+        var big = towns.OrderByDescending((t) => t.radius).FirstOrDefault();
         if (big != null) Crop(img, big.x, big.y, 300, 3, System.IO.Path.Combine(outDir, name + "_town.jpg"));
         Crop(img, start.x, start.y, 300, 3, System.IO.Path.Combine(outDir, name + "_start.jpg"));
-        GD.Print($"mapshot {name}: {size}x{size}, plan + start {(t1 - t0) / 1000.0:0.0} s, every chunk {(t2 - t1) / 1000.0:0.0} s; towns {plan.towns.Count}, roads {plan.roads.Count}, lots {plan.lots.Count}, settlements {state.settlements.Count}, trees {state.furniture.Count((f) => f.kind == "tree"):N0}, dormant {state.dormant.Count:N0}");
+        // Where four regions meet (worlds of more than one: WorldRegions), to see roads cross their borders.
+        if (!regions.Single) Crop(img, WorldRegions.R, WorldRegions.R, 400, 2, System.IO.Path.Combine(outDir, name + "_border.jpg"));
+        GD.Print($"mapshot {name}: {size}x{size}, plan + start {(t1 - t0) / 1000.0:0.0} s, every chunk {(t2 - t1) / 1000.0:0.0} s; regions {regions.side * regions.side}, towns {towns.Count}, roads {regions.RoadsPlanned} (in the {regions.Planned} regions still kept), settlements {state.settlements.Count}, trees {state.furniture.Count((f) => f.kind == "tree"):N0}, dormant {state.dormant.Count:N0}");
     }
 
     static void Crop(Image img, int cx, int cy, int span, int scale, string path)

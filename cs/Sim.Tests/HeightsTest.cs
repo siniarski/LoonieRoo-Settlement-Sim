@@ -59,7 +59,7 @@ public class HeightsTest
         {
             wet = new bool[SIZE * SIZE];
             for (int ty = 0; ty < SIZE; ty++)
-                for (int tx = 0; tx < SIZE; tx++) wet[ty * SIZE + tx] = NatureMod.isWater(f.plan.nature, tx, ty);
+                for (int tx = 0; tx < SIZE; tx++) wet[ty * SIZE + tx] = NatureMod.isWater(f.regions.Region(0, 0).nature, tx, ty);
             wetOf[f] = wet;
         }
         for (int dy = -2; dy <= 1; dy++)
@@ -76,7 +76,7 @@ public class HeightsTest
     {
         var f = Heights.make(42, SIZE, "mainland");
         int checkedBuildings = 0;
-        foreach (var lot in f.plan.lots)
+        foreach (var lot in f.regions.Region(0, 0).lots)
             foreach (var p in Lots.layoutLot(42, lot).buildings)
             {
                 bool turned = p.facing == "east" || p.facing == "west";
@@ -99,7 +99,7 @@ public class HeightsTest
             for (int y = 0; y < SIZE; y++)
                 for (int x = 0; x < SIZE; x++)
                 {
-                    bool wet = NatureMod.isWater(f.plan.nature, x, y) && f.plan.roadMask[y * SIZE + x] == 0;
+                    bool wet = NatureMod.isWater(f.regions.Region(0, 0).nature, x, y) && f.regions.Region(0, 0).roadMask[y * SIZE + x] == 0;
                     double surface = f.water(x + 0.5, y + 0.5);
                     if (wet && !besideBridge(f, x, y))
                     {
@@ -120,7 +120,7 @@ public class HeightsTest
             for (int dx = -1; dx <= 1; dx++)
             {
                 int tx = x + dx, ty = y + dy;
-                if (tx >= 0 && ty >= 0 && tx < SIZE && ty < SIZE && f.plan.roadMask[ty * SIZE + tx] != 0) return true;
+                if (tx >= 0 && ty >= 0 && tx < SIZE && ty < SIZE && f.regions.Region(0, 0).roadMask[ty * SIZE + tx] != 0) return true;
             }
         return false;
     }
@@ -143,7 +143,7 @@ public class HeightsTest
             {
                 bool wet = false;
                 for (int dy = -3; dy <= 3 && !wet; dy++)
-                    for (int dx = -3; dx <= 3 && !wet; dx++) wet = NatureMod.isWater(f.plan.nature, x + dx, y + dy);
+                    for (int dx = -3; dx <= 3 && !wet; dx++) wet = NatureMod.isWater(f.regions.Region(0, 0).nature, x + dx, y + dy);
                 if (!wet) off.Add(Math.Abs(f.coarse(x, y, false) - f.corner(x, y)));
             }
         off.Sort();

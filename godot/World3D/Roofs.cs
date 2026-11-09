@@ -128,14 +128,14 @@ public sealed class Roofs
     void Near(SimState state, int range, Vector3 eye)
     {
         if (state.world == null) return;
-        var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
+        var regions = Worldplan.regions(state.world.seed, state.world.size, state.settings.map);
         int chunks = (int)Math.Ceiling(state.world.size / Worldplan.PLAN_CHUNK);
         var want = new HashSet<int>();
         int px0 = (int)Math.Floor((eye.X - range) / Worldplan.PLAN_CHUNK), px1 = (int)Math.Floor((eye.X + range) / Worldplan.PLAN_CHUNK);
         int py0 = (int)Math.Floor((eye.Z - range) / Worldplan.PLAN_CHUNK), py1 = (int)Math.Floor((eye.Z + range) / Worldplan.PLAN_CHUNK);
         for (int py = Math.Max(0, py0); py <= Math.Min(chunks - 1, py1); py++)
             for (int px = Math.Max(0, px0); px <= Math.Min(chunks - 1, px1); px++)
-                foreach (var id in plan.lotsByChunk[py * chunks + px]) want.Add((int)id);
+                foreach (var id in regions.LotsInChunk(px, py)) want.Add((int)id);
         var drop = new List<int>();
         foreach (var id in lots.Keys) if (!want.Contains(id)) drop.Add(id);
         foreach (var id in drop)
@@ -144,7 +144,7 @@ public sealed class Roofs
             lots.Remove(id);
         }
         foreach (var id in want)
-            if (!lots.ContainsKey(id)) lots[id] = Footprints(state, plan.lots[id]);
+            if (!lots.ContainsKey(id)) lots[id] = Footprints(state, regions.Lot(id));
     }
 
     static List<Building> Footprints(SimState state, Lot lot)

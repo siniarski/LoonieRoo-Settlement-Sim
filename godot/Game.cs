@@ -289,7 +289,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     public void Resume() => ToggleMenu();
 
     /// <summary>A big world's plan being made on a worker thread (Worldplan.makePlan is pure), and what to make with it.</summary>
-    (System.Threading.Tasks.Task<WorldPlan> task, double seed, double size, Settings settings, Character you, ulong started, int told)? making;
+    (System.Threading.Tasks.Task<WorldRegions> task, double seed, double size, Settings settings, Character you, ulong started, int told)? making;
     /// <summary>Worlds bigger than this make their plan on a worker thread, behind a "making the world" note; smaller ones take milliseconds.</summary>
     const double PLAN_ON_A_THREAD_OVER = 512;
     /// <summary>--hold: keys held down from the start (w, a, s, d, shift), for screenshots of walking.</summary>
@@ -302,7 +302,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (size > PLAN_ON_A_THREAD_OVER)
         {
             string map = settings.map;
-            var task = System.Threading.Tasks.Task.Run(() => Worldplan.makePlan(NatureMod.natureFor(s, size, map)));
+            var task = System.Threading.Tasks.Task.Run(() => Worldplan.prepare(s, size, map));
             making = (task, s, size, settings, you, Godot.Time.GetTicksMsec(), 0);
             view.Toast($"Making a {size}×{size} world...");
             return;

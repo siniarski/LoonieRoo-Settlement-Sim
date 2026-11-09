@@ -47,8 +47,8 @@ public class GenProfile
                     Terrain(state, l, cx, cy);
                     phase[0] += t.Elapsed.TotalMilliseconds; t.Restart();
                     double x0 = cx * Worldgen.CHUNK, y0 = cy * Worldgen.CHUNK;
-                    foreach (var id in Js.Iter(Js.At(l.plan.lotsByChunk, (double)cy * chunks + cx, [])))
-                        Lots.drawLot(state, ctx, Js.NN(Js.Get(l.plan.lots, id)), x0, y0, JsMath.min(l.size, x0 + Worldgen.CHUNK) - 1, JsMath.min(l.size, y0 + Worldgen.CHUNK) - 1);
+                    foreach (var id in l.regions.LotsInChunk(cx, cy))
+                        Lots.drawLot(state, ctx, l.regions.Lot(id), x0, y0, JsMath.min(l.size, x0 + Worldgen.CHUNK) - 1, JsMath.min(l.size, y0 + Worldgen.CHUNK) - 1);
                     phase[1] += t.Elapsed.TotalMilliseconds; t.Restart();
                     Trees(state, l, x0, y0);
                     phase[2] += t.Elapsed.TotalMilliseconds; t.Restart();
@@ -142,6 +142,18 @@ public class GenProfile
                     var state = States.createState(new NewStateOptions { seed = 42, width = size, height = size }); Lap("createState (the grid)");
                     state = null;
                 }
+                GC.Collect();
+                m0 = Mb();
+                t.Restart();
+                var world = Worldgen.createWorld(42, size, Difficulty.NORMAL);
+                Lap($"createWorld ({Worldplan.regions(42, size, Difficulty.NORMAL.map).Planned} regions planned)");
+                if (Env("ALL") == "1")
+                {
+                    for (int y = 0; y < size; y += Worldgen.CHUNK)
+                        for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(world, new Point(x, y));
+                    Lap("every chunk");
+                }
+                world = null;
             }
             catch (OutOfMemoryException) { times.Add("OUT OF MEMORY"); }
             out_.Add($"size {size}: " + string.Join(", ", times));

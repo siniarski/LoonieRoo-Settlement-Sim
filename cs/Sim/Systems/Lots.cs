@@ -118,17 +118,18 @@ public static partial class Lots
         return new Placement { plan = plan, ox = Js.I(JsMath.min(a.x, b.x)), oy = Js.I(JsMath.min(a.y, b.y)), facing = facing, mirror = mirror };
     }
 
-    public static readonly JsMap<Lot, LotLayout> layouts = new JsMap<Lot, LotLayout>();
+    /// <summary>Each lot's layout, kept while the lot is (a region's plan dropped takes its lots, and these, with it).
+    /// Looked up only, never walked, so its order doesn't matter (rule 9).</summary>
+    public static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Lot, LotLayout> layouts = new();
 
     public static LotLayout layoutLot(double seed, Lot lot)
     {
-        var hit = layouts.get(lot);
-        if (Js.T(hit))
+        if (layouts.TryGetValue(lot, out var hit))
         {
             return hit;
         }
         var made = makeLayout(seed, lot);
-        layouts.set(lot, made);
+        layouts.AddOrUpdate(lot, made);
         return made;
     }
 

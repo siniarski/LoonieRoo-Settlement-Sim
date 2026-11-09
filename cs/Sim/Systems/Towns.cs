@@ -37,20 +37,43 @@ public static partial class Towns
     }
 
     /// <summary>A coarse map of the land (every 4 tiles): 0 open, 1 forest, 2 water.</summary>
-    public static Uint8Array landGrid(Nature n)
+    public static Uint8Array landGrid(Nature n) => landGrid(n, Win.Whole(n.size));
+
+    /// <summary>The same over a window's cells (row by row from its first cell; 4-tile cells, as the road cells).</summary>
+    public static Uint8Array landGrid(Nature n, Win w)
     {
-        var N = JsMath.ceil(((double)(n.size) / (4)));
-        var g = new Uint8Array(((double)(N) * (N)));
-        for (var j = 0; j < N; j++)
+        double N = w.KW, H = w.KH;
+        var g = new Uint8Array(((double)(N) * (H)));
+        for (var j = 0; j < H; j++)
         {
             for (var i = 0; i < N; i++)
             {
-                var x = ((double)(i) * (4)) + 2;
-                var y = ((double)(j) * (4)) + 2;
+                var x = ((double)(i + w.Kx0) * (4)) + 2;
+                var y = ((double)(j + w.Ky0) * (4)) + 2;
                 g[Js.Idx(((double)(j) * (N)) + i)] = NatureMod.isWater(n, x, y) ? 2 : (NatureMod.isForest(n, x, y) ? 1 : 0);
             }
         }
         return g;
+    }
+
+    /// <summary>Kept this far (tiles, beyond its radius) from a border shared with another region: two neighbours' towns
+    /// then stand at least r1 + r2 + 48 apart (the rule within a region) without either knowing the other's.</summary>
+    public const int REGION_MARGIN = 27;
+
+    /// <summary>The kinds of town a region holds (biggest first): one a 170 x 170 tiles of its area, and a roll for one
+    /// more; over the whole map, townKinds. Each region rolls its own, its towns' indexes from index x 1000.</summary>
+    public static List<string> townKindsFor(double seed, double size, Win w)
+    {
+        if (w.index == 0 && w.W == (int)size && w.H == (int)size) return townKinds(seed, size);
+        var count = JsMath.round(((double)w.W * w.H) / (170.0 * 170)) + ((NatureMod.roll(seed, size, w.index, 0x7100) < 0.5) ? 1 : 0);
+        List<string> kinds = [];
+        for (var i = 0; i < count; i++)
+        {
+            var r = NatureMod.roll(seed, w.index * 1000 + i, 1, 0x7101);
+            kinds.push(((size >= 384) && (r < 0.2)) ? "city" : ((r < 0.6) ? "town" : "village"));
+        }
+        JsRecord<double> order = new() { ["city"] = 0, ["town"] = 1, ["village"] = 2 };
+        return kinds.sort((a, b) => Js.Get(order, a) - Js.Get(order, b));
     }
 
     /// <summary>Where the towns go (biggest first): the best-scoring site for each on an 8-tile grid, dry and open,
@@ -62,17 +85,23 @@ public static partial class Towns
     /// and the towns placed so far are found through a coarse grid of cells. The counts are the same integers and the
     /// sites are scored in the same order with the same formula, so the towns are the same (TownsSpeedTest compares it
     /// with the original).</summary>
-    public static List<Town> siteTowns(Nature n, Uint8Array land)
+    public static List<Town> siteTowns(Nature n, Uint8Array land) => siteTowns(n, land, Win.Whole(n.size));
+
+    /// <summary>The same inside a window (its land grid from landGrid with it): sites only inside it, REGION_MARGIN
+    /// further from a border shared with another region; over the whole map, the above.</summary>
+    public static List<Town> siteTowns(Nature n, Uint8Array land, Win w)
     {
         int size = (int)n.size;
-        int N = (int)JsMath.ceil((double)size / 4);
+        // N: the window's width in cells (the map's, over the whole map); H its height; KX0, KY0 its first cell.
+        int N = w.KW, H = w.KH, KX0 = w.Kx0, KY0 = w.Ky0;
+        int baseIndex = w.index * 1000;
         List<Town> towns = [];
-        var kinds = townKinds(n.seed, n.size);
+        var kinds = townKindsFor(n.seed, n.size, w);
         // Prefix sums per row of the land grid: dry (not water), wooded (forest), wet (water).
-        var dryP = new int[N * (N + 1)];
-        var woodP = new int[N * (N + 1)];
-        var wetP = new int[N * (N + 1)];
-        for (int j = 0; j < N; j++)
+        var dryP = new int[H * (N + 1)];
+        var woodP = new int[H * (N + 1)];
+        var wetP = new int[H * (N + 1)];
+        for (int j = 0; j < H; j++)
             for (int k = 0; k < N; k++)
             {
                 int c = land.a[j * N + k];
@@ -81,7 +110,8 @@ public static partial class Towns
                 woodP[at + 1] = woodP[at] + (c == 1 ? 1 : 0);
                 wetP[at + 1] = wetP[at] + (c == 2 ? 1 : 0);
             }
-        int Sum(int[] p, int j, int k0, int k1) => k1 < k0 ? 0 : p[j * (N + 1) + k1 + 1] - p[j * (N + 1) + k0];
+        // Rows and columns in map cells (as the original counted them); the sums are kept from the window's first cell.
+        int Sum(int[] p, int j, int k0, int k1) => k1 < k0 ? 0 : p[(j - KY0) * (N + 1) + (k1 - KX0) + 1] - p[(j - KY0) * (N + 1) + (k0 - KX0)];
         // Placed towns by 64-tile cell: the exclusion reaches the radii of both towns plus 48.
         const int CELL = 64;
         int cells = size / CELL + 1;
@@ -91,14 +121,16 @@ public static partial class Towns
         {
             var kind = kinds[i];
             var (lo, hi) = Js.Get(RADII, kind);
-            var radius = JsMath.min(JsMath.floor(((double)(n.size) * (0.19))), lo + JsMath.floor(((double)(NatureMod.roll(n.seed, i, 2, 0x7102)) * (((hi - lo) + 1)))));
+            var radius = JsMath.min(JsMath.floor(((double)(n.size) * (0.19))), lo + JsMath.floor(((double)(NatureMod.roll(n.seed, baseIndex + i, 2, 0x7102)) * (((hi - lo) + 1)))));
             int r = (int)radius, reach = r + 14, margin = r + 3;
+            int mL = w.edgeL ? margin : r + REGION_MARGIN, mT = w.edgeT ? margin : r + REGION_MARGIN;
+            int mR = w.edgeR ? margin : r + REGION_MARGIN, mB = w.edgeB ? margin : r + REGION_MARGIN;
             long r2 = (long)r * r, reach2 = (long)reach * reach;
             int spanCells = (int)Math.Ceiling((radius + biggest + 48) / CELL) + 1;
             SiteTownsBest? best = null;
-            for (var y = margin; y < (size - margin); y += 8)
+            for (var y = w.y0 + mT; y < (w.y1 - mB); y += 8)
             {
-                for (var x = margin; x < (size - margin); x += 8)
+                for (var x = w.x0 + mL; x < (w.x1 - mR); x += 8)
                 {
                     if (JsMath.sqrt((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < ((radius + NatureMod.START_CLEAR_RADIUS) + 6))
                     {
@@ -110,8 +142,8 @@ public static partial class Towns
                     }
                     // The rows of the box the original scanned, each as spans: inside the circle, and the ring out to the reach.
                     int inside = 0, dry = 0, wooded = 0, around = 0, wet = 0;
-                    int j0 = Math.Max(0, (int)Math.Floor((y - reach) / 4.0)), j1 = Math.Min(N - 1, (int)Math.Floor((y + reach) / 4.0));
-                    int kb0 = Math.Max(0, (int)Math.Floor((x - reach) / 4.0)), kb1 = Math.Min(N - 1, (int)Math.Floor((x + reach) / 4.0));
+                    int j0 = Math.Max(KY0, (int)Math.Floor((y - reach) / 4.0)), j1 = Math.Min(KY0 + H - 1, (int)Math.Floor((y + reach) / 4.0));
+                    int kb0 = Math.Max(KX0, (int)Math.Floor((x - reach) / 4.0)), kb1 = Math.Min(KX0 + N - 1, (int)Math.Floor((x + reach) / 4.0));
                     for (int j = j0; j <= j1; j++)
                     {
                         long dy = 4L * j + 2 - y, dy2 = dy * dy;
@@ -149,7 +181,7 @@ public static partial class Towns
             }
             if (Js.T(best))
             {
-                var town = new Town { x = Js.I(best.x), y = Js.I(best.y), radius = radius, kind = kind, eastWest = (NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2) == 0 };
+                var town = new Town { x = Js.I(best.x), y = Js.I(best.y), radius = radius, kind = kind, eastWest = (NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2) == 0, index = baseIndex + towns.Count };
                 towns.push(town);
                 int at = Math.Min(cells - 1, town.y / CELL) * cells + Math.Min(cells - 1, town.x / CELL);
                 (placed[at] ??= new()).Add(town);

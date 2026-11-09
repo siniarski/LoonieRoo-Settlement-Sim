@@ -33,21 +33,21 @@ public static partial class Worldgen
 
     public static Layout layout(double seed, double size, string map = "mainland")
     {
-        var plan = Worldplan.planWorld(seed, size, map);
-        return Js.With(Js.CopyAs<Layout>(plan.nature), __s0 => { __s0.plan = plan; __s0.towns = plan.towns; });
+        var regions = Worldplan.regions(seed, size, map);
+        return Js.With(Js.CopyAs<Layout>(regions.nature), __s0 => { __s0.regions = regions; });
     }
 
     /// <summary>A country road or town street on this tile.</summary>
     public static bool isRoad(Layout l, int x, int y)
     {
-        return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && (Js.Get(l.plan.roadMask, ((double)(y) * (l.size)) + x) != 0);
+        return ((((x >= 0) && (y >= 0)) && (x < l.size)) && (y < l.size)) && l.regions.IsRoad(x, y);
     }
     public static bool isRoad(Layout l, double x, double y) => isRoad(l, Js.I(x), Js.I(y));
 
     /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
-        return Js.Get(l.plan.lotMask, ((double)(y) * (l.size)) + x) != 0;
+        return l.regions.OnLot(x, y);
     }
     public static bool onLot(Layout l, double x, double y) => onLot(l, Js.I(x), Js.I(y));
 
@@ -114,11 +114,10 @@ public static partial class Worldgen
                 }
             }
         }
-        var chunks = JsMath.ceil(((double)(l.size) / (CHUNK)));
         var ctx = lotContext(l);
-        foreach (var id in Js.Iter(Js.At(l.plan.lotsByChunk, ((double)(cy) * (chunks)) + cx, [])))
+        foreach (var id in l.regions.LotsInChunk(cx, cy))
         {
-            Lots.drawLot(state, ctx, Js.NN(Js.Get(l.plan.lots, id)), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
+            Lots.drawLot(state, ctx, l.regions.Lot(id), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
         for (var y = y0; y < (y0 + CHUNK); y++)
         {

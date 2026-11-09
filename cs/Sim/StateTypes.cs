@@ -452,8 +452,8 @@ public partial class JobChoicePlan
 /// <summary>A world's natural features and its plan (towns, roads, lots): what a chunk is drawn from.</summary>
 public partial class Layout : Nature
 {
-    public WorldPlan plan { get; set; } = new();
-    public List<Town> towns { get; set; } = new();
+    /// <summary>The world's plan, by region (WorldRegions: docs/worldplan-regions.md).</summary>
+    public WorldRegions regions { get; set; } = null!;
 }
 
 public partial class LoadResult
@@ -1142,6 +1142,8 @@ public partial class Town
     public double radius { get; set; }
     public string kind { get; set; } = "";
     public bool eastWest { get; set; }
+    /// <summary>A stable number for the town in its world (its region's index x 1000 + its place there): names are by it.</summary>
+    public int index { get; set; }
 }
 
 public partial class Trader : IHasId
@@ -1225,6 +1227,12 @@ public partial class WorldPlan
     public List<Lot> lots { get; set; } = new();
     public Int32Array lotMask { get; set; } = null!;
     public List<List<double>> lotsByChunk { get; set; } = new();
+    /// <summary>The window this plan covers (the whole map for a world of one region): the masks are its size, row by
+    /// row from its corner, and lotsByChunk its chunks from (chunkX0, chunkY0), chunksW to a row.</summary>
+    public Win window { get; set; }
+    public int chunkX0 { get; set; }
+    public int chunkY0 { get; set; }
+    public int chunksW { get; set; }
 }
 
 public partial class Wound

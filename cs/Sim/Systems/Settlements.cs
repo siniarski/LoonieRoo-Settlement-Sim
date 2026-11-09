@@ -66,7 +66,7 @@ public static partial class Settlements
     public static void placeSettlements(SimState state, Point start, double seed)
     {
         var size = state.grid.width;
-        Nature? nature = state.world == null ? null : Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map).nature;
+        Nature? nature = state.world == null ? null : Worldplan.regions(state.world.seed, state.world.size, state.settings.map).nature;
         for (var i = 0; i < 3; i++)
         {
             Point p = new Point { x = Js.I(0), y = Js.I(0) };

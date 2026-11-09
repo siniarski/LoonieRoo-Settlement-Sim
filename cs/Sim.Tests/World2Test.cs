@@ -71,7 +71,7 @@ public partial class World2Test
             var l = Worldgen.layout(11, SIZE, "islands");
             for (var i = 0; i < ((double)(SIZE) * (SIZE)); i++)
             {
-                if (Js.Get(l.plan.roadMask, i) == 0)
+                if (Js.Get(l.regions.Region(0, 0).roadMask, i) == 0)
                 {
                     continue;
                 }

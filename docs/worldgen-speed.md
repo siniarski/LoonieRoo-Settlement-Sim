@@ -64,3 +64,4 @@ Steps 2-6 change no world (they're checked by "same output" tests). Step 1 chang
 - The natural features keep their small-map scale: lakes and woods from noise 20-40 tiles across, one river; nothing larger (no big forests, mountains or regions) as the map grows.
 - Settlements are still three, whatever the size.
 - **A bug, fixed the same day**: on island maps some settlements stood out at sea (island 4 and islands 5: yellow boxes in the water). Settlements.placeSettlements now takes only tries on land (`Settlements.onLand`: not water in the plan, not on a quarantine fence, 8 tiles clear of the edge); the overviews are redrawn with them ashore.
+- **Step 7, the plan part, 2026-11-09 (schema 74):** the world plan by region, built: docs/worldplan-regions.md. createWorld at 10,000: 2.2 s (one region planned). Worlds of 1024 or less unchanged. Left: the grid in chunks and saves of what changed.

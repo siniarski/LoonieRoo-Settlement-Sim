@@ -1,6 +1,6 @@
-# The world plan by region: a design (2026-11-09, for approval)
+# The world plan by region (2026-11-09: designed, approved, built)
 
-Step 7 of docs/worldgen-speed.md: make 10,000 x 10,000 worlds possible. Nothing here is built yet.
+Step 7 of docs/worldgen-speed.md: make 10,000 x 10,000 worlds possible. Built as designed below; "Built" at the end has what came out.
 
 ## Measured (cs/Harness/GenProfile.cs, "gen profile big"; seed 42, Release)
 
@@ -48,3 +48,21 @@ A region's plan is a pure function of its own window and its neighbours' towns (
 ## The second job: the grid in chunks (not designed in detail)
 
 The grid's per-tile layers kept per 32 x 32 chunk, allocated when the chunk is generated (ungenerated land costs nothing), behind the Grids accessors (most code reads `grid.tiles[i]` directly today: a sweep through every system). Saves keep only generated chunks, and for those only what differs from regenerating them from the seed (most of a chunk is unchanged). Pathfinding's and reachability's per-tile data per chunk too. That's what makes 10,000 fit in memory and on disk; it touches nearly every system, so it's its own session after this one.
+
+## Built (2026-11-09; schema 74)
+
+- **Code:** `Win` (a window: tiles, which sides are the map's edge, the region's index), `WorldRegions` (the cache and the questions: `Region`, `RegionAt`, `RoadAt`/`IsRoad`, `LotAt`/`OnLot`, `Lot(id)`, `LotsInChunk`, `TownsOf`, `TownsNear`, `AllTowns`, `PlanSoon`), `Worldplan.makeRegion` (makePlan over a window, with the neighbour links), and windowed `Towns.landGrid/siteTowns`, `Roads.route/costGrid/reuse/drawLine`, `Worldplan.layRoads/cabinLots`. `Worldplan.regions(seed, size, map)` replaces the plan cache; `planWorld` is kept for one-region worlds (the tests) and refuses bigger ones; `Worldplan.prepare` plans the regions round the start (the game runs it on a worker for a new world over 512). Readers moved: Worldgen (Layout.regions), Heights (Field.regions; townness by TownsNear), Mapnotes (towns of regions with a generated chunk, names by `Town.index`), Settlements, and in the game Roofs, FarField, MapShot. `Lots.layouts` is a ConditionalWeakTable (lots of dropped regions go with them).
+- **The same for worlds of 1024 or less:** 120 plans (seeds 1-30 at 128, 256, 512, 1024), 12 whole generated worlds (their save files) and 90 height fields hashed before and after: identical. The balance players use 128 worlds, so they can't have moved.
+- **Tests** (WorldRegionsTest): a 2560 map's 9 regions the same planned row by row or in a spiral; towns of the whole map at least r1 + r2 + 48 apart; every lot inside its region; at least 4 of the 6 east borders crossed by a road; lots found again by id and by tile; a one-region world equal to makePlan.
+- **Times** (harness, Release, seed 42; "gen profile big"):
+
+| size | createWorld before | now | regions planned |
+|--:|--:|--:|--:|
+| 2048 | 4.3 s | 3.3 s | 4 |
+| 4096 | ~45 s | 4.1 s | 4 |
+| 10,000 | ~30 min (est.) | 2.2 s | 1 |
+
+  Memory after createWorld at 10,000: 4.3 GB, of which the grid is 3.6 GB (the second job). In the game's build, a whole 4096 world (MapShot): plan and start 4.9 s, every chunk 26 s.
+- **The far field** asks for a region's plan on a worker (`PlanSoon`) and draws nature alone there until it's made, so travelling never stalls a frame on a plan (~1 s a region).
+- **Seen in the overviews** (experiments/map-overview, 2000 and 4096): the regions join up, roads cross their borders (`_border.jpg`). Towns keep radius + 27 from a shared border, so a band ~100 tiles wide along each border has fewer towns (farms, cabins and roads still in it); on a 2000 map the start sits where four regions meet.
+- **Left:** the grid in chunks and saves of only what changed (above); the bands along borders, if they bother (a looser margin with a cross-border check against the neighbour's towns would cost siting the neighbour's towns first); the suite's time (the region tests add ~12 s).

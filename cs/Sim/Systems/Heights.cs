@@ -38,6 +38,8 @@ public static class Heights
     public const double A1 = 2.4, S1 = 56, A2 = 0.6, S2 = 21, A3 = 0.2, S3 = 8;
     const int SALT1 = 0x4E01, SALT2 = 0x4E02, SALT3 = 0x4E03;
     public const double TOWN_EASE = 20;
+    /// <summary>How far round a corner townness looks for towns: a city's biggest radius (Towns.RADII), TOWN_EASE and a tile.</summary>
+    const double TOWN_REACH = 66 + TOWN_EASE + 1;
     public const double ROAD_EASE = 4;
     public const double START_FLAT = NatureMod.START_CLEAR_RADIUS + 2, START_EASE = 12;
     /// <summary>The water's surface under the big octave (m): more than the small octaves can dip, so land is always above it.</summary>
@@ -59,16 +61,16 @@ public static class Heights
         public double seed;
         public int size;
         public string map;
-        public WorldPlan plan;
+        /// <summary>The world's plan, by region (docs/worldplan-regions.md).</summary>
+        public WorldRegions regions;
+        public Nature nature => regions.nature;
         /// <summary>Steps 1-4 (no buildings), and the final corners, per chunk: (CHUNK + 1)^2, row by row.</summary>
         internal readonly Dictionary<int, double[]> bare = new(), done = new();
         internal readonly List<int> bareOrder = new(), doneOrder = new();
         /// <summary>Each lot's buildings: footprint rectangle (x, y, w, h) and level.</summary>
         internal readonly Dictionary<int, List<double[]>> lotLevels = new();
         /// <summary>The plan's towns by cell, and the reach townness asks within (TownIndex).</summary>
-        internal TownIndex townIndex;
-        internal double townReach;
-        internal readonly List<int> townScratch = new();
+        internal readonly List<Town> townScratch = new();
 
         /// <summary>The ground's height (m) at tile corner (cx, cy), clamped to the map.</summary>
         public double corner(int cx, int cy)
@@ -114,7 +116,7 @@ public static class Heights
             if (water) return swell(this, x, y, town) - WATER_DROP - SHORE;
             double small = (octave(this, x, y, S2, SALT2, A2) + octave(this, x, y, S3, SALT3, A3)) * (1 - town);
             double h = swell(this, x, y, town) + small;
-            var s = plan.nature.start;
+            var s = nature.start;
             double ds = JsMath.sqrt((double)(x - s.x) * (x - s.x) + (double)(y - s.y) * (y - s.y));
             double flat = 1 - smoothstep((ds - START_FLAT) / START_EASE);
             if (flat > 0) h += (startLevel(this) - h) * flat;
@@ -181,7 +183,7 @@ public static class Heights
     }
 
     /// <summary>A new, empty field (not cached): the tests use it to ask for chunks in another order.</summary>
-    public static Field make(double seed, double size, string map) => new Field { seed = seed, size = (int)size, map = map, plan = Worldplan.planWorld(seed, size, map) };
+    public static Field make(double seed, double size, string map) => new Field { seed = seed, size = (int)size, map = map, regions = Worldplan.regions(seed, size, map) };
 
     /// <summary>The state's height field, or null on a hand-made map (flat).</summary>
     public static Field of(SimState state) => state.world == null ? null : field(state.world.seed, state.world.size, state.settings.map);
@@ -202,15 +204,9 @@ public static class Heights
     static double townness(Field f, int x, int y)
     {
         double most = 0;
-        // Only towns within their radius and TOWN_EASE can count (the rest give 0): asked through the index.
-        if (f.townIndex == null)
+        // Only towns within their radius and TOWN_EASE can count (the rest give 0): the towns near, by region and index.
+        foreach (var t in f.regions.TownsNear(x, y, TOWN_REACH, f.townScratch))
         {
-            f.townIndex = new TownIndex(f.plan.towns, f.size);
-            f.townReach = f.townIndex.Biggest + TOWN_EASE + 1;
-        }
-        foreach (var ti in f.townIndex.Near(x, y, f.townReach, f.townScratch))
-        {
-            var t = f.townIndex[ti];
             double d = JsMath.sqrt((double)(x - t.x) * (x - t.x) + (double)(y - t.y) * (y - t.y));
             double v = 1 - smoothstep((d - t.radius) / TOWN_EASE);
             if (v > most) most = v;
@@ -230,7 +226,7 @@ public static class Heights
         double town = townness(f, x, y);
         double small = (octave(f, x, y, S2, SALT2, A2) + octave(f, x, y, S3, SALT3, A3)) * (1 - town) * smoothstep(road / ROAD_EASE);
         double h = swell(f, x, y, town) + small;
-        var s = f.plan.nature.start;
+        var s = f.nature.start;
         double ds = JsMath.sqrt((double)(x - s.x) * (x - s.x) + (double)(y - s.y) * (y - s.y));
         double flat = 1 - smoothstep((ds - START_FLAT) / START_EASE);
         if (flat > 0) h += (startLevel(f) - h) * flat;
@@ -239,7 +235,7 @@ public static class Heights
 
     static double startLevel(Field f)
     {
-        var s = f.plan.nature.start;
+        var s = f.nature.start;
         return swell(f, s.x, s.y, townness(f, s.x, s.y));
     }
 
@@ -249,9 +245,9 @@ public static class Heights
     static bool wet(Field f, int x, int y)
     {
         if (x < 0 || y < 0 || x >= f.size || y >= f.size) return false;
-        if (f.plan.roadMask[y * f.size + x] != 0) return false;
-        if (NatureMod.onFenceLine(f.plan.nature, x, y)) return false;
-        return NatureMod.isWater(f.plan.nature, x, y);
+        if (f.regions.IsRoad(x, y)) return false;
+        if (NatureMod.onFenceLine(f.nature, x, y)) return false;
+        return NatureMod.isWater(f.nature, x, y);
     }
 
     static double[] bareCorners(Field f, int kx, int ky)
@@ -272,9 +268,9 @@ public static class Heights
                 water[k] = w;
                 toWater[k] = w ? 0 : FAR;
                 toLand[k] = w ? FAR : 0;
-                bool road = x >= 0 && y >= 0 && x < f.size && y < f.size && f.plan.roadMask[y * f.size + x] != 0;
+                bool road = x >= 0 && y >= 0 && x < f.size && y < f.size && f.regions.IsRoad(x, y);
                 toRoad[k] = road ? 0 : FAR;
-                bridge[k] = road && NatureMod.isWater(f.plan.nature, x, y);
+                bridge[k] = road && NatureMod.isWater(f.nature, x, y);
             }
         chamfer(toWater, n);
         chamfer(toLand, n);
@@ -384,14 +380,14 @@ public static class Heights
             for (int px = kx - 1; px <= kx + 1; px++)
             {
                 if (px < 0 || py < 0 || px >= chunks || py >= chunks) continue;
-                foreach (var id in f.plan.lotsByChunk[py * chunks + px])
+                foreach (var id in f.regions.LotsInChunk(px, py))
                     if (seen.Add((int)id)) ids.Add((int)id);
             }
         ids.Sort();
         var rects = new List<double[]>();
         double x0 = kx * CHUNK - BUILDING_EASE, x1 = (kx + 1) * CHUNK + BUILDING_EASE, y0 = ky * CHUNK - BUILDING_EASE, y1 = (ky + 1) * CHUNK + BUILDING_EASE;
         foreach (var id in ids)
-            foreach (var r in levels(f, f.plan.lots[id]))
+            foreach (var r in levels(f, f.regions.Lot(id)))
                 if (r[0] + r[2] >= x0 && r[0] <= x1 && r[1] + r[3] >= y0 && r[1] <= y1) rects.Add(r);
         if (rects.Count == 0) return out_;
         for (int cy = 0; cy <= CHUNK; cy++)

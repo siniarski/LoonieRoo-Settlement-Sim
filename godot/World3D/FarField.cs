@@ -179,6 +179,7 @@ void fragment() {
         for (int cy = ry * REGION / Worldgen.CHUNK; cy < (ry + 1) * REGION / Worldgen.CHUNK; cy++)
             for (int cx = rx * REGION / Worldgen.CHUNK; cx < (rx + 1) * REGION / Worldgen.CHUNK; cx++)
                 h = h * 3 + (Generated(state, cx * Worldgen.CHUNK, cy * Worldgen.CHUNK) ? 1 : 0);
+        h = h * 5 + (Ready(state, rx * REGION, ry * REGION) ? 1 : 0);
         // Walls are what change a far region's look; their count over the region is enough to notice.
         var g = state.grid;
         int x0 = rx * REGION, y0 = ry * REGION;
@@ -205,7 +206,7 @@ void fragment() {
             bool water;
             int ground;
             if (Generated(state, tx, ty)) { water = g.tiles[i] == "water"; ground = g.ground[i]; }
-            else (water, ground) = PlanGround(state, tx, ty);
+            else (water, ground) = PlanGround(state, tx, ty, Ready(state, tx, ty));
             c = water ? WaterColour : GroundColour(ground);
             float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
             c = c.Lightened(0.06f + Math.Abs(n) * 0.035f);
@@ -261,16 +262,15 @@ void fragment() {
             }
         // Buildings on land not generated yet: the lots' footprints (Lots.layoutLot), each once, those whose middle is
         // in this region and in a chunk not generated (the generated ones are in the grid's floors above).
-        if (Plan(state) is { } lay)
+        if (Plan(state) is { } lay && Ready(state, x0, y0))
         {
-            int pc = (int)Math.Ceiling(lay.size / Worldplan.PLAN_CHUNK);
             var seen = new HashSet<double>();
             for (int cy = y0 / Worldplan.PLAN_CHUNK; cy <= (y1 - 1) / Worldplan.PLAN_CHUNK; cy++)
                 for (int cx = x0 / Worldplan.PLAN_CHUNK; cx <= (x1 - 1) / Worldplan.PLAN_CHUNK; cx++)
-                    foreach (var id in lay.plan.lotsByChunk[cy * pc + cx])
+                    foreach (var id in lay.regions.LotsInChunk(cx, cy))
                     {
                         if (!seen.Add(id)) continue;
-                        var lot = lay.plan.lots[(int)id];
+                        var lot = lay.regions.Lot(id);
                         foreach (var p in Lots.layoutLot(lay.seed, lot).buildings)
                         {
                             bool turned = p.facing == "east" || p.facing == "west";
@@ -303,12 +303,12 @@ void fragment() {
                     bySpecies[s].Add((t, c));
                 }
             // Land not generated yet: the trees generateChunk would plant (forest ground off roads, lots and the start's clearing, a roll of 0.3).
-            if (Plan(state) is { } lay2)
+            if (Plan(state) is { } lay2 && Ready(state, x0, y0))
                 for (int y = y0; y < y1; y++)
                     for (int x = x0; x < x1; x++)
                     {
                         if (Generated(state, x, y) || Worldgen.isRoad(lay2, x, y) || Worldgen.onLot(lay2, x, y) || NatureMod.nearStart(lay2, x, y, NatureMod.START_CLEAR_RADIUS)) continue;
-                        var (wet, ground) = PlanGround(state, x, y);
+                        var (wet, ground) = PlanGround(state, x, y, true);
                         if (wet || ground != Worldgen.FOREST || NatureMod.roll(lay2.seed, x, y, 12) >= 0.3) continue;
                         var (s, t, c) = Trees.Placement(x, y, true, true);
                         bySpecies[s].Add((t, c));
@@ -342,6 +342,18 @@ void fragment() {
         return layout;
     }
 
+    /// <summary>Whether the plan of the region holding tile (x, y) is made; if not, it's asked for on a worker
+    /// (WorldRegions.PlanSoon), so the far field never stalls a frame making one (~1 s each at 1024).</summary>
+    bool Ready(SimState state, int x, int y)
+    {
+        var r = Plan(state)?.regions;
+        if (r == null) return true;
+        var (rx, ry) = r.RegionOf(x, y);
+        if (r.IsPlanned(rx, ry)) return true;
+        r.PlanSoon(rx, ry);
+        return false;
+    }
+
     /// <summary>Whether the chunk holding tile (x, y) has been generated (a hand-made map: all of it).</summary>
     static bool Generated(SimState state, int x, int y)
     {
@@ -353,21 +365,22 @@ void fragment() {
 
     /// <summary>What generateChunk's first loop would make a tile (water, and its ground index), with a lot's yard
     /// as Lots.layoutLot draws it: the far field's look at land not generated yet.</summary>
-    (bool water, int ground) PlanGround(SimState state, int x, int y)
+    (bool water, int ground) PlanGround(SimState state, int x, int y, bool planned)
     {
         var l = Plan(state)!;
         int grass = 0;
         if (Worldgen.fenceAt(l, x, y) != null) return (false, grass);
-        bool road = Worldgen.isRoad(l, x, y);
+        // A region whose plan isn't made yet (being made on a worker: Ready): nature alone, no roads or lots.
+        bool road = planned && Worldgen.isRoad(l, x, y);
         if (NatureMod.isSea(l, x, y) && !road) return (true, grass);
         if (road) return (false, Array.IndexOf(Grids.GROUNDS, NatureMod.isWater(l, x, y) ? "bridge" : "road"));
         if (NatureMod.isWater(l, x, y)) return (true, grass);
-        if (Worldgen.onLot(l, x, y))
+        if (planned && Worldgen.onLot(l, x, y))
         {
-            int id = (int)Js.Get(l.plan.lotMask, (double)y * l.size + x) - 1;
-            if (id >= 0 && id < l.plan.lots.Count)
+            var lot = l.regions.LotAt(x, y);
+            if (lot != null)
             {
-                string? yard = Lots.layoutLot(l.seed, l.plan.lots[id]).yard?.Invoke(x, y);
+                string? yard = Lots.layoutLot(l.seed, lot).yard?.Invoke(x, y);
                 int gi = yard == null ? -1 : Array.IndexOf(Grids.GROUNDS, yard);
                 return (false, gi >= 0 ? gi : grass);
             }

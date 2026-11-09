@@ -1,6 +1,7 @@
-mapshot mainland_1: 2000x2000, plan + start 4.1 s, every chunk 4.3 s; towns 139, roads 257, lots 2773, settlements 3, trees 320,489, dormant 18,186
-mapshot mainland_2: 2000x2000, plan + start 3.6 s, every chunk 4.0 s; towns 138, roads 261, lots 2945, settlements 3, trees 311,548, dormant 18,978
-mapshot mainland_3: 2000x2000, plan + start 3.7 s, every chunk 4.1 s; towns 138, roads 261, lots 2776, settlements 3, trees 316,568, dormant 17,946
-mapshot island_4: 2000x2000, plan + start 3.7 s, every chunk 3.0 s; towns 89, roads 124, lots 1714, settlements 3, trees 145,098, dormant 7,662
-mapshot islands_5: 2000x2000, plan + start 4.1 s, every chunk 3.1 s; towns 93, roads 131, lots 962, settlements 3, trees 130,422, dormant 4,660
-mapshot quarantine_6: 2000x2000, plan + start 4.0 s, every chunk 3.9 s; towns 138, roads 312, lots 2965, settlements 3, trees 318,596, dormant 19,486
+mapshot mainland_1: 2000x2000, plan + start 3.3 s, every chunk 4.3 s; regions 4, towns 140, roads 272 (in the 4 regions still kept), settlements 3, trees 319,386, dormant 19,435
+mapshot mainland_2: 2000x2000, plan + start 2.9 s, every chunk 4.2 s; regions 4, towns 141, roads 269 (in the 4 regions still kept), settlements 3, trees 306,961, dormant 20,027
+mapshot mainland_3: 2000x2000, plan + start 2.9 s, every chunk 4.2 s; regions 4, towns 141, roads 278 (in the 4 regions still kept), settlements 3, trees 314,799, dormant 19,793
+mapshot island_4: 2000x2000, plan + start 2.2 s, every chunk 3.2 s; regions 4, towns 85, roads 132 (in the 4 regions still kept), settlements 3, trees 148,452, dormant 6,872
+mapshot islands_5: 2000x2000, plan + start 2.1 s, every chunk 3.3 s; regions 4, towns 86, roads 123 (in the 4 regions still kept), settlements 3, trees 132,461, dormant 3,907
+mapshot quarantine_6: 2000x2000, plan + start 3.3 s, every chunk 4.1 s; regions 4, towns 141, roads 323 (in the 4 regions still kept), settlements 3, trees 318,470, dormant 19,126
+mapshot mainland_1_4096: 4096x4096, plan + start 4.9 s, every chunk 26.0 s; regions 16, towns 583, roads 1032 (in the 16 regions still kept), settlements 3, trees 1,331,978, dormant 154,007

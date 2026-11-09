@@ -77,20 +77,24 @@ public static partial class Roads
     }
 
     /// <summary>Routes a road from `from` to `to`; returns its smoothed centre line in tiles, or null if there's no way.</summary>
-    public static List<PointD>? route(Nature n, Float32Array cost, Point from, Point to)
+    public static List<PointD>? route(Nature n, Float32Array cost, Point from, Point to) => route(n, cost, from, to, Win.Whole(n.size));
+
+    /// <summary>The same inside a window (its coarse cells; `cost` is the window's, from costGrid with it): over the whole map, the above.</summary>
+    public static List<PointD>? route(Nature n, Float32Array cost, Point from, Point to, Win w)
     {
-        var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
+        // N: the window's width in cells (the map's, over the whole map); H its height; K0 its first cell.
+        double N = w.KW, H = w.KH, KX0 = w.Kx0, KY0 = w.Ky0;
         double cell(Point p)
         {
-            return ((double)(JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)))))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            return ((double)(JsMath.min(H - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)) - KY0)))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)) - KX0)));
         }
         var start = cell(from);
         var goal = cell(to);
         // g in doubles (2026-11-09; schema 73). It was a Float32Array, as the TypeScript had it, compared in doubles: a g
         // that rounded up when stored stayed "improvable" by the same path, so cells re-pushed each other without end
         // (one road in a 2048 world: 181 million expansions, 316 s). See docs/worldgen-speed.md.
-        var g = new Float64Array(((double)(N) * (N))).fill(double.PositiveInfinity);
-        var came = new Int32Array(((double)(N) * (N))).fill(-1);
+        var g = new Float64Array(((double)(N) * (H))).fill(double.PositiveInfinity);
+        var came = new Int32Array(((double)(N) * (H))).fill(-1);
         var gx = goal % N;
         var gy = JsMath.floor(((double)(goal) / (N)));
         // A binary min-heap of (f, cell) in two plain arrays: the same pushes, sift-ups and sift-downs as the list of
@@ -157,7 +161,7 @@ public static partial class Roads
         push(0, start);
         var MIN = 0.35;
         // A backstop: no road expands more than EXPANSIONS_PER_CELL times the grid (a sound search needs about one).
-        double budget = ((double)(N) * (N)) * EXPANSIONS_PER_CELL;
+        double budget = ((double)(N) * (H)) * EXPANSIONS_PER_CELL;
         while (heapN > 0)
         {
             if (--budget < 0)
@@ -185,7 +189,7 @@ public static partial class Roads
                     }
                     var nx = cx + dx;
                     var ny = cy + dy;
-                    if ((((nx < 0) || (ny < 0)) || (nx >= N)) || (ny >= N))
+                    if ((((nx < 0) || (ny < 0)) || (nx >= N)) || (ny >= H))
                     {
                         continue;
                     }
@@ -212,7 +216,7 @@ public static partial class Roads
         List<Point> cells = [];
         for (var c = goal; c != -1; c = Js.NN(Js.Get(came, c)))
         {
-            cells.push(new Point { x = Js.I(((double)((c % N)) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))), y = Js.I(((double)(JsMath.floor(((double)(c) / (N)))) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))) });
+            cells.push(new Point { x = Js.I(((double)((c % N) + KX0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))), y = Js.I(((double)(JsMath.floor(((double)(c) / (N))) + KY0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2))) });
         }
         cells.reverse();
         List<PointD> line = [from, .. cells.slice(1, -1), to];
@@ -232,20 +236,23 @@ public static partial class Roads
     }
 
     /// <summary>The cost of crossing each coarse cell: land 1, woods 3, water 14 (a bridge), sea impassable.</summary>
-    public static Float32Array costGrid(Nature n, List<Town> towns)
+    public static Float32Array costGrid(Nature n, List<Town> towns) => costGrid(n, towns, Win.Whole(n.size));
+
+    /// <summary>The same over a window's cells (row by row from its first cell).</summary>
+    public static Float32Array costGrid(Nature n, List<Town> towns, Win w)
     {
-        var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
-        var c = new Float32Array(((double)(N) * (N)));
+        double N = w.KW, H = w.KH;
+        var c = new Float32Array(((double)(N) * (H)));
         // Towns by cell (TownIndex): each cell asks only the towns that could cover it, not every town.
         var index = new TownIndex(towns, n.size);
         double reach = index.Biggest * 0.9 + 1;
         var scratch = new List<int>();
-        for (var j = 0; j < N; j++)
+        for (var j = 0; j < H; j++)
         {
             for (var i = 0; i < N; i++)
             {
-                var x = ((double)(i) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
-                var y = ((double)(j) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
+                var x = ((double)(i + w.Kx0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
+                var y = ((double)(j + w.Ky0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
                 var v = NatureMod.isSea(n, x, y) ? double.PositiveInfinity : (NatureMod.isWater(n, x, y) ? 14 : (NatureMod.isForest(n, x, y) ? 3 : 1));
                 if (index.Find(x, y, reach, (t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((double)(t.radius) * (0.9)), scratch) != null)
                 {
@@ -258,12 +265,14 @@ public static partial class Roads
     }
 
     /// <summary>Marks a laid road's cells cheap, so later roads share it.</summary>
-    public static void reuse(Float32Array cost, double size, List<PointD> line)
+    public static void reuse(Float32Array cost, double size, List<PointD> line) => reuse(cost, Win.Whole(size), line);
+
+    public static void reuse(Float32Array cost, Win w, List<PointD> line)
     {
-        var N = JsMath.ceil(((double)(size) / (ROAD_CELL)));
+        double N = w.KW, H = w.KH;
         foreach (var p in Js.Iter(line))
         {
-            var i = ((double)(JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)))))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)))));
+            var i = ((double)(JsMath.min(H - 1, JsMath.max(0, JsMath.floor(((double)(p.y) / (ROAD_CELL)) - w.Ky0)))) * (N)) + JsMath.min(N - 1, JsMath.max(0, JsMath.floor(((double)(p.x) / (ROAD_CELL)) - w.Kx0)));
             if (JsNumber.isFinite(Js.NN(Js.Get(cost, i))))
             {
                 cost[Js.Idx(i)] = 0.35;
@@ -272,7 +281,10 @@ public static partial class Roads
     }
 
     /// <summary>Draws a road's centre line into the mask, about two and a half tiles wide.</summary>
-    public static void drawLine(Uint8Array mask, double size, List<PointD> line, double value)
+    public static void drawLine(Uint8Array mask, double size, List<PointD> line, double value) => drawLine(mask, Win.Whole(size), line, value);
+
+    /// <summary>The same into a window's mask (row by row from its corner), the parts of the line outside it left out.</summary>
+    public static void drawLine(Uint8Array mask, Win w, List<PointD> line, double value)
     {
         for (var i = 0; i < (line.length - 1); i++)
         {
@@ -287,13 +299,13 @@ public static partial class Roads
                 {
                     for (var x = JsMath.floor(px - 1); x <= JsMath.ceil(px + 1); x++)
                     {
-                        if ((((x < 0) || (y < 0)) || (x >= size)) || (y >= size))
+                        if ((((x < w.x0) || (y < w.y0)) || (x >= w.x1)) || (y >= w.y1))
                         {
                             continue;
                         }
-                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (Js.Get(mask, ((double)(y) * (size)) + x) == 0))
+                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (Js.Get(mask, ((double)(y - w.y0) * (w.W)) + (x - w.x0)) == 0))
                         {
-                            mask[Js.Idx(((double)(y) * (size)) + x)] = value;
+                            mask[Js.Idx(((double)(y - w.y0) * (w.W)) + (x - w.x0))] = value;
                         }
                     }
                 }

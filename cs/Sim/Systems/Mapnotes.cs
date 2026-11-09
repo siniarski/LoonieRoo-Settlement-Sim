@@ -59,14 +59,36 @@ public static partial class Mapnotes
     }
 
     /// <summary>Each town's centre and name (generated worlds; none on hand-made maps).</summary>
+    /// <summary>Worldgen's chunk (a literal: CLAUDE.md rule 12).</summary>
+    const int CHUNK_TILES = 32;
+
     public static List<TownName> townNames(SimState state)
     {
         if (!Js.T(state.world))
         {
             return [];
         }
-        var plan = Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map);
+        var regions = Worldplan.regions(state.world.seed, state.world.size, state.settings.map);
         var offset = JsMath.floor(((double)(Hash.hashRoll(state.world.seed, 0x7041)) * (TOWN_NAMES.length)));
-        return plan.towns.map((t, i) => new TownName { x = Js.I(t.x), y = Js.I(t.y), name = Js.NN(Js.Get(TOWN_NAMES, (offset + i) % TOWN_NAMES.length)) });
+        // A world of one region: every town. A bigger one: the towns of the regions with a generated chunk in them (what
+        // the world has made so far; from the state, so the same whichever regions the plan's cache holds). Names by
+        // each town's index, so a town keeps its name as more regions come in.
+        List<Town> towns;
+        if (regions.Single) towns = regions.TownsOf(0, 0);
+        else
+        {
+            towns = [];
+            int chunks = (int)state.world.chunks, per = WorldRegions.R / CHUNK_TILES;
+            for (int ry = 0; ry < regions.side; ry++)
+                for (int rx = 0; rx < regions.side; rx++)
+                {
+                    bool any = false;
+                    for (int cy = ry * per; cy < Math.Min(chunks, (ry + 1) * per) && !any; cy++)
+                        for (int cx = rx * per; cx < Math.Min(chunks, (rx + 1) * per) && !any; cx++)
+                            any = Js.Get(state.world.generated, (double)cy * chunks + cx) == 1;
+                    if (any) towns.AddRange(regions.TownsOf(rx, ry));
+                }
+        }
+        return towns.map((t) => new TownName { x = Js.I(t.x), y = Js.I(t.y), name = Js.NN(Js.Get(TOWN_NAMES, (offset + t.index) % TOWN_NAMES.length)) });
     }
 }
