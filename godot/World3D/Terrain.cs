@@ -31,6 +31,9 @@ public static class Terrain
     public static float Height(float x, float z) => field == null ? 0f : (float)field.at(x, z);
 
     /// <summary>The ground's height (m) at tile corner (x, y).</summary>
+    /// <summary>A cheap approximate corner height for far away (Heights.Field.coarse): the far field's ground.</summary>
+    public static float Coarse(int x, int y, bool water) => field == null ? (water ? -0.25f : 0f) : (float)field.coarse(x, y, water);
+
     public static float Corner(int x, int y) => field == null ? 0f : (float)field.corner(x, y);
 
     /// <summary>A tile's floor (m): its highest corner (one level under a building). Walls, ceilings and roofs stand on it.</summary>

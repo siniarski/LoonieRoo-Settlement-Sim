@@ -78,7 +78,7 @@ public sealed class Loops
         foreach (var v in state.vehicles ?? new())
             if (v.driverId != null && v.fuel > 0 && v.health > 0)
                 Add($"car {v.id}", "engine", worldPos(v.at, v.was, alpha), 0.6f, 0.85f + 1.3f * (float)Math.Min(1, Math.Abs(v.speed) / Vehicles.MAX_SPEED));
-        foreach (var f in state.furniture)
+        foreach (var f in Of(state))
         {
             if (f.kind != "generator") continue;
             // First seen: not known to be running until its counter moves.
@@ -123,5 +123,22 @@ public sealed class Loops
     {
         foreach (var pl in players) if (pl.key != null) { pl.p.Stop(); pl.key = null; }
         Heard.Clear();
+    }
+
+    // The generators, found again only when the furniture list changes (a world has hundreds of thousands of trees:
+    // scanning them all every frame cost ~8 ms on a 2048 world).
+    List<Furniture> generatorList = new();
+    List<Furniture>? seenList;
+    int seenCount = -1;
+
+    List<Furniture> Of(SimState state)
+    {
+        if (!ReferenceEquals(seenList, state.furniture) || seenCount != state.furniture.Count)
+        {
+            seenList = state.furniture;
+            seenCount = state.furniture.Count;
+            generatorList = state.furniture.FindAll((f) => f.kind == "generator");
+        }
+        return generatorList;
     }
 }

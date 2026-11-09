@@ -31,6 +31,7 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - `--lineup`: one of every item kind on the ground in front of you, three rows of seven eastward (to look at the item models; not a command); `--lineup=variants` the kinds with variants instead, a kind to a row (north to south), its models eastward
 - `--held=MODEL --heldtool=MODEL --swingat=P`: draw that item model (`gun`, `axe`, `weapon_v2`...) in your right or left hand whatever you hold, and hold a swing (or a gun's kick) at P (0..1), for screenshots
 - The item bench: `Godot --path godot res://World3D/ItemBench.tscn -- [--runs=none@0,all@300,box@300,all@3000] [--frames=360] [--out=bench.md]` (items on every open tile within 60 m, a full turn; experiments/item-bench)
+- `--view=M`: first person draws the far field (FarField.cs: coarse ground, buildings as blocks, far trees) out to M metres, with the fog thinned to match (0, the default: off, ~56 m)
 - `--eye=X,Y,H`: first person from tile point (X, Y), H m over the ground there, instead of your eyes (a debug view: roofs from outside or above, a street, a room)
 - `--flat`: first person on flat ground, as before the heightmap (to compare; the sim's heights are untouched)
 - `--arena=one|crowd`: a debug arena (the dead round you); `--play`: on a group start, play its first survivor (to see the others in first person)

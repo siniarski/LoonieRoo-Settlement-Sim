@@ -60,6 +60,22 @@ public sealed class Trees
     public Mesh TreeMesh(int species, int lod) => trees[species, lod];
     public static IReadOnlyList<string> SpeciesNames => SPECIES;
 
+    /// <summary>A tree tile's species, place (size, turn, the trunk nudged off the centre) and tint, as Build draws it
+    /// (the far field draws the same trees).</summary>
+    public static (int species, Transform3D t, Color custom) Placement(Grid g, int x, int y, bool coarse = false)
+    {
+        bool forest = g.ground[y * g.width + x] == FOREST;
+        int s = Species(x, y, forest);
+        var (lo, hi) = SIZE[s];
+        float size = lo + (hi - lo) * U(x, y, 3);
+        float px = x + 0.5f + (U(x, y, 4) - 0.5f) * 2 * TRUNK_JITTER;
+        float pz = y + 0.5f + (U(x, y, 5) - 0.5f) * 2 * TRUNK_JITTER;
+        var t = coarse
+            ? new Transform3D(new Basis(Vector3.Up, U(x, y, 6) * Mathf.Tau).Scaled(new Vector3(size, size, size)), new Vector3(px, Terrain.Coarse(x, y, false) - SINK, pz))
+            : Place(px, pz, U(x, y, 6) * Mathf.Tau, size);
+        return (s, t, Tint(x, y));
+    }
+
     /// <summary>Trees in the chunks built (the debug panel).</summary>
     public int Count { get; private set; }
 

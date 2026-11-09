@@ -101,6 +101,22 @@ public static class Heights
             return top + (bottom - top) * fy;
         }
 
+        /// <summary>A cheap approximation of a corner's height (m) for drawing far away (the renderer's far field):
+        /// the rolling ground and the water level, without the banks, the roads' easing or the building levels, so
+        /// it needs no chunk (no chamfer, no cache). Within a metre or so of corner(); never used by the sim.</summary>
+        public double coarse(int x, int y, bool water)
+        {
+            double town = townness(this, x, y);
+            if (water) return swell(this, x, y, town) - WATER_DROP - SHORE;
+            double small = (octave(this, x, y, S2, SALT2, A2) + octave(this, x, y, S3, SALT3, A3)) * (1 - town);
+            double h = swell(this, x, y, town) + small;
+            var s = plan.nature.start;
+            double ds = JsMath.sqrt((double)(x - s.x) * (x - s.x) + (double)(y - s.y) * (y - s.y));
+            double flat = 1 - smoothstep((ds - START_FLAT) / START_EASE);
+            if (flat > 0) h += (startLevel(this) - h) * flat;
+            return h;
+        }
+
         /// <summary>A tile's floor: the highest of its corners (one level under a building).</summary>
         public double floor(int x, int y) => JsMath.max(JsMath.max(corner(x, y), corner(x + 1, y)), JsMath.max(corner(x, y + 1), corner(x + 1, y + 1)));
 

@@ -132,4 +132,23 @@ public class HeightsTest
         expect(f.at(10, 20)).toBe(f.corner(10, 20));
         expect(f.at(10.5, 20)).toBeCloseTo((f.corner(10, 20) + f.corner(11, 20)) / 2, 9);
     }
+
+    [Fact(DisplayName = "heights > the far field's coarse heights stay near the real ones on land")]
+    public void coarse_near_corner()
+    {
+        var f = Heights.make(42, SIZE, "mainland");
+        var off = new List<double>();
+        for (int y = 0; y <= SIZE; y += 2)
+            for (int x = 0; x <= SIZE; x += 2)
+            {
+                bool wet = false;
+                for (int dy = -3; dy <= 3 && !wet; dy++)
+                    for (int dx = -3; dx <= 3 && !wet; dx++) wet = NatureMod.isWater(f.plan.nature, x + dx, y + dy);
+                if (!wet) off.Add(Math.Abs(f.coarse(x, y, false) - f.corner(x, y)));
+            }
+        off.Sort();
+        expect(off.Count > 1000).toBe(true);
+        expect(off[(int)(off.Count * 0.95)]).toBeLessThan(0.3);
+        expect(off[^1]).toBeLessThan(1);
+    }
 }

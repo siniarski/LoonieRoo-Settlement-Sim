@@ -158,6 +158,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         view.showOverview = args.ContainsKey("overview");
         view.colonyMode = args.ContainsKey("colony");
         if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
+        if (args.TryGetValue("view", out var vw)) World3D.FarField.Range = float.Parse(vw, System.Globalization.CultureInfo.InvariantCulture);
         if (args.TryGetValue("pitch", out var pt)) pitchArg = double.Parse(pt) * Math.PI / 180;
         if (args.TryGetValue("eye", out var ey))
         {

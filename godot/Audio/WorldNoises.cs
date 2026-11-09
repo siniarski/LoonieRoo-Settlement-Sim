@@ -79,7 +79,7 @@ public sealed class WorldNoises
     /// <summary>Turrets: a round fired takes one off `loot`; the last one reloads from `stored`.</summary>
     void Turrets(SimState state, P me, bool fresh)
     {
-        foreach (var f in state.furniture)
+        foreach (var f in Of(state))
         {
             if (f.kind != "turret") continue;
             if (!fresh && turrets.TryGetValue(f.id, out var was) && (f.loot < was.loot || f.stored < was.stored))
@@ -116,5 +116,22 @@ public sealed class WorldNoises
         windowsVersion = state.walkabilityVersion;
         windowsX = you.pos.x;
         windowsY = you.pos.y;
+    }
+
+    // The turrets, found again only when the furniture list changes (a world has hundreds of thousands of trees:
+    // scanning them all every frame cost ~8 ms on a 2048 world).
+    List<Furniture> turretList = new();
+    List<Furniture>? seenList;
+    int seenCount = -1;
+
+    List<Furniture> Of(SimState state)
+    {
+        if (!ReferenceEquals(seenList, state.furniture) || seenCount != state.furniture.Count)
+        {
+            seenList = state.furniture;
+            seenCount = state.furniture.Count;
+            turretList = state.furniture.FindAll((f) => f.kind == "turret");
+        }
+        return turretList;
     }
 }

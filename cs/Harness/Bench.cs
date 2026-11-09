@@ -67,6 +67,7 @@ public static class Scenarios
     {
         ("gen-512", () => { var s = Worldgen.createWorld(7, 512); generateAll(s); return s; }),
         ("gen-1024", () => { var s = Worldgen.createWorld(7, 1024); generateAll(s); return s; }),
+        ("new-2048", () => Worldgen.createWorld(7, 2048)),
         ("colony-512", () =>
         {
             var s = Worldgen.createWorld(7, 512);

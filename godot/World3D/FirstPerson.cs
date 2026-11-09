@@ -38,6 +38,7 @@ public sealed partial class FirstPerson : Node3D
     readonly Held held;
     readonly People people;
     readonly Trees trees;
+    readonly FarField far;
     readonly Roofs roofs;
     /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
     public readonly Audio.Sounds sounds = new();
@@ -48,6 +49,7 @@ public sealed partial class FirstPerson : Node3D
     int sinceCheck;
     public int ChunkCount => chunks.Count;
     public int TreeCount => trees.Count;
+    public FarField Far => far;
     public int ItemCount => items.Count;
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
@@ -68,6 +70,7 @@ public sealed partial class FirstPerson : Node3D
         held = new Held(camera, items);
         people = new People(this);
         trees = new Trees(this);
+        far = new FarField(this, trees);
         roofs = new Roofs(this);
         AddChild(sounds);
         look.indoor = roofs.Indoor;
@@ -116,8 +119,14 @@ public sealed partial class FirstPerson : Node3D
         Light(state, eye, delta);
         Chunks(state, eye);
         trees.Update(state, eye, look);
+        // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
+        int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
+        far.Update(state, eye, new Vector4((hx - RADIUS) * WorldMesh.CHUNK, (hz - RADIUS) * WorldMesh.CHUNK, (hx + RADIUS + 1) * WorldMesh.CHUNK, (hz + RADIUS + 1) * WorldMesh.CHUNK));
+        camera.Far = FarField.Range > 0 ? FarField.Range + 64 : 120;
+        env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
+        people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null);
         bodies.Update(state, alpha, eye, you.id, modelled);
         items.Update(state, eye);
         held.Update(state, you, alpha, delta, inCar || EyeAt != null);

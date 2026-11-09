@@ -171,6 +171,73 @@ public sealed class People
         return drawn;
     }
 
+    // --- you: your own body under the camera (OwnBody.cs) ---
+
+    /// <summary>How far behind the eye the body stands (m), so looking down the camera is over the chest, not in the neck.</summary>
+    const float OWN_BACK = 0.22f;
+    /// <summary>Most the chest turns from the legs (radians), and how far you look round before the legs follow, standing.</summary>
+    const float OWN_TWIST = 1.2f, OWN_TURN_AT = 0.9f;
+    Model? own, ownShadow;
+    OwnBody? ownMod;
+    string ownLook = "";
+    float ownYaw = float.NaN;
+
+    /// <summary>Your own body: shown standing or sneaking, posed like everyone's, its legs the way you walk and its
+    /// chest the way you look (camYaw, FirstPerson's: the look along (cos, sin) on the grid); its head hidden unless
+    /// you look from outside (fromOutside: --eye).</summary>
+    public void UpdateYou(SimState state, Survivor you, double alpha, double camYaw, double delta, bool show, bool fromOutside)
+    {
+        var pose = PoseIntents.ofSurvivor(state, you);
+        show &= pose.stance is "stand" or "sneak";
+        string look = LivingLook(you.id);
+        if (show && look != ownLook)
+        {
+            own?.root.QueueFree();
+            ownShadow?.root.QueueFree();
+            own = Make(look);
+            ownShadow = Make(look);
+            foreach (var mi in FindAll<MeshInstance3D>(own.root)) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            foreach (var mi in FindAll<MeshInstance3D>(ownShadow.root)) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly;
+            ownMod = new OwnBody();
+            Find<Skeleton3D>(own.root)!.AddChild(ownMod);
+            own.phase = ownShadow.phase = 0;
+            ownLook = look;
+            ownYaw = float.NaN;
+        }
+        if (own == null || ownShadow == null || ownMod == null) return;
+        own.root.Visible = ownShadow.root.Visible = show;
+        if (!show) return;
+
+        // The legs: the way you walk (backing off: facing you, the walk run backwards); standing, they follow
+        // the look once it's turned far enough. The chest makes up the rest, up to OWN_TWIST.
+        float lookYaw = (float)Math.Atan2(Math.Cos(camYaw), Math.Sin(camYaw));
+        var w = new Wanted(you.id, look, you, pose, 0, false, "");
+        Pose(own, w, alpha, delta, 0.5, 720);
+        Pose(ownShadow, w, alpha, delta, 0.5, 720);
+        bool moving = own.speed > 0.3;
+        bool back = false;
+        float want;
+        if (moving)
+        {
+            float walk = (float)Math.Atan2(Math.Cos(pose.heading), Math.Sin(pose.heading));
+            back = Math.Abs(Mathf.AngleDifference(lookYaw, walk)) > 1.75f;
+            want = back ? walk + Mathf.Pi : walk;
+        }
+        else want = float.IsNaN(ownYaw) || Math.Abs(Mathf.AngleDifference(ownYaw, lookYaw)) > OWN_TURN_AT ? lookYaw : ownYaw;
+        ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * 8));
+        float twist = Math.Clamp(Mathf.AngleDifference(ownYaw, lookYaw), -OWN_TWIST, OWN_TWIST);
+        ownMod.Twist = twist;
+        ownMod.HideHead = !fromOutside;
+        var behind = new Vector3((float)-Math.Cos(camYaw), 0, (float)-Math.Sin(camYaw)) * (fromOutside ? 0 : OWN_BACK);
+        foreach (var m in new[] { own, ownShadow })
+        {
+            m.yaw = ownYaw;
+            m.root.Rotation = new Vector3(0, ownYaw, 0);
+            m.root.Position += behind;
+            if (back) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
+        }
+    }
+
     // --- the dormant dead ---
 
     static readonly PoseIntent LYING = new() { stance = "lie" }, STANDING = new();
