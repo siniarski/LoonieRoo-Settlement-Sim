@@ -214,6 +214,24 @@ public class GenProfile
         return (pushes, pops, expanded, times.Max(), heapMax);
     }
 
+    /// <summary>A hash of each world plan's roads and lots for seeds 1-30 at a few sizes, to see which worlds a change to
+    /// planning moves (run before and after, compare the files).</summary>
+    [Fact(DisplayName = "gen plan hashes")]
+    public void PlanHashes()
+    {
+        var out_ = new List<string>();
+        foreach (var size in (Env("SIZES") ?? "128,256,512").Split(',').Select(int.Parse))
+            for (int seed = 1; seed <= 30; seed++)
+            {
+                var p = Worldplan.makePlan(NatureMod.natureFor(seed, size, "mainland"));
+                ulong h = 1469598103934665603;
+                foreach (var v in p.roadMask) h = (h ^ (ulong)v) * 1099511628211;
+                foreach (var l in p.lots) h = (h ^ (ulong)(l.x * 73856093 ^ l.y * 19349663 ^ l.w * 83492791 ^ l.h)) * 1099511628211;
+                out_.Add($"{size} {seed} {h:x16} lots {p.lots.Count}");
+            }
+        File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/plan-hashes.txt"), string.Join("\n", out_) + "\n");
+    }
+
     // generateChunk's first loop (terrain), as Worldgen has it.
     static void Terrain(SimState state, Layout l, int cx, int cy)
     {

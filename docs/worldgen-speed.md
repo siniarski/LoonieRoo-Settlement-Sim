@@ -44,3 +44,7 @@ Each step measured by GenProfile before and after, with `./check.sh` green (the 
 7. **For the 10,000 x 10,000 target: a chunked plan.** The plan is global today (masks the size of the map; every town, road and lot planned at once). At that scale it should be hierarchical: regions planned on demand (towns per region, roads as a coarse graph between regions, lots per chunk from their region's plan), masks per chunk, cached and dropped like Heights' chunks. This is a redesign of Worldplan, and every world changes: its own session, after 1-6.
 
 Steps 2-6 change no world (they're checked by "same output" tests). Step 1 changes some worlds and needs the save decision. Step 7 is a new world format.
+
+## Done
+
+- **Step 1, 2026-11-09 (schema 73; old saves refused, the player's choice: "Break old saves").** `Roads.route` keeps g in a `Float64Array`, and stops after `EXPANSIONS_PER_CELL` (8) pops a cell of the grid (the road isn't laid then). A 2048 world (seed 42): createWorld 334 s -> 21 s, layRoads 316 s -> 1.45 s (280 roads, the slowest 23 ms); what's left is siteTowns (15 s). Worlds move: 67 of 90 plans (seeds 1-30 at 128, 256, 512; `gen plan hashes`) lay some road differently, as equal-cost paths now tie the other way. The sim tests all pass; the solo balance player's three worlds end as before (seeds 1 and 2 the same to the tick, seed 3 dies of hunger on day 3 either way, 22 ticks apart). Test: `roads > a long road over mixed ground is found within the search's budget` (even ground is what ran away; it fails on the float32 search).

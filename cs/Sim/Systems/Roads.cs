@@ -15,6 +15,9 @@ public static partial class Roads
 
     public const int ROAD_CELL = 4;
 
+    /// <summary>The most heap pops a road's search may take, per cell of the coarse grid.</summary>
+    public const int EXPANSIONS_PER_CELL = 8;
+
     /// <summary>Which nodes to join: a minimum spanning tree over the nodes, plus a few short extra links.</summary>
     public static List<List<double>> network(double seed, List<Point> nodes)
     {
@@ -83,7 +86,10 @@ public static partial class Roads
         }
         var start = cell(from);
         var goal = cell(to);
-        var g = new Float32Array(((double)(N) * (N))).fill(double.PositiveInfinity);
+        // g in doubles (2026-11-09; schema 73). It was a Float32Array, as the TypeScript had it, compared in doubles: a g
+        // that rounded up when stored stayed "improvable" by the same path, so cells re-pushed each other without end
+        // (one road in a 2048 world: 181 million expansions, 316 s). See docs/worldgen-speed.md.
+        var g = new Float64Array(((double)(N) * (N))).fill(double.PositiveInfinity);
         var came = new Int32Array(((double)(N) * (N))).fill(-1);
         var gx = goal % N;
         var gy = JsMath.floor(((double)(goal) / (N)));
@@ -137,8 +143,14 @@ public static partial class Roads
         g[Js.Idx(start)] = 0;
         push(0, start);
         var MIN = 0.35;
+        // A backstop: no road expands more than EXPANSIONS_PER_CELL times the grid (a sound search needs about one).
+        double budget = ((double)(N) * (N)) * EXPANSIONS_PER_CELL;
         while (heap.length > 0)
         {
+            if (--budget < 0)
+            {
+                return null;
+            }
             var (f, c) = pop();
             if (c == goal)
             {
