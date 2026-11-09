@@ -62,7 +62,7 @@ public sealed partial class Menu : Control
             "Wolves give a warning bite if you crowd them, and come for you when starving; hurt one and the pack comes. Bears maul anyone close. Rabbits and deer are food.",
             "Neighbouring settlements trade, ask favours, send scavengers and caravans out, and remember how you treated them.",
         }),
-        ("The view", new[] { "Space pauses (plan freely while paused); 1x, 2x and 4x speed. M is the map, N the minimap, Home recentres, the wheel zooms. Esc opens this menu." }),
+        ("The view", new[] { "Space jumps, vaults a broken window or a barricade, or hops a ditch. The world stops while this menu or the map is open; in the colony tab, 1x, 2x and 4x speed. M is the map, N the minimap, Home recentres, the wheel zooms. Esc opens this menu." }),
     };
 
     readonly View view = null!;

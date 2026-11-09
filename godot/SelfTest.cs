@@ -1,6 +1,6 @@
 // `--selftest`: drives the running game with real input events (through Godot's input pipeline,
 // so the HUD's buttons and the game's handlers both see them) and checks what they did: walking,
-// pausing, the build bar and a wall placed with the mouse, the map, the menu, a HUD button, a
+// a jump with Space, the map and the menu pausing the game, the build bar and a wall placed with the mouse, the map, the menu, a HUD button, a
 // save to a slot and back, and new games (group and solo) from the menu landing in first person. Prints PASS/FAIL per step and quits with the number of failures as the
 // exit code. The Godot side's equivalent of driving the browser game with Playwright.
 
@@ -178,11 +178,16 @@ public partial class Game
         Check("Tab closes it", !view.showInventory);
         await InventorySteps();
 
-        // Space pauses; ticks stop.
-        await Tap(Godot.Key.Space);
+        // Space jumps (no pause key now): you leave the ground, the eye rises and comes back down, and the game plays on.
+        you = ControlMod.controlled(state)!;
+        float ground = World3D.FirstPerson.Eye(state, you, 1).eye.Y, top = ground;
         int tick = state.tick;
-        await Frames(10);
-        Check("Space pauses", view.paused && state.tick == tick, $"tick {tick} -> {state.tick}");
+        await Tap(Godot.Key.Space);
+        string leap = state.control!.busy?.what ?? "none";
+        for (int i = 0; i < 30; i++) { await Frames(1); top = Math.Max(top, World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 0.5).eye.Y); }
+        float after = World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 1).eye.Y;
+        Check("Space jumps: the eye rises and lands, and the game plays on", Leaps.isLeap(leap) && top > ground + 0.1f && Math.Abs(after - ground) < 0.05f && !view.halted && state.tick > tick,
+            $"{leap}, eye {ground:0.00} -> top {top:0.00} -> {after:0.00}, tick {tick} -> {state.tick}");
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
@@ -221,8 +226,8 @@ public partial class Game
         // The HUD's 2x button (a real click on it) sets the speed and unpauses.
         var two = FindButton(hud, "2x");
         if (two != null) await Click(two.GetGlobalRect().GetCenter());
-        Check("Clicking 2x sets the speed", two != null && view.speed == 2 && !view.paused, $"speed {view.speed}, paused {view.paused}");
-        await Tap(Godot.Key.Space);
+        Check("Clicking 2x sets the speed", two != null && view.speed == 2 && !view.halted, $"speed {view.speed}, halted {view.halted}");
+        view.speed = 1;
 
         // Esc in the Colony tab: back to first person.
         await Tap(Godot.Key.Escape);
@@ -233,6 +238,7 @@ public partial class Game
         await Tap(Godot.Key.M);
         await Frames(1);
         Check("M opens the map", view.showMap && worldMap.Visible && tabs.Visible);
+        await StopsTicks("The map pauses the game");
         var colonyTab = FindButton(tabs, "Colony");
         if (colonyTab != null) await Click(colonyTab.GetGlobalRect().GetCenter());
         await Frames(1);
@@ -240,11 +246,13 @@ public partial class Game
         await Tap(Godot.Key.M);
         await Frames(1);
         Check("M goes back to first person", view.firstPerson && !view.showMap && !view.colonyMode);
+        await PlaysOn("Closing the map plays on");
 
         // Esc opens the menu; Save to slot 3 from it; Resume.
         await Tap(Godot.Key.Escape);
         await Frames(2);
         Check("Esc opens the menu", view.menu == "main" && menu.Visible, view.menu ?? "none");
+        await StopsTicks("The menu pauses the game");
         // The volume slider sets the master bus (and is put back as it was: it's the player's setting).
         var volume = FindNamed<HSlider>(menu, "Volume");
         float had = Audio.Volume.Level;
@@ -259,9 +267,9 @@ public partial class Game
         if (resume != null) await Click(resume.GetGlobalRect().GetCenter());
         await Frames(2);
         Check("Resume closes the menu", view.menu == null && !menu.Visible);
+        await PlaysOn("Closing the menu plays on");
 
         // Play on a little, then load slot 3 back: the clock goes back to when it was saved.
-        view.paused = false;
         await Frames(20);
         Load("3");
         await Frames(2);
@@ -270,7 +278,7 @@ public partial class Game
         await SoundTest();
 
         // New game from the menu, from the Colony tab of this one: a group start (the default
-        // preset), then a solo one. Each lands in first person on your survivor, paused, Space to play.
+        // preset), then a solo one. Each lands in first person on your survivor, playing at once.
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
         await BigNewGame();
@@ -298,7 +306,6 @@ public partial class Game
         Check($"New game ({start}) from the menu is first person on your survivor",
             state.settings.start == start && you != null && you.id == state.survivors[0].id && view.menu == null && !view.colonyMode && !view.buildOpen && view.firstPerson && firstPerson.Visible,
             $"start {state.settings.start}, playing {you?.id ?? "nobody"}, menu {view.menu ?? "none"}, colony {view.colonyMode}, first person {view.firstPerson}");
-        Check($"New game ({start}) starts paused with the banner up", view.paused && FindLabel(hud, "PAUSED") != null);
         // SELFTEST_SHOT=prefix: save what the new start looks like (prefix-group.png, prefix-solo.png).
         if (OS.GetEnvironment("SELFTEST_SHOT") is { Length: > 0 } shot)
         {
@@ -307,10 +314,24 @@ public partial class Game
             GetViewport().GetTexture().GetImage().SavePng($"{shot}-{start}.png");
         }
         int tick = state.tick;
-        await Tap(Godot.Key.Space);
         await Frames(10);
-        Check($"New game ({start}): Space plays", !view.paused && state.tick > tick, $"tick {tick} -> {state.tick}");
-        await Tap(Godot.Key.Space);
+        Check($"New game ({start}) plays at once, no banner", !view.halted && state.tick > tick && FindLabel(hud, "PAUSED") == null, $"tick {tick} -> {state.tick}");
+    }
+
+    /// <summary>No ticks go by over a few frames (the map or the menu is up).</summary>
+    async Task StopsTicks(string what)
+    {
+        int tick = state.tick;
+        await Frames(10);
+        Check(what, view.halted && state.tick == tick, $"tick {tick} -> {state.tick}");
+    }
+
+    /// <summary>Ticks go by again.</summary>
+    async Task PlaysOn(string what)
+    {
+        int tick = state.tick;
+        await Frames(10);
+        Check(what, !view.halted && state.tick > tick, $"tick {tick} -> {state.tick}");
     }
 
     /// <summary>Sound: the made sounds aren't silent (written to user://sounds-preview to listen to), and a zombie
