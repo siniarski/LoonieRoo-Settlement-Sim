@@ -1,27 +1,37 @@
 // Your own sounds (2026-11-09): footsteps and the swing, heard as yours (plain players, not 3D).
-//   steps  one every STRIDE m you've moved (shorter sneaking, longer running), on what's underfoot:
-//          soft (grass, dirt, field, forest, water's edge), hard (road, paving, concrete, tiles, a bridge),
-//          boards; quiet sneaking, louder running. None in a car or asleep.
+//   steps  one each time a foot of your own body comes down in its clip (People's footfalls: Footfalls.cs), so
+//          they land with the walk, the run and the sneak you see, at any rate and backing off; on the ground
+//          under that foot (Surface: each ground its own, shallow water by the bank); quiet sneaking, louder
+//          running. None in a car or asleep (your body isn't walking then).
 //   swing  control.swungTick moved: a swing through the air (a blow landing is the hit's own thud).
 // Your gunshots are WorldNoises' (a gun's wear going down), from where you stand.
 
 using System;
 using Godot;
+using System.Collections.Generic;
 using LoonieRoo.Sim;
+using LoonieRoo.Game.World3D;
 
 namespace LoonieRoo.Game.Audio;
 
 public sealed class Yours
 {
-    const double STRIDE = 0.75, STRIDE_RUN = 1.05, STRIDE_SNEAK = 0.55;
-    const float STEP_DB = -11, STEP_RUN_DB = -6, STEP_SNEAK_DB = -22, SWING_DB = -7;
-    /// <summary>A move of more than this (m) in one look is a jump (a teleport, getting out of a car), not steps.</summary>
-    const double JUMP = 2;
+    const float SWING_DB = -7;
+    /// <summary>A foot this close (m) to a water tile is in the shallows at the bank.</summary>
+    const double SHALLOWS = 0.3;
+
+    /// <summary>A step's level (dB) and pitch by gait; others' steps (Sounds) start from the same levels.</summary>
+    public static (float db, float pitch) Gait(string gait) => gait switch
+    {
+        "crouch" => (-22, 0.97f),
+        "jog" => (-7, 1.03f),
+        "sprint" => (-4, 1.06f),
+        _ => (-11, 1),
+    };
 
     readonly Sounds sounds;
     readonly AudioStreamPlayer[] feet = { new(), new() };
     readonly AudioStreamPlayer swing = new();
-    double walked, lastX = double.NaN, lastY;
     int foot, steps;
     double? lastSwung;
 
@@ -29,6 +39,7 @@ public sealed class Yours
     public int Steps => steps;
     public int Swings { get; private set; }
     public string LastSurface { get; private set; } = "";
+    public string LastGait { get; private set; } = "";
 
     public Yours(Sounds sounds)
     {
@@ -37,45 +48,43 @@ public sealed class Yours
         sounds.AddChild(swing);
     }
 
-    /// <summary>The kind of step for the ground of tile (x, y).</summary>
-    public static string Surface(Grid grid, int x, int y)
+    /// <summary>The kind of step (step_grass ... step_water) for a foot at (x, y) in tile units: the ground of the
+    /// tile under it, or shallow water if that's water or a water tile is within SHALLOWS of the foot (a bridge is a bridge).</summary>
+    public static string Surface(Grid grid, double x, double y)
     {
-        if (!Grids.inBounds(grid, x, y)) return "step_soft";
-        int i = y * grid.width + x;
+        int tx = (int)Math.Floor(x), ty = (int)Math.Floor(y);
+        if (!Grids.inBounds(grid, tx, ty)) return "step_grass";
+        int i = ty * grid.width + tx;
         var g = Grids.GROUNDS[Math.Clamp(grid.ground[i], 0, Grids.GROUNDS.Length - 1)];
-        return g switch
-        {
-            "road" or "paving" or "concrete" or "tiles" or "bridge" => "step_hard",
-            "boards" => "step_wood",
-            _ => "step_soft",
-        };
+        if (g == "bridge") return "step_bridge";
+        if (grid.tiles[i] == Grids.WATER) return "step_water";
+        for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int nx = (int)Math.Floor(x + dx * SHALLOWS), ny = (int)Math.Floor(y + dy * SHALLOWS);
+                if ((nx != tx || ny != ty) && Grids.getTile(grid, nx, ny) == Grids.WATER) return "step_water";
+            }
+        return "step_" + g;
     }
 
-    public void Update(SimState state, Survivor you, bool fresh)
+    public void Update(SimState state, Survivor you, bool fresh, IReadOnlyList<Footfall> footfalls)
     {
         var c = state.control;
-        double x = you.at.x / (double)Motion.SUB, y = you.at.y / (double)Motion.SUB;
-        bool still = Vehicles.vehicleOf(state, you) != null || you.sleep?.asleep == true;
-        double d = double.IsNaN(lastX) ? 0 : Math.Sqrt((x - lastX) * (x - lastX) + (y - lastY) * (y - lastY));
-        lastX = x; lastY = y;
-        if (fresh || still || d > JUMP) { walked = 0; d = 0; }
-        walked += d;
-        bool sneaking = c?.sneaking == true, running = c?.running == true && !sneaking;
-        double stride = sneaking ? STRIDE_SNEAK : running ? STRIDE_RUN : STRIDE;
-        if (walked >= stride)
+        foreach (var f in footfalls)
         {
-            walked -= stride;
-            if (walked > stride) walked = 0;
-            var kind = Surface(state.grid, you.pos.x, you.pos.y);
+            if (!f.you || fresh) continue;
+            var kind = Surface(state.grid, f.at.X, f.at.Z);
             var set = sounds.bank.Get(kind);
             var p = feet[foot];
             foot ^= 1;
+            var (db, pitch) = Gait(f.gait);
             p.Stream = set[(int)(Hash.hashRoll(steps, 0x57e9) * set.Length) % set.Length];
-            p.PitchScale = (running ? 1.05f : 1) * (0.94f + 0.12f * (float)Hash.hashRoll(steps, 0x57ea));
-            p.VolumeDb = sneaking ? STEP_SNEAK_DB : running ? STEP_RUN_DB : STEP_DB;
+            p.PitchScale = pitch * (0.94f + 0.12f * (float)Hash.hashRoll(steps, 0x57ea));
+            p.VolumeDb = db;
             p.Play();
             steps++;
             LastSurface = kind;
+            LastGait = f.gait;
         }
 
         var swung = c?.swungTick;

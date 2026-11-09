@@ -37,6 +37,8 @@ public sealed partial class FirstPerson : Node3D
     readonly ItemModels items;
     readonly Held held;
     readonly People people;
+    /// <summary>The people drawn (the self-test reads their footfalls).</summary>
+    public People People => people;
     readonly Trees trees;
     readonly FarField far;
     readonly Roofs roofs;
@@ -130,7 +132,7 @@ public sealed partial class FirstPerson : Node3D
         bodies.Update(state, alpha, eye, you.id, modelled);
         items.Update(state, eye);
         held.Update(state, you, alpha, delta, inCar || EyeAt != null);
-        sounds.Update(state, alpha, you);
+        sounds.Update(state, alpha, you, people.Steps);
     }
 
     /// <summary>How much of the open sky's ambient light reaches you: less under a roof, eased so doorways don't flicker.</summary>

@@ -60,6 +60,9 @@ public sealed class People
         public double speed, angry, phase;
         public float yaw;
         public bool placed;
+        public Skeleton3D? skel;
+        public readonly int[] feet = { -1, -1 };
+        public readonly Footfalls.Watch watch = new();
     }
 
     readonly Node3D parent;
@@ -68,7 +71,17 @@ public sealed class People
     readonly Dictionary<string, StandardMaterial3D> hairMats = new();
     readonly Dictionary<string, List<Model>> free = new();
     readonly Dictionary<string, Model> byBody = new();
+    readonly Dictionary<string, Footfalls.Marks> marks;
+    readonly List<int> crossed = new();
     double time;
+
+    /// <summary>The feet that came down this frame (Update clears it, UpdateYou adds yours): Sounds plays them.</summary>
+    public readonly List<Footfall> Steps = new();
+    /// <summary>Your last steps, for the self-test and STEP_TRACE: the clip and the playhead (s), the foot, the clip's
+    /// ankle over its lowest there (m), and the drawn ankles over your feet's ground, this foot and the other (m).</summary>
+    public readonly List<YourStep> YourSteps = new();
+    public readonly record struct YourStep(ulong ms, string clip, double at, int foot, float clipH, float drawnH, float otherH);
+    public Footfalls.Marks? MarksOf(string clip) => marks.GetValueOrDefault(clip);
 
     public People(Node3D parent)
     {
@@ -78,6 +91,7 @@ public sealed class People
         m.Free();
         var u = GD.Load<PackedScene>("res://assets/characters/clips_ual.glb").Instantiate<Node3D>();
         ualLib = Find<AnimationPlayer>(u)!.GetAnimationLibrary("");
+        marks = Footfalls.Find(ualLib, u, Find<Skeleton3D>(u)!);
         u.Free();
         foreach (var n in new[] { "ual_idle", "ual_walk", "ual_jog_fwd", "ual_sprint", "ual_crouch_fwd", "ual_crouch_idle", "ual_driving" })
             if (ualLib.HasAnimation(n)) ualLib.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
@@ -94,6 +108,7 @@ public sealed class People
     public HashSet<string> Update(SimState state, double alpha, Vector3 eye, string youId, double delta, float vpHeight)
     {
         time += delta;
+        Steps.Clear();
         var wanted = new List<Wanted>();
         float range2 = MODEL_RANGE * MODEL_RANGE;
         void Add(string id, string look, Body b, PoseIntent pose, bool angry, string action)
@@ -162,10 +177,12 @@ public sealed class People
                 m.placed = false;
                 m.clip = "";
                 m.phase = Hash01(w.id, 3);
+                m.watch.Reset();
                 m.root.Visible = true;
                 byBody[w.id] = m;
             }
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
+            Footfall(m, w.id, false, w.look.StartsWith("zombie"), delta);
             drawn.Add(w.id);
         }
         return drawn;
@@ -207,7 +224,7 @@ public sealed class People
         }
         if (own == null || ownShadow == null || ownMod == null) return;
         own.root.Visible = ownShadow.root.Visible = show;
-        if (!show) return;
+        if (!show) { own.watch.Reset(); return; }
 
         // The legs: the way you walk (backing off: facing you, the walk run backwards); standing, they follow
         // the look once it's turned far enough. The chest makes up the rest, up to OWN_TWIST.
@@ -243,6 +260,42 @@ public sealed class People
             m.root.Rotation = new Vector3(0, ownYaw, 0);
             m.root.Position += behind;
             if (back) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
+        }
+        Footfall(own!, you.id, true, false, delta);
+    }
+
+    /// <summary>The feet of model m that came down since the last look (its clip's marks crossed): into Steps.</summary>
+    void Footfall(Model m, string id, bool you, bool dead, double delta)
+    {
+        string clip = m.player.CurrentAnimation;
+        double at = m.player.CurrentAnimationPosition;
+        var mk = marks.GetValueOrDefault(clip);
+        m.watch.Crossed(clip, at, delta, mk, crossed);
+        if (crossed.Count == 0) return;
+        if (m.skel == null)
+        {
+            m.skel = Find<Skeleton3D>(m.root);
+            if (m.skel == null) return;
+            m.feet[0] = m.skel.FindBone("LeftFoot");
+            m.feet[1] = m.skel.FindBone("RightFoot");
+        }
+        var xf = m.skel.GlobalTransform;
+        foreach (int foot in crossed)
+        {
+            if (m.feet[foot] < 0) continue;
+            var ankle = xf * m.skel.GetBoneGlobalPose(m.feet[foot]).Origin;
+            Steps.Add(new Footfall(id, you, dead, ankle, Footfalls.GAITS[clip], foot));
+            if (!you) continue;
+            var other = xf * m.skel.GetBoneGlobalPose(m.feet[1 - foot]).Origin;
+            float ground = m.root.GlobalPosition.Y;
+            var step = new YourStep(Godot.Time.GetTicksMsec(), clip, at, foot, mk!.HeightAt(foot, at), ankle.Y - ground, other.Y - ground);
+            YourSteps.Add(step);
+            if (YourSteps.Count > 64) YourSteps.RemoveAt(0);
+            // STEP_SHOT=prefix: a picture at your 4th to 6th steps (with --eye to watch yourself), to see the foot down.
+            if (OS.GetEnvironment("STEP_SHOT") is { Length: > 0 } shot && YourSteps.Count is >= 4 and <= 6)
+                parent.GetViewport().GetTexture().GetImage().SavePng($"{shot}-{YourSteps.Count}.png");
+            if (OS.GetEnvironment("STEP_TRACE") != "")
+                GD.Print($"step: {step.ms} ms {clip} at {at:0.000}/{mk.length:0.000} rate {m.player.SpeedScale:0.00} {(foot == 0 ? "L" : "R")} clip ankle +{step.clipH * 100:0.0} cm, drawn ankle {step.drawnH * 100:0.0} cm, other {step.otherH * 100:0.0} cm");
         }
     }
 

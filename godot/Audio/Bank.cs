@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -17,16 +18,14 @@ public sealed class Bank
     /// <summary>A kind: how many variants, how to make variant i, and whether it loops.</summary>
     public readonly record struct Kind(string name, int count, Func<int, float[]> make, bool loop = false);
 
-    public static readonly Kind[] KINDS =
+    /// <summary>The kinds; the steps, one kind a surface (step_grass ... step_water), last.</summary>
+    public static readonly Kind[] KINDS = new Kind[]
     {
         new("moan_idle", 6, (i) => Synth.Moan(i, false)),
         new("moan_notice", 4, (i) => Synth.Moan(i, true)),
         new("hit", 3, (i) => Synth.Hit(i, false)),
         new("kill", 2, (i) => Synth.Hit(i, true)),
         new("scream", 2, Synth.Scream),
-        new("step_soft", 4, (i) => SynthWorld.Step(i, 0)),
-        new("step_hard", 4, (i) => SynthWorld.Step(i, 1)),
-        new("step_wood", 4, (i) => SynthWorld.Step(i, 2)),
         new("swing", 3, SynthWorld.Swing),
         new("gunshot", 3, SynthWorld.Gunshot),
         new("glass", 3, SynthWorld.Glass),
@@ -38,7 +37,7 @@ public sealed class Bank
         new("generator", 1, SynthWorld.Generator, true),
         new("alarm", 1, SynthWorld.Alarm, true),
         new("helicopter", 1, SynthWorld.Helicopter, true),
-    };
+    }.Concat(Array.ConvertAll(SynthSteps.SURFACES, (g) => new Kind("step_" + g, 4, (i) => SynthSteps.Step(i, g)))).ToArray();
 
     readonly Dictionary<string, AudioStream[]> streams = new();
     Task<Dictionary<string, float[][]>>? making;

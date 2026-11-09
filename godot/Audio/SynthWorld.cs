@@ -1,4 +1,4 @@
-// The world's sounds, made by code (2026-11-09, the second sound session): your footsteps and swing,
+// The world's sounds, made by code (2026-11-09, the second sound session): your swing (steps: SynthSteps.cs),
 // gunshots, glass, thunder, and the loops (wind, rain, the night's insects, an engine, a generator,
 // an alarm bell, a helicopter). Same rules as Synth.cs: pure arithmetic over float samples, each
 // variant from its own seed, the same every run.
@@ -17,7 +17,7 @@ public static class SynthWorld
     const double NYQUIST = RATE * 0.45;
 
     /// <summary>A two-pole band-pass (RBJ's cookbook), retunable while it runs.</summary>
-    struct Band
+    internal struct Band
     {
         double b0, b2, a1, a2, x1, x2, y1, y2;
         public void Tune(double f, double q)
@@ -55,7 +55,7 @@ public static class SynthWorld
         return outp;
     }
 
-    static float[] Floats(double[] d)
+    internal static float[] Floats(double[] d)
     {
         var f = new float[d.Length];
         for (int i = 0; i < d.Length; i++) f[i] = (float)d[i];
@@ -72,44 +72,6 @@ public static class SynthWorld
     }
 
     // ---- One-shots ----
-
-    /// <summary>A footstep. `surface`: 0 soft ground (grass, dirt, field: a muffled crunch), 1 hard (road, paving,
-    /// concrete: a heel's click and a scuff), 2 boards (a hollow knock).</summary>
-    public static float[] Step(int seed, int surface)
-    {
-        var r = new Lcg((uint)(seed * 31337 + surface * 7717 + 3));
-        int n = (int)(0.2 * RATE);
-        var outp = new float[n];
-        var crunch = new Band(); crunch.Tune(r.Range(900, 1500), 0.9);
-        var scuff = new Band(); scuff.Tune(r.Range(1800, 2600), 1.4);
-        var knock = new Band(); knock.Tune(r.Range(170, 230), 7);
-        var knock2 = new Band(); knock2.Tune(r.Range(420, 520), 9);
-        double thumpF = surface == 2 ? r.Range(110, 140) : r.Range(65, 90), phase = 0, lp = 0, prev = 0, grain = 0;
-        double heel = surface == 1 ? r.Range(0.6, 0.9) : surface == 2 ? 0.25 : 0.08;
-        for (int i = 0; i < n; i++)
-        {
-            double s = (double)i / RATE;
-            double white = r.Next() * 2 - 1;
-            phase += 2 * Math.PI * thumpF / RATE;
-            double thump = Math.Sin(phase) * Math.Exp(-s / (surface == 2 ? 0.05 : 0.025));
-            double hp = white - prev; prev = white;
-            double click = hp * heel * Math.Exp(-s / 0.003);
-            double v;
-            if (surface == 0)
-            {
-                // Grainy: a crackle that comes and goes as the sole rolls.
-                if ((i & 31) == 0) grain = r.Next() < 0.55 ? r.Range(0.3, 1) : 0.1;
-                lp += (white - lp) * 0.5;
-                v = thump * 0.7 + crunch.Run(lp) * 3.2 * grain * Math.Exp(-s / 0.05) * Smooth(Math.Min(1, s / 0.006)) + click;
-            }
-            else if (surface == 1)
-                v = thump * 0.6 + click + scuff.Run(white) * 1.6 * Math.Exp(-s / 0.03);
-            else
-                v = thump * 0.8 + (knock.Run(white) * 5 + knock2.Run(white) * 3) * Math.Exp(-s / 0.07) + click;
-            outp[i] = (float)v;
-        }
-        return Normalise(outp, 0.8f);
-    }
 
     /// <summary>A swing through the air: noise through a band that sweeps up and back down.</summary>
     public static float[] Swing(int seed)
