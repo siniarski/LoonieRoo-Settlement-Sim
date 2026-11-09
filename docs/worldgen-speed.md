@@ -63,4 +63,4 @@ Steps 2-6 change no world (they're checked by "same output" tests). Step 1 chang
 - Towns sit evenly over the whole map: one per 170 x 170 tiles (139 on a 2000 mainland), the same density everywhere, so a big map reads as a regular sprinkle of circles with no empty wilds or urban sprawl.
 - The natural features keep their small-map scale: lakes and woods from noise 20-40 tiles across, one river; nothing larger (no big forests, mountains or regions) as the map grows.
 - Settlements are still three, whatever the size.
-- **A bug**: on island maps some settlements stand out at sea (island 4 and islands 5: yellow boxes in the water).
+- **A bug, fixed the same day**: on island maps some settlements stood out at sea (island 4 and islands 5: yellow boxes in the water). Settlements.placeSettlements now takes only tries on land (`Settlements.onLand`: not water in the plan, not on a quarantine fence, 8 tiles clear of the edge); the overviews are redrawn with them ashore.

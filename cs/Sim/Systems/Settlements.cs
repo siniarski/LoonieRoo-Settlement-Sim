@@ -45,23 +45,65 @@ public static partial class Settlements
     }
 
     /// <summary>Three neighbours far from the start, at hashed spots (worldgen).</summary>
+    /// <summary>Settlements keep this far (tiles) from the map's edge.</summary>
+    public const int EDGE_MARGIN = 8;
+
+    /// <summary>Whether a settlement can stand at (x, y): on land in the world plan (not sea, channel, river or lake),
+    /// off a quarantine fence, clear of the edge. A hand-made map (no plan) takes anywhere in bounds.</summary>
+    public static bool onLand(Nature? n, double size, int x, int y)
+    {
+        if (x < EDGE_MARGIN || y < EDGE_MARGIN || x >= size - EDGE_MARGIN || y >= size - EDGE_MARGIN)
+        {
+            return size <= 2 * EDGE_MARGIN && x >= 0 && y >= 0 && x < size && y < size;
+        }
+        return n == null || (!NatureMod.isWater(n, x, y) && !NatureMod.onFenceLine(n, x, y));
+    }
+
+    /// <summary>Three settlements, each tried at up to 20 hashed spots for one on land (onLand) and far enough from the
+    /// start (a third of the map, in steps). 2026-11-09: the land test is new; before it, island maps put some out at
+    /// sea. A world whose old spot was on land keeps it (the same tries, in the same order). With none far enough, the
+    /// last try as before if it's on land, else the first on land, else the land nearest the last try.</summary>
     public static void placeSettlements(SimState state, Point start, double seed)
     {
         var size = state.grid.width;
+        Nature? nature = state.world == null ? null : Worldplan.planWorld(state.world.seed, state.world.size, state.settings.map).nature;
         for (var i = 0; i < 3; i++)
         {
             Point p = new Point { x = Js.I(0), y = Js.I(0) };
+            Point? land = null, found = null;
             for (var attempt = 0; attempt < 20; attempt++)
             {
                 p = new Point { x = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 1)) * (size)))), y = Js.I(JsMath.floor(((double)(Hash.hashRoll(seed, i, attempt, 2)) * (size)))) };
+                if (!onLand(nature, size, p.x, p.y))
+                {
+                    continue;
+                }
+                land ??= p;
                 if ((JsMath.abs(p.x - start.x) + JsMath.abs(p.y - start.y)) >= ((double)(size) / (3)))
                 {
+                    found = p;
                     break;
                 }
             }
+            // As before when none is far enough: the last try (if it's on land), else the first on land, else the nearest land.
+            p = found ?? (onLand(nature, size, p.x, p.y) ? p : land ?? nearestLand(nature, size, p));
             var people = 5 + JsMath.floor(((double)(Hash.hashRoll(seed, i, 3)) * (8)));
             newSettlement(state, Js.NN(Js.Get(NAMES, (seed + i) % NAMES.length)), p.x, p.y, people, ((double)(people) * (3)), JsMath.floor(((double)(Hash.hashRoll(seed, i, 4)) * (3))));
         }
+    }
+
+    /// <summary>The nearest spot to p (in growing square rings) where a settlement can stand, or p if there's none.</summary>
+    static Point nearestLand(Nature? n, double size, Point p)
+    {
+        for (int r = 1; r < size; r++)
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
+                    int x = p.x + dx, y = p.y + dy;
+                    if (onLand(n, size, x, y)) return new Point { x = x, y = y };
+                }
+        return p;
     }
 
     public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)
