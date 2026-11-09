@@ -1,11 +1,11 @@
 {
  "kind": "bear",
- "height": 1.002,
- "length": 1.535,
+ "height": 1.005,
+ "length": 1.531,
  "lods": [
-  5000,
   1600,
-  500
+  700,
+  300
  ],
  "clips": {
   "idle": {

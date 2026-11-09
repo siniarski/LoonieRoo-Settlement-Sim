@@ -1,11 +1,11 @@
 {
  "kind": "rabbit",
- "height": 0.347,
- "length": 0.398,
+ "height": 0.348,
+ "length": 0.397,
  "lods": [
-  1800,
   600,
-  200
+  250,
+  100
  ],
  "clips": {
   "idle": {

@@ -1,11 +1,11 @@
 {
  "kind": "dog",
- "height": 0.669,
- "length": 1.047,
+ "height": 0.671,
+ "length": 1.048,
  "lods": [
-  5000,
   1600,
-  500
+  700,
+  300
  ],
  "clips": {
   "idle": {

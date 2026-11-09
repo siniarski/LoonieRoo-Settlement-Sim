@@ -51,6 +51,9 @@ void fragment() {
     int frame, lastCount = -1;
     Vector3 lastEye = new(float.NaN, 0, 0);
 
+    /// <summary>A model by name (a kind or a variant, as in items.glb), with the game's material (the style lineup).</summary>
+    public Mesh? MeshNamed(string name) => meshes.GetValueOrDefault(name);
+
     /// <summary>Items drawn (the debug panel).</summary>
     public int Count { get; private set; }
 

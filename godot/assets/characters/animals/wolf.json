@@ -1,11 +1,11 @@
 {
  "kind": "wolf",
- "height": 1.009,
- "length": 1.613,
+ "height": 1.008,
+ "length": 1.618,
  "lods": [
-  5000,
   1600,
-  500
+  700,
+  300
  ],
  "clips": {
   "idle": {

@@ -1,5 +1,6 @@
-// People in first person: survivors, residents, raiders and the dead near you as the "Zomboid-plus"
-// character models (docs/characters.md "The look"; the look lab's assets), animated from the sim's
+// People in first person: survivors, residents, raiders and the dead near you as the "pz" character
+// models (3k / 1.2k / 600 triangles, a 512 painted map, no normal map: picked 2026-11-09 from the style
+// lineup, docs/characters.md "The look"; art/scripts/build_lookdev.py --only pz), animated from the sim's
 // pose intents (PoseIntents.cs: stance, speed, heading) and LOD'd by height on screen as the look lab
 // does. Reads state only.
 //
@@ -32,8 +33,11 @@ public sealed class People
     const int MAKES_PER_FRAME = 3;
     /// <summary>Further than this (m), a body stays a capsule even under budget.</summary>
     const float MODEL_RANGE = 40;
-    /// <summary>Auto LOD as the look lab's: the lowest screen height (px) each LOD is shown at.</summary>
-    static readonly double[] LOD_AT = { 700, 340, 170, 85, 40, 0 };
+    /// <summary>Auto LOD as the look lab's pz ladder: the lowest screen height (px) each LOD is shown at
+    /// (about 4 m and 10 m away at 720p).</summary>
+    static readonly double[] LOD_AT = { 260, 110, 0 };
+    /// <summary>The hair meshes are on the plus ladder (30k ... 600): the pz ladder's 3k / 1.2k / 600 are its 3 / 4 / 5.</summary>
+    const int HAIR_LOD_OFFSET = 3;
     const double FOV = 60;
 
     static readonly string[] ZOMBIE_FACES = { "feral", "feral", "slack", "gaunt", "bloated", "torn" };
@@ -229,7 +233,7 @@ public sealed class People
         var parts = look.Split('/');
         string subject = parts[0], variant = parts[1], hair = parts[2];
         int colour = int.Parse(parts[3]);
-        string plain = $"res://assets/characters/look/look_plus_{subject}.glb";
+        string plain = $"res://assets/characters/look/look_pz_{subject}.glb";
         string path = variant is "feral" or "painted" ? plain : plain.Replace(".glb", $"_{variant}.glb");
         if (!ResourceLoader.Exists(path)) path = plain;
         var root = Scene(path).Instantiate<Node3D>();
@@ -255,12 +259,14 @@ public sealed class People
         var scene = Scene(path).Instantiate<Node3D>();
         foreach (var mi in FindAll<MeshInstance3D>(scene).ToList())
         {
+            int lod = LodIndex(mi.Name) - HAIR_LOD_OFFSET;
+            if (lod < 0) continue;  // the plus ladder's top levels (and their strand cards): not drawn
             mi.GetParent().RemoveChild(mi);
             mi.Owner = null;
             skel.AddChild(mi);
             mi.Skeleton = new NodePath("..");
             mi.MaterialOverride = HairMaterial(mi, colour);
-            groups[Math.Min(LodIndex(mi.Name), groups.Count - 1)].Add(mi);
+            groups[Math.Min(lod, groups.Count - 1)].Add(mi);
         }
         scene.QueueFree();
     }

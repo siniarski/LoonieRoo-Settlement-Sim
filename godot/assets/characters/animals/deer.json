@@ -1,11 +1,11 @@
 {
  "kind": "deer",
- "height": 1.431,
- "length": 1.353,
+ "height": 1.433,
+ "length": 1.355,
  "lods": [
-  5000,
   1600,
-  500
+  700,
+  300
  ],
  "clips": {
   "idle": {

@@ -50,7 +50,7 @@ def shade(c, k):
 
 WOLF = dict(
     kind="wolf",
-    lods=[5000, 1600, 500],
+    lods=[1600, 700, 300],
     res=0.012, voxel=0.009,
     spine=dict(pelvis=(-0.36, 0.66), mid=(-0.02, 0.67), withers=(0.27, 0.74), neck=(0.38, 0.73),
                head=(0.60, 0.86), snout=(0.85, 0.775)),
@@ -89,7 +89,7 @@ WOLF = dict(
 
 DEER = dict(
     kind="deer",
-    lods=[5000, 1600, 500],
+    lods=[1600, 700, 300],
     res=0.013, voxel=0.009,
     spine=dict(pelvis=(-0.42, 0.90), mid=(-0.05, 0.88), withers=(0.28, 0.96), neck=(0.38, 0.98),
                head=(0.56, 1.30), snout=(0.76, 1.21)),
@@ -129,7 +129,7 @@ DEER = dict(
 
 RABBIT = dict(
     kind="rabbit",
-    lods=[1800, 600, 200],
+    lods=[600, 250, 100],
     res=0.005, voxel=0.0038,
     spine=dict(pelvis=(-0.10, 0.13), mid=(-0.01, 0.155), withers=(0.07, 0.15), neck=(0.10, 0.15),
                head=(0.15, 0.205), snout=(0.21, 0.185)),
@@ -158,7 +158,7 @@ RABBIT = dict(
 
 BEAR = dict(
     kind="bear",
-    lods=[5000, 1600, 500],
+    lods=[1600, 700, 300],
     res=0.016, voxel=0.011,
     spine=dict(pelvis=(-0.45, 0.84), mid=(-0.05, 0.84), withers=(0.30, 0.92), neck=(0.42, 0.86),
                head=(0.62, 0.84), snout=(0.88, 0.765)),

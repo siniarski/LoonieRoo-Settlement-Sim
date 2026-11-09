@@ -56,6 +56,10 @@ public sealed class Trees
     readonly Dictionary<(int, int), (long sig, List<Node3D> nodes, int count)> chunks = new();
     int frame;
 
+    /// <summary>A species' mesh at a LOD (0 near, 1 mid, 2 far), dressed in the game's materials (the style lineup).</summary>
+    public Mesh TreeMesh(int species, int lod) => trees[species, lod];
+    public static IReadOnlyList<string> SpeciesNames => SPECIES;
+
     /// <summary>Trees in the chunks built (the debug panel).</summary>
     public int Count { get; private set; }
 
