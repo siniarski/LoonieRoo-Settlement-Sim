@@ -70,8 +70,72 @@ public static partial class Worldgen
     }
     public static void ground(SimState state, double x, double y, string g) => ground(state, Js.I(x), Js.I(y), g);
 
-    /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees.</summary>
-    public static void generateChunk(SimState state, Layout l, int cx, int cy)
+    /// <summary>Generates a chunk into the world: makes it on its own (makeChunk) and takes it in (adoptChunk).</summary>
+    public static void generateChunk(SimState state, Layout l, int cx, int cy) => adoptChunk(state, makeChunk(state, l, cx, cy));
+
+    /// <summary>A chunk as generation makes it, on its own (2026-11-09, schema 75): into a small state of its own whose
+    /// grid is the chunk (its corner at the chunk's: Grid.ox, oy), from the seed, the plan and the world's settings
+    /// alone, so it comes out the same whenever and wherever it's made: the save keeps only what changed since
+    /// (Savefile), and loading makes it again. What it makes is named by the chunk: furniture "f{cx}.{cy}.{k}", the
+    /// dormant "d{cx}.{cy}.{k}", cars "v{cx}.{cy}.{k}", k their order made.</summary>
+    public static SimState makeChunk(SimState state, Layout l, int cx, int cy)
+    {
+        int x0 = cx * CHUNK, y0 = cy * CHUNK;
+        int w = (int)Math.Min(CHUNK, l.size - x0), h = (int)Math.Min(CHUNK, l.size - y0);
+        var c = States.createState(new NewStateOptions { seed = l.seed, width = w, height = h });
+        c.grid.ox = x0;
+        c.grid.oy = y0;
+        c.grid.explored.fill(0);
+        c.settings = state.settings;
+        c.world = state.world;
+        drawChunk(c, l, cx, cy);
+        for (int k = 0; k < c.furniture.Count; k++) c.furniture[k].id = $"f{cx}.{cy}.{k}";
+        for (int k = 0; k < c.dormant.Count; k++) c.dormant[k].id = $"d{cx}.{cy}.{k}";
+        var cars = c.vehicles ?? [];
+        for (int k = 0; k < cars.Count; k++) cars[k].id = $"v{cx}.{cy}.{k}";
+        return c;
+    }
+
+    /// <summary>Takes a chunk made by makeChunk into the world: its tiles, ground and edges (noting each change, for
+    /// rooms and reachability), its open doors and boarded windows, and what it made (furniture, the dormant, cars).</summary>
+    public static void adoptChunk(SimState state, SimState c)
+    {
+        var g = state.grid;
+        var s = c.grid;
+        int Map(int i) => (s.oy + i / s.width) * g.width + s.ox + i % s.width;
+        int MapEdge(int e) => Map(e / 2) * 2 + e % 2;
+        for (int i = 0; i < s.tiles.Count; i++)
+        {
+            int at = Map(i);
+            if (g.tiles[at] != s.tiles[i])
+            {
+                g.tiles[at] = s.tiles[i];
+                Grids.noteChange(g, at);
+            }
+            g.ground[at] = s.ground[i];
+            for (int side = 0; side < 2; side++)
+            {
+                int e = 2 * i + side, ge = 2 * at + side;
+                if (g.edges[ge] == s.edges[e]) continue;
+                g.edges[ge] = s.edges[e];
+                Grids.noteEdgeChange(g, ge);
+            }
+        }
+        foreach (var i in s.open) g.open.push(Map(i));
+        foreach (var e in s.edgeOpen) g.edgeOpen.push(MapEdge(e));
+        foreach (var e in s.edgeBoarded) g.edgeBoarded.push(MapEdge(e));
+        foreach (var f in c.furniture) FurnitureMod.adopt(state, f);
+        foreach (var d in c.dormant) Dormant.add(state, d);
+        if (c.vehicles is { Count: > 0 } cars)
+        {
+            state.vehicles ??= [];
+            foreach (var v in cars) state.vehicles.push(v);
+        }
+    }
+
+    /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees (into the
+    /// chunk's own state: makeChunk).</summary>
+    static void drawChunk(SimState state, Layout l, int cx, int cy)
     {
         var x0 = ((double)(cx) * (CHUNK));
         var y0 = ((double)(cy) * (CHUNK));

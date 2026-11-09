@@ -162,6 +162,43 @@ public class GenProfile
         }
     }
 
+    /// <summary>Save sizes and times: the chunked save (SavefileChunks) against the whole one (what a state without a
+    /// world gets), for worlds generated round the start only (as a game is) and in full.</summary>
+    [Fact(DisplayName = "gen profile saves")]
+    public void ProfileSaves()
+    {
+        var out_ = new List<string>();
+        foreach (var spec in (Env("SAVES") ?? "512:all,2048:start,2048:all,4096:start").Split(','))
+        {
+            var p = spec.Split(':');
+            int size = int.Parse(p[0]);
+            bool all = p[1] == "all";
+            var s = Worldgen.createWorld(42, size, Difficulty.NORMAL);
+            if (all)
+                for (int y = 0; y < size; y += Worldgen.CHUNK)
+                    for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(s, new Point(x, y));
+            for (int i = 0; i < 50; i++) Tick.tick(s);
+            var sw = Stopwatch.StartNew();
+            string chunked = Savefile.toSaveFile(s);
+            double saveMs = sw.Elapsed.TotalMilliseconds; sw.Restart();
+            var back = Savefile.loadFile(chunked);
+            double loadMs = sw.Elapsed.TotalMilliseconds;
+            string whole = "";
+            double wholeMs = 0;
+            if (Env("WHOLE") != "0" && size <= 4096)
+            {
+                var w = s.world;
+                s.world = null;
+                sw.Restart();
+                whole = Savefile.toSaveFile(s);
+                wholeMs = sw.Elapsed.TotalMilliseconds;
+                s.world = w;
+            }
+            out_.Add($"{size} {(all ? "every chunk" : "the start only")}: chunked save {chunked.Length / 1e6:0.00} MB in {saveMs / 1000:0.0} s, loaded in {loadMs / 1000:0.0} s ({(back.ok ? "ok" : back.error)}); whole save {(whole.Length > 0 ? $"{whole.Length / 1e6:0.00} MB in {wholeMs / 1000:0.0} s" : "not made")}; furniture {s.furniture.Count:N0}, dormant {s.dormant.Count:N0}");
+            File.WriteAllText(Path.Combine(Node.Root, "cs/Harness/out/gen-profile-saves.txt"), string.Join("\n", out_) + "\n");
+        }
+    }
+
     [Fact(DisplayName = "gen profile roads")]
     public void ProfileRoads()
     {

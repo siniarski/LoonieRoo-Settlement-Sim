@@ -34,6 +34,9 @@ public partial class IndexesEntry
     public JsMap<string, Furniture> byId { get; set; }
     public JsMap<string, List<Furniture>> byKind { get; set; }
     public List<Furniture>? marked { get; set; }
+    /// <summary>When each piece was added (its place in list order, removals aside): ofKinds sorts by it. Looked up only.</summary>
+    public Dictionary<Furniture, long> seq { get; } = new();
+    public long nextSeq;
 }
 
 public partial class ContainerOfResult

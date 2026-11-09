@@ -53,19 +53,18 @@ public static class Savefile
     static JsonObject packFurniture(JsonArray list)
     {
         var rows = new JsonArray();
-        foreach (var node in list)
-        {
-            if (node is not JsonObject f || f.Any(p => Array.IndexOf(FURNITURE_FIELDS, p.Key) < 0))
-            {
-                rows.Add(node?.DeepClone());
-                continue;
-            }
-            var row = new List<JsonNode?>();
-            foreach (var k in FURNITURE_FIELDS) row.Add(f.TryGetPropertyValue(k, out var v) ? v?.DeepClone() : null);
-            while (row.Count > 4 && JsonNode.DeepEquals(row[^1], FURNITURE_DEFAULTS[row.Count - 1])) row.RemoveAt(row.Count - 1);
-            rows.Add(new JsonArray(row.ToArray()));
-        }
+        foreach (var node in list) rows.Add(furnitureRow(node));
         return new JsonObject { ["rows"] = rows };
+    }
+
+    /// <summary>One piece as its row (or as it is, if its keys aren't FURNITURE_FIELDS').</summary>
+    public static JsonNode? furnitureRow(JsonNode? node)
+    {
+        if (node is not JsonObject f || f.Any(p => Array.IndexOf(FURNITURE_FIELDS, p.Key) < 0)) return node?.DeepClone();
+        var row = new List<JsonNode?>();
+        foreach (var k in FURNITURE_FIELDS) row.Add(f.TryGetPropertyValue(k, out var v) ? v?.DeepClone() : null);
+        while (row.Count > 4 && JsonNode.DeepEquals(row[^1], FURNITURE_DEFAULTS[row.Count - 1])) row.RemoveAt(row.Count - 1);
+        return new JsonArray(row.ToArray());
     }
 
     static JsonArray unpackFurniture(JsonObject packed)
@@ -91,9 +90,11 @@ public static class Savefile
 
     static JsonObject ToNode(SimState state) => JsonSerializer.SerializeToNode(state, StateJson.Options)!.AsObject();
 
-    /// <summary>The state as JSON with the grid's layers run-length encoded (marked `rle: true`) and the furniture as rows.</summary>
+    /// <summary>The state as JSON: a generated world keeping only what changed (SavefileChunks); a hand-made map with the
+    /// grid's layers run-length encoded (marked `rle: true`) and the furniture as rows.</summary>
     static JsonObject pack(SimState state)
     {
+        if (state.world != null) return SavefileChunks.pack(state, (f) => furnitureRow(f)!);
         var o = ToNode(state);
         var grid = o["grid"]!.AsObject();
         grid["rle"] = true;
@@ -106,6 +107,8 @@ public static class Savefile
     /// <summary>Undoes pack (and passes unpacked states through).</summary>
     static SimState unpack(JsonNode packed)
     {
+        if (packed is JsonObject chunked && SavefileChunks.IsChunked(chunked))
+            return SavefileChunks.unpack(chunked, (rows) => unpackFurniture(new JsonObject { ["rows"] = rows.DeepClone() }));
         var o = packed.DeepClone().AsObject();
         if (o["furniture"] is JsonObject rows) o["furniture"] = unpackFurniture(rows);
         if (o["grid"] is JsonObject grid && grid["rle"] is JsonValue rle && rle.TryGetValue<bool>(out var isRle) && isRle)
@@ -166,7 +169,8 @@ public static class Savefile
             if (file["state"] is not JsonObject s) return Fail("save has no state");
             try
             {
-                return new() { ok = true, state = States.cloneState(unpack(s)), kind = "save" };
+                // unpack builds a state of its own (no copy needed: at 10,000 a copy through one JSON string doesn't fit).
+                return new() { ok = true, state = unpack(s), kind = "save" };
             }
             catch (Exception err) when (err is JsonException or InvalidDataException)
             {

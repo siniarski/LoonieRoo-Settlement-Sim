@@ -66,3 +66,25 @@ The grid's per-tile layers kept per 32 x 32 chunk, allocated when the chunk is g
 - **The far field** asks for a region's plan on a worker (`PlanSoon`) and draws nature alone there until it's made, so travelling never stalls a frame on a plan (~1 s a region).
 - **Seen in the overviews** (experiments/map-overview, 2000 and 4096): the regions join up, roads cross their borders (`_border.jpg`). Towns keep radius + 27 from a shared border, so a band ~100 tiles wide along each border has fewer towns (farms, cabins and roads still in it); on a 2000 map the start sits where four regions meet.
 - **Left:** the grid in chunks and saves of only what changed (above); the bands along borders, if they bother (a looser margin with a cross-border check against the neighbour's towns would cost siting the neighbour's towns first); the suite's time (the region tests add ~12 s).
+
+## Saves of what changed (2026-11-09; schema 75)
+
+The player asked whether the world could be made again from the seed and the save keep only the chunk changes. Done for saves (the second job's steps 1-3; the grid in chunks in memory is still to do):
+
+1. **Ids from the chunk.** Generation made ids from `state.nextId`, so they depended on the order chunks were made in. A chunk is now made on its own (`Worldgen.makeChunk`: a small state whose grid is the chunk, `Grid.ox/oy` its corner, which `Grids.tileIndex/inBounds/edgeIndex` take into account) and its furniture, dormant and cars are named `f{cx}.{cy}.{k}`, `d...`, `v...`. `adoptChunk` takes it into the world (noting every changed tile and edge for rooms and reachability). `FurnitureMod.ofKinds` sorted by the number in the id (list order while ids came from the counter); it sorts by a count the index keeps now (`IndexesEntry.seq`). The furniture index is a ConditionalWeakTable (scratch lists don't leak).
+2. **Generation free of the state.** A chunk reads the seed, the plan and the world's settings only (checked: Lots, Difficulty, Climate read `state.settings` and `state.world`). A car's parking room is now judged inside its chunk (an edge just over the chunk's east or south border no longer counts), so some cars park differently.
+3. **Saves.** `SavefileChunks`: the state without the grid's layers, furniture and the dormant; per chunk, the layers that differ from making it again (or from bare land), run-length encoded; furniture and the dormant as runs of pieces still as made, the rest in full. Loading makes the generated chunks again and lays the differences over them. Hand-made maps are saved whole as before. `loadFile` no longer copies the state it has just built (at 10,000 the copy went through one JSON string and ran out of memory); bug reports still do, in Replay.
+
+Measured ("gen profile saves", seed 42, Release):
+
+| world | whole save | chunked save | load |
+|---|--:|--:|--:|
+| 512, every chunk | 1.26 MB, 0.5 s | 0.04 MB, 1.1 s | 0.7 s |
+| 2048, the start only | 0.14 MB, 3.8 s | 0.02 MB, 0.3 s | 1.0 s |
+| 2048, every chunk | 21.4 MB, 7.2 s | 0.47 MB, 5.6 s | 5.0 s |
+| 4096, the start only | 0.16 MB, 20.8 s | 0.04 MB, 0.2 s | 5.4 s |
+| 10,000, the start only | (couldn't) | 0.21 MB, 1.4 s | 1.0 s |
+
+Tests (ChunkSaveTest): a played and changed world (a tree cut, a crate emptied, a wall up, an edge wall down, a floor dirtied, one of the dormant woken, a workbench built) comes back exactly at 256 and 1536 (two regions a side), and saving it again gives the same file; a chunk made again later in a played state is the same; chunks made in reverse order give the same world; an untouched 256 world keeps at most 9 chunks and its furniture as runs.
+
+Left: saving a fully explored world regenerates every generated chunk to compare (5.6 s at 2048): a hash of each chunk as made, kept in WorldInfo, would skip the unchanged ones. The grid still lives whole in memory (3.6 GB at 10,000): the grid in chunks is the next job. A save made before this change won't load (schema 75).

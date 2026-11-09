@@ -48,6 +48,10 @@ public sealed class Grid
 {
     public int width;
     public int height;
+    /// <summary>The map tile of this grid's corner: 0 for the world's grid; a chunk's corner for the small grid a chunk
+    /// is generated into (Worldgen.makeChunk), so generation writes in map coordinates. Grids' helpers (tileIndex,
+    /// inBounds, edgeIndex) take it into account; nothing else meets such a grid. Not saved.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public int ox, oy;
     /// <summary>Row-major: index = y * width + x. "floor", "wall", "door", "water" or "barricade".</summary>
     public List<string> tiles = new();
     /// <summary>1 where a floor tile is dirty, else 0.</summary>
@@ -116,7 +120,7 @@ public static partial class Grids
     }
 
     /// <summary>The index of a tile's north ("n") or west ("w") edge.</summary>
-    public static int edgeIndex(Grid grid, int x, int y, string side) => (y * grid.width + x) * 2 + (side == "n" ? 0 : 1);
+    public static int edgeIndex(Grid grid, int x, int y, string side) => ((y - grid.oy) * grid.width + (x - grid.ox)) * 2 + (side == "n" ? 0 : 1);
 
     /// <summary>The edge between two tiles side by side, or -1 if they aren't.</summary>
     public static int edgeBetween(Grid grid, int ax, int ay, int bx, int by)
@@ -212,9 +216,9 @@ public static partial class Grids
 
     public static bool edgeIsOpen(Grid grid, int e) => grid.edgeOpen.Contains(e);
 
-    public static bool inBounds(Grid grid, int x, int y) => x >= 0 && y >= 0 && x < grid.width && y < grid.height;
+    public static bool inBounds(Grid grid, int x, int y) => x >= grid.ox && y >= grid.oy && x < grid.ox + grid.width && y < grid.oy + grid.height;
 
-    public static int tileIndex(Grid grid, int x, int y) => y * grid.width + x;
+    public static int tileIndex(Grid grid, int x, int y) => (y - grid.oy) * grid.width + (x - grid.ox);
 
     /// <summary>The tile, or null when out of bounds.</summary>
     public static string? getTile(Grid grid, int x, int y) => inBounds(grid, x, y) ? grid.tiles[tileIndex(grid, x, y)] : null;

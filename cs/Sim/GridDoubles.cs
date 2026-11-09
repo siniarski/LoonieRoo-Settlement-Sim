@@ -15,7 +15,7 @@ public static partial class Grids
     public static bool isLocked(Grid grid, double x, double y) => inBounds(grid, x, y) && isLocked(grid, (int)x, (int)y);
     public static bool isDirty(Grid grid, double x, double y) => inBounds(grid, x, y) && isDirty(grid, (int)x, (int)y);
     public static bool setDirty(Grid grid, double x, double y, bool dirty) => inBounds(grid, x, y) && setDirty(grid, (int)x, (int)y, dirty);
-    public static int tileIndex(Grid grid, double x, double y) => (int)(y * grid.width + x);
+    public static int tileIndex(Grid grid, double x, double y) => (int)((y - grid.oy) * grid.width + (x - grid.ox));
     public static int edgeIndex(Grid grid, double x, double y, string side) => edgeIndex(grid, (int)x, (int)y, side);
     public static int edgeBetween(Grid grid, double ax, double ay, double bx, double by) => inBounds(grid, ax, ay) && inBounds(grid, bx, by) ? edgeBetween(grid, (int)ax, (int)ay, (int)bx, (int)by) : -1;
     public static bool setEdge(Grid grid, double x, double y, string side, int kind) => inBounds(grid, x, y) && setEdge(grid, (int)x, (int)y, side, kind);

@@ -72,16 +72,20 @@ public static partial class FurnitureMod
     }
 
     /// <summary>Furniture by tile ("x,y") and by id, derived and cached outside sim state. Furniture never moves, and only addFurniture/removeFurniture change the list, so they drop the cache. (A generated world has thousands of trees: scanning the list per tile was the cost.)</summary>
-    public static readonly JsMap<List<Furniture>, IndexesEntry> indexes = new JsMap<List<Furniture>, IndexesEntry>();
+    /// <summary>Each furniture list's index, kept while the list is (a chunk's scratch list goes with it: Worldgen.makeChunk).</summary>
+    public static readonly System.Runtime.CompilerServices.ConditionalWeakTable<List<Furniture>, IndexesEntry> indexes = new();
+
+    static IndexesEntry? Ix(List<Furniture> list) => indexes.TryGetValue(list, out var e) ? e : null;
 
     public static IndexesEntry? index(SimState state)
     {
-        var found = indexes.get(state.furniture);
+        var found = Ix(state.furniture);
         if (!Js.T(found))
         {
             found = new IndexesEntry { byTile = new JsMap<string, Furniture>(), byId = new JsMap<string, Furniture>(), byKind = new JsMap<string, List<Furniture>>(), marked = null };
             foreach (var f in Js.Iter(state.furniture))
             {
+                found.seq[f] = found.nextSeq++;
                 if (!found.byTile.has($"{Js.Str(f.x)},{Js.Str(f.y)}"))
                 {
                     found.byTile.set($"{Js.Str(f.x)},{Js.Str(f.y)}", f);
@@ -97,7 +101,7 @@ public static partial class FurnitureMod
                     found.byKind.set(f.kind, [f]);
                 }
             }
-            indexes.set(state.furniture, found);
+            indexes.AddOrUpdate(state.furniture, found);
         }
         return found;
     }
@@ -132,7 +136,7 @@ public static partial class FurnitureMod
             return;
         }
         f.scavenge = on;
-        var ix = indexes.get(state.furniture);
+        var ix = Ix(state.furniture);
         if (Js.T(ix))
         {
             ix.marked = null;
@@ -142,7 +146,9 @@ public static partial class FurnitureMod
     /// <summary>Pieces of several kinds, in list order (furniture is only ever appended, so that's id order).</summary>
     public static List<Furniture> ofKinds(SimState state, List<string> kinds)
     {
-        return kinds.flatMap((k) => ofKind(state, k)).sort((a, b) => idOrder(a) - idOrder(b));
+        // List order: by when each was added (the index's count), not by id (generated ids come from their chunk).
+        var ix = index(state);
+        return kinds.flatMap((k) => ofKind(state, k)).sort((a, b) => ix.seq[a] - ix.seq[b]);
     }
 
     public static double idOrder(Furniture f)
@@ -158,24 +164,31 @@ public static partial class FurnitureMod
     public static Furniture addFurniture(SimState state, string kind, int x, int y)
     {
         Furniture f = new Furniture { id = $"f{Js.Str(state.nextId++)}", kind = kind, x = Js.I(x), y = Js.I(y), occupant = null, owner = null, loot = (kind == "crate") ? CRATE_LOOT : ((kind == "tree") ? TREE_WOOD : ((kind == "trap") ? TRAP_CHARGES : 0)), scavenge = false, stored = 0, storedKind = null, look = null, table = null };
+        return adopt(state, f);
+    }
+
+    /// <summary>Puts a piece made elsewhere (a generated chunk's: Worldgen.makeChunk) at the end of the list, indexed.</summary>
+    public static Furniture adopt(SimState state, Furniture f)
+    {
         state.furniture.push(f);
-        var ix = indexes.get(state.furniture);
+        var ix = Ix(state.furniture);
         if (Js.T(ix))
         {
-            var key = $"{Js.Str(x)},{Js.Str(y)}";
+            ix.seq[f] = ix.nextSeq++;
+            var key = $"{Js.Str(f.x)},{Js.Str(f.y)}";
             if (!ix.byTile.has(key))
             {
                 ix.byTile.set(key, f);
             }
             ix.byId.set(f.id, f);
-            var same = ix.byKind.get(kind);
+            var same = ix.byKind.get(f.kind);
             if (Js.T(same))
             {
                 same.push(f);
             }
             else
             {
-                ix.byKind.set(kind, [f]);
+                ix.byKind.set(f.kind, [f]);
             }
         }
         return f;
@@ -206,7 +219,7 @@ public static partial class FurnitureMod
             return;
         }
         state.furniture.splice(i, 1);
-        var ix = indexes.get(state.furniture);
+        var ix = Ix(state.furniture);
         if (Js.T(ix))
         {
             var key = $"{Js.Str(f.x)},{Js.Str(f.y)}";
