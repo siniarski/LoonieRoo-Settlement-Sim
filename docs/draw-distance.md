@@ -22,3 +22,9 @@ Past the built chunks, out to `FarField.Range` metres (`--view=M` in the game; 0
 A 2048 world (seed 42, every chunk generated), you in the middle, noon; per range: wait for the far field to be built, a shot at eye height towards the town and one from 60 m up, then a full turn. Results: experiments/draw-bench/bench.md and the view_*.png shots.
 
     Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees] [--frames=360] [--out=DIR]
+
+## Found on the way
+
+- **The sound scanned every piece of furniture each frame** (Loops: generators; WorldNoises: turrets). A 2048 world has ~330k trees as furniture: ~8 ms a frame, with the far field off. Now each keeps its list and looks again only when the furniture list changes: 1.2 ms -> 0.02 ms on a 1024 world.
+- **Generating a whole 2048 world takes ~19 minutes** (seed 42; a 1024 world: ~16 s). Creating one (only the start generated) is 20 s (the harness's new `new-2048` stress scenario). Superlinear somewhere in chunk generation or settling: a sim problem, left for a stress-test session.
+- **In the game the far field only knows what's been generated.** The sim generates chunks as survivors come near, so past that the grid is blank grass and the far field draws it so. Drawing far land the right way means reading the world plan (Worldplan: nature, roads, lots; pure from the seed) for chunks not generated yet, not the grid.

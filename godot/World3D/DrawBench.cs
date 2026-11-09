@@ -65,11 +65,20 @@ public partial class DrawBench : Node3D
         var you = ControlMod.controlled(state)!;
         // Stand in the open near the middle; look towards the most built-up region (the town).
         int cx = g.width / 2, cy = g.height / 2;
-        for (int r = 0; r < 200; r++)
+        // Open ground for 4 tiles round (no building, no tree), within 200 tiles east of the middle.
+        bool Open(int x, int y)
         {
-            int i = cy * g.width + cx + r;
-            if (g.tiles[i] == "floor" && Grids.GROUNDS[g.ground[i]] is "grass" or "road" or "field" or "dirt") { cx += r; break; }
+            for (int dy = -4; dy <= 4; dy++)
+                for (int dx = -4; dx <= 4; dx++)
+                {
+                    int i = (y + dy) * g.width + x + dx;
+                    if (g.tiles[i] != "floor" || Grids.GROUNDS[g.ground[i]] is not ("grass" or "road" or "field" or "dirt")) return false;
+                }
+            return true;
         }
+        var trees = new HashSet<int>(state.furniture.Select(fu => fu.y * g.width + fu.x));
+        for (int r = 0; r < 200; r++)
+            if (Open(cx + r, cy) && !trees.Contains(cy * g.width + cx + r)) { cx += r; break; }
         you.pos = new Point(cx, cy);
         you.at = Motion.centre(you.pos);
         you.was = Motion.centre(you.pos);
