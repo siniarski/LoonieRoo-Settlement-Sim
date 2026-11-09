@@ -98,6 +98,15 @@ public static partial class ControlMod
         return state.control?.survivorId == s.id;
     }
 
+    /// <summary>How far (SUB) you move a tick, steering: your tile pace, a run, a window's frame (slow), the dead clutching, sneaking.</summary>
+    public static double stepLength(SimState state, Survivor s, Control c, bool run)
+    {
+        var climb = Motion.inWindowFrame(state.grid, s.at);
+        var pct = ((double)(((double)(((double)(((double)(((double)(JsMath.max(CLUTCHED_MIN, 100 - ((double)(CLUTCH_PCT) * (clutchedBy(state, s))))) * (((run && !climb) ? BodyMod.RUN_PCT : 100)))) * ((climb ? 2 : 5)))) / (5))) * ((Js.T(c.sneaking) ? SNEAK_PCT : 100)))) / (100));
+        var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(state, s, s.pos))));
+        return JsMath.round(((double)(((double)(walk) * (pct))) / (10000)));
+    }
+
     /// <summary>Called once a tick for the controlled survivor, in place of their own behaviour.</summary>
     public static void updateControlled(SimState state, Survivor s)
     {
@@ -116,6 +125,11 @@ public static partial class ControlMod
             return;
         }
         s.move = null;
+        if (Leaps.airborne(c))
+        {
+            Leaps.tick(state, s, c);  // in the air: steering waits for the landing
+            return;
+        }
         Motion.followTile(s);
         if ((c.dx != 0) || (c.dy != 0))
         {
@@ -129,10 +143,7 @@ public static partial class ControlMod
             {
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
-            var climb = Motion.inWindowFrame(state.grid, s.at);
-            var pct = ((double)(((double)(((double)(((double)(((double)(JsMath.max(CLUTCHED_MIN, 100 - ((double)(CLUTCH_PCT) * (clutchedBy(state, s))))) * (((Js.T(run) && !climb) ? BodyMod.RUN_PCT : 100)))) * ((climb ? 2 : 5)))) / (5))) * ((Js.T(c.sneaking) ? SNEAK_PCT : 100)))) / (100));
-            var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(state, s, s.pos))));
-            var v = Motion.toward(c.dx, c.dy, JsMath.round(((double)(((double)(walk) * (pct))) / (10000))));
+            var v = Motion.toward(c.dx, c.dy, stepLength(state, s, c, Js.T(run)));
             s.at = Motion.slide(state.grid, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))

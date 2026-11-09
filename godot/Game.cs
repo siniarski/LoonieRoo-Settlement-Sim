@@ -63,7 +63,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     double accumulatorMs;
     double alpha;
     int lastAutosaveDawn;
-    bool pausedUnderMenu;
 
     Ctx ctx = null!;
     Painter painter = null!;
@@ -180,8 +179,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             // On starting: the menu, over a world to look at.
             view.inGame = false;
-            view.menu = "main";
-            view.paused = true;
+            view.menu = "main";  // the menu holds the world still (view.halted)
         }
     }
 
@@ -235,12 +233,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         }
         state = result.state;
         initial = States.cloneState(state);
-        Time.setDayScale(state.settings.dayScale); // the clock reads right while paused
+        Time.setDayScale(state.settings.dayScale); // the clock reads right before the first tick
         view.camera = centredOn(state.grid.width, state.grid.height, view.camera.zoom == 0 ? 1 : view.camera.zoom);
-        view.paused = true; // look before you play
-        Pathfinding.warmReach(state.grid, state.walkabilityVersion); // while paused, not mid-play
+        view.paused = false;
+        Pathfinding.warmReach(state.grid, state.walkabilityVersion); // now, not mid-play
         lastAutosaveDawn = Dawns(state.tick);
-        view.Toast($"Loaded {from}{(result.kind == "bug" ? " (bug report, replayed)" : "")}. Paused: Space to play.");
+        view.Toast($"Loaded {from}{(result.kind == "bug" ? " (bug report, replayed)" : "")}.");
         view.selectedId = state.control?.survivorId;
         return true;
     }
@@ -254,17 +252,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     void ToggleMenu()
     {
-        if (view.menu == null)
-        {
-            pausedUnderMenu = view.paused;
-            view.paused = true;
-            view.menu = "main";
-        }
-        else if (view.inGame)
-        {
-            view.menu = null;
-            view.paused = pausedUnderMenu;
-        }
+        // The menu holds the world still while it's up (view.halted).
+        if (view.menu == null) view.menu = "main";
+        else if (view.inGame) view.menu = null;
         menu.Refresh();
     }
 
@@ -279,6 +269,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     public void OpenMenu() => ToggleMenu();
 
+    /// <summary>The one you played died and someone could carry on: the world waits for the choice (the HUD's succession panel).</summary>
+    bool AwaitingHeir() => state.succession != null && SuccessionMod.heirs(state).Count > 0;
+
     public void NewGamePlus()
     {
         // The browser confirms first; the helicopter panel's button is the confirmation here.
@@ -292,7 +285,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     (System.Threading.Tasks.Task<WorldRegions> task, double seed, double size, Settings settings, Character you, ulong started, int told)? making;
     /// <summary>Worlds bigger than this make their plan on a worker thread, behind a "making the world" note; smaller ones take milliseconds.</summary>
     const double PLAN_ON_A_THREAD_OVER = 512;
-    /// <summary>--hold: keys held down from the start (w, a, s, d, shift), for screenshots of walking.</summary>
+    /// <summary>--hold: keys held down from the start (w, a, s, d, shift, space), for screenshots of walking and jumping.</summary>
     string[] holdKeys = Array.Empty<string>();
 
     public void NewGame(double size, Settings settings, double? seed, Character you)
@@ -338,7 +331,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // whom you play changes, and a new world's first survivor can have the old one's id).
         view.closeMScreen();
         view.showInventory = false;
-        view.Toast((settings.start == "solo" ? SOLO_TOAST : GROUP_TOAST) + " Space to play.");
+        view.Toast(settings.start == "solo" ? SOLO_TOAST : GROUP_TOAST);
     }
 
     const string GROUP_TOAST = "You and two others. The mouse looks, WASD walks, click to swing, right-click or E to use. Tab: inventory. M: the map and the colony (F there plays someone else).";
@@ -403,8 +396,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         WatchMaking();
 
         // Fixed timestep: speed changes how many ticks run per frame, never the tick length (rule 6).
+        // No ticks while the menu or the map is up, or while someone has to carry on after you die.
         int ticks = 0;
-        if (!view.paused)
+        if (!view.halted && !AwaitingHeir())
         {
             accumulatorMs += Math.Min(frameMs, MAX_FRAME_MS) * view.speed;
             ticks = (int)Math.Floor(accumulatorMs / MS_PER_TICK);
@@ -558,6 +552,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // Under direct control the keys walk, and the sim only hears about it when they change.
         if (view.firstPerson)
         {
+            // --hold=space: jump again on each landing (to catch a leap in a --shot).
+            if (holdKeys.Contains("space") && c != null && !Leaps.airborne(c) && Vehicles.vehicleOf(state, ControlMod.controlled(state)!) == null) Command(new Command { type = "jump" });
             FirstPersonInput(c!, dx, -dy, shift);
             return;
         }
@@ -801,6 +797,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             switch (key)
             {
+                case Key.Space: if (controlling) Command(new Command { type = "jump" }); return; // jump, vault or hop (leaps.cs)
                 case Key.Tab: view.showInventory = !view.showInventory; return;
                 case Key.Escape when view.showInventory: view.showInventory = false; return;
                 case Key.Escape: ToggleMenu(); return;
@@ -835,7 +832,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         }
         switch (key)
         {
-            case Key.Space: view.paused = !view.paused; return;
             case Key.Quoteleft: view.showDebug = !view.showDebug; return;
             case Key.P: view.showPriorities = !view.showPriorities; return;
             case Key.N: view.showMinimap = !view.showMinimap; return;

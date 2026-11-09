@@ -127,7 +127,7 @@ public sealed class Held
     public void Update(SimState state, Survivor you, double alpha, double delta, bool hidden)
     {
         var c = state.control;
-        root.Visible = !hidden && you.sleep?.asleep != true && c?.busy == null;
+        root.Visible = !hidden && you.sleep?.asleep != true && (c?.busy == null || Leaps.airborne(c)); // busy hands put it away; a jump keeps it in hand
         if (!root.Visible) return;
         var weapon = Js.T(you.weapon) ? Sim.Items.getItem(state, you.weapon) : null;
         var tool = Js.T(you.tool) ? Sim.Items.getItem(state, you.tool) : null;

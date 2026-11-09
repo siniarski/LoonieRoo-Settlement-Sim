@@ -43,7 +43,7 @@ public sealed partial class Hud : Control
 
     // top bar
     Label clock = null!;
-    Button pauseButton = null!, buildButton = null!, prioritiesButton = null!, overviewButton = null!, colonyButton = null!, bagButton = null!;
+    Button buildButton = null!, prioritiesButton = null!, overviewButton = null!, colonyButton = null!, bagButton = null!;
     readonly List<(int speed, Button button)> speedButtons = new();
     // left column
     readonly Label status = Kit.Label("", Kit.Dim, 12);
@@ -162,8 +162,6 @@ public sealed partial class Hud : Control
         clock = Kit.Label("", Ctx.Css("#f0d39a"));
         clock.CustomMinimumSize = new Vector2(150, 0);
         bar.AddChild(clock);
-        pauseButton = Kit.Button("", () => view.paused = !view.paused);
-        bar.AddChild(pauseButton);
         foreach (var speed in new[] { 1, 2, 4 })
         {
             var b = Kit.Button($"{speed}x", () => { view.speed = speed; view.paused = false; });
@@ -208,7 +206,7 @@ public sealed partial class Hud : Control
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
-                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
                     : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
                 : "K: keys"
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
@@ -218,12 +216,12 @@ public sealed partial class Hud : Control
         string feedText = string.Join("\n", state.events.TakeLast(FEED_LINES).Select((e) => $"Day {Time.dayOf(e.tick)} {Time.clockText(e.tick)}  {e.message}"));
         feed.Show(feedText != "", feedText, (r) => r.Text(feedText, Ctx.Css("#ffb3a8")));
 
-        pauseButton.Text = view.paused ? "▶ Resume" : "❚❚ Pause";
-        Kit.SetActive(pauseButton, view.paused);
-        pausedBanner.Show(view.paused, "p", (r) => r.Text("PAUSED · plan freely · Space to resume", Ctx.Css("#1a1408")));
+        // No pause key: the map and the menu hold the world still; --paused (a debug option) until a speed button.
+        string pausedText = view.showMap ? "PAUSED · the map is open" : view.paused ? "PAUSED · + or a speed button plays" : "";
+        pausedBanner.Show(pausedText != "", pausedText, (r) => r.Text(pausedText, Ctx.Css("#1a1408")));
         Kit.SetActive(buildButton, view.buildOpen);
         buildBar.Update(state);
-        foreach (var (speed, button) in speedButtons) Kit.SetActive(button, !view.paused && speed == view.speed);
+        foreach (var (speed, button) in speedButtons) Kit.SetActive(button, !view.halted && speed == view.speed);
         Kit.SetActive(prioritiesButton, view.showPriorities);
         Kit.SetActive(overviewButton, view.showOverview);
         UpdateAlerts(state);
@@ -450,13 +448,12 @@ public sealed partial class Hud : Control
 
     string lastSuccession = "";
 
-    /// <summary>When the one you controlled dies: who carries on? Pauses the game the first time it shows.</summary>
+    /// <summary>When the one you controlled dies: who carries on? The game waits for the choice (Game.AwaitingHeir).</summary>
     void UpdateSuccession(SimState state)
     {
         var s = state.succession;
         var ready = s != null ? SuccessionMod.heirs(state) : new List<Survivor>();
         string key = s != null ? J(new object[] { s.name, s.cause, ready.Select((h) => $"{h.id}:{h.resolve}") }) : "";
-        if (s != null && lastSuccession == "") view.paused = true;
         lastSuccession = key;
         succession.Show(s != null, key, (r) =>
         {
@@ -803,7 +800,7 @@ public sealed partial class Hud : Control
             perf,
             $"zombies/people {state.zombies.Count}/{state.survivors.Count + state.residents.Count}",
             $"tick           {state.tick}",
-            $"speed          {(view.paused ? "paused" : $"{view.speed}x")}",
+            $"speed          {(view.halted ? "paused" : $"{view.speed}x")}",
             $"map            {state.grid.width}x{state.grid.height}",
             $"walkability v  {state.walkabilityVersion}",
             $"commands       {state.commandLog.Count}",

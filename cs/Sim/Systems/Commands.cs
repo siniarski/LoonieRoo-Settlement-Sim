@@ -28,12 +28,27 @@ public static partial class Commands
         {
             return takeControl(state, command.survivorId);
         }
+        if (command.type == "jump")
+        {
+            // Space in first person: a jump, a vault or a hop, whichever is in front of you (leaps.cs).
+            var s = ControlMod.controlled(state);
+            if (!Js.T(s))
+            {
+                return reject("nobody is under control");
+            }
+            var why = Leaps.leap(state, s);
+            return (why == null) ? changed() : reject(why);
+        }
         if (command.type == "work")
         {
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
             {
                 return reject("nobody is under control");
+            }
+            if (Leaps.airborne(Js.NN(state.control)))
+            {
+                return reject("in the air");
             }
             if (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y))
             {
@@ -114,6 +129,10 @@ public static partial class Commands
             if (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y))
             {
                 return reject("not a tile");
+            }
+            if (Leaps.airborne(Js.NN(state.control)))
+            {
+                return reject("in the air");
             }
             var done = (command.type == "swing") ? ControlMod.swing(state, s, command) : ControlMod.use(state, s, command);
             if (!Js.T(done))

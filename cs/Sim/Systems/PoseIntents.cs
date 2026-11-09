@@ -8,7 +8,8 @@
 //               the controlled survivor)
 //   action      what (control's busy action: getIn, openBoot, forage, build, eat...), progress 0..1
 //               (the renderer plays its clip at this normalised time), anchor (where it happens:
-//               driverDoor, boot, hood) and the target's id; approach (normal for now)
+//               driverDoor, boot, hood) and the target's id; approach (normal for now); lift (metres
+//               your feet are off the ground in a jump, vault or hop: leaps.cs, at the tick's end)
 //   carry       right hand (the weapon's kind), left hand (a tool), both (something carried), back
 //               (a pack), cart
 //   condition   0..1 weights: limp left/right (a wounded or lost leg), arm left/right (a wounded or
@@ -25,7 +26,7 @@ public sealed class PoseIntent
     public double speed, heading;
     public Point? facing;
     public string? action, target, anchor, approach;
-    public double progress;
+    public double progress, lift;
     public string? carryRight, carryLeft, carryBoth, carryBack;
     public bool cart;
     public double limpLeft, limpRight, armLeft, armRight, exhaustion, panic, cold, pain, infection, blood, wet, startle;
@@ -61,6 +62,7 @@ public static class PoseIntents
                 p.approach = "normal";
                 p.progress = (b.what == "sleep" || b.duration <= 0) ? 0 : JsMath.min(1, b.progress / b.duration);
                 if (Vehicles.isCarAction(b.what)) p.anchor = Vehicles.anchorOf(b.what);
+                p.lift = Leaps.lift(b, 1);
             }
         }
         if (Js.T(s.weapon)) p.carryRight = Items.getItem(state, s.weapon)?.kind;

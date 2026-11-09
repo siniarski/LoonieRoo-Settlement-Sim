@@ -24,7 +24,11 @@ public sealed class View
     /// <summary>Edge tools (Wall, Door): the tile border nearest the cursor, previewed (grid.ts edges).</summary>
     public (int x, int y, string side)? hoverEdge;
     public int speed = 1;
+    /// <summary>Held still by the game itself: --paused (screenshots, debugging), the self-test. There's no pause key:
+    /// the game stops on its own while the menu or the map is up (`halted`).</summary>
     public bool paused;
+    /// <summary>No ticks run: paused, or the menu or the map is open.</summary>
+    public bool halted => paused || menu != null || showMap;
     public bool showDebug;
     public bool showPriorities = true;
     /// <summary>The menu screen over the game, or null when playing (menu.ts): main, new, character, load, howto.</summary>
