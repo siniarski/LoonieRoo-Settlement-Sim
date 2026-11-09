@@ -35,6 +35,7 @@ public sealed partial class FirstPerson : Node3D
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
     readonly ItemModels items;
+    readonly FurnitureModels furniture;
     readonly Held held;
     readonly People people;
     readonly Trees trees;
@@ -51,6 +52,7 @@ public sealed partial class FirstPerson : Node3D
     public int TreeCount => trees.Count;
     public FarField Far => far;
     public int ItemCount => items.Count;
+    public int FurnitureCount => furniture.Count;
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
 
@@ -67,6 +69,7 @@ public sealed partial class FirstPerson : Node3D
         AddChild(new WorldEnvironment { Environment = env });
         bodies = new Bodies(this);
         items = new ItemModels(this);
+        furniture = new FurnitureModels(this);
         held = new Held(camera, items);
         people = new People(this);
         trees = new Trees(this);
@@ -119,6 +122,7 @@ public sealed partial class FirstPerson : Node3D
         Light(state, eye, delta);
         Chunks(state, eye);
         trees.Update(state, eye, look);
+        furniture.Update(state, eye, look);
         // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
         int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
         far.Update(state, eye, new Vector4((hx - RADIUS) * WorldMesh.CHUNK, (hz - RADIUS) * WorldMesh.CHUNK, (hx + RADIUS + 1) * WorldMesh.CHUNK, (hz + RADIUS + 1) * WorldMesh.CHUNK));

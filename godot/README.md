@@ -28,7 +28,7 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - `--zoom=Z --paused --debug --map --colony --overview --build=category --menu=main|new|character|load|howto`: the view to start in (`--map` and `--colony` open the M screen's tabs)
 - `--look=DEG --pitch=DEG`: first person, which way you look at the start (0 east, 90 south, 270 north; pitch up positive)
 - `--at=X,Y`: put the survivor you control on tile X, Y first (a debug start for screenshots; not a command, so not in the log)
-- `--lineup`: one of every item kind on the ground in front of you, three rows of seven eastward (to look at the item models; not a command); `--lineup=variants` the kinds with variants instead, a kind to a row (north to south), its models eastward
+- `--lineup`: one of every item kind on the ground in front of you, three rows of seven eastward (to look at the item models; not a command); `--lineup=variants` the kinds with variants instead, a kind to a row (north to south), its models eastward; `--lineup=furniture` one of every furniture kind and look east of you instead (rows of eight, the vehicles, tower and silo in a row beyond; the land round you generated first)
 - `--held=MODEL --heldtool=MODEL --swingat=P`: draw that item model (`gun`, `axe`, `weapon_v2`...) in your right or left hand whatever you hold, and hold a swing (or a gun's kick) at P (0..1), for screenshots
 - The map overviews: `Godot --path godot res://World3D/MapShot.tscn -- [--size=2000] [--worlds=mainland:1,island:4] [--out=DIR]` (whole generated worlds, a pixel a tile: docs/worldgen-speed.md)
 - The draw bench: `Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees]` (the far field at each range: docs/draw-distance.md)
