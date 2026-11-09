@@ -151,11 +151,6 @@ public static partial class FurnitureMod
         return kinds.flatMap((k) => ofKind(state, k)).sort((a, b) => ix.seq[a] - ix.seq[b]);
     }
 
-    public static double idOrder(Furniture f)
-    {
-        return Js.Num(f.id.slice(1));
-    }
-
     public static Furniture? getFurniture(SimState state, string id)
     {
         return index(state).byId.get(id);

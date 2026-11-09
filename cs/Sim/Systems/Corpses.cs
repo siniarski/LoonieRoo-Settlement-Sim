@@ -178,10 +178,4 @@ public static partial class Corpses
         s.sick = null;
         s.note = "got over being sick";
     }
-
-    /// <summary>"Bea's body" or "a zombie's body".</summary>
-    public static string corpseLabel(Item c)
-    {
-        return Js.T(c.tag) ? $"{Js.Str(c.tag)}'s body" : "a zombie's body";
-    }
 }

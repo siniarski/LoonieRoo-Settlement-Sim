@@ -39,11 +39,6 @@ public static partial class Family
         return s.childUntil != null;
     }
 
-    public static bool isElder(Survivor s)
-    {
-        return s.age >= ELDER;
-    }
-
     /// <summary>An adult's starting age, from their id.</summary>
     public static double startingAge(string id)
     {

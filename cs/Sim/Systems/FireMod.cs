@@ -158,10 +158,4 @@ public static partial class FireMod
             Events.logEvent(state, $"A {Js.Str(what)} at ({Js.Str(f.x)}, {Js.Str(f.y)}) burned down");
         }
     }
-
-    /// <summary>A tile next to the fire to fight it from.</summary>
-    public static List<Point> fireSite(SimState state, Point f)
-    {
-        return Grids.neighbours4(state.grid, f.x, f.y);
-    }
 }

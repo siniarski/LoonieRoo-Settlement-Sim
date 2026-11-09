@@ -180,9 +180,4 @@ public static partial class Dogs
         Events.logEvent(state, $"{Js.Str(dog.name)} the dog was killed");
         return true;
     }
-
-    public static Dog? dogAt(SimState state, Point p)
-    {
-        return state.dogs.find((d) => Space.samePoint(d.pos, p));
-    }
 }

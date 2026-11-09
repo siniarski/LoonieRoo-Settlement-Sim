@@ -633,11 +633,4 @@ public static partial class Pathfinding
         if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);
         return true;
     }
-
-    /// <summary>A step to a tile beside it, straight or diagonal (either way round), this mover could walk.</summary>
-    public static bool walksAcross(Grid grid, Point a, Point b, string mover)
-    {
-        if (a.x == b.x || a.y == b.y) return crossable(grid, a.x, a.y, b.x, b.y, mover);
-        return (crossable(grid, a.x, a.y, b.x, a.y, mover) && crossable(grid, b.x, a.y, b.x, b.y, mover)) || (crossable(grid, a.x, a.y, a.x, b.y, mover) && crossable(grid, a.x, b.y, b.x, b.y, mover));
-    }
 }

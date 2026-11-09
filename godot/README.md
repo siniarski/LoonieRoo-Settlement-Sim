@@ -12,7 +12,7 @@ The game: the sim (`cs/Sim`, pure C#, no Godot) drawn and played in Godot 4.6 .N
 
 ## Build and run
 
-Open this folder (`godot/`, not `experiments/godot-bench`) in Godot 4.6 .NET and press Play. Or:
+Open this folder (`godot/`) in Godot 4.6 .NET and press Play. Or:
 
 ```bash
 dotnet build godot/LoonieRoo.csproj

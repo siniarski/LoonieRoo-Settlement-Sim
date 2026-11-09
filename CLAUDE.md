@@ -27,7 +27,7 @@ This is a **learning and exploration project**. Favour fast iteration, readable 
 
 - `./check.sh` builds everything (the sim, its tests, the Godot game) and runs the sim's tests (~12 s: six processes at once). **Run it before every commit.** `./check.sh --all` adds the Godot self-test (a window opens; ~30 s in all, run beside the tests). It prints a short summary (failures with their messages); the full output is in `.check/` (build.log, tests-N.log, selftest.log): **read those instead of running the check again** to see more.
 - `dotnet test cs/Sim.Tests -c Release --filter "DisplayName~pathfinding"` runs some of the tests (DisplayName is the describe/it path, e.g. `findPath > solves a maze`).
-- The game: open `godot/` in Godot 4.6 .NET and press Play, or `dotnet build godot/LoonieRoo.csproj` then Godot with `--path godot`. Command-line options (`--seed=`, `--start=solo|group`, `--load=save.json`, `--ticks=`, `--shot=out.png`, `--selftest`, ...) are in `godot/README.md`. Not `experiments/godot-bench`: that's a render benchmark (it pans and quits).
+- The game: open `godot/` in Godot 4.6 .NET and press Play, or `dotnet build godot/LoonieRoo.csproj` then Godot with `--path godot`. Command-line options (`--seed=`, `--start=solo|group`, `--load=save.json`, `--ticks=`, `--shot=out.png`, `--selftest`, ...) are in `godot/README.md`.
 - The harness: `dotnet test cs/Harness -c Release --filter "DisplayName~solo balance"` (or `world balance`, `DisplayName=bench`, `DisplayName=stress`); env vars and what each does in NOTES.md "Harness"; reports in `cs/Harness/out/`. Not part of the check.
 
 ## Architecture rules (non-negotiable)
@@ -62,7 +62,7 @@ cs/
   LoonieRoo.slnx    # the sim, its tests, the Godot game
 godot/              # the game: Game.cs (loop, input), Render/ (drawing), Ui/ (HUD, menu, map), SelfTest.cs
 scenarios/          # JSON maps the tests load
-experiments/        # old measurements (godot-bench; the browser render-bench is at ts-final)
+experiments/        # old measurements' write-ups (the Godot render bench is at tag godot-bench-final, the browser one at ts-final)
 check.sh            # the check
 NOTES.md            # Start here, decisions, design direction, open questions
 log/                # the session log: a file per entry, YYYY-MM-DD-NN-slug.md

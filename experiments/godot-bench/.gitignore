@@ -1,9 +1,0 @@
-.godot/
-data/
-shot.png
-cpp/build/
-bin/*.dll
-bin/*.pdb
-bin/*.lib
-bin/*.exp
-shot.png.import

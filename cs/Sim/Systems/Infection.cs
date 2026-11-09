@@ -59,9 +59,4 @@ public static partial class Infection
         }
         return (s.infection >= INFECTION_TURN) ? "the infection" : null;
     }
-
-    public static bool isInfected(Survivor s)
-    {
-        return s.infection != null;
-    }
 }
