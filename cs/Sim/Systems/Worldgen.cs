@@ -24,7 +24,7 @@ public static partial class Worldgen
     public const int GENERATE_RADIUS = 2;
 
     /// <summary>World sizes on offer (tiles a side, multiples of CHUNK). Development uses the small ones.</summary>
-    public static readonly List<double> WORLD_SIZES = [64, 128, 256, 512];
+    public static readonly List<double> WORLD_SIZES = [64, 128, 256, 512, 1024, 2048];
 
     public const int WORLD_SIZE = 128;
 

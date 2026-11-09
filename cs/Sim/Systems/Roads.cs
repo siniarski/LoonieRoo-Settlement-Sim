@@ -93,40 +93,52 @@ public static partial class Roads
         var came = new Int32Array(((double)(N) * (N))).fill(-1);
         var gx = goal % N;
         var gy = JsMath.floor(((double)(goal) / (N)));
-        List<List<double>> heap = [];
+        // A binary min-heap of (f, cell) in two plain arrays: the same pushes, sift-ups and sift-downs as the list of
+        // pairs it was (2026-11-09: that allocated a list per push), so equal f's come off in the same order.
+        var heapF = new double[64];
+        var heapC = new double[64];
+        int heapN = 0;
         void push(double f, double c)
         {
-            heap.push([f, c]);
-            var i = heap.length - 1;
+            if (heapN == heapF.Length)
+            {
+                Array.Resize(ref heapF, heapN * 2);
+                Array.Resize(ref heapC, heapN * 2);
+            }
+            heapF[heapN] = f;
+            heapC[heapN] = c;
+            int i = heapN++;
             while (i > 0)
             {
-                var p = Js.Shr(i - 1, 1);
-                if (Js.Get(Js.NN(Js.Get(heap, p)), 0) <= Js.Get(Js.NN(Js.Get(heap, i)), 0))
+                int p = (i - 1) >> 1;
+                if (heapF[p] <= heapF[i])
                 {
                     break;
                 }
-                (heap[Js.Idx(p)], heap[Js.Idx(i)]) = (Js.NN(Js.Get(heap, i)), Js.NN(Js.Get(heap, p)));
+                (heapF[p], heapF[i]) = (heapF[i], heapF[p]);
+                (heapC[p], heapC[i]) = (heapC[i], heapC[p]);
                 i = p;
             }
         }
-        List<double> pop()
+        (double f, double c) pop()
         {
-            var top = Js.NN(Js.Get(heap, 0));
-            var last = Js.NN(heap.pop());
-            if (heap.length > 0)
+            var top = (heapF[0], heapC[0]);
+            heapN--;
+            if (heapN > 0)
             {
-                heap[Js.Idx(0)] = last;
-                double i = 0;
+                heapF[0] = heapF[heapN];
+                heapC[0] = heapC[heapN];
+                int i = 0;
                 for (; ; )
                 {
-                    var l = ((double)(2) * (i)) + 1;
-                    var r = l + 1;
-                    double m = i;
-                    if ((l < heap.length) && (Js.Get(Js.NN(Js.Get(heap, l)), 0) < Js.Get(Js.NN(Js.Get(heap, m)), 0)))
+                    int l = 2 * i + 1;
+                    int r = l + 1;
+                    int m = i;
+                    if ((l < heapN) && (heapF[l] < heapF[m]))
                     {
                         m = l;
                     }
-                    if ((r < heap.length) && (Js.Get(Js.NN(Js.Get(heap, r)), 0) < Js.Get(Js.NN(Js.Get(heap, m)), 0)))
+                    if ((r < heapN) && (heapF[r] < heapF[m]))
                     {
                         m = r;
                     }
@@ -134,7 +146,8 @@ public static partial class Roads
                     {
                         break;
                     }
-                    (heap[Js.Idx(m)], heap[Js.Idx(i)]) = (Js.NN(Js.Get(heap, i)), Js.NN(Js.Get(heap, m)));
+                    (heapF[m], heapF[i]) = (heapF[i], heapF[m]);
+                    (heapC[m], heapC[i]) = (heapC[i], heapC[m]);
                     i = m;
                 }
             }
@@ -145,7 +158,7 @@ public static partial class Roads
         var MIN = 0.35;
         // A backstop: no road expands more than EXPANSIONS_PER_CELL times the grid (a sound search needs about one).
         double budget = ((double)(N) * (N)) * EXPANSIONS_PER_CELL;
-        while (heap.length > 0)
+        while (heapN > 0)
         {
             if (--budget < 0)
             {
@@ -223,6 +236,10 @@ public static partial class Roads
     {
         var N = JsMath.ceil(((double)(n.size) / (ROAD_CELL)));
         var c = new Float32Array(((double)(N) * (N)));
+        // Towns by cell (TownIndex): each cell asks only the towns that could cover it, not every town.
+        var index = new TownIndex(towns, n.size);
+        double reach = index.Biggest * 0.9 + 1;
+        var scratch = new List<int>();
         for (var j = 0; j < N; j++)
         {
             for (var i = 0; i < N; i++)
@@ -230,7 +247,7 @@ public static partial class Roads
                 var x = ((double)(i) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
                 var y = ((double)(j) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
                 var v = NatureMod.isSea(n, x, y) ? double.PositiveInfinity : (NatureMod.isWater(n, x, y) ? 14 : (NatureMod.isForest(n, x, y) ? 3 : 1));
-                if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((double)(t.radius) * (0.9))))
+                if (index.Find(x, y, reach, (t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((double)(t.radius) * (0.9)), scratch) != null)
                 {
                     v += 4;
                 }

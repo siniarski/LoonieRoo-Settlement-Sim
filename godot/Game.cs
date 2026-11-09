@@ -287,9 +287,45 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     public void Resume() => ToggleMenu();
 
+    /// <summary>A big world's plan being made on a worker thread (Worldplan.makePlan is pure), and what to make with it.</summary>
+    (System.Threading.Tasks.Task<WorldPlan> task, double seed, double size, Settings settings, Character you, ulong started, int told)? making;
+    /// <summary>Worlds bigger than this make their plan on a worker thread, behind a "making the world" note; smaller ones take milliseconds.</summary>
+    const double PLAN_ON_A_THREAD_OVER = 512;
+
     public void NewGame(double size, Settings settings, double? seed, Character you)
     {
-        var world = Worldgen.createWorld(seed ?? RandomSeed(), size, settings, you);
+        if (making != null) return; // one at a time
+        double s = seed ?? RandomSeed();
+        if (size > PLAN_ON_A_THREAD_OVER)
+        {
+            string map = settings.map;
+            var task = System.Threading.Tasks.Task.Run(() => Worldplan.makePlan(NatureMod.natureFor(s, size, map)));
+            making = (task, s, size, settings, you, Godot.Time.GetTicksMsec(), 0);
+            view.Toast($"Making a {size}×{size} world...");
+            return;
+        }
+        FinishNewGame(s, size, settings, you);
+    }
+
+    /// <summary>Each frame while a big world's plan is being made: a note every few seconds, and the world once it's done.</summary>
+    void WatchMaking()
+    {
+        if (making is not { } m) return;
+        if (!m.task.IsCompleted)
+        {
+            int secs = (int)((Godot.Time.GetTicksMsec() - m.started) / 1000);
+            if (secs >= m.told + 3) { view.Toast($"Making a {m.size}×{m.size} world: towns and roads ({secs} s)..."); making = m with { told = secs }; }
+            return;
+        }
+        making = null;
+        if (m.task.IsFaulted) { view.Toast($"Couldn't make the world: {m.task.Exception?.GetBaseException().Message}"); return; }
+        Worldplan.remember(m.seed, m.size, m.settings.map, m.task.Result);
+        FinishNewGame(m.seed, m.size, m.settings, m.you);
+    }
+
+    void FinishNewGame(double seed, double size, Settings settings, Character you)
+    {
+        var world = Worldgen.createWorld(seed, size, settings, you);
         if (!Replace(new LoadResult { ok = true, state = world, kind = "save" }, $"a new {size}×{size} world")) return;
         Play();
         // Every start is first person on your survivor: a group start plays the one you made (the
@@ -361,6 +397,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     {
         double frameMs = delta * 1000;
         fps = fps * 0.9 + 1000 / Math.Max(frameMs, 1) * 0.1;
+        WatchMaking();
 
         // Fixed timestep: speed changes how many ticks run per frame, never the tick length (rule 6).
         int ticks = 0;

@@ -8,6 +8,9 @@ public static partial class Js
     /// <summary>ECMAScript ToInt32: truncate, wrap modulo 2^32, as signed (what `x | 0` gives).</summary>
     public static int ToInt32(double x)
     {
+        // Fast path (2026-11-09: the world plan's hashes do this a dozen times a call): a finite number in long's range
+        // truncates to a long, whose low 32 bits are what the modulo below gives. NaN and the infinities fail the test.
+        if (x > -9.2e18 && x < 9.2e18) return unchecked((int)(long)x);
         if (double.IsNaN(x) || double.IsInfinity(x)) return 0;
         double t = Math.Truncate(x);
         double m = t % 4294967296.0;

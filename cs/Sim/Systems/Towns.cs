@@ -53,61 +53,85 @@ public static partial class Towns
         return g;
     }
 
+    /// <summary>Where the towns go (biggest first): the best-scoring site for each on an 8-tile grid, dry and open,
+    /// near water, clear of the start and of the towns already placed.
+    ///
+    /// Linear in the map's area (2026-11-09, docs/worldgen-speed.md): it was every town x every site x a disc of the
+    /// land grid (14 s at 2048, hours at 10,000). Now each site's counts (inside the town's circle: cells, dry, wooded;
+    /// in the ring round it: cells, wet) come from row prefix sums over the land grid (a disc is a stack of row spans),
+    /// and the towns placed so far are found through a coarse grid of cells. The counts are the same integers and the
+    /// sites are scored in the same order with the same formula, so the towns are the same (TownsSpeedTest compares it
+    /// with the original).</summary>
     public static List<Town> siteTowns(Nature n, Uint8Array land)
     {
-        var N = JsMath.ceil(((double)(n.size) / (4)));
+        int size = (int)n.size;
+        int N = (int)JsMath.ceil((double)size / 4);
         List<Town> towns = [];
         var kinds = townKinds(n.seed, n.size);
-        kinds.forEach((kind, i) =>
+        // Prefix sums per row of the land grid: dry (not water), wooded (forest), wet (water).
+        var dryP = new int[N * (N + 1)];
+        var woodP = new int[N * (N + 1)];
+        var wetP = new int[N * (N + 1)];
+        for (int j = 0; j < N; j++)
+            for (int k = 0; k < N; k++)
+            {
+                int c = land.a[j * N + k];
+                int at = j * (N + 1) + k;
+                dryP[at + 1] = dryP[at] + (c != 2 ? 1 : 0);
+                woodP[at + 1] = woodP[at] + (c == 1 ? 1 : 0);
+                wetP[at + 1] = wetP[at] + (c == 2 ? 1 : 0);
+            }
+        int Sum(int[] p, int j, int k0, int k1) => k1 < k0 ? 0 : p[j * (N + 1) + k1 + 1] - p[j * (N + 1) + k0];
+        // Placed towns by 64-tile cell: the exclusion reaches the radii of both towns plus 48.
+        const int CELL = 64;
+        int cells = size / CELL + 1;
+        var placed = new List<Town>?[cells * cells];
+        double biggest = 0;
+        for (int i = 0; i < kinds.Count; i++)
         {
+            var kind = kinds[i];
             var (lo, hi) = Js.Get(RADII, kind);
             var radius = JsMath.min(JsMath.floor(((double)(n.size) * (0.19))), lo + JsMath.floor(((double)(NatureMod.roll(n.seed, i, 2, 0x7102)) * (((hi - lo) + 1)))));
+            int r = (int)radius, reach = r + 14, margin = r + 3;
+            long r2 = (long)r * r, reach2 = (long)reach * reach;
+            int spanCells = (int)Math.Ceiling((radius + biggest + 48) / CELL) + 1;
             SiteTownsBest? best = null;
-            var margin = radius + 3;
-            for (var y = margin; y < (n.size - margin); y += 8)
+            for (var y = margin; y < (size - margin); y += 8)
             {
-                for (var x = margin; x < (n.size - margin); x += 8)
+                for (var x = margin; x < (size - margin); x += 8)
                 {
                     if (JsMath.sqrt((JsMath.pow((x - n.start.x), 2)) + (JsMath.pow((y - n.start.y), 2))) < ((radius + NatureMod.START_CLEAR_RADIUS) + 6))
                     {
                         continue;
                     }
-                    if (towns.some((t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((radius + t.radius) + 48)))
+                    if (Crowded(placed, cells, CELL, spanCells, x, y, radius))
                     {
                         continue;
                     }
-                    double inside = 0;
-                    double dry = 0;
-                    double wooded = 0;
-                    double around = 0;
-                    double wet = 0;
-                    var reach = radius + 14;
-                    for (var j = JsMath.max(0, JsMath.floor(((double)((y - reach)) / (4)))); j <= JsMath.min(N - 1, JsMath.floor(((double)((y + reach)) / (4)))); j++)
+                    // The rows of the box the original scanned, each as spans: inside the circle, and the ring out to the reach.
+                    int inside = 0, dry = 0, wooded = 0, around = 0, wet = 0;
+                    int j0 = Math.Max(0, (int)Math.Floor((y - reach) / 4.0)), j1 = Math.Min(N - 1, (int)Math.Floor((y + reach) / 4.0));
+                    int kb0 = Math.Max(0, (int)Math.Floor((x - reach) / 4.0)), kb1 = Math.Min(N - 1, (int)Math.Floor((x + reach) / 4.0));
+                    for (int j = j0; j <= j1; j++)
                     {
-                        for (var k = JsMath.max(0, JsMath.floor(((double)((x - reach)) / (4)))); k <= JsMath.min(N - 1, JsMath.floor(((double)((x + reach)) / (4)))); k++)
+                        long dy = 4L * j + 2 - y, dy2 = dy * dy;
+                        if (dy2 > reach2) continue;
+                        var (ro0, ro1) = Span(x, ISqrt(reach2 - dy2), kb0, kb1);
+                        int roCells = Math.Max(0, ro1 - ro0 + 1), roWet = Sum(wetP, j, ro0, ro1);
+                        if (dy2 <= r2)
                         {
-                            var d = JsMath.sqrt((JsMath.pow(((((double)(k) * (4)) + 2) - x), 2)) + (JsMath.pow(((((double)(j) * (4)) + 2) - y), 2)));
-                            var c = Js.NN(Js.Get(land, ((double)(j) * (N)) + k));
-                            if (d <= radius)
-                            {
-                                inside++;
-                                if (c != 2)
-                                {
-                                    dry++;
-                                }
-                                if (c == 1)
-                                {
-                                    wooded++;
-                                }
-                            }
-                            else if (d <= reach)
-                            {
-                                around++;
-                                if (c == 2)
-                                {
-                                    wet++;
-                                }
-                            }
+                            var (in0, in1) = Span(x, ISqrt(r2 - dy2), kb0, kb1);
+                            int inCells = Math.Max(0, in1 - in0 + 1);
+                            inside += inCells;
+                            dry += Sum(dryP, j, in0, in1);
+                            wooded += Sum(woodP, j, in0, in1);
+                            around += roCells - inCells;
+                            wet += roWet - Sum(wetP, j, in0, in1);
+                        }
+                        else
+                        {
+                            around += roCells;
+                            wet += roWet;
                         }
                     }
                     var dryShare = ((double)(dry) / (JsMath.max(1, inside)));
@@ -125,10 +149,42 @@ public static partial class Towns
             }
             if (Js.T(best))
             {
-                towns.push(new() { x = Js.I(best.x), y = Js.I(best.y), radius = radius, kind = kind, eastWest = (NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2) == 0 });
+                var town = new Town { x = Js.I(best.x), y = Js.I(best.y), radius = radius, kind = kind, eastWest = (NatureMod.hash(n.seed, best.x, best.y, 0x7104) % 2) == 0 };
+                towns.push(town);
+                int at = Math.Min(cells - 1, town.y / CELL) * cells + Math.Min(cells - 1, town.x / CELL);
+                (placed[at] ??= new()).Add(town);
+                biggest = Math.Max(biggest, radius);
             }
-        });
+        }
         return towns;
+    }
+
+    /// <summary>Whether a placed town is too near (x, y) for a town of this radius: the original's test, over the cells round it.</summary>
+    static bool Crowded(List<Town>?[] placed, int cells, int cell, int span, int x, int y, double radius)
+    {
+        int cx = Math.Min(cells - 1, x / cell), cy = Math.Min(cells - 1, y / cell);
+        for (int gy = Math.Max(0, cy - span); gy <= Math.Min(cells - 1, cy + span); gy++)
+            for (int gx = Math.Max(0, cx - span); gx <= Math.Min(cells - 1, cx + span); gx++)
+                if (placed[gy * cells + gx] is { } list)
+                    foreach (var t in list)
+                        if (JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((radius + t.radius) + 48)) return true;
+        return false;
+    }
+
+    /// <summary>The cells k (centres 4k + 2) with |4k + 2 - x| at most a, clipped to [k0, k1] (empty: hi under lo).</summary>
+    static (int lo, int hi) Span(int x, long a, int k0, int k1)
+    {
+        int lo = (int)Math.Ceiling((x - 2 - a) / 4.0), hi = (int)Math.Floor((x - 2 + a) / 4.0);
+        return (Math.Max(k0, lo), Math.Min(k1, hi));
+    }
+
+    /// <summary>The largest integer whose square is at most v (v at least 0).</summary>
+    static long ISqrt(long v)
+    {
+        long s = (long)Math.Sqrt(v);
+        while (s * s > v) s--;
+        while ((s + 1) * (s + 1) <= v) s++;
+        return s;
     }
 
     /// <summary>Streets for a town: main and cross streets through the centre, then side streets off them.</summary>

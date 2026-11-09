@@ -48,3 +48,19 @@ Steps 2-6 change no world (they're checked by "same output" tests). Step 1 chang
 ## Done
 
 - **Step 1, 2026-11-09 (schema 73; old saves refused, the player's choice: "Break old saves").** `Roads.route` keeps g in a `Float64Array`, and stops after `EXPANSIONS_PER_CELL` (8) pops a cell of the grid (the road isn't laid then). A 2048 world (seed 42): createWorld 334 s -> 21 s, layRoads 316 s -> 1.45 s (280 roads, the slowest 23 ms); what's left is siteTowns (15 s). Worlds move: 67 of 90 plans (seeds 1-30 at 128, 256, 512; `gen plan hashes`) lay some road differently, as equal-cost paths now tie the other way. The sim tests all pass; the solo balance player's three worlds end as before (seeds 1 and 2 the same to the tick, seed 3 dies of hunger on day 3 either way, 22 ticks apart). Test: `roads > a long road over mixed ground is found within the search's budget` (even ground is what ran away; it fails on the float32 search).
+- **Steps 2-6, 2026-11-09 (no world changed).** Checked by `gen plan hashes` before and after: 120 plans (seeds 1-30 at 128, 256, 512, 1024), 12 whole generated worlds (seeds 1-6 at 256 and 512, their entire save file hashed) and 90 height fields, all identical.
+  - **2:** cs/Sim/Sim.csproj optimises in every configuration (Godot builds Debug).
+  - **3:** `Towns.siteTowns` by row prefix sums and a cell grid of placed towns; `TownsSpeedTest` keeps the original and compares 72 plans (6 sizes, mainland and quarantine, 6 seeds).
+  - **4:** `TownIndex` (towns by 64-tile cell) for Roads.costGrid, Worldplan.farmLots (first match in list order, as `find`) and Heights.townness.
+  - **5:** `Js.ToInt32` takes a fast path (a finite value in long's range: the low 32 bits of the truncation, which is what the modulo gave); NatureMod.hash calls it a dozen times a call, every noise four times. The road search's heap is two plain arrays with the same sift-ups and sift-downs.
+  - **6:** a new game over 512 tiles makes its plan on a worker thread (`Worldplan.makePlan` is pure; `Worldplan.remember` keeps it for createWorld), with a note every 3 s; 1024 and 2048 are in the menu's map sizes. Self-test: "A 2048 world's plan is made on a thread" and "Then the 2048 world arrives" (5.6 s, 240 frames drawn meanwhile).
+  - **Times** (harness, Release, seed 42): 2048 createWorld 21 s -> 4.3 s, every chunk 9.0 s -> 3.7 s (2.2 -> 0.9 ms a chunk); 1024: 2.3 -> 0.7 s and 2.3 -> 0.9 s. In the game's build, a 2000 world: ~4 s to create, ~4 s for every chunk (experiments/map-overview/log.txt).
+
+## The overviews (experiments/map-overview)
+
+`godot/World3D/MapShot.tscn` draws whole generated worlds a pixel per tile: `<map>_<seed>_small.jpg` (1000 px), `_town.jpg` and `_start.jpg` (300 tiles at 3 px), and the full 2000 px PNG (not in git). Six worlds: mainland 1-3, island 4, islands 5, quarantine 6. What they show:
+
+- Towns sit evenly over the whole map: one per 170 x 170 tiles (139 on a 2000 mainland), the same density everywhere, so a big map reads as a regular sprinkle of circles with no empty wilds or urban sprawl.
+- The natural features keep their small-map scale: lakes and woods from noise 20-40 tiles across, one river; nothing larger (no big forests, mountains or regions) as the map grows.
+- Settlements are still three, whatever the size.
+- **A bug**: on island maps some settlements stand out at sea (island 4 and islands 5: yellow boxes in the water).

@@ -65,6 +65,10 @@ public static class Heights
         internal readonly List<int> bareOrder = new(), doneOrder = new();
         /// <summary>Each lot's buildings: footprint rectangle (x, y, w, h) and level.</summary>
         internal readonly Dictionary<int, List<double[]>> lotLevels = new();
+        /// <summary>The plan's towns by cell, and the reach townness asks within (TownIndex).</summary>
+        internal TownIndex townIndex;
+        internal double townReach;
+        internal readonly List<int> townScratch = new();
 
         /// <summary>The ground's height (m) at tile corner (cx, cy), clamped to the map.</summary>
         public double corner(int cx, int cy)
@@ -198,8 +202,15 @@ public static class Heights
     static double townness(Field f, int x, int y)
     {
         double most = 0;
-        foreach (var t in f.plan.towns)
+        // Only towns within their radius and TOWN_EASE can count (the rest give 0): asked through the index.
+        if (f.townIndex == null)
         {
+            f.townIndex = new TownIndex(f.plan.towns, f.size);
+            f.townReach = f.townIndex.Biggest + TOWN_EASE + 1;
+        }
+        foreach (var ti in f.townIndex.Near(x, y, f.townReach, f.townScratch))
+        {
+            var t = f.townIndex[ti];
             double d = JsMath.sqrt((double)(x - t.x) * (x - t.x) + (double)(y - t.y) * (y - t.y));
             double v = 1 - smoothstep((d - t.radius) / TOWN_EASE);
             if (v > most) most = v;

@@ -1,0 +1,6 @@
+mapshot mainland_1: 2000x2000, plan + start 4.1 s, every chunk 4.3 s; towns 139, roads 257, lots 2773, settlements 3, trees 320,489, dormant 18,186
+mapshot mainland_2: 2000x2000, plan + start 3.6 s, every chunk 4.0 s; towns 138, roads 261, lots 2945, settlements 3, trees 311,548, dormant 18,978
+mapshot mainland_3: 2000x2000, plan + start 3.7 s, every chunk 4.1 s; towns 138, roads 261, lots 2776, settlements 3, trees 316,568, dormant 17,946
+mapshot island_4: 2000x2000, plan + start 3.7 s, every chunk 3.0 s; towns 89, roads 124, lots 1714, settlements 3, trees 145,098, dormant 7,662
+mapshot islands_5: 2000x2000, plan + start 4.1 s, every chunk 3.1 s; towns 93, roads 131, lots 962, settlements 3, trees 130,422, dormant 4,660
+mapshot quarantine_6: 2000x2000, plan + start 4.0 s, every chunk 3.9 s; towns 138, roads 312, lots 2965, settlements 3, trees 318,596, dormant 19,486

@@ -9,3 +9,4 @@ __pycache__/
 .claude/settings.local.json
 # Blender's save backups.
 *.blend1
+experiments/map-overview/*.png

@@ -119,6 +119,23 @@ public partial class Game
         }
     }
 
+    /// <summary>A 2048 world: its plan is made on a worker thread (the game keeps drawing frames meanwhile), then the
+    /// world arrives and you're on your survivor in first person.</summary>
+    async Task BigNewGame()
+    {
+        int before = state.grid.width;
+        var settings = CopySettings(Difficulty.NORMAL);
+        settings.start = "solo";
+        ulong t0 = Godot.Time.GetTicksMsec();
+        NewGame(2048, settings, 42, new Character { name = "Ash", job = 0, traits = new() });
+        await Frames(2);
+        Check("A 2048 world's plan is made on a thread (frames go on meanwhile)", making != null && state.grid.width == before, $"making {making != null}, width {state.grid.width}");
+        int frames = 0;
+        while (making != null && frames < 3000) { await Frames(1); frames++; }
+        Check("Then the 2048 world arrives, first person on your survivor", state.grid.width == 2048 && view.firstPerson,
+            $"width {state.grid.width}, {frames} frames, {(Godot.Time.GetTicksMsec() - t0) / 1000.0:0.0} s");
+    }
+
     async Task SelfTestSteps()
     {
         selfTesting = true;
@@ -256,6 +273,7 @@ public partial class Game
         // preset), then a solo one. Each lands in first person on your survivor, paused, Space to play.
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
+        await BigNewGame();
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);

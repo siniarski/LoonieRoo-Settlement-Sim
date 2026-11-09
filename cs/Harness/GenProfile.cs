@@ -227,7 +227,27 @@ public class GenProfile
                 ulong h = 1469598103934665603;
                 foreach (var v in p.roadMask) h = (h ^ (ulong)v) * 1099511628211;
                 foreach (var l in p.lots) h = (h ^ (ulong)(l.x * 73856093 ^ l.y * 19349663 ^ l.w * 83492791 ^ l.h)) * 1099511628211;
-                out_.Add($"{size} {seed} {h:x16} lots {p.lots.Count}");
+                // The ground's heights (Heights: not in the save), every 3rd corner, exactly.
+                ulong hh = 1469598103934665603;
+                if (size <= 512)
+                {
+                    var f = Heights.make(seed, size, "mainland");
+                    for (int y = 0; y <= size; y += 3)
+                        for (int x = 0; x <= size; x += 3) hh = (hh ^ (ulong)BitConverter.DoubleToInt64Bits(f.corner(x, y))) * 1099511628211;
+                }
+                out_.Add($"{size} {seed} {h:x16} lots {p.lots.Count} heights {hh:x16}");
+            }
+        // Whole generated worlds: the grid, furniture, the dormant, items, survivors, a few seeds.
+        foreach (var size in (Env("WORLD_SIZES") ?? "256,512").Split(',').Select(int.Parse))
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var s = Worldgen.createWorld(seed, size, Difficulty.NORMAL);
+                for (int y = 0; y < size; y += Worldgen.CHUNK)
+                    for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(s, new Point(x, y));
+                // The whole state as a save file: everything generation made.
+                ulong h = 1469598103934665603;
+                foreach (char c in Savefile.toSaveFile(s)) h = (h ^ c) * 1099511628211;
+                out_.Add($"world {size} {seed} {h:x16} furniture {s.furniture.Count} dormant {s.dormant.Count}");
             }
         File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/plan-hashes.txt"), string.Join("\n", out_) + "\n");
     }

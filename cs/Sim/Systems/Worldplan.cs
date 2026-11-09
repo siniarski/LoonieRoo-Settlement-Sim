@@ -36,6 +36,19 @@ public static partial class Worldplan
         return plan;
     }
 
+    /// <summary>Keeps a plan made elsewhere (the game makes big worlds' plans on a worker thread: makePlan is pure) as
+    /// planWorld would have, so createWorld finds it.</summary>
+    public static void remember(double seed, double size, string map, WorldPlan plan)
+    {
+        var key = $"{Js.Str(seed)}|{Js.Str(size)}|{Js.Str(map)}";
+        if (Js.T(cache.get(key))) return;
+        if (cache.size > 6)
+        {
+            cache.delete(cache.keys()[0]);
+        }
+        cache.set(key, plan);
+    }
+
     public static WorldPlan makePlan(Nature n)
     {
         var size = n.size;
@@ -236,6 +249,10 @@ public static partial class Worldplan
     /// <summary>Along the country roads round each town: houses where the town spills out along its roads, then farms (a farmstead and its fields, or fields alone) further out.</summary>
     public static void farmLots(Nature n, List<Town> towns, List<List<PointD>> roads, Func<Lot, bool> add)
     {
+        // Towns by cell (TownIndex): each road point asks only the towns that could be in reach (the first in list order wins, as before).
+        var index = new TownIndex(towns, n.size);
+        double edgeReach = index.Biggest * 1.35 + 6 + 1, nearReach = index.Biggest * 2.6 + 24 + 1;
+        var scratch = new List<int>();
         roads.forEach((line, ri) =>
         {
             double since = 99;
@@ -244,11 +261,11 @@ public static partial class Worldplan
                 var a = Js.NN(Js.Get(line, i - 1));
                 var b = Js.NN(Js.Get(line, i));
                 since += dist(a.x, a.y, b.x, b.y);
-                var edge = towns.find((t) =>
+                var edge = index.Find(b.x, b.y, edgeReach, (t) =>
         {
             var d = dist(b.x, b.y, t.x, t.y);
             return (d > ((double)(t.radius) * (0.8))) && (d < (((double)(t.radius) * (1.35)) + 6));
-        });
+        }, scratch);
                 if (Js.T(edge) && (since >= 15))
                 {
                     double r_1(double j)
@@ -278,11 +295,11 @@ public static partial class Worldplan
                 {
                     continue;
                 }
-                var near = towns.find((t) =>
+                var near = index.Find(b.x, b.y, nearReach, (t) =>
         {
             var d = dist(b.x, b.y, t.x, t.y);
             return (d > ((double)(t.radius) * (1.2))) && (d < (((double)(t.radius) * (2.6)) + 24));
-        });
+        }, scratch);
                 if (!Js.T(near))
                 {
                     continue;
