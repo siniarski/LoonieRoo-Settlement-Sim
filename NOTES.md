@@ -25,7 +25,7 @@ Decisions log. Read this at the start of each session. After any non-trivial exp
 - ~~**Lots of furniture has no model**~~ (done 2026-11-09: every kind and look has a model, Furniture.cs; session log).
 
 **Open after the second round of 2026-11-09 (trees, free animals, held items, the body's leaps, the 500 m view and Options: all merged into main).**
-- **Play it:** tree trunks you slide round; animals moving at any angle; the held items' new holds and motion; your body leaping; the 500 m default view and the menu's Options page (view distance, detail, far trees, shadows, model budgets...).
+- **Played 2026-11-09 (the player):** tree collisions feel good; the shadow and anti-aliasing settings look nice; the far view works. **Not tried yet:** the body's leaps, the held items, animals moving freely.
 - **Trees:** colonists on tile paths and cars still pass through trunks; one trunk radius for every species (the species is drawing-only).
 - **Animals:** after the change a colony (world balance seed 11) fell to the dead on day 12 (was day 21), and none of the 13 lived to day 25 (was 1): worth a look whether it's noise; solo deaths by zombies 3 -> 7 of 16 seeds; how often prey falls wasn't counted.
 - **Body leaps:** the library's jump clip flings the arms wide; no real vault clip (a tuck and a hand on the sill); the eye doesn't dip on landing.
