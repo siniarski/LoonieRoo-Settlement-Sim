@@ -186,6 +186,7 @@ void fragment() {
     /// not a command, so not in the log.</summary>
     public static void Lineup(SimState state, Survivor you)
     {
+        if (Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=furniture")) { FurnitureModels.Lineup(state, you); return; }
         bool all = Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=variants");
         if (all)
         {

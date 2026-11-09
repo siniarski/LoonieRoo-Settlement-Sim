@@ -5,7 +5,8 @@
 // sim's (Terrain.cs): the ground is a quad per tile on the shared corner heights, normals from the
 // neighbouring corners (so no seams between tiles or chunks); everything stands on its tile's floor
 // (its highest corner) and walls go down to its lowest (a footing where the ground falls away).
-// Plain boxes in vertex colours for now: the look of the world is its own job.
+// Plain boxes in vertex colours for now: the look of the world is its own job. Furniture with a model is
+// Furniture.cs's; only a piece without one is a box here.
 
 using System;
 using System.Collections.Generic;
@@ -35,7 +36,8 @@ public static class WorldMesh
     /// <summary>A wall's footing goes this far under the lowest ground along it.</summary>
     const float FOOTING = 0.1f;
 
-    /// <summary>Furniture as a box: width, height, and colour (by kind; the rest a small grey box).</summary>
+    /// <summary>Furniture as a box: width, height, and colour (by kind; the rest a small grey box). Only for a
+    /// piece with no model (Furniture.cs draws the rest).</summary>
     static readonly Dictionary<string, (float w, float h, string colour)> FURNITURE = new()
     {
         ["bed"] = (0.9f, 0.5f, "#6f6a80"), ["table"] = (0.8f, 0.75f, "#6a4a2c"), ["crate"] = (0.6f, 0.6f, "#7a6040"),
@@ -77,9 +79,12 @@ public static class WorldMesh
         public readonly Dictionary<(int, int), List<Furniture>> furniture = new();
         /// <summary>Tiles with a ceiling over them (Roofs.Indoor).</summary>
         public HashSet<int> indoor = new();
+        /// <summary>Bumped by each Refresh (FurnitureModels gathers again).</summary>
+        public int Version { get; private set; }
 
         public void Refresh(SimState state)
         {
+            Version++;
             var g = state.grid;
             Fill(open, g.open); Fill(edgeOpen, g.edgeOpen); Fill(edgeBoarded, g.edgeBoarded); Fill(locked, g.locked); Fill(edgeLocked, g.edgeLocked);
             furniture.Clear();
@@ -264,7 +269,7 @@ public static class WorldMesh
     static void Thing(SurfaceTool st, Furniture f)
     {
         float x = f.x + 0.5f, z = f.y + 0.5f;
-        if (f.kind == "tree") return; // Trees.cs draws them
+        if (f.kind == "tree" || FurnitureModels.Has(f)) return; // Trees.cs and Furniture.cs draw them
         var (w, h, colour) = FURNITURE.GetValueOrDefault(f.kind, (0.45f, 0.45f, "#5a5a58"));
         float r = w / 2;
         // On the ground at its centre, its foot down to the lowest ground under it.
