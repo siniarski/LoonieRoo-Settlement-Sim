@@ -93,6 +93,11 @@ public sealed class Held
     readonly double swingAt = -1;
     double bob;
 
+    /// <summary>Whether a hand (the glove round a grip) is drawn on the right, or on the left: your own body (OwnBody)
+    /// hides its arm on that side, so there aren't two.</summary>
+    public bool RightHand => root.Visible && right.grip.Visible && right.hand.Visible;
+    public bool LeftHand => root.Visible && left.grip.Visible && left.hand.Visible;
+
     /// <summary>What's drawn in your right hand, or "" (the self-test and the debug panel).</summary>
     public string Right => root.Visible && right.grip.Visible ? right.model : "";
 

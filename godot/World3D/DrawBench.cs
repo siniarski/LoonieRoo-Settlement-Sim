@@ -1,4 +1,5 @@
-// The draw-distance benchmark: a big generated world (seed 42, 2048 tiles = 2 km a side by default), first
+// The draw-distance benchmark: a big generated world (seed 42, 2048 tiles = 2 km a side by default; --lazy for
+// only the start generated, as a game has it, the far field drawing the rest from the world plan), first
 // person in the middle, and what a frame costs as the far field (FarField.cs) draws further out. The sim
 // isn't ticked (noon, still). Each run is
 //   R          the far field's range in metres (0: off, the game's ~56 m and its fog)
@@ -35,6 +36,8 @@ public partial class DrawBench : Node3D
     FirstPerson? fp;
     Vector2 town;
     double genMs;
+    /// <summary>--lazy: only the start generated, as in a game (the far field draws the rest from the world plan).</summary>
+    bool lazy;
 
     public override void _Ready()
     {
@@ -58,8 +61,10 @@ public partial class DrawBench : Node3D
         var settings = new Settings { start = "solo", zombies = Difficulty.NORMAL.zombies, weather = Difficulty.NORMAL.weather, progression = Difficulty.NORMAL.progression, winter = Difficulty.NORMAL.winter, dayScale = Difficulty.NORMAL.dayScale, map = Difficulty.NORMAL.map };
         state = Worldgen.createWorld(42, size, settings);
         // The sim generates chunks as survivors come near; the bench wants all of it (as the harness's generateAll).
-        for (int y = 0; y < size; y += Worldgen.CHUNK)
-            for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(state, new Point(x, y));
+        lazy = args.ContainsKey("lazy");
+        if (!lazy)
+            for (int y = 0; y < size; y += Worldgen.CHUNK)
+                for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(state, new Point(x, y));
         genMs = (Godot.Time.GetTicksUsec() - t0) / 1000.0;
         var g = state.grid;
         var you = ControlMod.controlled(state)!;
@@ -89,7 +94,7 @@ public partial class DrawBench : Node3D
         DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = 0;
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
-        report.AppendLine($"Draw bench: a {size} world (seed 42, generated in {genMs / 1000:0.0} s, {state.furniture.Count(fu => fu.kind == "tree"):N0} trees), first person at ({cx}, {cy}), noon; {measureFrames} frames a run (a full turn), 1280x720, Godot {Engine.GetVersionInfo()["string"]}, {OS.GetProcessorName()}, {RenderingServer.GetVideoAdapterName()}");
+        report.AppendLine($"Draw bench: a {size} world (seed 42, {(lazy ? "only the start generated (--lazy)" : "every chunk generated")} in {genMs / 1000:0.0} s, {state.furniture.Count(fu => fu.kind == "tree"):N0} trees), first person at ({cx}, {cy}), noon; {measureFrames} frames a run (a full turn), 1280x720, Godot {Engine.GetVersionInfo()["string"]}, {OS.GetProcessorName()}, {RenderingServer.GetVideoAdapterName()}");
         report.AppendLine();
         report.AppendLine("| range m | far trees | regions | far tris | far trees drawn | build ms | frame ms | p95 | render cpu | render gpu | draw calls | primitives |");
         report.AppendLine("|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");

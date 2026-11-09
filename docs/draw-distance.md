@@ -28,3 +28,19 @@ A 2048 world (seed 42, every chunk generated), you in the middle, noon; per rang
 - **The sound scanned every piece of furniture each frame** (Loops: generators; WorldNoises: turrets). A 2048 world has ~330k trees as furniture: ~8 ms a frame, with the far field off. Now each keeps its list and looks again only when the furniture list changes: 1.2 ms -> 0.02 ms on a 1024 world.
 - **Generating a whole 2048 world takes ~19 minutes** (seed 42; a 1024 world: ~16 s). Creating one (only the start generated) is 20 s (the harness's new `new-2048` stress scenario). Superlinear somewhere in chunk generation or settling: a sim problem, left for a stress-test session.
 - **In the game the far field only knows what's been generated.** The sim generates chunks as survivors come near, so past that the grid is blank grass and the far field draws it so. Drawing far land the right way means reading the world plan (Worldplan: nature, roads, lots; pure from the seed) for chunks not generated yet, not the grid.
+
+## The bench again, and land not generated (2026-11-09, later)
+
+With world generation fixed (docs/worldgen-speed.md) and the sound's furniture scan gone, the 2048 bench (every chunk generated, 8.7 s) runs in 22 s:
+
+| range m | far trees | regions | far tris | frame ms | p95 | render cpu | render gpu |
+|--:|---|--:|--:|--:|--:|--:|--:|
+| 0 (today's ~56 m) | | 0 | 0 | 0.80 | 0.96 | 0.17 | 0.25 |
+| 250 | yes | 62 | 1.1M | 1.02 | 1.27 | 0.33 | 0.32 |
+| 500 | yes | 224 | 4.6M | 1.34 | 1.60 | 0.55 | 0.57 |
+| 1000 | yes | 825 | 16.7M | 2.81 | 3.48 | 1.39 | 1.35 |
+| 1000 | no | 825 | 0.45M | 1.26 | 1.41 | 0.34 | 0.27 |
+
+So a kilometre costs ~2 ms a frame on this machine, three quarters of it the far trees (267k of them): a cheaper far tier (cards or a canopy mesh past ~400 m) is where to look if it's ever needed.
+
+**Land not generated yet is drawn from the world plan** (FarField.PlanGround: the ground by generateChunk's own rules, the lots' yards; buildings from the lots' footprints; trees by generateChunk's roll), so in a game, where only the chunks near survivors exist, the far field isn't blank grass any more. A region is built again when its chunks are generated (its signature counts them). `DrawBench -- --lazy` (only the start generated): the same frame (2.47 ms at 1000 m), but a region takes 5.2 ms to build from the plan against 1.6 from the grid, so filling a 1 km view adds ~10 ms to a frame for its first few seconds (2 regions a frame). A worker thread for region building would hide that.

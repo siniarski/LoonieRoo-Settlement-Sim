@@ -126,7 +126,7 @@ public sealed partial class FirstPerson : Node3D
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
-        people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null);
+        people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
         bodies.Update(state, alpha, eye, you.id, modelled);
         items.Update(state, eye);
         held.Update(state, you, alpha, delta, inCar || EyeAt != null);

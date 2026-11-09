@@ -357,7 +357,15 @@ public partial class Game
         Zombies.damageZombie(state, z, 1000, you);
         await Frames(2);
         Check("The killing blow thuds where it stood", sounds.Played["kill"] > kill0, $"kills heard {sounds.Played["kill"] - kill0}");
+        // One that comes into being already after you (it woke, say, and saw you in the same tick) snarls too.
         view.paused = true;
+        int notice1 = sounds.Played["notice"];
+        var z2 = Zombies.addZombie(state, spot.x, spot.y, 100, "static");
+        z2.targetId = you.id;
+        await Frames(3);
+        Check("A zombie that appears already after you snarls", sounds.Played["notice"] > notice1, $"notices {sounds.Played["notice"] - notice1}");
+        Zombies.damageZombie(state, z2, 1000, you);
+        await Frames(2);
         await SoundSteps();
     }
 

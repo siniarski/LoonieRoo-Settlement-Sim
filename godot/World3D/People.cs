@@ -181,11 +181,12 @@ public sealed class People
     OwnBody? ownMod;
     string ownLook = "";
     float ownYaw = float.NaN;
+    double ownHeading;
 
     /// <summary>Your own body: shown standing or sneaking, posed like everyone's, its legs the way you walk and its
     /// chest the way you look (camYaw, FirstPerson's: the look along (cos, sin) on the grid); its head hidden unless
     /// you look from outside (fromOutside: --eye).</summary>
-    public void UpdateYou(SimState state, Survivor you, double alpha, double camYaw, double delta, bool show, bool fromOutside)
+    public void UpdateYou(SimState state, Survivor you, double alpha, double camYaw, double delta, bool show, bool fromOutside, bool rightHeld = false, bool leftHeld = false)
     {
         var pose = PoseIntents.ofSurvivor(state, you);
         show &= pose.stance is "stand" or "sneak";
@@ -217,17 +218,24 @@ public sealed class People
         bool moving = own.speed > 0.3;
         bool back = false;
         float want;
+        // The way you walk: the last heading you moved along (a tick that didn't move you says 0, which isn't a way).
+        if (pose.speed > 0.15) ownHeading = pose.heading;
         if (moving)
         {
-            float walk = (float)Math.Atan2(Math.Cos(pose.heading), Math.Sin(pose.heading));
+            float walk = (float)Math.Atan2(Math.Cos(ownHeading), Math.Sin(ownHeading));
             back = Math.Abs(Mathf.AngleDifference(lookYaw, walk)) > 1.75f;
-            want = back ? walk + Mathf.Pi : walk;
+            float legs = back ? walk + Mathf.Pi : walk;
+            // The legs turn at most OWN_TWIST from the look (the chest makes up the rest): strafing walks them half
+            // sideways rather than crossing the chest over.
+            want = lookYaw + Math.Clamp(Mathf.AngleDifference(lookYaw, legs), -OWN_TWIST, OWN_TWIST);
         }
         else want = float.IsNaN(ownYaw) || Math.Abs(Mathf.AngleDifference(ownYaw, lookYaw)) > OWN_TURN_AT ? lookYaw : ownYaw;
         ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * 8));
         float twist = Math.Clamp(Mathf.AngleDifference(ownYaw, lookYaw), -OWN_TWIST, OWN_TWIST);
         ownMod.Twist = twist;
         ownMod.HideHead = !fromOutside;
+        ownMod.HideRightArm = rightHeld && !fromOutside;
+        ownMod.HideLeftArm = leftHeld && !fromOutside;
         var behind = new Vector3((float)-Math.Cos(camYaw), 0, (float)-Math.Sin(camYaw)) * (fromOutside ? 0 : OWN_BACK);
         foreach (var m in new[] { own, ownShadow })
         {

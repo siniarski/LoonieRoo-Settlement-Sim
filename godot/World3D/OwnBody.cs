@@ -2,6 +2,8 @@
 // draws for the survivor you control. After the animation it
 //   - shrinks the neck and head to nothing (HideHead), so the camera at your eyes isn't inside it and looking down
 //     shows your chest, legs and feet, not the inside of your face (the hair and eyes go with it);
+//   - hides an arm (HideRightArm, HideLeftArm) while Held draws a hand holding something on that side, so you
+//     don't see two right arms looking down with a club in your hand;
 //   - turns the spine (Twist, radians about the vertical, shared over Spine, Chest and UpperChest), so the
 //     chest faces where you look while the legs face where you walk.
 // A second copy of the model, its head on, casts the shadow (ShadowsOnly), so your shadow has a head.
@@ -14,6 +16,8 @@ namespace LoonieRoo.Game.World3D;
 public partial class OwnBody : SkeletonModifier3D
 {
     public bool HideHead = true;
+    /// <summary>Arms to hide, right and left: Held draws a hand (and its sleeve) on that side, holding something.</summary>
+    public bool HideRightArm, HideLeftArm;
     public float Twist;
 
     static readonly string[] SPINE = { "Spine", "Chest", "UpperChest" };
@@ -30,6 +34,12 @@ public partial class OwnBody : SkeletonModifier3D
                 int b = sk.FindBone(name);
                 if (b >= 0) sk.SetBonePoseScale(b, new Vector3(0.001f, 0.001f, 0.001f));
             }
+        }
+        foreach (var (hide, bone) in new[] { (HideRightArm, "RightUpperArm"), (HideLeftArm, "LeftUpperArm") })
+        {
+            if (!hide) continue;
+            int b = sk.FindBone(bone);
+            if (b >= 0) sk.SetBonePoseScale(b, new Vector3(0.001f, 0.001f, 0.001f));
         }
         if (Twist == 0) return;
         float each = Twist / SPINE.Length;

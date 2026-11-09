@@ -62,9 +62,12 @@ public sealed class Trees
 
     /// <summary>A tree tile's species, place (size, turn, the trunk nudged off the centre) and tint, as Build draws it
     /// (the far field draws the same trees).</summary>
-    public static (int species, Transform3D t, Color custom) Placement(Grid g, int x, int y, bool coarse = false)
+    public static (int species, Transform3D t, Color custom) Placement(Grid g, int x, int y, bool coarse = false) =>
+        Placement(x, y, g.ground[y * g.width + x] == FOREST, coarse);
+
+    /// <summary>The same, told whether the tile is forest ground (the far field, for land not generated yet).</summary>
+    public static (int species, Transform3D t, Color custom) Placement(int x, int y, bool forest, bool coarse)
     {
-        bool forest = g.ground[y * g.width + x] == FOREST;
         int s = Species(x, y, forest);
         var (lo, hi) = SIZE[s];
         float size = lo + (hi - lo) * U(x, y, 3);

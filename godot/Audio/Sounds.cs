@@ -145,6 +145,10 @@ public sealed partial class Sounds : Node3D
                     if (z.hurtTick != was.hurt && z.hurtTick >= 0) Play(state, "hit", z.id, p, CHEST, me, Hash.idNumber(z.id) + z.hurtTick);
                     if (z.targetId == you.id && was.target != you.id) Play(state, "moan_notice", z.id, p, MOUTH, me, Hash.idNumber(z.id) + state.tick);
                 }
+                // New since the last look (it woke, or came into being) and already after you: it noticed you in the
+                // same tick it appeared, so it snarls too (2026-11-09: these never did; the self-test's zombie, put
+                // beside you, sometimes did this and its snarl went missing).
+                else if (d <= RANGE && z.targetId == you.id) Play(state, "moan_notice", z.id, p, MOUTH, me, Hash.idNumber(z.id) + state.tick);
                 if (newSecond && d <= IDLE_RANGE && !Speaking(z.id))
                 {
                     double chance = z.targetId != null ? HUNT_CHANCE : IDLE_CHANCE;

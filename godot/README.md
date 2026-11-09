@@ -33,6 +33,7 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - The map overviews: `Godot --path godot res://World3D/MapShot.tscn -- [--size=2000] [--worlds=mainland:1,island:4] [--out=DIR]` (whole generated worlds, a pixel a tile: docs/worldgen-speed.md)
 - The draw bench: `Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees]` (the far field at each range: docs/draw-distance.md)
 - The item bench: `Godot --path godot res://World3D/ItemBench.tscn -- [--runs=none@0,all@300,box@300,all@3000] [--frames=360] [--out=bench.md]` (items on every open tile within 60 m, a full turn; experiments/item-bench)
+- `--hold=w,d`: those keys held down from the start (w, a, s, d, shift), to see walking, strafing or backing off in a `--shot` (with `--eye` to watch yourself from outside)
 - `--view=M`: first person draws the far field (FarField.cs: coarse ground, buildings as blocks, far trees) out to M metres, with the fog thinned to match (0, the default: off, ~56 m)
 - `--eye=X,Y,H`: first person from tile point (X, Y), H m over the ground there, instead of your eyes (a debug view: roofs from outside or above, a street, a room)
 - `--flat`: first person on flat ground, as before the heightmap (to compare; the sim's heights are untouched)

@@ -12,6 +12,11 @@
 // moving needs no rebuild. Regions are built nearest first, a few a frame (rule 14), and rebuilt when the
 // world's walls or furniture change (checked rarely: far things change little).
 //
+// Land not generated yet (the sim makes chunks as survivors come near) is drawn from the world plan, which is
+// pure from the seed: the ground by Worldgen.generateChunk's own rules (PlanGround), buildings from the lots'
+// footprints (Lots.layoutLot), trees by its own roll. When a chunk is generated, the region is built again from
+// the grid (its signature counts the generated chunks).
+//
 // Range 0 is off (first person's ~56 m and its fog, as before).
 
 using System;
@@ -171,6 +176,9 @@ void fragment() {
     long Signature(SimState state, int rx, int ry)
     {
         long h = 17 + (treesByRegion.TryGetValue((rx, ry), out var l) ? l.Count : 0);
+        for (int cy = ry * REGION / Worldgen.CHUNK; cy < (ry + 1) * REGION / Worldgen.CHUNK; cy++)
+            for (int cx = rx * REGION / Worldgen.CHUNK; cx < (rx + 1) * REGION / Worldgen.CHUNK; cx++)
+                h = h * 3 + (Generated(state, cx * Worldgen.CHUNK, cy * Worldgen.CHUNK) ? 1 : 0);
         // Walls are what change a far region's look; their count over the region is enough to notice.
         var g = state.grid;
         int x0 = rx * REGION, y0 = ry * REGION;
@@ -194,8 +202,11 @@ void fragment() {
         Vector3 V(int x, int y, out Color c)
         {
             int tx = Math.Clamp(x, 0, g.width - 1), ty = Math.Clamp(y, 0, g.height - 1), i = ty * g.width + tx;
-            bool water = g.tiles[i] == "water";
-            c = water ? WaterColour : GroundColour(g.ground[i]);
+            bool water;
+            int ground;
+            if (Generated(state, tx, ty)) { water = g.tiles[i] == "water"; ground = g.ground[i]; }
+            else (water, ground) = PlanGround(state, tx, ty);
+            c = water ? WaterColour : GroundColour(ground);
             float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
             c = c.Lightened(0.06f + Math.Abs(n) * 0.035f);
             float h = Terrain.Coarse(Math.Min(x, g.width), Math.Min(y, g.height), water);
@@ -248,21 +259,60 @@ void fragment() {
                 Block(st, new Vector3(x0 + x, foot - 0.3f, y0 + y), new Vector3(x0 + ex + 1, foot + WorldMesh.WALL_H + 0.25f, y0 + ey + 1), WorldMesh.WALL, ROOFS[hh % ROOFS.Length]);
                 tris += 10;
             }
+        // Buildings on land not generated yet: the lots' footprints (Lots.layoutLot), each once, those whose middle is
+        // in this region and in a chunk not generated (the generated ones are in the grid's floors above).
+        if (Plan(state) is { } lay)
+        {
+            int pc = (int)Math.Ceiling(lay.size / Worldplan.PLAN_CHUNK);
+            var seen = new HashSet<double>();
+            for (int cy = y0 / Worldplan.PLAN_CHUNK; cy <= (y1 - 1) / Worldplan.PLAN_CHUNK; cy++)
+                for (int cx = x0 / Worldplan.PLAN_CHUNK; cx <= (x1 - 1) / Worldplan.PLAN_CHUNK; cx++)
+                    foreach (var id in lay.plan.lotsByChunk[cy * pc + cx])
+                    {
+                        if (!seen.Add(id)) continue;
+                        var lot = lay.plan.lots[(int)id];
+                        foreach (var p in Lots.layoutLot(lay.seed, lot).buildings)
+                        {
+                            bool turned = p.facing == "east" || p.facing == "west";
+                            int bw = turned ? p.plan.h : p.plan.w, bh = turned ? p.plan.w : p.plan.h;
+                            int mx = p.ox + bw / 2, my = p.oy + bh / 2;
+                            if (mx < x0 || my < y0 || mx >= x1 || my >= y1 || Generated(state, mx, my)) continue;
+                            float foot = Terrain.Coarse(p.ox, p.oy, false);
+                            uint hh = unchecked((uint)p.ox * 0x9E3779B1u ^ (uint)p.oy * 0x85EBCA77u);
+                            hh ^= hh >> 15;
+                            Block(st, new Vector3(p.ox, foot - 0.3f, p.oy), new Vector3(p.ox + bw, foot + WorldMesh.WALL_H + 0.25f, p.oy + bh), WorldMesh.WALL, ROOFS[hh % ROOFS.Length]);
+                            tris += 10;
+                        }
+                    }
+        }
         var mesh = st.Commit();
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, groundMat);
         node.AddChild(new MeshInstance3D { Mesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
 
         // Trees: the far LOD, one MultiMesh per species, placed as Trees places them.
         int treeCount = 0;
-        if (DrawTrees && treesByRegion.TryGetValue((rx, ry), out var list))
+        if (DrawTrees)
         {
             var bySpecies = new List<(Transform3D t, Color c)>[Trees.SpeciesNames.Count];
             for (int s = 0; s < bySpecies.Length; s++) bySpecies[s] = new();
-            foreach (var f in list)
-            {
-                var (s, t, c) = Trees.Placement(g, f.x, f.y, coarse: true);
-                bySpecies[s].Add((t, c));
-            }
+            if (treesByRegion.TryGetValue((rx, ry), out var list))
+                foreach (var f in list)
+                {
+                    if (!Generated(state, f.x, f.y)) continue;
+                    var (s, t, c) = Trees.Placement(g, f.x, f.y, coarse: true);
+                    bySpecies[s].Add((t, c));
+                }
+            // Land not generated yet: the trees generateChunk would plant (forest ground off roads, lots and the start's clearing, a roll of 0.3).
+            if (Plan(state) is { } lay2)
+                for (int y = y0; y < y1; y++)
+                    for (int x = x0; x < x1; x++)
+                    {
+                        if (Generated(state, x, y) || Worldgen.isRoad(lay2, x, y) || Worldgen.onLot(lay2, x, y) || NatureMod.nearStart(lay2, x, y, NatureMod.START_CLEAR_RADIUS)) continue;
+                        var (wet, ground) = PlanGround(state, x, y);
+                        if (wet || ground != Worldgen.FOREST || NatureMod.roll(lay2.seed, x, y, 12) >= 0.3) continue;
+                        var (s, t, c) = Trees.Placement(x, y, true, true);
+                        bySpecies[s].Add((t, c));
+                    }
             for (int s = 0; s < bySpecies.Length; s++)
             {
                 if (bySpecies[s].Count == 0) continue;
@@ -279,6 +329,53 @@ void fragment() {
             }
         }
         return (node, treeCount, tris);
+    }
+
+    Layout? layout;
+    WorldInfo? layoutFor;
+
+    /// <summary>The world plan as Worldgen lays it out (cached per world), or null on a hand-made map.</summary>
+    Layout? Plan(SimState state)
+    {
+        if (state.world == null) return null;
+        if (!ReferenceEquals(layoutFor, state.world)) { layout = Worldgen.layout(state.world.seed, state.world.size, state.settings.map); layoutFor = state.world; }
+        return layout;
+    }
+
+    /// <summary>Whether the chunk holding tile (x, y) has been generated (a hand-made map: all of it).</summary>
+    static bool Generated(SimState state, int x, int y)
+    {
+        var w = state.world;
+        if (w == null) return true;
+        int chunks = (int)w.chunks, cx = x / Worldgen.CHUNK, cy = y / Worldgen.CHUNK;
+        return cx < 0 || cy < 0 || cx >= chunks || cy >= chunks || Js.Get(w.generated, (double)cy * chunks + cx) == 1;
+    }
+
+    /// <summary>What generateChunk's first loop would make a tile (water, and its ground index), with a lot's yard
+    /// as Lots.layoutLot draws it: the far field's look at land not generated yet.</summary>
+    (bool water, int ground) PlanGround(SimState state, int x, int y)
+    {
+        var l = Plan(state)!;
+        int grass = 0;
+        if (Worldgen.fenceAt(l, x, y) != null) return (false, grass);
+        bool road = Worldgen.isRoad(l, x, y);
+        if (NatureMod.isSea(l, x, y) && !road) return (true, grass);
+        if (road) return (false, Array.IndexOf(Grids.GROUNDS, NatureMod.isWater(l, x, y) ? "bridge" : "road"));
+        if (NatureMod.isWater(l, x, y)) return (true, grass);
+        if (Worldgen.onLot(l, x, y))
+        {
+            int id = (int)Js.Get(l.plan.lotMask, (double)y * l.size + x) - 1;
+            if (id >= 0 && id < l.plan.lots.Count)
+            {
+                string? yard = Lots.layoutLot(l.seed, l.plan.lots[id]).yard?.Invoke(x, y);
+                int gi = yard == null ? -1 : Array.IndexOf(Grids.GROUNDS, yard);
+                return (false, gi >= 0 ? gi : grass);
+            }
+            return (false, grass);
+        }
+        if (NatureMod.isForest(l, x, y)) return (false, Worldgen.FOREST);
+        if (NatureMod.noise(l.seed, x, y, 6, 11) > 0.72) return (false, Array.IndexOf(Grids.GROUNDS, "dirt"));
+        return (false, grass);
     }
 
     static readonly Color WaterColour = Ctx.Css(COLOURS.tiles["water"]);

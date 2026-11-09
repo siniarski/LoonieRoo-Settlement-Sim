@@ -158,6 +158,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         view.showOverview = args.ContainsKey("overview");
         view.colonyMode = args.ContainsKey("colony");
         if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
+        if (args.TryGetValue("hold", out var hk)) holdKeys = hk.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries);
         if (args.TryGetValue("view", out var vw)) World3D.FarField.Range = float.Parse(vw, System.Globalization.CultureInfo.InvariantCulture);
         if (args.TryGetValue("pitch", out var pt)) pitchArg = double.Parse(pt) * Math.PI / 180;
         if (args.TryGetValue("eye", out var ey))
@@ -291,6 +292,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     (System.Threading.Tasks.Task<WorldPlan> task, double seed, double size, Settings settings, Character you, ulong started, int told)? making;
     /// <summary>Worlds bigger than this make their plan on a worker thread, behind a "making the world" note; smaller ones take milliseconds.</summary>
     const double PLAN_ON_A_THREAD_OVER = 512;
+    /// <summary>--hold: keys held down from the start (w, a, s, d, shift), for screenshots of walking.</summary>
+    string[] holdKeys = Array.Empty<string>();
 
     public void NewGame(double size, Settings settings, double? seed, Character you)
     {
@@ -546,6 +549,11 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (Input.IsPhysicalKeyPressed(Key.A) || Input.IsPhysicalKeyPressed(Key.Left)) dx -= 1;
         if (Input.IsPhysicalKeyPressed(Key.D) || Input.IsPhysicalKeyPressed(Key.Right)) dx += 1;
         bool shift = Input.IsKeyPressed(Key.Shift);
+        // --hold=w,d: those keys held down from the start (a debug option, to see walking in a --shot).
+        foreach (var k in holdKeys)
+        {
+            if (k == "w") dy -= 1; else if (k == "s") dy += 1; else if (k == "a") dx -= 1; else if (k == "d") dx += 1; else if (k == "shift") shift = true;
+        }
         var c = state.control;
         // Under direct control the keys walk, and the sim only hears about it when they change.
         if (view.firstPerson)
