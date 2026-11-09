@@ -57,6 +57,8 @@ public sealed partial class FirstPerson : Node3D
     public int FurnitureCount => furniture.Count;
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
+    /// <summary>The eye over the (eased) ground under it this frame (m): EYE standing, more in a leap (the self-test compares your body's lift).</summary>
+    public float EyeUp { get; private set; }
 
     public FirstPerson()
     {
@@ -120,6 +122,7 @@ public sealed partial class FirstPerson : Node3D
         eye.Y += eyeGround - ground;
         if (EyeAt is { } at) eye = at with { Y = Terrain.Height(at.X, at.Z) + at.Y };
         camera.Position = eye;
+        EyeUp = eye.Y - eyeGround;
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
         roofs.Update(state, eye, RADIUS);
         Light(state, eye, delta);
