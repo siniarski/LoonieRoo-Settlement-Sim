@@ -25,7 +25,7 @@ This is a **learning and exploration project**. Favour fast iteration, readable 
 
 ## Commands
 
-- `./check.sh` builds everything (the sim, its tests, the Godot game) and runs the sim's tests. **Run it before every commit.** `./check.sh --all` adds the Godot self-test (a window opens for a few seconds).
+- `./check.sh` builds everything (the sim, its tests, the Godot game) and runs the sim's tests (~12 s: six processes at once). **Run it before every commit.** `./check.sh --all` adds the Godot self-test (a window opens; ~30 s in all, run beside the tests). It prints a short summary (failures with their messages); the full output is in `.check/` (build.log, tests-N.log, selftest.log): **read those instead of running the check again** to see more.
 - `dotnet test cs/Sim.Tests -c Release --filter "DisplayName~pathfinding"` runs some of the tests (DisplayName is the describe/it path, e.g. `findPath > solves a maze`).
 - The game: open `godot/` in Godot 4.6 .NET and press Play, or `dotnet build godot/LoonieRoo.csproj` then Godot with `--path godot`. Command-line options (`--seed=`, `--start=solo|group`, `--load=save.json`, `--ticks=`, `--shot=out.png`, `--selftest`, ...) are in `godot/README.md`. Not `experiments/godot-bench`: that's a render benchmark (it pans and quits).
 - The harness: `dotnet test cs/Harness -c Release --filter "DisplayName~solo balance"` (or `world balance`, `DisplayName=bench`, `DisplayName=stress`); env vars and what each does in NOTES.md "Harness"; reports in `cs/Harness/out/`. Not part of the check.
@@ -119,7 +119,7 @@ They are how the agent (and you) can see what the game is doing.
 - Run `./check.sh` before every commit. A red check means stop and fix.
 - Prefer headless sim runs over screenshots to verify behaviour. Use screenshots (`--shot`) for rendering questions, but do look at anything visible before calling it done; `--selftest` (or a new step in SelfTest.cs) for input and UI.
 - Balance questions go to the harness (scripted players over several seeds, run in parallel), and the results go in the NOTES.md session log.
-- The sim's clock scale (Time.cs) is static state: a test that changes `settings.dayScale` must reset it (`Time.setDayScale(1)`) afterwards. Tests run one at a time, in file order, for this reason.
+- The sim's clock scale (Time.cs) is static state: a test that changes `settings.dayScale` must reset it (`Time.setDayScale(1)`) afterwards. Tests run one at a time, in file order, for this reason: inside a process. `./check.sh` runs whole test classes in separate processes (statics are per process), balanced by last run's times (`.check/test-times.txt`, seeded by `cs/Sim.Tests/test-times.txt`); a class that takes many seconds is better split in two so it can share out.
 
 ## Workflow
 

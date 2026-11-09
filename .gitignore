@@ -10,3 +10,5 @@ __pycache__/
 # Blender's save backups.
 *.blend1
 experiments/map-overview/*.png
+# ./check.sh logs and the tests' last timings.
+.check/

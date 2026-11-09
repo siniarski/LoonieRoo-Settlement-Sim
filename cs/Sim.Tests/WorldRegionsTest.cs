@@ -8,7 +8,7 @@ namespace LoonieRoo.Sim.Tests;
 public class WorldRegionsTest
 {
     // 2560: three regions to a side, the last one half a region wide (1024, 1024, 512).
-    const int SIZE = 2560;
+    internal const int SIZE = 2560;
 
     static string Summary(WorldPlan p)
     {
@@ -40,6 +40,21 @@ public class WorldRegionsTest
             foreach (var (k, v) in first) expect($"{k}: {got[k]}").toBe($"{k}: {v}");
         }
     }
+
+    [Fact(DisplayName = "world regions > a world of one region is the whole plan, as before")]
+    public void one_region()
+    {
+        var r = new WorldRegions(3, 512, "mainland");
+        expect(r.Single).toBe(true);
+        var whole = Worldplan.makePlan(NatureMod.natureFor(3, 512, "mainland"));
+        expect(Summary(r.Region(0, 0))).toBe(Summary(whole));
+    }
+}
+
+// Its own class so ./check.sh can run it in another process beside the one above (each takes seconds).
+public class WorldRegionsBordersTest
+{
+    const int SIZE = WorldRegionsTest.SIZE;
 
     [Fact(DisplayName = "world regions > towns stay apart across borders, lots inside their region, neighbours joined by a road")]
     public void borders()
@@ -78,14 +93,5 @@ public class WorldRegionsTest
             expect(ReferenceEquals(r.Lot(l.id), l)).toBe(true);
             expect(r.LotAt(l.x, l.y)?.id).toBe(l.id);
         }
-    }
-
-    [Fact(DisplayName = "world regions > a world of one region is the whole plan, as before")]
-    public void one_region()
-    {
-        var r = new WorldRegions(3, 512, "mainland");
-        expect(r.Single).toBe(true);
-        var whole = Worldplan.makePlan(NatureMod.natureFor(3, 512, "mainland"));
-        expect(Summary(r.Region(0, 0))).toBe(Summary(whole));
     }
 }

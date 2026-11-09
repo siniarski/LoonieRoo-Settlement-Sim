@@ -39,7 +39,7 @@ public partial class Game
         FindUnimported("res://", missing);
         if (missing.Count == 0) return false;
         GD.Print($"FAIL  Assets imported  ({missing.Count} not imported, first {string.Join(", ", missing.Take(3))})");
-        GD.Print("selftest: FAILED, assets not imported: run `godot --headless --path godot --import` once (./check.sh --all does)");
+        GD.Print($"{(shotPath != null ? "shot" : "selftest")}: FAILED, assets not imported: run `godot --headless --path godot --import` once (./check.sh --all does)");
         // _Ready stops here: nothing is built, so nothing may run or draw until the quit lands.
         SetProcess(false);
         SetProcessInput(false);

@@ -104,7 +104,14 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // The sim formats numbers JS's way; keep the UI (and CSS colour strings) culture-free too.
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--selftest") >= 0 && SelfTestQuitOnUnimported()) return;
+        var args = ParseArgs();
+        if (args.TryGetValue("shot", out var shot)) shotPath = shot;
+        if (args.TryGetValue("frames", out var f)) shotFrames = int.Parse(f);
+        // A --selftest or --shot with assets not imported would throw in _Ready: say so and quit.
+        if ((args.ContainsKey("selftest") || shotPath != null) && SelfTestQuitOnUnimported()) return;
+        // The shot is taken from the tree's frame signal, not from _Process: a frame that throws (or a _Ready that
+        // does) still gets its picture and quits, instead of waiting out the caller's timeout.
+        if (shotPath != null) GetTree().ProcessFrame += ShotFrame;
 
         ctx = new Ctx(this);
         painter = new Painter(ctx);
@@ -124,9 +131,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         menu = new Menu(view, this);
         layer.AddChild(menu);
 
-        var args = ParseArgs();
-        if (args.TryGetValue("shot", out var shot)) shotPath = shot;
-        if (args.TryGetValue("frames", out var f)) shotFrames = int.Parse(f);
         selftest = args.ContainsKey("selftest");
         if (selftest)
         {
@@ -468,8 +472,18 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         tabs.Update(state);
 
         frame++;
-        if (shotPath != null && frame == shotFrames) _ = SaveShot();
     }
+
+    /// <summary>--shot: frames counted on the tree's signal (it comes before _Process each frame), so the picture is
+    /// taken on time whatever the game's code does. Frames whose _Process didn't get to the end (it threw) are counted,
+    /// and make the exit code 1.</summary>
+    void ShotFrame()
+    {
+        if (shotFrameCount > 0 && frame == lastProcessed) shotBroken++;
+        lastProcessed = frame;
+        if (++shotFrameCount == shotFrames) _ = SaveShot();
+    }
+    int shotFrameCount, lastProcessed = -1, shotBroken;
 
     async System.Threading.Tasks.Task SaveShot()
     {
@@ -477,7 +491,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         var img = GetViewport().GetTexture().GetImage();
         var err = img.SavePng(shotPath!);
         GD.Print(err == Error.Ok ? $"shot: {shotPath}" : $"shot failed: {err}");
-        GetTree().Quit();
+        if (shotBroken > 0) GD.Print($"shot: {shotBroken} of {shotFrames} frames threw in _Process (the exception is above)");
+        GetTree().Quit(err == Error.Ok && shotBroken == 0 ? 0 : 1);
     }
 
     public override void _Draw()
