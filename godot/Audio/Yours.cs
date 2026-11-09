@@ -4,6 +4,9 @@
 //          under that foot (Surface: each ground its own, shallow water by the bank); quiet sneaking, louder
 //          running. None in a car or asleep (your body isn't walking then).
 //   swing  control.swungTick moved: a swing through the air (a blow landing is the hit's own thud).
+//   leaps  a jump, vault or hop (Leaps.cs): the push-off as you go up, a light scuff of the ground you leave; the
+//          landing as the leap ends, both feet on the ground you land on, heavier and lower than a step (the second
+//          foot a moment after the first). The steps' own sounds for that surface, pitched and levelled.
 // Your gunshots are WorldNoises' (a gun's wear going down), from where you stand.
 
 using System;
@@ -34,6 +37,17 @@ public sealed class Yours
     readonly AudioStreamPlayer swing = new();
     int foot, steps;
     double? lastSwung;
+    readonly AudioStreamPlayer push = new(), land = new(), land2 = new();
+    ControlBusy? leapBusy;
+    ulong land2At;
+    /// <summary>The push-off and the landing: level (dB) and pitch; the landing's second foot this much later (ms) and quieter.</summary>
+    const float PUSH_DB = -10, PUSH_PITCH = 1.12f, LAND_DB = -3, LAND_PITCH = 0.8f, LAND2_DB = -8;
+    const ulong LAND2_MS = 45;
+
+    /// <summary>Leaps heard (the self-test reads them): push-offs and landings, and the landing's surface.</summary>
+    public int Pushes { get; private set; }
+    public int Landings { get; private set; }
+    public string LandSurface { get; private set; } = "";
 
     /// <summary>Steps and swings heard (the self-test reads them), and the surface of the last step.</summary>
     public int Steps => steps;
@@ -46,6 +60,7 @@ public sealed class Yours
         this.sounds = sounds;
         foreach (var f in feet) sounds.AddChild(f);
         sounds.AddChild(swing);
+        foreach (var p in new[] { push, land, land2 }) sounds.AddChild(p);
     }
 
     /// <summary>The kind of step (step_grass ... step_water) for a foot at (x, y) in tile units: the ground of the
@@ -87,6 +102,8 @@ public sealed class Yours
             LastGait = f.gait;
         }
 
+        Leap(state, you, c, fresh);
+
         var swung = c?.swungTick;
         if (!fresh && swung != null && swung != lastSwung)
         {
@@ -98,5 +115,41 @@ public sealed class Yours
             Swings++;
         }
         lastSwung = swung;
+    }
+
+    /// <summary>A leap's sounds: the landing when the one we heard go up ends (a new one may start the same frame, with
+    /// Space held), the push-off when a new one starts.</summary>
+    void Leap(SimState state, Survivor you, LoonieRoo.Sim.Control? c, bool fresh)
+    {
+        var b = c?.busy;
+        bool leaping = b != null && Leaps.isLeap(b.what);
+        var at = (x: you.at.x / (double)Motion.SUB, y: you.at.y / (double)Motion.SUB);
+        if (!fresh && leapBusy != null && !ReferenceEquals(b, leapBusy))
+        {
+            LandSurface = Surface(state.grid, at.x, at.y);
+            Play(land, LandSurface, Landings * 2, LAND_DB, LAND_PITCH);
+            land2At = Godot.Time.GetTicksMsec() + LAND2_MS;
+            Landings++;
+        }
+        if (!fresh && leaping && !ReferenceEquals(b, leapBusy))
+        {
+            Play(push, Surface(state.grid, at.x, at.y), Pushes, PUSH_DB, PUSH_PITCH);
+            Pushes++;
+        }
+        if (land2At != 0 && Godot.Time.GetTicksMsec() >= land2At)
+        {
+            Play(land2, LandSurface, Landings * 2 + 1, LAND2_DB, LAND_PITCH * 1.06f);
+            land2At = 0;
+        }
+        leapBusy = leaping ? b : null;
+    }
+
+    void Play(AudioStreamPlayer p, string kind, int n, float db, float pitch)
+    {
+        var set = sounds.bank.Get(kind);
+        p.Stream = set[(int)(Hash.hashRoll(n, 0x1ea9) * set.Length) % set.Length];
+        p.PitchScale = pitch * (0.95f + 0.1f * (float)Hash.hashRoll(n, 0x1eaa));
+        p.VolumeDb = db;
+        p.Play();
     }
 }

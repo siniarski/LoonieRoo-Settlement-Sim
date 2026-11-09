@@ -27,7 +27,7 @@ using static LoonieRoo.Game.Render.CameraMath;
 
 namespace LoonieRoo.Game.World3D;
 
-public sealed class People
+public sealed partial class People
 {
     public const int MAX_MODELS = 40;
     const int MAKES_PER_FRAME = 3;
@@ -60,6 +60,9 @@ public sealed class People
         public double speed, angry, phase;
         public float yaw;
         public bool placed;
+        /// <summary>A clip that overrides the stance's (a leap's: People.Leap.cs), and where in it (s; below 0: played on).</summary>
+        public string? forced;
+        public double forcedAt;
         public Skeleton3D? skel;
         public readonly int[] feet = { -1, -1 };
         public readonly Footfalls.Watch watch = new();
@@ -230,6 +233,9 @@ public sealed class People
         // the look once it's turned far enough. The chest makes up the rest, up to OWN_TWIST.
         float lookYaw = (float)Math.Atan2(Math.Cos(camYaw), Math.Sin(camYaw));
         var w = new Wanted(you.id, look, you, pose, 0, false, "");
+        // A leap: the jump clips, and lifted with the eye (People.Leap.cs).
+        double lift = LeapPre(own, ownLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
+        LeapPre(ownShadow, shadowLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
         Pose(own, w, alpha, delta, 0.5, 720);
         Pose(ownShadow, w, alpha, delta, 0.5, 720);
         bool moving = own.speed > 0.3;
@@ -247,7 +253,8 @@ public sealed class People
             want = lookYaw + Math.Clamp(Mathf.AngleDifference(lookYaw, legs), -OWN_TWIST, OWN_TWIST);
         }
         else want = float.IsNaN(ownYaw) || Math.Abs(Mathf.AngleDifference(ownYaw, lookYaw)) > OWN_TURN_AT ? lookYaw : ownYaw;
-        ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * 8));
+        if (LeapYaw() is float over) { want = over; back = false; }
+        ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * (LeapYaw() != null ? 16 : 8)));
         float twist = Math.Clamp(Mathf.AngleDifference(ownYaw, lookYaw), -OWN_TWIST, OWN_TWIST);
         ownMod.Twist = twist;
         ownMod.HideHead = !fromOutside;
@@ -259,7 +266,8 @@ public sealed class People
             m.yaw = ownYaw;
             m.root.Rotation = new Vector3(0, ownYaw, 0);
             m.root.Position += behind;
-            if (back) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
+            if (back && m.forced == null) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
+            LeapPost(m, lift, m == own);
         }
         Footfall(own!, you.id, true, false, delta);
     }
@@ -433,6 +441,13 @@ public sealed class People
         m.root.Rotation = new Vector3(0, m.yaw, 0);
 
         string stance = w.pose.stance;
+        if (m.forced != null) ForcedPlay(m);
+        else Clip(m, w, stance, dead);
+        Lod(m, dist, vpHeight, w, dead, delta);
+    }
+
+    void Clip(Model m, Wanted w, string stance, bool dead)
+    {
         (string clip, float rate) = stance switch
         {
             "lie" or "dead" => ("lie_idle", 1f),
@@ -455,7 +470,10 @@ public sealed class People
             m.clip = clip;
         }
         m.player.SpeedScale = rate;
+    }
 
+    void Lod(Model m, double dist, float vpHeight, Wanted w, bool dead, double delta)
+    {
         // LOD by height on screen, as the look lab.
         double h = vpHeight * 1.75 / (2 * Math.Max(dist, 0.1) * Math.Tan(Mathf.DegToRad(FOV / 2)));
         int lod = Array.FindIndex(LOD_AT, (t) => h >= t);

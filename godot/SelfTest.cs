@@ -182,12 +182,31 @@ public partial class Game
         you = ControlMod.controlled(state)!;
         float ground = World3D.FirstPerson.Eye(state, you, 1).eye.Y, top = ground;
         int tick = state.tick;
+        // Your body goes up with the eye (People.Leap.cs): its lift each frame is the eye's over its standing height, its
+        // feet leave the ground and come back to it; and the jump is heard (Yours.cs).
+        var ppl = firstPerson.People;
+        float feet0 = ppl.YourFeetUp, bodyTop = 0, feetTop = 0, apart = 0;
+        var yours = firstPerson.sounds.yours;
+        int pushes = yours.Pushes, landings = yours.Landings;
+        void Watch()
+        {
+            top = Math.Max(top, World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 0.5).eye.Y);
+            bodyTop = Math.Max(bodyTop, ppl.YourLift);
+            feetTop = Math.Max(feetTop, ppl.YourFeetUp - feet0);
+            apart = Math.Max(apart, Math.Abs(firstPerson.EyeUp - World3D.FirstPerson.EYE - ppl.YourLift));
+        }
         await Tap(Godot.Key.Space);
         string leap = state.control!.busy?.what ?? "none";
-        for (int i = 0; i < 30; i++) { await Frames(1); top = Math.Max(top, World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 0.5).eye.Y); }
+        for (int i = 0; i < 120 && Leaps.airborne(state.control!); i++) { await Frames(1); Watch(); }
+        // Landed: the landing's knee bend and the blend back to standing (People.LAND_FOR, the 0.25 s cross-fade).
+        for (int i = 0; i < 40; i++) { await Frames(1); Watch(); }
         float after = World3D.FirstPerson.Eye(state, ControlMod.controlled(state)!, 1).eye.Y;
         Check("Space jumps: the eye rises and lands, and the game plays on", Leaps.isLeap(leap) && top > ground + 0.1f && Math.Abs(after - ground) < 0.05f && !view.halted && state.tick > tick,
             $"{leap}, eye {ground:0.00} -> top {top:0.00} -> {after:0.00}, tick {tick} -> {state.tick}");
+        Check("Your body leaps with the eye: lifted as high, its feet off the ground and back on it", bodyTop > 0.2f && apart < 0.03f && feetTop > 0.15f && Math.Abs(ppl.YourLift) < 0.01f && Math.Abs(ppl.YourFeetUp - feet0) < 0.05f,
+            $"body up {bodyTop:0.00} m, most apart from the eye {apart:0.000} m, feet up {feetTop:0.00} m (standing {feet0:0.00}), after {ppl.YourLift:0.00} / feet {ppl.YourFeetUp - feet0:0.00}");
+        Check("A jump is heard going up and landing, on the ground under you", yours.Pushes > pushes && yours.Landings > landings && yours.LandSurface.StartsWith("step_"),
+            $"push-offs {pushes} -> {yours.Pushes}, landings {landings} -> {yours.Landings}, on {yours.LandSurface}");
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
@@ -271,9 +290,11 @@ public partial class Game
 
         // Play on a little, then load slot 3 back: the clock goes back to when it was saved.
         await Frames(20);
+        // The tick read as it loads (Load is synchronous): loads play at once, so a tick can come in the next frames.
         Load("3");
+        int loadedTick = state.tick;
         await Frames(2);
-        Check("Load slot 3 brings the save back", state.tick == savedTick, $"tick {state.tick}, saved at {savedTick}");
+        Check("Load slot 3 brings the save back", loadedTick == savedTick, $"tick {loadedTick}, saved at {savedTick}");
 
         await SoundTest();
 
