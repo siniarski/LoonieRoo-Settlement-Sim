@@ -298,14 +298,17 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     /// <summary>--hold: keys held down from the start (w, a, s, d, shift, space), for screenshots of walking and jumping.</summary>
     string[] holdKeys = Array.Empty<string>();
 
+    public bool Making => making != null;
+
     public void NewGame(double size, Settings settings, double? seed, Character you)
     {
         if (making != null) return; // one at a time
         double s = seed ?? RandomSeed();
         if (size > PLAN_ON_A_THREAD_OVER)
         {
-            string map = settings.map;
-            var task = System.Threading.Tasks.Task.Run(() => Worldplan.prepare(s, size, map));
+            // The regions the menu's picture began planning, if it handed them over (Worldplan.remember), else new ones.
+            var regions = Worldplan.regions(s, size, settings.map);
+            var task = System.Threading.Tasks.Task.Run(() => Worldplan.planStart(regions));
             making = (task, s, size, settings, you, Godot.Time.GetTicksMsec(), 0);
             view.Toast($"Making a {size}×{size} world...");
             return;

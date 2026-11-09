@@ -124,8 +124,34 @@ public static class Savefile
     {
         var snapshot = pack(state);
         snapshot["commandLog"] = new JsonArray();
-        var file = new JsonObject { ["format"] = "loonieroo-save", ["schemaVersion"] = States.SCHEMA_VERSION, ["state"] = snapshot };
+        var file = new JsonObject { ["format"] = "loonieroo-save", ["schemaVersion"] = States.SCHEMA_VERSION };
+        // The Load screen's picture of the world (WorldPreview), ahead of the state so readPreview stops before it.
+        if (WorldPreview.ofSave(state) is { } preview) file["preview"] = JsonSerializer.SerializeToNode(preview, StateJson.Options);
+        file["state"] = snapshot;
         return file.ToJsonString(StateJson.Options);
+    }
+
+    /// <summary>A save's picture (WorldPreview.ofSave), read from the head of the file without the state; null if it has
+    /// none (a hand-made map, a bug report, an older save) or isn't a save. Never throws.</summary>
+    public static SavePreview? readPreview(ReadOnlySpan<byte> utf8)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(utf8);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                var name = reader.GetString();
+                if (name == "state") return null; // past where the preview goes
+                if (name == "preview") return JsonSerializer.Deserialize<SavePreview>(ref reader, StateJson.Options);
+                reader.Skip();
+            }
+            return null;
+        }
+        catch (Exception err) when (err is JsonException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     /// <summary>`initial` is the state play started from; the report carries only the commands logged since then.</summary>

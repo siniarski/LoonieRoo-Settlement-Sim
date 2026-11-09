@@ -1,9 +1,12 @@
 // The main menu (src/ui/menu.ts, howto.ts): what you see on starting, and (Escape, or the Menu
 // button) over a paused game.
 //   main       Continue (the newest save) or Resume, New game, Load, and in a game: Save, Report a bug
-//   new        the presets, a Customise section (the sandbox settings, map size, a seed), Next
+//   new        the presets, a Customise section (the sandbox settings, map size, a seed), the world's picture
+//              (WorldPreviewView: redrawn as the seed, size or map change; "Another world" rolls a new seed), Next
 //   character  who you are (CharacterMod): a name, a profession, traits for points; Start
-//   load       the save slots, the autosave, and a file
+//   making     the world's picture filling in while the world is made (a big one's plan is on a worker thread)
+//   load       the save slots, the autosave, and a file; the picture of the slot under the mouse (or the newest)
+//   loading    the picture of the save being loaded, drawn before the load (which holds the frame) starts
 //   howto      How to play
 //   options    Graphics: view and detail distance, far trees, shadows, character models, resolution, anti-aliasing
 //              (Graphics.cs: saved to the player's settings file and applied at once)
@@ -27,6 +30,8 @@ public interface IMenuActions
     void Arena(string kind);
     void Load(string slot);
     void ImportFile();
+    /// <summary>A world being made on a worker thread (the menu waits on its "making" screen).</summary>
+    bool Making { get; }
     void Save(string slot);
     void ExportSave();
     void ReportBug();
@@ -77,6 +82,23 @@ public sealed partial class Menu : Control
     double size = Worldgen.WORLD_SIZE;
     string seed = "";
     readonly Character you = new() { name = "Ash", job = StoryMod.STORY_JOBS.IndexOf("a student"), traits = new() };
+    /// <summary>The seed the picture shows (and Start uses) while the seed box is empty.</summary>
+    double previewSeed = RandomSeed();
+    /// <summary>The world's picture: one, moved between screens (each rebuild takes it out first).</summary>
+    readonly WorldPreviewView preview = new() { Name = "WorldPreview" };
+    Label? previewNote;
+    /// <summary>The Load screen's slot under the mouse (null: the newest save); the slot being loaded.</summary>
+    string? hoverSlot, loadingSlot;
+    readonly Dictionary<string, (long time, SavePreview? preview)> slotPreviews = new();
+    /// <summary>What the "making" or "loading" screen is about to do once it has been drawn (the work holds the frame),
+    /// and the screen to go back to if that doesn't get into the game.</summary>
+    (Action run, int frames, string back)? pending;
+    string waitTitle = "";
+
+    static double RandomSeed() => Math.Floor(Random.Shared.NextDouble() * 1e9);
+
+    /// <summary>The seed box's number, or the picture's seed if it's empty (or not a whole positive number).</summary>
+    double EffectiveSeed => double.TryParse(seed.Trim(), out var v) && v > 0 && Math.Floor(v) == v ? v : previewSeed;
 
     public Menu() { }
 
@@ -120,9 +142,12 @@ public sealed partial class Menu : Control
         var scroll = (ScrollContainer)panel.GetParent();
         // As tall as what it shows, up to the window (then it scrolls).
         scroll.CustomMinimumSize = new Vector2(640, Math.Min(panel.GetCombinedMinimumSize().Y, GetViewportRect().Size.Y - 80));
+        WantPreview();
         string key = $"{view.menu}|{view.inGame}";
-        if (key == shown) return;
+        if (key == shown) { RunPending(); return; }
         shown = key;
+        preview.GetParent()?.RemoveChild(preview);
+        previewNote = null;
         foreach (var c in panel.GetChildren()) c.QueueFree();
         var r = new Rows(panel, 14);
         r.Text("LOONIEROO", Kit.Title).AddThemeFontSizeOverride("font_size", 26);
@@ -134,8 +159,105 @@ public sealed partial class Menu : Control
             case "character": CharacterScreen(r); break;
             case "howto": HowTo(r); break;
             case "options": OptionsScreen(r); break;
+            case "making": case "loading": WaitScreen(r); break;
             default: LoadScreen(r); break;
         }
+    }
+
+    /// <summary>Each frame: the picture for what the screen shows, and its note.</summary>
+    void WantPreview()
+    {
+        switch (view.menu)
+        {
+            case "new": case "character": case "making":
+                // Making: the world being made (EffectiveSeed is rolled afresh once it's handed over: keep the last).
+                if (view.menu != "making" || pending != null) preview.Want(EffectiveSeed, size, settings.map);
+                if (previewNote != null) previewNote.Text = $"Seed {makingSeed ?? EffectiveSeed}\n{size} × {size}, {MapName(settings.map)}\n\n{StageText()}";
+                break;
+            case "load": case "loading":
+                var slot = view.menu == "load" ? hoverSlot ?? Saves.newestSave() : loadingSlot;
+                var p = slot == null ? null : SlotPreview(slot);
+                if (p != null) preview.Want(p.seed, p.size, p.map, p);
+                preview.Visible = p != null;
+                if (previewNote != null) previewNote.Text = slot == null ? "" : p == null ? $"{SlotName(slot)}: no picture\n(saved before pictures,\nor a hand-made map)" : $"{SlotName(slot)}\nSeed {p.seed}\n{p.size} × {p.size}, {MapName(p.map)}\n\n{StageText()}";
+                break;
+        }
+    }
+
+    double? makingSeed;
+
+    string StageText() => preview.Stage is "done" or "" ? "" : $"Drawing {preview.Stage}…";
+
+    static string MapName(string map) => Difficulty.MAP_TYPES.FirstOrDefault((m) => m[0] == map)?[1] ?? map;
+
+    static string SlotName(string slot) => slot == Saves.AUTO_SLOT ? "Autosave" : $"Slot {slot}";
+
+    SavePreview? SlotPreview(string slot)
+    {
+        long time = Saves.slotTime(slot);
+        if (slotPreviews.TryGetValue(slot, out var hit) && hit.time == time) return hit.preview;
+        var p = Saves.slotPreview(slot);
+        slotPreviews[slot] = (time, p);
+        return p;
+    }
+
+    /// <summary>The picture beside its note, as a row of the screen.</summary>
+    void PreviewRow(Rows r)
+    {
+        var row = r.Row();
+        row.Add(preview);
+        preview.Visible = true;
+        var side = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        row.Add(side);
+        previewNote = Kit.Label("", Kit.Dim, 13);
+        side.AddChild(previewNote);
+        if (view.menu == "new") side.AddChild(Kit.Button("Another world", () => { seed = ""; previewSeed = RandomSeed(); shown = ""; }, tip: "A new seed (clears the seed box)", size: 13));
+        side.AddChild(Legend());
+    }
+
+    /// <summary>What the picture's colours are.</summary>
+    static Control Legend()
+    {
+        var grid = new GridContainer { Columns = 2, MouseFilter = MouseFilterEnum.Ignore };
+        foreach (var (kind, name) in new[] { (WorldPreview.LAND, "land"), (WorldPreview.FOREST, "forest"), (WorldPreview.WATER, "water"), (WorldPreview.TOWN, "town"), (WorldPreview.ROAD, "road"), (WorldPreview.BUILT, "buildings"), (WorldPreview.FIELD, "fields") })
+        {
+            var cell = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            cell.AddChild(new ColorRect { Color = WorldPreviewView.ColourOf(kind), CustomMinimumSize = new Vector2(10, 10), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            cell.AddChild(Kit.Label(name, Ctx.Css("#8f998f"), 12));
+            grid.AddChild(cell);
+        }
+        return grid;
+    }
+
+    /// <summary>Does something that holds the frame (making or loading a world) once its screen has been drawn.</summary>
+    void Wait(string screen, string title, string back, Action run)
+    {
+        waitTitle = title;
+        pending = (run, 0, back);
+        Go(screen);
+    }
+
+    void RunPending()
+    {
+        if (pending is not { } p) return;
+        // A frame to lay the screen out, one to draw it, then the work.
+        if (p.frames < 2) { pending = p with { frames = p.frames + 1 }; return; }
+        pending = null;
+        p.run();
+        // Still here (it failed, with a toast): back. A big world goes on being made on a thread: wait for it.
+        if (view.menu is "making" or "loading" && !actions.Making) Go(p.back);
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        // A big world's plan on a thread: once the game has it the menu closes; if it failed (a toast), back to who you are.
+        if (view.menu == "making" && pending == null && !actions.Making) Go("character");
+    }
+
+    void WaitScreen(Rows r)
+    {
+        r.Text(waitTitle, Kit.Title).AddThemeFontSizeOverride("font_size", 18);
+        PreviewRow(r);
     }
 
     static Button Primary(Button b)
@@ -151,7 +273,7 @@ public sealed partial class Menu : Control
         if (view.inGame) Primary(r.Button("Resume", actions.Resume));
         else if (continueFrom != null)
         {
-            Primary(r.Button("Continue", () => actions.Load(continueFrom)));
+            Primary(r.Button("Continue", () => BeginLoad(continueFrom, "main")));
             r.Text(Saves.slotLabel(continueFrom) ?? "", Ctx.Css("#8f998f"));
         }
         r.Button("New game", () => Go("new"));
@@ -226,6 +348,7 @@ public sealed partial class Menu : Control
             input.TextChanged += (t) => seed = t;
             grid.AddChild(input);
         }
+        PreviewRow(r);
         Primary(r.Button("Next: who you are", () => Go("character")));
         var debug = r.Row();
         debug.Text("Debug", Kit.Dim);
@@ -280,8 +403,16 @@ public sealed partial class Menu : Control
         }
         start = Primary(r.Button("Start", () =>
         {
-            double? n = double.TryParse(seed.Trim(), out var v) && v > 0 && Math.Floor(v) == v ? v : null;
-            actions.NewGame(size, Copy(settings), n, new Character { name = you.name, job = you.job, traits = new(you.traits) });
+            double n = EffectiveSeed;
+            var s = Copy(settings);
+            var who = new Character { name = you.name, job = you.job, traits = new(you.traits) };
+            makingSeed = n;
+            Wait("making", $"Making a {size} × {size} world…", "character", () =>
+            {
+                preview.Remember(n, size, s.map); // the regions the picture planned: the world takes them up
+                actions.NewGame(size, s, n, who);
+                previewSeed = RandomSeed(); // the next new game shows another world
+            });
         }, disabled: CharacterMod.characterProblem(you) != null));
         r.Button("Back", () => Go("new"));
     }
@@ -323,8 +454,19 @@ public sealed partial class Menu : Control
         r.Button("Back", () => Go("main"));
     }
 
+    void BeginLoad(string slot, string back)
+    {
+        loadingSlot = slot;
+        Wait("loading", $"Loading {SlotName(slot).ToLowerInvariant()}…", back, () =>
+        {
+            if (SlotPreview(slot) is { } p) preview.Remember(p.seed, p.size, p.map);
+            actions.Load(slot);
+        });
+    }
+
     void LoadScreen(Rows r)
     {
+        hoverSlot = null;
         r.Text("Load", Kit.Title).AddThemeFontSizeOverride("font_size", 18);
         foreach (var slot in Saves.SLOTS.Append(Saves.AUTO_SLOT))
         {
@@ -332,8 +474,10 @@ public sealed partial class Menu : Control
             var row = r.Row();
             row.Text(slot == Saves.AUTO_SLOT ? "Autosave" : $"Slot {slot}", Kit.Dim).CustomMinimumSize = new Vector2(90, 0);
             row.Text(label ?? "empty", Ctx.Css("#8f998f")).CustomMinimumSize = new Vector2(400, 0);
-            row.Button("Load", () => actions.Load(slot), disabled: label == null);
+            var load = row.Button("Load", () => BeginLoad(slot, "load"), disabled: label == null);
+            load.MouseEntered += () => { if (label != null) hoverSlot = slot; };
         }
+        PreviewRow(r);
         r.Button("From a file…", actions.ImportFile);
         r.Button("Back", () => Go("main"));
     }

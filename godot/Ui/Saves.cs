@@ -78,6 +78,20 @@ public static class Saves
         }
     }
 
+    /// <summary>A slot's picture of its world (from the head of the save: Savefile.readPreview), or null.</summary>
+    public static SavePreview? slotPreview(string slot)
+    {
+        var path = ProjectSettings.GlobalizePath(DataPath(slot));
+        try
+        {
+            return System.IO.File.Exists(path) ? Savefile.readPreview(System.IO.File.ReadAllBytes(path)) : null;
+        }
+        catch (System.IO.IOException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Filename-safe stamp like "day3-1030".</summary>
     public static string fileStamp(SimState state) => $"day{Time.dayOf(state.tick)}-{Time.clockText(state.tick).Replace(":", "")}";
 

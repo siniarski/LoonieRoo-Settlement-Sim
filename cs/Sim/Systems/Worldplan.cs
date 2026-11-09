@@ -60,9 +60,13 @@ public static partial class Worldplan
 
     /// <summary>A world's regions with the ones round the start planned (what createWorld asks for first): pure, so the
     /// game can run it on a worker thread and remember the result.</summary>
-    public static WorldRegions prepare(double seed, double size, string map)
+    public static WorldRegions prepare(double seed, double size, string map) => planStart(new WorldRegions(seed, size, map));
+
+    /// <summary>Plans the regions round the start of a world's regions (any thread: WorldRegions is thread-safe for
+    /// planning), so the game can take regions the menu's preview already began (`regions` on the main thread, this on
+    /// a worker).</summary>
+    public static WorldRegions planStart(WorldRegions r)
     {
-        var r = new WorldRegions(seed, size, map);
         var s = r.nature.start;
         foreach (var (dx, dy) in new[] { (0, 0), (-200, 0), (200, 0), (0, -200), (0, 200) }) r.RegionAt(s.x + dx, s.y + dy);
         return r;

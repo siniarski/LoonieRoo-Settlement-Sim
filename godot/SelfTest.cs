@@ -298,6 +298,7 @@ public partial class Game
         int loadedTick = state.tick;
         await Frames(2);
         Check("Load slot 3 brings the save back", loadedTick == savedTick, $"tick {loadedTick}, saved at {savedTick}");
+        await LoadScreenPicture();
 
         await SoundTest();
 
@@ -359,7 +360,19 @@ public partial class Game
             if (b == null) { Check($"New game ({start}): the menu has \"{text}\"", false); return; }
             await Click(b.GetGlobalRect().GetCenter());
             await Frames(2);
+            if (text == "New game" && start == "group")
+            {
+                var shown = await PictureDone();
+                Check("The New game screen draws the world's picture (land, towns, roads)", shown != null && shown.IsVisibleInTree() && shown.Stage == "done", $"stage '{shown?.Stage}'");
+                if (OS.GetEnvironment("SELFTEST_SHOT") is { Length: > 0 } newShot)
+                {
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    GetViewport().GetTexture().GetImage().SavePng($"{newShot}-new.png");
+                }
+            }
         }
+        // Start shows the making screen first, then makes the world.
+        for (int f = 0; f < 120 && view.menu != null; f++) await Frames(1);
         await Frames(3);
         var you = ControlMod.controlled(state);
         Check($"New game ({start}) from the menu is first person on your survivor",
@@ -375,6 +388,37 @@ public partial class Game
         int tick = state.tick;
         await Frames(10);
         Check($"New game ({start}) plays at once, no banner", !view.halted && state.tick > tick && FindLabel(hud, "PAUSED") == null, $"tick {tick} -> {state.tick}");
+    }
+
+    /// <summary>The menu's world picture once it has finished drawing (or after 20 s), or null if the menu has none.</summary>
+    async System.Threading.Tasks.Task<WorldPreviewView?> PictureDone()
+    {
+        WorldPreviewView? p = null;
+        for (int f = 0; f < 1200; f++)
+        {
+            p = menu.FindChild("WorldPreview", true, false) as WorldPreviewView;
+            if (p != null && p.Stage == "done") break;
+            await Frames(1);
+        }
+        return p;
+    }
+
+    /// <summary>The Load screen shows the picture of the newest save (slot 3, just saved: a generated world).</summary>
+    async Task LoadScreenPicture()
+    {
+        view.menu = "load";
+        menu.Refresh();
+        await Frames(2);
+        var shown = await PictureDone();
+        Check("The Load screen draws the newest save's world", shown != null && shown.IsVisibleInTree() && shown.Stage == "done", $"stage '{shown?.Stage}'");
+        if (OS.GetEnvironment("SELFTEST_SHOT") is { Length: > 0 } shot)
+        {
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            GetViewport().GetTexture().GetImage().SavePng($"{shot}-load.png");
+        }
+        view.menu = null;
+        menu.Refresh();
+        await Frames(2);
     }
 
     /// <summary>No ticks go by over a few frames (the map or the menu is up).</summary>
