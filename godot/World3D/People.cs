@@ -29,7 +29,8 @@ namespace LoonieRoo.Game.World3D;
 
 public sealed partial class People
 {
-    public const int MAX_MODELS = 40;
+    /// <summary>The options' Character models (Ui/Graphics.cs).</summary>
+    public static int MAX_MODELS = 40;
     const int MAKES_PER_FRAME = 3;
     /// <summary>Further than this (m), a body stays a capsule even under budget.</summary>
     const float MODEL_RANGE = 40;

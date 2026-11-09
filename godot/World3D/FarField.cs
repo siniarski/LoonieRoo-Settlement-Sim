@@ -6,10 +6,13 @@
 //     level), a little under the near ground so the two never fight;
 //   - buildings as blocks: floor tiles (boards, tiles, concrete) merged into rectangles, walls to the
 //     eaves and a flat roof in a roof colour (by a hash of the block);
-//   - trees as the far LOD (Trees.TreeMesh(s, 2): 10-86 triangles), one MultiMesh per species, no shadows.
+//   - trees as the far LOD (Trees.TreeMesh(s, 2): 10-86 triangles), one MultiMesh per species, no shadows,
+//     out to TreeTier metres; past that each tree is a crown of 8 triangles (Crowns: a diamond the far LOD's
+//     height, width and colours) baked into one mesh for the region, so a far region is two draw calls, not
+//     seven. The two swap by visibility range (to the region's middle), so moving needs no rebuild.
 // Where first person's chunks are built (a square round you, the "hole"), the far field steps aside: its
 // ground and blocks discard their pixels there and its trees collapse to nothing, all in the shaders, so
-// moving needs no rebuild. Regions are built nearest first, a few a frame (rule 14), and rebuilt when the
+// moving needs no rebuild. Regions are built nearest first, BUILD_MS a frame at most (rule 14), and rebuilt when the
 // world's walls or furniture change (checked rarely: far things change little).
 //
 // Land not generated yet (the sim makes chunks as survivors come near) is drawn from the world plan, which is
@@ -32,12 +35,17 @@ public sealed class FarField
     public const int REGION = 64;
     const int STEP = 4;
     const float SINK = 0.08f;
-    const int BUILDS_PER_FRAME = 2;
+    /// <summary>Building regions stops for the frame once it has spent this long (ms; at least one is built).</summary>
+    const double BUILD_MS = 4;
     const int CHECK_EVERY = 300;
     /// <summary>How far the far field draws (m); 0 is off. The game's option --view=M; the draw bench's knob.</summary>
     public static float Range;
-    /// <summary>Bench knob: draw the far trees.</summary>
+    /// <summary>Draw the far trees (the options' Far trees: Off).</summary>
     public static bool DrawTrees = true;
+    /// <summary>Past this (m, to a region's middle) far trees are crowns, not the far LOD: 0 is crowns everywhere
+    /// (the options' Far trees: Simple), infinity the far LOD everywhere (the bench's :lod2).</summary>
+    public static float TreeTier = TREE_TIER;
+    public const float TREE_TIER = 350;
 
     static readonly HashSet<string> FLOORS = new() { "boards", "tiles", "concrete" };
     static readonly Color[] ROOFS = { new(0.33f, 0.27f, 0.24f), new(0.28f, 0.29f, 0.3f), new(0.4f, 0.36f, 0.32f), new(0.24f, 0.22f, 0.22f), new(0.42f, 0.28f, 0.22f) };
@@ -73,7 +81,9 @@ void fragment() {
     readonly Trees trees;
     readonly ShaderMaterial groundMat = new() { Shader = new Shader { Code = GROUND_SHADER } };
     readonly ShaderMaterial treeMat = new() { Shader = new Shader { Code = TREE_SHADER } };
-    readonly Dictionary<(int, int), (Node3D node, long sig, int trees, int tris)> regions = new();
+    readonly Dictionary<(int, int), Built> regions = new();
+    /// <summary>A region as built: its node, signature, trees, triangles (ground and blocks; its trees as the far LOD, as crowns), and the tree options it was built with.</summary>
+    readonly record struct Built(Node3D node, long sig, int trees, int tris, int lodTris, int crownTris, float tier, bool drawTrees);
     readonly Dictionary<(int, int), List<Furniture>> treesByRegion = new();
     int frame, furnitureCount = -1;
     long version = -1;
@@ -128,18 +138,22 @@ void fragment() {
             }
         want.Sort((a, b) => a.d.CompareTo(b.d));
         int built = 0, pending = 0;
+        double spent = 0;
         foreach (var (_, x, y) in want)
         {
             bool have = regions.TryGetValue((x, y), out var c);
-            if (have && !check) continue;
+            // The options changed what the trees are: build it again (nearest first, in the frame's budget).
+            bool stale = have && (c.tier != TreeTier || c.drawTrees != DrawTrees);
+            if (have && !check && !stale) continue;
             long sig = Signature(state, x, y);
-            if (have && c.sig == sig) continue;
-            if (built >= BUILDS_PER_FRAME) { pending++; continue; }
+            if (have && c.sig == sig && !stale) continue;
+            if (built > 0 && spent >= BUILD_MS) { pending++; continue; }
             ulong t0 = Godot.Time.GetTicksUsec();
             if (have) c.node.QueueFree();
-            var (node, treeCount, tris) = Build(state, x, y);
-            regions[(x, y)] = (node, sig, treeCount, tris);
-            BuildMs += (Godot.Time.GetTicksUsec() - t0) / 1000.0;
+            regions[(x, y)] = Build(state, x, y) with { sig = sig };
+            double ms = (Godot.Time.GetTicksUsec() - t0) / 1000.0;
+            BuildMs += ms;
+            spent += ms;
             built++;
         }
         Pending = pending;
@@ -152,7 +166,11 @@ void fragment() {
             regions.Remove(k);
         }
         int tc = 0, tt = 0;
-        foreach (var c in regions.Values) { tc += c.trees; tt += c.tris; }
+        foreach (var (k, c) in regions)
+        {
+            tc += c.trees;
+            tt += c.tris + (Middle(eye, k.Item1, k.Item2) < c.tier ? c.lodTris : c.crownTris);
+        }
         TreeCount = tc;
         Triangles = tt;
     }
@@ -173,6 +191,13 @@ void fragment() {
         return (float)Math.Sqrt(dx * dx + dz * dz);
     }
 
+    /// <summary>The distance (m, on the ground) from the eye to a region's middle, about what its visibility ranges measure.</summary>
+    static float Middle(Vector3 eye, int rx, int ry)
+    {
+        float dx = (rx + 0.5f) * REGION - eye.X, dz = (ry + 0.5f) * REGION - eye.Z;
+        return (float)Math.Sqrt(dx * dx + dz * dz);
+    }
+
     long Signature(SimState state, int rx, int ry)
     {
         long h = 17 + (treesByRegion.TryGetValue((rx, ry), out var l) ? l.Count : 0);
@@ -189,7 +214,7 @@ void fragment() {
         return h;
     }
 
-    (Node3D, int, int) Build(SimState state, int rx, int ry)
+    Built Build(SimState state, int rx, int ry)
     {
         var g = state.grid;
         var node = new Node3D();
@@ -289,8 +314,8 @@ void fragment() {
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, groundMat);
         node.AddChild(new MeshInstance3D { Mesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
 
-        // Trees: the far LOD, one MultiMesh per species, placed as Trees places them.
-        int treeCount = 0;
+        // Trees: the far LOD, one MultiMesh per species, placed as Trees places them, to TreeTier; crowns past it.
+        int treeCount = 0, lodTris = 0, crownTris = 0;
         if (DrawTrees)
         {
             var bySpecies = new List<(Transform3D t, Color c)>[Trees.SpeciesNames.Count];
@@ -313,22 +338,129 @@ void fragment() {
                         var (s, t, c) = Trees.Placement(x, y, true, true);
                         bySpecies[s].Add((t, c));
                     }
-            for (int s = 0; s < bySpecies.Length; s++)
-            {
-                if (bySpecies[s].Count == 0) continue;
-                var mesh2 = trees.TreeMesh(s, 2);
-                var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = mesh2, InstanceCount = bySpecies[s].Count };
-                for (int k = 0; k < bySpecies[s].Count; k++)
+            for (int s = 0; s < bySpecies.Length; s++) treeCount += bySpecies[s].Count;
+            if (TreeTier > 0)
+                for (int s = 0; s < bySpecies.Length; s++)
                 {
-                    mm.SetInstanceTransform(k, bySpecies[s][k].t);
-                    mm.SetInstanceCustomData(k, bySpecies[s][k].c);
+                    if (bySpecies[s].Count == 0) continue;
+                    var mesh2 = trees.TreeMesh(s, 2);
+                    var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = mesh2, InstanceCount = bySpecies[s].Count };
+                    for (int k = 0; k < bySpecies[s].Count; k++)
+                    {
+                        mm.SetInstanceTransform(k, bySpecies[s][k].t);
+                        mm.SetInstanceCustomData(k, bySpecies[s][k].c);
+                    }
+                    var inst = new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = treeMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+                    if (!float.IsPositiveInfinity(TreeTier)) inst.VisibilityRangeEnd = TreeTier;
+                    node.AddChild(inst);
+                    lodTris += bySpecies[s].Count * TrisOf(mesh2);
                 }
-                node.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = treeMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-                treeCount += bySpecies[s].Count;
-                tris += bySpecies[s].Count * TrisOf(mesh2);
+            if (!float.IsPositiveInfinity(TreeTier) && treeCount > 0)
+            {
+                var crowns = Crowns();
+                int n = 0;
+                for (int s = 0; s < bySpecies.Length; s++) n += bySpecies[s].Count * crowns[s].v.Length;
+                var verts = new Vector3[n];
+                var nrms = new Vector3[n];
+                var cols = new Color[n];
+                int at = 0;
+                for (int s = 0; s < bySpecies.Length; s++)
+                {
+                    var cr = crowns[s];
+                    foreach (var (t, tint) in bySpecies[s])
+                        for (int k = 0; k < cr.v.Length; k++, at++)
+                        {
+                            verts[at] = t * cr.v[k];
+                            nrms[at] = (t.Basis * cr.n[k]).Normalized();
+                            cols[at] = new Color(cr.c[k].R * tint.R, cr.c[k].G * tint.G, cr.c[k].B * tint.B);
+                        }
+                }
+                var arrays = new Godot.Collections.Array();
+                arrays.Resize((int)Mesh.ArrayType.Max);
+                arrays[(int)Mesh.ArrayType.Vertex] = verts;
+                arrays[(int)Mesh.ArrayType.Normal] = nrms;
+                arrays[(int)Mesh.ArrayType.Color] = cols;
+                var cm = new ArrayMesh();
+                cm.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+                cm.SurfaceSetMaterial(0, groundMat);
+                node.AddChild(new MeshInstance3D { Mesh = cm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeBegin = TreeTier });
+                crownTris = n / 3;
             }
         }
-        return (node, treeCount, tris);
+        return new Built(node, 0, treeCount, tris, lodTris, crownTris, TreeTier, DrawTrees);
+    }
+
+    (Vector3[] v, Vector3[] n, Color[] c)[]? crowns;
+
+    /// <summary>Each species' crown: a diamond (a point at the foliage's base, a ring of four at its widest, a tip)
+    /// as tall and wide as its far LOD's foliage, in the foliage's colour: 8 triangles, for trees a few pixels
+    /// tall (the trunk under it would be a pixel).</summary>
+    (Vector3[] v, Vector3[] n, Color[] c)[] Crowns()
+    {
+        if (crowns != null) return crowns;
+        crowns = new (Vector3[], Vector3[], Color[])[Trees.SpeciesNames.Count];
+        for (int s = 0; s < crowns.Length; s++)
+        {
+            var m = trees.TreeMesh(s, 2);
+            var pts = new List<(Vector3 p, Color c)>();
+            for (int k = 0; k < m.GetSurfaceCount(); k++)
+            {
+                var arr = m.SurfaceGetArrays(k);
+                var vs = arr[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                var cs = arr[(int)Mesh.ArrayType.Color].VariantType != Variant.Type.Nil ? arr[(int)Mesh.ArrayType.Color].AsColorArray() : null;
+                for (int i = 0; i < vs.Length; i++) pts.Add((vs[i], cs != null && i < cs.Length ? cs[i] : new Color(0.25f, 0.35f, 0.2f)));
+            }
+            // The foliage (the green points; a snag has none, so all of it): its top, base, widest radius (the
+            // 90th percentile) and the height that's at, and its mean colour.
+            var leaves = pts.FindAll(p => p.c.G > p.c.R * 1.05f);
+            if (leaves.Count < 3) leaves = pts;
+            float top = 0.1f;
+            Color leaf = new(0, 0, 0, 0);
+            var ys = new List<float>();
+            var rings = new List<(float r, float y)>();
+            foreach (var (p, c) in leaves)
+            {
+                top = Math.Max(top, p.Y);
+                leaf += c;
+                ys.Add(p.Y);
+                rings.Add((new Vector2(p.X, p.Z).Length(), p.Y));
+            }
+            leaf /= leaves.Count;
+            ys.Sort();
+            rings.Sort((a, b) => a.r.CompareTo(b.r));
+            float baseY = ys[(int)(ys.Count * 0.05f)];
+            var (r, wy) = rings[(int)(rings.Count * 0.9f)];
+            wy = Math.Clamp(wy, baseY + (top - baseY) * 0.2f, baseY + (top - baseY) * 0.6f);
+            var foot = new Vector3(0, baseY, 0);
+            var tip = new Vector3(0, top, 0);
+            var ring = new Vector3[4];
+            for (int i = 0; i < 4; i++) ring[i] = new Vector3(MathF.Cos(i * MathF.PI / 2) * r, wy, MathF.Sin(i * MathF.PI / 2) * r);
+            var v = new List<Vector3>();
+            var n = new List<Vector3>();
+            var col = new List<Color>();
+            void Tri(Vector3 a, Vector3 b, Vector3 c, Color ca, Color cb, Color cc)
+            {
+                // Outward from the trunk's axis, front faces wound as Block winds them.
+                var mid = (a + b + c) / 3;
+                if ((b - a).Cross(c - a).Dot(new Vector3(mid.X, 0, mid.Z)) > 0) { (b, c) = (c, b); (cb, cc) = (cc, cb); }
+                foreach (var (p, pc) in new[] { (a, ca), (b, cb), (c, cc) })
+                {
+                    v.Add(p);
+                    // Smooth, so the crown lights as a mass: the ring out from the axis and a little up, the foot down, the tip up.
+                    n.Add(p == foot ? Vector3.Down : p == tip ? Vector3.Up : (new Vector3(p.X, 0, p.Z).Normalized() + Vector3.Up * 0.35f).Normalized());
+                    col.Add(pc);
+                }
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                var a = ring[i];
+                var b = ring[(i + 1) % 4];
+                Tri(foot, a, b, leaf.Darkened(0.3f), leaf, leaf);
+                Tri(tip, b, a, leaf, leaf, leaf);
+            }
+            crowns[s] = (v.ToArray(), n.ToArray(), col.ToArray());
+        }
+        return crowns;
     }
 
     Layout? layout;

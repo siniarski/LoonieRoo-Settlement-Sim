@@ -25,8 +25,8 @@ namespace LoonieRoo.Game.World3D;
 
 public sealed class FurnitureModels
 {
-    /// <summary>Chunks round yours whose furniture is drawn (FirstPerson's radius).</summary>
-    const int RADIUS = 3;
+    /// <summary>Chunks round yours whose furniture is drawn (FirstPerson's radius: the options' Detail distance).</summary>
+    static int RADIUS => FirstPerson.Radius;
     const int CHUNK = WorldMesh.CHUNK;
     /// <summary>How far a wall's face is from its tile's centre (half a tile less half a wall).</summary>
     const float WALL_FACE = 0.5f - 0.06f;

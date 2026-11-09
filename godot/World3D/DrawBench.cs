@@ -2,13 +2,16 @@
 // only the start generated, as a game has it, the far field drawing the rest from the world plan), first
 // person in the middle, and what a frame costs as the far field (FarField.cs) draws further out. The sim
 // isn't ticked (noon, still). Each run is
-//   R          the far field's range in metres (0: off, the game's ~56 m and its fog)
+//   R          the far field's range in metres (0: off, the near chunks and their fog), the far trees as
+//              the game has them (the far LOD to FarField.TREE_TIER, crowns past it)
+//   R:lod2     the far LOD all the way out (as before the crowns)
+//   R:simple   crowns all the way (the options' Far trees: Simple)
 //   R:notrees  the same without the far trees (what the trees cost)
 // A run waits for the far field to be built (Pending 0), takes two shots (eye height looking at the town
 // centre, and 60 m up), then turns a full circle at eye height. Reported: regions, far triangles and trees,
 // the build time, frame ms (mean, p95), render CPU and GPU ms, draw calls, primitives. Vsync off.
 //
-//   Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees]
+//   Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:lod2,1000:simple,1000:notrees]
 //         [--frames=360] [--out=DIR]
 
 using System;
@@ -25,7 +28,7 @@ public partial class DrawBench : Node3D
 {
     const int Settle = 30, MaxWarmup = 4000;
 
-    readonly List<(float range, bool trees)> runs = new();
+    readonly List<(float range, string trees)> runs = new();
     readonly StringBuilder report = new();
     readonly List<double> frameMs = new(), renderCpu = new(), renderGpu = new();
     int run = -1, frame, measureFrames = 360, size = 2048, phase;
@@ -47,10 +50,10 @@ public partial class DrawBench : Node3D
             var kv = a.TrimStart('-').Split('=', 2);
             args[kv[0]] = kv.Length > 1 ? kv[1] : "";
         }
-        foreach (var r in (args.GetValueOrDefault("runs") ?? "0,250,500,1000,1000:notrees").Split(','))
+        foreach (var r in (args.GetValueOrDefault("runs") ?? "0,250,500,1000,1000:lod2,1000:simple,1000:notrees").Split(','))
         {
             var p = r.Split(':');
-            runs.Add((float.Parse(p[0], CultureInfo.InvariantCulture), !(p.Length > 1 && p[1] == "notrees")));
+            runs.Add((float.Parse(p[0], CultureInfo.InvariantCulture), p.Length > 1 ? p[1] : "tiered"));
         }
         if (args.TryGetValue("frames", out var f)) measureFrames = int.Parse(f);
         if (args.TryGetValue("size", out var sz)) size = int.Parse(sz);
@@ -134,7 +137,8 @@ public partial class DrawBench : Node3D
         }
         var (range, trees) = runs[run];
         FarField.Range = range;
-        FarField.DrawTrees = trees;
+        FarField.DrawTrees = trees != "notrees";
+        FarField.TreeTier = trees switch { "simple" => 0, "lod2" => float.PositiveInfinity, _ => FarField.TREE_TIER };
         fp = new FirstPerson();
         AddChild(fp);
         fp.camera.MakeCurrent();
@@ -191,7 +195,7 @@ public partial class DrawBench : Node3D
             var sorted = frameMs.OrderBy(x => x).ToList();
             string F(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
             var far = fp.Far;
-            string line = $"| {range} | {(trees ? "yes" : "no")} | {far.Regions} | {far.Triangles:N0} | {far.TreeCount:N0} | {far.BuildMs:0} | {F(frameMs.Average())} | {F(sorted[(int)(sorted.Count * 0.95)])} | {F(renderCpu.Average())} | {F(renderGpu.Average())} | {drawCalls} | {primitives:N0} |";
+            string line = $"| {range} | {trees} | {far.Regions} | {far.Triangles:N0} | {far.TreeCount:N0} | {far.BuildMs:0} | {F(frameMs.Average())} | {F(sorted[(int)(sorted.Count * 0.95)])} | {F(renderCpu.Average())} | {F(renderGpu.Average())} | {drawCalls} | {primitives:N0} |";
             report.AppendLine(line);
             GD.Print(line);
             NextRun();
@@ -201,6 +205,6 @@ public partial class DrawBench : Node3D
     void Shot(string what)
     {
         var (range, trees) = runs[run];
-        GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(outDir, $"view_{range}{(trees ? "" : "_notrees")}_{what}.png"));
+        GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.Combine(outDir, $"view_{range}{(trees == "tiered" ? "" : "_" + trees)}_{what}.png"));
     }
 }

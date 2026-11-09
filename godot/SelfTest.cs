@@ -1,6 +1,6 @@
 // `--selftest`: drives the running game with real input events (through Godot's input pipeline,
 // so the HUD's buttons and the game's handlers both see them) and checks what they did: walking,
-// a jump with Space, the map and the menu pausing the game, the build bar and a wall placed with the mouse, the map, the menu, a HUD button, a
+// a jump with Space, the map and the menu pausing the game, the Options page (SelfTestOptions.cs), the build bar and a wall placed with the mouse, the map, the menu, a HUD button, a
 // save to a slot and back, and new games (group and solo) from the menu landing in first person. Prints PASS/FAIL per step and quits with the number of failures as the
 // exit code. The Godot side's equivalent of driving the browser game with Playwright.
 
@@ -279,6 +279,7 @@ public partial class Game
         if (volume != null) volume.Value = 40;
         Check("The menu's volume slider sets the volume", volume != null && Math.Abs(Audio.Volume.Level - 0.4f) < 0.01f && Math.Abs(AudioServer.GetBusVolumeDb(0) - Mathf.LinearToDb(0.16f)) < 0.1f, $"level {Audio.Volume.Level:0.00}, bus {AudioServer.GetBusVolumeDb(0):0.0} dB");
         Audio.Volume.Set(had);
+        await OptionsSteps();
         var slot = FindButton(menu, "3");
         if (slot != null) await Click(slot.GetGlobalRect().GetCenter());
         Check("Save to slot 3", Saves.slotLabel("3") != null);
@@ -293,6 +294,7 @@ public partial class Game
         await Frames(20);
         // The tick read as it loads (Load is synchronous): loads play at once, so a tick can come in the next frames.
         Load("3");
+        // The clock as loaded (Load is synchronous): a slow frame after it may already run a tick.
         int loadedTick = state.tick;
         await Frames(2);
         Check("Load slot 3 brings the save back", loadedTick == savedTick, $"tick {loadedTick}, saved at {savedTick}");

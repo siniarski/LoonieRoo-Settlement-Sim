@@ -44,3 +44,31 @@ With world generation fixed (docs/worldgen-speed.md) and the sound's furniture s
 So a kilometre costs ~2 ms a frame on this machine, three quarters of it the far trees (267k of them): a cheaper far tier (cards or a canopy mesh past ~400 m) is where to look if it's ever needed.
 
 **Land not generated yet is drawn from the world plan** (FarField.PlanGround: the ground by generateChunk's own rules, the lots' yards; buildings from the lots' footprints; trees by generateChunk's roll), so in a game, where only the chunks near survivors exist, the far field isn't blank grass any more. A region is built again when its chunks are generated (its signature counts them). `DrawBench -- --lazy` (only the start generated): the same frame (2.47 ms at 1000 m), but a region takes 5.2 ms to build from the plan against 1.6 from the grid, so filling a 1 km view adds ~10 ms to a frame for its first few seconds (2 regions a frame). A worker thread for region building would hide that.
+
+## On by default, crowns past 350 m, and the Options page (2026-11-09, later still)
+
+The player: "can we increase the draw distance and perhaps introduce our first options in menu to adjust/cull if needed."
+
+**Far trees past 350 m are crowns.** The far LOD's cost was draw calls as much as triangles: one MultiMesh per species per region, ~2,000 of the 2,659 draw calls at 1 km, and render CPU (1.5 ms) as big as the GPU's. Now each far tree past `FarField.TREE_TIER` (350 m, to the region's middle) is a crown: a diamond of 8 triangles (a point at the foliage's base, a ring of four at its widest, a tip) as tall, wide and green as that species' far LOD, measured from the model's green vertices. A region's crowns are baked into one mesh in the ground's material: two draw calls a far region, not seven. The far LOD's MultiMeshes and the crowns swap by visibility range, so moving needs no rebuild. From 60 m up at 1 km the tiered view and the far LOD everywhere look the same (`experiments/draw-bench/options/bench_1000_*_high.png`); crowns all the way (`simple`) read as conifers close up.
+
+**Region builds are budgeted by time** (4 ms a frame, at least one), not two a frame: building from the world plan is ~7 ms a region, so filling 500 m (225 regions) takes ~1.5 s of build time spread over the first seconds, nearest first.
+
+`DrawBench -- --lazy` (a 2048 world, only the start generated, as in a game), the same machine (RTX 5070, Core Ultra 7 265K), 1280x720; `tiered` is the game's far trees:
+
+| range m | far trees | regions | far tris | far trees drawn | build ms | frame ms | p95 | render cpu | render gpu | draw calls |
+|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| 0 | | 0 | 0 | 0 | 0 | 0.64 | 0.95 | 0.15 | 0.30 | 338 |
+| 250 | tiered | 62 | 1.14M | 18,099 | 439 | 0.85 | 1.18 | 0.27 | 0.39 | 554 |
+| **500** | **tiered** | 225 | 2.13M | 68,156 | 1517 | **1.03** | 1.28 | 0.41 | 0.48 | 724 |
+| 750 | tiered | 482 | 2.86M | 141,532 | 3266 | 1.23 | 1.53 | 0.49 | 0.53 | 864 |
+| 1000 | tiered | 826 | 3.85M | 242,122 | 5595 | 1.57 | 1.99 | 0.61 | 0.61 | 1049 |
+| 1000 | lod2 (before) | 826 | 15.3M | 242,122 | 4333 | 3.07 | 4.04 | 1.54 | 1.36 | 2660 |
+| 500 | simple | 225 | 0.67M | 68,156 | 1452 | 0.89 | 1.12 | 0.23 | 0.37 | 475 |
+| 1000 | simple | 826 | 2.38M | 242,122 | 5484 | 1.41 | 1.84 | 0.49 | 0.51 | 804 |
+| 1000 | none | 826 | 0.45M | 0 | 1586 | 1.20 | 1.57 | 0.36 | 0.34 | 576 |
+
+(Before the crowns, the same lazy bench: 500 m 1.59 ms, 1000 m 2.74 ms.) So 1 km now costs 0.9 ms over the near view, not 2.1, and the trees in it 0.4 ms, not 1.5. Building is ~30% slower at 1 km (the crowns' vertices).
+
+**The game draws 500 m by default** (+0.4 ms a frame here). Full report: `experiments/draw-bench/options/bench.md`; the game from 50 m up at 0, 250, 500 and 1000 m: `game_*_high.png`.
+
+**The Options page** (the menu's main page, Options; `godot/Ui/Graphics.cs`): view distance (near only, 250, 500, 750, 1000 m), detail distance (the near chunks' radius: 40, 56, 72, 88 m: WorldMesh, trees, furniture and roofs), far trees (off, simple, detailed), shadows (off; low 24 m, a 2048 atlas; medium 40 m, 4096, as before; high 80 m, 8192), character models (the nearest 10, 20, 40, 60 people, and as many animals), 3D resolution (50, 75, 100%; FSR below 100, the HUD stays sharp) and anti-aliasing (off, FXAA, MSAA 4x). Saved in `user://settings.cfg` (`[graphics]`; the volume keeps `[audio]`), loaded at start, applied at once (the renderer's knobs are statics read every frame; a tree mode or a detail distance builds in nearest first). `--view=M` and `--detail=N` win for the run and aren't saved; a `--shot` and `--selftest` never read or write the player's file. Not measured per option: shadows, resolution and anti-aliasing were not benched (the bench drives FarField directly).

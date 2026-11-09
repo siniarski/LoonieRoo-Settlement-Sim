@@ -21,6 +21,8 @@
 //   --lineup                               one of every item kind on the ground in front of you (for screenshots; not a command)
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
+//   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
+//                                          Options page's (not saved); a --shot or --selftest ignores the player's options
 
 using System;
 using System.Collections.Generic;
@@ -158,7 +160,11 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         view.colonyMode = args.ContainsKey("colony");
         if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
         if (args.TryGetValue("hold", out var hk)) holdKeys = hk.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries);
-        if (args.TryGetValue("view", out var vw)) World3D.FarField.Range = float.Parse(vw, System.Globalization.CultureInfo.InvariantCulture);
+        // The graphics options (Ui/Graphics.cs): the player's file, then the command line's for this run. A self-test or a shot sees the defaults.
+        Graphics.Transient = selftest || shotPath != null;
+        if (args.TryGetValue("view", out var vw)) Graphics.ViewOverride = (int)float.Parse(vw, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("detail", out var dt)) Graphics.DetailOverride = int.Parse(dt);
+        Graphics.Init(GetViewport());
         if (args.TryGetValue("pitch", out var pt)) pitchArg = double.Parse(pt) * Math.PI / 180;
         if (args.TryGetValue("eye", out var ey))
         {

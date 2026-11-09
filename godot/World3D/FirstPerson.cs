@@ -15,8 +15,11 @@ namespace LoonieRoo.Game.World3D;
 
 public sealed partial class FirstPerson : Node3D
 {
-    /// <summary>Chunks this far (in chunks) from yours are kept built; 3 is 48-56 m.</summary>
-    const int RADIUS = 3;
+    /// <summary>Chunks this far (in chunks) from yours are kept built (with their trees, furniture and roofs); 3 is
+    /// 48-56 m. The options' Detail distance (Ui/Graphics.cs).</summary>
+    public static int Radius = 3;
+    /// <summary>How far the sun's shadows reach (m); 0 is none. The options' Shadows.</summary>
+    public static float ShadowDistance = 40;
     /// <summary>Chunk meshes built per frame at most.</summary>
     const int BUILDS_PER_FRAME = 4;
     /// <summary>Bodies further than this (m) aren't drawn.</summary>
@@ -126,15 +129,17 @@ public sealed partial class FirstPerson : Node3D
         camera.Position = eye;
         EyeUp = eye.Y - eyeGround;
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
-        roofs.Update(state, eye, RADIUS);
+        roofs.Update(state, eye, Radius);
+        sun.ShadowEnabled = ShadowDistance > 0;
+        if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
         Light(state, eye, delta);
         Chunks(state, eye);
         trees.Update(state, eye, look);
         furniture.Update(state, eye, look);
         // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
         int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
-        far.Update(state, eye, new Vector4((hx - RADIUS) * WorldMesh.CHUNK, (hz - RADIUS) * WorldMesh.CHUNK, (hx + RADIUS + 1) * WorldMesh.CHUNK, (hz + RADIUS + 1) * WorldMesh.CHUNK));
-        camera.Far = FarField.Range > 0 ? FarField.Range + 64 : 120;
+        far.Update(state, eye, new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK));
+        camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
@@ -186,8 +191,8 @@ public sealed partial class FirstPerson : Node3D
         int maxX = (g.width - 1) / WorldMesh.CHUNK, maxY = (g.height - 1) / WorldMesh.CHUNK;
         // Nearest first, so what you're standing in is built before the distance.
         var want = new List<(int d, int x, int y)>();
-        for (int y = Math.Max(0, ccy - RADIUS); y <= Math.Min(maxY, ccy + RADIUS); y++)
-            for (int x = Math.Max(0, ccx - RADIUS); x <= Math.Min(maxX, ccx + RADIUS); x++)
+        for (int y = Math.Max(0, ccy - Radius); y <= Math.Min(maxY, ccy + Radius); y++)
+            for (int x = Math.Max(0, ccx - Radius); x <= Math.Min(maxX, ccx + Radius); x++)
                 want.Add((Math.Max(Math.Abs(x - ccx), Math.Abs(y - ccy)), x, y));
         want.Sort((a, b) => a.d.CompareTo(b.d));
         int built = 0;
@@ -217,7 +222,7 @@ public sealed partial class FirstPerson : Node3D
         // Drop chunks well out of range.
         var drop = new List<(int, int)>();
         foreach (var (k, c) in chunks)
-            if (Math.Max(Math.Abs(k.Item1 - ccx), Math.Abs(k.Item2 - ccy)) > RADIUS + 1) drop.Add(k);
+            if (Math.Max(Math.Abs(k.Item1 - ccx), Math.Abs(k.Item2 - ccy)) > Radius + 1) drop.Add(k);
         foreach (var k in drop)
         {
             chunks[k].node.QueueFree();
