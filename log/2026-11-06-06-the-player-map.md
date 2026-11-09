@@ -1,0 +1,7 @@
+- **2026-11-06, the player map (branch player-map).** System 9, the last of the six. New ui/worldmap.ts and sim/mapnotes.ts; state.mapNotes (missing in older saves: none).
+  - M now opens a full-screen map, and N toggles the minimap (it was M).
+  - What's on it: the ground you've explored (fogged elsewhere); town names once you've seen a town's middle; neighbours' settlements, coloured by how they feel about you; places of interest, labelled when zoomed in; cars you've seen; your people; and you, ringed.
+  - Controls: wheel zooms, drag pans, double-click shows that spot in the game, and M, Escape or Close shuts it.
+  - Notes: click to pin one (type, then Enter; Escape cancels), right-click a pin to take it off. Notes are sim state, added and removed by commands (addMapNote, removeMapNote), so they're saved and replayed. They're at most NOTE_MAX 40 characters with control characters stripped, and at most MAX_NOTES 200.
+  - Town names are derived from the plan, never saved (townNames). The first six are the hometowns from survivors' stories (story.ts TOWNS), so "I lived in Coldwater" can be a place you find.
+  - Checked in the browser: map opens on M, notes pin by click and by command, right-click removes one, Escape closes, and typing in the note box doesn't trigger game keys. tests/mapnotes.test.ts (3). 737 tests.

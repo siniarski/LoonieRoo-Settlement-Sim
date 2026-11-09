@@ -1,0 +1,10 @@
+- **2026-11-06, the last big-world spike (branch herd-spikes).** Player: "Can we address the remaining spike? Should we look at capping calculations per tick or adding a queue system for calculations?"
+  - The spike was two more algorithm problems, not load:
+    - A herd turning into real zombies (herds.ts materialize) searched outward for a free tile for each zombie, checking every zombie on every tile looked at: a herd of 30 among 1,200 dead was over a million checks in one tick. It now keeps a set of taken tiles, updated as each is placed.
+    - Waking dormant zombies (every 10 ticks) checked every sleeper against every survivor. Survivors are now bucketed by squares of WAKE_RADIUS, and each sleeper checks its own square and the eight round it.
+  - Same answers: solo and colony harnesses unchanged.
+  - city-1024: p99 23.6 → 16.5 ms, mean 6.95 → 6.06 ms. Two slow ticks left in 320 (30 and 20 ms): chunk floods, apparently the first full build of reachability for a mover type that hadn't been asked about before (a one-off per type, per session, on 1024).
+  - On capping and queues (the player's question):
+    - Every spike so far was a whole-map pass or a quadratic loop that shouldn't have existed, and fixing those keeps outcomes identical.
+    - A per-tick cap (count-based, never wall-clock: rule 1) already exists for zombie plans (PLANS_PER_TICK). It suits thinking that can wait a tick, like colonists choosing jobs if colonies grow to hundreds. But it changes outcomes, so it's a balance change.
+    - A queue (work spread over ticks) only pays for single jobs too big for one tick: a first reachability build, generating many chunks at once, unfolding a settlement. Derived caches like reachability can't hand out half-built answers. They could be warmed ahead of time instead (on load or world creation, or in a Web Worker), with no outcome change.

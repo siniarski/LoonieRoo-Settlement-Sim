@@ -1,0 +1,1 @@
+- **2026-11-01, barracks and bed ownership:** schema 19. `owner` on furniture, `assignBed` command, ranked bed choice in `needs.ts`, `wakeLightSleepers` each tick, barracks planner. No bed-assignment UI yet beyond hover text ("Ash's bed"); assignment is automatic or by command. 338 tests.

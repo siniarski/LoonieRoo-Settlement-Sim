@@ -64,7 +64,8 @@ godot/              # the game: Game.cs (loop, input), Render/ (drawing), Ui/ (H
 scenarios/          # JSON maps the tests load
 experiments/        # old measurements (godot-bench; the browser render-bench is at ts-final)
 check.sh            # the check
-NOTES.md            # Start here, decisions, design direction, open questions, session log
+NOTES.md            # Start here, decisions, design direction, open questions
+log/                # the session log: a file per entry, YYYY-MM-DD-NN-slug.md
 ```
 
 NOTES.md "Start here" maps every system to what it does. Each file opens with a comment stating its rules.
@@ -118,14 +119,14 @@ They are how the agent (and you) can see what the game is doing.
 - The **stuck-state invariant tests**: after running a scenario for N ticks, no survivor is idle with available jobs they could do, and none has been stuck on the same job for too long (no more than **600 ticks** on one job; no more than **20 ticks** idle while a reachable, unreserved job of an enabled type exists). Tune thresholds as needed and record changes in NOTES.md.
 - Run `./check.sh` before every commit. A red check means stop and fix.
 - Prefer headless sim runs over screenshots to verify behaviour. Use screenshots (`--shot`) for rendering questions, but do look at anything visible before calling it done; `--selftest` (or a new step in SelfTest.cs) for input and UI.
-- Balance questions go to the harness (scripted players over several seeds, run in parallel), and the results go in the NOTES.md session log.
+- Balance questions go to the harness (scripted players over several seeds, run in parallel), and the results go in the session log (a new file in `log/`).
 - The sim's clock scale (Time.cs) is static state: a test that changes `settings.dayScale` must reset it (`Time.setDayScale(1)`) afterwards. Tests run one at a time, in file order, for this reason: inside a process. `./check.sh` runs whole test classes in separate processes (statics are per process), balanced by last run's times (`.check/test-times.txt`, seeded by `cs/Sim.Tests/test-times.txt`); a class that takes many seconds is better split in two so it can share out.
 
 ## Workflow
 
 - **Start tiny.** Get the smallest thing working, play with it, then extend.
 - **Commit at each working milestone** with a clear message so experiments can be rolled back.
-- **Keep `NOTES.md`** as a decisions log. After any non-trivial experiment, record: what was tried, what happened, what was decided. Read it at the start of each session.
+- **Keep `NOTES.md`** as a decisions log; read it at the start of each session. After any non-trivial experiment, record what was tried, what happened, what was decided as a **new file in `log/`** (`YYYY-MM-DD-NN-slug.md`: NOTES.md "Session log" says how), not in NOTES.md: parallel sessions then never collide. Update NOTES.md itself only when "Start here", a decision or an open question changes.
 - **Rewrites are fine.** If a system is fighting you, say so and propose a rewrite rather than piling on workarounds. That includes the JS layer: replacing a `Js.*` idiom with plain C# is welcome where tests (and, for balance, the harness) show nothing changes.
 - Ask before adding dependencies (NuGet packages, Godot add-ons, tools like dotnet-trace). Prefer fewer.
 - Keep functions small and files focused. Prefer plain data and static functions over class hierarchies in `cs/Sim`.

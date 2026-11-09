@@ -1,0 +1,12 @@
+- **2026-11-06, balance pass (branch balance).** Item 4 of "Do 1-4", after today's systems.
+  - The solo harness was losing fights it should have won.
+    - It judged the dead by `pos`, the tile a zombie last finished stepping onto, which can lag a tile behind its body. Bites reach 1.1 tiles centre to centre, so one "two tiles away" could bite it to death while it stood there.
+    - It now uses the bodies (tileOf(at)) and fights whatever is in swing reach as the game measures it (inReach, SWING_REACH), aiming at it.
+    - It also sneaks when the dead are within 10 tiles but not on it, forages when hungry with no food about, and drinks from taps while the water's on.
+  - Found while doing that: using your own tile put you to sleep on the floor whenever you were tired, even starving by day on open grass. Now hunger wins by day: tired and hungry where there's foraging to be done, you forage (control.ts use).
+  - Solo (Apocalypse) now: days 5, 5, 5 (was 3, 4, 3): two night attacks on night 5, one starvation after 53 forages. It still doesn't barricade, hunt or drive, so a human should do better. Apocalypse stays hard; no numbers changed.
+  - Colony: days 22, 20, 18 at first. All in the first winter: colonies of 20-odd people on under two days of food, sitting on 2,000 wood, starving once nothing grows.
+    - Taking fewer people in (only with four days' food, not from autumn) made it worse (19, 16, 11): small colonies die to attacks.
+    - Having the scripted player build chicken coops (one per three people, from day 6; they lay all year, half as often in winter) fixed it: alive at day 25 (6 people, 25 days of food), wiped out on day 24, alive at day 25 (7 people, 20 days).
+    - So the winter tools were already enough; nobody was using them. The harness now builds coops. The autumn alert ("Winter in N days: food for...") now says what keeps food coming: coops lay all year, a greenhouse grows all year.
+  - Open question updated: "Colonies die in their first winter" holds only without coops or a greenhouse.

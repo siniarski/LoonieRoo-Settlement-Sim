@@ -1,0 +1,1 @@
+- **2026-10-24, milestone 3 playtest:** works well. 10 ticks/sec with 4 ticks per tile (0.4s/tile) feels right; staying 4-way, no diagonals for now. Tick-rate question closed. Next: milestone 4 (job system: build, haul, clean, reservation, priority panel).

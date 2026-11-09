@@ -1,0 +1,1 @@
+- **2026-11-01, world size option:** the player asked whether tests were slowing down on bigger worlds. They weren't (365 tests in about 3 s; world tests use 128x128): the killed run was the balance harness hitting the furniture-search bug. Still, size is now a choice, defaulting to 128 for development.

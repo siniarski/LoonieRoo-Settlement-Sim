@@ -1,0 +1,12 @@
+- **2026-11-06, character creation (branch character-creation).** System 7 of the six-plus. New character.ts, and a menu screen.
+  - New game now goes on to "Who you are": a name, what you were before (the story.ts jobs, so the past you pick is the one you tell in conversation), and traits bought with points. Start stays greyed out until it adds up.
+  - Professions (PROFESSIONS, one per STORY_JOBS entry) start some skills at a level, put a little kit in your bag (at your feet in a group start), and cost or give points. For example, a nurse starts at doctor 3 with medicine and a bandage for -2; a police officer at guard 2 with a gun and ammo for -4; a student has nothing, for +4.
+  - Traits (TRAIT_COST):
+    - good ones cost points: tough 4, quick 4, graceful 3, green thumb 2, cheerful 2;
+    - bad ones give points back: lazy 3, gloomy 2, clumsy 2;
+    - you can't be cheerful and gloomy, or graceful and clumsy;
+    - everyone starts with START_POINTS 4.
+    - The first try started at 0, which left every paid profession overspent unless you took a bad trait; 4 lets a soldier or police officer start plain.
+  - Two new traits, chosen only (not rolled at birth, so existing worlds roll the same): graceful (your movement is heard half as far: sight.ts heardFrom) and clumsy (half as far again).
+  - The character becomes the world's first survivor (createWorld's new `you` argument): yours in a solo start, the first of the three in a group. A character that breaks the rules is ignored (characterProblem).
+  - Checked in the browser: the points go red and Start greys out when overspent, the opposed trait locks, and the game starts as the character made. tests/character.test.ts (5). Harness runs unchanged: they pass no character. 724 tests.

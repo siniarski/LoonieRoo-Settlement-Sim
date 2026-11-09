@@ -1,0 +1,5 @@
+- **2026-11-05, solo made fairer (handiwork.ts, schema 59):** what the survivor you control does with their own hands.
+  - R works the tile in front: a damaged wall, door or barricade is repaired (no materials, until whole); carrying wood, a door becomes a barricade (you still walk through; 600 health against a door's 400), a wall or barricade is reinforced (2.5x, as scrap does for the colony), bare floor gets a wall. Building takes BUILD_WORK ticks; moving stops it.
+  - E underfoot on open grass, by day, spring to autumn: forage (60 ticks, 35% food, half in a nuclear winter; each tile once a day, `state.foraged`). Tired or at night it's still sleep rough.
+  - Swing at a deer next to you, or shoot one: half the time it drops (3 food), else it bolts and leaves soon.
+  - A solo start sets out with a crude weapon in hand and a bandage at their feet.

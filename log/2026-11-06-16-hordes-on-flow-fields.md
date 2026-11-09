@@ -1,0 +1,31 @@
+- **2026-11-06, hordes on flow fields (branch hordes).** Player: flow fields for night waves and herds, "obviously not every zombie being part of a horde". Asked how splitting and joining would work, agreed the design, and added: large hordes have a small random chance to shed a small part, so even huge herds leave stragglers across the map.
+  - New hordes.ts; state.hordes, and zombie.hordeId (both missing in older saves: loners).
+  - Made by:
+    - a night's wave of 3 or more arriving together;
+    - a herd breaking into real zombies near your people.
+  - Loners (sleepers, wanderers) still think for themselves (plan).
+  - **Hunting:** a night wave goes for everyone; others go for whoever any member sees or hears. **Roaming:** a heading.
+  - **The flow field:**
+    - cost to a goal from every tile in a box round the horde, worked out backwards from the goals;
+    - a tile walked costs STEP; a wall, door, window or barricade in the way costs its battering time (health at a zombie's battering rate);
+    - goals outside the box pull through its edge.
+    - Each member steps to its cheapest neighbour (as things are now: an open door in front is walked through), and battering works as before. So a walled colony draws a horde to its weakest point (a test: the wave walks round to the door rather than through the wall).
+    - The field takes every door as shut, since doors swing all the time and it shouldn't be worked out again for each. It's derived from what the horde stores (goals, box) and the walls, so a game saved mid-horde plays on exactly (a test).
+  - Goals and the box are kept while the same people have barely moved (GOAL_SLACK 3), or for up to GOAL_EVERY 60 ticks whatever they did, and while members are well inside the box.
+  - **Joining:** every 50 ticks, two hordes within 10 tiles that want the same kind of thing merge (the bigger keeps its goals). An awake loner within 6 tiles falls in.
+  - **Splitting:**
+    - a noise heard by more than half a roaming horde turns it; heard by fewer, that part splits off (or goes alone);
+    - a member more than 24 tiles from the horde's middle (the median, so stragglers don't drag it) drops out;
+    - **shedding:** a horde of 20 or more has a 15% chance each hour (a hash roll) of losing 5-15% off its back, which heads off to one side;
+    - under 3, a horde dissolves.
+  - **Far off:** a roaming horde with nobody of yours within 44 tiles becomes a herd marker again, its count kept, until it comes near someone.
+  - **What went wrong on the way:**
+    - **Stalling:** members stood still: a step was taken only if strictly cheaper than the member's own tile, and on the best route they're equal. Colonies "did better" (10-11 alive, almost no zombie deaths) until that was found by comparing kills with main.
+    - **Constant rebuilds:** fields were worked out again for every door swinging and every colonist shuffling (63% of a colony tick). Now the field ignores whether doors are open and keeps its goals as above (15%).
+    - **Crafting stock:** craftStock checked every item against everyone's equipment; it now gathers the equipped ids once.
+    - The colony harness can profile one day (PROFILE_DAY=n → harness/out/colony-profile.txt).
+  - **Results:**
+    - colony vs main: seed 1, alive 4 at day 25 (main 6; kills 206 vs 197); seed 2 wiped out on day 21 (main day 24); seed 3 alive 14 (main 7). Zombie deaths 10/16/5 (main 18/29/10). Tick cost the same as main (0.3-0.5 ms, worst 7 ms).
+    - Solo: days 5, 6, 6.
+    - Stress city-1024: 4.8 ms mean, worst 14.6 ms (its zombies are mostly placed directly, not in hordes).
+  - 769 tests. MAX_ZOMBIES is still 60, so hordes here are small; the design is for the big-world target.

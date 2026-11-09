@@ -1,0 +1,8 @@
+- **2026-11-03, eleven more systems and balance pass 5:** the endgame (cure, evacuation) and sieges; policies, a leader, contagion, wounds and amputation; scrap, reinforced walls, turrets, lures, pits, darkness; the truck and outposts. 527 tests.
+  Balance pass 5 (three worlds, 25 days or 5 minutes; seconds each). The harness also builds a lab bench and beacon (from day 10), lamps (day 5) and pits at the gates, amputates whenever it can, and plants some herbs.
+  1. First run: all three wiped out by day 6-7. Bleeding ran until bandaged at 25% of blows; the first siege (night 7, 2x) finished them.
+  2. Bleeding stops by itself (300 ticks), 15% of blows; first siege night 14 at 1.5x; night sight 8: days 5-9. Storms' lightning (30% an hour) burned a dozen things a day: cut to 8%. Harness quarantine sent half a small colony to bed: off.
+  3. Days 13, 20, 12; one found the cure on day 19.
+  4. Experiments: darkness off (17, 13, 12) and wounds off (12, 25+, 9) didn't settle it: seed-to-seed spread is wider than either. The real gap: infected survivors die untreated (no wood for medicine). With the harness planting herbs and amputating: no infection deaths at all; days 22 (won by evacuation), 15 (won the cure on day 14, then wiped out), 16. Deaths bunched on the night-14 siege.
+  5. Cure 40 samples (25 was too quick), sieges 1.25x: days 17, 18, 19, cure progress 16-19 of 40. Every colony dies in its first winter, just short of the day-20 evacuation.
+  Left: a scripted player with no real defence strategy doesn't reach an ending; whether a human does is the question for a playtest. Amputation plus herbs make infection nearly harmless for a player who uses them: maybe too much.

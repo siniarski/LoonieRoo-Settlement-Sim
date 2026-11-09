@@ -1,0 +1,18 @@
+- **2026-11-06, the world winding down (branch world-timeline).** System 6 of the six. New timeline.ts; state.timeline (null on hand-made maps, and missing in older saves, which reads as no mains, so no schema bump).
+  - The mains: a generated world starts with the water and the power on. Each goes off for good on a day rolled from the seed, depending on how far on the world is (progression):
+    - weeks: water off on day 8-14, power on day 10-18;
+    - months: water on day 3-7, power on day 4-9;
+    - a year or years: both already off.
+  - Each going off is logged that morning. The HUD's stores line shows "water on/off · power on/off".
+  - Water on: generated kitchen counters, toilets and baths are taps, which are clean water (water.ts sourceAt, findWater). Colonists drink there. You drink from one by using it if you're more than TAP_THIRST short of full; otherwise using it searches the counter.
+  - Power on:
+    - iceboxes keep food like a powered fridge (power.ts spoilage);
+    - indoors (any room) is lit at night (inLight: guards hit harder);
+    - you see as far as by day while you stand in the light (sight.ts).
+  - Happenings, until WIND_DOWN_DAYS after the power goes:
+    - Helicopter: on a rolled day (weeks: 3-6, months: 2-5, later: none), in the afternoon, it flies in from far off. It hangs over you (or the first survivor) for HELI_HOVER ticks, then flies off, making noise 'helicopter' (35) every HELI_NOISE_EVERY ticks. So it wakes sleepers and drags the dead and herds after you.
+    - Alarms: smashing a window while the power's on has an ALARM_CHANCE (half) of setting one off at that tile. It rings ('alarm', 25) every 20 ticks for an hour, drawn as a pulsing red ring.
+    - Far off: on the hour, a FAR_CHANCE (6%) of gunshots or a scream 25-45 tiles away, logged with a compass direction. It's real noise, so it moves the dead out there.
+    - All rolls use hashRoll, not the sim RNG.
+  - Seen on the way: a colony nobody plays starves by day 3 in a fresh Settler world. That was already so before this branch (checked against the windows merge), so it's not from this change. The harness's scripted player keeps colonies alive for weeks.
+  - tests/timeline.test.ts (6). Colony harness: days 25, 23, 18. Solo (Apocalypse, mains off from the start): days 2, 3, 3, as before. Bench unchanged (0.74 ms busy). 718 tests. The helicopter's drawing hasn't been seen in the browser yet (an unplayed colony is dead before it comes).

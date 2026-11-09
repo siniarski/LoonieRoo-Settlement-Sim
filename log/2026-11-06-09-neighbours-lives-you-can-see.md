@@ -1,0 +1,16 @@
+- **2026-11-06, neighbours' lives you can see (branch settlements-life).** Item 2 of "Do 1-4": settlements had full off-screen lives (food, raids, splits, help) and survivors had story tasks, but nothing between settlements was visible, and they never asked you for anything in person.
+  - Caravans (caravans.ts):
+    - What a fed neighbour sends a starving one now goes by caravan: a marker like a herd, a tile every 6 ticks in a straight line. So do allies' food runs (to a merely hungry ally) and the thanks for an errand or a radio request (radio.ts used to drop the thanks at your feet).
+    - The road: each hour there's a chance the dead catch it (3% an hour, more as the days go on and with the zombie setting). One of its people is lost, and a share of the load with them. Lose all three and it's gone, and what's left lies in the road as items.
+    - Arriving, food goes into the settlement's stores (the two warm to each other) or is set down at your place.
+    - Drawn as a cart with its people where you can see; on the map and minimap on ground you've seen.
+  - Alliances and feuds (settlements.ts): ties at ALLY 40 or better make allies, at FEUD -40 or worse a feud. The news says when either starts or ends.
+    - Feuding neighbours raid each other about one day in twelve, fed or not.
+    - How you're seen spills over: what you do for or to one, its allies feel half as much, and those feuding with it a quarter as much the other way. So raiding a settlement turns its allies against you too.
+    - The neighbours panel lists each one's allies and feuds.
+  - Errands (errands.ts): talking to a neighbour's people in person (once a day each, not hostile, nothing open with you) makes them ask for something half the time:
+    - clear a nest of the dead (4 static zombies) near a spot 18-36 tiles from them;
+    - or find one of theirs who went missing near a spot (be within 2 tiles of it).
+    - The deal: within 4 days for +25 reputation and a caravan of thanks (3 food and two useful things), and the missing one goes home (+1 person). Let it lapse and it's -5. One errand at a time per settlement.
+    - Marked on the map in orange with what it is and who asked, listed in the neighbours panel with the days left, and dotted on the minimap.
+  - tests/neighbours.test.ts (9). 755 tests.

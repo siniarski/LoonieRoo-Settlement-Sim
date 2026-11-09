@@ -1,0 +1,6 @@
+- **2026-11-06, playtest prep (branch playtest-prep).** Item 1 of "Do 1-4", done last.
+  - "Start here" rewritten for today: what the game is now, the schema (71), the next steps (the playtest with a list of what to try; then a very large stress test before any scale or storey work, as the player asked; rendering last), and the full controls including C sneak, the car keys, the map, stash and errands.
+  - The in-game key list (K) and input.ts's header list the new keys.
+  - The solo harness drives: with its next crate over 30 tiles off by day and a fuelled car within 15 tiles, it walks to the car, gets in, steers by heading toward the crate (slowing for sharp turns), brakes within 3 tiles and gets out. Out of fuel, wrecked, night, or stuck for 60 ticks, it gets out and walks. Seed 2 drove 40 tiles west in about 80 ticks, parked and searched.
+  - Checked in the browser: the character screen (8 points for a student now), the boot panel next to a car (0 / 40 kg), the stash button on a bag item, stashing food into the boot (the command log shows take, then stash), the key list. No console errors.
+  - Not checked by eye: caravans and errands in the world and on the map. They take days of play or a talk with a neighbour's people to come up; tests cover them.
