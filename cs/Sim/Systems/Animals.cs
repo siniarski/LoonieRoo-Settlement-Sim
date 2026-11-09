@@ -2,7 +2,7 @@
 // Wild animals: deer to hunt, and a small food chain round them.
 //
 //   deer    most mornings (a hash of the day) a deer wanders in at the edge of explored ground,
-//           browses about (a step every DEER_STEP_EVERY ticks), keeps clear of people, and leaves
+//           browses about (a tile every DEER_STEP_EVERY ticks on average), keeps clear of people, and leaves
 //           after DEER_STAYS. VENISON when brought down.
 //   rabbits nibble about on open ground near your people and bolt from anything that moves near
 //           (people, wolves, bears, the dead) within FLEE. Where there are two or more close
@@ -14,6 +14,8 @@
 //           A pack follows its leader; a wolf badly hurt runs.
 //   bears   rare (BEAR_CHANCE a day), slow and very tough. They wander, eat what they catch, and
 //           maul anyone who comes within BEAR_CLOSE.
+// They move freely (Walkers.cs: continuous positions at any angle, sliding along walls, A* only where
+// the straight way is blocked); PACE is a walking speed (ticks a tile), and reach is between `at`s.
 // Only near your people: animals turn up round them (a hash of the hour and the survivor) and are
 // gone once nobody of yours is within WILD_RADIUS (they wandered off), so a bigger world costs
 // nothing extra. Rolls are hashes (hash.ts), not the sim RNG, so adding wildlife shifts nothing else.
@@ -68,7 +70,7 @@ public static partial class Animals
 
     public static readonly JsRecord<double> HEALTH = new() { ["rabbit"] = 20, ["wolf"] = 150, ["bear"] = 700 };
 
-    /// <summary>Ticks a tile, by kind.</summary>
+    /// <summary>Ticks a tile, by kind: how fast each walks (Walkers.speedOf).</summary>
     public static readonly JsRecord<double> PACE = new() { ["deer"] = DEER_TICKS_PER_TILE, ["rabbit"] = 3, ["wolf"] = 4, ["bear"] = 7 };
 
     public const int WILD_RADIUS = 70;
@@ -164,11 +166,8 @@ public static partial class Animals
     }
     public static bool ground(SimState state, double x, double y) => ground(state, Js.I(x), Js.I(y));
 
-    /// <summary>A step from one tile to the next that an animal can take (no walls between).</summary>
-    public static bool canStep(SimState state, Point a, Point b)
-    {
-        return ground(state, b.x, b.y) && Pathfinding.crossable(state.grid, a.x, a.y, b.x, b.y, "zombie");
-    }
+    /// <summary>A* plans animals may make in one tick, all told (rule 14; most walks are straight and need none).</summary>
+    public const int PLANS_PER_TICK = 4;
 
     public static void updateAnimals(SimState state)
     {
@@ -186,6 +185,7 @@ public static partial class Animals
         {
             hourly(state);
         }
+        var budget = new WalkBudget { plans = PLANS_PER_TICK };
         foreach (var a in Js.Iter((state.animals).ToList()))
         {
             if (!state.animals.includes(a))
@@ -201,31 +201,24 @@ public static partial class Animals
             {
                 a.hunger += 1;
             }
-            if (Js.T(a.move))
-            {
-                a.move.progress += 1;
-                if (a.move.progress < a.move.duration)
-                {
-                    continue;
-                }
-                a.pos = a.move.to;
-                a.move = null;
-            }
+            // A free mover (Walkers.cs): if something moved it by tile (an eviction), `at` follows.
+            a.move = null;
+            Motion.followTile(a);
             if (!ground(state, a.pos.x, a.pos.y) && !offGround(state, a))
             {
                 continue;
             }
             if (a.kind == "deer")
             {
-                deer(state, a);
+                deer(state, a, budget);
             }
             else if (a.kind == "rabbit")
             {
-                rabbit(state, a);
+                rabbit(state, a, budget);
             }
             else
             {
-                predator(state, a);
+                predator(state, a, budget);
             }
         }
     }
@@ -241,103 +234,108 @@ public static partial class Animals
         }
         a.pos = @out;
         /*TODO Object.assign*/Js.Object_assign(a, Motion.placedAt(@out));
+        a.goal = null;
+        a.path = [];
         return true;
     }
 
-    public static void step(Animal a, Point to, double? pace = null)
+    /// <summary>Its walking speed, SUB units a tick (PACE ticks a tile).</summary>
+    public static double speedOf(Animal a)
     {
-        pace ??= Js.Get(PACE, a.kind);
-        a.move = new Movement { from = Js.Clone(a.pos), to = Js.Clone(to), progress = 0, duration = Js.NN(pace) };
+        return Walkers.speedOf(Js.Get(PACE, a.kind));
     }
 
-    /// <summary>The neighbour that's furthest from (or nearest to) a point, of those an animal can step to.</summary>
-    public static Point? stepAway(SimState state, Animal a, Point from, bool toward = false)
+    /// <summary>Walk on to its goal, if it has one; it stands again (no goal) once there, or if it can't get on.</summary>
+    public static void walkOn(SimState state, Animal a, double speed, WalkBudget budget)
     {
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => canStep(state, a.pos, p));
-        if (options.length == 0)
-        {
-            return null;
-        }
-        options.sort((p, q) => Js.T(toward) ? (Space.manhattan(p, from) - Space.manhattan(q, from)) : (Space.manhattan(q, from) - Space.manhattan(p, from)));
-        return Js.NN(Js.Get(options, 0));
-    }
-
-    public static void wander(SimState state, Animal a, double every)
-    {
-        if ((state.tick % every) != 0)
+        if (!Js.T(a.goal))
         {
             return;
         }
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => canStep(state, a.pos, p));
-        if (options.length > 0)
+        var was = a.at;
+        if (Walkers.walkTo(state, a, a.goal, speed, Pathfinding.ANIMAL, budget) || ((a.at.x == was.x) && (a.at.y == was.y)))
         {
-            step(a, Js.NN(Js.Get(options, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(a.id), state.tick)) * (options.length))))));
+            a.goal = null;
         }
     }
 
-    public static void deer(SimState state, Animal a)
+    /// <summary>Away from a point (SUB units), `tiles` at a time: a new leg when it has none, or every `every` ticks (the threat moves).</summary>
+    public static void flee(SimState state, Animal a, Point from, double tiles, double every, WalkBudget budget)
     {
-        if ((state.tick % DEER_STEP_EVERY) != 0)
+        if (!Js.T(a.goal) || ((state.tick % every) == 0))
         {
-            return;
+            a.goal = Walkers.fleeLeg(state, a, from, tiles, Pathfinding.ANIMAL);
+            a.path = [];
         }
-        var options = Grids.neighbours4(state.grid, a.pos.x, a.pos.y).filter((p) => ground(state, p.x, p.y));
-        if (options.length == 0)
-        {
-            return;
-        }
-        var near = state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= DEER_WARY);
-        var to = Js.T(near) ? Js.NN(Js.Get(options.sort((p, q) => Space.manhattan(q, near.pos) - Space.manhattan(p, near.pos)), 0)) : Js.NN(Js.Get(options, JsMath.floor(((double)(Hash.hashRoll(Hash.idNumber(a.id), state.tick)) * (options.length)))));
-        step(a, to);
+        a.restUntil = state.tick;
+        walkOn(state, a, speedOf(a), budget);
     }
 
-    public static void rabbit(SimState state, Animal a)
+    /// <summary>Wander (graze, roam): once it's stood long enough, a walk 1 to 3 tiles off at any angle, then a stand, so it goes a tile every `every` ticks on average (as the tile steps did).</summary>
+    public static void wander(SimState state, Animal a, double every, WalkBudget budget)
     {
-        var threat = (state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= FLEE)?.pos ?? state.animals.find((o) => ((o.kind == "wolf") || (o.kind == "bear")) && (Space.manhattan(o.pos, a.pos) <= FLEE))?.pos) ?? ((Zombies.zombiesWithin(state, a.pos, FLEE) > 0) ? state.zombies.find((z) => Space.manhattan(z.pos, a.pos) <= FLEE)?.pos : null);
+        if (!Js.T(a.goal) && (state.tick >= a.restUntil))
+        {
+            a.goal = Walkers.wanderLeg(state, a, Pathfinding.ANIMAL);
+            a.path = [];
+            a.restUntil = state.tick + (Js.T(a.goal) ? JsMath.floor(((double)(JsMath.sqrt(Motion.distance2(a.goal, a.at))) * (every)) / Motion.SUB) : every);
+        }
+        walkOn(state, a, speedOf(a), budget);
+    }
+
+    /// <summary>Deer browse about, and every DEER_STEP_EVERY ticks with someone within DEER_WARY walk a tile away from them (wary, not fast).</summary>
+    public static void deer(SimState state, Animal a, WalkBudget budget)
+    {
+        if ((state.tick % DEER_STEP_EVERY) == 0)
+        {
+            var near = state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= DEER_WARY);
+            if (Js.T(near))
+            {
+                a.goal = Walkers.fleeLeg(state, a, near.at, 1, Pathfinding.ANIMAL);
+                a.path = [];
+                a.restUntil = state.tick + DEER_STEP_EVERY;
+            }
+        }
+        wander(state, a, DEER_STEP_EVERY, budget);
+    }
+
+    /// <summary>What a rabbit bolts from: someone, a wolf or bear, or one of the dead within FLEE tiles. Where it is, SUB units.</summary>
+    public static Point? rabbitThreat(SimState state, Animal a)
+    {
+        return (state.survivors.find((s) => Space.manhattan(s.pos, a.pos) <= FLEE)?.at ?? state.animals.find((o) => ((o.kind == "wolf") || (o.kind == "bear")) && (Space.manhattan(o.pos, a.pos) <= FLEE))?.at) ?? ((Zombies.zombiesWithin(state, a.pos, FLEE) > 0) ? state.zombies.find((z) => Space.manhattan(z.pos, a.pos) <= FLEE)?.at : null);
+    }
+
+    public static void rabbit(SimState state, Animal a, WalkBudget budget)
+    {
+        var threat = rabbitThreat(state, a);
         if (Js.T(threat))
         {
-            var to = stepAway(state, a, threat);
-            if (Js.T(to))
-            {
-                step(a, to);
-            }
+            flee(state, a, threat, 3, 6, budget);
             return;
         }
-        wander(state, a, 12);
+        wander(state, a, 12, budget);
     }
 
-    public static void predator(SimState state, Animal a)
+    public static void predator(SimState state, Animal a, WalkBudget budget)
     {
         var hp = Js.Q(a.health, 0);
         var hurt = hp < ((double)(Js.Get(HEALTH, a.kind)) * (0.3));
         var nearest = closestSurvivor(state, a.pos);
         if ((Js.T(hurt && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
-            var to_1 = stepAway(state, a, nearest.pos);
-            if (Js.T(to_1))
-            {
-                step(a, to_1);
-            }
+            flee(state, a, nearest.at, 3, 8, budget);
             return;
         }
         if ((Js.T((((Js.Q(a.backOffUntil, 0)) > state.tick) && !Js.T(a.angryAt)) && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= 8))
         {
-            var to_2 = stepAway(state, a, nearest.pos);
-            if (Js.T(to_2))
-            {
-                step(a, to_2);
-            }
+            flee(state, a, nearest.at, 3, 8, budget);
             return;
         }
         var target = chooseTarget(state, a, nearest);
         a.targetId = target?.id ?? null;
         if ((Js.T((!Js.T(target) && (a.kind == "wolf")) && Js.T(nearest))) && (Space.manhattan(nearest.pos, a.pos) <= WOLF_WARY))
         {
-            var to_3 = stepAway(state, a, nearest.pos);
-            if (Js.T(to_3))
-            {
-                step(a, to_3);
-            }
+            flee(state, a, nearest.at, 3, 8, budget);
             return;
         }
         if (!Js.T(target))
@@ -345,25 +343,25 @@ public static partial class Animals
             var leader = (Js.T(a.packId) && (a.packId != a.id)) ? state.animals.find((o) => o.id == a.packId) : null;
             if (Js.T(leader) && (Space.manhattan(leader.pos, a.pos) > 2))
             {
-                var to_4 = stepAway(state, a, leader.pos, true);
-                if (Js.T(to_4))
-                {
-                    step(a, to_4);
-                }
+                a.goal = null;
+                Walkers.walkTo(state, a, leader.at, speedOf(a), Pathfinding.ANIMAL, budget, (double)(2) * (Motion.SUB));
                 return;
             }
-            wander(state, a, (a.kind == "bear") ? 25 : 15);
+            wander(state, a, (a.kind == "bear") ? 25 : 15, budget);
             return;
         }
-        if (Space.manhattan(target.pos, a.pos) <= 1)
+        a.goal = null;
+        if (Motion.inReach(a, target, Motion.REACH, state.grid))
         {
             attack(state, a, target);
             return;
         }
-        var to = stepAway(state, a, target.pos, true);
-        if (Js.T(to))
+        // Run it down: straight at it (A* round what's in the way), stopping just inside reach, and
+        // bite as it gets there (else a fleeing rabbit is always a step out of reach by its next turn).
+        Walkers.walkTo(state, a, target.at, (a.kind == "wolf") ? Walkers.speedOf(WOLF_SPRINT) : speedOf(a), Pathfinding.ANIMAL, budget, Motion.REACH - 16);
+        if (Motion.inReach(a, target, Motion.REACH, state.grid))
         {
-            step(a, to, (a.kind == "wolf") ? WOLF_SPRINT : Js.Get(PACE, a.kind));
+            attack(state, a, target);
         }
     }
 

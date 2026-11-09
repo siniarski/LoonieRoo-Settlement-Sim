@@ -5,9 +5,10 @@
 //
 // What the sim gives: where each one is (at, was) and nothing about how it moves, so the clip is
 // chosen by its speed (idle, walk, run, with some hysteresis; the rate scaled by the speed each clip
-// was made at, from <kind>.json), facing the way it moves. Animals step a tile at a time and stand
-// between steps (a deer one step in 20 ticks), so the speed is eased slowly and the walk carries on
-// through the pauses. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
+// was made at, from <kind>.json), facing the way it moves. Animals and dogs are free movers (the
+// sim's Walkers.cs: they walk at any angle at a steady pace, and stand still to graze or wait), so the
+// speed is eased only enough to hide a tick's jitter, the facing turns towards the velocity, and an
+// animal that stops really stands (idle) until it walks on. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
 // (dogs): the attack plays once, turned to whoever it bit. Killed animals leave the sim at once (the
 // meat goes to whoever brought it down), so there's no carcass to draw.
 //
@@ -184,13 +185,14 @@ public sealed class AnimalModels
         m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y), (float)p.y);
         double dx = w.at.x - w.was.x, dy = w.at.y - w.was.y;
         double speed = Math.Sqrt(dx * dx + dy * dy) / Motion.SUB * PoseIntents.TICKS_PER_SECOND;
-        // Eased slowly: animals move a tile and stand, and the walk should carry through the pauses.
-        m.speed += (speed - m.speed) * Math.Min(1, delta * (speed > m.speed ? 6 : 2.5));
+        // Eased a little (a tick's jitter, a turn round a corner); a stop is a real stand.
+        m.speed += (speed - m.speed) * Math.Min(1, delta * (speed > m.speed ? 10 : 6));
         // The model's front is +Z: a heading (cos h, sin h) on the grid's (x, z) is a turn of atan2(cos h, sin h).
         if (speed > 0.15)
         {
             float want = (float)Math.Atan2(dx, dy);
-            m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * 8)) : want;
+            // Turn towards the way it's going: quicker the faster it goes (a bolting rabbit turns on the spot).
+            m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * (6 + 2 * speed))) : want;
         }
         else if (!m.placed) m.yaw = (float)(Hash01(w.id, 9) * Math.PI * 2);
 

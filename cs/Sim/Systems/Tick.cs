@@ -153,11 +153,11 @@ public static partial class Tick
         return (List<Body>)[.. state.survivors, .. state.zombies, .. state.dogs, .. state.animals, .. state.residents];
     }
 
-    /// <summary>Moving under its own steering, not tile steps (motion.ts).</summary>
+    /// <summary>Moving under its own steering, not tile steps (motion.ts): the dead, animals and dogs (Walkers.cs), and you.</summary>
     public static bool isFree(SimState state, Body e)
     {
         var id = ((IHasId)(e)).id ?? "";
-        return id.startsWith("z") || ((state.control != null) && (id == state.control.survivorId));
+        return id.startsWith("z") || (e is Animal) || (e is Dog) || ((state.control != null) && (id == state.control.survivorId));
     }
 
     public static void step(SimState state, double ticks)

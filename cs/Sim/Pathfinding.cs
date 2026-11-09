@@ -1,7 +1,8 @@
 // A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening (pathfinding.ts).
 // Deterministic: ties broken by lower h, then insertion order; neighbours expanded N, E, S, W.
 // Movers: "survivor" (colonists: any door), "free" (you: doors open), "zombie", "breacher" (batters
-// through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle".
+// through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
+// "animal" (wild animals: open floor only; through open doors and broken windows, never onto a door's tile).
 using System.Runtime.CompilerServices;
 using static LoonieRoo.Sim.Grids;
 
@@ -9,7 +10,7 @@ namespace LoonieRoo.Sim;
 
 public static partial class Pathfinding
 {
-    public const string SURVIVOR = "survivor", FREE = "free", ZOMBIE = "zombie", BREACHER = "breacher", RAIDER = "raider", CRAWLER = "crawler", VEHICLE = "vehicle";
+    public const string SURVIVOR = "survivor", FREE = "free", ZOMBIE = "zombie", BREACHER = "breacher", RAIDER = "raider", CRAWLER = "crawler", VEHICLE = "vehicle", ANIMAL = "animal";
 
     public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
@@ -17,7 +18,7 @@ public static partial class Pathfinding
         var tile = getTile(grid, x, y);
         bool openDoor = tile == DOOR && isOpen(grid, x, y);
         if (mover == CRAWLER) return tile == FLOOR || tile == BARRICADE || openDoor;
-        if (mover == VEHICLE) return tile == FLOOR;
+        if (mover == VEHICLE || mover == ANIMAL) return tile == FLOOR;
         if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
         if (mover == SURVIVOR) return isWalkable(grid, x, y);
         if (mover == FREE) return tile == FLOOR || tile == BARRICADE || openDoor;
@@ -44,8 +45,8 @@ public static partial class Pathfinding
     /// <summary>Path from start to goal, excluding start, including goal; [] if already there; null if unreachable.</summary>
     public static List<Point>? findPath(Grid grid, Point start, Point goal) => findPathToAny(grid, start, new[] { goal });
 
-    /// <summary>Shortest path to whichever goal is nearest. Unwalkable goals are ignored.</summary>
-    public static List<Point>? findPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR)
+    /// <summary>Shortest path to whichever goal is nearest. Unwalkable goals are ignored. `maxExpand`: give up (null) after expanding this many tiles (a bounded search, for movers that only look nearby).</summary>
+    public static List<Point>? findPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR, int maxExpand = int.MaxValue)
     {
         if (!inBounds(grid, start.x, start.y)) return null;
         var targets = goals.Where(g => isPassable(grid, g.x, g.y, mover)).ToList();
@@ -86,6 +87,7 @@ public static partial class Pathfinding
             if (goalSet.Contains(current)) return Reconstruct(cameFrom, current, width);
             if (closed[current] == gen) continue;
             closed[current] = gen;
+            if (--maxExpand < 0) return null;
             int cx = current % width;
             int cy = current / width;
             double g = GOf(current) + 1;

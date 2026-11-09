@@ -48,6 +48,14 @@ public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
     public double? nextBite { get; set; }
     /// <summary>When it last bit one of yours (menace: guards go for it a while after).</summary>
     public double? bitTick { get; set; }
+    /// <summary>Where it's walking to (SUB units: it's a free mover, Walkers.cs), or nothing (standing).</summary>
+    public Point? goal { get; set; }
+    /// <summary>Tile waypoints, when the straight way to its goal is blocked (A*).</summary>
+    public List<Point> path { get; set; } = new();
+    /// <summary>No new A* plan before this tick.</summary>
+    public double nextPlan { get; set; }
+    /// <summary>Grazing (or wandering): it stands until this tick before the next walk.</summary>
+    public double restUntil { get; set; }
 }
 
 public partial class Blueprint : IHasId
@@ -225,6 +233,8 @@ public partial class Dog : Body, IHasId, IHasAt, IHasPos, IBody
     public double nextThinkTick { get; set; }
     public double barkedTick { get; set; }
     public bool waiting { get; set; }
+    /// <summary>Following someone: where they were (SUB units: a free mover, Walkers.cs), until it's caught up.</summary>
+    public Point? goal { get; set; }
 }
 
 public partial class DormantZombie : IHasId
