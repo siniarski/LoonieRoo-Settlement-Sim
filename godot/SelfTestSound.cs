@@ -1,6 +1,7 @@
 // The self-test's second round of sound steps (2026-11-09; SoundTest in SelfTest.cs calls them): the
 // sounds are made off the main thread; a wall, a shut door and an open one between you and a sound;
-// your steps when you walk and the swing when you click; a gun firing, glass breaking, an alarm
+// your steps from your own feet walking, running and backing off, a zombie's steps, each ground's step,
+// and the swing when you click; a gun firing, glass breaking, an alarm
 // ringing, rain. Each puts back what it changed in state. Nothing here is heard: the checks are on
 // what was played, from where, and through which bus.
 
@@ -114,17 +115,80 @@ public partial class Game
             rain > -60 && dryRain <= -60 && roofRain < rain && stormWind > calmWind && insects > -60 && winterInsects <= -60,
             $"rain {rain} dB, under a roof {roofRain}; wind {calmWind} -> {stormWind} in a storm; insects {insects}, in winter {winterInsects}");
 
-        // Your steps and your swing: walk a second, then swing at the air.
+        // Your steps: from your own body's footfalls (Footfalls.cs), walking, running and backing off. A step is
+        // on a foot that's down: the clip's ankle within 5 cm of its lowest, the drawn one no higher than the other.
         view.paused = false;
+        var people = firstPerson.People;
         int steps0 = sounds.yours.Steps, swings0 = sounds.yours.Swings;
-        var at0 = you.at;
-        SendKey(Godot.Key.W, true);
-        await Frames(60);
-        SendKey(Godot.Key.W, false);
-        await Frames(3);
-        you = ControlMod.controlled(state)!;
-        double moved = Math.Sqrt(Math.Pow(you.at.x - at0.x, 2) + Math.Pow(you.at.y - at0.y, 2)) / Motion.SUB;
-        Check("Walking, your steps are heard", sounds.yours.Steps > steps0, $"{sounds.yours.Steps - steps0} steps on {sounds.yours.LastSurface} over {moved:0.0} m");
+        static bool Down(World3D.People.YourStep s) => s.clipH <= 0.05f && s.drawnH <= s.otherH + 0.01f;
+        static string Trace(System.Collections.Generic.List<World3D.People.YourStep> l) =>
+            string.Join("; ", l.Select((s) => $"{(s.foot == 0 ? "L" : "R")} {s.clip[8..]}@{s.at:0.00} +{s.clipH * 100:0}cm {s.drawnH * 100:0}/{s.otherH * 100:0}"));
+        static double Gap(System.Collections.Generic.List<World3D.People.YourStep> l) =>
+            l.Count < 2 ? 0 : (l[^1].ms - l[0].ms) / (double)(l.Count - 1);
+        async System.Threading.Tasks.Task<(System.Collections.Generic.List<World3D.People.YourStep>, double)> Walk(Godot.Key key, bool run, int frames)
+        {
+            you = ControlMod.controlled(state)!;
+            var from = you.at;
+            people.YourSteps.Clear();
+            if (run) SendKey(Godot.Key.Shift, true);
+            SendKey(key, true);
+            await Frames(frames);
+            SendKey(key, false);
+            if (run) SendKey(Godot.Key.Shift, false);
+            await Frames(20);
+            you = ControlMod.controlled(state)!;
+            return (people.YourSteps.ToList(), Math.Sqrt(Math.Pow(you.at.x - from.x, 2) + Math.Pow(you.at.y - from.y, 2)) / Motion.SUB);
+        }
+        var (walk, walkM) = await Walk(Godot.Key.W, false, 90);
+        Check("Walking, your steps are heard as your feet come down", sounds.yours.Steps > steps0 && walk.Count >= 2 && walk.All(Down),
+            $"{walk.Count} steps on {sounds.yours.LastSurface} over {walkM:0.0} m, every {Gap(walk):0} ms: {Trace(walk)}");
+        var (run, runM) = await Walk(Godot.Key.W, true, 90);
+        Check("Running, your steps come quicker, still on your feet", run.Count >= 2 && run.All(Down) && Gap(run) < Gap(walk) && sounds.yours.LastGait is "jog" or "sprint",
+            $"{run.Count} steps over {runM:0.0} m, every {Gap(run):0} ms ({sounds.yours.LastGait}): {Trace(run)}");
+        var (back, backM) = await Walk(Godot.Key.S, false, 60);
+        Check("Backing off, your steps come from the clip played backwards", backM < 0.8 || (back.Count >= 1 && back.All(Down)),
+            $"{back.Count} steps over {backM:0.0} m: {Trace(back)}");
+
+        // Others' steps: a zombie coming at you from six tiles off is heard walking, from its feet.
+        var zdir = state.control!.aim ?? state.control.facing;
+        var zspot = Space.nearestTile(state.grid, new Point { x = you.pos.x + Math.Sign(zdir.x) * 6, y = you.pos.y + Math.Sign(zdir.y) * 6 }, (x, y) => Grids.getTile(state.grid, x, y) == Grids.FLOOR && Math.Abs(x - you.pos.x) + Math.Abs(y - you.pos.y) >= 4);
+        if (zspot == null) Check("Floor for a zombie to walk at you", false);
+        else
+        {
+            var walker = Zombies.addZombie(state, zspot.x, zspot.y, 100, "static");
+            walker.targetId = you.id;
+            int heard0 = sounds.Count("step"), its = 0;
+            for (int i = 0; i < 120 && its < 2; i++)
+            {
+                await Frames(1);
+                its += people.Steps.Count((f) => f.bodyId == walker.id);
+            }
+            Check("A zombie walking at you is heard stepping", its >= 1 && sounds.Count("step") > heard0, $"its footfalls {its}, others' steps heard {sounds.Count("step") - heard0}");
+            Zombies.damageZombie(state, walker, 1000, you);
+            await Frames(2);
+        }
+
+        // Each ground its own steps: the surface under a foot, on a little grid of its own (a row of every ground,
+        // and water with a bank and a bridge beside it), and every surface's sound different from the others.
+        var sg = Grids.createGrid(Grids.GROUNDS.Length, 3);
+        for (int i = 0; i < Grids.GROUNDS.Length; i++) sg.ground[i] = i;
+        sg.tiles[2 * sg.width + 5] = Grids.WATER;
+        sg.ground[2 * sg.width + 6] = Array.IndexOf(Grids.GROUNDS, "bridge");
+        var under = Enumerable.Range(0, Grids.GROUNDS.Length).Select((i) => Yours.Surface(sg, i + 0.5, 0.5)).ToList();
+        string inWater = Yours.Surface(sg, 5.5, 2.5), bank = Yours.Surface(sg, 4.85, 2.5), dry = Yours.Surface(sg, 4.4, 2.5), bridge = Yours.Surface(sg, 6.1, 2.5);
+        var feats = SynthSteps.SURFACES.Select((g) =>
+        {
+            var w = (AudioStreamWav)sounds.Kind("step_" + g)[0];
+            var d = w.Data;
+            int zc = 0;
+            for (int j = 2; j + 1 < d.Length; j += 2) if (((short)(d[j] | (d[j + 1] << 8)) >= 0) != ((short)(d[j - 2] | (d[j - 1] << 8)) >= 0)) zc++;
+            return (g, data: d, len: d.Length / 2 / (double)Synth.RATE, zcr: zc / (d.Length / 2 / (double)Synth.RATE));
+        }).ToList();
+        bool distinct = feats.All((a) => feats.All((b) => ReferenceEquals(a.data, b.data) || a.g == b.g || !a.data.SequenceEqual(b.data)));
+        Check("Each ground has its own step, and shallow water too",
+            under.SequenceEqual(Grids.GROUNDS.Select((g) => "step_" + g)) && inWater == "step_water" && bank == "step_water" && dry == "step_grass" && bridge == "step_bridge" && distinct,
+            $"water {inWater}, bank {bank}, a step back {dry}, bridge {bridge}; " + string.Join(", ", feats.Select((f) => $"{f.g} {f.len:0.00}s {f.zcr / 1000:0.0}k zc/s")));
+
         state.control!.nextSwing = 0;
         await Click(GetViewport().GetVisibleRect().Size / 2);
         await Frames(4);

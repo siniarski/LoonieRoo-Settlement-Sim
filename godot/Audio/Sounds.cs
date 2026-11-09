@@ -12,6 +12,9 @@
 // window edge turning broken), the far-off shots and screams and lightning (asked of the sim's pure
 // reads, TimelineMod.farNoiseAt and Seasons.lightningAt, for each tick run). Loops.cs: alarms,
 // engines, generators, the helicopter. Ambience.cs: wind, rain, the night. Yours.cs: your steps and swing.
+// Others' steps (the living and the dead near you, drawn as models): each foot that comes down in its clip
+// (People's footfalls, Footfalls.cs), on the ground under it (Yours.Surface), from the foot; the quietest kind,
+// and at most STEP_VOICES of the pool at once, so a crowd's feet don't crowd out the moans.
 // A pool of VOICES players for the one-shots; each follows the body it speaks for until it's done.
 // The sounds are Bank's (made off the main thread at startup; nothing plays until they're ready).
 
@@ -39,6 +42,11 @@ public sealed partial class Sounds : Node3D
     const float MOUTH = 1.55f, CHEST = 1.2f;
     /// <summary>A playing voice looks again at what's between it and you this often (frames).</summary>
     const int MUFFLE_EVERY = 8;
+    /// <summary>Others' steps: heard within STEP_RANGE m, louder than yours by STEP_DB (they're heard from metres off,
+    /// yours at the ear), at most STEP_VOICES playing at once.</summary>
+    const float STEP_RANGE = 20, STEP_DB = 6;
+    const int STEP_VOICES = 5;
+    static readonly Spec STEP = new(2, STEP_RANGE, 0, 0);
 
     /// <summary>How a kind is heard: full loudness within `unit` m (then inverse distance), nothing past `range` m,
     /// its level (dB), and how much it matters when voices run short.</summary>
@@ -97,7 +105,7 @@ public sealed partial class Sounds : Node3D
     {
         _ = Volume.Level; // sets the master bus from the settings file
         Muffle.Buses();
-        foreach (var key in new[] { "notice", "idle", "hit", "kill", "scream", "gunshot", "glass" }) Played[key] = 0;
+        foreach (var key in new[] { "notice", "idle", "hit", "kill", "scream", "gunshot", "glass", "step" }) Played[key] = 0;
         for (int i = 0; i < VOICES; i++)
         {
             voices[i] = new Voice();
@@ -112,8 +120,9 @@ public sealed partial class Sounds : Node3D
     /// <summary>The streams of a kind (the self-test writes the made ones out to listen to).</summary>
     public AudioStream[] Kind(string kind) => bank.Get(kind);
 
-    public void Update(SimState state, double alpha, Survivor you)
+    public void Update(SimState state, double alpha, Survivor you, IReadOnlyList<World3D.Footfall>? footfalls = null)
     {
+        footfalls ??= Array.Empty<World3D.Footfall>();
         updatedFrame = Engine.GetProcessFrames();
         if (!bank.Poll()) return;
         frame++;
@@ -174,7 +183,8 @@ public sealed partial class Sounds : Node3D
         noises.Update(state, alpha, you, me, fresh, lastTick);
         loops.Update(state, alpha, me, frame);
         ambience.Update(state, you, fresh, lastTick);
-        yours.Update(state, you, fresh);
+        yours.Update(state, you, fresh, footfalls);
+        if (!fresh) Steps(state, footfalls, me);
         last = state;
         lastTick = state.tick;
     }
@@ -189,6 +199,23 @@ public sealed partial class Sounds : Node3D
         }
     }
 
+    /// <summary>Others' feet that came down this frame, each on its own ground.</summary>
+    void Steps(SimState state, IReadOnlyList<World3D.Footfall> footfalls, P me)
+    {
+        foreach (var f in footfalls)
+        {
+            if (f.you) continue;
+            int busy = 0;
+            foreach (var v in voices) if (v.player.Playing && v.priority == 0) busy++;
+            if (busy >= STEP_VOICES) return;
+            var at = new P(f.at.X, f.at.Z);
+            var (db, _) = Yours.Gait(f.gait);
+            // The dead drag their feet a little lower; the pick varies the variant and pitch by body and foot.
+            Play(state, Yours.Surface(state.grid, at.x, at.y), null, at, 0.05f, me,
+                Hash.idNumber(f.bodyId) * 7 + state.tick * 2 + f.foot, db + STEP_DB + (f.dead ? 1 : 0));
+        }
+    }
+
     bool Speaking(string id)
     {
         foreach (var v in voices) if (v.follows == id && v.player.Playing) return true;
@@ -199,7 +226,7 @@ public sealed partial class Sounds : Node3D
     /// Takes a free voice, else the one playing the least important sound if it's less important than this.</summary>
     public void Play(SimState state, string kind, string? follows, P at, float height, P listener, double pick, float extraDb = 0)
     {
-        var spec = SPECS[kind];
+        var spec = SpecOf(kind);
         if (Dist(at, listener) > spec.range) return;
         Voice? use = null;
         foreach (var v in voices)
@@ -226,9 +253,11 @@ public sealed partial class Sounds : Node3D
         LastAt = use.player.Position;
         LastKind = kind;
         LastMuffle = muffle;
-        string key = kind == "moan_idle" ? "idle" : kind == "moan_notice" ? "notice" : kind;
+        string key = kind == "moan_idle" ? "idle" : kind == "moan_notice" ? "notice" : kind.StartsWith("step_") ? "step" : kind;
         Played[key] = Count(key) + 1;
     }
+
+    static Spec SpecOf(string kind) => SPECS.TryGetValue(kind, out var s) ? s : STEP;
 
     /// <summary>How many of a kind have played.</summary>
     public int Count(string key) => Played.TryGetValue(key, out var n) ? n : 0;
