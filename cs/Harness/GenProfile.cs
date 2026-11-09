@@ -108,6 +108,48 @@ public class GenProfile
         }
     }
 
+    /// <summary>The world plan's steps, each timed and with the managed heap after it, then the sim state (createState:
+    /// the grid) on its own, at sizes up to the scale target (10,000). The plan's steps are run as makePlan runs them.</summary>
+    [Fact(DisplayName = "gen profile big")]
+    public void ProfileBig()
+    {
+        var out_ = new List<string>();
+        double Mb() => GC.GetTotalMemory(true) / 1e6;
+        foreach (var size in (Env("SIZES") ?? "2048,4096").Split(',').Select(int.Parse))
+        {
+            var t = Stopwatch.StartNew();
+            double m0 = Mb();
+            var times = new List<string>();
+            void Lap(string what) { times.Add($"{what} {t.Elapsed.TotalSeconds:0.00} s ({Mb() - m0:0} MB)"); t.Restart(); }
+            try
+            {
+                var n = NatureMod.natureFor(42, size, "mainland"); Lap("nature");
+                if (Env("PLAN") == "0") goto state;
+                var land = Towns.landGrid(n); Lap("landGrid");
+                var towns = Towns.siteTowns(n, land); Lap($"siteTowns ({towns.Count})");
+                var streets = towns.flatMap((tw, i) => Towns.growStreets(n, tw, i)); Lap($"growStreets ({streets.Count})");
+                var mask = new Uint8Array((double)size * size); Lap("roadMask");
+                var roads = Worldplan.layRoads(n, towns, streets, mask); Lap($"layRoads ({roads.Count})");
+                land = null; mask = null; roads = null; streets = null; towns = null;
+                var plan = Worldplan.makePlan(n); Lap($"makePlan whole ({plan.lots.Count} lots)");
+                plan = null;
+            state:
+                GC.Collect();
+                m0 = Mb();
+                t.Restart();
+                if (Env("STATE") != "0")
+                {
+                    var state = States.createState(new NewStateOptions { seed = 42, width = size, height = size }); Lap("createState (the grid)");
+                    state = null;
+                }
+            }
+            catch (OutOfMemoryException) { times.Add("OUT OF MEMORY"); }
+            out_.Add($"size {size}: " + string.Join(", ", times));
+            File.WriteAllText(Path.Combine(Node.Root, "cs/Harness/out/gen-profile-big.txt"), string.Join("\n", out_) + "\n");
+            GC.Collect();
+        }
+    }
+
     [Fact(DisplayName = "gen profile roads")]
     public void ProfileRoads()
     {
