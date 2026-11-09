@@ -584,7 +584,7 @@ public static partial class Zombies
             return;
         }
         var v = Motion.toward(target.at.x - z.at.x, target.at.y - z.at.y, step);
-        z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+        z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));
         z.path = [];
         enter(state, z);
     }
@@ -622,9 +622,9 @@ public static partial class Zombies
             var dx = aim.x - z.at.x;
             var dy = aim.y - z.at.y;
             var v = ((((double)(dx) * (dx)) + ((double)(dy) * (dy))) <= ((double)(speed) * (speed))) ? new Point { x = Js.I(dx), y = Js.I(dy) } : Motion.toward(dx, dy, speed);
-            z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+            z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));
             var was = z.pos;
-            var reached = Motion.distance2(z.at, aim) <= ((double)(ARRIVED) * (ARRIVED));
+            var reached = (Motion.distance2(z.at, aim) <= ((double)(ARRIVED) * (ARRIVED))) || Trunks.against(state, z.at, next, Motion.BODY_RADIUS, 16);  // a tree's tile: its trunk is as near as it gets
             if (reached)
             {
                 z.path.shift();
@@ -661,7 +661,7 @@ public static partial class Zombies
             if (!onTheWay)
             {
                 var v = Motion.toward(home.x - z.at.x, home.y - z.at.y, JsMath.min(speed, JsMath.sqrt(Motion.distance2(home, z.at))));
-                z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+                z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));
                 if (!adjacent)
                 {
                     z.path = [];
@@ -845,8 +845,8 @@ public static partial class Zombies
                         var ux = (d == 0) ? 1 : ((double)((o.at.x - z.at.x)) / (d));
                         var uy = (d == 0) ? 0 : ((double)((o.at.y - z.at.y)) / (d));
                         var half = JsMath.ceil(((double)((CROWD - d)) / (2)));
-                        o.at = Motion.slide(state.grid, o.at, JsMath.round(((double)(ux) * (half))), JsMath.round(((double)(uy) * (half))), moverOf(o));
-                        z.at = Motion.slide(state.grid, z.at, -JsMath.round(((double)(ux) * (half))), -JsMath.round(((double)(uy) * (half))), moverOf(z));
+                        o.at = Motion.slide(state, o.at, JsMath.round(((double)(ux) * (half))), JsMath.round(((double)(uy) * (half))), moverOf(o));
+                        z.at = Motion.slide(state, z.at, -JsMath.round(((double)(ux) * (half))), -JsMath.round(((double)(uy) * (half))), moverOf(z));
                     }
                 }
             }
@@ -883,7 +883,7 @@ public static partial class Zombies
                 var d = JsMath.sqrt(d2);
                 var ux = (d == 0) ? 1 : ((double)((z.at.x - s.at.x)) / (d));
                 var uy = (d == 0) ? 0 : ((double)((z.at.y - s.at.y)) / (d));
-                z.at = Motion.slide(state.grid, z.at, JsMath.round(((double)(ux) * ((CROWD - d)))), JsMath.round(((double)(uy) * ((CROWD - d)))), moverOf(z));
+                z.at = Motion.slide(state, z.at, JsMath.round(((double)(ux) * ((CROWD - d)))), JsMath.round(((double)(uy) * ((CROWD - d)))), moverOf(z));
             }
         }
     }
@@ -991,7 +991,7 @@ public static partial class Zombies
         z.staggerUntil = state.tick + STAGGER_TICKS;
         z.windup = 0;
         var v = Motion.toward(z.at.x - from.x, z.at.y - from.y, (z.variant == "brute") ? ((double)(SHOVE) / (2)) : SHOVE);
-        z.at = Motion.slide(state.grid, z.at, v.x, v.y, moverOf(z));
+        z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));
         var tile = Motion.tileOf(z.at);
         if ((tile.x != z.pos.x) || (tile.y != z.pos.y))
         {

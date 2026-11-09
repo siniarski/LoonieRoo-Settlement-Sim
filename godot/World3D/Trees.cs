@@ -5,8 +5,8 @@
 // colours with alpha-cut leaf cards near. Drawn by chunk (WorldMesh.CHUNK tiles), one MultiMesh per chunk,
 // species and LOD; the LOD is the node's visibility range (to the chunk's centre), so a chunk swaps whole.
 //
-// A tree is a sim `tree` (furniture): the trunk stands in its tile (you and the dead collide with the
-// tile), so it's jittered at most TRUNK_JITTER off the centre and the thickest trunk fits. Which species,
+// A tree is a sim `tree` (furniture): the trunk stands in its tile, where the sim says (Trunks.trunkAt: you
+// and the dead collide with a circle there), at most Trunks.JITTER off the centre. Which species,
 // its size, turn and tint come from a hash of the tile (stable, no RNG), with stands: a patch of a few
 // tiles leans to one species. Forest ground with no tree gets low undergrowth (ferns and bushes, under
 // knee height, walked through), purely visual. Everything sways a little in a shader (the wind's the
@@ -32,7 +32,6 @@ public sealed class Trees
     const int BUILDS_PER_FRAME = 4;
     /// <summary>Frames between looks at whether a built chunk's trees changed.</summary>
     const int CHECK_EVERY = 30;
-    const float TRUNK_JITTER = 0.12f;
 
     static readonly string[] SPECIES = { "spruce", "pine", "broadleaf", "birch", "snag" };
     static readonly string[] UNDER = { "bush", "fern" };
@@ -71,8 +70,7 @@ public sealed class Trees
         int s = Species(x, y, forest);
         var (lo, hi) = SIZE[s];
         float size = lo + (hi - lo) * U(x, y, 3);
-        float px = x + 0.5f + (U(x, y, 4) - 0.5f) * 2 * TRUNK_JITTER;
-        float pz = y + 0.5f + (U(x, y, 5) - 0.5f) * 2 * TRUNK_JITTER;
+        var (px, pz) = Trunk(x, y);
         var t = coarse
             ? new Transform3D(new Basis(Vector3.Up, U(x, y, 6) * Mathf.Tau).Scaled(new Vector3(size, size, size)), new Vector3(px, Terrain.Coarse(x, y, false) - SINK, pz))
             : Place(px, pz, U(x, y, 6) * Mathf.Tau, size);
@@ -202,8 +200,7 @@ public sealed class Trees
                 int s = Species(f.x, f.y, forest);
                 var (lo, hi) = SIZE[s];
                 float size = lo + (hi - lo) * U(f.x, f.y, 3);
-                float px = f.x + 0.5f + (U(f.x, f.y, 4) - 0.5f) * 2 * TRUNK_JITTER;
-                float pz = f.y + 0.5f + (U(f.x, f.y, 5) - 0.5f) * 2 * TRUNK_JITTER;
+                var (px, pz) = Trunk(f.x, f.y);
                 treeAt[s].Add((s, Place(px, pz, U(f.x, f.y, 6) * Mathf.Tau, size), Tint(f.x, f.y)));
                 count++;
             }
@@ -292,11 +289,13 @@ public sealed class Trees
     }
 
     /// <summary>A stateless hash of a tile and a salt, 0..1 (the renderer's own; the sim's rolls aren't touched).</summary>
-    static float U(int x, int y, uint salt)
+    static float U(int x, int y, uint salt) => (Trunks.hash(x, y, salt) & 0xFFFFFF) / 16777216f;
+
+    /// <summary>Where a tree's trunk stands (tiles): the sim's trunk, the one you bump into.</summary>
+    static (float x, float z) Trunk(int x, int y)
     {
-        uint h = unchecked((uint)x * 0x8da6b343u ^ (uint)y * 0xd8163841u ^ salt * 0xcb1ab31fu);
-        h ^= h >> 13; h = unchecked(h * 0x5bd1e995u); h ^= h >> 15; h = unchecked(h * 0x27d4eb2du); h ^= h >> 16;
-        return (h & 0xFFFFFF) / 16777216f;
+        var c = Trunks.trunkAt(x, y);
+        return (c.x / (float)Motion.SUB, c.y / (float)Motion.SUB);
     }
 
     // The trees' shader: vertex colours (the model's) times the instance's tint, the leaf atlas on cards

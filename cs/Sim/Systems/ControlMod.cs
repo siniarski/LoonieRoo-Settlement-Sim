@@ -144,7 +144,7 @@ public static partial class ControlMod
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
             var v = Motion.toward(c.dx, c.dy, stepLength(state, s, c, Js.T(run)));
-            s.at = Motion.slide(state.grid, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
+            s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))
             {

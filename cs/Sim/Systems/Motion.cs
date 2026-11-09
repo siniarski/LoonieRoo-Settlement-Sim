@@ -168,7 +168,13 @@ public static partial class Motion
     public static bool touches(Point c, double r, double x0, double y0, double x1, double y1) => touches(c, r, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1));
 
     /// <summary>Move a body by (dx, dy) SUB units, stopping at walls: each axis on its own, so it slides along a wall rather than sticking to it. Big moves go in steps no longer than a radius, so nothing tunnels through a wall. Returns the new centre.</summary>
-    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double r = BODY_RADIUS)
+    public static Point slide(Grid grid, Point at, int dx, int dy, string mover, double r = BODY_RADIUS) => slide(grid, null, at, dx, dy, mover, r);
+
+    /// <summary>The same, and tree trunks in the world are solid too (Trunks.cs): a free mover slides round them.</summary>
+    public static Point slide(SimState state, Point at, int dx, int dy, string mover, double r = BODY_RADIUS) => slide(state.grid, state, at, dx, dy, mover, r);
+    public static Point slide(SimState state, Point at, double dx, double dy, string mover, double r = BODY_RADIUS) => slide(state.grid, state, at, Js.I(dx), Js.I(dy), mover, r);
+
+    static Point slide(Grid grid, SimState? trees, Point at, int dx, int dy, string mover, double r)
     {
         double x = at.x;
         double y = at.y;
@@ -177,6 +183,7 @@ public static partial class Motion
         {
             var sx = JsMath.trunc(((double)(((double)(dx) * (i))) / (steps))) - JsMath.trunc(((double)(((double)(dx) * ((i - 1)))) / (steps)));
             var sy = JsMath.trunc(((double)(((double)(dy) * (i))) / (steps))) - JsMath.trunc(((double)(((double)(dy) * ((i - 1)))) / (steps)));
+            double bx = x, by = y;
             if ((sx != 0) && fits(grid, new Point { x = Js.I(x + sx), y = Js.I(y) }, mover, r))
             {
                 x += sx;
@@ -184,6 +191,17 @@ public static partial class Motion
             if ((sy != 0) && fits(grid, new Point { x = Js.I(x), y = Js.I(y + sy) }, mover, r))
             {
                 y += sy;
+            }
+            if (trees != null)
+            {
+                var o = Trunks.pushOut(trees, new Point { x = Js.I(x), y = Js.I(y) }, r, Js.I(sx), Js.I(sy));
+                if ((o.x != x) || (o.y != y))
+                {
+                    // Out of the trunk, or (a wall in the way) back where this step began.
+                    var ok = fits(grid, o, mover, r);
+                    x = ok ? o.x : bx;
+                    y = ok ? o.y : by;
+                }
             }
         }
         return new Point { x = Js.I(x), y = Js.I(y) };
