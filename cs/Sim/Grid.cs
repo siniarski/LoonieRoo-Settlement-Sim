@@ -446,6 +446,33 @@ public static partial class Grids
     /// <summary>Whether anything stands on any edge of the grid.</summary>
     public static bool anyEdges(Grid grid) => grid.edgeLayer.AnyNot(0, 0, grid.width, grid.height, EDGE_NONE);
 
+    /// <summary>The tile indexes where a layer holds something other than 0, ascending: from the chunks that hold
+    /// anything (every chunk, if the layer's fill isn't 0).</summary>
+    static List<int> NonZero<T>(GridLayer<T> layer) where T : unmanaged, IEquatable<T>
+    {
+        const int SIDE = GridLayer<byte>.SIDE;
+        var out_ = new List<int>();
+        bool every = !layer.fill.Equals(default);
+        for (int ci = 0; ci < layer.chunks.Length; ci++)
+        {
+            var c = layer.chunks[ci];
+            if (c == null && !every) continue;
+            int x0 = ci % layer.cw * SIDE, y0 = ci / layer.cw * SIDE;
+            int w = Math.Min(SIDE, layer.width - x0), h = Math.Min(SIDE, layer.height - y0);
+            for (int ly = 0; ly < h; ly++)
+                for (int lx = 0; lx < w; lx++)
+                    if (!(c == null ? layer.fill : c[ly * SIDE + lx]).Equals(default)) out_.Add((y0 + ly) * layer.width + x0 + lx);
+        }
+        out_.Sort();
+        return out_;
+    }
+
+    /// <summary>The tiles the dirt layer marks, ascending (dirtList should hold the same).</summary>
+    public static List<int> dirtyTiles(Grid grid) => NonZero(grid.dirtLayer);
+
+    /// <summary>The tiles with damage on them, ascending (damageList should hold the same).</summary>
+    public static List<int> damagedTiles(Grid grid) => NonZero(grid.damageLayer);
+
     // Whole layers as flat lists (copies), row-major as they are in JSON: for tests, dumps and the text map. They cost
     // the whole map: never in a tick.
 

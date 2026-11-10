@@ -97,6 +97,22 @@ public static class SaveWriter
         w.WriteEndArray();
     }
 
+    /// <summary>A layer's bytes: as numbers, or as the names they are codes of (a tile layer's kinds).</summary>
+    public static void Rle(Utf8JsonWriter w, ReadOnlySpan<byte> v, string[]? names)
+    {
+        w.WriteStartArray();
+        for (int i = 0; i < v.Length;)
+        {
+            int j = i + 1;
+            while (j < v.Length && v[j] == v[i]) j++;
+            if (names == null) w.WriteNumberValue(v[i]);
+            else w.WriteStringValue(names[v[i]]);
+            w.WriteNumberValue(j - i);
+            i = j;
+        }
+        w.WriteEndArray();
+    }
+
     public static void Rle(Utf8JsonWriter w, ReadOnlySpan<double> v)
     {
         w.WriteStartArray();

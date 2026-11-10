@@ -104,7 +104,7 @@ public partial class SightTest
             var seen = Sight.visibleNow(state);
             double at(double x, double y)
             {
-                return Js.Get(seen, ((double)(y) * (state.grid.width)) + x);
+                return seen[Js.I(((double)(y) * (state.grid.width)) + x)];
             }
             expect(at(7, 2)).toBe(1);
             expect(at(0, 7)).toBe(0);

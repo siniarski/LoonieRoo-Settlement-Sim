@@ -391,3 +391,19 @@ sealed class DoubleLayerJson : JsonConverter<DoubleLayer>
         writer.WriteEndArray();
     }
 }
+
+/// <summary>A flag a tile, by tile index, in chunks allocated where one is set: what's in view now (Sight.visibleNow).
+/// Reads as 1 or 0 (0 off the grid).</summary>
+public sealed class TileMask
+{
+    readonly ByteLayer layer = new();
+
+    public TileMask(Grid grid) => layer.Shape(grid.width, grid.height);
+
+    public int this[int i] => (uint)i < (uint)layer.count ? layer.At(i) : 0;
+
+    internal void set(int i, bool on) => layer.Put(i, on ? (byte)1 : (byte)0);
+
+    /// <summary>Whether this mask is for a grid of that size and hasn't spread over more than a thousand chunks (1 MB).</summary>
+    internal bool fits(Grid grid) => layer.width == grid.width && layer.height == grid.height && layer.AllocatedCount() <= 1024;
+}

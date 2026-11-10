@@ -155,12 +155,12 @@ public static class Savefile
                     {
                         switch (layer)
                         {
-                            case "tiles": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allTiles(g))); return true;
-                            case "ground": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allGround(g))); return true;
-                            case "explored": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allExplored(g))); return true;
-                            case "dirt": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allDirt(g))); return true;
-                            case "damage": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allDamage(g))); return true;
-                            case "edges": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(Grids.allEdges(g))); return true;
+                            case "tiles": w.WritePropertyName(layer); SaveWriter.Rle(w, g.tileLayer.ToFlat(), Grids.tileNames); return true;
+                            case "ground": w.WritePropertyName(layer); SaveWriter.Rle(w, g.groundLayer.ToFlat(), null); return true;
+                            case "explored": w.WritePropertyName(layer); SaveWriter.Rle(w, g.exploredLayer.ToFlat(), null); return true;
+                            case "dirt": w.WritePropertyName(layer); SaveWriter.Rle(w, g.dirtLayer.ToFlat(), null); return true;
+                            case "damage": w.WritePropertyName(layer); SaveWriter.Rle(w, g.damageLayer.ToFlat()); return true;
+                            case "edges": w.WritePropertyName(layer); SaveWriter.Rle(w, g.edgeLayer.ToFlat(), null); return true;
                         }
                         return false;
                     });

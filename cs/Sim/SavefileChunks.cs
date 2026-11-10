@@ -286,7 +286,7 @@ public static partial class SavefileChunks
         o["grid"]!.AsObject().Remove("chunked");
         var state = o.Deserialize<SimState>(StateJson.Options) ?? throw new InvalidDataException("not a sim state");
         var g = state.grid;
-        int size = g.width, total = g.width * g.height, n = (int)state.world!.chunks;
+        int size = g.width, n = (int)state.world!.chunks;
         // The layers came back empty, so every tile is bare land (floor, grass, no edges, clean, undamaged, unseen)
         // and no chunk is allocated: only what is laid in below takes memory.
 

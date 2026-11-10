@@ -93,7 +93,7 @@ public partial class SeenEntry
 {
     public int tick { get; set; }
     public string who { get; set; }
-    public Uint8Array mask { get; set; }
+    public TileMask mask { get; set; }
     public List<double> set { get; set; }
 }
 
