@@ -1081,6 +1081,92 @@ def limbs(r, lib, only):
 RECIPES.append(limbs)
 
 
+# ---------------------------------------------------------------- colonists' work
+
+# Carrying something in both arms: the forearms forward under it at the waist, the elbows in.
+CARRY = {"arm_Left": 48, "arm_Right": 48, "lower": 80, "elbow": 75, "shrug": 3}
+
+
+def work(r, lib, only):
+    """Colonists at their jobs (PoseIntents' action for one standing at its job): hammering (build), digging (farm,
+    clean, firefight), and carrying something in both arms over the walks and standing (haul)."""
+    out = []
+    idle = lib("ual_idle")
+
+    def wanted(name):
+        return not only or name in only
+
+    if wanted("work_hammer"):
+        # The left hand steadies the work at chest height ahead; the right raises the hammer and brings it down fast on it.
+        n = 24
+        fr = [idle[i % (len(idle) - 1)].copy() for i in range(n + 1)]
+        for i, p in enumerate(fr):
+            t = i / n
+            p.turn("Spine", pitch(10) @ yaw(-6))
+            p.turn("Head", pitch(12))
+
+        def path(p, s, t):
+            work_at = Vector((0.04, 0, 1.0)) + FWD * 0.50
+            if s == "Left":
+                return work_at + LEFT * 0.12 - UP * 0.03
+            # Up slowly (0..0.6), down fast (0.6..0.75: accelerating into the blow), a rebound and a beat (0.75..1).
+            if t < 0.6:
+                u = t / 0.6
+                lift = 1 - (1 - u) * (1 - u)
+            elif t < 0.75:
+                u = (t - 0.6) / 0.15
+                lift = 1 - u * u
+            else:
+                u = (t - 0.75) / 0.25
+                lift = 0.08 * math.sin(math.pi * u)
+            return work_at - LEFT * 0.08 + UP * (0.42 * lift) - FWD * (0.22 * lift)
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        out.append(("work_hammer", fr, True, None))
+    if wanted("work_dig"):
+        # Both hands together on a handle: raised to the right shoulder, driven down to the ground ahead, levered back.
+        n = 36
+        fr = [idle[i % (len(idle) - 1)].copy() for i in range(n + 1)]
+        bend = []
+        for i, p in enumerate(fr):
+            t = i / n
+            k = keyed([(0, {"b": 14}), (0.45, {"b": 4}), (0.62, {"b": 34}), (0.85, {"b": 24}), (1, {"b": 14})], t)["b"]
+            p.turn("Spine", pitch(k))
+            p.turn("Head", pitch(10))
+            bend.append(k)
+
+        def path(p, s, t):
+            high = Vector((-0.18, 0, 1.30)) + FWD * 0.15
+            low = Vector((0.0, 0, 0.55)) + FWD * 0.55
+            lever = Vector((-0.05, 0, 0.80)) + FWD * 0.35
+            k = keyed([(0, {"a": 0}), (0.45, {"a": 1}), (0.62, {"a": 2}), (0.85, {"a": 3}), (1, {"a": 3})], t)["a"]
+            pts = [lever, high, low, lever, lever]
+            i = min(3, int(k))
+            at = pts[i] + (pts[i + 1] - pts[i]) * (k - i)
+            # The hands a handle's width apart, the right above.
+            return at + (UP * 0.12 - LEFT * 0.03 if s == "Right" else -UP * 0.12 + LEFT * 0.03)
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        out.append(("work_dig", fr, True, None))
+    # Carrying: the gaits' arms under a load (their legs, and so their planted feet, as they are).
+    for name, src in (("carry_walk", "walk"), ("carry_brisk", "walk_brisk"), ("carry_idle", "idle")):
+        if not wanted(name):
+            continue
+        base = next((fr for nm, fr, _, _ in RESULTS if nm == src), None)
+        if base is None:
+            continue
+        fr = [p.copy() for p in base]
+        for p in fr:
+            arms_to(r, p, CARRY, 0.9)
+            p.turn("Spine", pitch(-4))
+        fr[-1] = fr[0].copy()
+        out.append((name, fr, True, contact(r, fr) if src != "idle" else None))
+    return out
+
+
+RECIPES.append(work)
+
+
 
 
 def main():

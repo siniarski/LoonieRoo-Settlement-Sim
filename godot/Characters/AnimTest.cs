@@ -26,7 +26,7 @@ public partial class AnimTest : Node3D
 {
     /// <summary>One run: a name, the speed over time (m/s), the ground's slope (degrees, uphill along the walk),
     /// how long, which part is measured (from, to: seconds), and whether the near tier's foot IK is on.</summary>
-    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null, char oneLeg = ' ', bool armLost = false);
+    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null, char oneLeg = ' ', bool armLost = false, bool look = false);
 
     const double DT = 1.0 / 60;
     const float HEEL_UP = 0.09f, BALL_UP = 0.02f, DOWN = 0.025f, WRIST_UP = 0.04f;
@@ -47,7 +47,7 @@ public partial class AnimTest : Node3D
     readonly Vector3[] last = new Vector3[2];
     readonly double[] stepSlide = new double[2];
     readonly List<double> slides = new();
-    double stumpWorst;
+    double stumpWorst, faceSum; int faceN;
     Vector3 lastHeel, lastBall;
     double soleSum, soleWorstSink; int soleN;
     readonly StringBuilder report = new();
@@ -59,6 +59,10 @@ public partial class AnimTest : Node3D
         public readonly Vector3[] Ankle = new Vector3[2], Ball = new Vector3[2], Wrist = new Vector3[2];
         /// <summary>The left upper arm's line in the chest's frame (the chest's turn from its rest undone).</summary>
         public Vector3 ArmInChest;
+        /// <summary>The angle (deg) between the face and LookAt, if set.</summary>
+        public Vector3? LookAt;
+        public float FaceOff;
+        int head = -1;
         int chest = -1, arm = -1;
         int[] feet = { -1, -1 }, toes = { -1, -1 }, hands = { -1, -1 };
         public bool Fresh;
@@ -72,6 +76,14 @@ public partial class AnimTest : Node3D
             if (chest < 0) { chest = sk.FindBone("UpperChest"); arm = sk.FindBone("LeftUpperArm"); }
             var turn = sk.GetBoneGlobalPose(chest).Basis.Orthonormalized() * sk.GetBoneGlobalRest(chest).Basis.Orthonormalized().Inverse();
             ArmInChest = (turn.Inverse() * sk.GetBoneGlobalPose(arm).Basis.Y).Normalized();
+            if (LookAt is Vector3 la)
+            {
+                if (head < 0) head = sk.FindBone("Head");
+                var hp = sk.GetBoneGlobalPose(head);
+                var face = xf.Basis * (hp.Basis.Orthonormalized() * sk.GetBoneGlobalRest(head).Basis.Orthonormalized().Inverse() * Vector3.Back);
+                var to = la - xf * hp.Origin;
+                FaceOff = Mathf.RadToDeg(new Vector3(face.X, 0, face.Z).AngleTo(new Vector3(to.X, 0, to.Z)));
+            }
             Fresh = true;
         }
     }
@@ -123,6 +135,8 @@ public partial class AnimTest : Node3D
         cases.Add(new Case("left leg lost, 2.0", (x) => 2.0, 0, 5, 1.5, 5, false, oneLeg: 'l'));
         cases.Add(new Case("left leg lost, standing", (x) => 0, 0, 4, 1.5, 4, false, oneLeg: 'l'));
         cases.Add(new Case("left arm lost, walking 1.4", (x) => 1.4, 0, 5, 1.5, 5, false, armLost: true));
+        // One of the dead standing, what it's after 2 m to its left: how far its face is turned from it (HeadLook.cs).
+        cases.Add(new Case("dead idle, its target to its left", (x) => 0, 0, 3, 1.5, 3, false, dead: true, look: true));
         cases.Add(new Case("dead crawler 1.45 (hands)", (x) => 1.45, 0, 5, 1.5, 5, false, dead: true, stance: "crawl", variant: "crawler"));
         foreach (double slope in new[] { 8.0, -8.0 })
         {
@@ -321,6 +335,15 @@ public partial class AnimTest : Node3D
         slides.Clear();
         soleSum = soleWorstSink = 0; soleN = 0;
         stumpWorst = 0;
+        faceSum = 0; faceN = 0;
+        probe.LookAt = c.look ? new Vector3(2, 1.55f, 0) : null;
+        var hl = skel.GetNodeOrNull<HeadLook>("HeadLook");
+        if (c.look && logic == "after" && hl == null)
+        {
+            skel.AddChild(hl = new HeadLook { Name = "HeadLook", Target = new Vector3(2, 1.55f, 0), Weight = 1 });
+            skel.MoveChild(hl, probe.GetIndex());
+        }
+        if (!c.look && hl != null) { skel.RemoveChild(hl); hl.QueueFree(); }
         // The stump hold for a lost arm (after: StumpHold.cs, as People.cs puts it on such a model; before: none).
         var hold = skel.GetNodeOrNull<StumpHold>("StumpHold");
         if (c.armLost && logic == "after" && hold == null)
@@ -415,6 +438,7 @@ public partial class AnimTest : Node3D
     void Measure()
     {
         bool hands = cases[caseIndex].stance == "crawl";
+        if (cases[caseIndex].look) { faceSum += probe.FaceOff; faceN++; }
         if (cases[caseIndex].armLost)
         {
             float a = Mathf.RadToDeg(probe.ArmInChest.AngleTo(new Vector3(0.30f, -0.93f, 0.20f).Normalized()));
@@ -451,7 +475,7 @@ public partial class AnimTest : Node3D
     {
         for (int k = 0; k < 2; k++) if (wasDown[k] && stepSlide[k] > 0) slides.Add(stepSlide[k]);
         string F(double x) => (x * 100).ToString("0.0", CultureInfo.InvariantCulture);
-        string stump = c.armLost ? $" (the stump strays up to {stumpWorst:0} deg from held)" : "";
+        string stump = c.armLost ? $" (the stump strays up to {stumpWorst:0} deg from held)" : c.look ? $" (its face {faceSum / Math.Max(1, faceN):0} deg off it)" : "";
         string line = $"| {c.name}{stump} | {string.Join(", ", clipsUsed)} | {slides.Count} | {F(slides.Count > 0 ? slides.Average() : 0)} | {F(slides.Count > 0 ? slides.Max() : 0)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(soleWorstSink)} |";
         report.AppendLine(line);
         GD.Print(line);

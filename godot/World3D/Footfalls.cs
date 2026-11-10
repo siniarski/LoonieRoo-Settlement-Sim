@@ -35,7 +35,7 @@ public static class Footfalls
         ["more/run"] = "sprint", ["more/sneak"] = "crouch", ["more/shuffle"] = "walk",
         ["more/dead_shamble"] = "walk", ["more/dead_lurch"] = "walk", ["more/dead_drag_l"] = "walk", ["more/dead_drag_r"] = "walk",
         ["more/dead_run"] = "jog", ["more/dead_crawl"] = "crawl", ["more/hop_l"] = "walk", ["more/hop_r"] = "walk",
-        ["more/crawl_l"] = "crawl", ["more/crawl_r"] = "crawl",
+        ["more/crawl_l"] = "crawl", ["more/crawl_r"] = "crawl", ["more/carry_walk"] = "walk", ["more/carry_brisk"] = "walk",
     };
     /// <summary>Gaits whose footfalls are the hands' (a crawl drags itself on them).</summary>
     public static readonly HashSet<string> ON_HANDS = new() { "crawl" };

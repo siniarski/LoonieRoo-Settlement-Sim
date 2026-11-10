@@ -277,6 +277,40 @@
       "frames": 60,
       "seconds": 2.0,
       "loop": true
+    },
+    {
+      "name": "work_hammer",
+      "frames": 24,
+      "seconds": 0.8,
+      "loop": true
+    },
+    {
+      "name": "work_dig",
+      "frames": 36,
+      "seconds": 1.2,
+      "loop": true
+    },
+    {
+      "name": "carry_walk",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 1.054,
+      "stride": 1.406
+    },
+    {
+      "name": "carry_brisk",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 1.314,
+      "stride": 1.753
+    },
+    {
+      "name": "carry_idle",
+      "frames": 75,
+      "seconds": 2.5,
+      "loop": true
     }
   ]
 }

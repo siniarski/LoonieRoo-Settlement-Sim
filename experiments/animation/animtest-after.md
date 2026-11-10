@@ -25,6 +25,7 @@ Animation test, logic `after`: a pz survivor model as People.cs plays it, moved 
 | left leg lost, 2.0 | hop_l | 14 | 1.0 | 1.6 | 0.1 | -0.1 |
 | left leg lost, standing | stand_l | 1 | 1.1 | 1.1 | -0.0 | -0.0 |
 | left arm lost, walking 1.4 (the stump strays up to 1 deg from held) | walk | 11 | 4.9 | 11.2 | 0.2 | -0.1 |
+| dead idle, its target to its left (its face 27 deg off it) | dead_idle | 2 | 1.1 | 1.2 | 0.1 | -0.0 |
 | dead crawler 1.45 (hands) | dead_crawl | 11 | 4.1 | 5.7 | 0.6 | 0.0 |
 | up 8 deg at 2.5 | walk_brisk | 10 | 6.8 | 10.3 | -1.5 | -4.7 |
 | up 8 deg at 2.5, foot IK | walk_brisk | 10 | 3.3 | 4.3 | 0.1 | -0.3 |

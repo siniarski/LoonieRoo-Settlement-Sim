@@ -80,6 +80,9 @@ public sealed partial class People
         /// <summary>The near tier's foot IK (made once it first comes near), and whether it's on now.</summary>
         public FootIK? ik;
         public bool ikOn, own;
+        /// <summary>The near dead's head turned to its target (made when first needed), eased in and out.</summary>
+        public HeadLook? headLook;
+        public double lookW;
         public readonly int[] feet = { -1, -1 }, hands = { -1, -1 };
         public readonly Footfalls.Watch watch = new();
     }
@@ -504,6 +507,7 @@ public sealed partial class People
         if (m.forced != null) ForcedPlay(m);
         else Clip(m, w, stance, dead, delta);
         int lod = Lod(m, dist, vpHeight, w, dead, delta);
+        if (dead) Look(m, w, lod == 0 && dist < LOOK_RANGE && m.rise == null, delta);
         FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && stance is "stand" or "sneak" && OneLeg(w.pose) == ' ');
     }
 
@@ -545,6 +549,30 @@ public sealed partial class People
         m.ik.Enabled = m.ikOn = on;
     }
 
+    /// <summary>The near dead turn their heads to what they're after (HeadLook.cs, PoseIntent.lookAt) within this (m).</summary>
+    const float LOOK_RANGE = 15;
+
+    void Look(Model m, Wanted w, bool near, double delta)
+    {
+        bool on = near && w.pose.lookAt != null;
+        if (on && m.headLook == null)
+        {
+            m.skel ??= Find<Skeleton3D>(m.root);
+            if (m.skel == null) return;
+            m.skel.AddChild(m.headLook = new HeadLook { Name = "HeadLook" });
+        }
+        if (m.headLook == null) return;
+        m.lookW = Math.Clamp(m.lookW + (on ? 1 : -1) * delta * 3, 0, 1);
+        m.headLook.Weight = (float)(m.lookW * m.lookW * (3 - 2 * m.lookW));
+        m.headLook.Active = m.lookW > 0;
+        if (on)
+        {
+            var at = w.pose.lookAt!;
+            float x = at.x / (float)Motion.SUB, z = at.y / (float)Motion.SUB;
+            m.headLook.Target = new Vector3(x, Terrain.Height(x, z) + 1.55f, z);
+        }
+    }
+
     /// <summary>The ground under a point for the foot IK: the sim's heights (Terrain.cs) and their slope there.</summary>
     static (float y, Vector3 normal) GroundAt(Vector3 at)
     {
@@ -569,7 +597,13 @@ public sealed partial class People
                 Play(m, busy, 1, 0.3);
                 return;
             }
-            var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, m.clip, m.turn, OneLeg(w.pose));
+            var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, Uncarried(m.clip), m.turn, OneLeg(w.pose));
+            if (w.pose.carryBoth != null && Carried(pick.clip) is var held && held != pick.clip)
+            {
+                // The carry clips have their walks' strides: the same rate fits.
+                Play(m, held, pick.rate, pick.blend);
+                return;
+            }
             Play(m, pick.clip, pick.rate, pick.blend);
             return;
         }
@@ -618,7 +652,21 @@ public sealed partial class People
     static string? BusyClip(string? action, PoseIntent pose) => action switch
     {
         "eat" => pose.lostLimbs.Any((l) => l.StartsWith("armRight")) ? "more/eat_left" : "more/eat", "drink" => "more/drink", "treat" => "more/treat", "search" => "more/search",
-        "forage" => "more/forage", "cook" => "more/cook", _ => null,
+        "forage" => "more/forage", "cook" => "more/cook",
+        // Others at their jobs (PoseIntents: one standing at its job has its type as the action).
+        "build" => "more/work_hammer", "farm" or "clean" or "firefight" => "more/work_dig", "doctor" => "more/treat",
+        "scavenge" or "craft" => "more/search", _ => null,
+    };
+
+    static string Uncarried(string clip) => clip switch
+    {
+        "more/carry_walk" => "more/walk", "more/carry_brisk" => "more/walk_brisk", "more/carry_idle" => "more/idle", _ => clip,
+    };
+
+    /// <summary>Carrying something in both arms (PoseIntent.carryBoth): the gait's own clip with the arms under the load.</summary>
+    static string Carried(string clip) => clip switch
+    {
+        "more/walk" or "more/walk_slow" => "more/carry_walk", "more/walk_brisk" => "more/carry_brisk", "more/idle" => "more/carry_idle", _ => clip,
     };
 
     /// <summary>One-shots over the stance's clip, started by what the sim says: one of the dead struck (its stagger: from the

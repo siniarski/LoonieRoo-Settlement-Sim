@@ -132,4 +132,35 @@ public class PoseTest
         expect(zp.stance).toBe("crawl");
         expect(zp.lostLimbs.length).toBe(2);
     }
+
+    [Fact(DisplayName = "pose intent > running is said, the dead look at what they're after, one standing at its job works")]
+    public void RunningLookingWorking()
+    {
+        var f = VehiclesTest.field();
+        Commands.applyCommand(f.state, new Command { type = "steer", dx = 1, dy = 0, run = true });
+        run(f.state, 3);
+        expect(PoseIntents.ofSurvivor(f.state, f.s).running).toBe(true);
+        Commands.applyCommand(f.state, new Command { type = "steer", dx = 1, dy = 0 });
+        run(f.state, 1);
+        expect(PoseIntents.ofSurvivor(f.state, f.s).running).toBe(false);
+        // One of the dead after you: its look is where you are.
+        var z = Zombies.addZombie(f.state, 20, 5);
+        z.targetId = f.s.id;
+        var zp = PoseIntents.ofZombie(f.state, z);
+        expect(zp.lookAt.x).toBe(f.s.at.x);
+        expect(zp.lookAt.y).toBe(f.s.at.y);
+        z.targetId = null;
+        expect(PoseIntents.ofZombie(f.state, z).lookAt).toBeNull();
+        // Someone else at a job they hold, standing by its tile: the job's type is their action; walking off, none.
+        f.state.control = null;
+        var job = Jobs.addJob(f.state, "build", f.s.pos.x, f.s.pos.y, null, null);
+        job.reservedBy = f.s.id;
+        f.s.jobId = job.id;
+        f.s.was = new Point { x = f.s.at.x, y = f.s.at.y };
+        var p = PoseIntents.ofSurvivor(f.state, f.s);
+        expect(p.action).toBe("build");
+        expect(p.target).toBe(job.id);
+        f.s.was = new Point { x = f.s.at.x - 40, y = f.s.at.y };
+        expect(PoseIntents.ofSurvivor(f.state, f.s).action).toBeUndefined();
+    }
 }
