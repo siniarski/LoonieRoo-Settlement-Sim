@@ -483,8 +483,8 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   a cost by kind (rabbit 1, deer 2, dog and wolf 3, bear 8 tiles' worth), so animals go round when round is short. The far side is checked before (the body fits,
   the way is open but for cars) and again each tick; one that can't cross is refused and plans off cars for 60 ticks. **Under** is out of reach: no blow, bite or
   shot finds it (a shot passes it by, a colonist hunting waits, a predator loses it, a zombie's blow on a dog lands on the car), and a rabbit stays under while
-  something it fears is within FLEE (15 s at most). **Over** is in plain sight and can be hit, but can't bite until down. Your own swing still finds an animal under
-  a car (ControlMod, not this change's to edit: one line, `AnimalCars.inTheOpen`, makes it agree)
+  something it fears is within FLEE (15 s at most), and your own swing misses it (ControlMod's swing looks only at `AnimalCars.inTheOpen`). **Over** is in plain
+  sight and can be hit, but can't bite until down
   *Why:* Parked cars stopped every animal, so a deer could be cornered against one and a dog left behind by it; the player asked for the small to go under and the
   rest over. A timed crossing, rather than letting some movers stand on a car's tiles, keeps collision and planning in agreement (no mover ever stands where its
   body doesn't fit but while crossing)

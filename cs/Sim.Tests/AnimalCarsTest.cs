@@ -139,6 +139,27 @@ public class AnimalCarsTest
         }
     }
 
+    [Fact(DisplayName = "animals and cars > your swing misses a rabbit under a car, and the same swing hits it in the open")]
+    public void Swing_under()
+    {
+        var state = map(16, 8, (x, y) => '.');
+        var s = state.survivors[0];
+        Commands.applyCommand(state, new Command { type = "takeControl", survivorId = s.id });
+        park(state, "car", 6, 3);
+        Staging.place(s, 5, 4);
+        var r = Animals.addAnimal(state, "rabbit", 5, 3);
+        r.cross = new Crossing { how = AnimalCars.UNDER, from = r.at.Copy(), to = Motion.centre(new Point(5, 1)), ticks = 8, done = 4 };
+        double hp = Js.Q(r.health, 0);
+        Commands.applyCommand(state, new Command { type = "swing", x = 5, y = 3 });
+        expect(state.animals.includes(r), "under the car: missed").toBe(true);
+        expect(r.health).toBe(hp);
+        // Out from under it, where it stood: the same swing finds it.
+        r.cross = null;
+        state.control.nextSwing = 0;
+        Commands.applyCommand(state, new Command { type = "swing", x = 5, y = 3 });
+        expect(!state.animals.includes(r) || Js.Q(r.health, 0) < hp, "in the open: hit").toBe(true);
+    }
+
     [Fact(DisplayName = "animals and cars > a wolf after a rabbit loses it when it goes under a car")]
     public void Chase_broken()
     {

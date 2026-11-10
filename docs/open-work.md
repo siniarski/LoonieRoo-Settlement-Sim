@@ -152,8 +152,7 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); you can't
   jump onto or over a car; animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
-  left there: your own swing still finds an animal under a car until ControlMod's swing asks
-  `AnimalCars.inTheOpen`; meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
+  left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
   reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;
   animals have no climbing or crouching clips: they are lifted, and squashed to fit under; the corner fix in
   `Walkers.walkTo` makes a body caught on a corner inch round it, a few ticks slow); a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
