@@ -145,6 +145,84 @@
       "frames": 48,
       "seconds": 1.6,
       "loop": false
+    },
+    {
+      "name": "dead_hit_front",
+      "frames": 18,
+      "seconds": 0.6,
+      "loop": false
+    },
+    {
+      "name": "dead_hit_back",
+      "frames": 18,
+      "seconds": 0.6,
+      "loop": false
+    },
+    {
+      "name": "dead_hit_left",
+      "frames": 18,
+      "seconds": 0.6,
+      "loop": false
+    },
+    {
+      "name": "dead_hit_right",
+      "frames": 18,
+      "seconds": 0.6,
+      "loop": false
+    },
+    {
+      "name": "dead_lunge",
+      "frames": 30,
+      "seconds": 1.0,
+      "loop": false
+    },
+    {
+      "name": "flinch",
+      "frames": 30,
+      "seconds": 1.0,
+      "loop": false
+    },
+    {
+      "name": "dead_fall_front",
+      "frames": 36,
+      "seconds": 1.2,
+      "loop": false
+    },
+    {
+      "name": "eat",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "drink",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "treat",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "search",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "forage",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "cook",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
     }
   ]
 }

@@ -69,6 +69,14 @@ public sealed partial class People
         public double turn, since, riseAt;
         /// <summary>The get-up clip of one of the dead that woke where it lay, while it plays.</summary>
         public string? rise;
+        /// <summary>A one-shot over the stance's clip (a hit, the dead's lunge, a flinch), how far in (s), how long.</summary>
+        public string? shot;
+        public double shotAt, shotFor;
+        /// <summary>What the sim said of this body last: when it was hurt (tick), its last stagger, whether it was winding up a
+        /// bite or startled, the side the last blow came from; and (once its body has gone) how long its death has left.</summary>
+        public double lastHurt = -1, lastStagger, dying;
+        public bool attacking, startled, wasZombie;
+        public string lastSide = "front";
         /// <summary>The near tier's foot IK (made once it first comes near), and whether it's on now.</summary>
         public FootIK? ik;
         public bool ikOn, own;
@@ -118,6 +126,9 @@ public sealed partial class People
     }
 
     public int Shown => byBody.Count;
+    readonly List<Model> dying = new();
+    /// <summary>How long one of the dead takes to fall when it's killed (s), before the corpse the sim left is all there is.</summary>
+    const double DEATH_FOR = 2.4;
 
     /// <summary>One body this frame: who, what look, where, and how it's moving.</summary>
     readonly record struct Wanted(string id, string look, Looks.Outfit dress, Body body, PoseIntent pose, double dist2, bool angry, string action);
@@ -177,14 +188,35 @@ public sealed partial class People
         lastDormant = dormantNow;
         foreach (var id in dormantBodies.Keys.Where((id) => !dormantNow.ContainsKey(id)).ToList()) dormantBodies.Remove(id);
 
-        // Hand back the models of bodies that left.
+        // Hand back the models of bodies that left; one of the dead killed (hurt as it went: the sim removes it and
+        // leaves a corpse at once) falls first, where it stood (DEATH_FOR s: backwards, or on its face if struck from behind).
         var keep = new HashSet<string>(wanted.Select((w) => w.id));
         foreach (var id in byBody.Keys.Where((id) => !keep.Contains(id)).ToList())
         {
             var m = byBody[id];
             byBody.Remove(id);
             m.bodyId = null;
+            if (m.wasZombie && m.lastHurt >= state.tick - 3)
+            {
+                m.dying = DEATH_FOR;
+                m.shot = null;
+                if (m.ik != null && m.ikOn) m.ik.Enabled = m.ikOn = false;
+                Play(m, m.lastSide == "back" ? "more/dead_fall_front" : "ual/ual_death01", 1, 0.1);
+                dying.Add(m);
+                continue;
+            }
             m.root.Visible = false;
+            Free(m.look).Add(m);
+        }
+        for (int i = dying.Count - 1; i >= 0; i--)
+        {
+            var m = dying[i];
+            m.dying -= delta;
+            if (m.dying > 0) continue;
+            dying.RemoveAt(i);
+            m.root.Visible = false;
+            m.wasZombie = false;
+            m.lastHurt = -1;
             Free(m.look).Add(m);
         }
 
@@ -209,11 +241,16 @@ public sealed partial class People
                 m.phase = Hash01(w.id, 3);
                 m.turn = 0;
                 m.rise = null;
+                m.shot = null;
+                m.attacking = m.startled = false;
+                m.lastStagger = 0;
                 if (m.ik != null && m.ikOn) m.ik.Enabled = m.ikOn = false;  // a new body: nothing held from the last
                 m.watch.Reset();
                 m.root.Visible = true;
                 byBody[w.id] = m;
             }
+            if (w.body is Zombie zb && !dormantNow.ContainsKey(w.id)) { m.wasZombie = true; m.lastHurt = zb.hurtTick; }
+            else m.wasZombie = false;
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
             Footfall(m, w.id, false, w.look.StartsWith("zombie"), delta);
             drawn.Add(w.id);
@@ -450,7 +487,7 @@ public sealed partial class People
         // The model's front is +Z: a heading (cos h, sin h) on the grid's (x, z) is a turn of atan2(cos h, sin h).
         float was = m.yaw;
         bool placed = m.placed;
-        if (w.pose.speed > 0.15 && m.rise == null)
+        if (w.pose.speed > 0.15 && m.rise == null && m.shot == null)
         {
             float want = (float)Math.Atan2(Math.Cos(w.pose.heading), Math.Sin(w.pose.heading));
             m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * 10)) : want;
@@ -520,8 +557,15 @@ public sealed partial class People
 
     void Clip(Model m, Wanted w, string stance, bool dead, double delta)
     {
+        if (OneShot(m, w, stance, dead, delta)) return;
         if (!dead && stance is "stand" or "sneak" && w.action == "")
         {
+            if (BusyClip(w.pose.action) is string busy && w.pose.speed < Gaits.STILL)
+            {
+                m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 25);
+                Play(m, busy, 1, 0.3);
+                return;
+            }
             var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, m.clip, m.turn);
             Play(m, pick.clip, pick.rate, pick.blend);
             return;
@@ -557,6 +601,69 @@ public sealed partial class People
             _ => ("ual/ual_sprint", Rate(m.speed, 5.0)),
         };
         Play(m, clip, rate, 0.25);
+    }
+
+    /// <summary>The living's busy actions as clips (the controlled survivor's: PoseIntent.action), looping while they last.</summary>
+    static string? BusyClip(string? action) => action switch
+    {
+        "eat" => "more/eat", "drink" => "more/drink", "treat" => "more/treat", "search" => "more/search",
+        "forage" => "more/forage", "cook" => "more/cook", _ => null,
+    };
+
+    /// <summary>One-shots over the stance's clip, started by what the sim says: one of the dead struck (its stagger: from the
+    /// side the blow came from), winding up a bite (the lunge, its whole second), one of the living startled (a flinch,
+    /// standing or walking slowly). Returns whether one plays this frame.</summary>
+    bool OneShot(Model m, Wanted w, string stance, bool dead, double delta)
+    {
+        if (w.body is Zombie z && stance == "stand")
+        {
+            if (w.action == "hit" && z.staggerUntil != m.lastStagger)
+            {
+                m.lastStagger = z.staggerUntil;
+                m.lastSide = BlowFrom(m, w.pose);
+                Shot(m, dead ? $"more/dead_hit_{m.lastSide}" : "ual/ual_hit_chest", dead ? 0.6 : 0.33);
+            }
+            bool attacking = w.action == "attack";
+            if (attacking && !m.attacking && dead) Shot(m, "more/dead_lunge", 1.0);
+            m.attacking = attacking;
+        }
+        else if (!dead && stance is "stand" or "sneak")
+        {
+            bool startled = w.pose.startle > 0.5;
+            if (startled && !m.startled && w.pose.speed < 1.2) Shot(m, "more/flinch", 1.0);
+            m.startled = startled;
+        }
+        if (m.shot == null) return false;
+        m.shotAt += delta;
+        if (m.shotAt >= m.shotFor) { m.shot = null; return false; }
+        m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 8);
+        m.player.SpeedScale = 1;
+        return true;
+    }
+
+    /// <summary>Starts a one-shot from its beginning (again, if it was playing).</summary>
+    static void Shot(Model m, string clip, double length)
+    {
+        if (!m.player.HasAnimation(clip)) return;
+        m.shot = clip;
+        m.shotAt = 0;
+        m.shotFor = length;
+        m.player.Play(clip, m.clip == "" ? 0 : 0.08);
+        m.player.Seek(0, true);
+        m.player.SpeedScale = 1;
+        m.clip = clip;
+    }
+
+    /// <summary>The side a blow came from, by the way the sim shoves the body (away from the blow) against the way it
+    /// faces: shoved back, it was struck from the front; not shoved (against a wall), the front.</summary>
+    static string BlowFrom(Model m, PoseIntent pose)
+    {
+        if (pose.speed < 0.3) return "front";
+        float moved = (float)Math.Atan2(Math.Cos(pose.heading), Math.Sin(pose.heading));
+        float rel = Mathf.AngleDifference(m.yaw, moved);  // the shove against the facing (+: to its left)
+        if (Math.Abs(rel) > 2.36f) return "front";
+        if (Math.Abs(rel) < 0.79f) return "back";
+        return rel > 0 ? "right" : "left";
     }
 
     /// <summary>Plays clip at rate on model m, cross-fading over `blend` s from what it played (a new model starts at its own phase).</summary>

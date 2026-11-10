@@ -583,7 +583,10 @@ def arms_to(r, p, nums, w=1.0, sides=SIDES):
     for s in sides:
         for b in ARM_BONES:
             n = s + b
-            p.set_world_rot(n, p.rot(n).slerp(turn @ t.rot(n), w))
+            q0, q1 = p.rot(n), turn @ t.rot(n)
+            if q0.dot(q1) < 0:
+                q1.negate()  # the short way round
+            p.set_world_rot(n, q0.slerp(q1, w))
 
 
 def roll(deg):
@@ -726,7 +729,236 @@ def crawl(r):
     return frames
 
 
-RECIPES = [locomotion, dead]
+# ---------------------------------------------------------------- reactions and actions
+
+def keyed(keys, t):
+    """Numbers at phase t from (t, {name: value}) keys, eased between (missing names are 0)."""
+    names = set()
+    for _, d in keys:
+        names |= set(d)
+    for (t0, a), (t1, b) in zip(keys, keys[1:]):
+        if t <= t1:
+            u = (t - t0) / (t1 - t0) if t1 > t0 else 1.0
+            u = u * u * (3 - 2 * u)
+            return {n: a.get(n, 0.0) + (b.get(n, 0.0) - a.get(n, 0.0)) * u for n in names}
+    return {n: keys[-1][1].get(n, 0.0) for n in names}
+
+
+BODY_TURNS = ("Hips", "Spine", "Chest", "UpperChest", "Neck", "Head")
+
+
+def turns(p, k):
+    """Extra turns from keyed numbers: <bone>_pitch, <bone>_roll, <bone>_yaw (degrees), parents first."""
+    for b in BODY_TURNS:
+        q = yaw(k.get(b + "_yaw", 0.0)) @ roll(k.get(b + "_roll", 0.0)) @ pitch(k.get(b + "_pitch", 0.0))
+        if q.angle > 1e-5:
+            p.turn(b, q)
+
+
+def hold_feet(r, frames, base):
+    """The feet back where the base frames have them (after the hips moved or the body turned above them)."""
+    goals = [{s: b.head(s + "Foot") for s in SIDES} for b in base]
+    rots = [{s: b.rot(s + "Foot") for s in SIDES} for b in base]
+    poles = [{s: knee_dir(b, s) for s in SIDES} for b in base]
+    solve_legs(r, frames, goals, poles, rots, "hold", most_drop=0.0)
+
+
+def reaction(r, base, frames, keys, arms=None):
+    """A one-shot over `frames` frames of a looping base: keyed turns (turns()), the hips moved (hips_x/y/z, m),
+    the arms blended to a pose by arm_w; the feet kept planted."""
+    out = []
+    src = [base[i % (len(base) - 1)].copy() for i in range(frames + 1)]
+    for i, p0 in enumerate(src):
+        t = i / frames
+        k = keyed(keys, t)
+        p = p0.copy()
+        p.move_hips(Vector((k.get("hips_x", 0.0), k.get("hips_y", 0.0), k.get("hips_z", 0.0))))
+        turns(p, k)
+        if arms is not None and k.get("arm_w", 0.0) > 0:
+            arms_to(r, p, arms, k["arm_w"])
+        if abs(k.get("arms_pitch", 0.0)) > 1e-3:  # the arms kept on a target while the body pitches
+            for side in SIDES:
+                p.turn(side + "UpperArm", pitch(k["arms_pitch"]))
+        out.append(p)
+    hold_feet(r, out, src)
+    return out
+
+
+def hands_path(r, frames, path, sides=SIDES, pole=None):
+    """Hands put by IK where path(p, side, t) says (a point, or None for the clip's own), each frame."""
+    n = len(frames) - 1
+    for i, p in enumerate(frames):
+        for s in sides:
+            at = path(p, s, i / n)
+            if at is not None:
+                place_hand(r, p, s, at, pole=pole)
+
+
+FLINCH = {"arm_Left": 35, "arm_Right": 35, "lower": 45, "elbow": 88}
+
+
+def reactions(r, lib, only):
+    """Hits from four sides and the dead's lunge (on the dead's idle), a startle (on the living's), a fall face down,
+    and the living's busy actions: eating, drinking, treating a wound, searching, foraging, cooking."""
+    out = []
+
+    def wanted(name):
+        return not only or name in only
+
+    def make(name, frames, loop=False):
+        out.append((name, frames, loop, None))
+
+    dead_idle = None
+    for name, fr, _, _ in RESULTS:
+        if name == "dead_idle":
+            dead_idle = fr
+    idle, crouch = lib("ual_idle"), lib("ual_crouch_idle")
+    dead_base = dead_idle or idle
+    # Struck (the sim's stagger, 0.6 s): the body thrown away from the blow, the head lagging, the arms flung,
+    # the hips knocked a few cm, then an overshoot back and a settle. The side is where the blow came from.
+    blows = {
+        "front": {"Spine_pitch": -16, "Chest_pitch": -8, "Head_pitch": -24, "hips_y": 0.07},
+        "back": {"Spine_pitch": 18, "Chest_pitch": 6, "Head_pitch": -18, "hips_y": -0.07},
+        "left": {"Spine_roll": -14, "Chest_roll": -6, "Head_roll": 20, "Spine_yaw": 10, "hips_x": -0.06},
+        "right": {"Spine_roll": 14, "Chest_roll": 6, "Head_roll": -20, "Spine_yaw": -10, "hips_x": 0.06},
+    }
+    for side, hit in blows.items():
+        name = f"dead_hit_{side}"
+        if not wanted(name):
+            continue
+        NOW[0] = name
+        over = {k: -0.3 * v for k, v in hit.items()}
+        make(name, reaction(r, dead_base, 18, [(0, {}), (0.14, {**hit, "arm_w": 0.55}), (0.42, {**over, "arm_w": 0.25}),
+                                               (0.7, {k: 0.1 * v for k, v in hit.items()}), (1, {})], REACH))
+    # The dead's lunge (from the windup's start, 1 s: the sim's attack every second, the bite 0.4 s in): arms up and
+    # drawn back, then thrown forward with the body, the head craning in to bite, and back.
+    if wanted("dead_lunge"):
+        NOW[0] = "dead_lunge"
+        make("dead_lunge", reaction(r, dead_base, 30, [
+            (0, {}), (0.3, {"Spine_pitch": -4, "hips_y": 0.04, "arm_w": 0.9}), (0.4, {"Spine_pitch": -6, "hips_y": 0.05, "arm_w": 1.0}),
+            (0.52, {"Spine_pitch": 26, "Chest_pitch": 10, "Head_pitch": -24, "hips_y": -0.10, "arm_w": 1.0, "arms_pitch": -40}),
+            (0.62, {"Spine_pitch": 22, "Chest_pitch": 8, "Head_pitch": -18, "hips_y": -0.09, "arm_w": 0.9, "arms_pitch": -34}),
+            (1, {})], {**REACH, "arm_Left": 88, "arm_Right": 84, "elbow_Left": 8, "elbow_Right": 12}))
+    # Startled (the sim's startledAt, 1 s): shoulders and head jerk back, the forearms up to guard, held, let go.
+    if wanted("flinch"):
+        NOW[0] = "flinch"
+        make("flinch", reaction(r, idle, 30, [(0, {}), (0.08, {"Spine_pitch": -9, "Head_pitch": -16, "hips_y": 0.03, "arm_w": 1.0}),
+                                              (0.4, {"Spine_pitch": -5, "Head_pitch": -8, "hips_y": 0.02, "arm_w": 0.85}), (1, {})], FLINCH))
+    # Falling face down (a blow from behind at the end): knees go, onto the hands, flat.
+    if wanted("dead_fall_front"):
+        stand = {"lean": 14, "look_up": 8, **HANG, "knee_Left": 8, "knee_Right": 8, "bob": -0.02}
+        kneel = {"pitch": -10, "lean": 40, "bob": -0.42, "back": 0.05, "leg_Left": 90, "knee_Left": 95,
+                 "leg_Right": 80, "knee_Right": 110, "foot_follow": 0.5, "arm_Left": 60, "arm_Right": 50, "lower": 85, "elbow": 10}
+        flat = {"pitch": -90, "bob": -0.88, "back": 0.1, "foot_follow": 1, "head_yaw": 60, "lower": 70,
+                "arm_Left": 60, "arm_Right": 20, "elbow": 30, "leg_out_Left": 8, "leg_out_Right": 4, "knee_Left": 10, "knee_Right": 20}
+        make("dead_fall_front", through_numbers(r, 36, (0, stand), (0.35, kneel), (0.6, {**btm.ALL_FOURS, "arm_Left": 90, "arm_Right": 90}), (0.82, flat), (1, flat)))
+
+    # The living's busy actions, looping while the sim's action runs.
+    def mouth(p, out=0.0):
+        h = p.head("Head")
+        return h + FWD * 0.11 + UP * 0.02 + LEFT * out
+
+    if wanted("eat"):
+        # Bites: the right hand from the chest to the mouth and back, the head meeting it; the left holds the food low.
+        fr = [idle[i % (len(idle) - 1)].copy() for i in range(61)]
+        for i, p in enumerate(fr):
+            t = i / 60
+            p.turn("Head", pitch(8 + 6 * max(0.0, math.sin(2 * math.pi * (t * 2 - 0.1)))))
+
+        def path(p, s, t):
+            u = (t * 2) % 1.0
+            chest = p.head("UpperChest") + FWD * 0.28 + UP * 0.02
+            if s == "Left":
+                return chest + LEFT * 0.06 - UP * 0.08
+            m = mouth(p, -0.02)
+            w = keyed([(0, {"w": 0}), (0.3, {"w": 1}), (0.55, {"w": 1}), (0.85, {"w": 0}), (1, {"w": 0})], u)["w"]
+            return chest - LEFT * 0.04 + (m - chest + LEFT * 0.04) * w
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("eat", fr, True)
+    if wanted("drink"):
+        # Down on the haunches at the water: both hands cupped in it, up to the mouth, down again.
+        fr = [crouch[i % (len(crouch) - 1)].copy() for i in range(61)]
+        for i, p in enumerate(fr):
+            u = (i / 60 * 1.5) % 1.0
+            p.turn("Spine", pitch(18 * keyed([(0, {"a": 1}), (0.3, {"a": 1}), (0.6, {"a": 0}), (0.85, {"a": 0}), (1, {"a": 1})], u)["a"]))
+
+        def path(p, s, t):
+            u = (t * 1.5) % 1.0
+            side = LEFT * (0.04 if s == "Left" else -0.04)
+            low = Vector((p.head("Hips").x, p.head("Hips").y, 0.07)) + FWD * 0.42 + side
+            m = mouth(p) + side - UP * 0.05
+            w = keyed([(0, {"w": 0}), (0.3, {"w": 0}), (0.6, {"w": 1}), (0.85, {"w": 1}), (1, {"w": 0})], u)["w"]
+            return low + (m - low) * w
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("drink", fr, True)
+    if wanted("treat"):
+        # Crouched over the left shin, both hands winding a bandage round it.
+        fr = [crouch[i % (len(crouch) - 1)].copy() for i in range(61)]
+        for p in fr:
+            p.turn("Spine", pitch(16))
+            p.turn("Head", pitch(18))
+
+        def path(p, s, t):
+            shin = (p.head("LeftLowerLeg") * 0.6 + p.head("LeftFoot") * 0.4)
+            c = 2 * math.pi * (t * 2 + (0.5 if s == "Right" else 0))
+            return shin + FWD * (0.07 + 0.05 * math.sin(c)) + LEFT * (0.06 * math.cos(c) + (0.05 if s == "Left" else -0.05)) + UP * 0.02
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("treat", fr, True)
+    if wanted("search"):
+        # Bent into a container at waist height, the hands rummaging in turn.
+        fr = [idle[i % (len(idle) - 1)].copy() for i in range(61)]
+        for i, p in enumerate(fr):
+            p.turn("Spine", pitch(24 + 3 * math.sin(2 * math.pi * i / 60)))
+            p.turn("Head", pitch(14))
+
+        def path(p, s, t):
+            c = 2 * math.pi * (t * 2 + (0.5 if s == "Right" else 0))
+            base = Vector((0, 0, 0.78)) + FWD * 0.5 + LEFT * (0.12 if s == "Left" else -0.12)
+            return base + FWD * 0.08 * math.sin(c) + UP * 0.06 * max(0.0, math.cos(c)) + LEFT * 0.04 * math.cos(c)
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("search", fr, True)
+    if wanted("forage"):
+        # Crouched, picking at the ground ahead with one hand then the other, the head following.
+        fr = [crouch[i % (len(crouch) - 1)].copy() for i in range(61)]
+        for i, p in enumerate(fr):
+            p.turn("Spine", pitch(20))
+            p.turn("Head", pitch(20) @ yaw(10 * math.sin(2 * math.pi * i / 60)))
+
+        def path(p, s, t):
+            u = (t * 2 + (0.5 if s == "Right" else 0)) % 1.0
+            side = LEFT * (0.16 if s == "Left" else -0.16)
+            ground = Vector((0, 0, 0.06)) + FWD * 0.48 + side
+            knee = p.head(s + "LowerLeg") + FWD * 0.12 + UP * 0.05
+            w = keyed([(0, {"w": 0}), (0.35, {"w": 1}), (0.55, {"w": 1}), (0.9, {"w": 0}), (1, {"w": 0})], u)["w"]
+            return knee + (ground - knee) * w
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("forage", fr, True)
+    if wanted("cook"):
+        # On the haunches at a fire: the right hand stirring ahead, the left on its knee.
+        fr = [crouch[i % (len(crouch) - 1)].copy() for i in range(61)]
+        for p in fr:
+            p.turn("Spine", pitch(12))
+            p.turn("Head", pitch(16))
+
+        def path(p, s, t):
+            if s == "Left":
+                return p.head("LeftLowerLeg") + UP * 0.06 + FWD * 0.02
+            c = 2 * math.pi * t * 2
+            return Vector((0, 0, 0.32)) + FWD * (0.50 + 0.07 * math.sin(c)) - LEFT * (0.05 + 0.07 * math.cos(c))
+        hands_path(r, fr, path)
+        fr[-1] = fr[0].copy()
+        make("cook", fr, True)
+    return out
+
+
+RESULTS = []  # what the recipes made so far (a later recipe can build on an earlier one's clip)
+RECIPES = [locomotion, dead, reactions]
+
 
 
 
@@ -767,6 +999,7 @@ def main():
     clips = []
     for recipe in RECIPES:
         for name, frames, loop, speed in recipe(r, lib, only):
+            RESULTS.append((name, frames, loop, speed))
             key(r, name, frames)
             info = clip_info(name, frames, loop, speed if speed and speed[0] else None)
             clips.append(info)

@@ -26,7 +26,7 @@ public partial class AnimTest : Node3D
 {
     /// <summary>One run: a name, the speed over time (m/s), the ground's slope (degrees, uphill along the walk),
     /// how long, which part is measured (from, to: seconds), and whether the near tier's foot IK is on.</summary>
-    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0);
+    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null);
 
     const double DT = 1.0 / 60;
     const float HEEL_UP = 0.09f, BALL_UP = 0.02f, DOWN = 0.025f, WRIST_UP = 0.04f;
@@ -117,6 +117,18 @@ public partial class AnimTest : Node3D
             cases.Add(new Case($"{(slope > 0 ? "up" : "down")} {Math.Abs(slope)} deg at 2.5", (x) => 2.5, slope, 5, 1.5, 5, false));
             if (ik) cases.Add(new Case($"{(slope > 0 ? "up" : "down")} {Math.Abs(slope)} deg at 2.5, foot IK", (x) => 2.5, slope, 5, 1.5, 5, true));
         }
+        if (args.TryGetValue("clips", out var named))
+        {
+            // Each clip once, in place: a strip across its length (--strip=N: EVERY is worked out from it).
+            cases.Clear();
+            foreach (var cl in named.Split(','))
+            {
+                var a = player.GetAnimation(cl);
+                double len = a?.Length ?? 1;
+                cases.Add(new Case(cl.Replace("/", "-"), (x) => 0, 0, len + 0.5, 0.25, len + 0.25, false, clip: cl));
+            }
+            if (stripN > 0) stripEvery = -1;
+        }
         if (args.TryGetValue("cases", out var only)) cases.RemoveAll((c) => !only.Split(',').Any((o) => c.name.Contains(o)));
         report.AppendLine($"Animation test, logic `{logic}`: a pz survivor model as People.cs plays it, moved along the ground. Slide: how far the planted foot travels along the ground while down, per step (cm). Sole: the planted sole's height over the ground (cm, mean; worst sink).");
         report.AppendLine();
@@ -176,7 +188,8 @@ public partial class AnimTest : Node3D
         cam.LookAt(at + new Vector3(0, 0.85f, 0), Vector3.Up);
         if (ground != null) { ground.Rotation = new Vector3(-(float)(slopeDeg * Math.PI / 180), 0, 0); }
         frame++;
-        if (t < c.from || captured >= stripN || frame % stripEvery != 0) return;
+        int every = stripEvery > 0 ? stripEvery : Math.Max(1, (int)((c.to - c.from) / DT / stripN));
+        if (t < c.from || captured >= stripN || frame % every != 0) return;
         var shot = GetViewport().GetTexture().GetImage();
         int w = shot.GetWidth(), h = shot.GetHeight();
         // The middle of the view, a column round the body.
@@ -331,7 +344,12 @@ public partial class AnimTest : Node3D
     void Step(Case c, double v, double turning)
     {
         string want; float rate; double blend;
-        if (c.dead)
+        if (c.clip != null)
+        {
+            (want, rate, blend) = (c.clip, t < c.from ? 0f : 1f, 0);
+            if (t < c.from) player.Play(c.clip);
+        }
+        else if (c.dead)
         {
             eased += (v - eased) * Math.Min(1, DT * 8);
             if (logic == "before")
