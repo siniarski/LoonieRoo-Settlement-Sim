@@ -94,11 +94,24 @@ public static class Staging
         return true;
     }
 
-    /// <summary>A car at a tile, heading 0-31 (0 east, 8 south), headlights on, a full tank.</summary>
-    public static Vehicle car(SimState state, int x, int y, int heading = 0)
+    /// <summary>A car (or a "truck") at a tile, heading 0-31 (0 east, 8 south), headlights on, a full tank.</summary>
+    public static Vehicle car(SimState state, int x, int y, int heading = 0, string kind = "car")
     {
-        var v = Vehicles.addVehicle(state, x, y, heading, Vehicles.FUEL_MAX);
+        var v = Vehicles.addVehicle(state, x, y, heading, Vehicles.FUEL_MAX, Vehicles.VEHICLE_HEALTH, kind);
         v.lights = true;
+        return v;
+    }
+
+    /// <summary>Someone behind the wheel of the nearest car (within a few tiles), without the getting in. Its tank
+    /// and its health at those percentages and its speed in km/h, where given. Null when there is no car near.</summary>
+    public static Vehicle? seat(SimState state, Survivor s, double? fuel = null, double? health = null, double? kmh = null)
+    {
+        var v = Vehicles.vehicleNear(state, s.at, 8 * Motion.SUB);
+        if (v == null) return null;
+        Vehicles.enterVehicle(state, s, v);
+        if (fuel != null) v.fuel = Math.Round(Vehicles.FUEL_MAX * fuel.Value / 100);
+        if (health != null) v.health = Math.Round(Vehicles.VEHICLE_HEALTH * health.Value / 100);
+        if (kmh != null) v.speed = Math.Round(kmh.Value / 3.6 * Motion.SUB / Tick.TICKS_PER_SECOND);
         return v;
     }
 

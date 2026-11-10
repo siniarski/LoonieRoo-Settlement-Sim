@@ -68,7 +68,10 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
 - Right-click or E use: pick up, wear, eat, drink, sleep, treat yourself, search, smash a window, get in or out of a
   car (a moment each way: walking off stops it), fill a car from a fuel can. U opens or shuts the boot of the car
   beside you, I its bonnet. E underfoot forages on grass by day or sleeps.
-- In a car: W go, S brake and reverse, A D steer.
+- In a car: W go, S brake and reverse, A D steer. You sit in the driver's seat and the view turns with the car; the
+  mouse looks round the cabin and out of it. Look down for the dashboard: the speedometer (km/h), the fuel gauge,
+  the temperature (it climbs as the car is damaged), and the lamps (FUEL under 15%, ENGINE under half health, OIL
+  and BATT when the engine has stopped, LIGHTS for the headlights).
 - 1-9 use the quick slots (assigned on the inventory screen; see below). R works the tile in front (repair;
   with wood: barricade a door or board a window, reinforce, build a wall). X reloads, Q switches weapon (see
   Weapons above); in the Colony tab a click on a tile fires a loaded gun at it.

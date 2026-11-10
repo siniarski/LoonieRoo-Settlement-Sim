@@ -85,6 +85,20 @@ def cyl(g, r, length, loc=(0, 0, 0), col=(0.5, 0.5, 0.5), metal=0.0, seg=8, axis
     g.add(v, f, cols, metal, m)
 
 
+def beam(g, p0, p1, w, d=None, col=(0.5, 0.5, 0.5), metal=0.0):
+    """A straight bar of cross-section w x d from p0 to p1 (a pillar, a spoke, a lever): a box along the line.
+    Not for a line straight down (-Z): the turn that takes Z onto it is not defined."""
+    d = w if d is None else d
+    a, b = Vector(p0), Vector(p1)
+    length = (b - a).length
+    m = Matrix.Translation(a) @ Vector((0, 0, 1)).rotation_difference((b - a).normalized()).to_matrix().to_4x4()
+    sx, sy = w / 2, d / 2
+    v = [(-sx, -sy, 0), (sx, -sy, 0), (sx, sy, 0), (-sx, sy, 0),
+         (-sx, -sy, length), (sx, -sy, length), (sx, sy, length), (-sx, sy, length)]
+    f = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    g.add(v, f, [mul(col, 0.8), col, col, mul(col, 0.92), mul(col, 0.96), mul(col, 0.92)], metal, m)
+
+
 # --- out to Blender, the glTF and a preview ---
 
 def material(name):

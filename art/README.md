@@ -123,5 +123,13 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 - `scripts/lowpoly.py`: the kit build_world.py is made with (boxes, cylinders and cones as coloured faces, one mesh
   per model, the glTF export, a preview). build_items.py and build_furniture.py carry older copies of the same
   helpers: fold them in when either is next rebuilt.
+- `scripts/build_cabins.py` (2026-11-11): a car from the driver's seat, for the car you drive (~1 s): `cabin` and
+  `cabin_v1` (the sedan's inside, with the red and the blue bonnet), `cabin_truck` (the pickup's: the same cab
+  further forward and higher, a wall and window behind the seats, the load bed), `steeringwheel` (about its hub, so
+  the game turns it): `"$B" --background --factory-startup --python art/scripts/build_cabins.py -- --glb
+  godot/assets/cars/cabins.glb [--preview lineup.png]`, then re-import in Godot. Its EYE, HUB and PANEL are the
+  numbers godot/World3D/Cockpit.cs has: change both. **A model's name must not end in `_wheel`, `-col`, `-rigid`,
+  `-navmesh`, `-vehicle`, `-occ` or `-noimp`** (with `-` or `_`): Godot's importer reads those as hints and makes
+  the node something else under another name.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

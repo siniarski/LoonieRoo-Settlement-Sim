@@ -32,7 +32,9 @@
 //   --mains=off                            the mains gone (no porches, street lamps or mains-lit rooms)
 //   --switch=X,Y[;X,Y]                     flip the light switch of the room at each tile
 //   --give=flashlight[:on]                 a flashlight in your bag (switched on)
-//   --car=X,Y,H                            a car at tile X, Y, heading H (0-31, 0 east, 8 south), headlights on, a full tank
+//   --car=X,Y,H[,truck]                    a car (or a pickup) at tile X, Y, heading H (0-31, 0 east, 8 south), headlights on, a full tank
+//   --drive[=FUEL,HEALTH,KMH]              you behind the wheel of the nearest car (after --car), its tank and its health at those
+//                                          percentages and going that fast, for pictures of the dashboard
 //   --fire=X,Y --stove=X,Y --heater=X,Y    a fire burning there; a stove someone is cooking at; a lit heater (and a blizzard)
 //   --clock=TICK --burn=dx,dy,dx,dy..      the clock set; tiles alight at those offsets from you (a line of grass fire: --burn=4,-3,4,-2,4,-1,4,0)
 //   --lineup[=variants|weapons|furniture]  one of every item kind on the ground in front of you (or every model of the kinds with several,
@@ -166,8 +168,14 @@ public partial class Game
         if (args.TryGetValue("give", out var give) && you != null && give.StartsWith("flashlight")) Staging.giveFlashlight(state, you, give.EndsWith(":on"));
         if (args.TryGetValue("car", out var car))
         {
-            var p = Ints(car);
-            Staging.car(state, p[0], p[1], p.Length > 2 ? p[2] : 0);
+            // X,Y[,H[,truck]]
+            var f = car.Split(',');
+            Staging.car(state, int.Parse(f[0]), int.Parse(f[1]), f.Length > 2 ? int.Parse(f[2]) : 0, f.Length > 3 ? f[3] : "car");
+        }
+        if (args.TryGetValue("drive", out var drive) && you != null)
+        {
+            var n = Array.ConvertAll(drive.Split(',', StringSplitOptions.RemoveEmptyEntries), Num);
+            if (Staging.seat(state, you, n.Length > 0 ? n[0] : null, n.Length > 1 ? n[1] : null, n.Length > 2 ? n[2] : null) == null) GD.Print("--drive: no car near you (put one there with --car=X,Y,H)");
         }
         if (args.TryGetValue("fire", out var fire))
         {

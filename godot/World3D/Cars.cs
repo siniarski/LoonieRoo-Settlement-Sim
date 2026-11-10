@@ -26,10 +26,10 @@ public sealed class Cars
     /// <summary>The model a vehicle is drawn with: the pickup for a truck, else one of the sedans by its id.</summary>
     public static string ModelOf(Vehicle v) => v.kind == "truck" ? "truck" : Characters.Looks.Hash01(v.id, 11) < 0.5 ? "car" : "car_v1";
 
-    public void Update(SimState state, double alpha, Vector3 eye, Survivor you)
+    /// <summary>`mine`: the car not to draw (the one you sit in: Cockpit.cs draws that), or null.</summary>
+    public void Update(SimState state, double alpha, Vector3 eye, Vehicle? mine)
     {
         models.Begin();
-        var mine = Vehicles.vehicleOf(state, you);
         foreach (var v in Vehicles.vehiclesOf(state))
         {
             if (v == mine) continue;

@@ -24,7 +24,7 @@ public sealed partial class FirstPerson : Node3D
     const int BUILDS_PER_FRAME = 4;
     /// <summary>Bodies further than this (m) aren't drawn.</summary>
     const float BODY_RANGE = 48;
-    public const float EYE = 1.65f, EYE_SNEAK = 1.1f, EYE_ASLEEP = 0.35f, EYE_CAR = 1.15f;
+    public const float EYE = 1.65f, EYE_SNEAK = 1.1f, EYE_ASLEEP = 0.35f;
     /// <summary>Vertical field of view (degrees), as the look lab's.</summary>
     const float FOV = 60;
 
@@ -54,6 +54,7 @@ public sealed partial class FirstPerson : Node3D
     readonly Aircraft aircraft;
     readonly Cars cars;
     readonly Others others;
+    readonly Cockpit cockpit;
     /// <summary>The world's lights (the debug panel, the light bench).</summary>
     public WorldLights Lights => lights;
     /// <summary>Rain, snow, the snow layer and the overcast sky (Weather.cs).</summary>
@@ -77,6 +78,17 @@ public sealed partial class FirstPerson : Node3D
     public int OtherProps => others.Props;
     public int OtherPeople => others.Shown.Count;
     public bool HelicopterShown => aircraft.Shown;
+    /// <summary>The cockpit of the car you drive (the self-test reads its instruments).</summary>
+    public Cockpit Cockpit => cockpit;
+
+    /// <summary>Before Update each frame: how far the car you're in turned (its heading eased), for the view to turn with
+    /// it, so you keep looking out of the windscreen as you steer. Getting in, with `faceForward`, it is the turn that
+    /// faces you forward.</summary>
+    public double CarTurn(SimState state, double viewYaw, double delta, bool faceForward)
+    {
+        var you = ControlMod.controlled(state);
+        return cockpit.Track(you != null ? Vehicles.vehicleOf(state, you) : null, viewYaw, delta, faceForward);
+    }
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
     /// <summary>The eye over the (eased) ground under it this frame (m): EYE standing, more in a leap (the self-test compares your body's lift).</summary>
@@ -107,6 +119,7 @@ public sealed partial class FirstPerson : Node3D
         aircraft = new Aircraft(this);
         cars = new Cars(this);
         others = new Others(this);
+        cockpit = new Cockpit(this);
         AddChild(sounds);
         AddChild(weather);
         look.indoor = roofs.Indoor;
@@ -114,15 +127,20 @@ public sealed partial class FirstPerson : Node3D
 
     /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
     /// <summary>Where the eye is (m: on the ground under you, as it is there) and which way it looks. Update eases the ground's height.</summary>
-    public static (Vector3 eye, bool inCar, double carYaw) Eye(SimState state, Survivor you, double alpha)
+    /// <summary>In a car the eye is the driver's (Cockpit.Seat: ahead of the car's centre, to its left), on the car's heading
+    /// or `carYaw` if given (the view's eased heading, so the seat doesn't jump between the sim's 32 headings).</summary>
+    public static (Vector3 eye, bool inCar, double carYaw) Eye(SimState state, Survivor you, double alpha, double? carYaw = null)
     {
         Terrain.Use(state);
         var car = Vehicles.vehicleOf(state, you);
         if (car != null)
         {
             var c = worldPos(car.at, car.was, alpha);
-            var (hx, hy) = (Js.Get(Vehicles.HEADING_DIRS, car.heading)![0], Js.Get(Vehicles.HEADING_DIRS, car.heading)![1]);
-            return (new Vector3((float)c.x, Terrain.Height((float)c.x, (float)c.y) + EYE_CAR, (float)c.y), true, Math.Atan2(hy, hx));
+            double a = carYaw ?? Cockpit.YawOf(car);
+            var (ahead, up, left) = Cockpit.Seat(car);
+            // Ahead is the heading; the car's left is a quarter turn anticlockwise of it (the grid's y runs south).
+            double fx = Math.Cos(a), fy = Math.Sin(a);
+            return (new Vector3((float)(c.x + fx * ahead + fy * left), Terrain.Height((float)c.x, (float)c.y) + up, (float)(c.y + fy * ahead - fx * left)), true, a);
         }
         var p = worldPos(you, alpha);
         float h = you.sleep?.asleep == true ? EYE_ASLEEP : state.control?.sneaking == true ? EYE_SNEAK : EYE;
@@ -144,7 +162,8 @@ public sealed partial class FirstPerson : Node3D
         var you = ControlMod.controlled(state);
         if (you == null) return;
         Terrain.Use(state);
-        var (eye, inCar, _) = Eye(state, you, alpha);
+        var car = Vehicles.vehicleOf(state, you);
+        var (eye, inCar, _) = Eye(state, you, alpha, car != null && cockpit.Following(car) ? cockpit.Yaw : null);
         float ground = Terrain.Height(eye.X, eye.Z);
         if (float.IsNaN(eyeGround) || Math.Abs(ground - eyeGround) > EYE_SNAP) eyeGround = ground;
         else eyeGround += (ground - eyeGround) * (float)Math.Min(1, delta * EYE_EASE);
@@ -171,7 +190,10 @@ public sealed partial class FirstPerson : Node3D
         Modelled = modelled.Count;
         people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
         bodies.Update(state, alpha, eye, you.id, modelled, others.Shown);
-        cars.Update(state, alpha, eye, you);
+        // The car you sit in is the cockpit round you; seen from outside (--eye) it is a car like the others.
+        bool inside = car != null && EyeAt == null;
+        cars.Update(state, alpha, eye, inside ? car : null);
+        cockpit.Update(state, car, camera.Position, alpha, delta, inside);
         fields.Update(state, eye);
         sites.Update(state, eye);
         aircraft.Update(state, delta);

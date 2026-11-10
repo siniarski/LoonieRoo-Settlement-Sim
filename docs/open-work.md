@@ -149,6 +149,10 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   Left: people, the dead and animals walk through a parked car (pathfinding doesn't know cars); a wall doesn't
   turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
   call whether cars should be faster now that they are car-sized).
+- The driver's seat (log/2026-11-11-05-drivers-seat.md): Left: no hands on the wheel and no body in the seat; the
+  mirrors are grey glass (nothing reflects); no windscreen glass, rain on it or wipers working; doors don't open
+  as you get in; the tachometer and odometer are the view's (a trip is forgotten on a reload); the speedometer's
+  dial goes to 60 and the car to 22; passengers aren't a thing; the cabin doesn't pitch or roll on a slope.
 - Models added 2026-11-11 (log/2026-11-11-03-models.md): farm plots and crops, building sites, cars, the
   helicopter, the flashlight, and the people the sim keeps as a tile (wanderers, traders, prisoners, caravans,
   scavenging parties: `Others.cs`'s stand-ins). Left: a

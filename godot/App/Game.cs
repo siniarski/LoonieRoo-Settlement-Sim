@@ -190,10 +190,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         bool fpScene = you != null && !view.mScreen(true);
         view.firstPerson = fpScene && view.menu == null;
         if (!view.inventoryAllowed(you != null)) view.showInventory = false;
+        bool lookSet = false;
         if (fpScene && !wasFirstPerson)
         {
             // Look the way they were aiming.
             var d = state.control!.aim ?? state.control.facing;
+            lookSet = lookArg != null;
             view.yaw = lookArg ?? Math.Atan2(d.y, d.x);
             view.pitch = pitchArg ?? 0;
             lookArg = pitchArg = null;
@@ -203,6 +205,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (fpScene)
         {
             var fsw = Stopwatch.StartNew();
+            // In a car the view turns with it (and faces forward as you get in, unless --look said where to look).
+            view.yaw = (view.yaw + firstPerson.CarTurn(state, view.yaw, delta, !lookSet)) % (2 * Math.PI);
             firstPerson.Update(state, alpha, view.yaw, view.pitch, delta);
             fires.Update(state, firstPerson.camera.GlobalPosition, delta);
             fpMs = fpMs * 0.9 + fsw.Elapsed.TotalMilliseconds * 0.1;
