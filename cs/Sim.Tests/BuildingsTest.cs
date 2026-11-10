@@ -245,6 +245,25 @@ public class BuildingsTest
         expect(all(5) == all(6)).toBe(false);
     }
 
+    [Fact(DisplayName = "buildings > a save made by another world generation version is refused, with a message")]
+    public void GenerationVersion()
+    {
+        var state = Worldgen.createWorld(3, 128);
+        expect(state.world.gen).toBe(Worldgen.GEN_VERSION);
+        var text = Savefile.toSaveFile(state);
+        expect(Savefile.loadFile(text).ok).toBe(true);
+        var node = System.Text.Json.Nodes.JsonNode.Parse(text)!;
+        node["state"]!["world"]!.AsObject().Remove("gen");
+        var old = Savefile.loadFile(node.ToJsonString());
+        expect(old.ok).toBe(false);
+        expect(old.error).toContain("generation version 1");
+        node["state"]!["world"]!["gen"] = Worldgen.GEN_VERSION + 1;
+        expect(Savefile.loadFile(node.ToJsonString()).ok).toBe(false);
+        var bug = System.Text.Json.Nodes.JsonNode.Parse(Savefile.toBugReport(state, state))!;
+        bug["initial"]!["world"]!.AsObject().Remove("gen");
+        expect(Savefile.loadFile(bug.ToJsonString()).ok).toBe(false);
+    }
+
     /// <summary>PLANS=path writes one plan of each kind and style as text (for the session log and docs).</summary>
     [Fact(DisplayName = "buildings > print plans")]
     public void Print()
