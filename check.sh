@@ -3,8 +3,12 @@
 #   ./check.sh         build everything (the sim, its tests, the Godot game) and run the sim's tests
 #   ./check.sh --all   and the Godot self-test: real input through the running game (a window opens for a few seconds),
 #                      run while the sim's tests run
-# It prints a short summary; everything else is in .check/ (build.log, tests-N.log, selftest.log): read those
-# rather than running the check again to see more.
+# Godot runs the game's DEBUG build (godot/.godot/mono/temp/bin/Debug), so every check builds that too (build-debug.log,
+# started once the Release build is done, beside the tests: ~1.5 s when little changed; with --all the self-test's
+# own Debug build does it). A --shot after a green check therefore always sees the sim as it is now. See also shot.sh
+# (build Debug and take a picture) and finish.sh (check, then commit if green).
+# It prints a short summary; everything else is in .check/ (build.log, build-debug.log, tests-N.log, selftest.log): read
+# those rather than running the check again to see more.
 # The sim's tests run as SHARDS processes at once (default 6), each a set of whole test classes, balanced by how long
 # each class took last time (.check/test-times.txt, else the committed cs/Sim.Tests/test-times.txt). Processes,
 # not threads: the sim's statics (the clock scale, caches) are per process, and inside one the tests still run one
@@ -14,13 +18,13 @@ set -uo pipefail
 cd "$(dirname "$0")"
 OUT=.check
 mkdir -p "$OUT"
-rm -f "$OUT"/tests-*.log "$OUT"/tests-*.trx "$OUT"/selftest.log "$OUT"/build.log
+rm -f "$OUT"/tests-*.log "$OUT"/tests-*.trx "$OUT"/selftest.log "$OUT"/build.log "$OUT"/build-debug.log
 SHARDS="${SHARDS:-6}"
 ALL=0; [ "${1:-}" = "--all" ] && ALL=1
 start=$(date +%s)
 secs() { echo "$(( $(date +%s) - start )) s"; }
 
-# --- Build (the sim, its tests, the game in Release; the game in Debug too with --all: Godot runs Debug) ---
+# --- Build (the sim, its tests, the game in Release; the game in Debug follows, beside the tests: Godot runs Debug) ---
 if ! dotnet build cs/LoonieRoo.slnx -c Release -v q -nologo > "$OUT/build.log" 2>&1; then
   grep -E ' error ' "$OUT/build.log" | sed 's/^ *//' | sort -u | head -30
   echo "check: RED, the build failed ($OUT/build.log)"; exit 1
@@ -51,13 +55,21 @@ done <<< "$filters"
 dotnet test cs/Sim.Tests -c Release --no-build -v q -nologo --filter "$rest" --results-directory "$OUT" --logger "trx;LogFileName=tests-rest.trx" --logger "console;verbosity=normal" > "$OUT/tests-rest.log" 2>&1 &
 pids+=($!)
 
+# --- The game's Debug build, meanwhile (after the Release build: two builds at once fight over the sim's obj/). With
+# --all the self-test below builds it, so not twice. ---
+debug_ok=1; dbpid=""
+if [ $ALL = 0 ]; then
+  dotnet build godot/LoonieRoo.csproj -v q -nologo > "$OUT/build-debug.log" 2>&1 &
+  dbpid=$!
+fi
+
 # --- The self-test, meanwhile ---
 selftest_ok=1
 if [ $ALL = 1 ]; then
   GODOT="${GODOT:-/c/Program Files/Godot_v4.6.1-stable_mono_win64/Godot_v4.6.1-stable_mono_win64_console.exe}"
   {
     if [ ! -x "$GODOT" ]; then echo "no Godot at $GODOT (set GODOT)"; exit 1; fi
-    dotnet build godot/LoonieRoo.csproj -v q -nologo || { echo "the game's Debug build failed"; exit 1; }
+    dotnet build godot/LoonieRoo.csproj -v q -nologo > "$OUT/build-debug.log" 2>&1 || { grep -E ' error ' "$OUT/build-debug.log" | sed 's/^ *//' | sort -u | head -30; echo "the game's Debug build failed"; exit 1; }
     # Import the assets first: a fresh checkout or worktree has no godot/.godot/imported, and new models
     # from a merge need importing too. ~9 s the first time, ~3 s when there's nothing new.
     timeout 600 "$GODOT" --headless --path godot --import >/dev/null 2>&1 || { echo "importing the assets failed: run $GODOT --headless --path godot --import to see why"; exit 1; }
@@ -98,6 +110,12 @@ else
   awk '/^  Failed / { on = 1 } /^  (Passed|Skipped) |^$|^Test Run|^Total tests/ { on = 0 } on && !/^ +at (Xunit|System)\./' "$OUT"/tests-*.log | head -80
 fi
 
+if [ -n "$dbpid" ] && ! wait "$dbpid"; then
+  debug_ok=0
+  grep -E ' error ' "$OUT/build-debug.log" | sed 's/^ *//' | sort -u | head -30
+  echo "build: the game's Debug build FAILED ($OUT/build-debug.log)"
+fi
+
 if [ $ALL = 1 ]; then
   wait "$stpid"
   grep -E '^(FAIL|selftest)|^no Godot|failed' "$OUT/selftest.log" | grep -vE '^PASS|^selftest: all passed'
@@ -105,4 +123,4 @@ if [ $ALL = 1 ]; then
   [ $selftest_ok = 1 ] && echo "selftest: $(grep -c '^PASS' "$OUT/selftest.log") checks passed ($(secs))"
 fi
 
-if [ $tests_ok = 1 ] && [ $selftest_ok = 1 ]; then echo "check: green ($(secs))"; else echo "check: RED (logs in $OUT/)"; exit 1; fi
+if [ $tests_ok = 1 ] && [ $selftest_ok = 1 ] && [ $debug_ok = 1 ]; then echo "check: green ($(secs))"; else echo "check: RED (logs in $OUT/)"; exit 1; fi
