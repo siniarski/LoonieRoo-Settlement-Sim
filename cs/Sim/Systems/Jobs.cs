@@ -64,7 +64,7 @@ public static partial class Jobs
                 removeJob(state, job, reason);
             }
         }
-        var haveJob = Js.Set(state.jobs.map((j) => j.blueprintId));
+        var haveJob = jobSet(state.jobs, null, (j) => j.blueprintId);
         foreach (var bp in Js.Iter(state.blueprints))
         {
             if (!haveJob.has(bp.id))
@@ -74,7 +74,7 @@ public static partial class Jobs
         }
         var __d0 = state.grid;
         var width = __d0.width;
-        var cleaning = Js.Set(state.jobs.filter((j) => j.type == "clean").map((j) => ((double)(j.y) * (width)) + j.x));
+        var cleaning = jobSet(state.jobs, (j) => j.type == "clean", (j) => ((double)(j.y) * (width)) + j.x);
         foreach (var i in Js.Iter(Js.ListOf(state.grid.dirtList).sort((a, b) => a - b)))
         {
             var x = i % width;
@@ -84,7 +84,7 @@ public static partial class Jobs
                 addJob(state, "clean", x, y, null, null);
             }
         }
-        var storing = Js.Set(state.jobs.filter(isStoreJob).map((j) => j.itemId));
+        var storing = jobSet(state.jobs, isStoreJob, (j) => j.itemId);
         foreach (var item in Js.Iter(state.items))
         {
             var home = Rooms.homeFor(stores, item.kind);
@@ -94,7 +94,7 @@ public static partial class Jobs
             }
             addJob(state, "haul", item.pos.x, item.pos.y, null, item.id);
         }
-        var fuelling = Js.Set(state.jobs.filter(isFuelJob).map((j) => j.furnitureId));
+        var fuelling = jobSet(state.jobs, isFuelJob, (j) => j.furnitureId);
         foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, Js.ObjectKeys(FUEL))))
         {
             if ((f.stored < fuelMax(f.kind)) && !fuelling.has(f.id))
@@ -102,7 +102,7 @@ public static partial class Jobs
                 addJob(state, "haul", f.x, f.y, null, null, f.id);
             }
         }
-        var repairing = Js.Set(state.jobs.filter((j) => isRepairJob(j) && (j.edge == null)).map((j) => ((double)(j.y) * (width)) + j.x));
+        var repairing = jobSet(state.jobs, (j) => isRepairJob(j) && (j.edge == null), (j) => ((double)(j.y) * (width)) + j.x);
         foreach (var i in Js.Iter(Js.ListOf(state.grid.damageList).sort((a, b) => a - b)))
         {
             if (!repairing.has(i))
@@ -120,7 +120,7 @@ public static partial class Jobs
             var tile = JsMath.floor(((double)(e) / (2)));
             addJob(state, "build", tile % width, JsMath.floor(((double)(tile) / (width))), null, null).edge = e;
         }
-        var scouting = Js.Set(state.jobs.filter((j) => j.type == "scout").map((j) => j.areaId));
+        var scouting = jobSet(state.jobs, (j) => j.type == "scout", (j) => j.areaId);
         foreach (var a in Js.Iter(state.exploreAreas))
         {
             if (!scouting.has(a.id))
@@ -128,7 +128,7 @@ public static partial class Jobs
                 addJob(state, "scout", JsMath.floor(((double)((a.x0 + a.x1)) / (2))), JsMath.floor(((double)((a.y0 + a.y1)) / (2))), null, null).areaId = a.id;
             }
         }
-        var treating = Js.Set(state.jobs.filter((j) => j.type == "doctor").map((j) => j.patientId));
+        var treating = jobSet(state.jobs, (j) => j.type == "doctor", (j) => j.patientId);
         foreach (var p in Js.Iter(state.survivors))
         {
             if (Medicine.isPatient(p) && !treating.has(p.id))
@@ -139,7 +139,7 @@ public static partial class Jobs
         JsRecord<string> wanted = new() { ["workbench"] = Crafting.wantedCraft(state, "workbench", true), ["stove"] = Crafting.wantedCraft(state, "stove") };
         if (Js.T(Js.T(wanted["workbench"]) || Js.T(wanted["stove"])))
         {
-            var stationed = Js.Set(state.jobs.filter((j) => (j.type == "craft") || (j.type == "cook")).map((j) => j.furnitureId));
+            var stationed = jobSet(state.jobs, (j) => (j.type == "craft") || (j.type == "cook"), (j) => j.furnitureId);
             foreach (var f in Js.Iter(FurnitureMod.ofKinds(state, ["workbench", "stove"])))
             {
                 if (((!Crafting.isStation(f.kind) || !Js.T(Js.Get(wanted, f.kind))) || stationed.has(f.id)) || !Js.T(Crafting.wantedCraft(state, f.kind, Crafting.inWorkshop(state, f))))
@@ -149,7 +149,7 @@ public static partial class Jobs
                 addJob(state, (f.kind == "stove") ? "cook" : "craft", f.x, f.y, null, null, f.id);
             }
         }
-        var searching = Js.Set(state.jobs.filter((j) => j.type == "scavenge").map((j) => j.furnitureId));
+        var searching = jobSet(state.jobs, (j) => j.type == "scavenge", (j) => j.furnitureId);
         foreach (var f in Js.Iter(FurnitureMod.markedForScavenge(state)))
         {
             if (((f.scavenge && ((f.kind == "crate") || (f.kind == "tree"))) && (f.loot > 0)) && !searching.has(f.id))
@@ -157,7 +157,7 @@ public static partial class Jobs
                 addJob(state, "scavenge", f.x, f.y, null, null, f.id);
             }
         }
-        var tending = Js.Set(state.jobs.filter((j) => j.type == "farm").map((j) => j.plotId));
+        var tending = jobSet(state.jobs, (j) => j.type == "farm", (j) => j.plotId);
         foreach (var plot in Js.Iter(state.farm))
         {
             if (Farming.needsWork(plot) && !tending.has(plot.id))
@@ -165,7 +165,7 @@ public static partial class Jobs
                 addJob(state, "farm", plot.x, plot.y, null, null, null, null, plot.id);
             }
         }
-        var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => ((double)(j.y) * (width)) + j.x));
+        var fighting = jobSet(state.jobs, (j) => j.type == "firefight", (j) => ((double)(j.y) * (width)) + j.x);
         foreach (var f in Js.Iter(state.fires))
         {
             if (!fighting.has(((double)(f.y) * (width)) + f.x))
@@ -175,7 +175,7 @@ public static partial class Jobs
         }
         if (EndgameMod.researchWanted(state))
         {
-            var researching = Js.Set(state.jobs.filter((j) => j.type == "research").map((j) => j.furnitureId));
+            var researching = jobSet(state.jobs, (j) => j.type == "research", (j) => j.furnitureId);
             var samples = state.items.some((i) => (i.kind == "sample") && (i.pos != null));
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "lab")))
             {
@@ -185,7 +185,7 @@ public static partial class Jobs
                 }
             }
         }
-        var hunting = Js.Set(state.jobs.filter((j) => j.type == "hunt").map((j) => j.animalId));
+        var hunting = jobSet(state.jobs, (j) => j.type == "hunt", (j) => j.animalId);
         foreach (var a in Js.Iter(state.animals))
         {
             if (a.hunted && !hunting.has(a.id))
@@ -193,7 +193,7 @@ public static partial class Jobs
                 addJob(state, "hunt", a.pos.x, a.pos.y, null, null).animalId = a.id;
             }
         }
-        var hunted = Js.Set(state.jobs.filter((j) => j.type == "guard").map((j) => j.zombieId));
+        var hunted = jobSet(state.jobs, (j) => j.type == "guard", (j) => j.zombieId);
         foreach (var z in Js.Iter(state.zombies))
         {
             if (!hunted.has(z.id))
@@ -201,7 +201,7 @@ public static partial class Jobs
                 addJob(state, "guard", z.pos.x, z.pos.y, null, null, null, z.id);
             }
         }
-        var guarding = Js.Set(state.jobs.filter((j) => Js.T((j.type == "guard") && Js.T(j.animalId))).map((j) => j.animalId));
+        var guarding = jobSet(state.jobs, (j) => Js.T((j.type == "guard") && Js.T(j.animalId)), (j) => j.animalId);
         foreach (var a in Js.Iter(state.animals))
         {
             if (Animals.isMenace(state, a) && !guarding.has(a.id))
@@ -209,6 +209,21 @@ public static partial class Jobs
                 addJob(state, "guard", a.pos.x, a.pos.y, null, null).animalId = a.id;
             }
         }
+    }
+
+    /// <summary>The keys of the jobs that pass `keep` (all if null), as a set for `has`: one pass, no lists on the way
+    /// (it was Js.Set(jobs.filter(keep).map(key))). Never iterated, so a plain HashSet.</summary>
+    static HashSet<T> jobSet<T>(List<Job> jobs, Func<Job, bool>? keep, Func<Job, T> key)
+    {
+        var o = new HashSet<T>();
+        foreach (var j in jobs)
+        {
+            if (keep == null || keep(j))
+            {
+                o.Add(key(j));
+            }
+        }
+        return o;
     }
 
     /// <summary>Repairs are build jobs with no blueprint: they fix a damaged wall or door at x, y.</summary>
