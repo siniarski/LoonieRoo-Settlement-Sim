@@ -61,7 +61,7 @@ public static partial class Defences
                 return true;
             }
         }
-        if (Power.litLamps(state).some((l) => Space.manhattan(l, p) <= (Power.LAMP_LIGHT + 1)))
+        if (Lights.isLit(state, p))
         {
             return true;
         }

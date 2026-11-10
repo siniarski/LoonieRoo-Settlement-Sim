@@ -134,6 +134,6 @@ public static class COLOURS
     {
         ["cloth"] = ("#c9b8a0", "c"), ["coat"] = ("#8a5a3a", "C"), ["armour"] = ("#7a8088", "A"), ["boots"] = ("#4a3626", "B"), ["gun"] = ("#2e3238", "G"),
         ["ammo"] = ("#b08a2e", "a"), ["corpse"] = ("#5a4a4a", "+"), ["book"] = ("#6a3a7a", "b"), ["cart"] = ("#7a6040", "K"), ["axe"] = ("#8a8070", "X"),
-        ["hammer"] = ("#707880", "H"), ["medkit"] = ("#c84040", "+"), ["sample"] = ("#7ab06a", "s"), ["scrap"] = ("#8a8f96", "#"), ["fuel"] = ("#b06a2a", "f"),
+        ["hammer"] = ("#707880", "H"), ["medkit"] = ("#c84040", "+"), ["sample"] = ("#7ab06a", "s"), ["scrap"] = ("#8a8f96", "#"), ["fuel"] = ("#b06a2a", "f"), ["flashlight"] = ("#d8c860", "i"),
     };
 }

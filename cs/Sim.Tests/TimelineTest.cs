@@ -95,20 +95,23 @@ public partial class TimelineTest
             expect(icebox.loot).toBe(2);
         }
 
-        [Fact(DisplayName = "the mains > with the power on, indoors is lit at night and you see as far as by day")]
+        [Fact(DisplayName = "the mains > with the power on, a room whose light is switched on is lit at night and you see as far as by day")]
         public void T005_with_the_power_on_indoors_is_lit_at_night_and_you_see_as_far()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["#####", "#.s.#", "#...#", "#####", "....."] });
             state.timeline = timeline();
+            Commands.applyCommand(state, new Command { type = "takeControl", survivorId = Js.NN(Js.Get(state.survivors, 0)).id });
             while (!Time.isNight(state.tick))
             {
                 state.tick = Js.I(state.tick + 10);
             }
-            expect(TimelineMod.mainsLit(state, new Point { x = Js.I(2), y = Js.I(1) })).toBe(true);
-            expect(TimelineMod.mainsLit(state, new Point { x = Js.I(2), y = Js.I(4) })).toBe(false);
+            expect(Lights.roomLit(state, new Point { x = Js.I(2), y = Js.I(1) })).toBe(false);
+            Commands.applyCommand(state, new Command { type = "lightSwitch", x = 2, y = 1 });
+            expect(Lights.roomLit(state, new Point { x = Js.I(2), y = Js.I(1) })).toBe(true);
+            expect(Lights.roomLit(state, new Point { x = Js.I(2), y = Js.I(4) })).toBe(false);
             expect(Sight.sightRadius(state, Js.NN(Js.Get(state.survivors, 0)))).toBe(Sight.SIGHT_RADIUS);
             state.timeline.powerOffDay = 1;
-            expect(TimelineMod.mainsLit(state, new Point { x = Js.I(2), y = Js.I(1) })).toBe(false);
+            expect(Lights.roomLit(state, new Point { x = Js.I(2), y = Js.I(1) })).toBe(false);
             expect(Sight.sightRadius(state, Js.NN(Js.Get(state.survivors, 0)))).toBeLessThan(Sight.SIGHT_RADIUS);
         }
 

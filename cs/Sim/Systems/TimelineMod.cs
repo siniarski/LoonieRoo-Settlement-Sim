@@ -6,8 +6,9 @@
 //                the world is (settings.progression: weeks, months, a year, years; a year on,
 //                they're off from the start). Hand-made maps have no mains.
 //     water on   kitchen counters, toilets and baths are taps: clean water (water.ts).
-//     power on   iceboxes keep food like fridges (power.ts spoilage), and indoors is lit at
-//                night (inLight: guards hit harder, you see as far as by day: sight.ts).
+//     power on   iceboxes keep food like fridges (power.ts spoilage); room lights switched on, porch
+//                lights and street lamps light at night (lights.cs: guards hit harder in light, and
+//                in a lit room you see as far as by day: sight.ts).
 //   happenings   while the world is still winding down (until a few days after the power goes):
 //     helicopter on a rolled day a helicopter comes over, hangs over you (the one you control,
 //                else the first survivor) for HELI_HOVER ticks, then flies off, thundering
@@ -89,12 +90,6 @@ public static partial class TimelineMod
     public static bool isMainsFridge(SimState state, Furniture f)
     {
         return (f.look == "icebox") && powerOn(state);
-    }
-
-    /// <summary>Indoors at night with the power on: the lights are on.</summary>
-    public static bool mainsLit(SimState state, Point p)
-    {
-        return ((Time.isNight(state.tick) && powerOn(state)) && Grids.inBounds(state.grid, p.x, p.y)) && (Rooms.labelAt(state, p.x, p.y) != Rooms.OUTDOORS);
     }
 
     /// <summary>Who the world's happenings come looking for: the one you control, else the first survivor.</summary>

@@ -142,6 +142,35 @@ public static partial class Commands
             s.note = done;
             return changed();
         }
+        if ((command.type == "lightSwitch") || (command.type == "flashlight") || (command.type == "headlights"))
+        {
+            // Lights (lights.cs): the switch of the room at x, y (you in it or at its door), your flashlight, your car's headlights.
+            var s = ControlMod.controlled(state);
+            if (!Js.T(s))
+            {
+                return reject("nobody is under control");
+            }
+            string? why;
+            if (command.type == "lightSwitch")
+            {
+                why = (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y)) ? "not a tile" : Lights.toggleSwitch(state, s, Js.NN(command.x), Js.NN(command.y));
+            }
+            else if (command.type == "flashlight")
+            {
+                why = Lights.toggleFlashlight(state, s);
+            }
+            else
+            {
+                var car = Vehicles.vehicleOf(state, s);
+                why = Js.T(car) ? null : "not driving";
+                if (why == null)
+                {
+                    car.lights = (car.lights == true) ? null : true;
+                    s.note = (car.lights == true) ? (Lights.headlightsLit(car) ? "headlights on" : "headlights on: they need fuel") : "headlights off";
+                }
+            }
+            return (why == null) ? changed() : reject(why);
+        }
         if (command.type == "escape")
         {
             if ((command.who != "others") && (command.who != "none"))
@@ -1358,6 +1387,10 @@ public static partial class Commands
             c.busy = new ControlBusy { what = "treat", targetId = item.id, progress = 0, duration = Health.TREAT_TICKS };
             s.note = (item.kind == "medicine") ? "taking medicine" : "bandaging";
             return null;
+        }
+        if (item.kind == Lights.FLASHLIGHT)
+        {
+            return Lights.toggleFlashlight(state, s, item);
         }
         if (Js.T(Inventory.slotFor(item.kind)))
         {
