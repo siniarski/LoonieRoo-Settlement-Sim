@@ -57,15 +57,15 @@ public class WorldPreviewTest
     [Fact(DisplayName = "world preview > the same picture on a worker thread, in stages, and stoppable")]
     public async System.Threading.Tasks.Task same_on_a_thread()
     {
-        var here = WorldPreview.build(new WorldRegions(11, 2048, "mainland"));
+        var here = WorldPreview.build(new WorldRegions(11, 1280, "mainland"));
         var stages = new List<string>();
-        var there = await System.Threading.Tasks.Task.Run(() => WorldPreview.build(new WorldRegions(11, 2048, "mainland"), (_, what) => stages.Add(what)));
+        var there = await System.Threading.Tasks.Task.Run(() => WorldPreview.build(new WorldRegions(11, 1280, "mainland"), (_, what) => stages.Add(what)));
         expect(there.SequenceEqual(here)).toBe(true);
         expect(stages[0]).toBe("the land");
         expect(stages[1]).toBe("towns");
         expect(stages[^1]).toBe("done");
-        expect(stages.Count).toBe(2 + 4); // 2048: 2 x 2 regions, every one planned
-        expect(WorldPreview.build(new WorldRegions(11, 2048, "mainland"), null, () => true)).toBe(null);
+        expect(stages.Count).toBe(2 + 4); // 1280: 2 x 2 regions, every one planned
+        expect(WorldPreview.build(new WorldRegions(11, 1280, "mainland"), null, () => true)).toBe(null);
     }
 
     [Fact(DisplayName = "world preview > a big world shows every region's towns, nearest the start first, and plans none")]

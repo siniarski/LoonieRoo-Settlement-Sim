@@ -231,7 +231,7 @@ void fragment() {
             bool water;
             int ground;
             if (Generated(state, tx, ty)) { water = g.tiles[i] == "water"; ground = g.ground[i]; }
-            else (water, ground) = PlanGround(state, tx, ty, Ready(state, tx, ty));
+            else (water, ground, _) = PlanGround(state, tx, ty, Ready(state, tx, ty));
             c = water ? WaterColour : GroundColour(ground);
             float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
             c = c.Lightened(0.06f + Math.Abs(n) * 0.035f);
@@ -327,14 +327,14 @@ void fragment() {
                     var (s, t, c) = Trees.Placement(g, f.x, f.y, coarse: true);
                     bySpecies[s].Add((t, c));
                 }
-            // Land not generated yet: the trees generateChunk would plant (forest ground off roads, lots and the start's clearing, a roll of 0.3).
+            // Land not generated yet: the trees generateChunk would plant (open ground off roads, lots and the start's clearing, a roll under NatureMod.treeChance).
             if (Plan(state) is { } lay2 && Ready(state, x0, y0))
                 for (int y = y0; y < y1; y++)
                     for (int x = x0; x < x1; x++)
                     {
                         if (Generated(state, x, y) || Worldgen.isRoad(lay2, x, y) || Worldgen.onLot(lay2, x, y) || NatureMod.nearStart(lay2, x, y, NatureMod.START_CLEAR_RADIUS)) continue;
-                        var (wet, ground) = PlanGround(state, x, y, true);
-                        if (wet || ground != Worldgen.FOREST || NatureMod.roll(lay2.seed, x, y, 12) >= 0.3) continue;
+                        var (wet, _, wooded) = PlanGround(state, x, y, true);
+                        if (wet || double.IsNaN(wooded) || NatureMod.roll(lay2.seed, x, y, 12) >= NatureMod.treeChanceAt(wooded)) continue;
                         var (s, t, c) = Trees.Placement(x, y, true, true);
                         bySpecies[s].Add((t, c));
                     }
@@ -495,18 +495,20 @@ void fragment() {
         return cx < 0 || cy < 0 || cx >= chunks || cy >= chunks || Js.Get(w.generated, (double)cy * chunks + cx) == 1;
     }
 
-    /// <summary>What generateChunk's first loop would make a tile (water, and its ground index), with a lot's yard
-    /// as Lots.layoutLot draws it: the far field's look at land not generated yet.</summary>
-    (bool water, int ground) PlanGround(SimState state, int x, int y, bool planned)
+    /// <summary>What Worldgen.drawTerrain would make a tile (water, and its ground index), with a lot's yard as
+    /// Lots.layoutLot draws it: the far field's look at land not generated yet. And the woodedness of open ground, for
+    /// its tree (NaN elsewhere: a road, a lot, water, the fence).</summary>
+    (bool water, int ground, double wooded) PlanGround(SimState state, int x, int y, bool planned)
     {
         var l = Plan(state)!;
         int grass = 0;
-        if (Worldgen.fenceAt(l, x, y) != null) return (false, grass);
+        const double NONE = double.NaN;
+        if (Worldgen.fenceAt(l, x, y) != null) return (false, grass, NONE);
         // A region whose plan isn't made yet (being made on a worker: Ready): nature alone, no roads or lots.
         bool road = planned && Worldgen.isRoad(l, x, y);
-        if (NatureMod.isSea(l, x, y) && !road) return (true, grass);
-        if (road) return (false, Array.IndexOf(Grids.GROUNDS, NatureMod.isWater(l, x, y) ? "bridge" : "road"));
-        if (NatureMod.isWater(l, x, y)) return (true, grass);
+        bool water = NatureMod.isWater(l, x, y);
+        if (road) return (false, Array.IndexOf(Grids.GROUNDS, water ? "bridge" : "road"), NONE);
+        if (water) return (true, grass, NONE);
         if (planned && Worldgen.onLot(l, x, y))
         {
             var lot = l.regions.LotAt(x, y);
@@ -514,13 +516,14 @@ void fragment() {
             {
                 string? yard = Lots.layoutLot(l.seed, lot).yard?.Invoke(x, y);
                 int gi = yard == null ? -1 : Array.IndexOf(Grids.GROUNDS, yard);
-                return (false, gi >= 0 ? gi : grass);
+                return (false, gi >= 0 ? gi : grass, NONE);
             }
-            return (false, grass);
+            return (false, grass, NONE);
         }
-        if (NatureMod.isForest(l, x, y)) return (false, Worldgen.FOREST);
-        if (NatureMod.noise(l.seed, x, y, 6, 11) > 0.72) return (false, Array.IndexOf(Grids.GROUNDS, "dirt"));
-        return (false, grass);
+        double w = NatureMod.woodedness(l, x, y);
+        if (w > NatureMod.FOREST_AT) return (false, Worldgen.FOREST, w);
+        if (NatureMod.isDirt(l, x, y)) return (false, Array.IndexOf(Grids.GROUNDS, "dirt"), w);
+        return (false, grass, w);
     }
 
     static readonly Color WaterColour = Ctx.Css(COLOURS.tiles["water"]);

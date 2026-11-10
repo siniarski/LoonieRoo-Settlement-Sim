@@ -59,6 +59,8 @@ public static class WorldPreview
                         for (int a = 0; a < 3; a++) votes[NatureAt(n, x0 + (2 * a + 1) * (x1 - x0) / 6, y0 + (2 * b + 1) * (y1 - y0) / 6)]++;
                     // The most votes; a tie goes to water, then forest (what a coarse picture would lose).
                     k = votes[WATER] >= votes[FOREST] && votes[WATER] >= votes[LAND] ? WATER : votes[FOREST] >= votes[LAND] ? FOREST : LAND;
+                    // A river narrower than a pixel still shows (a map's licence): within half a pixel of its middle.
+                    if (k != WATER && !NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 8) && Terrain.Of(n).riverDistance(x, y) < Math.Min((x1 - x0) / 2.0, Terrain.FAR - 1)) k = WATER;
                 }
                 if (n.map == "quarantine" && OnFence(size, x0, x1, y0, y1)) k = FENCE;
                 img[j * px + i] = k;

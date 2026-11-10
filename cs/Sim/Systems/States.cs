@@ -8,7 +8,7 @@ public static partial class States
 {
 
     /// <summary>Bump when the shape of SimState changes. Hot reload and (later) save loading discard state with a different version instead of crashing on it.</summary>
-    public const int SCHEMA_VERSION = 76;
+    public const int SCHEMA_VERSION = 77;
 
     public static SimState createState(NewStateOptions __o0)
     {

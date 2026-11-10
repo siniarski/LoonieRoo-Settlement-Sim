@@ -44,13 +44,13 @@ public class GenProfile
                     world.generated[i] = 1;
                     var one = Stopwatch.StartNew();
                     var t = Stopwatch.StartNew();
-                    Terrain(state, l, cx, cy);
+                    var wooded = Worldgen.drawTerrain(state, l, cx, cy);
                     phase[0] += t.Elapsed.TotalMilliseconds; t.Restart();
                     double x0 = cx * Worldgen.CHUNK, y0 = cy * Worldgen.CHUNK;
                     foreach (var id in l.regions.LotsInChunk(cx, cy))
                         Lots.drawLot(state, ctx, l.regions.Lot(id), x0, y0, JsMath.min(l.size, x0 + Worldgen.CHUNK) - 1, JsMath.min(l.size, y0 + Worldgen.CHUNK) - 1);
                     phase[1] += t.Elapsed.TotalMilliseconds; t.Restart();
-                    Trees(state, l, x0, y0);
+                    Worldgen.drawTrees(state, l, cx, cy, wooded);
                     phase[2] += t.Elapsed.TotalMilliseconds; t.Restart();
                     Worldgen.strays(state, l, x0, y0);
                     phase[3] += t.Elapsed.TotalMilliseconds; t.Restart();
@@ -341,37 +341,5 @@ public class GenProfile
                 out_.Add($"world {size} {seed} {h:x16} furniture {s.furniture.Count} dormant {s.dormant.Count}");
             }
         File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/plan-hashes.txt"), string.Join("\n", out_) + "\n");
-    }
-
-    // generateChunk's first loop (terrain), as Worldgen has it.
-    static void Terrain(SimState state, Layout l, int cx, int cy)
-    {
-        double x0 = (double)cx * Worldgen.CHUNK, y0 = (double)cy * Worldgen.CHUNK;
-        for (var y = y0; y < y0 + Worldgen.CHUNK; y++)
-            for (var x = x0; x < x0 + Worldgen.CHUNK; x++)
-            {
-                if (!Grids.inBounds(state.grid, x, y)) continue;
-                var fence = Worldgen.fenceAt(l, x, y);
-                if (Js.T(fence)) Grids.setTile(state.grid, x, y, fence);
-                else if (NatureMod.isSea(l, x, y) && !Worldgen.isRoad(l, x, y)) Grids.setTile(state.grid, x, y, "water");
-                else if (Worldgen.isRoad(l, x, y)) Worldgen.ground(state, x, y, NatureMod.isWater(l, x, y) ? "bridge" : "road");
-                else if (NatureMod.isWater(l, x, y)) Grids.setTile(state.grid, x, y, "water");
-                else if (Worldgen.onLot(l, x, y)) continue;
-                else if (NatureMod.isForest(l, x, y)) Worldgen.ground(state, x, y, "forest");
-                else if (NatureMod.noise(l.seed, x, y, 6, 11) > 0.72) Worldgen.ground(state, x, y, "dirt");
-            }
-    }
-
-    // generateChunk's third loop (trees), as Worldgen has it.
-    static void Trees(SimState state, Layout l, double x0, double y0)
-    {
-        for (var y = y0; y < y0 + Worldgen.CHUNK; y++)
-            for (var x = x0; x < x0 + Worldgen.CHUNK; x++)
-            {
-                if (!Grids.inBounds(state.grid, x, y) || Worldgen.isRoad(l, x, y) || Worldgen.onLot(l, x, y) || NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS)) continue;
-                var i = Grids.tileIndex(state.grid, x, y);
-                if (Js.Get(state.grid.tiles, i) == "floor" && Js.Get(state.grid.ground, i) == Worldgen.FOREST && NatureMod.roll(l.seed, x, y, 12) < 0.3)
-                    FurnitureMod.addFurniture(state, "tree", x, y);
-            }
     }
 }

@@ -89,7 +89,12 @@ public class TownsSpeedTest
                         continue;
                     }
                     var wetShare = ((double)(wet) / (JsMath.max(1, around)));
-                    var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15));
+                    var settled = Towns.settled(n, x, y);
+                    if (settled < Towns.wild(n))
+                    {
+                        continue;
+                    }
+                    var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15)) + Towns.SETTLED_PULL * (settled - 0.5);
                     if (!Js.T(best) || (score > best.score))
                     {
                         best = new SiteTownsBest { x = Js.I(x), y = Js.I(y), score = score };

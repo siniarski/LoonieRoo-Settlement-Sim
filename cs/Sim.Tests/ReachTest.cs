@@ -7,16 +7,25 @@ namespace LoonieRoo.Sim.Tests.Ported;
 public partial class ReachTest
 {
 
-    /// <summary>The plain answer: flood from `from` with the doors exactly as they are.</summary>
+    /// <summary>The plain answer: flood from `from` with the doors exactly as they are. Standing where it can't pass (a
+    /// zombie on a shut door), a mover sets off from the neighbours it can step to, as canReach has it (2026-11-10:
+    /// until then this gave up, and the chunked test only passed because its map never put a start on a door).</summary>
     public static bool reference(Grid grid, Point from, Point goal, string mover)
     {
-        if (!Pathfinding.isPassable(grid, from.x, from.y, mover) || !Pathfinding.isPassable(grid, goal.x, goal.y, mover))
+        if (!Pathfinding.isPassable(grid, goal.x, goal.y, mover))
         {
             return false;
         }
         var seen = new Uint8Array(((double)(grid.width) * (grid.height)));
-        List<Point> stack = [from];
-        seen[Js.Idx(((double)(from.y) * (grid.width)) + from.x)] = 1;
+        List<Point> stack = [];
+        if (Pathfinding.isPassable(grid, from.x, from.y, mover)) stack.push(from);
+        else
+            foreach (var d in Pathfinding.DIRS)
+            {
+                Point n = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
+                if (n.x >= 0 && n.y >= 0 && n.x < grid.width && n.y < grid.height && Pathfinding.isPassable(grid, n.x, n.y, mover) && Pathfinding.crossable(grid, from.x, from.y, n.x, n.y, mover)) stack.push(n);
+            }
+        foreach (var p0 in stack) seen[Js.Idx(((double)(p0.y) * (grid.width)) + p0.x)] = 1;
         while (Js.T(stack.length))
         {
             var p = Js.NN(stack.pop());

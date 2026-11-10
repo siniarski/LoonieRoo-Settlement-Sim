@@ -133,12 +133,24 @@ public static partial class Worldgen
         }
     }
 
-    /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees (into the
-    /// chunk's own state: makeChunk).</summary>
+    /// <summary>Terrain for every tile in the chunk, then its part of every lot touching it, then trees, then the dead
+    /// lying out (into the chunk's own state: makeChunk). The phases are public for the harness's gen profile.</summary>
     static void drawChunk(SimState state, Layout l, int cx, int cy)
+    {
+        var wooded = drawTerrain(state, l, cx, cy);
+        drawLots(state, l, cx, cy);
+        drawTrees(state, l, cx, cy, wooded);
+        strays(state, l, (double)cx * CHUNK, (double)cy * CHUNK);
+    }
+
+    /// <summary>The chunk's tiles and ground; returns each open tile's woodedness (NaN where it isn't open ground), for
+    /// its tree.</summary>
+    public static double[] drawTerrain(SimState state, Layout l, int cx, int cy)
     {
         var x0 = ((double)(cx) * (CHUNK));
         var y0 = ((double)(cy) * (CHUNK));
+        var wooded = new double[CHUNK * CHUNK];
+        Array.Fill(wooded, double.NaN);
         for (var y = y0; y < (y0 + CHUNK); y++)
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
@@ -148,19 +160,18 @@ public static partial class Worldgen
                     continue;
                 }
                 var fence = fenceAt(l, x, y);
+                bool road = isRoad(l, x, y);
+                // Water (the sea is water too): a road over it is a bridge.
+                bool water = !Js.T(fence) && NatureMod.isWater(l, x, y);
                 if (Js.T(fence))
                 {
                     Grids.setTile(state.grid, x, y, fence);
                 }
-                else if (NatureMod.isSea(l, x, y) && !isRoad(l, x, y))
+                else if (road)
                 {
-                    Grids.setTile(state.grid, x, y, "water");
+                    ground(state, x, y, water ? "bridge" : "road");
                 }
-                else if (isRoad(l, x, y))
-                {
-                    ground(state, x, y, NatureMod.isWater(l, x, y) ? "bridge" : "road");
-                }
-                else if (NatureMod.isWater(l, x, y))
+                else if (water)
                 {
                     Grids.setTile(state.grid, x, y, "water");
                 }
@@ -168,21 +179,35 @@ public static partial class Worldgen
                 {
                     continue;
                 }
-                else if (NatureMod.isForest(l, x, y))
+                else
                 {
-                    ground(state, x, y, "forest");
-                }
-                else if (NatureMod.noise(l.seed, x, y, 6, 11) > 0.72)
-                {
-                    ground(state, x, y, "dirt");
+                    int tx = Js.I(x), ty = Js.I(y);
+                    double w = NatureMod.woodedness(l, tx, ty);
+                    wooded[(ty - Js.I(y0)) * CHUNK + (tx - Js.I(x0))] = w;
+                    if (w > NatureMod.FOREST_AT) ground(state, x, y, "forest");
+                    else if (NatureMod.isDirt(l, tx, ty)) ground(state, x, y, "dirt");
                 }
             }
         }
+        return wooded;
+    }
+
+    /// <summary>The chunk's part of every lot touching it.</summary>
+    public static void drawLots(SimState state, Layout l, int cx, int cy)
+    {
+        double x0 = (double)cx * CHUNK, y0 = (double)cy * CHUNK;
         var ctx = lotContext(l);
         foreach (var id in l.regions.LotsInChunk(cx, cy))
         {
             Lots.drawLot(state, ctx, l.regions.Lot(id), x0, y0, JsMath.min(l.size, x0 + CHUNK) - 1, JsMath.min(l.size, y0 + CHUNK) - 1);
         }
+    }
+
+    /// <summary>Trees on the chunk's open ground (off roads, lots and the start's clearing), each a roll under
+    /// NatureMod.treeChance (from drawTerrain's woodedness).</summary>
+    public static void drawTrees(SimState state, Layout l, int cx, int cy, double[] wooded)
+    {
+        double x0 = (double)cx * CHUNK, y0 = (double)cy * CHUNK;
         for (var y = y0; y < (y0 + CHUNK); y++)
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
@@ -192,13 +217,13 @@ public static partial class Worldgen
                     continue;
                 }
                 var i = Grids.tileIndex(state.grid, x, y);
-                if (((Js.Get(state.grid.tiles, i) == "floor") && (Js.Get(state.grid.ground, i) == FOREST)) && (NatureMod.roll(l.seed, x, y, 12) < 0.3))
+                double w = wooded[(Js.I(y) - Js.I(y0)) * CHUNK + (Js.I(x) - Js.I(x0))];
+                if ((Js.Get(state.grid.tiles, i) == "floor") && !double.IsNaN(w) && (NatureMod.roll(l.seed, x, y, 12) < NatureMod.treeChanceAt(w)))
                 {
                     FurnitureMod.addFurniture(state, "tree", x, y);
                 }
             }
         }
-        strays(state, l, x0, y0);
     }
     public static void generateChunk(SimState state, Layout l, double cx, double cy) => generateChunk(state, l, Js.I(cx), Js.I(cy));
 

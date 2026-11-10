@@ -15,6 +15,9 @@ public static partial class Roads
 
     public const int ROAD_CELL = 4;
 
+    /// <summary>A road cell's cost on a lake (14 on a river, 3 in woods, 1 in the open).</summary>
+    public const double LAKE_COST = 60;
+
     /// <summary>The most heap pops a road's search may take, per cell of the coarse grid.</summary>
     public const int EXPANSIONS_PER_CELL = 8;
 
@@ -253,7 +256,8 @@ public static partial class Roads
             {
                 var x = ((double)(i + w.Kx0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
                 var y = ((double)(j + w.Ky0) * (ROAD_CELL)) + ((double)(ROAD_CELL) / (2));
-                var v = NatureMod.isSea(n, x, y) ? double.PositiveInfinity : (NatureMod.isWater(n, x, y) ? 14 : (NatureMod.isForest(n, x, y) ? 3 : 1));
+                // Rivers are bridged where they must be; a lake (Terrain's) is gone round unless that's very far.
+                var v = NatureMod.isSea(n, x, y) ? double.PositiveInfinity : (NatureMod.isWater(n, x, y) ? (NatureMod.isLake(n, x, y) ? LAKE_COST : 14) : (NatureMod.isForest(n, x, y) ? 3 : 1));
                 if (index.Find(x, y, reach, (t) => JsMath.sqrt((JsMath.pow((x - t.x), 2)) + (JsMath.pow((y - t.y), 2))) < ((double)(t.radius) * (0.9)), scratch) != null)
                 {
                     v += 4;

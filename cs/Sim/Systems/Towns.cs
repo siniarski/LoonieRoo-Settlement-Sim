@@ -4,7 +4,11 @@
 //
 //   siting   towns go where the land suits them: dry, open ground (little forest), near water
 //            (a river or lake just outside the town), away from the map's edge, the start
-//            clearing and each other (farmland between). Biggest first; villages fill in.
+//            clearing and each other (farmland between). Biggest first; villages fill in. Only on
+//            settled land (Terrain.settlement over wild()), the more settled the better: towns gather
+//            where people did, and wild country lies between (2026-11-10).
+//   outline  a town's streets reach out as far as a lumpy outline (noise round its circle, REACH),
+//            not a circle: it straggles out one way and stops short another.
 //   streets  each town grows from its centre: a main street one way and a cross street the
 //            other, then side streets branching off them at uneven spacing (wide enough for a
 //            lot each side and room between), each as long as the town's circle allows. Streets
@@ -16,6 +20,19 @@ public static partial class Towns
 {
 
     public const int STREET = 2;
+
+    /// <summary>How much a site's score gains for settled land (x settlement - 0.5).</summary>
+    public const double SETTLED_PULL = 0.6;
+
+    /// <summary>How settled the land at a site is (Terrain.settlement).</summary>
+    public static double settled(Nature n, double x, double y) => Terrain.Of(n).settlement(x, y);
+
+    /// <summary>Land settled less than this has no towns (Terrain.wildAt: the world's least settled quarter).</summary>
+    public static double wild(Nature n) => Terrain.Of(n).wildAt;
+
+    /// <summary>How far a town's streets reach at (x, y), as a share of its radius: 0.75 to 1.3 by noise at about half
+    /// its radius, so its edge wanders.</summary>
+    public static double reach(Nature n, Town t, double x, double y) => 0.75 + 0.55 * NatureMod.noiseD(n.seed, x, y, Math.Max(8, t.radius * 0.6), 0x7210 + t.index);
 
     /// <summary>Side streets branch this far apart, at least (a lot's depth each side and a verge).</summary>
     public const int STREET_GAP = 26;
@@ -172,7 +189,12 @@ public static partial class Towns
                         continue;
                     }
                     var wetShare = ((double)(wet) / (JsMath.max(1, around)));
-                    var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15));
+                    var settled = Towns.settled(n, x, y);
+                    if (settled < Towns.wild(n))
+                    {
+                        continue;
+                    }
+                    var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15)) + Towns.SETTLED_PULL * (settled - 0.5);
                     if (!Js.T(best) || (score > best.score))
                     {
                         best = new SiteTownsBest { x = Js.I(x), y = Js.I(y), score = score };
@@ -259,7 +281,7 @@ public static partial class Towns
             {
                 var nx = x + ((double)(dx) * ((steps + 1)));
                 var ny = y + ((double)(dy) * ((steps + 1)));
-                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > ((double)(t.radius) * (1.05))))
+                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > ((double)(t.radius) * reach(n, t, nx, ny))))
                 {
                     break;
                 }

@@ -424,7 +424,8 @@ public static partial class Worldplan
                 {
                     return NatureMod.roll(n.seed, gx, gy, 0x7600 + j);
                 }
-                if (r(0) > 0.35)
+                // More cabins in wild country (a third of the cells where nobody settled, a fifth where towns are).
+                if (r(0) > 0.2 + 0.15 * (1 - Towns.settled(n, gx + 24, gy + 24)))
                 {
                     continue;
                 }
