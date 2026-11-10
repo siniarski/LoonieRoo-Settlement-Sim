@@ -8,6 +8,8 @@
 //   crawler   frail; slips under barricades
 // Each counters a different defence: runners outpace guards, brutes break walls,
 // screamers punish fighting near ruins, crawlers make barricades no wall.
+// Since 2026-11-11 (Crossings.cs) runners also vault barricades, every kind climbs over a parked car at its own
+// pace, and a crawler goes under a pickup.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

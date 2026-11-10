@@ -262,6 +262,40 @@ public static class Staging
         state.runs.Add(new ScavRun { id = $"sr{state.nextId++}", from = "", x = x + 2, y = y + 2, home = new Point(x + 2, y + 2), ruin = new Point(x + 2, y + 2), people = 3, phase = "out", nextStepTick = far, untilTick = far });
     }
 
+    /// <summary>The dead getting over things (Crossings.cs), four tiles east of someone looking east: a sedan and a
+    /// pickup side on (noses south), a barricade on the border between them, and the dead coming over from the far
+    /// side, each put part-way through its crossing: on the sedan a walker coming down off the bonnet, a screamer
+    /// on the roof and a crawler hauled onto the boot; a runner in the air over the barricade; on the pickup a
+    /// brute on the cab and a walker on the bed, and a crawler going in under its nose. They go on from there
+    /// (hold them with --paused). Wants open ground (nothing is cleared: one whose tiles aren't open is left out).</summary>
+    public static void climb(SimState state, Survivor you)
+    {
+        Worldgen.ensureGeneratedAround(state, you.pos);
+        var grid = state.grid;
+        int x = you.pos.x + 4, y = you.pos.y;
+        car(state, x, y - 3, 8).lights = null;
+        car(state, x, y + 3, 8, "truck").lights = null;
+        Grids.setEdge(grid, x + 1, y, "w", Grids.EDGE_BARRICADE);
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+        void one(string variant, int row, int ticks)
+        {
+            if (!Pathfinding.isPassable(grid, x + 1, y + row, Pathfinding.ZOMBIE) || !Pathfinding.isPassable(grid, x - 1, y + row, Pathfinding.ZOMBIE)) return;
+            var z = Zombies.addZombie(state, x + 1, y + row, Zombies.ZOMBIE_HEALTH, "static");
+            z.variant = variant;
+            // Its way is given, not planned: straight over, whatever round would cost.
+            z.path = [new Point(x, y + row), new Point(x - 1, y + row)];
+            z.nextThinkTick = state.tick + 100000;
+            Crossings.stage(state, z, ticks);
+        }
+        one("walker", -2, 30);
+        one("screamer", -4, 16);
+        one("crawler", -5, 30);
+        one("runner", 0, 4);
+        one("brute", 3, 30);
+        one("walker", 1, 12);
+        one("crawler", 5, 3);
+    }
+
     /// <summary>The helicopter hanging over a tile a little way off, staying (the timeline's own comes on a rolled day).</summary>
     public static void helicopter(SimState state, int x, int y)
     {

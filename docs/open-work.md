@@ -146,9 +146,13 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
 - Left from the first-person start (2026-11-08): the world's look (textures); what line of sight and fog of war mean
   in first person.
 - Cars (log/2026-11-11-04-car-body.md): a car's body in the sim is the size of the car drawn (VehicleBody.cs).
-  A parked car is in the way of everyone on foot (VehicleParking.cs, log/2026-11-11-06-parked-cars.md). Left: **a
-  parked car is a barricade the dead can't break or climb** (they go round, or stand at it if there is no way
-  round: a car across a gate seals it; Zomboid plays the same, but it is the player's call); the car you are
+  A parked car is in the way of everyone on foot (VehicleParking.cs, log/2026-11-11-06-parked-cars.md), and the dead
+  get over it (a crawler under a pickup) and runners over barricades (Crossings.cs, log/2026-11-11-07-dead-climb.md).
+  Left of the crossings: no queue (a crowd goes over one car all at once, overlapping on top of it); a path's cost
+  for a car is the same whoever plans it (a crawler pays for a pickup as for a sedan, though under is quick); the
+  body slides up the car's flank lying down (no clip of hauling up, no hands on it), and a paused or just-placed
+  climber faces any way; a horde's field costs a barricade as battering even for its runners; nobody has played
+  it. Left of the cars: the car you are
   sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); you can't
   jump onto or over a car; a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't

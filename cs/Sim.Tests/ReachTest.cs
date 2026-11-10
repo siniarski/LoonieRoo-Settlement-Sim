@@ -9,9 +9,13 @@ public partial class ReachTest
 
     /// <summary>The plain answer: flood from `from` with the doors exactly as they are. Standing where it can't pass (a
     /// zombie on a shut door), a mover sets off from the neighbours it can step to, as canReach has it (2026-11-10:
-    /// until then this gave up, and the chunked test only passed because its map never put a start on a door).</summary>
+    /// until then this gave up, and the chunked test only passed because its map never put a start on a door).
+    /// On the way, the dead's movers also go over what their paths cross and their bodies can't walk through (a
+    /// parked car; a runner, barricades: Crossings.cs, 2026-11-11), as canReach has it.</summary>
     public static bool reference(Grid grid, Point from, Point goal, string mover)
     {
+        bool stands(Point n) => Pathfinding.isPassable(grid, n.x, n.y, mover) || Crossings.standsOn(grid, n.x, n.y, mover);
+        bool across(Point a, Point b) => Pathfinding.crossable(grid, a.x, a.y, b.x, b.y, mover) || Crossings.vaults(Grids.edgeKindBetween(grid, a.x, a.y, b.x, b.y), mover);
         if (!Pathfinding.isPassable(grid, goal.x, goal.y, mover))
         {
             return false;
@@ -37,7 +41,7 @@ public partial class ReachTest
             {
                 Point n = new Point { x = Js.I(p.x + d.x), y = Js.I(p.y + d.y) };
                 var i = ((double)(n.y) * (grid.width)) + n.x;
-                if (Js.T((Js.T((Js.T(((((n.x < 0) || (n.y < 0)) || (n.x >= grid.width)) || (n.y >= grid.height)) || Js.T(Js.Get(seen, i)))) || !Pathfinding.isPassable(grid, n.x, n.y, mover))) || !Pathfinding.crossable(grid, p.x, p.y, n.x, n.y, mover)))
+                if (Js.T((Js.T((Js.T(((((n.x < 0) || (n.y < 0)) || (n.x >= grid.width)) || (n.y >= grid.height)) || Js.T(Js.Get(seen, i)))) || !stands(n))) || !across(p, n)))
                 {
                     continue;
                 }

@@ -372,9 +372,14 @@ public static partial class Invariants
             {
                 return Pathfinding.isPassable(grid, x, y, Zombies.moverOf(z));
             }
-            if (!standable(z.pos.x, z.pos.y))
+            // One crossing a car or a barricade (Crossings.cs) is on it, not in it.
+            if ((z.crossing == null) && !standable(z.pos.x, z.pos.y))
             {
                 problems.push($"zombie {Js.Str(z.id)} on non-floor ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})");
+            }
+            if ((z.crossing != null) && ((z.crossing.of <= 0) || (z.crossing.ticks < 0) || (z.crossing.ticks > z.crossing.of)))
+            {
+                problems.push($"zombie {Js.Str(z.id)} has a crossing with {Js.Str(z.crossing.ticks)} of {Js.Str(z.crossing.of)} ticks left");
             }
             if (Js.T(z.move) && !standable(z.move.to.x, z.move.to.y))
             {

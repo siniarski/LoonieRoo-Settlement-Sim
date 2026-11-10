@@ -19,6 +19,9 @@
 //               (1 at the startle, gone after STARTLE_TICKS)
 //   lostLimbs   "armLeft:elbow" and the like (wounds.ts); crawlers have lost both legs at the knee
 //   lookAt      what one of the dead is after (its target's position, SUB), for its head to turn to
+// One of the dead crossing something (Crossings.cs) has the crossing as its action (climb, under, vault), the
+// leg's progress, its lift (feet over the ground, at the tick's end), and for a climb or under the crawl stance:
+// it goes over a car on its belly.
 // Others (not the controlled survivor) at their job, standing within WORK_REACH of its tile, have the job's
 // type as their action (build, farm, cook, doctor...) and its id as the target: what a renderer draws them doing.
 // A wound has no side in the sim: its side is a hash of the survivor's id (stable, no RNG draw).
@@ -119,6 +122,13 @@ public static class PoseIntents
         {
             p.stance = "crawl";
             p.lostLimbs = ["legLeft:knee", "legRight:knee"];
+        }
+        if (z.crossing is { } c)
+        {
+            p.action = c.what;
+            p.progress = c.of <= 0 ? 0 : JsMath.min(1, (double)(c.of - c.ticks) / c.of);
+            p.lift = Crossings.lift(state, z, 1);
+            if (c.what != Crossings.VAULT) p.stance = "crawl";
         }
         if (z.targetId != null)
         {

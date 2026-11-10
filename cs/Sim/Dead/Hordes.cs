@@ -10,7 +10,7 @@
 //   moves    on one flow field (flowField): the cost to reach a goal from every tile in a box round
 //            the horde, worked out backwards from the goals. Walking a tile costs STEP; a wall, door,
 //            window or barricade in the way costs the time it takes to batter down (its health at
-//            BATTER_RATE). So a walled-in colony draws a horde to its weakest point, and the whole
+//            BATTER_RATE), a parked car the steps it costs to climb (Crossings.cs). So a walled-in colony draws a horde to its weakest point, and the whole
 //            horde piles up there. Each member steps to its cheapest neighbour; battering is done as
 //            it always was (zombies.ts). Goals outside the box pull through its edge (each edge tile
 //            seeded with its distance to the nearest goal).
@@ -251,6 +251,10 @@ public static partial class Hordes
         {
             return STEP;
         }
+        if (Crossings.standsOn(grid, bx, by, "zombie"))
+        {
+            return ((double)(STEP) * (Crossings.CAR_COST)); // a parked car: climbed over (Crossings.cs)
+        }
         if (!Breach.isStructure(tile))
         {
             return double.PositiveInfinity;
@@ -465,6 +469,12 @@ public static partial class Hordes
     /// <summary>A horde member's next tile: the neighbour it costs least to go on from (ties in N, E, S, W order), or null.</summary>
     public static Point? hordeStep(SimState state, Zombie z, Horde h)
     {
+        return hordeStepFrom(state, z.pos, h);
+    }
+
+    /// <summary>The same from any tile: where a member standing there would go next (Crossings.cs follows the field over a parked car).</summary>
+    public static Point? hordeStepFrom(SimState state, Point here, Horde h)
+    {
         var f = flowField(state, h);
         var __d4 = f.box;
         var x0 = __d4.x0;
@@ -472,7 +482,6 @@ public static partial class Hordes
         var x1 = __d4.x1;
         var y1 = __d4.y1;
         var w = (x1 - x0) + 1;
-        var here = z.pos;
         if ((((here.x < x0) || (here.x > x1)) || (here.y < y0)) || (here.y > y1))
         {
             return null;
