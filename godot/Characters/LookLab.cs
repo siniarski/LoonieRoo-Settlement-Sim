@@ -10,6 +10,9 @@
 //   faces      the zombie's five face candidates side by side (plus, near LOD)
 //   clothes    the survivor painted, in a jacket, in a hoodie (garment meshes with volume) side by side
 //   hair       the survivor with each hair style side by side (hair meshes, attached and tinted)
+//   stumps     every lost limb the sim can say (Wounds.lostLimb: an arm below the elbow, a leg below the
+//              knee, either side), on the survivor in a jacket (pinned sleeve, knotted trouser leg) and the
+//              dead (torn), cut at load (StumpCut.cs)
 // Faces: the zombie's top LODs carry two blend shapes, jaw_open and angry. Neutral is a slack jaw;
 // angry (it has seen you) eases in over a quarter second with a growl. Lower LODs carry no face.
 //
@@ -22,6 +25,8 @@
 //   --zface=feral|slack|gaunt|bloated|torn (the zombie's face) --clothes=painted|jacket|hoodie (the survivor's)
 //   --hair=none|buzz|crop|sidepart|long|receding|ponytail|matted --haircolour=black|brown|blond|red|grey --beard
 //   --hat=none|beanie --hatcolour=charcoal|olive|navy|red (the hair under it swaps to its under-hat version)
+//   --lose=armLeft:elbow,legRight:knee  lost limbs (the sim's lostLimbs), cut at load (StumpCut.cs)
+//   --aimat=H                        look at height H on the subject (m; else the face up close, the chest further off)
 //   --crowd=N [--crowdlod=auto|K]   N more of the candidate, walking, in a field ahead
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
@@ -52,7 +57,17 @@ public partial class LookLab : Node3D
         return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
     }
 
-    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair" };
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair", "stumps" };
+    // Lost limbs (the sim's lostLimbs: Wounds.lostLimb cuts arms below the elbow, legs below the knee; crawlers have lost both legs).
+    static readonly string[] Losses = { "none", "armLeft:elbow", "armRight:elbow", "legLeft:knee", "legRight:knee", "legLeft:knee,legRight:knee", "armLeft:elbow,legRight:knee" };
+    // The stumps lineup: (subject, clothes or face, lost limbs, label).
+    static readonly (string subj, string variant, string limbs, string tag)[] StumpCases =
+    {
+        ("survivor", "jacket", "armLeft:elbow", "arm L"), ("survivor", "jacket", "armRight:elbow", "arm R"),
+        ("survivor", "jacket", "legLeft:knee", "leg L"), ("survivor", "jacket", "legRight:knee", "leg R"),
+        ("survivor", "hoodie", "armLeft:elbow,legRight:knee", "hoodie"), ("zombie", "feral", "armRight:elbow", "dead arm R"),
+        ("zombie", "feral", "legLeft:knee,legRight:knee", "crawler"),
+    };
     static readonly string[] Faces = { "feral", "slack", "gaunt", "bloated", "torn" };
     const string DefaultFace = "feral";  // chosen 2026-11-08; the others are kept to compare
     static readonly string[] ClothesSets = { "painted", "jacket", "hoodie" };
@@ -90,7 +105,8 @@ public partial class LookLab : Node3D
     double turn;  // the subject turned from facing you, degrees
     string hairStyle = "crop", hairColour = "brown", hat = "none", hatColour = "charcoal";  // the survivor's; a zombie's is matted
     bool beard;
-    double forceJaw = -1;
+    string lose = "";  // the lost limbs, comma-separated (the sim's form)
+    double forceJaw = -1, aimAt = -1;  // --aimat=H: look at this height on the subject (m)
     bool noNormal, noAlbedo;  // --nonormal, --noalbedo: the body's maps off one at a time, to find what a mark is  // --jaw=V holds jaw_open (for checking the key)
     int forcedLod = -1, crowdLod = -1, crowdCount;
     double dist = 3, lodBias = 1, sightRange = 12;
@@ -126,6 +142,8 @@ public partial class LookLab : Node3D
         public Label3D? Tag;
         public long TexBytes;
         public string TexDesc = "";
+        public double CutMs;
+        public string CutDesc = "";
     }
 
     public override void _Ready()
@@ -151,6 +169,8 @@ public partial class LookLab : Node3D
         beard = args.ContainsKey("beard");
         if (args.TryGetValue("hat", out var ht)) hat = ht;
         if (args.TryGetValue("hatcolour", out var htc)) hatColour = htc;
+        if (args.TryGetValue("lose", out var lo)) lose = lo == "none" ? "" : lo;
+        if (args.TryGetValue("aimat", out var am)) aimAt = Num(am);
         if (args.TryGetValue("jaw", out var jw)) forceJaw = Num(jw);
         wire = args.ContainsKey("wire");
         hidePanel = args.ContainsKey("nopanel");
@@ -184,7 +204,7 @@ public partial class LookLab : Node3D
         u.Free();
     }
 
-    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null)
+    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null, string? limbs = null)
     {
         subj ??= subject;
         variant ??= subj == "zombie" ? faceVariant : clothesSet;
@@ -213,6 +233,16 @@ public partial class LookLab : Node3D
         }
         if (which != "mannequin")
         {
+            // Lost limbs: the character's own meshes cut and capped (before the hair goes on: it's never cut).
+            var lost = (limbs ?? lose).Split(',', StringSplitOptions.RemoveEmptyEntries);
+            if (lost.Length > 0)
+            {
+                ulong t0 = Godot.Time.GetTicksUsec();
+                int cut = StumpCut.Apply(root, lost, subj == "zombie");
+                a.CutMs = (Godot.Time.GetTicksUsec() - t0) / 1000.0;
+                a.CutDesc = $"{string.Join(", ", lost)} ({cut} meshes, {a.CutMs:0.0} ms)";
+                a.Lods = FindAll<MeshInstance3D>(root).GroupBy(mi => LodIndex(mi.Name)).OrderBy(g => g.Key).Select(g => g.ToArray()).ToArray();
+            }
             foreach (var style in new[] { hair ?? (subj == "zombie" ? "matted" : hairStyle), beard ? "beard" : "none", hat })
                 if (style != "none") AttachHair(a, style, hat != "none");
             a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
@@ -319,14 +349,15 @@ public partial class LookLab : Node3D
             "faces" => Faces.Select(f => ("plus", 0, f, (string?)"zombie", (string?)f)).ToArray(),
             "clothes" => ClothesSets.Select(c => ("plus", 0, c, (string?)"survivor", (string?)c)).ToArray(),
             "hair" => HairStyles.Select(h => ("plus", 0, h, (string?)"survivor", (string?)h)).ToArray(),
+            "stumps" => StumpCases.Select(x => ("pz", 0, x.tag, (string?)x.subj, (string?)x.variant)).ToArray(),
             _ => new (string c, int lod, string tag, string? subj, string? variant)[] { (cand, -1, cand, null, null) },
         };
         bool row = list.Length > 1;
-        double spacing = cand is "faces" or "hair" ? 0.62 : 1.05;
+        double spacing = cand is "faces" or "hair" ? 0.62 : cand == "stumps" ? 0.95 : 1.05;
         for (int i = 0; i < list.Length; i++)
         {
-            var a = cand == "hair"
-                ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant)
+            var a = cand == "hair" ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant)
+                : cand == "stumps" ? MakeActor(list[i].c, this, list[i].subj, list[i].variant, null, StumpCases[i].limbs)
                 : MakeActor(list[i].c, this, list[i].subj, list[i].variant);
             if (row)
             {
@@ -346,7 +377,7 @@ public partial class LookLab : Node3D
     {
         foreach (var a in crowd) a.Root.QueueFree();
         crowd.Clear();
-        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand;
+        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand == "stumps" ? "pz" : cand;
         // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
         int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
         for (int i = 0; i < crowdCount; i++)
@@ -403,7 +434,7 @@ public partial class LookLab : Node3D
         double pitch = lookPitch;
         if (aim)  // look at the subject: the face up close, the chest further off
         {
-            double target = -z < 2.5 ? 1.62 : 1.25;
+            double target = aimAt >= 0 ? aimAt : -z < 2.5 ? 1.62 : 1.25;
             pitch += Mathf.RadToDeg(Math.Atan2(target - EyeHeight, Math.Max(-z, 0.3)));
         }
         cam.Rotation = new Vector3((float)Mathf.DegToRad(pitch), (float)Mathf.DegToRad(lookYaw), 0);
@@ -461,12 +492,13 @@ public partial class LookLab : Node3D
         if (a != null)
         {
             int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
-            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair");
+            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair" or "stumps");
             sb.AppendLine($"subject   {a.Subject} / {cand}{(a.Cand != "mannequin" && single ? $" lod{lod}" : "")}  {(single && a.Cand != "mannequin" ? a.Variant : "")}");
             sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
             if (single) sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
             if (single) sb.AppendLine($"textures  {a.TexBytes / 1048576.0:0.0} MB: {a.TexDesc}");
             sb.AppendLine($"face      {(a.Subject == "zombie" ? $"{face}, angry {a.Angry:0.00}" : "-")}");
+            if (a.CutDesc != "") sb.AppendLine($"lost      {a.CutDesc}");
             if (single && a.Lods.Length > 0 && a.Lods[0].Length > 1)
                 sb.AppendLine($"pieces    {string.Join("  ", a.Lods[Math.Min(lod, a.Lods.Length - 1)].Select(m => $"{m.Name.ToString().Split("_lod")[0]} {Tris(m):N0}"))}");
         }
@@ -575,6 +607,7 @@ public partial class LookLab : Node3D
         Pick(grid, "Beard", new[] { "none", "beard" }, beard ? "beard" : "none", v => { beard = v == "beard"; Rebuild(); });
         Pick(grid, "Hat", Hats, hat, v => { hat = v; Rebuild(); });
         Pick(grid, "Hat colour", HatColours.Keys.ToArray(), hatColour, v => { hatColour = v; Rebuild(); });
+        Pick(grid, "Missing", Losses, lose == "" ? "none" : lose, v => { lose = v == "none" ? "" : v; Rebuild(); });
         var presets = new HBoxContainer();
         foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
         box.AddChild(presets);

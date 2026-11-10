@@ -11,7 +11,8 @@
 //
 // Looks, picked by a hash of the body's id (stable, no RNG): the dead get one of the five faces with
 // matted hair; the living a clothes set (painted, jacket, hoodie), a hair style and colour; raiders a
-// jacket and a buzz cut.
+// jacket and a buzz cut. Lost limbs (the pose intent's lostLimbs: a survivor's amputation, a crawler's legs) are
+// part of the look: the model is cut and capped at the stump (Characters/StumpCut.cs).
 //
 // The dormant dead (state.dormant: bare positions till someone comes within Herds.WAKE_RADIUS) are drawn
 // too, so they don't pop into being as they wake: most lying still, some standing (a hash of the id), from
@@ -122,13 +123,18 @@ public sealed partial class People
             if (d2 <= range2) wanted.Add(new Wanted(id, look, b, pose, d2, angry, action));
         }
         foreach (var s in state.survivors)
-            if (s.id != youId && Vehicles.vehicleOf(state, s) == null) Add(s.id, LivingLook(s.id), s, PoseIntents.ofSurvivor(state, s), false, "");
+            if (s.id != youId && Vehicles.vehicleOf(state, s) == null)
+            {
+                var pose = PoseIntents.ofSurvivor(state, s);
+                Add(s.id, LivingLook(s.id) + Lost(pose), s, pose, false, "");
+            }
         foreach (var r in state.residents) Add(r.id, LivingLook(r.id), r, Pose(r.at, r.was), false, "");
         foreach (var z in state.zombies)
         {
             bool raider = z.kind == "raider";
             string action = state.tick < z.staggerUntil ? "hit" : z.windup > 0 ? "attack" : "";
-            Add(z.id, raider ? "survivor/jacket/buzz/0" : DeadLook(z.id), z, PoseIntents.ofZombie(state, z), !raider && z.targetId != null, action);
+            var zp = PoseIntents.ofZombie(state, z);
+            Add(z.id, (raider ? "survivor/jacket/buzz/0" : DeadLook(z.id)) + Lost(zp), z, zp, !raider && z.targetId != null, action);
         }
         var dormantNow = new Dictionary<string, Point>();
         foreach (var d in Dormant.near(state, eye.X, eye.Z, MODEL_RANGE, false))
@@ -211,7 +217,7 @@ public sealed partial class People
     {
         var pose = PoseIntents.ofSurvivor(state, you);
         show &= pose.stance is "stand" or "sneak";
-        string look = LivingLook(you.id);
+        string look = LivingLook(you.id) + Lost(pose);
         if (show && look != ownLook)
         {
             own?.root.QueueFree();
@@ -353,6 +359,10 @@ public sealed partial class People
 
     static string Pick(string[] from, string id, int salt) => from[(int)(Hash01(id, salt) * from.Length) % from.Length];
 
+    /// <summary>A look's lost limbs (the pose intent's lostLimbs): "|armLeft:elbow,legRight:knee", or "" for none.
+    /// Part of the look, so a model cut for one stays with the looks cut the same (StumpCut.cs).</summary>
+    static string Lost(PoseIntent pose) => pose.lostLimbs.Count == 0 ? "" : "|" + string.Join(",", pose.lostLimbs);
+
     static string DeadLook(string id) => $"zombie/{Pick(ZOMBIE_FACES, id, 1)}/matted/4";
 
     static string LivingLook(string id) =>
@@ -367,7 +377,8 @@ public sealed partial class People
     /// <summary>A new model of a look: "subject/variant/hair/colour".</summary>
     Model Make(string look)
     {
-        var parts = look.Split('/');
+        var cut = look.Split('|');
+        var parts = cut[0].Split('/');
         string subject = parts[0], variant = parts[1], hair = parts[2];
         int colour = int.Parse(parts[3]);
         string plain = $"res://assets/characters/look/look_pz_{subject}.glb";
@@ -375,6 +386,8 @@ public sealed partial class People
         if (!ResourceLoader.Exists(path)) path = plain;
         var root = Scene(path).Instantiate<Node3D>();
         parent.AddChild(root);
+        // Lost limbs: the body and its clothes cut and capped (a pinned sleeve, a knotted trouser leg; the dead's torn), before the hair goes on.
+        if (cut.Length > 1) Characters.StumpCut.Apply(root, cut[1].Split(','), subject == "zombie");
         var m = new Model { root = root, look = look, variant = variant };
         var groups = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToList()).ToList();
         if (hair != "none") AttachHair(root, groups, hair, colour);
