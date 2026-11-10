@@ -1,38 +1,30 @@
-// Ported from src/sim/buildings.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Building plans: houses with rooms, shops, civic buildings, warehouses, barns and sheds.
+// Building plans (2026-11-10, the buildings session: docs/buildings.md). Ported from src/sim/buildings.ts at first;
+// rewritten so buildings read as real places.
 //
-// A plan is drawn in its own coordinates with the front (the side facing the street) at the
-// bottom, then stamped onto the world turned to face its street, and maybe mirrored. Plans
-// are pure (a function of a roll), so tests can check every one: walls all round, every room
-// reachable from the front door, furniture only on floor.
+// A plan is drawn in its own coordinates with the front (the side facing the street) at the bottom (y = h - 1), then
+// stamped onto the world turned to face its street, and maybe mirrored (Lots.transform). Plans are pure (a function of
+// a roll), so tests check every one.
 //
-//   house     a front strip (living room with the front door, kitchen) and a back strip
-//             (bathroom, one or two bedrooms) behind a dividing wall; each back room has a door
-//             into the front strip. Some have a garage on one side, opening into the kitchen.
-//   shop      a sales floor with shelves along the walls (and an island when there's room),
-//             a storeroom and a toilet behind
-//   civic     a corridor up the middle from a double front door, rooms either side
-//             (police station, clinic, school, offices); a church is one hall with a vestry
-//   warehouse a big hall with rows of pallets and shelves, and an office in a corner
-//   barn, shed  one room
+// A plan is drafted as rooms of floor cells (rectangles, joined into L shapes where a room needs it) with walls on
+// the edges between them, never on cells: a room's floor runs to its walls (Draft). Doors and windows are edges too.
+// Every cell of the plan's rectangle is a room's floor or outside (an L-shaped house leaves a corner outside); the
+// rectangle is the building's footprint for the ground's levelling (Heights: flat over it, an apron round it).
 //
-// Rooms set the floor (boards, tiles, concrete) and what's in the containers (loot.ts).
+// Kinds (Buildings*.cs): dwellings (kind "house", by style: cottage, bungalow, family house, farmhouse, cabin, trailer:
+// BuildingsHouses.cs), shops, a bar or diner, a workshop, an office, a petrol station (BuildingsTrade.cs), civic
+// buildings round a corridor (police, clinic, school, offices), a church, warehouses, factories, barns and sheds
+// (BuildingsCivic.cs). Rooms set the floor (boards, tiles, concrete) and what's in the containers (Loot.cs).
+//
+// Furniture is placed by function (against walls, in runs, beds with room round them) and never where it would block
+// a doorway or the way between a room's doors (Draft.put checks every placement); tall pieces stay off windows.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
 public static partial class Buildings
 {
-
     public const int OUTSIDE = 0;
 
     public const int FLOOR = 1;
-
-    public const int WALL = 2;
-
-    public const int DOOR = 3;
-
-    /// <summary>The kinds of building that get windows (toEdges).</summary>
-    public static readonly List<string> WINDOWED = ["house", "grocery", "pharmacy", "hardware", "bar", "station", "office", "police", "clinic", "school", "church"];
 
     /// <summary>Containers whose look is a container (the rest are decor).</summary>
     public static bool isContainerLook(string look)
@@ -40,764 +32,581 @@ public static partial class Buildings
         return (FurnitureMod.CONTAINER_LOOKS).includes(look);
     }
 
-    public static BuildingsPlan newPlan(int w, int h, string kind, double sleepers)
-    {
-        return new BuildingsPlan { w = Js.I(w), h = Js.I(h), cells = Js.Filled<double>(((double)(w) * (h)), OUTSIDE), ground = Js.Filled<string>(((double)(w) * (h)), null), furniture = [], kind = kind, sleepers = sleepers, edges = [] };
-    }
-    public static BuildingsPlan newPlan(double w, double h, string kind, double sleepers) => newPlan(Js.I(w), Js.I(h), kind, sleepers);
-
     public static double cellAt(BuildingsPlan p, int x, int y)
     {
-        return ((((x < 0) || (y < 0)) || (x >= p.w)) || (y >= p.h)) ? OUTSIDE : Js.NN(Js.Get(p.cells, ((double)(y) * (p.w)) + x));
+        return x < 0 || y < 0 || x >= p.w || y >= p.h ? OUTSIDE : p.cells[y * p.w + x];
     }
     public static double cellAt(BuildingsPlan p, double x, double y) => cellAt(p, Js.I(x), Js.I(y));
 
-    public static void set(BuildingsPlan p, int x, int y, double c)
-    {
-        p.cells[Js.Idx(((double)(y) * (p.w)) + x)] = c;
-    }
-    public static void set(BuildingsPlan p, double x, double y, double c) => set(p, Js.I(x), Js.I(y), c);
-
-    /// <summary>A walled box from (x0, y0) to (x1, y1) inclusive, floored inside with `ground`. Shares walls with boxes it touches.</summary>
-    public static void box(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
-    {
-        for (var y = y0; y <= y1; y++)
-        {
-            for (var x = x0; x <= x1; x++)
-            {
-                var edge = (((x == x0) || (x == x1)) || (y == y0)) || (y == y1);
-                if (Js.T(edge))
-                {
-                    if (cellAt(p, x, y) != DOOR)
-                    {
-                        set(p, x, y, WALL);
-                    }
-                }
-                else
-                {
-                    set(p, x, y, FLOOR);
-                    p.ground[Js.Idx(((double)(y) * (p.w)) + x)] = ground;
-                }
-            }
-        }
-    }
-    public static void box(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => box(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), ground);
-
-    /// <summary>Floors a rectangle (inside a box) with another ground.</summary>
-    public static void floorAs(BuildingsPlan p, int x0, int y0, int x1, int y1, string ground)
-    {
-        for (var y = y0; y <= y1; y++)
-        {
-            for (var x = x0; x <= x1; x++)
-            {
-                if (cellAt(p, x, y) == FLOOR)
-                {
-                    p.ground[Js.Idx(((double)(y) * (p.w)) + x)] = ground;
-                }
-            }
-        }
-    }
-    public static void floorAs(BuildingsPlan p, double x0, double y0, double x1, double y1, string ground) => floorAs(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), ground);
-
-    public static void hwall(BuildingsPlan p, int y, int x0, int x1)
-    {
-        for (var x = x0; x <= x1; x++)
-        {
-            if (cellAt(p, x, y) != DOOR)
-            {
-                set(p, x, y, WALL);
-            }
-        }
-    }
-    public static void hwall(BuildingsPlan p, double y, double x0, double x1) => hwall(p, Js.I(y), Js.I(x0), Js.I(x1));
-
-    public static void vwall(BuildingsPlan p, int x, int y0, int y1)
-    {
-        for (var y = y0; y <= y1; y++)
-        {
-            if (cellAt(p, x, y) != DOOR)
-            {
-                set(p, x, y, WALL);
-            }
-        }
-    }
-    public static void vwall(BuildingsPlan p, double x, double y0, double y1) => vwall(p, Js.I(x), Js.I(y0), Js.I(y1));
-
-    public static void door(BuildingsPlan p, int x, int y)
-    {
-        set(p, x, y, DOOR);
-    }
-    public static void door(BuildingsPlan p, double x, double y) => door(p, Js.I(x), Js.I(y));
-
-    /// <summary>Next to a door (orthogonally): kept clear of furniture so doorways read.</summary>
-    public static bool byDoor(BuildingsPlan p, int x, int y)
-    {
-        return (((cellAt(p, x + 1, y) == DOOR) || (cellAt(p, x - 1, y) == DOOR)) || (cellAt(p, x, y + 1) == DOOR)) || (cellAt(p, x, y - 1) == DOOR);
-    }
-    public static bool byDoor(BuildingsPlan p, double x, double y) => byDoor(p, Js.I(x), Js.I(y));
-
-    public static bool free(BuildingsPlan p, int x, int y)
-    {
-        return ((cellAt(p, x, y) == FLOOR) && !byDoor(p, x, y)) && !p.furniture.some((f) => (f.x == x) && (f.y == y));
-    }
-    public static bool free(BuildingsPlan p, double x, double y) => free(p, Js.I(x), Js.I(y));
-
-    public static bool put(BuildingsPlan p, int x, int y, string look, string? table = null)
-    {
-        if (!free(p, x, y))
-        {
-            return false;
-        }
-        p.furniture.push(new() { x = Js.I(x), y = Js.I(y), look = look, table = isContainerLook(look) ? table : null });
-        return true;
-    }
-    public static bool put(BuildingsPlan p, double x, double y, string look, string? table = null) => put(p, Js.I(x), Js.I(y), look, table);
-
-    /// <summary>Puts something against a wall of the room (x0..x1, y0..y1 interior), trying the walls in an order set by the roll.</summary>
-    public static bool againstWall(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table, double roll)
-    {
-        List<List<double>> spots = [];
-        for (var x = x0; x <= x1; x++)
-        {
-            spots.pushAll([[x, y0], [x, y1]]);
-        }
-        for (var y = y0 + 1; y < y1; y++)
-        {
-            spots.pushAll([[x0, y], [x1, y]]);
-        }
-        var start = JsMath.floor(((double)(roll) * (spots.length)));
-        for (var i = 0; i < spots.length; i++)
-        {
-            var (x, y) = Js.NN(Js.Get(spots, (start + i) % spots.length));
-            if (put(p, x, y, look, table))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    public static bool againstWall(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table, double roll) => againstWall(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), look, table, roll);
-
-    /// <summary>Somewhere in the middle of the room, away from the walls if there's space.</summary>
-    public static bool inMiddle(BuildingsPlan p, int x0, int y0, int x1, int y1, string look, string? table)
-    {
-        var cx = JsMath.floor(((double)((x0 + x1)) / (2)));
-        var cy = JsMath.floor(((double)((y0 + y1)) / (2)));
-        foreach (var (dx, dy) in new (double, double)[] { (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1) })
-        {
-            var x = cx + dx;
-            var y = cy + dy;
-            if (((((x > x0) && (x < x1)) && (y > y0)) && (y < y1)) && put(p, x, y, look, table))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    public static bool inMiddle(BuildingsPlan p, double x0, double y0, double x1, double y1, string look, string? table) => inMiddle(p, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), look, table);
+    /// <summary>The room at a plan cell, -1 outside.</summary>
+    public static int roomAt(BuildingsPlan p, int x, int y) => x < 0 || y < 0 || x >= p.w || y >= p.h ? -1 : p.roomOf[y * p.w + x];
 
     public static double between(double r, double lo, double hi)
     {
         return lo + JsMath.floor(((double)(r) * (((hi - lo) + 1))));
     }
 
-    public static BuildingsPlan housePlan(Func<double, double> r, HouseOptions o)
-    {
-        var garage = (o.garage && (r(1) < 0.4)) && (o.maxW >= 13);
-        var W = JsMath.min(o.maxW - (Js.T(garage) ? 4 : 0), between(r(2), 9, 13));
-        var H = JsMath.min(o.maxH, between(r(3), 9, 11));
-        var p = newPlan(W + (Js.T(garage) ? 4 : 0), H, "house", 1);
-        box(p, 0, 0, W - 1, H - 1, "boards");
-        var back = (H >= 11) ? 4 : 3;
-        var div = back + 1;
-        hwall(p, div, 0, W - 1);
-        var inner = W - 2;
-        var split = 1 + JsMath.max(3, JsMath.floor(((double)(inner) * (0.55))));
-        vwall(p, split, div, H - 1);
-        HordeBox living = new HordeBox { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(split - 1), y1 = Js.I(H - 2) };
-        HordeBox kitchen = new HordeBox { x0 = Js.I(split + 1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
-        floorAs(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "tiles");
-        door(p, JsMath.floor(((double)((living.x0 + living.x1)) / (2))), H - 1);
-        door(p, split, JsMath.floor(((double)(((living.y0 + living.y1) + 1)) / (2))));
-        var bathW = (inner >= 10) ? 3 : 2;
-        HordeBox bath = new HordeBox { x0 = Js.I(1), y0 = Js.I(1), x1 = Js.I(bathW), y1 = Js.I(back) };
-        vwall(p, bathW + 1, 0, div);
-        floorAs(p, bath.x0, bath.y0, bath.x1, bath.y1, "tiles");
-        HousePlanRest rest = new HousePlanRest { x0 = Js.I(bathW + 2), x1 = Js.I(W - 2) };
-        var two = ((rest.x1 - rest.x0) + 1) >= 7;
-        List<HordeBox> bedrooms = two ? Js.Run<List<HordeBox>>(() =>
-        {
-            var mid = rest.x0 + JsMath.floor(((double)(((rest.x1 - rest.x0) + 1)) / (2)));
-            vwall(p, mid, 0, div);
-            return [new() { x0 = Js.I(rest.x0), y0 = Js.I(1), x1 = Js.I(mid - 1), y1 = Js.I(back) }, new() { x0 = Js.I(mid + 1), y0 = Js.I(1), x1 = Js.I(rest.x1), y1 = Js.I(back) }];
-        }) : [new() { x0 = Js.I(rest.x0), y0 = Js.I(1), x1 = Js.I(rest.x1), y1 = Js.I(back) }];
-        foreach (var room in Js.Iter([bath, .. bedrooms]))
-        {
-            double x = JsMath.floor(((double)((room.x0 + room.x1)) / (2)));
-            if (x == split)
-            {
-                x = ((x - 1) >= room.x0) ? (x - 1) : (x + 1);
-            }
-            door(p, x, div);
-        }
-        if (Js.T(garage))
-        {
-            var gy0 = JsMath.max(div, H - 7);
-            box(p, W - 1, gy0, W + 3, H - 1, "concrete");
-            vwall(p, W - 1, 0, H - 1);
-            door(p, W - 1, JsMath.max(gy0 + 1, kitchen.y0 + JsMath.floor(((double)((kitchen.y1 - kitchen.y0)) / (2)))));
-            door(p, W, H - 1);
-            door(p, W + 1, H - 1);
-            againstWall(p, W, gy0 + 1, W + 2, H - 2, "toolbox", "garage", r(30));
-            againstWall(p, W, gy0 + 1, W + 2, H - 2, "shelf", "garage", r(31));
-            if (r(32) < 0.5)
-            {
-                inMiddle(p, W, gy0 + 1, W + 2, H - 2, "car", null);
-            }
-        }
-        else if (r(4) < 0.5)
-        {
-            door(p, W - 1, JsMath.floor(((double)((kitchen.y0 + kitchen.y1)) / (2))));
-        }
-        againstWall(p, living.x0, living.y0, living.x1, living.y1, "sofa", null, r(10));
-        againstWall(p, living.x0, living.y0, living.x1, living.y1, "shelf", "living", r(11));
-        if (r(12) < 0.6)
-        {
-            againstWall(p, living.x0, living.y0, living.x1, living.y1, "tv", null, r(13));
-        }
-        againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "counter", "kitchen", r(14));
-        againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "icebox", "kitchen", r(15));
-        againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "oven", null, r(16));
-        if (r(17) < 0.5)
-        {
-            againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "counter", "kitchen", r(18));
-        }
-        inMiddle(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "table", null);
-        againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, "toilet", null, r(19));
-        againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, "cabinet", "bathroom", r(20));
-        if (bathW == 3)
-        {
-            againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, "bath", null, r(21));
-        }
-        bedrooms.forEach((b, i) =>
-        {
-            againstWall(p, b.x0, b.y0, b.x1, b.y1, "bed", null, r(22 + i));
-            againstWall(p, b.x0, b.y0, b.x1, b.y1, (i == 0) ? "wardrobe" : "dresser", "bedroom", r(24 + i));
-        });
-        againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "sink", "kitchen", r(33));
-        againstWall(p, kitchen.x0, kitchen.y0, kitchen.x1, kitchen.y1, "bin", "trash", r(34));
-        againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, "sink", "bathroom", r(35));
-        if (bathW != 3)
-        {
-            againstWall(p, bath.x0, bath.y0, bath.x1, bath.y1, "shower", null, r(36));
-        }
-        bedrooms.forEach((b, i) => againstWall(p, b.x0, b.y0, b.x1, b.y1, "nightstand", "bedroom", r(26 + i)));
-        againstWall(p, living.x0, living.y0, living.x1, living.y1, "armchair", null, r(37));
-        if (r(39) < 0.6)
-        {
-            againstWall(p, living.x0, living.y0, living.x1, living.y1, "bookcase", "living", r(38));
-        }
-        if (Js.T(garage) && (r(28) < 0.4))
-        {
-            againstWall(p, W, JsMath.max(div, H - 7) + 1, W + 2, H - 2, "washer", null, r(29));
-        }
-        return toEdges(p);
-    }
+    /// <summary>A roll's pick of n (0..n-1).</summary>
+    public static int pick(double r, int n) => Math.Min(n - 1, (int)Math.Floor(r * n));
 
-    public static BuildingsPlan shopPlan(Func<double, double> r, string kind, double maxW, double maxH)
-    {
-        var W = JsMath.min(maxW, between(r(2), 11, 14));
-        var H = JsMath.min(maxH, between(r(3), 9, 12));
-        string table = kind;
-        var p = newPlan(W, H, kind, 1);
-        box(p, 0, 0, W - 1, H - 1, ((kind == "bar") || (kind == "office")) ? "boards" : "tiles");
-        var div = 4;
-        hwall(p, div, 0, W - 1);
-        vwall(p, 3, 0, div);
-        floorAs(p, 4, 1, W - 2, div - 1, "concrete");
-        door(p, 2, div);
-        door(p, JsMath.floor(((double)(W) / (2))) + 1, div);
-        againstWall(p, 1, 1, 2, div - 1, "toilet", null, r(5));
-        againstWall(p, 1, 1, 2, div - 1, "sink", "bathroom", r(45));
-        var mid = JsMath.floor(((double)(W) / (2)));
-        door(p, mid - 1, H - 1);
-        door(p, mid, H - 1);
-        for (var i = 0; i < (2 + JsMath.floor(((double)(r(6)) * (2)))); i++)
-        {
-            againstWall(p, 4, 1, W - 2, div - 1, ((i % 2) == 0) ? "pallet" : "crate", table, r(7 + i));
-        }
-        HordeBox floor = new HordeBox { x0 = Js.I(1), y0 = Js.I(div + 1), x1 = Js.I(W - 2), y1 = Js.I(H - 2) };
-        if (kind == "office")
-        {
-            for (var y = floor.y0 + 1; y < floor.y1; y += 2)
-            {
-                for (var x = floor.x0 + 1; x < floor.x1; x += 3)
-                {
-                    put(p, x, y, "desk", table);
-                }
-            }
-            return toEdges(p);
-        }
-        if (kind == "bar")
-        {
-            for (var x = floor.x0; x <= (floor.x1 - 2); x++)
-            {
-                put(p, x, floor.y0, "counter", table);
-            }
-            for (var y = floor.y0 + 2; y < floor.y1; y += 2)
-            {
-                for (var x = floor.x0 + 1; x < floor.x1; x += 3)
-                {
-                    put(p, x, y, "table", null);
-                }
-            }
-            return toEdges(p);
-        }
-        for (var y = floor.y0; y <= (floor.y1 - 1); y++)
-        {
-            put(p, floor.x0, y, "shelf", table);
-            put(p, floor.x1, y, "shelf", table);
-        }
-        if (W >= 12)
-        {
-            for (var y = floor.y0 + 1; y <= (floor.y1 - 2); y++)
-            {
-                put(p, mid - 1, y, "shelf", table);
-            }
-        }
-        put(p, floor.x1 - 1, floor.y1, "register", null);
-        return toEdges(p);
-    }
+    // Directions: 0 north (towards the back, y - 1), 1 east, 2 south (towards the front), 3 west.
+    public static readonly int[] DX = { 0, 1, 0, -1 };
+    public static readonly int[] DY = { -1, 0, 1, 0 };
 
-    /// <summary>A corridor up the middle from a double front door; rooms either side, each with a door onto it.</summary>
-    public static BuildingsPlan civicPlan(Func<double, double> r, string kind, double maxW, double maxH)
+    /// <summary>Pieces too tall to stand in front of a window.</summary>
+    public static readonly HashSet<string> TALL = new() { "wardrobe", "bookcase", "shelf", "icebox", "locker", "machine", "pallet" };
+
+    /// <summary>How a room's outer walls get windows: "none", "one" (a single, small: bathrooms), "some" (one a wall,
+    /// more on a long one), "many" (a pair in the middle and more along), "front" (every outer edge of the front wall
+    /// but the doors: a shopfront), "high" (sparse: every fourth edge, halls and barns).</summary>
+    public static readonly JsRecord<string> WINDOWS = new()
     {
-        var W = JsMath.min(maxW, between(r(2), 17, 23));
-        var H = JsMath.min(maxH, between(r(3), 13, 19));
-        var p = newPlan(W, H, kind, ((kind == "police") || (kind == "clinic")) ? 3 : 2);
-        box(p, 0, 0, W - 1, H - 1, (kind == "clinic") ? "tiles" : "boards");
-        var c0 = JsMath.floor(((double)(W) / (2))) - 1;
-        vwall(p, c0 - 1, 0, H - 1);
-        vwall(p, c0 + 2, 0, H - 1);
-        door(p, c0, H - 1);
-        door(p, c0 + 1, H - 1);
-        floorAs(p, c0, 1, c0 + 1, H - 2, (kind == "clinic") ? "tiles" : "concrete");
-        var roles = Js.Get(ROLES, kind);
-        double n = 0;
-        foreach (var (x0, x1, doorX) in new (double, double, double)[] { (1, c0 - 2, c0 - 1), (c0 + 3, W - 2, c0 + 2) })
+        ["living"] = "many", ["kitchen"] = "some", ["bedroom"] = "some", ["bathroom"] = "one", ["utility"] = "one", ["hall"] = "none",
+        ["closet"] = "none", ["garage"] = "one", ["shop"] = "front", ["store"] = "none", ["toilet"] = "one", ["office"] = "some",
+        ["bar"] = "front", ["workshop"] = "high", ["lobby"] = "front", ["corridor"] = "none", ["classroom"] = "many", ["ward"] = "some",
+        ["exam"] = "one", ["cells"] = "none", ["cell"] = "none", ["armoury"] = "none", ["lockers"] = "none", ["nave"] = "some", ["vestry"] = "one",
+        ["hall-big"] = "high", ["barn"] = "none", ["shed"] = "none", ["cabin"] = "many", ["lean-to"] = "none", ["porch"] = "none",
+    };
+
+    /// <summary>A plan being drafted: rooms of cells, door and window edges, furniture. finish() makes the plan.</summary>
+    public sealed class Draft
+    {
+        public int w, h;
+        public string kind, style = "";
+        public double sleepers;
+        public int[] room;
+        public string[] ground;
+        public readonly List<string> kinds = new();
+        public readonly List<string> grounds = new();
+        /// <summary>Per cell and side (cell * 4 + direction): a door, a window, no window allowed (a neighbour too close).</summary>
+        public bool[] door, window, noWindow;
+        /// <summary>Per cell: furniture on it; kept clear (beside a door).</summary>
+        public bool[] taken, keep;
+        public readonly List<PlanFurniture> furniture = new();
+        public PlanEdge front;
+
+        public Draft(int w, int h, string kind, double sleepers)
         {
-            double y = 1;
-            while (y <= (H - 2))
+            this.w = w; this.h = h; this.kind = kind; this.sleepers = sleepers;
+            room = new int[w * h];
+            Array.Fill(room, -1);
+            ground = new string[w * h];
+            door = new bool[w * h * 4];
+            window = new bool[w * h * 4];
+            noWindow = new bool[w * h * 4];
+            taken = new bool[w * h];
+            keep = new bool[w * h];
+        }
+
+        public bool inside(int x, int y) => x >= 0 && y >= 0 && x < w && y < h;
+        public int at(int x, int y) => inside(x, y) ? room[y * w + x] : -1;
+
+        /// <summary>A new room over a rectangle (inclusive); cells already in another room move to this one.</summary>
+        public int add(string kind, string floor, int x0, int y0, int x1, int y1)
+        {
+            kinds.Add(kind);
+            grounds.Add(floor);
+            int r = kinds.Count - 1;
+            extend(r, x0, y0, x1, y1);
+            return r;
+        }
+
+        public void extend(int r, int x0, int y0, int x1, int y1)
+        {
+            for (int y = Math.Max(0, y0); y <= Math.Min(h - 1, y1); y++)
+                for (int x = Math.Max(0, x0); x <= Math.Min(w - 1, x1); x++)
+                {
+                    room[y * w + x] = r;
+                    ground[y * w + x] = grounds[r];
+                }
+        }
+
+        /// <summary>Floors part of a room with another ground (a kitchen's tiles inside an open-plan room).</summary>
+        public void floorAs(int x0, int y0, int x1, int y1, string g)
+        {
+            for (int y = Math.Max(0, y0); y <= Math.Min(h - 1, y1); y++)
+                for (int x = Math.Max(0, x0); x <= Math.Min(w - 1, x1); x++)
+                    if (room[y * w + x] >= 0) ground[y * w + x] = g;
+        }
+
+        /// <summary>Whether a side of a cell is a wall (another room or outside) with no door in it.</summary>
+        public bool wall(int x, int y, int d) => at(x, y) >= 0 && at(x + DX[d], y + DY[d]) != at(x, y) && !door[(y * w + x) * 4 + d];
+
+        /// <summary>A door through side d of cell (x, y); the cells either side are kept clear.</summary>
+        public void putDoor(int x, int y, int d)
+        {
+            int nx = x + DX[d], ny = y + DY[d];
+            door[(y * w + x) * 4 + d] = true;
+            keep[y * w + x] = true;
+            if (inside(nx, ny))
             {
-                double depth = between(r(40 + n), 3, 5);
-                if (((H - 2) - (y + depth)) < 3)
-                {
-                    depth = (H - 1) - y;
-                }
-                var y1 = (y + depth) - 1;
-                if ((y1 + 1) < (H - 1))
-                {
-                    hwall(p, y1 + 1, x0 - 1, x1 + 1);
-                }
-                door(p, doorX, y + JsMath.floor(((double)(depth) / (2))));
-                fitOut(p, Js.NN(Js.Get(roles, n % roles.length)), x0, y, x1, y1, r, 60 + ((double)(n) * (5)));
-                n++;
-                y = Js.I(y1 + 2);
+                door[(ny * w + nx) * 4 + (d + 2) % 4] = true;
+                if (room[ny * w + nx] >= 0) keep[ny * w + nx] = true;
             }
         }
-        return toEdges(p);
-    }
 
-    public static readonly JsRecord<List<string>> ROLES = new() { ["police"] = ["desks", "lockers", "cells", "armoury", "toilets", "desks"], ["clinic"] = ["ward", "stores", "ward", "desks", "toilets", "ward"], ["school"] = ["classroom", "classroom", "desks", "toilets", "classroom", "stores"], ["office"] = ["desks", "desks", "toilets", "stores", "desks", "desks"] };
-
-    public static void fitOut(BuildingsPlan p, string role, int x0, int y0, int x1, int y1, Func<double, double> r, int k)
-    {
-        string table = (p.kind == "police") ? "police" : ((p.kind == "clinic") ? "clinic" : ((p.kind == "school") ? "school" : "office"));
-        switch (role)
+        /// <summary>The cells of room a with a side on room b (b = -1: outside), as (x, y, side).</summary>
+        public List<(int x, int y, int d)> shared(int a, int b)
         {
-            case "desks":
+            var list = new List<(int, int, int)>();
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
                 {
-                    for (var y = y0 + 1; y < y1; y += 2)
+                    if (room[y * w + x] != a) continue;
+                    for (int d = 0; d < 4; d++)
+                        if (at(x + DX[d], y + DY[d]) == b) list.Add((x, y, d));
+                }
+            return list;
+        }
+
+        /// <summary>A door between rooms a and b (b = -1: outside, on side `side` if given), in the middle of their shared
+        /// wall or where the roll puts it, away from a wall's ends. False if they don't meet.</summary>
+        public bool join(int a, int b, double roll = 0.5, int side = -1, int width = 1)
+        {
+            var all = shared(a, b);
+            if (side >= 0) all = all.FindAll(c => c.d == side);
+            if (all.Count == 0) return false;
+            // Prefer spots whose neighbours along the wall share it too (not at a wall's end or a corner).
+            bool along((int x, int y, int d) c, int k)
+            {
+                int ax = c.d % 2 == 0 ? k : 0, ay = c.d % 2 == 0 ? 0 : k;
+                return all.Exists(o => o.x == c.x + ax && o.y == c.y + ay && o.d == c.d);
+            }
+            var good = width > 1 ? all.FindAll(c => Enumerable.Range(1, width - 1).All(k => along(c, k)))
+                : all.FindAll(c => along(c, -1) && along(c, 1));
+            var from = good.Count > 0 ? good : all;
+            var spot = from[pick(roll, from.Count)];
+            for (int k = 0; k < width; k++)
+            {
+                int ax = spot.d % 2 == 0 ? k : 0, ay = spot.d % 2 == 0 ? 0 : k;
+                if (all.Exists(o => o.x == spot.x + ax && o.y == spot.y + ay && o.d == spot.d)) putDoor(spot.x + ax, spot.y + ay, spot.d);
+            }
+            return true;
+        }
+
+        /// <summary>The front door: an outer door on the front (south) side of room a.</summary>
+        public bool frontDoor(int a, double roll = 0.5, int width = 1)
+        {
+            if (!join(a, -1, roll, 2, width)) return false;
+            for (int x = 0; x < w; x++)
+                for (int y = h - 1; y >= 0; y--)
+                    if (room[y * w + x] == a && door[(y * w + x) * 4 + 2] && at(x, y + 1) < 0)
                     {
-                    for (var x = x0 + 1; x < x1; x += 2)
+                        front ??= new PlanEdge { ax = x, ay = y, bx = x, by = y + 1, door = true };
+                        return true;
+                    }
+            return true;
+        }
+
+        /// <summary>The rooms a room has a door to (-1 for outside).</summary>
+        public List<int> doorsOf(int a)
+        {
+            var list = new List<int>();
+            for (int i = 0; i < w * h; i++)
+            {
+                if (room[i] != a) continue;
+                for (int d = 0; d < 4; d++)
+                    if (door[i * 4 + d])
                     {
-                        put(p, x, y, "desk", "office");
+                        int b = at(i % w + DX[d], i / w + DY[d]);
+                        if (!list.Contains(b)) list.Add(b);
+                    }
+            }
+            return list;
+        }
+
+        // --- windows ---
+
+        /// <summary>Windows in every room's outer walls by its kind (WINDOWS), spaced along each wall, never beside a door,
+        /// never at a wall's very end on a long wall, never where noWindow is set (a neighbour's wall too close).</summary>
+        public void windows()
+        {
+            for (int r = 0; r < kinds.Count; r++)
+            {
+                string how = Js.Get(WINDOWS, kinds[r]) ?? "some";
+                if (how == "none") continue;
+                var runs = new List<List<(int x, int y, int d)>>();
+                for (int d = 0; d < 4; d++)
+                {
+                    // Runs of this room's outer edges facing d, cell by cell along the wall.
+                    var cells = shared(r, -1).FindAll(c => c.d == d);
+                    List<(int, int, int)> run = null;
+                    (int x, int y, int d) last = (-9, -9, -1);
+                    foreach (var c in cells.OrderBy(c => d % 2 == 0 ? c.y * w + c.x : c.x * h + c.y))
+                    {
+                        bool next = d % 2 == 0 ? c.y == last.y && c.x == last.x + 1 : c.x == last.x && c.y == last.y + 1;
+                        if (run == null || !next) runs.Add(run = new());
+                        run.Add(c);
+                        last = c;
                     }
                 }
-                    againstWall(p, x0, y0, x1, y1, "bin", "trash", r(k + 4));
-                    break;
-                }
-            case "lockers":
-            case "armoury":
+                if (how == "one")
                 {
-                    for (var x = x0; x <= x1; x++)
-                    {
-                    put(p, x, y0, "locker", table);
-                }
-                    if (role == "armoury")
-                    {
-                    for (var x = x0; x <= x1; x++)
-                    {
-                        put(p, x, y1, "locker", table);
-                    }
-                }
-                    break;
-                }
-            case "cells":
-                {
-                    for (var x = x0; x <= x1; x += 2)
-                    {
-                    put(p, x, y0, "cot", null);
-                }
-                    break;
-                }
-            case "toilets":
-                {
-                    floorAs(p, x0, y0, x1, y1, "tiles");
-                    for (var x = x0; x <= x1; x += 2)
-                    {
-                    put(p, x, y0, "toilet", null);
-                }
-                    againstWall(p, x0, y0, x1, y1, "cabinet", "bathroom", r(k));
-                    againstWall(p, x0, y0, x1, y1, "sink", "bathroom", r(k + 1));
-                    break;
-                }
-            case "ward":
-                {
-                    for (var x = x0; x <= x1; x += 2)
-                    {
-                    put(p, x, y0, "cot", null);
-                }
-                    againstWall(p, x0, y0, x1, y1, "cabinet", table, r(k));
-                    againstWall(p, x0, y0, x1, y1, "cabinet", table, r(k + 1));
-                    break;
-                }
-            case "stores":
-                {
-                    for (var i = 0; i < 3; i++)
-                    {
-                    againstWall(p, x0, y0, x1, y1, (i == 0) ? "cabinet" : "shelf", table, r(k + i));
-                }
-                    break;
-                }
-            case "classroom":
-                {
-                    for (var y = y0 + 1; y < y1; y += 2)
-                    {
-                    for (var x = x0 + 1; x < x1; x += 2)
-                    {
-                        put(p, x, y, "desk", "school");
-                    }
-                }
-                    againstWall(p, x0, y0, x1, y1, "shelf", "school", r(k));
-                    break;
-                }
-        }
-    }
-    public static void fitOut(BuildingsPlan p, string role, double x0, double y0, double x1, double y1, Func<double, double> r, double k) => fitOut(p, role, Js.I(x0), Js.I(y0), Js.I(x1), Js.I(y1), r, Js.I(k));
-
-    /// <summary>One hall of pews facing an altar, a vestry in a back corner.</summary>
-    public static BuildingsPlan churchPlan(Func<double, double> r, double maxW, double maxH)
-    {
-        var W = JsMath.min(maxW, between(r(2), 11, 15));
-        var H = JsMath.min(maxH, between(r(3), 15, 20));
-        var p = newPlan(W, H, "church", 1);
-        box(p, 0, 0, W - 1, H - 1, "boards");
-        box(p, 0, 0, 4, 4, "boards");
-        door(p, 4, 2);
-        var mid = JsMath.floor(((double)(W) / (2)));
-        door(p, mid, H - 1);
-        againstWall(p, 1, 1, 3, 3, "cabinet", "church", r(5));
-        againstWall(p, 1, 1, 3, 3, "shelf", "church", r(6));
-        put(p, mid, 2, "altar", null);
-        for (var y = 6; y < (H - 3); y += 2)
-        {
-            for (var x = 1; x < (W - 1); x++)
-            {
-                if (JsMath.abs(x - mid) > 1)
-                {
-                    put(p, x, y, "pew", null);
-                }
-            }
-        }
-        return toEdges(p);
-    }
-
-    public static BuildingsPlan warehousePlan(Func<double, double> r, string kind, double maxW, double maxH)
-    {
-        var W = JsMath.min(maxW, between(r(2), 18, 26));
-        var H = JsMath.min(maxH, between(r(3), 13, 20));
-        var p = newPlan(W, H, kind, 2);
-        box(p, 0, 0, W - 1, H - 1, "concrete");
-        for (var x = 3; x <= 5; x++)
-        {
-            door(p, x, H - 1);
-        }
-        door(p, W - 3, 0);
-        box(p, 0, 0, 5, 4, "boards");
-        door(p, 3, 4);
-        put(p, 2, 2, "desk", "office");
-        againstWall(p, 1, 1, 4, 3, "cabinet", "office", r(5));
-        string table = kind;
-        for (var x = 8; x < (W - 2); x += 3)
-        {
-            for (var y = 2; y < (H - 3); y++)
-            {
-                if ((kind == "factory") && ((y % 3) == 0))
-                {
-                    put(p, x, y, "machine", null);
-                }
-                else if (((x + y) % 2) == 0)
-                {
-                    put(p, x, y, (r((10 + ((double)(x) * (31))) + y) < 0.5) ? "pallet" : "shelf", table);
-                }
-            }
-        }
-        return toEdges(p);
-    }
-
-    public static BuildingsPlan barnPlan(Func<double, double> r, double maxW, double maxH)
-    {
-        var W = JsMath.min(maxW, between(r(2), 9, 13));
-        var H = JsMath.min(maxH, between(r(3), 8, 10));
-        var p = newPlan(W, H, "barn", 1);
-        box(p, 0, 0, W - 1, H - 1, "concrete");
-        var mid = JsMath.floor(((double)(W) / (2)));
-        door(p, mid - 1, H - 1);
-        door(p, mid, H - 1);
-        for (var i = 0; i < 4; i++)
-        {
-            againstWall(p, 1, 1, W - 2, H - 2, "hay", null, r(10 + i));
-        }
-        for (var i = 0; i < 2; i++)
-        {
-            againstWall(p, 1, 1, W - 2, H - 2, "sack", "barn", r(20 + i));
-        }
-        againstWall(p, 1, 1, W - 2, H - 2, "toolbox", "barn", r(30));
-        if (r(31) < 0.5)
-        {
-            inMiddle(p, 1, 1, W - 2, H - 2, "tractor", null);
-        }
-        return toEdges(p);
-    }
-
-    public static BuildingsPlan shedPlan(Func<double, double> r)
-    {
-        var p = newPlan(5, 5, "shed", 0);
-        box(p, 0, 0, 4, 4, "boards");
-        door(p, 2, 4);
-        againstWall(p, 1, 1, 3, 3, "toolbox", "shed", r(1));
-        againstWall(p, 1, 1, 3, 3, "shelf", "shed", r(2));
-        return toEdges(p);
-    }
-
-    public static readonly List<List<double>> DIR4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-
-    /// <summary>Turns a plan drawn with wall cells into one with edge walls (grid.ts): walls on the borders between cells, so rooms get the floor the walls stood on. - Wall cells on the outside (next to the outside or the plan's edge) become outside: the building's outer walls are edges round its floor. An outer door becomes a door edge there. - Inside, each wall cell becomes floor of a room beside it (south, else east, north, west of it, whichever is a room's floor first; a cell with none takes a neighbour's), so a wall line goes to the room below or right of it. - Then an edge wall wherever two cells side by side are in different rooms, or a room meets the outside; an edge door where a door cell stood (between the door's two sides).</summary>
-    public static BuildingsPlan toEdges(BuildingsPlan p)
-    {
-        var __d0 = p;
-        var w = __d0.w;
-        var h = __d0.h;
-        double at(double x, double y)
-        {
-            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : Js.NN(Js.Get(p.cells, ((double)(y) * (w)) + x));
-        }
-        bool solid(double c)
-        {
-            return (c == WALL) || (c == DOOR);
-        }
-        var room = new Int32Array(((double)(w) * (h))).fill(-1);
-        double rooms = 0;
-        for (var i = 0; i < ((double)(w) * (h)); i++)
-        {
-            if ((Js.Get(p.cells, i) != FLOOR) || (Js.Get(room, i) != -1))
-            {
-                continue;
-            }
-            List<double> queue = [i];
-            room[Js.Idx(i)] = rooms;
-            while (Js.T(queue.length))
-            {
-                var j = Js.NN(queue.pop());
-                var x = j % w;
-                var y = JsMath.floor(((double)(j) / (w)));
-                foreach (var (dx, dy) in Js.Iter(DIR4))
-                {
-                    var nx = x + dx;
-                    var ny = y + dy;
-                    if ((at(nx, ny) != FLOOR) || (Js.Get(room, ((double)(ny) * (w)) + nx) != -1))
-                    {
-                        continue;
-                    }
-                    room[Js.Idx(((double)(ny) * (w)) + nx)] = rooms;
-                    queue.push(((double)(ny) * (w)) + nx);
-                }
-            }
-            rooms++;
-        }
-        bool outer(double x, double y)
-        {
-            return DIR4.some((__p1) =>
-        {
-            var (dx, dy) = __p1;
-            return at(x + dx, y + dy) == OUTSIDE;
-        });
-        }
-        var cells = p.cells.slice();
-        List<double> pending = [];
-        for (var i = 0; i < ((double)(w) * (h)); i++)
-        {
-            if (!solid(Js.NN(Js.Get(p.cells, i))))
-            {
-                continue;
-            }
-            var x = i % w;
-            var y = JsMath.floor(((double)(i) / (w)));
-            if (outer(x, y))
-            {
-                cells[Js.Idx(i)] = OUTSIDE;
-                continue;
-            }
-            cells[Js.Idx(i)] = FLOOR;
-            pending.push(i);
-        }
-        for (var pass = 0; (pass < 4) && pending.some((i) => Js.Get(room, i) == -1); pass++)
-        {
-            foreach (var i in Js.Iter(pending))
-            {
-                if (Js.Get(room, i) != -1)
-                {
+                    var longest = runs.OrderByDescending(x => x.Count).FirstOrDefault();
+                    if (longest != null) glaze(longest, longest.Count / 2);
                     continue;
                 }
-                var x = i % w;
-                var y = JsMath.floor(((double)(i) / (w)));
-                foreach (var (dx, dy) in Js.Iter(DIR4))
+                foreach (var run in runs)
                 {
-                    var nx = x + dx;
-                    var ny = y + dy;
-                    if (((((nx < 0) || (ny < 0)) || (nx >= w)) || (ny >= h)) || (Js.Get(cells, ((double)(ny) * (w)) + nx) != FLOOR))
+                    int n = run.Count;
+                    if (how == "front")
                     {
+                        // A shopfront: glass the whole front; the side walls are for shelving.
+                        if (run[0].d == 2) for (int i = 0; i < n; i++) glaze(run, i);
                         continue;
                     }
-                    var r = Js.NN(Js.Get(room, ((double)(ny) * (w)) + nx));
-                    if ((r == -1) || ((pass == 0) && solid(Js.NN(Js.Get(p.cells, ((double)(ny) * (w)) + nx)))))
+                    if (how == "high") { for (int i = 2; i < n - 1; i += 4) glaze(run, i); continue; }
+                    if (n <= 2) { if (how == "many" || n == 2) glaze(run, n - 1); continue; }
+                    if (how == "many" && n >= 4)
                     {
+                        glaze(run, n / 2 - 1);
+                        glaze(run, n / 2);
+                        for (int i = 1; i < n / 2 - 2; i += 3) { glaze(run, i); glaze(run, n - 1 - i); }
                         continue;
                     }
-                    room[Js.Idx(i)] = r;
-                    break;
+                    if (n <= 5) { glaze(run, n / 2); continue; }
+                    for (int i = 1 + (n - 2) % 3 / 2; i < n - 1; i += 3) glaze(run, i);
+                }
+                // A room that should have windows but got none (every spot beside a door): the first spot that takes one.
+                bool any = runs.Exists(run => run.Exists(c => window[(c.y * w + c.x) * 4 + c.d]));
+                foreach (var run in runs)
+                    for (int i = 0; i < run.Count && !any; i++) any = glaze(run, i);
+            }
+        }
+
+        bool glaze(List<(int x, int y, int d)> run, int i)
+        {
+            if (i < 0 || i >= run.Count) return false;
+            var (x, y, d) = run[i];
+            int k = (y * w + x) * 4 + d;
+            if (door[k] || noWindow[k]) return false;
+            // Not right beside a door in the same wall.
+            int ax = d % 2 == 0 ? 1 : 0, ay = d % 2 == 0 ? 0 : 1;
+            foreach (int s in new[] { -1, 1 })
+            {
+                int nx = x + ax * s, ny = y + ay * s;
+                if (inside(nx, ny) && door[(ny * w + nx) * 4 + d]) return false;
+            }
+            window[k] = true;
+            return true;
+        }
+
+        /// <summary>No windows on side d's walls whose outside cell is within `gap` tiles of the plan's edge plus `room`
+        /// tiles beyond it (the lot's clearance on that side): a neighbour's wall would be a hand's breadth off.</summary>
+        public void shutSide(int d, int clearance)
+        {
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (room[y * w + x] < 0) continue;
+                    int nx = x + DX[d], ny = y + DY[d];
+                    if (at(nx, ny) >= 0) continue;
+                    // Tiles of clear ground beyond this wall: to the plan's edge, then the clearance.
+                    int beyond = d == 1 ? w - 1 - x : d == 3 ? x : d == 0 ? y : h - 1 - y;
+                    if (beyond + clearance < 2) { noWindow[(y * w + x) * 4 + d] = true; window[(y * w + x) * 4 + d] = false; }
+                }
+        }
+
+        // --- furniture ---
+
+        public bool free(int x, int y) => at(x, y) >= 0 && !taken[y * w + x] && !keep[y * w + x];
+
+        /// <summary>The sides of a cell that are walls (a window counts: furniture backs onto it).</summary>
+        public int walls(int x, int y, bool noWindows = false)
+        {
+            int n = 0;
+            for (int d = 0; d < 4; d++) if (wall(x, y, d) && !(noWindows && window[(y * w + x) * 4 + d])) n |= 1 << d;
+            return n;
+        }
+
+        public List<(int x, int y)> cellsOf(int r)
+        {
+            var list = new List<(int, int)>();
+            for (int i = 0; i < w * h; i++) if (room[i] == r) list.Add((i % w, i / w));
+            return list;
+        }
+
+        /// <summary>Puts a piece on a cell if it's free and the room stays usable: every cell beside the room's doors
+        /// still joined by free floor, and every container in the room still beside that free floor.</summary>
+        public bool put(int x, int y, string look, string table)
+        {
+            if (!free(x, y)) return false;
+            if (TALL.Contains(look))
+                for (int d = 0; d < 4; d++) if (window[(y * w + x) * 4 + d]) return false;
+            taken[y * w + x] = true;
+            furniture.Add(new PlanFurniture { x = x, y = y, look = look, table = isContainerLook(look) ? table : null });
+            if (!usable(at(x, y)))
+            {
+                taken[y * w + x] = false;
+                furniture.RemoveAt(furniture.Count - 1);
+                return false;
+            }
+            return true;
+        }
+
+        bool usable(int r)
+        {
+            var cells = cellsOf(r);
+            var open = cells.FindAll(c => !taken[c.y * w + c.x]);
+            if (open.Count == 0) return false;
+            int si = open.FindIndex(c => keep[c.y * w + c.x]);
+            var start = open[Math.Max(0, si)];
+            var seen = new bool[w * h];
+            var stack = new Stack<(int x, int y)>();
+            stack.Push(start);
+            seen[start.y * w + start.x] = true;
+            while (stack.Count > 0)
+            {
+                var (x, y) = stack.Pop();
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = x + DX[d], ny = y + DY[d];
+                    if (at(nx, ny) != r || taken[ny * w + nx] || seen[ny * w + nx] || wall(x, y, d)) continue;
+                    seen[ny * w + nx] = true;
+                    stack.Push((nx, ny));
                 }
             }
-        }
-        var ground = p.ground.slice();
-        foreach (var i in Js.Iter(pending))
-        {
-            if (Js.T(Js.Get(ground, i)))
+            foreach (var c in cells)
             {
-                continue;
+                int i = c.y * w + c.x;
+                if (keep[i] && !taken[i] && !seen[i]) return false;
             }
-            var x = i % w;
-            var y = JsMath.floor(((double)(i) / (w)));
-            foreach (var (dx, dy) in Js.Iter(DIR4))
+            foreach (var f in furniture)
             {
-                var j = (((double)((y + dy)) * (w)) + x) + dx;
-                if (Js.T(((((((x + dx) >= 0) && ((y + dy) >= 0)) && ((x + dx) < w)) && ((y + dy) < h)) && (Js.Get(room, j) == Js.Get(room, i))) && Js.T(Js.Get(p.ground, j))))
+                if (f.table == null || at(f.x, f.y) != r) continue;
+                bool reach = false;
+                for (int d = 0; d < 4 && !reach; d++)
                 {
-                    ground[Js.Idx(i)] = Js.NN(Js.Get(p.ground, j));
-                    break;
+                    int nx = f.x + DX[d], ny = f.y + DY[d];
+                    reach = at(nx, ny) == r && seen[ny * w + nx] && !wall(f.x, f.y, d);
+                }
+                if (!reach) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Against a wall of the room: the free wall cells in reading order, starting where the roll says.</summary>
+        public bool againstWall(int r, string look, string table, double roll, Func<int, int, bool> where = null)
+        {
+            var spots = cellsOf(r).FindAll(c => walls(c.x, c.y) != 0 && (where == null || where(c.x, c.y)));
+            return tryAll(spots, roll, look, table);
+        }
+
+        /// <summary>In a corner of the room (two walls).</summary>
+        public bool inCorner(int r, string look, string table, double roll)
+        {
+            var spots = cellsOf(r).FindAll(c => { int m = walls(c.x, c.y); return (m & 5) != 0 && (m & 10) != 0; });
+            return tryAll(spots, roll, look, table) || againstWall(r, look, table, roll);
+        }
+
+        /// <summary>Away from the walls, nearest the room's middle.</summary>
+        public bool inMiddle(int r, string look, string table)
+        {
+            var cells = cellsOf(r);
+            if (cells.Count == 0) return false;
+            double cx = cells.Average(c => c.x), cy = cells.Average(c => c.y);
+            var spots = cells.FindAll(c => walls(c.x, c.y) == 0).OrderBy(c => (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy)).ThenBy(c => c.y).ThenBy(c => c.x).ToList();
+            foreach (var c in spots) if (put(c.x, c.y, look, table)) return true;
+            return false;
+        }
+
+        bool tryAll(List<(int x, int y)> spots, double roll, string look, string table)
+        {
+            int start = spots.Count == 0 ? 0 : pick(roll, spots.Count);
+            for (int i = 0; i < spots.Count; i++)
+            {
+                var c = spots[(start + i) % spots.Count];
+                if (put(c.x, c.y, look, table)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>A bed with its head to a wall (one wall only: not in a corner), the floor at its foot and one side
+        /// clear to walk round, and a bedside table beside it. Falls back to any wall.</summary>
+        public bool bed(int r, double roll, string nightstand = "nightstand", string table = "bedroom")
+        {
+            var spots = new List<(int x, int y, int d)>();
+            foreach (var c in cellsOf(r))
+            {
+                int m = walls(c.x, c.y);
+                for (int d = 0; d < 4; d++)
+                {
+                    if (m != 1 << d) continue;
+                    int fx = c.x - DX[d], fy = c.y - DY[d];
+                    if (!free(fx, fy) && !(at(fx, fy) == r && keep[fy * w + fx])) continue;
+                    spots.Add((c.x, c.y, d));
                 }
             }
-        }
-        var doorPairs = new JsSet<string>();
-        string pairKey(double ax, double ay, double bx, double by)
-        {
-            return ((ay < by) || ((ay == by) && (ax < bx))) ? $"{Js.Str(ax)},{Js.Str(ay)},{Js.Str(bx)},{Js.Str(by)}" : $"{Js.Str(bx)},{Js.Str(by)},{Js.Str(ax)},{Js.Str(ay)}";
-        }
-        for (var i = 0; i < ((double)(w) * (h)); i++)
-        {
-            if (Js.Get(p.cells, i) != DOOR)
+            int start = spots.Count == 0 ? 0 : pick(roll, spots.Count);
+            for (int i = 0; i < spots.Count; i++)
             {
-                continue;
-            }
-            var x = i % w;
-            var y = JsMath.floor(((double)(i) / (w)));
-            var vertical = solid(at(x, y - 1)) || solid(at(x, y + 1));
-            var __c2 = Js.T(vertical); var ax = __c2 ? (x - 1) : x; var ay = __c2 ? y : (y - 1); var bx = __c2 ? (x + 1) : x; var by = __c2 ? y : (y + 1);
-            if (Js.Get(cells, i) == OUTSIDE)
-            {
-                List<double> inside = (((((Js.Get(cells, ((double)(ay) * (w)) + ax) == FLOOR) && (ax >= 0)) && (ay >= 0)) && (ax < w)) && (ay < h)) ? ((List<double>)[ax, ay]) : ((List<double>)[bx, by]);
-                doorPairs.add(pairKey(x, y, Js.NN(Js.Get(inside, 0)), Js.NN(Js.Get(inside, 1))));
-            }
-            else
-            {
-                var aRoom = ((((ax >= 0) && (ay >= 0)) && (ax < w)) && (ay < h)) ? Js.Get(room, ((double)(ay) * (w)) + ax) : -2;
-                List<double> other = (aRoom == Js.Get(room, i)) ? ((List<double>)[bx, by]) : ((List<double>)[ax, ay]);
-                doorPairs.add(pairKey(x, y, Js.NN(Js.Get(other, 0)), Js.NN(Js.Get(other, 1))));
-            }
-        }
-        List<PlanEdge> edges = [];
-        double cellOf(double x, double y)
-        {
-            return ((((x < 0) || (y < 0)) || (x >= w)) || (y >= h)) ? OUTSIDE : Js.NN(Js.Get(cells, ((double)(y) * (w)) + x));
-        }
-        for (var y = 0; y < h; y++)
-        {
-            for (var x = 0; x < w; x++)
-            {
-                foreach (var (dx, dy) in new (double, double)[] { (0, -1), (-1, 0), (0, 1), (1, 0) })
+                var s = spots[(start + i) % spots.Count];
+                if (!put(s.x, s.y, "bed", null)) continue;
+                if (nightstand != null)
                 {
-                    var nx = x + dx;
-                    var ny = y + dy;
-                    var here = cellOf(x, y);
-                    var there = cellOf(nx, ny);
-                    if ((here != FLOOR) && (there != FLOOR))
+                    int ax = s.d % 2 == 0 ? 1 : 0, ay = s.d % 2 == 0 ? 0 : 1;
+                    // One side for the nightstand, the other left to walk round.
+                    foreach (int k in roll < 0.5 ? new[] { 1, -1 } : new[] { -1, 1 })
                     {
-                        continue;
+                        int nx = s.x + ax * k, ny = s.y + ay * k, ox = s.x - ax * k, oy = s.y - ay * k;
+                        if (at(nx, ny) == r && wall(nx, ny, s.d) && free(ox, oy) && put(nx, ny, nightstand, table)) break;
                     }
-                    if (here != FLOOR)
-                    {
-                        continue;
-                    }
-                    if ((there == FLOOR) && ((dx > 0) || (dy > 0)))
-                    {
-                        continue;
-                    }
-                    var differs = (there != FLOOR) || (Js.Get(room, ((double)(y) * (w)) + x) != Js.Get(room, ((double)(ny) * (w)) + nx));
-                    if (!Js.T(differs))
-                    {
-                        continue;
-                    }
-                    edges.push(new() { ax = Js.I(x), ay = Js.I(y), bx = Js.I(nx), by = Js.I(ny), door = doorPairs.has(pairKey(x, y, nx, ny)) });
                 }
+                return true;
             }
+            return againstWall(r, "bed", null, roll);
         }
-        if (WINDOWED.includes(p.kind))
+
+        /// <summary>Pieces side by side along one wall (a kitchen's counters, a shop's shelves): the longest free run
+        /// of wall cells facing one way, starting with the side `prefer` if it has room. Returns how many were placed.</summary>
+        public int run(int r, IList<(string look, string table)> pieces, double roll, int prefer = -1)
         {
-            string key(PlanEdge e)
+            var best = new List<(int x, int y)>();
+            for (int k = 0; k < 4; k++)
             {
-                return $"{Js.Str(e.ax)},{Js.Str(e.ay)},{Js.Str(e.bx)},{Js.Str(e.by)}";
+                int d = prefer >= 0 ? (prefer + k) % 4 : (pick(roll, 4) + k) % 4;
+                var cells = cellsOf(r).FindAll(c => wall(c.x, c.y, d) && !window[(c.y * w + c.x) * 4 + d] && free(c.x, c.y));
+                cells = cells.OrderBy(c => d % 2 == 0 ? c.y * w + c.x : c.x * h + c.y).ToList();
+                var cur = new List<(int x, int y)>();
+                foreach (var c in cells)
+                {
+                    if (cur.Count > 0)
+                    {
+                        var l = cur[^1];
+                        bool next = d % 2 == 0 ? c.y == l.y && c.x == l.x + 1 : c.x == l.x && c.y == l.y + 1;
+                        if (!next) cur = new();
+                    }
+                    cur.Add(c);
+                    if (cur.Count > best.Count) best = new(cur);
+                }
+                if (prefer >= 0 && best.Count >= pieces.Count) break;
             }
-            var outerWall = Js.MapOf(edges.filter((e) => !e.door && (cellOf(e.bx, e.by) != FLOOR)), (e) => key(e), (e) => e);
-            foreach (var e in Js.Iter(outerWall.values()))
+            int placed = 0, i = 0;
+            foreach (var c in best)
             {
-                var (dx, dy) = (e.bx - e.ax, e.by - e.ay);
-                var __c3 = dy != 0; var sx = __c3 ? 1 : 0; var sy = __c3 ? 0 : 1;
-                var along = (dy != 0) ? e.ax : e.ay;
-                if ((along % 3) != 1)
-                {
-                    continue;
-                }
-                bool beside(double k)
-                {
-                    return outerWall.has($"{Js.Str(e.ax + ((double)(sx) * (k)))},{Js.Str(e.ay + ((double)(sy) * (k)))},{Js.Str(e.bx + ((double)(sx) * (k)))},{Js.Str(e.by + ((double)(sy) * (k)))}");
-                }
-                if (beside(1) && beside(-1))
-                {
-                    e.window = true;
-                }
+                if (i >= pieces.Count) break;
+                if (put(c.x, c.y, pieces[i].look, pieces[i].table)) { placed++; i++; }
             }
+            for (; i < pieces.Count; i++) if (againstWall(r, pieces[i].look, pieces[i].table, roll + 0.37 * i - Math.Floor(roll + 0.37 * i))) placed++;
+            return placed;
         }
-        return Js.With(Js.CopyAs<BuildingsPlan>(p), __s4 => { __s4.cells = cells; __s4.ground = ground; __s4.edges = edges; });
+
+        /// <summary>One piece facing another across the room: on the far side, in line with it (a sofa facing the
+        /// television), against the wall there if there's one, else two tiles off.</summary>
+        public bool facing(int r, (int x, int y) what, string look, string table)
+        {
+            int m = walls(what.x, what.y);
+            for (int d = 0; d < 4; d++)
+            {
+                if ((m & (1 << d)) == 0) continue;
+                // Walk away from that wall across the room.
+                int x = what.x, y = what.y, steps = 0;
+                while (at(x - DX[d], y - DY[d]) == r && !wall(x, y, (d + 2) % 4)) { x -= DX[d]; y -= DY[d]; steps++; }
+                for (int back = 0; back <= steps - 2; back++)
+                {
+                    int px = x + DX[d] * back, py = y + DY[d] * back;
+                    if (put(px, py, look, table)) return true;
+                }
+            }
+            return false;
+        }
+
+        public (int x, int y) last => furniture.Count == 0 ? (-1, -1) : (furniture[^1].x, furniture[^1].y);
+
+        /// <summary>The plan: cells, ground, edges (walls, doors, windows), furniture, rooms.</summary>
+        public BuildingsPlan finish()
+        {
+            var p = new BuildingsPlan
+            {
+                w = w, h = h, kind = kind, style = style, sleepers = sleepers,
+                cells = Js.Filled<double>(w * h, OUTSIDE), ground = new List<string>(ground),
+                furniture = new List<PlanFurniture>(furniture), roomOf = new List<int>(room), rooms = new List<string>(kinds), front = front,
+            };
+            for (int i = 0; i < w * h; i++) if (room[i] >= 0) p.cells[i] = FLOOR;
+            // An edge wherever a room meets another room or the outside: from the cell whose neighbour is north or west
+            // for two rooms (listed once), from the room's cell for the outside.
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int a = room[y * w + x];
+                    if (a < 0) continue;
+                    foreach (int d in new[] { 0, 3, 2, 1 })
+                    {
+                        int nx = x + DX[d], ny = y + DY[d];
+                        int b = at(nx, ny);
+                        if (b == a || (b >= 0 && (d == 1 || d == 2))) continue;
+                        int k = (y * w + x) * 4 + d;
+                        p.edges.Add(new PlanEdge { ax = x, ay = y, bx = nx, by = ny, door = door[k], window = window[k] && b < 0 ? true : null });
+                    }
+                }
+            return p;
+        }
+    }
+
+    /// <summary>The front door's outside cell's column, and so where a path meets the building (plan coordinates).</summary>
+    public static (int x, int y)? frontStep(BuildingsPlan p) => p.front == null ? null : (p.front.bx, p.front.by);
+}
+
+public static partial class Buildings
+{
+    /// <summary>Leaves out the windows on a plan's west (plan-left) and east sides whose outside is fewer than two tiles
+    /// from the lot's edge (`left`, `right`: the lot's clear tiles beyond the plan's rectangle on each side).</summary>
+    public static void shutSides(BuildingsPlan p, int left, int right)
+    {
+        foreach (var e in p.edges)
+        {
+            if (e.window != true) continue;
+            if (e.bx == e.ax - 1 && e.ax + left < 2) e.window = null;
+            if (e.bx == e.ax + 1 && p.w - 1 - e.ax + right < 2) e.window = null;
+        }
+    }
+}
+
+public static partial class Buildings
+{
+    /// <summary>Letters for furniture in ascii() (decor upper case where it would clash).</summary>
+    public static readonly JsRecord<string> GLYPHS = new()
+    {
+        ["bed"] = "B", ["nightstand"] = "n", ["wardrobe"] = "W", ["dresser"] = "w", ["counter"] = "c", ["sink"] = "s", ["oven"] = "O",
+        ["icebox"] = "F", ["table"] = "T", ["bin"] = "x", ["tv"] = "V", ["sofa"] = "S", ["armchair"] = "a", ["shelf"] = "h", ["bookcase"] = "k",
+        ["toilet"] = "t", ["bath"] = "U", ["shower"] = "u", ["cabinet"] = "m", ["washer"] = "M", ["toolbox"] = "X", ["car"] = "C",
+        ["register"] = "$", ["pallet"] = "p", ["crate"] = "r", ["desk"] = "d", ["locker"] = "l", ["cot"] = "b", ["pew"] = "=", ["altar"] = "A",
+        ["hay"] = "H", ["sack"] = "q", ["tractor"] = "Y", ["machine"] = "Z", ["bench"] = "_",
+    };
+
+    /// <summary>A plan as text, two characters a cell: walls - and |, doors (gaps) as spaces between floor, windows o,
+    /// furniture by GLYPHS, empty floor '.', outside blank. Rows from the back (top) to the front (bottom).</summary>
+    public static string ascii(BuildingsPlan p)
+    {
+        int W = 2 * p.w + 1, H = 2 * p.h + 1;
+        var g = new char[H, W];
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) g[y, x] = ' ';
+        for (int y = 0; y < p.h; y++)
+            for (int x = 0; x < p.w; x++)
+                if (cellAt(p, x, y) == FLOOR) g[2 * y + 1, 2 * x + 1] = '.';
+        foreach (var f in p.furniture) g[2 * f.y + 1, 2 * f.x + 1] = (Js.Get(GLYPHS, f.look) ?? "?")[0];
+        foreach (var e in p.edges)
+        {
+            int ex = e.ax + e.bx + 1, ey = e.ay + e.by + 1;
+            bool vertical = e.ay == e.by;
+            g[ey, ex] = e.door ? (vertical ? ' ' : ' ') : e.window == true ? 'o' : vertical ? '|' : '-';
+            if (e.door) g[ey, ex] = vertical ? ':' : '~';
+        }
+        for (int y = 0; y < H; y += 2)
+            for (int x = 0; x < W; x += 2)
+            {
+                bool n = y > 0 && g[y - 1, x] is '|' or 'o' or ':', s = y < H - 1 && g[y + 1, x] is '|' or 'o' or ':';
+                bool w = x > 0 && g[y, x - 1] is '-' or 'o' or '~', e = x < W - 1 && g[y, x + 1] is '-' or 'o' or '~';
+                if (n || s || w || e) g[y, x] = '+';
+            }
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"{p.kind} ({p.style}) {p.w} x {p.h}: {string.Join(", ", p.rooms)}\n");
+        for (int y = 0; y < H; y++)
+        {
+            var row = new char[W];
+            for (int x = 0; x < W; x++) row[x] = g[y, x];
+            sb.Append(new string(row).TrimEnd()).Append('\n');
+        }
+        return sb.ToString();
     }
 }
