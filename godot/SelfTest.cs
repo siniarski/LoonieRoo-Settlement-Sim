@@ -208,6 +208,7 @@ public partial class Game
         Check("A jump is heard going up and landing, on the ground under you", yours.Pushes > pushes && yours.Landings > landings && yours.LandSurface.StartsWith("step_"),
             $"push-offs {pushes} -> {yours.Pushes}, landings {landings} -> {yours.Landings}, on {yours.LandSurface}");
         await HeldSteps();
+        await FireSteps();
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);

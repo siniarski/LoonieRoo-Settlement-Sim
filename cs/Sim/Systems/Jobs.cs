@@ -166,11 +166,14 @@ public static partial class Jobs
             }
         }
         var fighting = Js.Set(state.jobs.filter((j) => j.type == "firefight").map((j) => ((double)(j.y) * (width)) + j.x));
+        var fightJobs = fighting.size;
         foreach (var f in Js.Iter(state.fires))
         {
-            if (!fighting.has(((double)(f.y) * (width)) + f.x))
+            // A vegetation fire gets a job only where it threatens a building (FireMod.worthFighting); looked at every tenth tick when there are many.
+            if (!fighting.has(((double)(f.y) * (width)) + f.x) && ((state.fires.length <= 16) || ((state.tick % 10) == 0)) && FireMod.worthFighting(state, f, fightJobs))
             {
                 addJob(state, "firefight", f.x, f.y, null, null);
+                fightJobs++;
             }
         }
         if (EndgameMod.researchWanted(state))

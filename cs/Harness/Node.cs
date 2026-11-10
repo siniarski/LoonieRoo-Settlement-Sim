@@ -56,6 +56,7 @@ public static class Node
         public string? TICKS => Get("TICKS");
         public string? LOG => Get("LOG");
         public string? LOG_AT => Get("LOG_AT");
+        public string? WILDFIRE => Get("WILDFIRE");
     }
 
     public static class process
