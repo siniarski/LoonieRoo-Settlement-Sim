@@ -23,6 +23,7 @@
 //   --lineup                               one of every item kind on the ground in front of you (for screenshots; not a command)
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
+//   --hour=H --switch=X,Y --give=flashlight:on --car=X,Y,H --fire= --stove= --heater= --lights=N --lightbench   lights (GameLights.cs)
 //   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
 //                                          Options page's (not saved); a --shot or --selftest ignores the player's options
 
@@ -164,6 +165,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             me.at = Motion.centre(me.pos);
             me.was = Motion.centre(me.pos);
         }
+        LightArgs(args); // --hour, --switch, --give, --car, --fire, --stove, --heater, --lights, --lightbench (GameLights.cs)
         if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
@@ -992,6 +994,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.V:
             case Key.H: Command(new Command { type = "shout", order = key == Key.V ? "follow" : "hold" }); break;
             case Key.E: UseAhead(); break;
+            case Key.G: LightKey(you); break;   // your flashlight; in a car, its headlights (GameLights.cs)
+            case Key.X: SwitchKey(you); break;  // the room's light switch
         }
     }
 }

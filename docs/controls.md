@@ -34,6 +34,10 @@ G is gone.
   with wood: barricade a door or board a window, reinforce, build a wall).
 - T talk (neighbours' people may ask you for an errand), V "follow me", H "hold here", L "loot that room" (under the
   mouse), K the full key list.
+- Lights (2026-11-10): G switches your flashlight on or off (one in your bag; using it from the bag does the same); in
+  a car, G is its headlights. X flips the light switch of the room you're in, or of the room past the door in front
+  of you (the HUD says "X: light on" or "light off" in a room). A room's light needs power: the mains, or a generator
+  in reach.
 
 ## Saves
 

@@ -206,9 +206,9 @@ public sealed partial class Hud : Control
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
-                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · G flashlight (in a car: headlights) · X light switch · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
                     : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
-                : "K: keys"
+                : "K: keys" + LightPrompt(state, you)
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
         controlLine.Show(controlText != "", controlText, (r) => r.Text(controlText, Kit.Gold, 600));
         string toastText = view.toast != null && Godot.Time.GetTicksMsec() < view.toastUntil ? view.toast : "";
@@ -266,6 +266,15 @@ public sealed partial class Hud : Control
         if (car == null) return "";
         double tiles = Math.Round(Math.Abs(car.speed) * 10 / Motion.SUB);
         return $"driving {(car.speed < 0 ? "backwards " : "")}{tiles} tiles/s · fuel {Math.Round(car.fuel * 100 / Vehicles.FUEL_MAX)}% · car {Math.Round(car.health * 100 / Vehicles.VEHICLE_HEALTH)}%";
+    }
+
+    /// <summary>In a room with a light switch: what X does (Sim.Lights).</summary>
+    static string LightPrompt(SimState state, Survivor you)
+    {
+        var r = LoonieRoo.Sim.Lights.roomAt(state, you.pos.x, you.pos.y);
+        if (r == null) return "";
+        bool on = LoonieRoo.Sim.Lights.switchedOn(state, r);
+        return on && !LoonieRoo.Sim.Lights.roomPowered(state, r) ? " · X: light switch (no power)" : on ? " · X: light off" : " · X: light on";
     }
 
     string statusText(SimState state, bool solo)

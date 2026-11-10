@@ -289,7 +289,7 @@ public static partial class Lights
 
     sealed class StreetLamps
     {
-        public readonly Dictionary<long, List<(int x, int y)>> byChunk = new();
+        public readonly Dictionary<long, List<(int x, int y, bool works, int side)>> byChunk = new();
     }
 
     static readonly ConditionalWeakTable<WorldPlan, StreetLamps> lampCache = new();
@@ -307,7 +307,7 @@ public static partial class Lights
             double shift = JsMath.floor(Hash.hashRoll(seed, st.x0, st.y0, 0x1a3b) * STREET_SPACING);
             for (double k = shift; k <= along; k += STREET_SPACING)
             {
-                if (Hash.hashRoll(seed, st.x0, st.y0, k, 0x1a3c) >= STREET_WORKING) continue;
+                bool works = Hash.hashRoll(seed, st.x0, st.y0, k, 0x1a3c) < STREET_WORKING;
                 bool far = Hash.hashRoll(seed, st.x0, st.y0, k, 0x1a3d) < 0.5;
                 int x = st.eastWest ? st.x0 + (int)k : (far ? st.x0 + Towns.STREET : st.x0 - 1);
                 int y = st.eastWest ? (far ? st.y0 + Towns.STREET : st.y0 - 1) : st.y0 + (int)k;
@@ -315,18 +315,37 @@ public static partial class Lights
                 if (plan.roadMask.a[(y - w.y0) * w.W + (x - w.x0)] != 0) continue;
                 long c = Key(x / Worldplan.PLAN_CHUNK, y / Worldplan.PLAN_CHUNK);
                 if (!made.byChunk.TryGetValue(c, out var list)) made.byChunk[c] = list = new();
-                list.Add((x, y));
+                list.Add((x, y, works, st.eastWest ? (far ? 2 : 0) : (far ? 1 : 3)));
             }
         }
         lampCache.AddOrUpdate(plan, made);
         return made;
     }
 
+    /// <summary>Every street lamp's post within `radius` of (x, y), lit or not, working or not: its tile and the side of
+    /// the street it stands on (0 north of it, 1 east, 2 south, 3 west), for the renderer's posts.</summary>
+    public static List<(int x, int y, int side)> streetPosts(SimState state, double x, double y, double radius)
+    {
+        var @out = new List<(int, int, int)>();
+        var regions = regionsOf(state);
+        if (regions == null) return @out;
+        int size = (int)state.world.size, C = Worldplan.PLAN_CHUNK, chunks = (size + C - 1) / C;
+        for (int cy = Math.Max(0, (int)Math.Floor((y - radius) / C)); cy <= Math.Min(chunks - 1, (int)Math.Floor((y + radius) / C)); cy++)
+            for (int cx = Math.Max(0, (int)Math.Floor((x - radius) / C)); cx <= Math.Min(chunks - 1, (int)Math.Floor((x + radius) / C)); cx++)
+            {
+                var plan = regions.RegionAt(cx * C, cy * C);
+                if (!lampsOf(state.world.seed, regions, plan).byChunk.TryGetValue(Key(cx, cy), out var lamps)) continue;
+                foreach (var (lx, ly, _, side) in lamps)
+                    if (Math.Abs(lx + 0.5 - x) <= radius && Math.Abs(ly + 0.5 - y) <= radius) @out.Add((lx, ly, side));
+            }
+        return @out;
+    }
+
     // --- the sources ---
 
     /// <summary>The lights lit now within `radius` tiles of (x, y) (tile units; a source counts by its own point),
-    /// nearest first (then by id), at most MAX_NEAR. Bounded: plan chunks in reach, and the sparse lists in state.</summary>
-    public static List<Source> near(SimState state, double x, double y, double radius)
+    /// nearest first (then by id), at most `max` (MAX_NEAR). Bounded: plan chunks in reach, and the sparse lists in state.</summary>
+    public static List<Source> near(SimState state, double x, double y, double radius, int max = MAX_NEAR)
     {
         var found = new List<Source>();
         bool night = Time.isNight(state.tick);
@@ -378,7 +397,7 @@ public static partial class Lights
         var beam = flashlightBeam(state);
         if (beam != null) add(beam);
         found.Sort((a, b) => a.dist != b.dist ? a.dist.CompareTo(b.dist) : string.CompareOrdinal(a.id, b.id));
-        if (found.Count > MAX_NEAR) found.RemoveRange(MAX_NEAR, found.Count - MAX_NEAR);
+        if (found.Count > max) found.RemoveRange(max, found.Count - max);
         return found;
     }
 
@@ -413,7 +432,8 @@ public static partial class Lights
                 if (!mains) continue;
                 var plan = regions.RegionAt(cx * C, cy * C);
                 if (lampsOf(seed, regions, plan).byChunk.TryGetValue(Key(cx, cy), out var lamps))
-                    foreach (var (lx, ly) in lamps) add(point(STREET, $"street{Js.Str(lx)},{Js.Str(ly)}", lx + 0.5, ly + 0.5, OUT));
+                    foreach (var (lx, ly, works, _) in lamps)
+                        if (works) add(point(STREET, $"street{Js.Str(lx)},{Js.Str(ly)}", lx + 0.5, ly + 0.5, OUT));
             }
     }
 
