@@ -11,6 +11,13 @@ or E uses what you look at on the ground beside you (else what's in front). Tab 
 beside you, your card; the mouse is let go). M opens the map screen (tabs: Map, Colony, Back); B, P or O open the
 Colony tab. Esc opens the menu. The map and the menu pause; the Colony tab plays on. There is no pause key.
 
+**The character sheet** is the left column of the Tab screen: who you are, your health (a bar and a word: fine, hurt,
+badly hurt, dying), the body by part (an outline tinted by each part's state; hover it for the details), what is wrong
+with you worst first with what would help, then body heat, endurance, wetness and panic, needs, mood and the thoughts
+behind it, what you wear and wield, skills and your story. It only reads: nothing on it changes the game. It scrolls
+(wheel) when it is taller than the window, and follows the survivor you control. The same sheet as text:
+`CharacterSheet.textOfControlled(state)` (cs/Sim/Systems/CharacterSheet.cs).
+
 The direct-control keys below apply as before (L loots the room where you look). In the Colony tab you stand still
 and the colony's controls apply; M or Esc goes back to first person; F on someone selected plays them instead.
 G is gone.

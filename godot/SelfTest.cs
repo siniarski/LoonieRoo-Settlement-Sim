@@ -176,6 +176,7 @@ public partial class Game
         Check("Tab opens the inventory", view.showInventory && Input.MouseMode == Input.MouseModeEnum.Visible);
         await Tap(Godot.Key.Tab);
         Check("Tab closes it", !view.showInventory);
+        await SheetSteps();
         await InventorySteps();
 
         // Space jumps (no pause key now): you leave the ground, the eye rises and comes back down, and the game plays on.

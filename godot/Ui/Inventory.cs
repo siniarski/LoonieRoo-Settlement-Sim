@@ -26,6 +26,7 @@ public sealed partial class InventoryScreen : Control
     readonly View view;
     readonly Func<Command, CommandResult> command;
     readonly DropPanel you, box;
+    readonly CharacterSheetPanel sheet = new();   // the character sheet: the left column (CharacterSheet.cs), read-only
     readonly Label said = Kit.Label("", Ctx.Css("#ffb347"), 12);
     string key = "\0";
     /// <summary>A container being searched, or a boot being opened: the screen opens on it when that's done.</summary>
@@ -54,6 +55,7 @@ public sealed partial class InventoryScreen : Control
         outer.AnchorLeft = outer.AnchorRight = 0.5f;
         outer.AnchorTop = outer.AnchorBottom = 0.16f;
         outer.GrowHorizontal = GrowDirection.Both;
+        outer.OffsetLeft = outer.OffsetRight = CharacterSheetPanel.WIDTH / 2;   // right of the character sheet's column
         AddChild(outer);
         var title = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         var titleBox = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -71,6 +73,7 @@ public sealed partial class InventoryScreen : Control
         var saidRow = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         saidRow.AddChild(said);
         outer.AddChild(saidRow);
+        AddChild(sheet);
     }
 
     /// <summary>The container open beside you: the one you used, else a car's boot or a container beside you. Null if none.</summary>
@@ -124,6 +127,7 @@ public sealed partial class InventoryScreen : Control
         Visible = view.showInventory && s != null && view.inventoryAllowed(true);
         if (!view.showInventory) view.openContainer = null;
         if (!Visible || s == null) return;
+        sheet.Update(state, s);
         if (saidUntil != 0 && Godot.Time.GetTicksMsec() > saidUntil) { said.Text = ""; saidUntil = 0; }
         var open = Container(state, s, view.openContainer);
         if (open == null) view.openContainer = null;
