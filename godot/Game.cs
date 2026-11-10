@@ -17,7 +17,6 @@
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
 //   --at=X,Y                               put the survivor you control on tile X, Y (for screenshots; not a command)
-//   --day=D                                start at noon of day D (only the clock moves: for pictures of growth and the seasons; not a command)
 //   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn,
 //                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
@@ -25,6 +24,8 @@
 //   --arm=KIND[:ROUNDS]                    put that weapon in your hand (a gun with ROUNDS in it, else 60% of its magazine, and a box of its
 //                                          ammunition in your bag) for screenshots of the HUD's readout; not a command
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
+//   --day=N --weather=W --snow=CM          start on day N at 06:00 (17: second day of winter; 17.33: 14:00; grown as of then), with that day's weather
+//                                          (clear rain storm heatwave snow blizzard) and CM cm of snow on open ground
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
 //   --hour=H --switch=X,Y --give=flashlight:on --car=X,Y,H --fire= --stove= --heater= --lights=N --lightbench   lights (GameLights.cs)
 //   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
@@ -156,6 +157,10 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (args.TryGetValue("arena", out var arena)) { Replace(new LoadResult { ok = true, state = LoonieRoo.Sim.Arena.createArena(seed, arena == "" ? "crowd" : arena), kind = "save" }, "a debug arena"); direct = true; }
         else if (args.TryGetValue("load", out var load)) Replace(Savefile.loadFile(System.IO.File.ReadAllText(load)), "the file");
         else Replace(new LoadResult { ok = true, state = Worldgen.createWorld(seed, size, settings), kind = "save" }, $"a new {size}×{size} world");
+        // --day=N: start on day N at 06:00 (17 is the second day of winter; 17.33 is 14:00, a day's fraction counts from 06:00; only the clock moves, and what has grown by then is grown: Growth.cs; --hour=H then picks the hour, GameLights.cs); --weather=W: that day's weather (clear, rain, storm, heatwave, snow, blizzard); --snow=CM: that much snow on open ground in every region.
+        if (args.TryGetValue("day", out var dayArg)) { Time.setDayScale(state.settings.dayScale); state.tick = (int)Math.Round((double.Parse(dayArg, CultureInfo.InvariantCulture) - 1) * Time.DAY_LENGTH) + 1; Growth.update(state); }
+        if (args.TryGetValue("weather", out var wxArg)) state.weather = wxArg;
+        if (args.TryGetValue("snow", out var snowArg)) { var cm = double.Parse(snowArg, CultureInfo.InvariantCulture); state.snow = new SnowState { depth = [cm, cm, cm], fallen = [0, 0, 0], melted = [0, 0, 0] }; }
         if (args.TryGetValue("zoom", out var zoom)) view.camera.zoom = double.Parse(zoom);
         ParseTextOptions(args);
         ParseShotOptions(args);
@@ -172,12 +177,10 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             me.at = Motion.centre(me.pos);
             me.was = Motion.centre(me.pos);
         }
-        if (args.TryGetValue("day", out var dayArg)) StartDay(double.Parse(dayArg, CultureInfo.InvariantCulture));
         LightArgs(args); // --hour, --switch, --give, --car, --fire, --stove, --heater, --lights, --lightbench (GameLights.cs)
-        // --clock=TICK --fire-weather=KIND --burn=dx,dy,dx,dy..: a debug start for pictures of fire (not commands): the clock set, the weather,
+        // --clock=TICK --burn=dx,dy,dx,dy..: a debug start for pictures of fire (not commands): the clock set (the weather is --weather= above),
         // and tiles alight at those offsets from you (a line of grass fire: --burn=4,-3,4,-2,4,-1,4,0; --fire=X,Y is GameLights.cs's one fire at a tile).
         if (args.TryGetValue("clock", out var clockArg)) state.tick = int.Parse(clockArg);
-        if (args.TryGetValue("fire-weather", out var wxArg)) state.weather = wxArg;
         if (args.TryGetValue("burn", out var fireArg) && ControlMod.controlled(state) is { } burner)
         {
             var d = fireArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -443,15 +446,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     /// <summary>Autosave at every dawn (06:00), when the night's zombies have gone. Tick 0 is 06:00.</summary>
     static int Dawns(int tick) => tick / Time.DAY_LENGTH;
-
-    /// <summary>--day=D: the clock to noon of day D (only the clock: needs and events are not played, so it is for looking at what the days grow, Growth.cs, and the seasons).</summary>
-    void StartDay(double day)
-    {
-        Time.setDayScale(state.settings.dayScale);
-        int tick = (int)Math.Round((day - 0.5) * Time.DAY_LENGTH - Time.START_HOUR * Time.TICKS_PER_HOUR);
-        if (tick > state.tick) state.tick = tick;
-        Growth.update(state); // the saplings that have grown solid by then are trees before the first frame
-    }
 
     Vport Vp
     {

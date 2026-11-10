@@ -138,7 +138,10 @@ public static partial class Survivors
     }
 
     /// <summary>Ticks to step onto a tile. Roads (and bridges) are a tick quicker per tile; so are quick survivors. Never under 2.</summary>
-    public static double stepPace(SimState state, Survivor s, Point next)
+    public static double stepPace(SimState state, Survivor s, Point next) => Snow.paced(state, next, stepPaceDry(state, s, next));
+
+    /// <summary>The pace without the snow (Snow.paced adds it: deep untrodden snow lengthens a step).</summary>
+    public static double stepPaceDry(SimState state, Survivor s, Point next)
     {
         var road = ROAD_GROUNDS.includes(Js.NN(Grids.groundAt(state.grid, ((double)(next.y) * (state.grid.width)) + next.x)));
         return JsMath.max(2, (((((Health.isHurt(s.health) ? Health.HURT_STEP_TICKS : TICKS_PER_TILE) - (Skills.hasTrait(s, "quick") ? 1 : 0)) - (Js.T(road) ? 1 : 0)) + (Wounds.legSlowed(s) ? 1 : 0)) - (Orders.hurries(state, s) ? 1 : 0)) + (Moodlets.boosted(s, "slowWalk") ? 1 : 0));

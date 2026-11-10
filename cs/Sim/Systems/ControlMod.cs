@@ -103,7 +103,12 @@ public static partial class ControlMod
     {
         var climb = Motion.inWindowFrame(state.grid, s.at);
         var pct = ((double)(((double)(((double)(((double)(((double)(JsMath.max(CLUTCHED_MIN, 100 - ((double)(CLUTCH_PCT) * (clutchedBy(state, s))))) * (((run && !climb) ? BodyMod.RUN_PCT : 100)))) * ((climb ? 2 : 5)))) / (5))) * ((Js.T(c.sneaking) ? SNEAK_PCT : 100)))) / (100));
-        var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPace(state, s, s.pos))));
+        var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPaceDry(state, s, s.pos))));
+        var snow = Snow.walkPct(state, s.pos.x, s.pos.y);
+        if (snow != 100)
+        {
+            pct = ((double)(pct) * snow) / 100;  // deep snow where you stand (Snow.cs): smooth, not a whole tick a tile
+        }
         return JsMath.round(((double)(((double)(walk) * (pct))) / (10000)));
     }
 

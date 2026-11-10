@@ -119,6 +119,7 @@ public static partial class Tick
         syncSteps(state, state.dogs);
         syncSteps(state, state.animals);
         syncSteps(state, state.residents);
+        Snow.tick(state);
         Fog.updateFog(state);
         state.tick = Js.I(state.tick + 1);
     }
