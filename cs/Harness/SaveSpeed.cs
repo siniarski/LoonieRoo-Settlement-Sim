@@ -7,7 +7,7 @@
 // their own, so the total can be read as a sum.
 //
 //   dotnet test cs/Harness -c Release --filter "DisplayName=save speed"
-//   SAVES=512:all,2048:all REPS=3 ...  Report: cs/Harness/out/save-speed.txt
+//   SAVES=512:all,2048:all REPS=3 ...  (10000:start runs too: no whole save or copy there.) Report: cs/Harness/out/save-speed.txt
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -91,8 +91,9 @@ public class SaveSpeed
             }
 
             // The parts, each on its own: the state as plain JSON text and as nodes, chunks made again, the preview.
-            var text = Time(reps, () => JsonSerializer.Serialize(s, StateJson.Options));
-            var nodes = Time(reps, () => JsonSerializer.SerializeToNode(s, StateJson.Options)!.ToJsonString(StateJson.Options));
+            bool huge = size > 4096; // the whole state as JSON doesn't fit at 10,000
+            var text = huge ? (0.0, 0.0) : Time(reps, () => JsonSerializer.Serialize(s, StateJson.Options));
+            var nodes = huge ? (0.0, 0.0) : Time(reps, () => JsonSerializer.SerializeToNode(s, StateJson.Options)!.ToJsonString(StateJson.Options));
             var l = Worldgen.layout(42, size, s.settings.map);
             int n = (int)s.world!.chunks;
             var remake = Time(Math.Min(reps, 2), () =>
@@ -104,6 +105,13 @@ public class SaveSpeed
             // A bug report's start: the packed state (Savefile.bugStart) against the whole copy the game kept before.
             Savefile.BugStart start = null!;
             var packed = Time(reps, () => start = Savefile.bugStart(s));
+            if (huge)
+            {
+                // No copy, no parts.
+                out_.Add($"   bug report's start: packed {Ms(packed)}, {start.Length / 1e6:0.000} MB");
+                File.WriteAllText(path, string.Join("\n", out_) + "\n");
+                continue;
+            }
             var copy = Time(Math.Min(reps, 3), () => States.cloneState(s));
             out_.Add($"   bug report's start: packed {Ms(packed)}, {start.Length / 1e6:0.000} MB; a whole copy (cloneState, as before) {Ms(copy)}, {JsonSerializer.Serialize(s, StateJson.Options).Length / 1e6:0.0} MB as JSON");
             out_.Add($"   parts: state as text {Ms(text)}; as nodes then text {Ms(nodes)}; every generated chunk made again {Ms(remake)}; preview {Ms(preview)}");
