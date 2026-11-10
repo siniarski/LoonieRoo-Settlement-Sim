@@ -30,7 +30,15 @@ public static class Footfalls
     public static readonly Dictionary<string, string> GAITS = new()
     {
         ["ual/ual_walk"] = "walk", ["ual/ual_jog_fwd"] = "jog", ["ual/ual_sprint"] = "sprint", ["ual/ual_crouch_fwd"] = "crouch",
+        // The derived gaits (art/scripts/derive_clips.py, 2026-11-10), the dead's, and the crawl (on its hands).
+        ["more/walk_slow"] = "walk", ["more/walk"] = "walk", ["more/walk_brisk"] = "walk", ["more/jog"] = "jog",
+        ["more/run"] = "sprint", ["more/sneak"] = "crouch", ["more/shuffle"] = "walk",
+        ["more/dead_shamble"] = "walk", ["more/dead_lurch"] = "walk", ["more/dead_drag_l"] = "walk", ["more/dead_drag_r"] = "walk",
+        ["more/dead_run"] = "jog", ["more/dead_crawl"] = "crawl", ["more/hop_l"] = "walk", ["more/hop_r"] = "walk",
+        ["more/crawl_l"] = "crawl", ["more/crawl_r"] = "crawl",
     };
+    /// <summary>Gaits whose footfalls are the hands' (a crawl drags itself on them).</summary>
+    public static readonly HashSet<string> ON_HANDS = new() { "crawl" };
     /// <summary>A foot is down within this (m) of its lowest in the clip, or this share of its lift, whichever is more.</summary>
     const float FLOOR_BAND = 0.015f, FLOOR_SHARE = 0.10f;
     /// <summary>A foot that came down is in the air again once it's above this share of its lift.</summary>
@@ -59,20 +67,21 @@ public static class Footfalls
         }
     }
 
-    /// <summary>The marks of every stepping clip in `lib` (named "ual/" + its name), from the skeleton `skel` of
-    /// scene `root` (the instance the clips' track paths start at).</summary>
-    public static Dictionary<string, Marks> Find(AnimationLibrary lib, Node root, Skeleton3D skel)
+    /// <summary>The marks of every stepping clip in `lib` (named prefix + its name: "ual/", "more/"), from the skeleton
+    /// `skel` of scene `root` (the instance the clips' track paths start at).</summary>
+    public static Dictionary<string, Marks> Find(AnimationLibrary lib, Node root, Skeleton3D skel, string prefix = "ual/")
     {
         var all = new Dictionary<string, Marks>();
         // The skeleton's place in the scene (an Armature node can turn it): heights are taken along the scene's up.
         var toScene = Transform3D.Identity;
         for (Node n = skel; n != null && n != root; n = n.GetParent())
             if (n is Node3D n3) toScene = n3.Transform * toScene;
-        foreach (var (key, _) in GAITS)
+        foreach (var (key, gait) in GAITS)
         {
-            string name = key["ual/".Length..];
+            if (!key.StartsWith(prefix)) continue;
+            string name = key[prefix.Length..];
             if (!lib.HasAnimation(name)) continue;
-            all[key] = Of(lib.GetAnimation(name), skel, toScene);
+            all[key] = Of(lib.GetAnimation(name), skel, toScene, ON_HANDS.Contains(gait) ? HANDS : FEET);
         }
         if (OS.GetEnvironment("STEP_TRACE") != "")
             foreach (var (k, m) in all)
@@ -83,7 +92,9 @@ public static class Footfalls
 
     static float Max(this float[] a) { float m = float.MinValue; foreach (var v in a) m = Math.Max(m, v); return m; }
 
-    static Marks Of(Animation a, Skeleton3D skel, Transform3D toScene)
+    static readonly string[] HANDS = { "LeftHand", "RightHand" };
+
+    static Marks Of(Animation a, Skeleton3D skel, Transform3D toScene, string[] limbs)
     {
         var m = new Marks { length = a.Length };
         // Each bone's tracks, by name.
@@ -102,7 +113,7 @@ public static class Footfalls
         }
         for (int f = 0; f < 2; f++)
         {
-            int b = skel.FindBone(FEET[f]);
+            int b = skel.FindBone(limbs[f]);
             var chain = new List<int>();
             for (int c = b; c >= 0; c = skel.GetBoneParent(c)) chain.Insert(0, c);
             var h = new float[SAMPLES];

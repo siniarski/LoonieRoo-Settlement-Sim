@@ -1,0 +1,12 @@
+bench: logic before, 40 models (0 with foot IK), 900 frames: mean 1.14 ms, p95 1.32 ms
+bench: logic after, 40 models (6 with foot IK), 900 frames: mean 1.28 ms, p95 1.48 ms
+bench: logic before, 40 models (0 with foot IK), 900 frames: mean 1.15 ms, p95 1.31 ms
+bench: logic after, 40 models (6 with foot IK), 900 frames: mean 1.30 ms, p95 1.54 ms
+bench: logic before, 200 models (0 with foot IK), 900 frames: mean 6.30 ms, p95 7.11 ms
+bench: logic after, 200 models (6 with foot IK), 900 frames: mean 6.24 ms, p95 6.77 ms
+bench: logic before, 200 models (0 with foot IK), 900 frames: mean 5.82 ms, p95 6.40 ms
+bench: logic after, 200 models (6 with foot IK), 900 frames: mean 6.40 ms, p95 7.39 ms
+bench: logic after, 40 models (0 with foot IK), 900 frames: mean 1.12 ms, p95 1.27 ms
+bench: logic after, 40 models (0 with foot IK), 900 frames: mean 1.31 ms, p95 1.56 ms
+bench: logic after, 200 models (0 with foot IK), 900 frames: mean 6.09 ms, p95 6.83 ms
+bench: logic after, 200 models (0 with foot IK), 900 frames: mean 5.86 ms, p95 6.41 ms

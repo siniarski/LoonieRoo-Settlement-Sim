@@ -195,8 +195,7 @@ public sealed partial class People
         if (!yours) return;
         float ground = Terrain.Height(m.root.Position.X, m.root.Position.Z);
         YourLift = m.root.Position.Y - ground;
-        if (m.skel == null) { m.skel = Find<Skeleton3D>(m.root); if (m.skel != null) { m.feet[0] = m.skel.FindBone("LeftFoot"); m.feet[1] = m.skel.FindBone("RightFoot"); } }
-        if (m.skel == null || m.feet[0] < 0 || m.feet[1] < 0) return;
+        if (!Bones(m) || m.feet[0] < 0 || m.feet[1] < 0) return;
         // The ankles as last drawn (the skeleton poses after this frame's code), over the ground under the body.
         var xf = m.skel.GlobalTransform;
         YourFeetUp = Math.Min((xf * m.skel.GetBoneGlobalPose(m.feet[0]).Origin).Y, (xf * m.skel.GetBoneGlobalPose(m.feet[1]).Origin).Y) - ground;

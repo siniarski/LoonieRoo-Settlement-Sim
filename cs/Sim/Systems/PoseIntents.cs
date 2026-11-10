@@ -3,6 +3,8 @@
 // and a loaded game rebuilds every pose from it.
 //
 //   stance      stand | sneak | sit (in a car) | lie (asleep) | crawl (a crawler) | dead
+//   running     the controlled survivor is running (shift held, not sneaking, not winded): the gait the speed
+//               alone can't tell (a road's walk is as quick as a jog)
 //   locomotion  speed (m/s: a tile is a metre, TICKS_PER_SECOND ticks a second), heading (radians,
 //               of the motion, screen x right / y down), facing (the aim or the way you face, for
 //               the controlled survivor)
@@ -23,6 +25,7 @@ namespace LoonieRoo.Sim;
 public sealed class PoseIntent
 {
     public string stance = "stand";
+    public bool running;
     public double speed, heading;
     public Point? facing;
     public string? action, target, anchor, approach;
@@ -54,6 +57,7 @@ public static class PoseIntents
         if (controlled)
         {
             p.facing = c.aim ?? c.facing;
+            p.running = c.running == true && c.sneaking != true && !BodyMod.isWinded(s) && p.stance == "stand";
             if (Js.T(c.busy))
             {
                 var b = c.busy;

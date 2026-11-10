@@ -65,12 +65,19 @@ public sealed partial class People
         public string? forced;
         public double forcedAt;
         public Skeleton3D? skel;
-        public readonly int[] feet = { -1, -1 };
+        /// <summary>How fast it turns (rad/s, smoothed): standing, a quick turn steps round.</summary>
+        public double turn, since, riseAt;
+        /// <summary>The get-up clip of one of the dead that woke where it lay, while it plays.</summary>
+        public string? rise;
+        /// <summary>The near tier's foot IK (made once it first comes near), and whether it's on now.</summary>
+        public FootIK? ik;
+        public bool ikOn, own;
+        public readonly int[] feet = { -1, -1 }, hands = { -1, -1 };
         public readonly Footfalls.Watch watch = new();
     }
 
     readonly Node3D parent;
-    readonly AnimationLibrary mannequinLib, ualLib;
+    readonly AnimationLibrary mannequinLib, ualLib, moreLib;
     readonly Dictionary<string, PackedScene> scenes = new();
     readonly Dictionary<string, List<Model>> free = new();
     readonly Dictionary<string, Model> byBody = new();
@@ -96,6 +103,14 @@ public sealed partial class People
         ualLib = Find<AnimationPlayer>(u)!.GetAnimationLibrary("");
         marks = Footfalls.Find(ualLib, u, Find<Skeleton3D>(u)!);
         u.Free();
+        var more = GD.Load<PackedScene>("res://assets/characters/clips_more.glb").Instantiate<Node3D>();
+        moreLib = Find<AnimationPlayer>(more)!.GetAnimationLibrary("");
+        var moreSkel = Find<Skeleton3D>(more)!;
+        Gaits.Measure(moreLib, "more/", moreSkel, Gaits.ToScene(more, moreSkel));
+        foreach (var (k, mk) in Footfalls.Find(moreLib, more, moreSkel, "more/")) marks[k] = mk;
+        foreach (var name in moreLib.GetAnimationList())
+            if (Gaits.Looping(name)) moreLib.GetAnimation(name).LoopMode = Animation.LoopModeEnum.Linear;
+        more.Free();
         foreach (var n in new[] { "ual_idle", "ual_walk", "ual_jog_fwd", "ual_sprint", "ual_crouch_fwd", "ual_crouch_idle", "ual_driving" })
             if (ualLib.HasAnimation(n)) ualLib.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
         foreach (var n in new[] { "lie_idle", "zombie_crawl", "prone_idle" })
@@ -112,6 +127,7 @@ public sealed partial class People
     {
         time += delta;
         Steps.Clear();
+        iks = 0;
         var wanted = new List<Wanted>();
         float range2 = MODEL_RANGE * MODEL_RANGE;
         void Add(string id, string look, Looks.Outfit dress, Body b, PoseIntent pose, bool angry, string action)
@@ -154,6 +170,7 @@ public sealed partial class People
                 byBody.Remove(id);
                 m.bodyId = z.id;
                 byBody[z.id] = m;
+                if (DormantLies(id) && z.variant != "crawler") { m.rise = DormantFront(id) ? "more/dead_rise_front" : "more/dead_rise_back"; m.riseAt = 0; }
                 break;
             }
         }
@@ -190,6 +207,9 @@ public sealed partial class People
                 m.placed = false;
                 m.clip = "";
                 m.phase = Hash01(w.id, 3);
+                m.turn = 0;
+                m.rise = null;
+                if (m.ik != null && m.ikOn) m.ik.Enabled = m.ikOn = false;  // a new body: nothing held from the last
                 m.watch.Reset();
                 m.root.Visible = true;
                 byBody[w.id] = m;
@@ -228,6 +248,7 @@ public sealed partial class People
             ownShadow?.root.QueueFree();
             own = Make(look);
             ownShadow = Make(look);
+            own.own = ownShadow.own = true;
             Dress(own, hair);
             Dress(ownShadow, hair);
             foreach (var mi in FindAll<MeshInstance3D>(own.root)) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
@@ -267,7 +288,10 @@ public sealed partial class People
         }
         else want = float.IsNaN(ownYaw) || Math.Abs(Mathf.AngleDifference(ownYaw, lookYaw)) > OWN_TURN_AT ? lookYaw : ownYaw;
         if (LeapYaw() is float over) { want = over; back = false; }
+        float before = ownYaw;
         ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * (LeapYaw() != null ? 16 : 8)));
+        if (!float.IsNaN(before) && delta > 0)
+            foreach (var m in new[] { own, ownShadow }) Turning(m, Mathf.AngleDifference(before, ownYaw) / delta, delta);
         float twist = Math.Clamp(Mathf.AngleDifference(ownYaw, lookYaw), -OWN_TWIST, OWN_TWIST);
         ownMod.Twist = twist;
         ownMod.HideHead = !fromOutside;
@@ -293,18 +317,13 @@ public sealed partial class People
         var mk = marks.GetValueOrDefault(clip);
         m.watch.Crossed(clip, at, delta, mk, crossed);
         if (crossed.Count == 0) return;
-        if (m.skel == null)
-        {
-            m.skel = Find<Skeleton3D>(m.root);
-            if (m.skel == null) return;
-            m.feet[0] = m.skel.FindBone("LeftFoot");
-            m.feet[1] = m.skel.FindBone("RightFoot");
-        }
-        var xf = m.skel.GlobalTransform;
+        if (!Bones(m)) return;
+        var limbs = Footfalls.ON_HANDS.Contains(Footfalls.GAITS[clip]) ? m.hands : m.feet;
+        var xf = m.skel!.GlobalTransform;
         foreach (int foot in crossed)
         {
-            if (m.feet[foot] < 0) continue;
-            var ankle = xf * m.skel.GetBoneGlobalPose(m.feet[foot]).Origin;
+            if (limbs[foot] < 0) continue;
+            var ankle = xf * m.skel.GetBoneGlobalPose(limbs[foot]).Origin;
             Steps.Add(new Footfall(id, you, dead, ankle, Footfalls.GAITS[clip], foot));
             if (!you) continue;
             var other = xf * m.skel.GetBoneGlobalPose(m.feet[1 - foot]).Origin;
@@ -328,6 +347,12 @@ public sealed partial class People
 
     /// <summary>Most of the dormant lie where they fell; some stand (a hash of the id, stable between runs).</summary>
     public static bool DormantLies(string id) => Hash01(id, 17) < 0.65;
+
+    /// <summary>Of those lying, some lie face down (a hash of the id).</summary>
+    public static bool DormantFront(string id) => Hash01(id, 21) < 0.4;
+
+    /// <summary>How long the dead take to get up off the ground (the rise clips' length, s).</summary>
+    const double RISE_FOR = 1.6;
 
     /// <summary>A stand-in body (not in state) for a dormant one, so it's placed and posed like the rest.</summary>
     Zombie DormantBody(DormantZombie d)
@@ -392,6 +417,7 @@ public sealed partial class People
         root.AddChild(player); // its root node ".." is the instance, where "Armature/Skeleton3D:..." starts
         player.AddAnimationLibrary("", mannequinLib);
         player.AddAnimationLibrary("ual", ualLib);
+        player.AddAnimationLibrary("more", moreLib);
         m.player = player;
         return m;
     }
@@ -421,10 +447,10 @@ public sealed partial class People
         var p = worldPos(w.body, alpha);
         m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y), (float)p.y);
         bool dead = w.look.StartsWith("zombie");
-        // Speed eased, so a tick without a step doesn't flick the walk to idle and back.
-        m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 8);
         // The model's front is +Z: a heading (cos h, sin h) on the grid's (x, z) is a turn of atan2(cos h, sin h).
-        if (w.pose.speed > 0.15)
+        float was = m.yaw;
+        bool placed = m.placed;
+        if (w.pose.speed > 0.15 && m.rise == null)
         {
             float want = (float)Math.Atan2(Math.Cos(w.pose.heading), Math.Sin(w.pose.heading));
             m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * 10)) : want;
@@ -432,40 +458,122 @@ public sealed partial class People
         else if (!m.placed) m.yaw = (float)(Hash01(w.id, 9) * Math.PI * 2);
         m.placed = true;
         m.root.Rotation = new Vector3(0, m.yaw, 0);
+        if (!m.own && placed && delta > 0) Turning(m, Mathf.AngleDifference(was, m.yaw) / delta, delta);
 
         string stance = w.pose.stance;
         if (m.forced != null) ForcedPlay(m);
-        else Clip(m, w, stance, dead);
-        Lod(m, dist, vpHeight, w, dead, delta);
+        else Clip(m, w, stance, dead, delta);
+        int lod = Lod(m, dist, vpHeight, w, dead, delta);
+        FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && stance is "stand" or "sneak");
     }
 
-    void Clip(Model m, Wanted w, string stance, bool dead)
+    /// <summary>Model m's skeleton and the bones its footfalls are read from, found once; false if it has no skeleton.</summary>
+    static bool Bones(Model m)
     {
+        m.skel ??= Find<Skeleton3D>(m.root);
+        if (m.skel == null) return false;
+        if (m.feet[0] < 0)
+        {
+            m.feet[0] = m.skel.FindBone("LeftFoot");
+            m.feet[1] = m.skel.FindBone("RightFoot");
+            m.hands[0] = m.skel.FindBone("LeftHand");
+            m.hands[1] = m.skel.FindBone("RightHand");
+        }
+        return true;
+    }
+
+    /// <summary>The foot IK (FootIK.cs: feet on the ground's slope, a planted foot held where it landed) for you and
+    /// the nearest few (within IK_RANGE, at the near LOD, IK_MAX of them): the mid and far tiers never have it.</summary>
+    const float IK_RANGE = 8;
+    const int IK_MAX = 6;
+    int iks;
+
+    void FeetOnGround(Model m, bool on)
+    {
+        if (on && m.ik == null)
+        {
+            m.skel ??= Find<Skeleton3D>(m.root);
+            if (m.skel == null) return;
+            m.ik = new FootIK(m.root, m.skel, parent) { GroundAt = GroundAt };
+            m.ik.Enabled = false;
+        }
+        if (on && !m.own) iks++;
+        if (m.ik == null) return;
+        // Steps (a held foot lifted and put down where the clip has it) only standing or turning on the spot.
+        m.ik.Steps = m.clip is "more/idle" or "more/crouch_idle" or "more/shuffle";
+        if (on == m.ikOn) return;
+        m.ik.Enabled = m.ikOn = on;
+    }
+
+    /// <summary>The ground under a point for the foot IK: the sim's heights (Terrain.cs) and their slope there.</summary>
+    static (float y, Vector3 normal) GroundAt(Vector3 at)
+    {
+        const float E = 0.15f;
+        float h = Terrain.Height(at.X, at.Z);
+        float dx = Terrain.Height(at.X + E, at.Z) - Terrain.Height(at.X - E, at.Z);
+        float dz = Terrain.Height(at.X, at.Z + E) - Terrain.Height(at.X, at.Z - E);
+        return (h, new Vector3(-dx / (2 * E), 1, -dz / (2 * E)).Normalized());
+    }
+
+    /// <summary>The turn rate, smoothed (rad/s).</summary>
+    static void Turning(Model m, double rate, double delta) => m.turn += (rate - m.turn) * Math.Min(1, delta * 10);
+
+    void Clip(Model m, Wanted w, string stance, bool dead, double delta)
+    {
+        if (!dead && stance is "stand" or "sneak" && w.action == "")
+        {
+            var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, m.clip, m.turn);
+            Play(m, pick.clip, pick.rate, pick.blend);
+            return;
+        }
+        // Speed eased, so a tick without a step doesn't flick the walk to idle and back.
+        m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 8);
+        if (dead && m.rise != null)
+        {
+            // Woken where it lay: up off the ground (the sim has it on its feet already; it turns to go once up).
+            m.riseAt += delta;
+            if (m.riseAt < RISE_FOR) { Play(m, m.rise, 1, 0.12); return; }
+            m.rise = null;
+        }
+        if (dead && stance is "stand" && w.action == "")
+        {
+            var z = w.body as Zombie;
+            var g = Gaits.Dead(z?.variant ?? "walker", Hash01(w.id, 23), m.speed);
+            Play(m, g.clip, g.rate, 0.3);
+            return;
+        }
         (string clip, float rate) = stance switch
         {
+            "lie" when dead => (DormantFront(w.id) ? "more/dead_lie_front" : "more/dead_lie_back", 1f),
             "lie" or "dead" => ("lie_idle", 1f),
-            "crawl" => ("zombie_crawl", 1f),
+            "crawl" => (Gaits.Crawl(m.speed).clip, Gaits.Crawl(m.speed).rate),
             "sit" => ("ual/ual_driving", 1f),
             _ when w.action == "attack" => ("ual/ual_punch_cross", 1.2f),
             _ when w.action == "hit" => ("ual/ual_hit_chest", 1f),
-            _ when m.speed < 0.2 => ("ual/ual_idle", dead ? 0.6f : 1f),
+            _ when m.speed < 0.2 => ("more/idle", dead ? 0.6f : 1f),
             _ when stance == "sneak" => ("ual/ual_crouch_fwd", Rate(m.speed, 1.0)),
             _ when m.speed < 2.2 || dead => ("ual/ual_walk", Rate(m.speed, dead ? 1.0 : 1.4)),
             _ when m.speed < 3.8 => ("ual/ual_jog_fwd", Rate(m.speed, 3.0)),
             _ => ("ual/ual_sprint", Rate(m.speed, 5.0)),
         };
-        if (!m.player.HasAnimation(clip)) clip = "ual/ual_idle";
+        Play(m, clip, rate, 0.25);
+    }
+
+    /// <summary>Plays clip at rate on model m, cross-fading over `blend` s from what it played (a new model starts at its own phase).</summary>
+    static void Play(Model m, string clip, float rate, double blend)
+    {
+        if (!m.player.HasAnimation(clip)) clip = "more/idle";
         if (clip != m.clip)
         {
             bool first = m.clip == "";
-            m.player.Play(clip, first ? 0 : 0.25);
+            m.player.Play(clip, first ? 0 : blend);
             if (first) m.player.Seek(m.phase * m.player.CurrentAnimationLength, true);
             m.clip = clip;
         }
         m.player.SpeedScale = rate;
     }
 
-    void Lod(Model m, double dist, float vpHeight, Wanted w, bool dead, double delta)
+    int Lod(Model m, double dist, float vpHeight, Wanted w, bool dead, double delta)
     {
         // LOD by height on screen, as the look lab.
         double h = vpHeight * 1.75 / (2 * Math.Max(dist, 0.1) * Math.Tan(Mathf.DegToRad(FOV / 2)));
@@ -476,16 +584,53 @@ public sealed partial class People
             foreach (var piece in m.lods[i]) piece.Visible = i == lod;
 
         // The dead's face: angry once it's after someone, eased in over a quarter second.
-        if (!dead) return;
+        if (!dead) return lod;
         m.angry = Math.Clamp(m.angry + (w.angry ? 1 : -1) * delta / 0.25, 0, 1);
         var face = m.lods[lod].FirstOrDefault((mi) => mi.FindBlendShapeByName("angry") >= 0);
-        if (face == null) return;
+        if (face == null) return lod;
         double e = m.angry * m.angry * (3 - 2 * m.angry);
         double slack = SLACK.GetValueOrDefault(m.variant, 0.12) + 0.03 * Math.Sin(time * 1.3 + m.phase * 6);
         double growl = 0.75 + 0.20 * Math.Sin(time * 7.5 + m.phase * 6);
         Shape(face, "jaw_open", slack + (growl - slack) * e);
         Shape(face, "angry", e);
+        return lod;
     }
+
+    /// <summary>A clip, its rate and the cross-fade into it (s).</summary>
+    public readonly record struct ClipPick(string clip, float rate, double blend);
+
+    /// <summary>The living on their feet at sim speed `v` (m/s): `eased` follows it quickly (in about 0.04 s: the sim's
+    /// speed changes at once, and a rate behind it slides the feet), the gait from Gaits.cs at a rate
+    /// that keeps the planted foot still; standing, the idle, or a shuffle on the spot while `turning` (rad/s).</summary>
+    public static ClipPick LivingClip(ref double eased, ref double since, double v, double dt, string stance, bool running, string current, double turning)
+    {
+        eased += (v - eased) * Math.Min(1, dt * 25);
+        since += dt;
+        ClipPick pick;
+        if (v < Gaits.STILL)
+        {
+            // Stopped (the sim stops at once): to standing, the stride held as it was while it cross-fades (its feet
+            // don't run on; the near tier's foot IK steps them in), rather than slowing through the slower gaits.
+            string idle = stance == "sneak" ? "more/crouch_idle" : "more/idle";
+            pick = Math.Abs(turning) > TURN_SHUFFLE ? new("more/shuffle", (float)Math.Clamp(Math.Abs(turning) / 1.2, 0.8, 2.5), 0.15)
+                : new(idle, current == idle && since < STOP_BLEND ? STOP_RATE : 1, STOP_BLEND);
+            if (current != idle && pick.clip == idle && current != "more/shuffle") pick = pick with { rate = STOP_RATE };
+        }
+        else
+        {
+            var p = Gaits.Living(eased, stance, running, current);
+            pick = new(p.clip, p.rate, 0.2);
+        }
+        if (pick.clip != current) since = 0;
+        return pick;
+    }
+
+    /// <summary>Stopping: the cross-fade to standing (s), and the rate meanwhile (the stride all but held).</summary>
+    const double STOP_BLEND = 0.15;
+    const float STOP_RATE = 0.12f;
+
+    /// <summary>Turning faster than this on the spot (rad/s), the feet step round (the shuffle clip).</summary>
+    public const double TURN_SHUFFLE = 0.8;
 
     /// <summary>A clip's playback rate for a speed, against the speed it was made at.</summary>
     static float Rate(double speed, double clipSpeed) => (float)Math.Clamp(speed / clipSpeed, 0.5, 1.6);

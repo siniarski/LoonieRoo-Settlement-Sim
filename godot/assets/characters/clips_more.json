@@ -1,0 +1,150 @@
+{
+  "from": "clips_ual.glb",
+  "fps": 30,
+  "clips": [
+    {
+      "name": "walk_slow",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 0.755,
+      "stride": 1.007
+    },
+    {
+      "name": "walk",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 1.054,
+      "stride": 1.406
+    },
+    {
+      "name": "walk_brisk",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 1.314,
+      "stride": 1.753
+    },
+    {
+      "name": "jog",
+      "frames": 28,
+      "seconds": 0.933,
+      "loop": true,
+      "speed": 2.769,
+      "stride": 2.584
+    },
+    {
+      "name": "run",
+      "frames": 20,
+      "seconds": 0.667,
+      "loop": true,
+      "speed": 4.99,
+      "stride": 3.327
+    },
+    {
+      "name": "sneak",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true,
+      "speed": 0.88,
+      "stride": 1.759
+    },
+    {
+      "name": "shuffle",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 0.019,
+      "stride": 0.025
+    },
+    {
+      "name": "idle",
+      "frames": 75,
+      "seconds": 2.5,
+      "loop": true
+    },
+    {
+      "name": "crouch_idle",
+      "frames": 88,
+      "seconds": 2.933,
+      "loop": true
+    },
+    {
+      "name": "dead_shamble",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 1.047,
+      "stride": 1.395
+    },
+    {
+      "name": "dead_lurch",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 0.832,
+      "stride": 1.11
+    },
+    {
+      "name": "dead_drag_l",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 0.837,
+      "stride": 1.117
+    },
+    {
+      "name": "dead_drag_r",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": true,
+      "speed": 0.713,
+      "stride": 0.951
+    },
+    {
+      "name": "dead_run",
+      "frames": 28,
+      "seconds": 0.933,
+      "loop": true,
+      "speed": 3.031,
+      "stride": 2.829
+    },
+    {
+      "name": "dead_idle",
+      "frames": 75,
+      "seconds": 2.5,
+      "loop": true
+    },
+    {
+      "name": "dead_crawl",
+      "frames": 30,
+      "seconds": 1.0,
+      "loop": true
+    },
+    {
+      "name": "dead_lie_back",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "dead_lie_front",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "dead_rise_back",
+      "frames": 48,
+      "seconds": 1.6,
+      "loop": false
+    },
+    {
+      "name": "dead_rise_front",
+      "frames": 48,
+      "seconds": 1.6,
+      "loop": false
+    }
+  ]
+}
