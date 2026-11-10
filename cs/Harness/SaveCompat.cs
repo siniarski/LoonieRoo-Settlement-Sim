@@ -1,5 +1,6 @@
 // Saves written by one build, loaded by another (2026-11-10, schema 77 -> 78): DUMP=dir writes, for a few played
-// states, the save file, a bug report and the state's whole JSON; CHECK=dir loads them and compares.
+// states, the save file, a bug report and the state's whole JSON; CHECK=dir loads them and compares. Since the
+// buildings (generation version 2), a generated world dumped by an older build is expected to be refused.
 //   DUMP=<dir> dotnet test cs/Harness -c Release --filter "DisplayName=save compat"   (on the old build)
 //   CHECK=<dir> ... (on the new). Report: cs/Harness/out/save-compat.txt
 using System.Text.Json;
@@ -62,7 +63,11 @@ public class SaveCompat
                 {
                     string want = File.ReadAllText(kind == "save" ? f : Path.Combine(check, name + ".bugstate.json"));
                     var r = Savefile.loadFile(File.ReadAllText(Path.Combine(check, $"{name}.{kind}.json")));
+                    // A generated world from before the buildings (generation version 1) is refused with a message;
+                    // a hand-made map (no world) loads as before.
+                    if (!r.ok && name.StartsWith("world") && r.error.Contains("generation version")) { out_.Add($"{name} {kind}: refused as expected: {r.error}"); continue; }
                     if (!r.ok) { out_.Add($"{name} {kind}: did not load: {r.error}"); continue; }
+                    if (name.StartsWith("world")) { out_.Add($"{name} {kind}: LOADED, but its generation version differs"); continue; }
                     string got = Old(r.state);
                     var diff = StateJson.Diff(JsonNode.Parse(got), JsonNode.Parse(want), 5);
                     // The save written again by this build: the old file but for schema 78's additions?

@@ -52,7 +52,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
   (docs/worldplan-regions.md). **Win**: a window of the map a region's plan covers.
 - **Towns**: where towns stand and their streets. **TownIndex**: towns by coarse cell.
 - **Roads**: country roads, network and A* routing (RoadPoint/PointD are fractional). **Lots**: what stands on a lot.
-- **Buildings**: plans with rooms and furniture. **Loot**: loot tables by room and building.
+- **Buildings** (+ BuildingsHouses, BuildingsTrade, BuildingsCivic): plans as rooms with walls, doors and windows on edges, archetypes, furniture by function (docs/buildings.md). **Loot**: loot tables by room and building.
 - **Heights**: the ground's height in metres from the seed and plan (cached, never saved, read-only so far).
 - **WorldPreview**: a small picture of a world from its seed (New game, Load, loading screens; `Savefile.readPreview`).
 - **Climate**: regions, radiation. **Seasons**: weather. **Weather**: temperature in degrees for any place and tick (derived, agrees with the cold and hot rules). **Snow**: depth by climate region, trodden tracks (capped), the slowing of deep snow (`state.snow`). **Fog**: exploring. **Mapnotes**: map notes; town names.

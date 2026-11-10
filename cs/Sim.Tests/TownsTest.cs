@@ -19,16 +19,20 @@ public partial class TownsTest
         for (var n = 0; n < 60; n++)
         {
             var r = rolls(n);
-            @out.pushAll([Buildings.housePlan(r, new HouseOptions { maxW = 13, maxH = 12, garage = true }), Buildings.housePlan(r, new HouseOptions { maxW = 10, maxH = 10, garage = false })]);
-            foreach (var kind in Js.Iter((List<string>)["grocery", "pharmacy", "hardware", "bar", "station", "office"]))
+            foreach (var (mw, mh) in new (double, double)[] { (10, 8), (11, 9), (12, 10), (13, 11), (13, 9) })
             {
-                @out.push(Buildings.shopPlan(r, kind, 13, 13));
+                @out.push(Buildings.housePlan(r, new HouseOptions { maxW = mw, maxH = mh, garage = true, where = "town" }));
+            }
+            @out.pushAll([Buildings.housePlan(r, new HouseOptions { maxW = 12, maxH = 10, where = "farm" }), Buildings.housePlan(r, new HouseOptions { maxW = 11, maxH = 9, where = "wild" }), Buildings.housePlan(r, new HouseOptions { maxW = 9, maxH = 9, where = "wild" })]);
+            foreach (var kind in Js.Iter((List<string>)["grocery", "pharmacy", "hardware", "workshop", "bar", "diner", "station", "office"]))
+            {
+                @out.push(Buildings.shopPlan(r, kind, 10 + n % 4, 9 + n % 3));
             }
             foreach (var kind in Js.Iter((List<string>)["police", "clinic", "school", "office"]))
             {
-                @out.push(Buildings.civicPlan(r, kind, 26, 26));
+                @out.push(Buildings.civicPlan(r, kind, 16 + n % 7, 14 + n % 7));
             }
-            @out.pushAll([Buildings.churchPlan(r, 26, 26), Buildings.warehousePlan(r, "warehouse", 28, 26), Buildings.warehousePlan(r, "factory", 28, 26), Buildings.barnPlan(r, 13, 10), Buildings.shedPlan(r)]);
+            @out.pushAll([Buildings.churchPlan(r, 16 + n % 7, 14 + n % 7), Buildings.warehousePlan(r, "warehouse", 20 + n % 7, 13 + n % 7), Buildings.warehousePlan(r, "factory", 20 + n % 7, 13 + n % 7), Buildings.barnPlan(r, 12, 10), Buildings.shedPlan(r)]);
         }
         return @out;
     }
@@ -82,12 +86,12 @@ public partial class TownsTest
 
         public static readonly List<BuildingsPlan> plans = allPlans();
 
-        [Fact(DisplayName = "building plans > are walled all round: an edge wall or door wherever floor meets the outside; no wall or door cells left")]
+        [Fact(DisplayName = "building plans > are walled all round: an edge wall or door wherever floor meets the outside; only floor and outside cells")]
         public void T002_are_walled_all_round_an_edge_wall_or_door_wherever_floor_mee()
         {
             foreach (var p in Js.Iter(plans))
             {
-                expect(p.cells.filter((c) => (c == Buildings.WALL) || (c == Buildings.DOOR)), p.kind).toHaveLength(0);
+                expect(p.cells.filter((c) => (c != Buildings.FLOOR) && (c != Buildings.OUTSIDE)), p.kind).toHaveLength(0);
                 for (var y = 0; y < p.h; y++)
                 {
                     for (var x = 0; x < p.w; x++)
@@ -322,7 +326,7 @@ public partial class TownsTest
             }
         }
 
-        [Fact(DisplayName = "towns > lots sit on dry land off the roads and each other, and every building fits inside its lot")]
+        [Fact(DisplayName = "towns > lots sit on dry land off the roads and each other, and every building and its apron fit inside its lot")]
         public void T014_lots_sit_on_dry_land_off_the_roads_and_each_other_and_every_()
         {
             foreach (var (name, p) in Js.Iter(plans))
@@ -349,10 +353,11 @@ public partial class TownsTest
                         var across = (b.facing == "north") || (b.facing == "south");
                         var __c3 = Js.T(across); var w = __c3 ? b.plan.w : b.plan.h; var h = __c3 ? b.plan.h : b.plan.w;
                         var msg = $"{Js.Str(name)}: {Js.Str(b.plan.kind)} {Js.Str(w)}x{Js.Str(h)} at {Js.Str(b.ox)},{Js.Str(b.oy)} in {Js.Str(lot.zone)} lot {Js.Str(Js.Json_stringify(lot))}";
-                        expect(b.ox, msg).toBeGreaterThanOrEqual(lot.x);
-                        expect(b.oy, msg).toBeGreaterThanOrEqual(lot.y);
-                        expect(b.ox + w, msg).toBeLessThanOrEqual(lot.x + lot.w);
-                        expect(b.oy + h, msg).toBeLessThanOrEqual(lot.y + lot.h);
+                        // The footprint and the one-tile apron round it (Heights levels both) inside the lot.
+                        expect(b.ox - 1, msg).toBeGreaterThanOrEqual(lot.x);
+                        expect(b.oy - 1, msg).toBeGreaterThanOrEqual(lot.y);
+                        expect(b.ox + w + 1, msg).toBeLessThanOrEqual(lot.x + lot.w);
+                        expect(b.oy + h + 1, msg).toBeLessThanOrEqual(lot.y + lot.h);
                     }
                 }
             }

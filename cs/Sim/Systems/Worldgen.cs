@@ -20,6 +20,11 @@ public static partial class Worldgen
 
     public const int CHUNK = 32;
 
+    /// <summary>The world generation version (saved in WorldInfo.gen; absent is 1). Bump it whenever what a chunk is
+    /// made of changes: a save keeps only what differs from making its chunks again, so a save made by another version
+    /// is refused (Savefile.loadFile). 2: the buildings of 2026-11-10 (docs/buildings.md).</summary>
+    public const int GEN_VERSION = 2;
+
     /// <summary>Chunks this far (in chunks, each way) from any survivor are always generated.</summary>
     public const int GENERATE_RADIUS = 2;
 
@@ -468,7 +473,7 @@ public static partial class Worldgen
         state.settings = Js.CopyAs<Settings>(settings);
         var l = layout(seed, size, settings.map);
         var chunks = JsMath.ceil(((double)(size) / (CHUNK)));
-        state.world = new WorldInfo { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(((double)(chunks) * (chunks)), 0) };
+        state.world = new WorldInfo { seed = seed, size = size, chunks = chunks, generated = Js.Filled<double>(((double)(chunks) * (chunks)), 0), gen = GEN_VERSION };
         ensureGeneratedAround(state, l.start);
         startCamp(state, l);
         startStrays(state, l);

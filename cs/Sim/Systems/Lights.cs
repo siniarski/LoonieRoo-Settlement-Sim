@@ -48,6 +48,8 @@ public static partial class Lights
     public const int STREET_SPACING = 12;
     public const double STREET_WORKING = 0.8;
     public const double PORCH_WORKING = 0.85;
+    /// <summary>The kinds of building with a light over the front door (the lived-in and the public ones).</summary>
+    public static readonly List<string> PORCH_KINDS = ["house", "grocery", "pharmacy", "hardware", "bar", "diner", "station", "office", "police", "clinic", "school", "church"];
     /// <summary>Chance a container you search (of FLASHLIGHT_TABLES) holds a flashlight too.</summary>
     public const double FLASHLIGHT_FIND = 0.12;
     public static readonly List<string> FLASHLIGHT_TABLES = ["kitchen", "garage", "hardware", "police", "station", "shed", "barn", "warehouse", "factory"];
@@ -174,7 +176,7 @@ public static partial class Lights
         if (plan.kind == "house" && @out.rooms.Count > 0 && Hash.hashRoll(seed, lot.id, bi, 0x11a7) < LEFT_ON)
             @out.rooms[Math.Min(@out.rooms.Count - 1, (int)Math.Floor(Hash.hashRoll(seed, lot.id, bi, 0x11a8) * @out.rooms.Count))].defaultOn = true;
         // The front door: the outer door furthest to the front (the plan's bottom), its outside cell.
-        if (Buildings.WINDOWED.includes(plan.kind))
+        if (PORCH_KINDS.includes(plan.kind))
         {
             int best = -1;
             foreach (var e in plan.edges)

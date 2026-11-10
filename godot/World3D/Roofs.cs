@@ -13,7 +13,7 @@
 //     indoors, with a flat roof. Hand-made maps (no world plan) are all this kind.
 // Roofs: per building, their own node (a roof spans chunk edges); pitched for houses, barns,
 // sheds and churches (gable or hip, by a hash of the lot), flat with a parapet for the rest
-// (shops, civic buildings, warehouses). Player rooms share one node of flat roofs, rebuilt when
+// (shops, civic buildings, warehouses, trailers). Player rooms share one node of flat roofs, rebuilt when
 // walls change. Only lots near you are known (lotsByChunk), a few roofs are built a frame, and
 // the standing test and rooms rerun only when walkabilityVersion changes or you move a chunk (rule 14).
 // From inside, the ceiling (WorldMesh, at WALL_H over Indoor tiles) hides the roof above it.
@@ -156,7 +156,8 @@ public sealed class Roofs
         {
             var p = layout.buildings[bi];
             var plan = p.plan;
-            var b = new Building { kind = plan.kind, roll = Hash.hashRoll(state.world.seed, lot.x, lot.y, 0x7200 + bi) };
+            // A trailer's roof is flat (drawn as the flat kinds are); a workshop's or diner's flat too (not in PITCHED).
+            var b = new Building { kind = plan.style == "trailer" ? "trailer" : plan.kind, roll = Hash.hashRoll(state.world.seed, lot.x, lot.y, 0x7200 + bi) };
             for (int y = 0; y < plan.h; y++)
                 for (int x = 0; x < plan.w; x++)
                 {

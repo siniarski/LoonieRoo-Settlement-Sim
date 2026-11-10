@@ -357,6 +357,13 @@ public static class Savefile
         bool older = version >= OLDEST_SCHEMA && version < States.SCHEMA_VERSION && inner == version;
         if (version != States.SCHEMA_VERSION && !older)
             return Fail($"made by a different version of the game (schema {(file["schemaVersion"] is null ? "undefined" : file["schemaVersion"]!.ToJsonString())}, this is {Js.Str(States.SCHEMA_VERSION)})");
+        // A generated world's chunks are made again from the seed on load: refuse one made by another generation.
+        if ((format == "loonieroo-save" ? file["state"] : file["initial"]) is JsonObject gs && gs["world"] is JsonObject gw)
+        {
+            double gen = gw["gen"] is JsonValue gv && gv.TryGetValue<double>(out var g) ? g : 1;
+            if (gen != Worldgen.GEN_VERSION)
+                return Fail($"made with world generation version {Js.Str(gen)}, this is {Js.Str(Worldgen.GEN_VERSION)}: its land would be made again differently (start a new world, or load it in the build that made it)");
+        }
         if (format == "loonieroo-save")
         {
             if (file["state"] is not JsonObject s) return Fail("save has no state");

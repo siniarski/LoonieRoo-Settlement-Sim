@@ -103,6 +103,14 @@ public partial class BuildingsPlan
     public string kind { get; set; } = "";
     public double sleepers { get; set; }
     public List<PlanEdge> edges { get; set; } = new();
+    /// <summary>Each cell's room (an index into rooms), -1 outside (Buildings.Draft.finish).</summary>
+    public List<int> roomOf { get; set; } = new();
+    /// <summary>Each room's kind ("living", "kitchen", "bedroom", "hall", "shop", "cells"...).</summary>
+    public List<string> rooms { get; set; } = new();
+    /// <summary>The archetype within the kind: a house's "cottage", "bungalow", "family", "farmhouse", "cabin", "trailer".</summary>
+    public string style { get; set; } = "";
+    /// <summary>The front door: the outer door edge facing the street (its b cell is outside), or null.</summary>
+    public PlanEdge? front { get; set; }
 }
 
 public partial class Caravan : IHasId
@@ -412,6 +420,8 @@ public partial class HouseOptions
     public double maxH { get; set; }
     /// <summary>A garage is allowed (town houses; not farmhouses or cabins).</summary>
     public bool garage { get; set; }
+    /// <summary>"town", "farm" or "wild" (a cabin lot): which archetypes it may be.</summary>
+    public string where { get; set; } = "town";
 }
 
 public partial class IdMap
@@ -522,6 +532,11 @@ public partial class LotLayout
     public Func<double, double, string> yard { get; set; } = null!;
     public List<Point> trees { get; set; } = new();
     public List<LotLayoutDecorItem> decor { get; set; } = new();
+    /// <summary>Yard fences: plank edges (Grids.EDGE_BARRICADE) between two map tiles (ax, ay)-(bx, by).</summary>
+    public List<PlanEdge> fences { get; set; } = new();
+    /// <summary>Where a car stands on the driveway (map tile), and the next tile towards the street; null: no driveway.</summary>
+    public Point? drive { get; set; }
+    public Point? driveTo { get; set; }
 }
 
 public partial class LotLayoutDecorItem
@@ -1286,6 +1301,9 @@ public partial class WorldInfo
     /// <summary>Each generated chunk's hash as generation made it (SavefileChunks.madeHash), by chunk index: a save
     /// skips a chunk whose hash now is the same without making it again. Made again on load (schema 78).</summary>
     public JsRecord<string> made { get; set; } = new();
+    /// <summary>The world generation version the world was made with (Worldgen.GEN_VERSION); absent is 1. A save whose
+    /// version differs is refused: its chunks would be made again differently.</summary>
+    public double? gen { get; set; }
 }
 
 public partial class WorldPlan
