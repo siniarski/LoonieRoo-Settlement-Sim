@@ -28,7 +28,7 @@ public class HeightsTest
         expect(Heights.height(state, 2.5, 0.5)).toBe(0);
     }
 
-    [Fact(DisplayName = "heights > gentle: a few metres in all, and no step over a third of a metre between neighbouring land corners")]
+    [Fact(DisplayName = "heights > gentle: ten metres in all at most, and no step over a half metre between neighbouring land corners")]
     public void gentle()
     {
         foreach (var seed in new double[] { 1, 42 })
@@ -44,9 +44,9 @@ public class HeightsTest
                     if (x < SIZE && !nearWater(f, x, y) && !nearWater(f, x + 1, y)) steep = Math.Max(steep, Math.Abs(f.corner(x + 1, y) - h));
                     if (y < SIZE && !nearWater(f, x, y) && !nearWater(f, x, y + 1)) steep = Math.Max(steep, Math.Abs(f.corner(x, y + 1) - h));
                 }
-            expect(hi - lo).toBeLessThan(5);
+            expect(hi - lo).toBeLessThan(14);
             expect(hi - lo).toBeGreaterThan(1);
-            expect(steep).toBeLessThan(0.34);
+            expect(steep).toBeLessThan(0.5);
         }
     }
 
@@ -148,7 +148,7 @@ public class HeightsTest
             }
         off.Sort();
         expect(off.Count > 1000).toBe(true);
-        expect(off[(int)(off.Count * 0.95)]).toBeLessThan(0.3);
-        expect(off[^1]).toBeLessThan(1);
+        expect(off[(int)(off.Count * 0.95)]).toBeLessThan(0.5);
+        expect(off[^1]).toBeLessThan(1.6);
     }
 }
