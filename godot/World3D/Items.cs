@@ -180,37 +180,10 @@ void fragment() {
         return h;
     }
 
-    /// <summary>--lineup: one of every kind with a model on the ground in front of you, three rows of seven
-    /// eastward, each its first model. --lineup=variants: the kinds with variants instead, a kind to a row
-    /// (north to south) and its models eastward, the first nearest. A debug start for screenshots, like --at:
-    /// not a command, so not in the log.</summary>
-    public static void Lineup(SimState state, Survivor you)
+    /// <summary>Show each of these items as a given model variant, not the one its hash picks (--lineup: the items
+    /// come from Sim.Staging.itemLineup, so that all of a kind's models are seen).</summary>
+    public static void ShowAs(IEnumerable<(Item item, int variant)> shown)
     {
-        if (Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=furniture")) { FurnitureModels.Lineup(state, you); return; }
-        bool all = Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=variants");
-        if (all)
-        {
-            string[] many = ["food", "wood", "medicine", "bandage", "weapon", "cloth", "book", "scrap", "coat", "boots", "ammo", "meal"];
-            for (int k = 0; k < many.Length; k++)
-                for (int v = 0; v < 4; v++)
-                {
-                    var it = LoonieRoo.Sim.Items.spawnItem(state, many[k], you.pos.x + 2 + v, you.pos.y - many.Length / 2 + k);
-                    forced[it.id] = v;
-                }
-            return;
-        }
-        if (Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=weapons"))
-        {
-            // The weapons and their ammunition: two rows of ten, eastward (melee first, then guns, then boxes).
-            string[] arms = ["knife", "hatchet", "machete", "crowbar", "bat", "pipe", "sledge", "spear", "plank", "hammer",
-                "axe", "pistol", "revolver", "shotgun", "rifle", "crossbow", "ammo", "ammo38", "shells", "bolts"];
-            for (int k = 0; k < arms.Length; k++)
-                forced[LoonieRoo.Sim.Items.spawnItem(state, arms[k], you.pos.x + 2 + k % 10, you.pos.y - 1 + k / 10 * 2).id] = 0;
-            return;
-        }
-        string[] kinds = ["wood", "food", "meal", "bandage", "medicine", "medkit", "weapon", "cloth", "coat", "armour", "boots",
-            "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "sample", "scrap", "fuel", "knife", "hatchet", "machete", "crowbar", "bat", "pipe", "sledge", "spear", "plank", "pistol", "revolver", "shotgun", "rifle", "crossbow", "ammo38", "shells", "ammo308", "bolts"];
-        for (int k = 0; k < kinds.Length; k++)
-            forced[LoonieRoo.Sim.Items.spawnItem(state, kinds[k], you.pos.x + 2 + k / 3, you.pos.y - 1 + k % 3).id] = 0;
+        foreach (var (item, variant) in shown) forced[item.id] = variant;
     }
 }

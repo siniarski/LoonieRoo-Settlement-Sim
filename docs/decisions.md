@@ -4,7 +4,7 @@ Every design decision so far, with its reasoning, by area. Moved here from the d
 (one entry per row of the old table, the wording unchanged). Read the section your task touches; `grep -n '^- \*\*Fire'`
 finds one entry. Decisions about the vision and the look are in docs/design.md; newer decisions are in the session log
 (`log/`), and NOTES.md "Start here" says what holds now. Entries keep the browser era's names where they were written
-then (`sim/planner.ts` is now `cs/Sim/Systems/Planner.cs`: docs/modules.md).
+then (`sim/planner.ts` is now `cs/Sim/Colony/Planner.cs`: docs/modules.md).
 
 ## Project context (from initial planning)
 
@@ -459,3 +459,9 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 - **Alerts, overview.** `alerts(state)` (sim, pure): threats, the infected, hunger and thirst, winter food, beds, bodies, fuel, neighbours, visitors; worst first. HUD shows the top
   six (click to look); O opens the overview (people, stock, storage filters, knowledge, neighbours)
   *Why:* Too much going on to follow from the event feed
+- **The code's structure (2026-11-11).** `cs/Sim` is a folder per area (Js, State, Core, Save, Grid, Debug, Movement, Worldgen, World, Combat, Dead, Items, Colony,
+  Survivors, You, Others) in one namespace: the folders are for finding things, and nothing in the code changed with the move. Tests stay flat (`XTest.cs`; the files ported
+  from TypeScript cover several systems each, so folders would mislead). The game class is in parts by concern under `godot/App`; labs and benches are in `godot/Labs`, the
+  self-test in `godot/SelfTest`. Debug flags that set a scene call `Staging` (cs/Sim/Debug): the game no longer writes a state field anywhere. `ArchitectureTest` checks the
+  sim's purity, the game's no-writes rule, and that every sim file is in an area folder and in docs/modules.md
+  *Why:* The player wants to review the project himself; 125 files in one folder and a 1,050-line game file hid the shape, and rule 5 had exceptions nobody could see

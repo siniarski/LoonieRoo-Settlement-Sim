@@ -1,9 +1,9 @@
 # Style lineup (2026-11-09)
 
-`godot/Characters/StyleLineup.tscn`: the survivor, the dead, a wolf, a rabbit, trees and items at five detail tiers, in the game's daylight at first person's eye (1.65 m, 60 degrees). All from the models we already have; nothing new was modelled.
+`godot/Labs/StyleLineup.tscn`: the survivor, the dead, a wolf, a rabbit, trees and items at five detail tiers, in the game's daylight at first person's eye (1.65 m, 60 degrees). All from the models we already have; nothing new was modelled.
 
-    Godot --path godot res://Characters/StyleLineup.tscn -- --shots=DIR   # the pictures here
-    Godot --path godot res://Characters/StyleLineup.tscn -- --perf=DIR    # perf.md
+    Godot --path godot res://Labs/StyleLineup.tscn -- --shots=DIR   # the pictures here
+    Godot --path godot res://Labs/StyleLineup.tscn -- --perf=DIR    # perf.md
     (no arguments: the scene; keys 1-5 switch tier)
 
 | tier | people | animals | trees | maps |

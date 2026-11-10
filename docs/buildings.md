@@ -1,6 +1,6 @@
 # Buildings (2026-11-10/11: built)
 
-How generated buildings are planned and stamped: `cs/Sim/Systems/Buildings.cs` (the Draft builder), `BuildingsHouses.cs`,
+How generated buildings are planned and stamped: `cs/Sim/Worldgen/Buildings.cs` (the Draft builder), `BuildingsHouses.cs`,
 `BuildingsTrade.cs`, `BuildingsCivic.cs`, `Lots.cs` (what stands on a lot, and drawing it a chunk at a time). The
 world plan that cuts the lots is docs/worldplan-regions.md; the lot sizes are Worldplan's (residential 12-15 x 13-15,
 commercial 12-15 x 12-14, civic 20-26 x 18-24, industrial 22-28 x 18-24, cabin 13 x 13, farms bigger).

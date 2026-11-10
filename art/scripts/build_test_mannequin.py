@@ -435,7 +435,7 @@ def shiver(t):
     return add(shrug=1.5 * a, lean=0.6 * a, head_yaw=1.2 * math.sin(2 * math.pi * 2 * t))
 
 
-# Locomotion clips are all one cycle long (CYCLE frames); godot/Characters/Lab.cs sets the cycle
+# Locomotion clips are all one cycle long (CYCLE frames); godot/Labs/Lab.cs sets the cycle
 # rate from the speed (cycles per second, its RATES tables) and the stride follows.
 CYCLE = 30
 CLIPS = [

@@ -284,35 +284,6 @@ void fragment() {
         return best;
     }
 
-    /// <summary>--lineup=furniture: one of every furniture kind and look in the open east of you (the land round
-    /// you generated first, so --at can go anywhere): rows of eight, three tiles apart, the big ones (vehicles,
-    /// the silo, the tower) in a row of their own beyond. A debug start for screenshots, like --lineup: not a
-    /// command, so not in the log.</summary>
-    public static void Lineup(SimState state, Survivor you)
-    {
-        Worldgen.ensureGeneratedAround(state, you.pos);
-        string[] kinds = ["bed", "table", "workbench", "stove", "trap", "well", "collector", "generator", "lamp", "fridge",
-            "heater", "coop", "radio", "lab", "beacon", "turret", "lure", "pit", "crate"];
-        var looks = new List<(string kind, string? look)>();
-        foreach (var k in kinds) looks.Add((k, null));
-        foreach (var l in FurnitureMod.CONTAINER_LOOKS) if (l != "crate") looks.Add(("crate", l));
-        foreach (var l in FurnitureMod.DECOR_LOOKS) if (l is not ("bed" or "table" or "car" or "tractor" or "silo")) looks.Add(("decor", l));
-        for (int k = 0; k < looks.Count; k++)
-        {
-            var f = FurnitureMod.addFurniture(state, looks[k].kind, you.pos.x + 3 + 3 * (k % 8), you.pos.y - 6 + 3 * (k / 8));
-            f.look = looks[k].look;
-        }
-        int y = you.pos.y - 6 + 3 * ((looks.Count + 7) / 8) + 2;
-        (string kind, string? look, int dx)[] big = [("truck", null, 3), ("decor", "car", 10), ("decor", "tractor", 16), ("tower", null, 21), ("decor", "silo", 25)];
-        foreach (var (kind, look, dx) in big)
-        {
-            int n = look == "silo" ? 2 : 1;
-            for (int a = 0; a < n; a++)
-                for (int b = 0; b < n; b++)
-                    FurnitureMod.addFurniture(state, kind, you.pos.x + dx + a, y + b).look = look;
-        }
-    }
-
     static uint Fnv(string s)
     {
         uint h = 2166136261;

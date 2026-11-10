@@ -1,5 +1,5 @@
 # Hair styles and hats as their own meshes (hair.py), each exported alone on the shared rig so any style goes
-# on any body or outfit: the look lab (godot/Characters/LookLab.tscn) attaches them to a character's
+# on any body or outfit: the look lab (godot/Labs/LookLab.tscn) attaches them to a character's
 # skeleton and tints them. Each is a LOD ladder (the plus look's ratios) with a 512 grey colour map and a
 # normal map baked from a high-poly version with strand grooves. Styles with "cards" also get strand cards
 # along the hairline (near LODs only): small cut-out quads with a strand texture, for wispy edges.

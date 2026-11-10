@@ -4,7 +4,7 @@
 #   "$B" --background --factory-startup --python art/scripts/build_furniture.py -- \
 #       --glb godot/assets/furniture/furniture.glb [--preview lineup.png]
 #
-# What the sim has (cs/Sim/Systems/FurnitureMod.cs, Designations.FURNITURE_TARGETS, ScenarioMod.SIMPLE_FURNITURE,
+# What the sim has (cs/Sim/Items/FurnitureMod.cs, Designations.FURNITURE_TARGETS, ScenarioMod.SIMPLE_FURNITURE,
 # Buildings.cs, Lots.cs):
 #   kinds: bed, table, workbench, stove, trap, tower, well, collector, generator, lamp, fridge, heater, coop,
 #     radio, lab, beacon, turret, lure, pit, truck, crate (trees are Trees.cs's);

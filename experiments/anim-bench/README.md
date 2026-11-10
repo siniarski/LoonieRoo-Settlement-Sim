@@ -1,12 +1,12 @@
 # Animation bench (2026-11-08)
 
 How many animated characters a frame holds in Godot 4.6, by how they're animated and how they're built.
-The scene is `godot/Characters/Bench.tscn` (Bench.cs says what each mode is); run it:
+The scene is `godot/Labs/Bench.tscn` (Bench.cs says what each mode is); run it:
 
 ```bash
 G="/c/Program Files/Godot_v4.6.1-stable_mono_win64/Godot_v4.6.1-stable_mono_win64_console.exe"
-"$G" --path godot res://Characters/Bench.tscn -- --out="$(pwd -W)/experiments/anim-bench/windowed.md"
-"$G" --headless --path godot res://Characters/Bench.tscn -- --counts=500,2000 --out=...   # CPU only
+"$G" --path godot res://Labs/Bench.tscn -- --out="$(pwd -W)/experiments/anim-bench/windowed.md"
+"$G" --headless --path godot res://Labs/Bench.tscn -- --counts=500,2000 --out=...   # CPU only
 ```
 
 The character is the test mannequin (1,792 triangles, 56 bones), in a grid, vsync off, no shadows.
@@ -19,7 +19,7 @@ Machine: Intel Core Ultra 7 265K, RTX 5070 (a fast desktop: a low-end target is 
 
 ## The horde (VAT on MultiMesh)
 
-`godot/Characters/HordeBench.tscn` (HordeBench.cs, Vat.cs, vat.gdshader): `"$G" --path godot res://Characters/HordeBench.tscn -- --counts=5000,10000,20000 [--shadows] --out=...`.
+`godot/Labs/HordeBench.tscn` (HordeBench.cs, Vat.cs, vat.gdshader): `"$G" --path godot res://Labs/HordeBench.tscn -- --counts=5000,10000,20000 [--shadows] --out=...`.
 Results in `horde.md` and `horde-shadows.md`. Four outfits baked (walk, idle, run, zombie_crawl; 159 ms, 10.9 MB), the horde
 0.9 m apart, mostly shambling: 5,000 / 10,000 / 20,000 in 2.9 / 5.5 / 10.8 ms (shadows 7.8 / 13.4 / 26.1), 5 draw calls, render CPU
 ~0.1 ms at any count. All GPU (~0.5 µs per character at ~2,800 triangles): a far LOD mesh is the next lever. Against the skeleton

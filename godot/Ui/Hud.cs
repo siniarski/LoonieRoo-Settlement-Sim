@@ -48,7 +48,7 @@ public sealed partial class Hud : Control
     // left column
     readonly Label status = Kit.Label("", Kit.Dim, 12);
     readonly UiPanel controlLine = new("#f0c850");
-    /// <summary>First person with a gun in hand: its rounds, the bag's, and what to do (cs/Sim/Systems/WeaponTable.cs).</summary>
+    /// <summary>First person with a gun in hand: its rounds, the bag's, and what to do (cs/Sim/Combat/WeaponTable.cs).</summary>
     readonly UiPanel ammoReadout = new("#f0c850", "rgba(20, 23, 21, 0.85)", 14);
     readonly UiPanel alerts = new("#5a4a3a", "rgba(20, 23, 21, 0.85)");
     readonly UiPanel toast = new("rgba(140, 240, 164, 0.95)", "rgba(140, 240, 164, 0.95)", 13);

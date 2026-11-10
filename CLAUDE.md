@@ -17,9 +17,9 @@ only the `docs/` file your task touches.**
   CanvasItem drawing (`Render/`), UI as Controls built in code (`Ui/`). Map: docs/modules.md, godot/README.md.
 - .NET SDK 10.x (target net8.0); Godot 4.6.1 .NET at `C:\Program Files\Godot_v4.6.1-stable_mono_win64`. No NuGet
   packages beyond xUnit and the test SDK.
-- TypeScript until 2026-11-08 (git tag `ts-final`); comments still name TS modules: `x.ts` is `cs/Sim/Systems/X.cs`.
+- TypeScript until 2026-11-08 (git tag `ts-final`); comments still name TS modules: `x.ts` is class `X` (docs/modules.md).
 
-**The C# keeps JavaScript's semantics, on purpose** (`cs/Sim/JsCompat.cs`: `Js.*`, `JsMath.*`, `JsString`,
+**The C# keeps JavaScript's semantics, on purpose** (`cs/Sim/Js/JsCompat.cs`: `Js.*`, `JsMath.*`, `JsString`,
 `JsRegExp`, `JsMap`, `JsSet`, `JsRecord`, list methods `push`, `filter`, `map`, `splice`...). Saves, tests and balance
 depend on them: write new sim code the same way. The port's traps:
 - **Numbers are doubles.** Multiply in doubles (`int * int` overflows: squared distances in SUB units do). A JS number
@@ -51,6 +51,8 @@ Plain C# in place of a `Js.*` idiom is welcome where tests (and, for balance, th
 3. **No `System.Random`, `DateTime.Now` or `Stopwatch` in the sim.** The seeded RNG in state (Rng.cs); time is ticks.
 4. **Sim coordinates are grid coordinates** (integer tiles). Projection is the renderer's job.
 5. **The renderer only reads state.** Input becomes commands through `Commands.applyCommand`, never direct mutation.
+   A debug flag's hand-set scene is a call to `Staging` (cs/Sim/Debug), never a write from the game. `ArchitectureTest`
+   checks rules 1-3 and 5 and that every sim file is in an area folder and in docs/modules.md.
 6. **Fixed timestep** (default 10 ticks/sec). Speed changes ticks per frame, not tick length.
 7. **State is serialisable**: plain JSON (StateTypes.cs public properties, no hidden state, no delegates), for saves,
    scenarios, bug reports and dumps (StateJson.cs, Savefile.cs).
@@ -102,7 +104,8 @@ Render concerns (sprite sizes, pixels, animation state) never leak into the sim.
 
 ## Layout
 
-`cs/Sim/` (Systems/: a class per system; StateTypes.cs; the core; the JS layer), `cs/Sim.Tests/`, `cs/Harness/`,
-`godot/` (Game.cs, World3D/, Characters/, Audio/, Render/, Ui/, SelfTest*.cs, assets/), `art/` (Blender, headless),
+`cs/Sim/` (a folder per area, one namespace: Js/, State/, Core/, Save/, Grid/, Debug/, Movement/, Worldgen/, World/,
+Combat/, Dead/, Items/, Colony/, Survivors/, You/, Others/), `cs/Sim.Tests/`, `cs/Harness/`, `godot/` (App/: the game
+class in parts; World3D/, Characters/, Audio/, Render/, Ui/, SelfTest/, Labs/, assets/), `art/` (Blender, headless),
 `scenarios/` (test maps), `experiments/` (write-ups), `docs/` (read on demand), `log/` (session log), NOTES.md,
 check.sh, finish.sh, shot.sh. Every module: docs/modules.md.

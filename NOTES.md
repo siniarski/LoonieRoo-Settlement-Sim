@@ -48,7 +48,8 @@ cheaper models for mechanical work.
 4. The look and sound: textures, cars as models, weapon, fire and rain sounds, bloom for lights.
 
 **Where to read what** (read only what your task touches).
-- docs/modules.md: one line per sim system and game folder; the TypeScript-name mapping. Before touching code.
+- README.md: the shape and a reading order, for a person reviewing the code.
+- docs/modules.md: one line per sim module by folder and per game folder; the TypeScript-name mapping. Before touching code.
 - docs/sim-model.md: designations, jobs, rooms, paths, doors, edges, replays. Before jobs, rooms or pathfinding work.
 - docs/decisions.md: every design decision with its reasoning, by area. Before changing how a system behaves.
 - docs/design.md: the player's vision, the 2026-11-04 and 2026-11-08 decisions, big worlds. Before new features.

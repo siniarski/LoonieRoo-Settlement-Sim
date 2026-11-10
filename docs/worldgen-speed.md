@@ -58,7 +58,7 @@ Steps 2-6 change no world (they're checked by "same output" tests). Step 1 chang
 
 ## The overviews (experiments/map-overview)
 
-`godot/World3D/MapShot.tscn` draws whole generated worlds a pixel per tile: `<map>_<seed>_small.jpg` (1000 px), `_town.jpg` and `_start.jpg` (300 tiles at 3 px), and the full 2000 px PNG (not in git). Six worlds: mainland 1-3, island 4, islands 5, quarantine 6. What they show:
+`godot/Labs/MapShot.tscn` draws whole generated worlds a pixel per tile: `<map>_<seed>_small.jpg` (1000 px), `_town.jpg` and `_start.jpg` (300 tiles at 3 px), and the full 2000 px PNG (not in git). Six worlds: mainland 1-3, island 4, islands 5, quarantine 6. What they show:
 
 - Towns sit evenly over the whole map: one per 170 x 170 tiles (139 on a 2000 mainland), the same density everywhere, so a big map reads as a regular sprinkle of circles with no empty wilds or urban sprawl.
 - The natural features keep their small-map scale: lakes and woods from noise 20-40 tiles across, one river; nothing larger (no big forests, mountains or regions) as the map grows.

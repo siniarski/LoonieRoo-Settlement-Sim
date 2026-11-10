@@ -67,7 +67,7 @@ public sealed class Held
         _ => Vector3.Zero,
     };
 
-    /// <summary>How an item is held and moved (the weapons' table is cs/Sim/Systems/WeaponTable.cs): "rifle" (a long gun in both hands), "handgun", "axe" (a heavy tool in both hands), "stab" (a knife, a spear) or "club".</summary>
+    /// <summary>How an item is held and moved (the weapons' table is cs/Sim/Combat/WeaponTable.cs): "rifle" (a long gun in both hands), "handgun", "axe" (a heavy tool in both hands), "stab" (a knife, a spear) or "club".</summary>
     static string Family(string kind) => kind switch
     {
         "rifle" or "shotgun" or "crossbow" => "rifle",

@@ -4,7 +4,7 @@
 #   "$B" --background --factory-startup --python art/scripts/build_items.py -- \
 #       --glb godot/assets/items/items.glb [--preview lineup.png]
 #
-# The kinds are the sim's (cs/Sim/Systems/Inventory.cs ITEM_WEIGHT): wood, food, meal, bandage, medicine,
+# The kinds are the sim's (cs/Sim/Items/Inventory.cs ITEM_WEIGHT): wood, food, meal, bandage, medicine,
 # weapon, cloth, coat, armour, boots, gun, ammo, corpse, book, cart, axe, hammer, medkit, sample, scrap,
 # fuel, and the weapons' own kinds (knife, hatchet, machete, crowbar, bat, pipe, sledge, spear, plank, pistol,
 # revolver, shotgun, rifle, crossbow and their ammunition: ammo38, shells, ammo308, bolts). Each is a mesh object named after its kind, made of boxes, cylinders and wedges, flat shaded, in
@@ -532,7 +532,7 @@ VARIANTS = {
 }
 
 
-# --- the weapons (2026-11-10, cs/Sim/Systems/WeaponTable.cs): a model each, handle along X. Melee weapons keep a grip
+# --- the weapons (2026-11-10, cs/Sim/Combat/WeaponTable.cs): a model each, handle along X. Melee weapons keep a grip
 # near x -0.1 .. -0.3 and a working side towards -Y (an edge, a head's face: Held.cs FaceOf); firearms have the muzzle
 # at +X and the top at +Z. Held.cs gives each kind its grip and, for two-handed ones, where the left hand goes.
 

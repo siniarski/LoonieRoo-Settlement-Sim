@@ -35,7 +35,7 @@ The look-development characters (docs/characters.md "The look"; ~45 s a subject,
 ```
 
 It writes look_plus_<subject>.glb (30k / 12k / 6k / 3k / 1.2k / 600 triangles, 2048 colour and normal maps) and
-look_pz_<subject>.glb (2.5k / 1.2k / 600, a 512 painted colour map), for the look lab (godot/Characters/LookLab.tscn).
+look_pz_<subject>.glb (2.5k / 1.2k / 600, a 512 painted colour map), for the look lab (godot/Labs/LookLab.tscn).
 
 The dead the game draws are pz builds (~18 s each; four at once are fine): the tee with each face, and three more
 outfits, worn dirty and bloodied (`--outfit longsleeve`: a painted work shirt and trousers, paint.OUTFIT_VARIANTS;
@@ -53,7 +53,7 @@ done
 ```
 
 Then in Godot: `--headless --path godot --import` (re-import), and the lab:
-`--path godot res://Characters/Lab.tscn -- --check` (skeleton vs the humanoid profile) or `-- --shot=out.png`.
+`--path godot res://Labs/Lab.tscn -- --check` (skeleton vs the humanoid profile) or `-- --shot=out.png`.
 
 - `scripts/humanoid_profile.json`: Godot 4.6's SkeletonProfileHumanoid (names, parents, reference poses), dumped by
   `dump_profile.gd` (`Godot --headless --script art/scripts/dump_profile.gd -- out.json`). The rig is built from it.

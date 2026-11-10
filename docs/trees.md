@@ -81,7 +81,7 @@ Assets: trees.glb 0.3 MB, leaves.png 0.2 MB (VRAM-compressed with mipmaps on imp
 
 ## Benchmark: is the LOD worth it, and do far trees need more?
 
-`godot/World3D/TreeBench.tscn` (`Godot --path godot res://World3D/TreeBench.tscn -- [--runs=lods@3,near@3,...]
+`godot/Labs/TreeBench.tscn` (`Godot --path godot res://Labs/TreeBench.tscn -- [--runs=lods@3,near@3,...]
 [--frames=360] [--out=bench.md]`): a 256 world where every open tile is forest ground with a tree on 30% of them
 (the worst case: every chunk in range is forest), first person in the middle at noon, the camera turning a full
 circle, vsync off. Modes: `lods` (the game's), `noshadow` (the mid LOD casts no shadow), `near` / `mid` / `far`
@@ -113,7 +113,7 @@ LOD), a mid-LOD shadow proxy, or a lighter near LOD; dropping the mid LOD's shad
 
 ## Growth: the world overgrows (2026-11-10)
 
-How overgrown a tile is **is computed, not stored** (cs/Sim/Systems/Growth.cs, read its header first): a function of the
+How overgrown a tile is **is computed, not stored** (cs/Sim/World/Growth.cs, read its header first): a function of the
 seed, the tile, what its ground is (`GrowthKind`: yard, verge, meadow, field, dirt, forest floor, road, pavement, a
 ruin's floor) and the *growing days* since the tile was last cleared. A spring or summer day is 1 growing day, an autumn
 day 0.35, a winter day 0 (half again in a nuclear winter); a season is 5 game days, so a year is 20 days and 11.75

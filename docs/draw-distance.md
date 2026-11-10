@@ -17,11 +17,11 @@ Past the built chunks, out to `FarField.Range` metres (`--view=M` in the game; 0
 - **The hole**: where the near chunks are, the far field's ground and blocks discard their pixels and its trees collapse to a point, in the shaders (a uniform: the chunks' square), so moving needs no rebuild. The far ground sits 8 cm under the near ground.
 - With the far field on, the fog thins to `3.2 / Range` and the far plane goes to Range + 64 m.
 
-## The bench (godot/World3D/DrawBench.tscn)
+## The bench (godot/Labs/DrawBench.tscn)
 
 A 2048 world (seed 42, every chunk generated), you in the middle, noon; per range: wait for the far field to be built, a shot at eye height towards the town and one from 60 m up, then a full turn. Results: experiments/draw-bench/bench.md and the view_*.png shots.
 
-    Godot --path godot res://World3D/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees] [--frames=360] [--out=DIR]
+    Godot --path godot res://Labs/DrawBench.tscn -- [--size=2048] [--runs=0,250,500,1000,1000:notrees] [--frames=360] [--out=DIR]
 
 ## Found on the way
 

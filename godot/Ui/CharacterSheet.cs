@@ -1,7 +1,7 @@
 // The character sheet on the Tab screen: a column on the left with who you are and what state you are in. The body
 // outline's parts are tinted by their state, the conditions stand beside it (worst first), and under them the body,
 // needs, mood and its thoughts, what you wear, skills and your story. Everything it says is the sim's own
-// (cs/Sim/Systems/CharacterSheet.cs builds it from the state with the sim's thresholds); this file only draws it.
+// (cs/Sim/Survivors/CharacterSheet.cs builds it from the state with the sim's thresholds); this file only draws it.
 //
 // Reads state only, changes nothing. InventoryScreen creates it and calls Update while the screen is open, with the
 // survivor you control (it follows you if that changes). The content is rebuilt when the sheet's text changes, at

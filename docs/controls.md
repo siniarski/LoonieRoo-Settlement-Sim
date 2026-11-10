@@ -1,7 +1,7 @@
 # Controls
 
 The keys as of 2026-11-09 (moved from NOTES.md "Start here" on 2026-11-10). The game's own key list is K in play;
-the self-test (godot/SelfTest.cs) drives most of these with real input.
+the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 
 ## First person (playing a survivor, since 2026-11-08)
 
@@ -16,9 +16,9 @@ badly hurt, dying), the body by part (an outline tinted by each part's state; ho
 with you worst first with what would help, then body heat, endurance, wetness and panic, needs, mood and the thoughts
 behind it, what you wear and wield, skills and your story. It only reads: nothing on it changes the game. It scrolls
 (wheel) when it is taller than the window, and follows the survivor you control. The same sheet as text:
-`CharacterSheet.textOfControlled(state)` (cs/Sim/Systems/CharacterSheet.cs).
+`CharacterSheet.textOfControlled(state)` (cs/Sim/Survivors/CharacterSheet.cs).
 
-**Weapons** (2026-11-10; the table of every weapon: cs/Sim/Systems/WeaponTable.cs, how shots fly: Shooting.cs).
+**Weapons** (2026-11-10; the table of every weapon: cs/Sim/Combat/WeaponTable.cs, how shots fly: Shooting.cs).
 Click swings what is in your hand, or, with a loaded gun, fires it exactly where you look (the `fire` command: a
 direction). **X** reloads the gun in hand from your bag (the whole magazine for a pistol, a round at a time for a
 revolver, shotgun or rifle; shooting or walking off stops it). **Q** takes up the next weapon from the bag, the one

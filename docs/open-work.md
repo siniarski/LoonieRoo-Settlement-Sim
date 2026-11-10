@@ -202,7 +202,7 @@ the world (Held's arms do).
 The plan and decisions are docs/characters.md (read it first); each step's details are in the session log of
 2026-11-08. **Built:** a Blender pipeline run headless (art/scripts, art/README.md: the rig from Godot's humanoid
 profile, a validator, a scripted mannequin with body regions, stump caps, a face with shape keys and 27 clips, nine
-garments by region); a character lab (godot/Characters/Lab.tscn, godot/README.md: movement and stances, body states
+garments by region); a character lab (godot/Labs/Lab.tscn, godot/README.md: movement and stances, body states
 and missing limbs, clothes, ground, crowd and LOD, hands); foot IK (kerb, hill, stairs); hand IK (pistol, rifle,
 knife, bat, ready and aimed at eye level; a door); a car to get into and out of (seat, wheel and pedal IK);
 retargeted CC0 clips (art/scripts/retarget.py: 43 Quaternius clips in clips_ual.glb; the download lives in
@@ -215,9 +215,9 @@ lock); the sim side (PoseIntents.cs, lostLimbs with side and level, startledAt, 
 in recoloured outfits; derived clips (art/scripts/derive_clips.py, clips_more.glb): planted gaits picked and rated by
 speed (Gaits.cs: foot slide 37-46 cm a step before, 0.7-5.7 now), varied shambles by a hash of the id, crawlers,
 getting up when woken, hit reactions, falls, a hop for a lost leg, a held stump, colonists at work, the eye's dip on
-landing, heads turned to a target (HeadLook.cs); `Characters/AnimTest.tscn` measures foot slide.
+landing, heads turned to a target (HeadLook.cs); `Labs/AnimTest.tscn` measures foot slide.
 Tests: `--iktest`, `--handtest`, `--cartest`, `--ragtest`, `--walktest` (experiments/ik-test); benchmark
-godot/Characters/Bench.tscn (experiments/anim-bench).
+godot/Labs/Bench.tscn (experiments/anim-bench).
 
 Blender 5.2 is installed; the Blender MCP server is in .mcp.json and approved locally (.claude/settings.local.json,
 not in git): Blender must be open (its add-on listens on localhost:9876).
@@ -245,6 +245,17 @@ Skeleton3D restores its poses after its modifiers (read final poses inside a mod
 global shader-buffer slots for every mesh with instance uniforms (near-tier characters top out near 300; the buffer
 is raised in project.godot). The glTF exporter keeps every bone's channels unless told not to. Shell heredocs here can
 turn `\n` into a newline: write patch scripts to files.
+
+## Code structure (log/2026-11-11-02-structure.md)
+
+Done: area folders in the sim, the game class in parts, labs apart, `Staging`, `ArchitectureTest`, a README for
+reviewing. Left, each long but one concern (split only with a reason): `Commands.execute` (a 780-line chain of
+`if (command.type == ...)`: a method per group of commands would read better; every branch returns, so the order is
+free), `Items/InventoryGrid.cs` (1,290 lines, in marked sections), `Dead/Zombies.cs` (1,200), `Colony/Work.cs`
+(960), `godot/Ui/Inventory.cs` (1,020), `godot/Ui/Hud.cs` (920: each panel could be its own Control),
+`godot/World3D/People.cs` (840). `State/StateTypes.cs` (1,360) is the schema and stays one file. The self-test sets
+its fixtures straight on the state (allowed: it is a test); `Staging` could hold them too. The tests ported from
+TypeScript are grab-bags under old names (docs/modules.md lists them): regroup when one is next touched.
 
 ## Smaller
 

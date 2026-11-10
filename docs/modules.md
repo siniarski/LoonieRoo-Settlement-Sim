@@ -1,100 +1,160 @@
 # Where things live
 
-One line per module, by area, so `grep -n 'Worldgen' docs/modules.md` finds one. The sim is `cs/Sim/Systems/<Name>.cs`
-unless a path is given: pure C#, deterministic, no Godot. Each file opens with a comment stating its rules; read that
-next. The game (`godot/`) is mapped file by file in godot/README.md; a summary is at the end here.
+One line per module, by folder, so `grep -n 'Worldgen' docs/modules.md` finds one. Each file opens with a comment
+stating its rules; read that next. `ArchitectureTest` (cs/Sim.Tests) fails when a sim file is missing from this page.
 
-**From the port.** File comments still name the TypeScript modules (`(worldplan.ts)`): `x.ts` is now
-`cs/Sim/Systems/X.cs`, class `X`, or `XMod` where X is also a type: BodyMod, CharacterMod, ControlMod, EndgameMod,
-FireMod, FurnitureMod, NatureMod, ScenarioMod, StoryMod, SuccessionMod, TimelineMod. grid.ts is `Grids` in Grid.cs.
-Hand-written from the start (in `cs/Sim/`): Grid.cs, Pathfinding.cs, Space.cs, Rng.cs, Hash.cs, Time.cs, Lookup.cs,
-Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git tag `ts-final`.
+**The shape.** Three projects, one direction:
 
-## Core (`cs/Sim/`)
+```
+godot/  (the game: draws, plays sounds, takes input)
+   |  reads state; changes it only through Commands.applyCommand, Tick.step and, for debug scenes, Staging
+   v
+cs/Sim/ (the simulation: plain data and static functions, deterministic, no Godot)
+   ^
+cs/Sim.Tests/ (xUnit), cs/Harness/ (balance, bench, stress)
+```
 
-- **State.cs**: the state's hand-written part (the RNG it holds); fields generated (State.g.cs) from StateTypes.cs.
-- **StateTypes.cs**: all state's types (InlineTypes.cs, HandTypes.cs: small shapes the TypeScript wrote inline).
-- **States**: state constructors; `SCHEMA_VERSION` (77 on 2026-11-10).
-- **Tick**: the order of everything each tick.
-- **Commands**: the only way in (`applyCommand`); every applied command goes to `state.commandLog`.
+**The sim is one namespace** (`LoonieRoo.Sim`) in a folder per area: the folders are for finding things, not for
+access control. A system is a static class of functions over the state (`Zombies.update(state)`); the state is plain
+data (`State/StateTypes.cs`). `Core/Tick.cs` is the order everything runs in each tick: start there.
+
+**From the port.** File comments still name the TypeScript modules (`(worldplan.ts)`): `x.ts` is now class `X` in the
+folder below, or `XMod` where X is also a type: BodyMod, CharacterMod, ControlMod, EndgameMod, FireMod, FurnitureMod,
+NatureMod, ScenarioMod, StoryMod, SuccessionMod, TimelineMod. grid.ts is `Grids` in Grid/Grid.cs. The TypeScript is at
+git tag `ts-final`.
+
+## The sim (`cs/Sim/`)
+
+### `Js/`: the JavaScript-semantics layer
+
+- **JsCompat.cs**: Js, JsMath, JsString, JsRegExp, JsMap, JsSet, JsRecord, list extensions (`push`, `filter`...).
+  Saves, tests and balance depend on JS's numbers and ordering (CLAUDE.md "The C# keeps JavaScript's semantics").
+- **Js.cs**: the small helpers. **TypedArrays.cs**: Uint8Array etc. **GridDoubles.cs**: double overloads of the
+  hand-written modules (a JS number reaching an `int` parameter).
+
+### `State/`: what the world is
+
+- **StateTypes.cs**: every type in the state, plain JSON-serialisable data (rule 7). **InlineTypes.cs**,
+  **HandTypes.cs**: small shapes the TypeScript wrote inline.
+- **State.cs**: the state's hand-written part (the RNG it holds). **States**: state constructors; `SCHEMA_VERSION`.
+- **StateJson.cs**: the state as JSON (the serializer's options).
+
+### `Core/`: the loop and the way in
+
+- **Tick**: the order of everything each tick. **Commands**: the only way in (`applyCommand`); every applied command
+  goes to `state.commandLog`. **Replay**: seed + initial state + command log = the game.
 - **Time.cs**: the clock from `state.tick`; day length scale, `onClock`, `slowTick`.
 - **Rng.cs**: the sim RNG (mulberry32, one uint32 in state). **Hash.cs**: stateless `hashRoll` for chances.
-- **Lookup.cs**: finding things by id without scanning (derived maps, outside state).
-- **Space.cs**: spatial search helpers (nearestTile). **Grid.cs** (`Grids`): tiles, walls, doors, edges: the only
-  way to the grid's per-tile layers (`getTile`, `tileAt`, `groundAt`, `edgeKind`, `setTile`...), which
-  **GridLayers.cs** keeps in 32 x 32 chunks allocated where something differs from bare land (also `TileMask`).
-- **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening (their per-tile data in
-  chunks too). **RoomLabels.cs** (`Rooms`' core): room labels in chunks, `computeRooms` and `updateRooms`.
-- **Replay**: seed + initial state + command log = the game. **Savefile.cs**, **SavefileChunks.cs** (generated
-  worlds keep only changed chunks), **StateJson.cs** (state as JSON).
-- **ScenarioMod**: ASCII maps for tests. **Invariants**: cross-checks of survivors, jobs, items. **DebugText**: the
-  ASCII renderer. **Events**: the event log (capped). **Alerts**: what needs attention, worst first (pure, read-only).
-- **Arena**: debug arenas (the dead round you from the first tick).
-- **The JS layer**: JsCompat.cs (Js, JsMath, JsString, JsRegExp, JsMap, JsSet, JsRecord, list extensions), Js.cs,
-  TypedArrays.cs (Uint8Array etc.), GridDoubles.cs (double overloads of the hand-written modules).
+- **Lookup.cs**: finding things by id without scanning (derived maps, outside state). **Events**: the event log
+  (capped). **Difficulty**: presets (start, zombies, weather, progression, nuclear winter, day length, map type).
 
-## Movement
+### `Save/`
+
+- **Savefile.cs**: saves and bug reports (`bugStart`, `restartLog`, `toBugReport`, `loadFile`).
+  **SavefileChunks.cs**: generated worlds keep only changed chunks. **SavefileHash.cs**: a chunk's hash as generation
+  made it, so saving only remakes chunks that differ. **SavefileWriter.cs**: saves written straight to UTF-8.
+
+### `Grid/`: tiles, paths, rooms
+
+- **Grid.cs** (`Grids`): tiles, walls, doors, edges: the only way to the grid's per-tile layers (`getTile`, `tileAt`,
+  `groundAt`, `edgeKind`, `setTile`...), which **GridLayers.cs** keeps in 32 x 32 chunks allocated where something
+  differs from bare land (also `TileMask`).
+- **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening (their per-tile data in
+  chunks too). **Space.cs**: spatial search helpers (nearestTile).
+- **Rooms**: flood fill, purposes, requirements. **RoomLabels.cs** (`Rooms`' core): room labels in chunks,
+  `computeRooms` and `updateRooms`.
+
+### `Debug/`: tools for tests, pictures and bug hunting
+
+- **ScenarioMod**: ASCII maps for tests. **DebugText**: the ASCII renderer. **Invariants**: cross-checks of survivors,
+  jobs, items. **Arena**: debug arenas (the dead round you from the first tick).
+- **Staging**: scenes set by hand for the game's debug flags (a clock, weather, a fire, a gun in your hand, lineups
+  of every item and furniture). Not commands, never logged; the game calls these and never writes state itself.
+
+### `Movement/`
 
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
 - **Survivors**: tile-to-tile movement along cached A* paths. **Doors**: doors held open by whoever passes.
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
-- **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers, tile walkers' bodies (`at` only) and cars.
+- **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers, tile
+  walkers' bodies (`at` only) and cars.
 - **PoseIntents**: what a mover's body is doing, read for the renderer (docs/characters.md section 1).
-- **VehicleActions** (part of Vehicles): timed car actions and anchors (get in, out, boot, bonnet).
+- **Vehicles**: cars, fuel, the boot. **VehicleActions** (part of Vehicles): timed car actions and anchors (get in,
+  out, boot, bonnet).
 
-## World
+### `Worldgen/`: making the world from a seed
 
-- **Worldgen**: draws chunks lazily from the plan; map types. **Terrain**: the land's large scale from the seed
-  (elevation, moisture, settlement; rivers by drainage, lakes in hollows; cached, never saved).
+- **Worldgen**: draws chunks lazily from the plan; map types; `GEN_VERSION`. **Terrain**: the land's large scale from
+  the seed (elevation, moisture, settlement; rivers by drainage, lakes in hollows; cached, never saved).
 - **NatureMod**: water, forest, trees, dirt per tile (noise, fBm, `treeChance`).
-- **Growth**: foliage as a pure function of the tile and the growing days since it was cleared (grass, weeds, bushes, saplings that become trees, cracks and tufts on roads); the saved part is `state.cleared`, a sparse record (docs/trees.md "Growth").
 - **Worldplan**: the plan (towns, streets, roads, lots; cached, never saved). **WorldRegions**: the plan by region
   (docs/worldplan-regions.md). **Win**: a window of the map a region's plan covers.
 - **Towns**: where towns stand and their streets. **TownIndex**: towns by coarse cell.
 - **Roads**: country roads, network and A* routing (RoadPoint/PointD are fractional). **Lots**: what stands on a lot.
-- **Buildings** (+ BuildingsHouses, BuildingsTrade, BuildingsCivic): plans as rooms with walls, doors and windows on edges, archetypes, furniture by function (docs/buildings.md). **Loot**: loot tables by room and building.
+- **Buildings** (+ BuildingsHouses, BuildingsTrade, BuildingsCivic): plans as rooms with walls, doors and windows on
+  edges, archetypes, furniture by function (docs/buildings.md). **Loot**: loot tables by room and building.
 - **Heights**: the ground's height in metres from the seed and plan (cached, never saved, read-only so far).
 - **WorldPreview**: a small picture of a world from its seed (New game, Load, loading screens; `Savefile.readPreview`).
-- **Climate**: regions, radiation. **Seasons**: weather. **Weather**: temperature in degrees for any place and tick (derived, agrees with the cold and hot rules). **Snow**: depth by climate region, trodden tracks (capped), the slowing of deep snow (`state.snow`). **Fog**: exploring. **Mapnotes**: map notes; town names.
-- **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
-- **Rooms**: flood fill, purposes, requirements. **Breach**: battering doors and walls. **FireMod**: fire, and wildfire through grass, undergrowth and trees (fuel from the tile, season and weather; scars in `state.burnt`; `settings.wildfire`; bounded by budgets and a far rule).
-- **Defences**: traps, barricades, turrets, lures, pits. **Towers**: watchtowers. **Power**, **Water**.
-- **Lights**: room lights behind switches, porch lights, street lamps, headlights, the flashlight, fire; what is lit
-  and by what (`near`, `lightAt`, `isLit`). The game draws them in `World3D/Lights.cs` (keys and debug flags: GameLights.cs).
-- **Farming**: plots and crops. **Animals**: deer, rabbits, wolf packs, bears. **Forage**: foraging.
-- **Vehicles**: cars, fuel, the boot. **TimelineMod**: the world winding down (water, power, helicopter, alarms).
-- **CharacterMod**: character creation. **Difficulty**: presets (start, zombies, weather, progression, nuclear
-  winter, day length, map type).
 
-## The dead
+### `World/`: the living world
+
+- **Climate**: regions, radiation. **Seasons**: weather. **Weather**: temperature in degrees for any place and tick
+  (derived, agrees with the cold and hot rules). **Snow**: depth by climate region, trodden tracks (capped), the
+  slowing of deep snow (`state.snow`).
+- **Growth**: foliage as a pure function of the tile and the growing days since it was cleared (grass, weeds, bushes,
+  saplings that become trees, cracks and tufts on roads); the saved part is `state.cleared` (docs/trees.md "Growth").
+- **FireMod**: fire, and wildfire through grass, undergrowth and trees (fuel from the tile, season and weather; scars
+  in `state.burnt`; `settings.wildfire`; bounded by budgets and a far rule).
+- **Lights**: room lights behind switches, porch lights, street lamps, headlights, the flashlight, fire; what is lit
+  and by what (`near`, `lightAt`, `isLit`). **Power**, **Water**. **TimelineMod**: the world winding down (water,
+  power, helicopter, alarms).
+- **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
+- **Fog**: exploring. **Mapnotes**: map notes; town names.
+- **Farming**: plots and crops. **Forage**: foraging. **Animals**: deer, rabbits, wolf packs, bears.
+
+### `Combat/`
+
+- **Weapons**: wielding, swings, reloads. **WeaponTable**: every weapon as data (damage, reach, magazine, noise).
+  **Shooting**: how a shot flies (a line with spread from a stateless hash).
+- **Wounds**, **Infection**, **Corpses**.
+- **Breach**: battering doors and walls. **Defences**: traps, barricades, turrets, lures, pits. **Towers**:
+  watchtowers.
+
+### `Dead/`
 
 - **Zombies**: the dead's behaviour. **ZombieKinds**: runners, screamers, brutes, crawlers.
 - **Herds**: the dead out in the world (dormant and migrating). **Dormant**: dormant dead bucketed by place.
 - **Hordes**: the dead moving together on one flow field.
 
-## Colony
+### `Items/`
+
+- **Items**: items (**ItemNames**: what things are called). **Inventory**: your bag and containers
+  (**InventoryGrid**: every container a grid of cells, footprints, stacks, pockets, first-fit, quick slots).
+- **FurnitureMod**: furniture. **Crafting**: stations and recipes.
+
+### `Colony/`
 
 - **Designations** -> **Jobs** (the queue, `reconcileJobs`) -> **JobChoice** (who takes what) -> **Work** (doing it).
-- **JobTypes**: job types and priorities. **Items**: items (ItemNames: what things are called). **Inventory**: your
-  bag and containers (InventoryGrid: every container a grid of cells, footprints, stacks, pockets, first-fit, quick
-  slots). **FurnitureMod**: furniture. **Crafting**: stations and recipes. **Mess**: mess halls.
-- **Medicine**, **Planner** (the auto-planner: ordinary commands), **Policies**, **Director** (storyteller),
-  **EndgameMod** (cure, evacuation, sieges), **Escape** (the helicopter, new game+).
+  **JobTypes**: job types and priorities. The model: docs/sim-model.md.
+- **Mess**: mess halls. **Medicine**. **Planner** (the auto-planner: ordinary commands). **Policies**.
+- **Director** (storyteller). **EndgameMod** (cure, evacuation, sieges). **Escape** (the helicopter, new game+).
+- **Alerts**: what needs attention, worst first (pure, read-only).
 
-## Survivors
+### `Survivors/`
 
 - **Needs**, **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
   (social, comfort), **Mood** (thoughts), **Moodlets**, **Resolve**, **Wishes**, **Skills** (skills, traits),
-  **Relationships**, **Leisure**, **Books**, **Clothing**, **Weapons**, **Wounds**, **Infection**, **Corpses**,
-  **Family**, **Dogs**.
+  **Relationships**, **Leisure**, **Books**, **Clothing**, **Family**, **Dogs**.
+- **CharacterMod**: character creation. **CharacterSheet**: who a survivor is and what state they are in, as data and
+  as text (pure, read-only; the Tab screen draws it).
 
-## You
+### `You/`: the survivor you play
 
 - **ControlMod**: direct control (steer, swing, use, work). **Handiwork**: build, repair, forage, hunt.
 - **Orders**: follow, hold, loot. **Talk** and **StoryMod**: backstories, talks, tasks.
 - **SuccessionMod**: the death rule.
 
-## Others
+### `Others/`: everyone else
 
 - **Wanderers**, **Visitors** (traders, raiders), **Prisoners**, **Radio**, **Expeditions**, **Outposts**.
 - **Settlements**: reputation, gifts. **Colonies**: neighbours' off-screen life. **Residents**: their people in
@@ -102,18 +162,31 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 
 ## Tests, harness, assets
 
-- `cs/Sim.Tests`: xUnit, one file per system (Vitest.cs keeps `expect`); `scenarios/` holds the JSON maps they load.
+- `cs/Sim.Tests`: xUnit, flat: `XTest.cs` is system X's (Vitest.cs keeps `expect`); `scenarios/` holds the JSON maps
+  they load. Some files ported from the TypeScript cover several systems under an old name: ArmsTest and GunsTest
+  (weapons), BalanceTest (trees, yields), BedsTest, CartsTest, CookingTest, FittingsTest (a house's fittings),
+  HungerTest (food), InjuriesTest (wounds), LandTest (heaters, land), NeighboursTest (caravans, settlements),
+  PeopleTest (books, traits), ScavengeTest, StorageTest, ThreatsTest (zombie kinds), ToolsRadioTest, WildlifeTest
+  (animals), World2Test (map types). **ArchitectureTest**: the rules above, checked against the source.
+  **SeamsTest**: where separately built features meet.
 - `cs/Harness`: balance players, bench, stress (docs/harness.md).
 - `art/`: the Blender pipeline, run headless (art/README.md). `experiments/`: write-ups and pictures behind decisions.
 
 ## The game (`godot/`; file by file in godot/README.md)
 
-- `Game.cs`: the fixed-timestep loop, input to commands, saves, the command line, which view.
+- `App/`: the game itself, class `Game` in parts: `Game.cs` (what it is made of; the frame: ticks, then the views),
+  `GameArgs.cs` (the command line and debug flags), `GameSession.cs` (new, load, save, bug reports, the menu's
+  actions), `GameInput.cs` (keys and mouse into commands), `GameShots.cs` (`--shot`), `GameText.cs` (`--trace`).
 - `World3D/`: first person (FirstPerson, WorldMesh chunks, Roofs, Terrain, People, Animals, Items, Furniture, Held,
-  OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls, Fires: flames, smoke, embers, scorch and charred stumps in a fixed few nodes) and benches (DrawBench, ItemBench, TreeBench, MapShot).
-- `Characters/`: the character lab, look lab, IK, ragdoll, VAT crowds (docs/characters.md).
+  OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls, Lights, Weather, Fires: flames, smoke, embers, scorch and
+  charred stumps in a fixed few nodes).
+- `Characters/`: what a body needs at runtime: looks and wardrobe, gaits, foot and hand IK, head look, stumps, the
+  merged mid tier and VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.
-- `Ui/`: HUD and panels, inventory, card, build tools, menu, options (Graphics), saves, minimap, map, ScreenTabs
-  (the M screen's Map and Colony tabs), WorldPreviewView, View (view state), Ui (panel kit).
+- `Ui/`: HUD and panels, inventory, character sheet, card, build tools, menu, options (Graphics), saves, minimap,
+  map, ScreenTabs (the M screen's Map and Colony tabs), WorldPreviewView, View (view state), Ui (panel kit).
 - `Render/`: the 2D top-down Colony tab (Ctx a Canvas 2D-style context; Draw, DrawThings, DrawPeople; Camera; Palette).
-- `SelfTest*.cs`: `--selftest`. `assets/`: imported models (characters, furniture, items, trees).
+- `SelfTest/`: `--selftest`, the game driven by real input and checked, a file per feature.
+- `Labs/`: scenes run by path, never part of the game: the character lab (Lab*), LookLab, StyleLineup, AnimTest, the
+  benches (Bench, HordeBench, DrawBench, ItemBench, TreeBench) and MapShot.
+- `assets/`: imported models (characters, furniture, items, trees) and shaders.

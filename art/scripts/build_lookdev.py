@@ -1,6 +1,6 @@
 # The look-development characters (docs/characters.md "The look"): one sculpted adult (sculpt.py) as
 # two candidate looks, each a ladder of LOD meshes on the shared rig, for the look lab
-# (godot/Characters/LookLab.tscn) to compare at first-person distances and to profile:
+# (godot/Labs/LookLab.tscn) to compare at first-person distances and to profile:
 #
 #   plus  "Zomboid-plus": 30k / 12k / 6k / 3k / 1.2k / 600 triangles, a 2048 albedo and a normal map
 #         baked from a high-poly version (cloth folds, hems, skin), face shape keys on the top two

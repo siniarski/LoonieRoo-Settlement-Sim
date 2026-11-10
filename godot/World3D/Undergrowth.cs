@@ -1,4 +1,4 @@
-// Grass, weeds, bushes, saplings and the cracks and tufts on old roads, by growth stage (cs/Sim/Systems/Growth.cs).
+// Grass, weeds, bushes, saplings and the cracks and tufts on old roads, by growth stage (cs/Sim/World/Growth.cs).
 // Reads state only (rule 5): every tile's cover is the sim's pure function of the tick, so nothing here is saved or
 // stepped. Drawn by chunk (WorldMesh.CHUNK tiles) as MultiMeshes, never a node per tile or per tuft:
 //   grass tufts and weeds  one MultiMesh each per chunk (a tuft is a handful of blade triangles, procedural)

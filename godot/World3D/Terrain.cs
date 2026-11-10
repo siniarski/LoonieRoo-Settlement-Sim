@@ -1,5 +1,5 @@
 // The ground's height for everything the 3D view stands on it: the one hook (2026-11-08). The heights
-// are the sim's (cs/Sim/Systems/Heights.cs: a pure field from the seed and the world plan, cached by
+// are the sim's (cs/Sim/Worldgen/Heights.cs: a pure field from the seed and the world plan, cached by
 // chunk); this only reads them (rule 5). Hand-made maps have no plan and are flat (0).
 // FirstPerson calls Use(state) each frame before anything asks; Eye calls it too.
 
