@@ -32,7 +32,20 @@ public sealed class FootIK
     public const float ToeHeight = 0.02f, ToeLength = 0.07f;  // the toes bone above the sole, and its length (rig.py)
     public const float MaxToePitch = 35, MaxToeLift = 0.04f;  // toes raised at most this far; the foot lifted only for a lip
     public bool ToeRay = true, Lock = true;
+    /// <summary>The ground under a point (height, normal), in place of the physics rays: the world's ground is the
+    /// sim's heights (World3D/Terrain.cs), with no collision shapes.</summary>
+    public Func<Vector3, (float y, Vector3 normal)>? GroundAt;
+    public (float y, Vector3 normal) GroundUnder(Node3D from, Vector3 at) => GroundAt != null ? GroundAt(at) : Ground(from, at);
     public const float PlantHeight = 0.01f, MaxLockStretch = 0.25f, ReleaseTime = 0.08f;
+    /// <summary>A held foot the body has moved this far off (m) steps to where the clip has it: over StepTime (s),
+    /// lifted StepHeight (m) at the middle (2026-11-10: a stop, a turn on the spot, a cross-fade slid it before).</summary>
+    public const float StepStretch = 0.12f, StepTime = 0.2f, StepHeight = 0.07f;
+    /// <summary>A clip's ankle this far under its floor (m) is held there: a cross-fade can carry a foot through the ground.</summary>
+    public const float SinkLimit = 0.02f;
+    /// <summary>Steps are for a body all but standing (m/s) whose caller says it stands (Steps: People.cs, while the
+    /// clip is a standing one or the shuffle); walking, a held foot lets go as it always did.</summary>
+    public bool Steps;
+    public const float StepBelow = 0.6f;
     const float MaxTilt = 40;                // degrees a foot will tilt to meet the ground
 
     readonly Node3D character;
@@ -111,6 +124,8 @@ public sealed class Foot
     public bool Planted;                          // locked where it touched down
     public float AnimHeight;                      // the clip's ankle over its floor this frame (contact: under PlantHeight)
     public Vector3 LockPos, ReleaseOff;           // where (world), and the offset easing out after lift-off
+    public float Step;                            // a step under way: 1 -> 0 over StepTime
+    public Vector3 StepFrom;                      // ...from this offset to the clip's place
     public Foot(int thigh, int shin, int bone, Node3D target, Node3D pole) { Thigh = thigh; Shin = shin; Bone = bone; Target = target; Pole = pole; }
 }
 
@@ -120,9 +135,11 @@ public partial class FootProbe : SkeletonModifier3D
     public Foot[] Feet = Array.Empty<Foot>();
     public FootIK Ik = null!;
     float hips;  // smoothed hip drop (world metres, <= 0)
+    Vector3 lastRoot;
+    bool hasRoot;
     int hipsBone = -1;
 
-    public void Reset() { hips = 0; foreach (var f in Feet) { f.Lift = 0; f.Normal = Vector3.Up; f.Planted = false; f.ReleaseOff = Vector3.Zero; } }
+    public void Reset() { hips = 0; hasRoot = false; foreach (var f in Feet) { f.Lift = 0; f.Normal = Vector3.Up; f.Planted = false; f.ReleaseOff = Vector3.Zero; f.Step = 0; } }
 
     public override void _ProcessModificationWithDelta(double delta)
     {
@@ -133,6 +150,10 @@ public partial class FootProbe : SkeletonModifier3D
         float rootY = Character.GlobalPosition.Y;
         float k = 1 - (float)Math.Exp(-14 * delta);  // smoothing per frame
         float lowest = 0;
+        var rootNow = Character.GlobalPosition;
+        float rootSpeed = delta > 0 && hasRoot ? new Vector2(rootNow.X - lastRoot.X, rootNow.Z - lastRoot.Z).Length() / (float)delta : 0;
+        lastRoot = rootNow;
+        hasRoot = true;
         var forward = Character.GlobalBasis.Z.Normalized();
         foreach (var f in Feet)
         {
@@ -143,32 +164,58 @@ public partial class FootProbe : SkeletonModifier3D
             // or easing out from there), then the rays there: on stairs the clip's foot and a locked
             // one stand over different steps.
             var at = world.Origin;
+            float stepUp = 0;
             if (Ik.Lock)
             {
                 bool down = f.AnimHeight < FootIK.PlantHeight;
                 var flat = new Vector3(at.X - f.LockPos.X, 0, at.Z - f.LockPos.Z);
-                if (down && !f.Planted) { f.Planted = true; f.LockPos = at; f.ReleaseOff = Vector3.Zero; }
-                else if (f.Planted && (!down || flat.Length() > FootIK.MaxLockStretch))
+                if (f.Step > 0)
+                {
+                    // A step: the clip left the foot down but the body moved off it (a stop, a turn on the spot, a
+                    // cross-fade): it's lifted and put down at the clip's place over STEP_TIME, on an arc.
+                    f.Step = Math.Max(0, f.Step - (float)(delta / FootIK.StepTime));
+                    float u = 1 - f.Step, e = u * u * (3 - 2 * u);
+                    at += f.StepFrom * (1 - e);
+                    stepUp = FootIK.StepHeight * 4 * u * (1 - u) * Math.Min(1, f.StepFrom.Length() / 0.15f);
+                    if (f.Step == 0 && down) { f.Planted = true; f.LockPos = world.Origin; }
+                }
+                else if (down && !f.Planted) { f.Planted = true; f.LockPos = at; f.ReleaseOff = Vector3.Zero; }
+                else if (f.Planted && (!down || flat.Length() > FootIK.MaxLockStretch) && (rootSpeed >= FootIK.StepBelow || !Ik.Steps))
                 {
                     f.Planted = false;
-                    f.ReleaseOff = -flat;  // from where it was held, easing to the clip's place
+                    f.ReleaseOff = -flat;  // lifted by the clip: from where it was held, easing to the clip's place
+                }
+                else if (f.Planted && !down)
+                {
+                    f.Planted = false;
+                    f.ReleaseOff = -flat;
+                }
+                else if (f.Planted && Ik.Steps && flat.Length() > FootIK.StepStretch)
+                {
+                    f.Planted = false;
+                    f.Step = 1;
+                    f.StepFrom = -flat;
+                    at += f.StepFrom;
                 }
                 if (f.Planted) at = new Vector3(f.LockPos.X, at.Y, f.LockPos.Z);
-                else if (f.ReleaseOff.LengthSquared() > 1e-8f)
+                else if (f.Step == 0 && f.ReleaseOff.LengthSquared() > 1e-8f)
                 {
                     at += f.ReleaseOff;
                     f.ReleaseOff *= (float)Math.Exp(-delta / FootIK.ReleaseTime);
                 }
             }
-            else f.Planted = false;
+            else { f.Planted = false; f.Step = 0; }
             var shift = new Vector3(at.X - world.Origin.X, 0, at.Z - world.Origin.Z);
-            var (gy, n) = FootIK.Ground(Character, at);
+            var (gy, n) = Ik.GroundUnder(Character, at);
             f.GroundY = gy;
             f.GroundNormal = n;
             // Keep the clip's height above its own floor (the root's plane), over the real ground;
             // on a slope the ankle sits higher above the point under it (the sole is tilted).
             float slope = AnkleHeight(n) - FootIK.AnkleHeight;
-            float want = gy - rootY + slope;
+            float want = gy - rootY + slope + stepUp;
+            // Never under its own floor: two clips cross-fading can carry a foot through the ground (a stride
+            // fading into standing sank a foot 15-20 cm).
+            if (f.AnimHeight < -FootIK.SinkLimit) want -= f.AnimHeight + FootIK.SinkLimit;
             // Feet follow the ground at once (a planted foot mustn't lag into a slope); the hips and
             // the tilt are smoothed instead, which is what hides a step up the kerb.
             f.ToeLift = 0;
@@ -178,7 +225,7 @@ public partial class FootProbe : SkeletonModifier3D
                 // The ground under the toe tip against the plane under the ankle: higher means a step.
                 var toes = xf * skel.GetBoneGlobalPose(f.Toes);
                 var tip = toes.Origin + toes.Basis.Y.Normalized() * FootIK.ToeLength + shift;
-                var (ty, tn) = FootIK.Ground(Character, tip);
+                var (ty, tn) = Ik.GroundUnder(Character, tip);
                 var d = tip - at;
                 float plane = gy - (n.X * d.X + n.Z * d.Z) / Math.Max(n.Y, 0.3f);
                 float step = ty - plane;

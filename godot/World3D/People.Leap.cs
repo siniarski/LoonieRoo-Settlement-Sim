@@ -26,11 +26,17 @@ public sealed partial class People
     /// <summary>A leap's clip, by its share t (0..1) of the time in the air: (clip, seconds into it).</summary>
     static (string clip, double at) LeapClip(string what, double t)
     {
+        // A vault: its own clip (derive_clips.py: a tuck, the legs swung out to the left over the edge, down and through).
+        if (what == "vault") return ("more/vault", VAULT_LENGTH * Smooth(t));
         // The start clip from 0.07 s (past its one crouched frame) to a light tuck (0.22 s) for a jump, the deepest (0.33 s) else.
+        // (more/: the library's jump clips with the arms held in, 2026-11-10: they flung them wide.)
         double tuck = what == "jump" ? 0.22 : 0.33;
-        if (t < TUCKED) return ("ual/ual_jump_start", 0.07 + (tuck - 0.07) * Smooth(t / TUCKED));
-        return ("ual/ual_jump", (t - TUCKED) * 0.8);
+        if (t < TUCKED) return ("more/jump_start", 0.07 + (tuck - 0.07) * Smooth(t / TUCKED));
+        return ("more/jump_air", (t - TUCKED) * 0.8);
     }
+
+    /// <summary>The vault clip's length (s).</summary>
+    const double VAULT_LENGTH = 0.8;
 
     /// <summary>The share of the leap spent tucking up; the rest is the in-air clip, the legs reaching down for the landing.</summary>
     const double TUCKED = 0.45;
@@ -85,7 +91,7 @@ public sealed partial class People
             {
                 if (m.speed > 0.3) l.land = Math.Min(l.land, LAND_MOVING);
                 l.land -= delta;
-                m.forced = "ual/ual_jump_land";
+                m.forced = "more/jump_land";
                 m.forcedAt = -1;  // played on from LAND_AT at LAND_RATE
             }
         }
@@ -120,6 +126,35 @@ public sealed partial class People
         }
         else if (m.forcedAt >= 0) m.player.Seek(m.forcedAt, true);
         m.player.SpeedScale = m.forcedAt >= 0 ? 1 : (float)LAND_RATE;
+    }
+
+    /// <summary>The eye dips as you land (the knees taking it): DIP m at most, over DIP_FOR s, deeper the longer the leap
+    /// was in the air; added to the camera after FirstPerson has put it at your eyes this frame (People.UpdateYou runs
+    /// after that), so the sim's eye and the self-test's EyeUp are untouched.</summary>
+    const float DIP = 0.07f;
+    const double DIP_FOR = 0.28;
+    double dipLeft, dipDepth, airborne;
+    /// <summary>How far the eye is dipped this frame (m), for the self-test and LEAP_SHOT.</summary>
+    public float YourDip { get; private set; }
+
+    void EyeDip()
+    {
+        double delta = parent.GetProcessDeltaTime();
+        if (ownLeap.busy != null) airborne += delta;
+        else if (airborne > 0)
+        {
+            dipDepth = DIP * Math.Clamp(airborne / 0.6, 0.4, 1.0);
+            dipLeft = DIP_FOR;
+            airborne = 0;
+        }
+        YourDip = 0;
+        if (dipLeft <= 0) return;
+        dipLeft -= delta;
+        double u = 1 - Math.Max(0, dipLeft) / DIP_FOR;
+        // Down quickly, back up slower: the peak a third of the way.
+        double shape = u < 0.33 ? Math.Sin(u / 0.33 * Math.PI / 2) : Math.Cos((u - 0.33) / 0.67 * Math.PI / 2);
+        YourDip = (float)(dipDepth * shape);
+        if (parent.GetViewport().GetCamera3D() is Camera3D cam && cam.GetParent() == parent) cam.Position += Vector3.Down * YourDip;
     }
 
     /// <summary>A vault's hand: on the edge's top under the line you go over, the hand your body has free.</summary>
@@ -193,10 +228,10 @@ public sealed partial class People
     {
         if (lift != 0) m.root.Position += Vector3.Up * (float)lift;
         if (!yours) return;
+        EyeDip();
         float ground = Terrain.Height(m.root.Position.X, m.root.Position.Z);
         YourLift = m.root.Position.Y - ground;
-        if (m.skel == null) { m.skel = Find<Skeleton3D>(m.root); if (m.skel != null) { m.feet[0] = m.skel.FindBone("LeftFoot"); m.feet[1] = m.skel.FindBone("RightFoot"); } }
-        if (m.skel == null || m.feet[0] < 0 || m.feet[1] < 0) return;
+        if (!Bones(m) || m.feet[0] < 0 || m.feet[1] < 0) return;
         // The ankles as last drawn (the skeleton poses after this frame's code), over the ground under the body.
         var xf = m.skel.GlobalTransform;
         YourFeetUp = Math.Min((xf * m.skel.GetBoneGlobalPose(m.feet[0]).Origin).Y, (xf * m.skel.GetBoneGlobalPose(m.feet[1]).Origin).Y) - ground;

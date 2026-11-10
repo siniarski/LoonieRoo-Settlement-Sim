@@ -3,6 +3,8 @@
 // and a loaded game rebuilds every pose from it.
 //
 //   stance      stand | sneak | sit (in a car) | lie (asleep) | crawl (a crawler) | dead
+//   running     the controlled survivor is running (shift held, not sneaking, not winded): the gait the speed
+//               alone can't tell (a road's walk is as quick as a jog)
 //   locomotion  speed (m/s: a tile is a metre, TICKS_PER_SECOND ticks a second), heading (radians,
 //               of the motion, screen x right / y down), facing (the aim or the way you face, for
 //               the controlled survivor)
@@ -16,6 +18,9 @@
 //               lost arm), exhaustion, panic, cold, pain, infection, blood (bleeding), wet, startle
 //               (1 at the startle, gone after STARTLE_TICKS)
 //   lostLimbs   "armLeft:elbow" and the like (wounds.ts); crawlers have lost both legs at the knee
+//   lookAt      what one of the dead is after (its target's position, SUB), for its head to turn to
+// Others (not the controlled survivor) at their job, standing within WORK_REACH of its tile, have the job's
+// type as their action (build, farm, cook, doctor...) and its id as the target: what a renderer draws them doing.
 // A wound has no side in the sim: its side is a hash of the survivor's id (stable, no RNG draw).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -23,6 +28,7 @@ namespace LoonieRoo.Sim;
 public sealed class PoseIntent
 {
     public string stance = "stand";
+    public bool running;
     public double speed, heading;
     public Point? facing;
     public string? action, target, anchor, approach;
@@ -31,12 +37,16 @@ public sealed class PoseIntent
     public bool cart;
     public double limpLeft, limpRight, armLeft, armRight, exhaustion, panic, cold, pain, infection, blood, wet, startle;
     public List<string> lostLimbs = new();
+    public Point? lookAt;
 }
 
 public static class PoseIntents
 {
     /// <summary>The sim's rate at 1x (CLAUDE.md rule 6): for speeds in metres a second.</summary>
     public const double TICKS_PER_SECOND = 10;
+
+    /// <summary>One at their job counts as working at it within this of its tile's centre (tiles), standing.</summary>
+    public const double WORK_REACH = 1.6;
 
     /// <summary>A startle shows for this long (a second at 1x).</summary>
     public const int STARTLE_TICKS = 10;
@@ -54,6 +64,7 @@ public static class PoseIntents
         if (controlled)
         {
             p.facing = c.aim ?? c.facing;
+            p.running = c.running == true && c.sneaking != true && !BodyMod.isWinded(s) && p.stance == "stand";
             if (Js.T(c.busy))
             {
                 var b = c.busy;
@@ -63,6 +74,15 @@ public static class PoseIntents
                 p.progress = (b.what == "sleep" || b.duration <= 0) ? 0 : JsMath.min(1, b.progress / b.duration);
                 if (Vehicles.isCarAction(b.what)) p.anchor = Vehicles.anchorOf(b.what);
                 p.lift = Leaps.lift(b, 1);
+            }
+        }
+        else if (s.jobId != null && p.speed < 0.25 && p.stance == "stand")
+        {
+            var job = state.jobs.find((j) => j.id == s.jobId);
+            if (job != null && job.reservedBy == s.id)
+            {
+                double dx = s.at.x / (double)Motion.SUB - (job.x + 0.5), dy = s.at.y / (double)Motion.SUB - (job.y + 0.5);
+                if (dx * dx + dy * dy <= WORK_REACH * WORK_REACH) { p.action = job.type; p.target = job.id; p.approach = "normal"; }
             }
         }
         if (Js.T(s.weapon)) p.carryRight = Items.getItem(state, s.weapon)?.kind;
@@ -99,6 +119,11 @@ public static class PoseIntents
         {
             p.stance = "crawl";
             p.lostLimbs = ["legLeft:knee", "legRight:knee"];
+        }
+        if (z.targetId != null)
+        {
+            Point? at = Survivors.getSurvivor(state, z.targetId)?.at ?? state.residents.find((r) => r.id == z.targetId)?.at ?? state.dogs.find((d) => d.id == z.targetId)?.at;
+            if (at != null) p.lookAt = new Point { x = at.x, y = at.y };
         }
         return p;
     }
