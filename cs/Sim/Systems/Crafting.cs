@@ -46,23 +46,29 @@ public static partial class Crafting
     }
 
     /// <summary>Items of this kind the colony has spare: on the ground or being hauled, not wielded or worn.</summary>
-    public static double craftStock(SimState state, string kind)
+    public static double craftStock(SimState state, string kind) => craftStock(state, kind, usedItems(state));
+
+    /// <summary>The ids of what the survivors wield and wear (a set for `has` only).</summary>
+    static HashSet<string> usedItems(SimState state)
     {
-        var used = new JsSet<string>();
+        var used = new HashSet<string>();
         foreach (var s in Js.Iter(state.survivors))
         {
-            foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool]))
-            {
-                if (Js.T(id))
-                {
-                    used.add(id);
-                }
-            }
+            if (Js.T(s.weapon)) used.Add(s.weapon);
+            if (Js.T(s.body)) used.Add(s.body);
+            if (Js.T(s.feet)) used.Add(s.feet);
+            if (Js.T(s.cart)) used.Add(s.cart);
+            if (Js.T(s.tool)) used.Add(s.tool);
         }
+        return used;
+    }
+
+    static double craftStock(SimState state, string kind, HashSet<string> used)
+    {
         double n = 0;
         foreach (var i in Js.Iter(state.items))
         {
-            if ((i.kind == kind) && !used.has(i.id))
+            if ((i.kind == kind) && !used.Contains(i.id))
             {
                 n++;
             }
@@ -78,7 +84,9 @@ public static partial class Crafting
     /// <summary>Craftables for this station below their target, in CRAFTABLES order.</summary>
     public static List<string> wantedCrafts(SimState state, string station = "workbench", bool inWorkshop = false)
     {
-        return CRAFTABLES.filter((k) => ((Js.T((Js.Get(RECIPES, k).station == station) && (Js.T(Js.T(inWorkshop) || !Js.T(Js.Get(RECIPES, k).workshopOnly))))) && (!Js.T(Js.Get(RECIPES, k).needs) || state.knowledge.includes(Js.NN(Js.Get(RECIPES, k).needs)))) && (craftStock(state, k) < target(state, k)));
+        // What's wielded and worn, found once for all the craftables (it was once each).
+        HashSet<string>? used = null;
+        return CRAFTABLES.filter((k) => ((Js.T((Js.Get(RECIPES, k).station == station) && (Js.T(Js.T(inWorkshop) || !Js.T(Js.Get(RECIPES, k).workshopOnly))))) && (!Js.T(Js.Get(RECIPES, k).needs) || state.knowledge.includes(Js.NN(Js.Get(RECIPES, k).needs)))) && (craftStock(state, k, used ??= usedItems(state)) < target(state, k)));
     }
 
     /// <summary>The first craftable for this station below its target, or null when stocks are full.</summary>

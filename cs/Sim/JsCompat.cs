@@ -15,6 +15,12 @@ public static class JsListExtensions
         public bool has(double x) => x == Math.Floor(x) && x >= int.MinValue && x <= int.MaxValue && a.has((int)x);
     }
 
+    extension<T>(HashSet<T> a)
+    {
+        /// <summary>A Set used only for membership, as a plain HashSet (no order to keep).</summary>
+        public bool has(T x) => a.Contains(x);
+    }
+
     extension(List<string> a)
     {
         /// <summary>includes with a value of unknown type: only a string can be in it.</summary>
@@ -71,7 +77,9 @@ public static class JsListExtensions
         /// <summary>push(...xs)</summary>
         public int pushAll(IEnumerable<T> xs)
         {
-            a.AddRange(xs.ToList());
+            // Another list (or array) straight in; anything lazy (it may read `a`) or `a` itself copied first.
+            if (xs is ICollection<T> c && !ReferenceEquals(c, a)) a.AddRange(c);
+            else a.AddRange(xs.ToList());
             return a.Count;
         }
 
@@ -260,6 +268,7 @@ public static class JsListExtensions
         /// <summary>A stable sort in place by a JS comparator (negative, zero, positive), as Array.prototype.sort.</summary>
         public List<T> sort(Func<T, T, double> cmp)
         {
+            if (a.Count < 2) return a;
             var sorted = a.Select((x, i) => (x, i)).OrderBy(p => p, Comparer<(T x, int i)>.Create((p, q) =>
             {
                 double c = cmp(p.x, q.x);
@@ -521,8 +530,13 @@ readonly record struct JsKey<K>(K? Value);
 
 public class JsMap<K, V> where K : notnull
 {
-    readonly Dictionary<JsKey<K>, LinkedListNode<(K key, V value)>> index = new();
-    readonly LinkedList<(K key, V value)> order = new();
+    // Entries in insertion order in arrays (a deleted one leaves a hole, squeezed out when the arrays fill), and an
+    // index from key to slot: no allocation per entry (it was a linked list).
+    readonly Dictionary<JsKey<K>, int> index = new();
+    K[] ks = [];
+    V[] vs = [];
+    bool[] used = [];
+    int n;
 
     public JsMap() { }
     public JsMap(IEnumerable<(K, V)> items)
@@ -532,27 +546,84 @@ public class JsMap<K, V> where K : notnull
 
     public int size => index.Count;
     public bool has(K k) => index.ContainsKey(new(k));
-    public V get(K k) => index.TryGetValue(new(k), out var n) ? n.Value.value : default!;
+    public V get(K k) => index.TryGetValue(new(k), out var i) ? vs[i] : default!;
     public JsMap<K, V> set(K k, V v)
     {
-        if (index.TryGetValue(new(k), out var n)) n.Value = (k, v);
-        else index[new(k)] = order.AddLast((k, v));
+        if (index.TryGetValue(new(k), out var i))
+        {
+            ks[i] = k;
+            vs[i] = v;
+            return this;
+        }
+        if (n == ks.Length) Grow();
+        ks[n] = k;
+        vs[n] = v;
+        used[n] = true;
+        index[new(k)] = n++;
         return this;
     }
     public bool delete(K k)
     {
-        if (!index.Remove(new(k), out var n)) return false;
-        order.Remove(n);
+        if (!index.Remove(new(k), out var i)) return false;
+        ks[i] = default!;
+        vs[i] = default!;
+        used[i] = false;
         return true;
     }
     public void clear()
     {
         index.Clear();
-        order.Clear();
+        Array.Clear(ks, 0, n);
+        Array.Clear(vs, 0, n);
+        Array.Clear(used, 0, n);
+        n = 0;
     }
-    public List<K> keys() => order.Select(p => p.key).ToList();
-    public List<V> values() => order.Select(p => p.value).ToList();
-    public List<(K, V)> entries() => order.Select(p => (p.key, p.value)).ToList();
+
+    /// <summary>Full: squeeze out the holes if they're at least half, else double.</summary>
+    void Grow()
+    {
+        if (index.Count * 2 <= n && n > 0)
+        {
+            int w = 0;
+            for (int r = 0; r < n; r++)
+            {
+                if (!used[r]) continue;
+                ks[w] = ks[r];
+                vs[w] = vs[r];
+                used[w] = true;
+                index[new(ks[w])] = w;
+                w++;
+            }
+            Array.Clear(ks, w, n - w);
+            Array.Clear(vs, w, n - w);
+            Array.Clear(used, w, n - w);
+            n = w;
+            if (n < ks.Length) return;
+        }
+        int cap = Math.Max(4, ks.Length * 2);
+        Array.Resize(ref ks, cap);
+        Array.Resize(ref vs, cap);
+        Array.Resize(ref used, cap);
+    }
+
+    public List<K> keys()
+    {
+        var o = new List<K>(index.Count);
+        for (int i = 0; i < n; i++) if (used[i]) o.Add(ks[i]);
+        return o;
+    }
+    public List<V> values()
+    {
+        var o = new List<V>(index.Count);
+        for (int i = 0; i < n; i++) if (used[i]) o.Add(vs[i]);
+        return o;
+    }
+    public List<(K, V)> entries()
+    {
+        var o = new List<(K, V)>(index.Count);
+        for (int i = 0; i < n; i++) if (used[i]) o.Add((ks[i], vs[i]));
+        return o;
+    }
     public void forEach(Action<V, K> f)
     {
         foreach (var (k, v) in entries()) f(v, k);
@@ -562,8 +633,11 @@ public class JsMap<K, V> where K : notnull
 /// <summary>JavaScript's Set: insertion-ordered.</summary>
 public class JsSet<T> : IEnumerable<T> where T : notnull
 {
-    readonly Dictionary<JsKey<T>, LinkedListNode<T>> index = new();
-    readonly LinkedList<T> order = new();
+    // As JsMap: items in insertion order in an array with holes, and an index from item to slot.
+    readonly Dictionary<JsKey<T>, int> index = new();
+    T[] xs = [];
+    bool[] used = [];
+    int n;
 
     public JsSet() { }
     public JsSet(IEnumerable<T> items)
@@ -575,22 +649,60 @@ public class JsSet<T> : IEnumerable<T> where T : notnull
     public bool has(T x) => index.ContainsKey(new(x));
     public JsSet<T> add(T x)
     {
-        if (!index.ContainsKey(new(x))) index[new(x)] = order.AddLast(x);
+        if (index.ContainsKey(new(x))) return this;
+        if (n == xs.Length) Grow();
+        xs[n] = x;
+        used[n] = true;
+        index[new(x)] = n++;
         return this;
     }
     public bool delete(T x)
     {
-        if (!index.Remove(new(x), out var n)) return false;
-        order.Remove(n);
+        if (!index.Remove(new(x), out var i)) return false;
+        xs[i] = default!;
+        used[i] = false;
         return true;
     }
     public void clear()
     {
         index.Clear();
-        order.Clear();
+        Array.Clear(xs, 0, n);
+        Array.Clear(used, 0, n);
+        n = 0;
     }
-    public List<T> values() => order.ToList();
-    public IEnumerator<T> GetEnumerator() => order.ToList().GetEnumerator();
+
+    void Grow()
+    {
+        if (index.Count * 2 <= n && n > 0)
+        {
+            int w = 0;
+            for (int r = 0; r < n; r++)
+            {
+                if (!used[r]) continue;
+                xs[w] = xs[r];
+                used[w] = true;
+                index[new(xs[w])] = w;
+                w++;
+            }
+            Array.Clear(xs, w, n - w);
+            Array.Clear(used, w, n - w);
+            n = w;
+            if (n < xs.Length) return;
+        }
+        int cap = Math.Max(4, xs.Length * 2);
+        Array.Resize(ref xs, cap);
+        Array.Resize(ref used, cap);
+    }
+
+    /// <summary>The items in insertion order (a copy).</summary>
+    public List<T> values()
+    {
+        var o = new List<T>(index.Count);
+        for (int i = 0; i < n; i++) if (used[i]) o.Add(xs[i]);
+        return o;
+    }
+    /// <summary>A copy's enumerator, as before: changes during a loop over the set aren't seen.</summary>
+    public IEnumerator<T> GetEnumerator() => values().GetEnumerator();
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
@@ -931,10 +1043,8 @@ public static partial class Js
     public static string Idx(string s) => s;
 
     /// <summary>for...of over a list: by index, reading the length each step (so items added during the loop are seen, as in JS).</summary>
-    public static IEnumerable<V> Iter<V>(List<V> list)
-    {
-        for (int i = 0; i < list.Count; i++) yield return list[i];
-    }
+    /// A struct, so a foreach over it allocates nothing (it was an iterator method: an object per loop).
+    public static ListIter<V> Iter<V>(List<V> list) => new(list);
 
     public static IEnumerable<V> Iter<V>(IEnumerable<V> xs) => xs;
     /// <summary>for (const [k, v] of map): its entries, in insertion order.</summary>
@@ -1034,3 +1144,33 @@ public static class JsRegExpExtensions
 
 /// <summary>A list literal written as a loose JS value (Js.Arr).</summary>
 public sealed class JsLooseList(IEnumerable<object?> items) : List<object?>(items);
+
+/// <summary>Js.Iter over a list: by index, reading the length each step (items added during the loop are seen, as in
+/// JS; no version check). A struct with a struct enumerator, so a foreach over it allocates nothing.</summary>
+public readonly struct ListIter<V>(List<V> list) : IEnumerable<V>
+{
+    public Enumerator GetEnumerator() => new(list);
+    IEnumerator<V> IEnumerable<V>.GetEnumerator() => new Enumerator(list);
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => new Enumerator(list);
+
+    public struct Enumerator(List<V> list) : IEnumerator<V>
+    {
+        int i;
+        V current = default!;
+        public readonly V Current => current;
+        readonly object? System.Collections.IEnumerator.Current => current;
+
+        public bool MoveNext()
+        {
+            if (i < list.Count)
+            {
+                current = list[i++];
+                return true;
+            }
+            return false;
+        }
+
+        public void Reset() => i = 0;
+        public readonly void Dispose() { }
+    }
+}

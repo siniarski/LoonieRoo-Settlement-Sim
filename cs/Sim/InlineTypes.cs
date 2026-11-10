@@ -168,7 +168,7 @@ public partial class BucketsEntry
 {
     public int tick { get; set; }
     public double edit { get; set; }
-    public JsMap<double, List<Zombie>> cells { get; set; }
+    public ZombieBuckets cells { get; set; }
 }
 
 public partial class PushApartOthers

@@ -88,28 +88,56 @@ public static partial class Fog
     }
     public static bool scoutingOver(double tick) => scoutingOver(Js.I(tick));
 
-    /// <summary>What each survivor last looked at: skip the look when nothing it depends on has changed.</summary>
-    public static readonly JsMap<SimState, JsRecord<string>> looked = new JsMap<SimState, JsRecord<string>>();
+    /// <summary>What each survivor last looked at: skip the look when nothing it depends on has changed (its tile,
+    /// sight radius, being up a tower, the walkability version, and which doors and edge doors are open). Kept per
+    /// state, outside it. It was a string per survivor a tick with every open door in it; now the fields, and the open
+    /// doors as an array that's replaced only when they change: the same comparison, without the strings.</summary>
+    sealed class FogMemo
+    {
+        public readonly Dictionary<string, FogLook> bySurvivor = new();
+        public int[] open = [];
+        public int[] edgeOpen = [];
+    }
 
-    /// <summary>Everyone sees what is in their field of view, every tick. A look is skipped when the survivor, how far they see, the walls and the open doors are all as they were last time (the same field, all of it already explored), so the outcome never depends on the cache.</summary>
+    sealed class FogLook
+    {
+        public int x, y, version;
+        public double r;
+        public bool tower;
+        public int[] open = [], edgeOpen = [];
+    }
+
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SimState, FogMemo> looked = new();
+
+    /// <summary>The list as an array: the old one while the contents are the same.</summary>
+    static int[] snapshot(int[] old, List<int> now) => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(now).SequenceEqual(old) ? old : now.ToArray();
+
+    static bool same(int[] a, int[] b) => ReferenceEquals(a, b) || a.AsSpan().SequenceEqual(b);
+
     public static void updateFog(SimState state)
     {
         var __d1 = state;
         var grid = __d1.grid;
-        var last = looked.get(state) ?? new();
-        looked.set(state, last);
-        string? doors = null;
+        var memo = looked.GetValue(state, (_) => new FogMemo());
+        var doors = false;
         foreach (var s in Js.Iter(state.survivors))
         {
             Worldgen.ensureGeneratedAround(state, s.pos);
             var r = Sight.sightRadius(state, s);
-            doors ??= (grid.open.join(",") + "|") + grid.edgeOpen.join(",");
-            var key = $"{Js.Str(s.pos.x)},{Js.Str(s.pos.y)},{Js.Str(r)},{Js.Str(Towers.onTower(state, s))},{Js.Str(state.walkabilityVersion)},{Js.Str(doors)}";
-            if (Js.Get(last, s.id) == key)
+            if (!doors)
+            {
+                // The doors as the first survivor's look sees them, for everyone this tick.
+                memo.open = snapshot(memo.open, grid.open);
+                memo.edgeOpen = snapshot(memo.edgeOpen, grid.edgeOpen);
+                doors = true;
+            }
+            var tower = Towers.onTower(state, s);
+            var version = state.walkabilityVersion;
+            if (memo.bySurvivor.TryGetValue(s.id, out var l) && (l.x == s.pos.x) && (l.y == s.pos.y) && l.r.Equals(r) && (l.tower == tower) && (l.version == version) && same(l.open, memo.open) && same(l.edgeOpen, memo.edgeOpen))
             {
                 continue;
             }
-            last[Js.Idx(s.id)] = key;
+            memo.bySurvivor[s.id] = new FogLook { x = s.pos.x, y = s.pos.y, r = r, tower = tower, version = version, open = memo.open, edgeOpen = memo.edgeOpen };
             foreach (var i in Js.Iter(Sight.sightOf(state, s, (j) => Js.Get(grid.explored, j) == 1)))
             {
                 grid.explored[Js.Idx(i)] = 1;

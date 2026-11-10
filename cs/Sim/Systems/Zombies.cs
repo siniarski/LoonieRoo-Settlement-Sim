@@ -110,21 +110,7 @@ public static partial class Zombies
         var b = buckets.get(list);
         if ((!Js.T(b) || (b.tick != state.tick)) || (b.edit != edit))
         {
-            var cells = new JsMap<double, List<Zombie>>();
-            foreach (var z in Js.Iter(list))
-            {
-                var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-                var at = cells.get(k);
-                if (Js.T(at))
-                {
-                    at.push(z);
-                }
-                else
-                {
-                    cells.set(k, [z]);
-                }
-            }
-            b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells };
+            b = new BucketsEntry { tick = state.tick, edit = edit, cells = new ZombieBuckets(list, width) };
             buckets.set(list, b);
         }
         double n = 0;
@@ -137,8 +123,10 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                foreach (var z in Js.Iter(b.cells.get(((double)(y) * (width)) + x) ?? []))
+                var cells = b.cells;
+                for (var i = cells.first(((double)(y) * (width)) + x); i >= 0; i = cells.next[i])
                 {
+                    var z = cells.zs[i];
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
                         n++;
@@ -148,6 +136,7 @@ public static partial class Zombies
         }
         return n;
     }
+
 
     public static void removeZombie(SimState state, Zombie z)
     {
@@ -369,31 +358,55 @@ public static partial class Zombies
         var length = list.length;
         var __d2 = state.grid;
         var width = __d2.width;
-        var order = new JsMap<Survivor, double>();
-        var cells = new JsMap<double, List<Survivor>>();
-        list.forEach((s, i) =>
+        // Plain dictionaries: only looked up, never iterated.
+        var order = new Dictionary<Survivor, double>(length);
+        var cells = new Dictionary<double, List<Survivor>>(length);
+        for (int i = 0; i < list.Count; i++)
         {
-            order.set(s, i);
+            var s = list[i];
+            order[s] = i;
             var t = Motion.tileOf(s.at);
             var k = ((double)(t.y) * (width)) + t.x;
-            var at = cells.get(k);
-            if (Js.T(at))
+            if (cells.TryGetValue(k, out var at))
             {
                 at.push(s);
             }
             else
             {
-                cells.set(k, [s]);
+                cells[k] = [s];
             }
-        });
+        }
+        Comparison<Survivor> byOrder = (a, b) => order[a].CompareTo(order[b]);
+        // Every tile within 2 (each way) of a bucket, so a tile with nobody near costs one lookup, not 25. A bucket's
+        // key k is found from tile (tx, ty) exactly when (k mod width, k div width) is within 2 of it each way. Only
+        // worth making when the dead outnumber the buckets (it costs 25 entries a bucket); null: look every time.
+        HashSet<long>? near = state.zombies.Count > cells.Count ? new HashSet<long>(cells.Count * 25) : null;
+        if (near != null) foreach (var k in cells.Keys)
+        {
+            var ky = JsMath.floor(k / width);
+            int kx = (int)(k - ky * width);
+            for (var dy = -2; dy <= 2; dy++)
+            {
+                for (var dx = -2; dx <= 2; dx++)
+                {
+                    near.Add(tileKey(kx + dx, (int)ky + dy));
+                }
+            }
+        }
+        // One list for every call, emptied each time: read it before the next call.
+        List<Survivor> found = [];
         return (at) =>
         {
             if ((state.survivors != list) || (list.length != length))
             {
                 return list;
             }
-            var t = Motion.tileOf(at);
-            List<Survivor> found = [];
+            Point t = new(Js.I(JsMath.floor(((double)(at.x) / (Motion.SUB)))), Js.I(JsMath.floor(((double)(at.y) / (Motion.SUB))))); // Motion.tileOf
+            found.Clear();
+            if ((near != null) && !near.Contains(tileKey(t.x, t.y)))
+            {
+                return found;
+            }
             for (var dy = -2; dy <= 2; dy++)
             {
                 for (var dx = -2; dx <= 2; dx++)
@@ -403,8 +416,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    var c = cells.get(((double)((t.y + dy)) * (width)) + x);
-                    if (Js.T(c))
+                    if (cells.TryGetValue(((double)((t.y + dy)) * (width)) + x, out var c))
                     {
                         found.pushAll(c);
                     }
@@ -412,11 +424,14 @@ public static partial class Zombies
             }
             if (found.length > 1)
             {
-                found.sort((a, b) => Js.NN(order.get(a)) - Js.NN(order.get(b)));
+                // By place in the list: distinct whole numbers, so any sort gives the one order.
+                found.Sort(byOrder);
             }
             return found;
         };
     }
+
+    static long tileKey(int x, int y) => ((long)y << 32) | (uint)x;
 
     public static void updateZombie(SimState state, Zombie z, Budget budget)
     {
@@ -432,7 +447,8 @@ public static partial class Zombies
             return;
         }
         {
-            List<Survivor> reachable = [];
+            // The target if in reach, else the first in reach (no list made: most zombies have nobody in reach).
+            Survivor? victim = null, first = null;
             foreach (var s in Js.Iter(budget.near(z.at)))
             {
                 if ((JsMath.abs(s.at.x - z.at.x) > Motion.REACH) || (JsMath.abs(s.at.y - z.at.y) > Motion.REACH))
@@ -441,10 +457,11 @@ public static partial class Zombies
                 }
                 if (Motion.inReach(s, z, Motion.REACH, state.grid))
                 {
-                    reachable.push(s);
+                    first ??= s;
+                    if (victim == null && s.id == z.targetId) victim = s;
                 }
             }
-            var victim = reachable.find((s) => s.id == z.targetId) ?? Js.Get(reachable, 0);
+            victim ??= first;
             if (Js.T(victim))
             {
                 if (z.windup > 0)
@@ -466,7 +483,15 @@ public static partial class Zombies
                 z.windup = 0;
                 z.cooldown = WINDUP_TICKS;
             }
-            var dog = state.dogs.find((d) => Motion.inReach(d, z, Motion.REACH, state.grid));
+            Dog? dog = null;
+            foreach (var d in state.dogs)
+            {
+                if (Motion.inReach(d, z, Motion.REACH, state.grid))
+                {
+                    dog = d;
+                    break;
+                }
+            }
             if (Js.T(dog))
             {
                 if (z.cooldown == 0)
@@ -543,12 +568,14 @@ public static partial class Zombies
     /// <summary>The pos follows the tile under `at` (free movers own `at`); stepping onto a new tile can spring a trap or drop it in a pit. True if a trap took it.</summary>
     public static bool enter(SimState state, Zombie z)
     {
-        var tile = Motion.tileOf(z.at);
-        if ((tile.x == z.pos.x) && (tile.y == z.pos.y))
+        // Motion.tileOf, made only when it differs.
+        var tx = Js.I(JsMath.floor(((double)(z.at.x) / (Motion.SUB))));
+        var ty = Js.I(JsMath.floor(((double)(z.at.y) / (Motion.SUB))));
+        if ((tx == z.pos.x) && (ty == z.pos.y))
         {
             return false;
         }
-        z.pos = tile;
+        z.pos = new Point { x = tx, y = ty };
         if (springTrap(state, z))
         {
             return true;
@@ -728,24 +755,27 @@ public static partial class Zombies
     /// <summary>Can a zombie walk the straight line between two points (SUB units)? Every tile the centre line passes through is open to `mover` and every edge it crosses is crossable (a broken window isn't: climbing goes by the path, tile by tile). Where the line runs exactly through a corner, both tiles beside it must be open. `endMayBeBlocked`: the far end's own tile isn't checked (someone standing in a doorway). Exact integer maths (in doubles): crossing times compared by cross-multiplying.</summary>
     public static bool walkLine(Grid grid, Point a, Point b, string mover, bool endMayBeBlocked)
     {
-        var t = Motion.tileOf(a);
-        var end = Motion.tileOf(b);
+        // Motion.tileOf of each end, without making Points.
+        var tx = Js.I(JsMath.floor(((double)(a.x) / (Motion.SUB))));
+        var ty = Js.I(JsMath.floor(((double)(a.y) / (Motion.SUB))));
+        var endX = Js.I(JsMath.floor(((double)(b.x) / (Motion.SUB))));
+        var endY = Js.I(JsMath.floor(((double)(b.y) / (Motion.SUB))));
         double dx = b.x - a.x;
         double dy = b.y - a.y;
         var sx = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0);
         var sy = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0);
-        var x = t.x;
-        var y = t.y;
+        var x = tx;
+        var y = ty;
         bool open(int px, int py, int qx, int qy)
         {
             if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKind(grid, Grids.edgeBetween(grid, px, py, qx, qy)) == Grids.EDGE_WINDOW_BROKEN))
             {
                 return false;
             }
-            return (Js.T(endMayBeBlocked) && (qx == end.x) && (qy == end.y)) || Pathfinding.isPassable(grid, qx, qy, mover);
+            return (Js.T(endMayBeBlocked) && (qx == endX) && (qy == endY)) || Pathfinding.isPassable(grid, qx, qy, mover);
         }
-        var guard = JsMath.abs(end.x - x) + JsMath.abs(end.y - y);
-        while (((x != end.x) || (y != end.y)) && (guard-- >= 0))
+        var guard = JsMath.abs(endX - x) + JsMath.abs(endY - y);
+        while (((x != endX) || (y != endY)) && (guard-- >= 0))
         {
             // How far along the line the next x and y boundaries are, as |dx| * |dy| fractions.
             double nx = (sx == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sx > 0) ? (x + 1) : x) * (Motion.SUB)) - a.x)) * (JsMath.abs(dy)));
@@ -785,21 +815,13 @@ public static partial class Zombies
         var __d4 = state.grid;
         var width = __d4.width;
         var height = __d4.height;
-        var buckets = new JsMap<double, List<Zombie>>();
-        foreach (var z in Js.Iter(state.zombies))
-        {
-            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-            var list = buckets.get(k);
-            if (Js.T(list))
-            {
-                list.push(z);
-            }
-            else
-            {
-                buckets.set(k, [z]);
-            }
-        }
-        var others = new JsMap<double, List<PushApartOthers>>();
+        // Plain dictionaries: only looked up, never iterated.
+        var buckets = new ZombieBuckets(state.zombies, width);
+        // The others by tile, and (othersAround) each listed under every in-grid tile within 1 of the tile its key names:
+        // the ones a zombie on an in-grid tile meets, in one lookup instead of nine (sorted by order after, as before).
+        var others = new Dictionary<double, List<PushApartOthers>>();
+        // Worth making only when the dead outnumber the others (it costs nine entries for each); null: look every time.
+        var othersAround = state.zombies.Count > (state.survivors.Count + state.residents.Count + state.dogs.Count + state.animals.Count) ? new Dictionary<double, List<PushApartOthers>>() : null;
         double order = 0;
         foreach (var list in new List<IEnumerable<Body>> { state.survivors, state.residents, state.dogs, state.animals })
         {
@@ -807,17 +829,49 @@ public static partial class Zombies
             {
                 var k = ((double)(s.pos.y) * (width)) + s.pos.x;
                 PushApartOthers entry = new PushApartOthers { s = s, order = order++ };
-                var at = others.get(k);
-                if (Js.T(at))
+                if (others.TryGetValue(k, out var at))
                 {
                     at.push(entry);
                 }
                 else
                 {
-                    others.set(k, [entry]);
+                    others[k] = [entry];
+                }
+                if (othersAround == null)
+                {
+                    continue;
+                }
+                // The tile its key names (its own, unless it stands off the grid's sides).
+                var ky = JsMath.floor(k / width);
+                var kx = k - ky * width;
+                if ((ky < 0) || (ky >= height))
+                {
+                    continue;
+                }
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        var nx = kx + dx;
+                        var ny = ky + dy;
+                        if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                        {
+                            continue;
+                        }
+                        var nk = ((double)(ny) * (width)) + nx;
+                        if (othersAround.TryGetValue(nk, out var around))
+                        {
+                            around.Add(entry);
+                        }
+                        else
+                        {
+                            othersAround[nk] = [entry];
+                        }
+                    }
                 }
             }
         }
+        List<PushApartOthers> near = []; // one list, emptied for each zombie
         foreach (var z in Js.Iter(state.zombies))
         {
             for (var dy = -1; dy <= 1; dy++)
@@ -830,8 +884,9 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    foreach (var o in Js.Iter(buckets.get(((double)(ny) * (width)) + nx) ?? []))
+                    for (var i = buckets.first(((double)(ny) * (width)) + nx); i >= 0; i = buckets.next[i])
                     {
+                        var o = buckets.zs[i];
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
                             continue;
@@ -850,27 +905,37 @@ public static partial class Zombies
                     }
                 }
             }
-            List<PushApartOthers> near = [];
-            for (var dy = -1; dy <= 1; dy++)
+            near.Clear();
+            if ((othersAround != null) && (z.pos.x >= 0) && (z.pos.y >= 0) && (z.pos.x < width) && (z.pos.y < height))
             {
-                for (var dx = -1; dx <= 1; dx++)
+                if (othersAround.TryGetValue(((double)(z.pos.y) * (width)) + z.pos.x, out var around))
                 {
-                    var nx = z.pos.x + dx;
-                    var ny = z.pos.y + dy;
-                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                    near.AddRange(around);
+                }
+            }
+            else
+            {
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
                     {
-                        continue;
-                    }
-                    var at = others.get(((double)(ny) * (width)) + nx);
-                    if (Js.T(at))
-                    {
-                        near.pushAll(at);
+                        var nx = z.pos.x + dx;
+                        var ny = z.pos.y + dy;
+                        if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                        {
+                            continue;
+                        }
+                        if (others.TryGetValue(((double)(ny) * (width)) + nx, out var at))
+                        {
+                            near.pushAll(at);
+                        }
                     }
                 }
             }
             if (near.length > 1)
             {
-                near.sort((a, b) => a.order - b.order);
+                // Distinct orders: any sort gives the one order.
+                near.Sort((a, b) => a.order.CompareTo(b.order));
             }
             foreach (var __o5 in Js.Iter(near))
             {
@@ -1078,5 +1143,53 @@ public static partial class Zombies
     public static bool climbing(SimState state, Point a, Point b)
     {
         return Js.Get(state.grid.edges, Grids.edgeBetween(state.grid, a.x, a.y, b.x, b.y)) == Grids.EDGE_WINDOW_BROKEN;
+    }
+}
+
+/// <summary>The dead by tile (key y * width + x, where each stood when made), in list order within a tile: a copy of
+/// the list, and for each a link to the next in its tile (-1 at the end), so no list per tile. A bitmask of hashed keys
+/// (64K bits) answers most empty tiles without the dictionary: a clear bit means nobody there.</summary>
+public sealed class ZombieBuckets
+{
+    public readonly Zombie[] zs;
+    public readonly int[] next;
+    readonly Dictionary<double, int> head;
+    readonly ulong[] occ = new ulong[1024];
+
+    public ZombieBuckets(List<Zombie> list, int width)
+    {
+        zs = list.ToArray();
+        next = new int[zs.Length];
+        head = new Dictionary<double, int>(zs.Length);
+        // Backwards, each put in front of its tile's chain: the chains run in list order.
+        for (var i = zs.Length - 1; i >= 0; i--)
+        {
+            var z = zs[i];
+            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
+            if (head.TryGetValue(k, out var h))
+            {
+                next[i] = h;
+            }
+            else
+            {
+                next[i] = -1;
+                var b = bit(k);
+                occ[b >> 6] |= 1UL << (b & 63);
+            }
+            head[k] = i;
+        }
+    }
+
+    static int bit(double k) => (int)(unchecked((ulong)(long)k * 0x9E3779B97F4A7C15UL) >> 48);
+
+    /// <summary>The first in this tile's chain (index into zs), or -1.</summary>
+    public int first(double k)
+    {
+        var b = bit(k);
+        if ((occ[b >> 6] & (1UL << (b & 63))) == 0)
+        {
+            return -1;
+        }
+        return head.TryGetValue(k, out var h) ? h : -1;
     }
 }
