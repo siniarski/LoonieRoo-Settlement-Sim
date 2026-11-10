@@ -767,6 +767,7 @@ public static partial class Commands
             return unchanged();
         }
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+        Growth.clear(state, x, y);
         if (tile != "floor")
         {
             var f = FurnitureMod.furnitureAt(state, x, y);

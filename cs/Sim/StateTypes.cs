@@ -900,6 +900,8 @@ public partial class SimState
     public List<Task> tasks { get; set; } = new();
     /// <summary>A prisoner: talk them round to join, or let them go home (prisoners.ts).</summary>
     public JsRecord<double> foraged { get; set; } = new();
+    /// <summary>Tiles whose growth was reset (Growth.clear): tile index -> the tick it was cleared; from then it regrows. Sparse; entries go once regrown (Growth.expire). Absent in older saves: none.</summary>
+    public JsRecord<double> cleared { get; set; } = new();
     public List<Item> items { get; set; } = new();
     public List<Furniture> furniture { get; set; } = new();
     public List<FarmPlot> farm { get; set; } = new();

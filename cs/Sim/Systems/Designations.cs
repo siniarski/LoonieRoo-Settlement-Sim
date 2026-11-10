@@ -120,6 +120,7 @@ public static partial class Designations
             }
             return;
         }
+        Growth.clear(state, bp.x, bp.y);
         switch (bp.target)
         {
             case "wall":

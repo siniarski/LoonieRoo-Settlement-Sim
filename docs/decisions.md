@@ -408,6 +408,8 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 - **Endgame.** `state.endgame`. Cure: zombies a guard brings down leave a sample 15% of the time (hash); a powered lab bench gets a research job (new job type) to study them; 40
   studied wins. Evacuation: from day 20 a powered beacon and radio call a helicopter for the dawn 3 days on, after a triple-strength siege. Winning is marked and told; play goes on
   *Why:* The game needed an ending
+- **Growth is computed, with a sparse record (2026-11-10).** Foliage, and trees coming back, are a pure function of the seed, the tile, its ground and the growing days since it was cleared; the only saved state is `state.cleared` (tile -> clearing tick), trimmed once regrown. No per-tile state, no sweep of the map, no schema change. Rates: docs/trees.md "Growth". Saplings that become trees are planted from per-chunk plans in tick order, so the result doesn't depend on who is near or which chunk was made first; they are `tree` furniture like any other.
+  *Why:* The world is going to 10,000 x 10,000, saves keep only what differs from the seed, and the player wanted places to look abandoned as days pass
 
 ## Controls and UI (the browser's, mostly carried into the Colony tab)
 

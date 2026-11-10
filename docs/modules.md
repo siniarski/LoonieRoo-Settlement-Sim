@@ -44,6 +44,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **Worldgen**: draws chunks lazily from the plan; map types. **Terrain**: the land's large scale from the seed
   (elevation, moisture, settlement; rivers by drainage, lakes in hollows; cached, never saved).
 - **NatureMod**: water, forest, trees, dirt per tile (noise, fBm, `treeChance`).
+- **Growth**: foliage as a pure function of the tile and the growing days since it was cleared (grass, weeds, bushes, saplings that become trees, cracks and tufts on roads); the saved part is `state.cleared`, a sparse record (docs/trees.md "Growth").
 - **Worldplan**: the plan (towns, streets, roads, lots; cached, never saved). **WorldRegions**: the plan by region
   (docs/worldplan-regions.md). **Win**: a window of the map a region's plan covers.
 - **Towns**: where towns stand and their streets. **TownIndex**: towns by coarse cell.
@@ -103,7 +104,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 
 - `Game.cs`: the fixed-timestep loop, input to commands, saves, the command line, which view.
 - `World3D/`: first person (FirstPerson, WorldMesh chunks, Roofs, Terrain, People, Animals, Items, Furniture, Held,
-  OwnBody, Trees, FarField, Bodies, Footfalls) and benches (DrawBench, ItemBench, TreeBench, MapShot).
+  OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls) and benches (DrawBench, ItemBench, TreeBench, MapShot).
 - `Characters/`: the character lab, look lab, IK, ragdoll, VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.
 - `Ui/`: HUD and panels, inventory, card, build tools, menu, options (Graphics), saves, minimap, map, ScreenTabs
