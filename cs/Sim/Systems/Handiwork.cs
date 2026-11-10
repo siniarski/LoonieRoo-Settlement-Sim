@@ -147,7 +147,7 @@ public static partial class Handiwork
         var __d0 = s.pos;
         var x = __d0.x;
         var y = __d0.y;
-        var g = Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, Grids.tileIndex(state.grid, x, y))));
+        var g = Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, Grids.tileIndex(state.grid, x, y))));
         if (Rooms.isIndoors(state, x, y) || ((g != "grass") && (g != "field")))
         {
             return "nothing to forage here: find open grass, or a field";
@@ -172,7 +172,7 @@ public static partial class Handiwork
     {
         var i = Grids.tileIndex(state.grid, s.pos.x, s.pos.y);
         state.foraged[Js.Idx(Js.Str(i))] = Time.dayOf(state.tick);
-        var field = (Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, i))) == "field") ? 2 : 1;
+        var field = (Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, i))) == "field") ? 2 : 1;
         var chance = ((double)(((double)(FORAGE_CHANCE) * (field))) * ((state.settings.winter ? 0.5 : 1))) * Growth.forageBonus(state, s.pos.x, s.pos.y);
         if (Hash.hashRoll(Hash.idNumber(s.id), i, state.tick) >= chance)
         {

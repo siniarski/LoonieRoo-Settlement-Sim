@@ -155,12 +155,12 @@ public static class Savefile
                     {
                         switch (layer)
                         {
-                            case "tiles": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.tiles)); return true;
-                            case "ground": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.ground)); return true;
-                            case "explored": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.explored)); return true;
-                            case "dirt": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.dirt)); return true;
-                            case "damage": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.damage)); return true;
-                            case "edges": w.WritePropertyName(layer); SaveWriter.Rle(w, SaveWriter.Span(g.edges)); return true;
+                            case "tiles": w.WritePropertyName(layer); SaveWriter.Rle(w, g.tileLayer.ToFlat(), Grids.tileNames); return true;
+                            case "ground": w.WritePropertyName(layer); SaveWriter.Rle(w, g.groundLayer.ToFlat(), null); return true;
+                            case "explored": w.WritePropertyName(layer); SaveWriter.Rle(w, g.exploredLayer.ToFlat(), null); return true;
+                            case "dirt": w.WritePropertyName(layer); SaveWriter.Rle(w, g.dirtLayer.ToFlat(), null); return true;
+                            case "damage": w.WritePropertyName(layer); SaveWriter.Rle(w, g.damageLayer.ToFlat()); return true;
+                            case "edges": w.WritePropertyName(layer); SaveWriter.Rle(w, g.edgeLayer.ToFlat(), null); return true;
                         }
                         return false;
                     });
@@ -208,12 +208,12 @@ public static class Savefile
         foreach (var (layer, a) in encoded)
             switch (layer)
             {
-                case "tiles": g.tiles = Decoded(a, (v) => v?.GetValue<string>()!); break;
-                case "ground": g.ground = Decoded(a, (v) => (int)number(v)); break;
-                case "explored": g.explored = Decoded(a, (v) => (int)number(v)); break;
-                case "dirt": g.dirt = Decoded(a, (v) => (int)number(v)); break;
-                case "damage": g.damage = Decoded(a, number); break;
-                case "edges": g.edges = Decoded(a, (v) => (int)number(v)); break;
+                case "tiles": g.tileLayer.Load(SaveWriter.Span(Decoded(a, (v) => Grids.tileCode(v?.GetValue<string>() ?? throw new InvalidDataException("a tile is a string"))))); break;
+                case "ground": g.groundLayer.Load(SaveWriter.Span(Decoded(a, (v) => Grids.small(number(v))))); break;
+                case "explored": g.exploredLayer.Load(SaveWriter.Span(Decoded(a, (v) => Grids.small(number(v))))); break;
+                case "dirt": g.dirtLayer.Load(SaveWriter.Span(Decoded(a, (v) => Grids.small(number(v))))); break;
+                case "damage": g.damageLayer.Load(SaveWriter.Span(Decoded(a, number))); break;
+                case "edges": g.edgeLayer.Load(SaveWriter.Span(Decoded(a, (v) => Grids.small(number(v))))); break;
             }
         return state;
     }

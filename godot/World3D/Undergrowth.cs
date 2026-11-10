@@ -229,7 +229,7 @@ public sealed class Undergrowth
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
             {
                 int i = y * g.width + x;
-                if (g.tiles[i] != Grids.FLOOR || look.indoor.Contains(i) || taken.Contains(i)) continue;
+                if (Grids.tileAt(g, i) != Grids.FLOOR || look.indoor.Contains(i) || taken.Contains(i)) continue;
                 var c = Growth.coverWith(state, x, y, gNow);
                 if (c.kind == GrowthKind.None) continue;
                 if (c.grass > 0 && budget > 0)
@@ -258,7 +258,7 @@ public sealed class Undergrowth
                 }
                 if (c.sapling >= 0 && c.sapling < Growth.SOLID_AT)
                 {
-                    bool forest = g.ground[i] == Array.IndexOf(Grids.GROUNDS, "forest");
+                    bool forest = Grids.groundAt(g, i) == Array.IndexOf(Grids.GROUNDS, "forest");
                     var (sp, t, custom) = Trees.Placement(x, y, forest, false, (float)Growth.treeScale(c.sapling));
                     AddTransform(saplings[sp], t, custom);
                 }
@@ -321,7 +321,7 @@ public sealed class Undergrowth
     static bool Open(Grid g, int x, int y)
     {
         if (x < 0 || y < 0 || x >= g.width || y >= g.height) return false;
-        int gr = g.ground[y * g.width + x];
+        int gr = Grids.groundAt(g, y * g.width + x);
         return gr != ROAD && gr != PAVING && gr != BRIDGE;
     }
 

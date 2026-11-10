@@ -20,8 +20,11 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **Time.cs**: the clock from `state.tick`; day length scale, `onClock`, `slowTick`.
 - **Rng.cs**: the sim RNG (mulberry32, one uint32 in state). **Hash.cs**: stateless `hashRoll` for chances.
 - **Lookup.cs**: finding things by id without scanning (derived maps, outside state).
-- **Space.cs**: spatial search helpers (nearestTile). **Grid.cs** (`Grids`): tiles, walls, doors, edges.
-- **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening.
+- **Space.cs**: spatial search helpers (nearestTile). **Grid.cs** (`Grids`): tiles, walls, doors, edges: the only
+  way to the grid's per-tile layers (`getTile`, `tileAt`, `groundAt`, `edgeKind`, `setTile`...), which
+  **GridLayers.cs** keeps in 32 x 32 chunks allocated where something differs from bare land (also `TileMask`).
+- **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening (their per-tile data in
+  chunks too). **RoomLabels.cs** (`Rooms`' core): room labels in chunks, `computeRooms` and `updateRooms`.
 - **Replay**: seed + initial state + command log = the game. **Savefile.cs**, **SavefileChunks.cs** (generated
   worlds keep only changed chunks), **StateJson.cs** (state as JSON).
 - **ScenarioMod**: ASCII maps for tests. **Invariants**: cross-checks of survivors, jobs, items. **DebugText**: the

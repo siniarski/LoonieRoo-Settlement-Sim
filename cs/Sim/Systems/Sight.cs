@@ -43,7 +43,8 @@ public static partial class Sight
     /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
     public static bool opaque(Grid grid, int x, int y)
     {
-        var t = Js.Get(grid.tiles, Grids.tileIndex(grid, x, y));
+        // By tile (off the grid: by the index, as it always read).
+        var t = Grids.inBounds(grid, x, y) ? Grids.getTile(grid, x, y) : Grids.tileAt(grid, Grids.tileIndex(grid, x, y));
         return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Grids.isOpen(grid, x, y));
     }
     public static bool opaque(Grid grid, double x, double y) => opaque(grid, Js.I(x), Js.I(y));
@@ -51,9 +52,9 @@ public static partial class Sight
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
     public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
     {
-        bool clear(double px, double py, double qx, double qy)
+        bool clear(int px, int py, int qx, int qy)
         {
-            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+            return Pathfinding.seesBetween(grid, px, py, qx, qy);
         }
         if ((ax == bx) || (ay == by))
         {
@@ -161,26 +162,27 @@ public static partial class Sight
         return Grids.inBounds(state.grid, s.x, s.y) && sightLine(state.grid, z, s);
     }
 
-    public static readonly JsMap<SimState, SeenEntry> seen = new JsMap<SimState, SeenEntry>();
+    // Per state, and gone with it (a JsMap here kept every state alive, with a byte a tile of the map each).
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SimState, SeenEntry> seen = new();
 
     /// <summary>What can be seen now: by the survivor you control, or by any survivor when nobody is controlled. Per tile 1 or 0. Derived, cached per state and tick (for the renderer).</summary>
-    public static Uint8Array visibleNow(SimState state)
+    public static TileMask visibleNow(SimState state)
     {
         var you = ControlMod.controlled(state);
         var lookers = Js.T(you) ? [you] : state.survivors;
         var who = lookers.map((s) => $"{Js.Str(s.id)}@{Js.Str(s.pos.x)},{Js.Str(s.pos.y)}").join("|");
-        var hit = seen.get(state);
+        seen.TryGetValue(state, out var hit);
         if ((Js.T(hit) && (hit.tick == state.tick)) && (hit.who == who))
         {
             return hit.mask;
         }
-        var size = ((double)(state.grid.width) * (state.grid.height));
-        var mask = (Js.T(hit) && (hit.mask.length == size)) ? hit.mask : new Uint8Array(size);
+        // The last mask with what was set in it cleared, unless the map's size changed or it has spread over many chunks.
+        var mask = (Js.T(hit) && hit.mask.fits(state.grid)) ? hit.mask : new TileMask(state.grid);
         if (Js.T(hit) && (hit.mask == mask))
         {
             foreach (var i in Js.Iter(hit.set))
             {
-                mask[Js.Idx(i)] = 0;
+                mask.set(Js.I(i), false);
             }
         }
         List<double> set = [];
@@ -188,14 +190,14 @@ public static partial class Sight
         {
             foreach (var i in Js.Iter(sightOf(state, s)))
             {
-                if (Js.Get(mask, i) == 0)
+                if (mask[Js.I(i)] == 0)
                 {
-                    mask[Js.Idx(i)] = 1;
+                    mask.set(Js.I(i), true);
                     set.push(i);
                 }
             }
         }
-        seen.set(state, new() { tick = state.tick, who = who, mask = mask, set = set });
+        seen.AddOrUpdate(state, new() { tick = state.tick, who = who, mask = mask, set = set });
         return mask;
     }
 }

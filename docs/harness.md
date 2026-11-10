@@ -22,6 +22,19 @@ vars below for each.
   and memory over 10 days.
 - **stress** (Bench.cs): very large worlds (fully generated 512 and 1024; up to 200 colonists, 2,000 zombies, herds
   and caravans): build time, tick mean/p99/max, managed heap, save size and time (ONLY=<scenario>, TICKS).
+- **big world** (BigWorld.cs): one new world made, ticked, walked a few chunks, saved and loaded, with the time and
+  the managed heap after each step (SIZES=2048,10000, TICKS=200; BOUND_MB=n fails if the heap after createWorld at
+  the last size is over n: the grid in chunks is held to 64 MB at 4096). **chunk cost** (same file, SIZE=1024): what a
+  generated chunk costs in memory by part (the grid's layers, furniture, the dormant, what play derives).
+- **profile** (Profile.cs): the tick by system, with allocations (SCENES, TICKS, WARM). The big new worlds
+  `new-2048`, `new-4096` and `new-10000` run only when named in SCENES. **tick dumps** (same file, DUMP=dir): states
+  of fixed scenes as JSON, to compare two builds byte for byte.
+- **micro** (Micro.cs; SCENE=colony-512, ROUNDS=7): the grid's readers one at a time on one fixed state (tile and
+  edge reads, room labels, sight, paths, reachability, and each after a wall change), the best of several rounds in
+  nanoseconds an operation. For comparing two builds when whole ticks are too noisy to call a few percent: build it
+  against each and read the two reports side by side.
+- **save compat** (SaveCompat.cs): DUMP=dir writes saves, bug reports and states of a few played worlds; CHECK=dir
+  loads another build's and compares (a file of this schema must also be written again byte for byte).
 
 **PROBE=path** (both players, Probe.cs): a read-only observer that writes path.txt (a summary line per run: deaths by
 cause from every event, prey caught and meat, drinks by source, how thirst met the other needs; each death with the

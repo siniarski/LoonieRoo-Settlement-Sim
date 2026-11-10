@@ -78,13 +78,13 @@ public sealed partial class Minimap : Control
             for (int qx = 0; qx < w; qx++)
             {
                 int i = py * scale * grid.width + qx * scale;
-                var tile = grid.tiles[i];
+                var tile = Grids.tileAt(grid, i);
                 // A tile with an edge wall (or door) on its north or west side shows as that: at a pixel a
                 // tile, the walls round a room still outline it.
-                int edge = grid.edges[i * 2] != 0 ? grid.edges[i * 2] : grid.edges[i * 2 + 1];
-                Color colour = grid.explored[i] != 1 ? RGB["fog"]
+                int edge = Grids.edgeKind(grid, i * 2) != 0 ? Grids.edgeKind(grid, i * 2) : Grids.edgeKind(grid, i * 2 + 1);
+                Color colour = Grids.exploredAt(grid, i) != 1 ? RGB["fog"]
                     : edge != 0 ? (edge == 1 ? RGB["wall"] : edge is 4 or 5 ? RGB["glass"] : RGB["door"])
-                    : tile == "floor" ? RGB[grid.ground[i] >= 0 && grid.ground[i] < Grids.GROUNDS.Length ? Grids.GROUNDS[grid.ground[i]] : "grass"]
+                    : tile == "floor" ? RGB[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
                     : RGB.TryGetValue(tile, out var c) ? c : RGB["fog"];
                 image.SetPixel(qx, py, colour);
             }
@@ -93,7 +93,7 @@ public sealed partial class Minimap : Control
 
         dots.Clear();
         void dot(int x, int y, string colour, int size = 2) => dots.Add((x, y, Ctx.Css(colour), size));
-        bool seen(int x, int y) => grid.explored[y * grid.width + x] == 1;
+        bool seen(int x, int y) => Grids.exploredAt(grid, y * grid.width + x) == 1;
         foreach (var p in state.pointsOfInterest) dot(p.x, p.y, "#ffd166", 3);
         foreach (var n in state.settlements) dot(n.x, n.y, n.people <= 0 ? "#777777" : n.reputation <= Settlements.HOSTILE ? "#ff5a4a" : "#7ad7ff", 5);
         foreach (var z in state.zombies) if (seen(z.pos.x, z.pos.y)) dot(z.pos.x, z.pos.y, "#ff5a4a");

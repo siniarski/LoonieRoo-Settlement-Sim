@@ -135,7 +135,7 @@ public partial class ZombiesTest
         {
             List<string> map = ["z..........", "...#####...", "...#.s.#...", "...##D##...", "..........."];
             var state = night(map);
-            runUntil(state, (_) => Js.NN(Js.Get(state.grid.damage, ((double)(3) * (11)) + 5)) > 0);
+            runUntil(state, (_) => Js.NN(Grids.damageAt(state.grid, ((double)(3) * (11)) + 5)) > 0);
             expect(Js.NN(Js.Get(state.survivors, 0)).health).toBe(1000);
             expect(Js.NN(Js.Get(state.zombies, 0)).targetId).toBe(Js.NN(Js.Get(state.survivors, 0)).id);
         }

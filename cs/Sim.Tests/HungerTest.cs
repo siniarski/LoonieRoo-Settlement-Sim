@@ -91,7 +91,7 @@ public partial class HungerTest
             s.priorities["clean"] = 0;
             starve(state, s);
             Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(6), y = Js.I(0), structure = "wall" });
-            runUntil(state, (st) => Js.Get(st.grid.tiles, 6) == "wall");
+            runUntil(state, (st) => Grids.tileAt(st.grid, 6) == "wall");
             expect(s.meal).toBeNull();
         }
 
@@ -109,7 +109,7 @@ public partial class HungerTest
             expect(s.carrying).toBeNull();
             expect(s.meal).not.toBeNull();
             runUntil(state, (_) => s.note == "ate a meal");
-            runUntil(state, (st) => Js.Get(st.grid.tiles, 9) == "wall");
+            runUntil(state, (st) => Grids.tileAt(st.grid, 9) == "wall");
         }
 
         [Fact(DisplayName = "hunger and food > eats before sleeping when both hungry and tired")]

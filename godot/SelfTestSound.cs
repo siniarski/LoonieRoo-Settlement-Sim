@@ -49,29 +49,29 @@ public partial class Game
             // Two walls between you and a sound three tiles off.
             int e1 = Grids.edgeBetween(state.grid, you.pos.x + dir.Item1, you.pos.y + dir.Item2, you.pos.x + dir.Item1 * 2, you.pos.y + dir.Item2 * 2);
             int e2 = Grids.edgeBetween(state.grid, you.pos.x + dir.Item1 * 2, you.pos.y + dir.Item2 * 2, you.pos.x + dir.Item1 * 3, you.pos.y + dir.Item2 * 3);
-            int was1 = state.grid.edges[e1], was2 = state.grid.edges[e2];
-            state.grid.edges[e1] = Grids.EDGE_WALL;
-            state.grid.edges[e2] = Grids.EDGE_WALL;
+            int was1 = Grids.edgeKind(state.grid, e1), was2 = Grids.edgeKind(state.grid, e2);
+            Grids.putEdge(state.grid, e1, Grids.EDGE_WALL);
+            Grids.putEdge(state.grid, e2, Grids.EDGE_WALL);
             var far = new P(you.pos.x + dir.Item1 * 3 + 0.5, you.pos.y + dir.Item2 * 3 + 0.5);
             sounds.Play(state, "glass", null, far, 1.2f, me, 1);
             float behind = sounds.LastMuffle;
-            state.grid.edges[e1] = was1;
-            state.grid.edges[e2] = was2;
+            Grids.putEdge(state.grid, e1, was1);
+            Grids.putEdge(state.grid, e2, was2);
             sounds.Play(state, "glass", null, far, 1.2f, me, 2);
             Check("A sound behind two walls comes through low and quiet", behind >= 2 && Muffle.BusFor(behind) == Muffle.WALLED && sounds.LastMuffle == 0,
                 $"{behind} walls' worth -> {Muffle.DbFor(behind):0} dB on {Muffle.BusFor(behind)}; without them {sounds.LastMuffle}");
 
             // Glass: a window three tiles off, then smashed.
             int ew = Grids.edgeBetween(state.grid, you.pos.x + dir.Item1 * 2, you.pos.y + dir.Item2 * 2, you.pos.x + dir.Item1 * 3, you.pos.y + dir.Item2 * 3);
-            int wasW = state.grid.edges[ew];
-            state.grid.edges[ew] = Grids.EDGE_WINDOW;
+            int wasW = Grids.edgeKind(state.grid, ew);
+            Grids.putEdge(state.grid, ew, Grids.EDGE_WINDOW);
             state.walkabilityVersion++;
             await Frames(3);
             int glass0 = sounds.Count("glass");
             Breach.smashGlass(state, ew);
             await Frames(3);
             Check("A window smashed near you is heard", sounds.Count("glass") > glass0 && sounds.LastKind == "glass", $"glass {sounds.Count("glass") - glass0}");
-            state.grid.edges[ew] = wasW;
+            Grids.putEdge(state.grid, ew, wasW);
             state.walkabilityVersion++;
         }
 
@@ -171,9 +171,9 @@ public partial class Game
         // Each ground its own steps: the surface under a foot, on a little grid of its own (a row of every ground,
         // and water with a bank and a bridge beside it), and every surface's sound different from the others.
         var sg = Grids.createGrid(Grids.GROUNDS.Length, 3);
-        for (int i = 0; i < Grids.GROUNDS.Length; i++) sg.ground[i] = i;
-        sg.tiles[2 * sg.width + 5] = Grids.WATER;
-        sg.ground[2 * sg.width + 6] = Array.IndexOf(Grids.GROUNDS, "bridge");
+        for (int i = 0; i < Grids.GROUNDS.Length; i++) Grids.setGround(sg, i, i);
+        Grids.putTile(sg, 2 * sg.width + 5, Grids.WATER);
+        Grids.setGround(sg, 2 * sg.width + 6, Array.IndexOf(Grids.GROUNDS, "bridge"));
         var under = Enumerable.Range(0, Grids.GROUNDS.Length).Select((i) => Yours.Surface(sg, i + 0.5, 0.5)).ToList();
         string inWater = Yours.Surface(sg, 5.5, 2.5), bank = Yours.Surface(sg, 4.85, 2.5), dry = Yours.Surface(sg, 4.4, 2.5), bridge = Yours.Surface(sg, 6.1, 2.5);
         var feats = SynthSteps.SURFACES.Select((g) =>

@@ -28,9 +28,8 @@ public static partial class Pathfinding
     /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>
     public static bool crossable(Grid grid, int ax, int ay, int bx, int by, string mover = SURVIVOR)
     {
-        int e = edgeBetween(grid, ax, ay, bx, by);
+        int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
         if (e < 0) return true;
-        int kind = grid.edges[e];
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
@@ -54,17 +53,11 @@ public static partial class Pathfinding
         if (targets.Any(g => g.x == start.x && g.y == start.y)) return new List<Point>();
 
         int width = grid.width;
-        int size = width * grid.height;
         int startIdx = start.y * width + start.x;
         var goalSet = new HashSet<int>(targets.Select(g => g.y * width + g.x));
 
-        var sc = ScratchFor(size);
+        var sc = ScratchFor(grid);
         uint gen = sc.gen;
-        var seen = sc.seen;
-        var gRaw = sc.g;
-        var cameFrom = sc.from;
-        var closed = sc.closed;
-        double GOf(int i) => seen[i] == gen ? gRaw[i] : double.PositiveInfinity;
         var open = new MinHeap();
 
         double H(int idx)
@@ -76,31 +69,34 @@ public static partial class Pathfinding
             return best;
         }
 
-        seen[startIdx] = gen;
-        gRaw[startIdx] = 0;
-        cameFrom[startIdx] = -1;
+        ref var first = ref sc.At(start.x, start.y);
+        first.seen = gen;
+        first.g = 0;
+        first.from = -1;
         open.Push(startIdx, H(startIdx), H(startIdx));
 
         while (open.Count > 0)
         {
             int current = open.Pop();
-            if (goalSet.Contains(current)) return Reconstruct(cameFrom, current, width);
-            if (closed[current] == gen) continue;
-            closed[current] = gen;
-            if (--maxExpand < 0) return null;
+            if (goalSet.Contains(current)) return Reconstruct(sc, current, width);
             int cx = current % width;
             int cy = current / width;
-            double g = GOf(current) + 1;
+            ref var here = ref sc.At(cx, cy);
+            if (here.closed == gen) continue;
+            here.closed = gen;
+            if (--maxExpand < 0) return null;
+            double g = (here.seen == gen ? here.g : double.PositiveInfinity) + 1;
             foreach (var dir in DIRS)
             {
                 int nx = cx + dir.x;
                 int ny = cy + dir.y;
                 if (!isPassable(grid, nx, ny, mover) || !crossable(grid, cx, cy, nx, ny, mover)) continue;
                 int next = ny * width + nx;
-                if (closed[next] == gen || g >= GOf(next)) continue;
-                seen[next] = gen;
-                gRaw[next] = g;
-                cameFrom[next] = current;
+                ref var there = ref sc.At(nx, ny);
+                if (there.closed == gen || g >= (there.seen == gen ? there.g : double.PositiveInfinity)) continue;
+                there.seen = gen;
+                there.g = g;
+                there.from = current;
                 double hn = H(next);
                 open.Push(next, g + hn, hn);
             }
@@ -115,7 +111,9 @@ public static partial class Pathfinding
         public int version;
         public int cursor;
         public int cw, ch;
-        public int[] local = Array.Empty<int>();
+        /// <summary>Per chunk, each tile's component within the chunk (-1 where it can't stand); null for a bare chunk
+        /// (floor, no edges): every tile is component 0, and nobody flooded it.</summary>
+        public short[]?[] local = Array.Empty<short[]?>();
         public int[] counts = Array.Empty<int>();
         public int[] offsets = Array.Empty<int>();
         public List<int>[] east = Array.Empty<List<int>>();
@@ -142,15 +140,25 @@ public static partial class Pathfinding
         return (i - x) / width / REACH_CHUNK * r.cw + x / REACH_CHUNK;
     }
 
+    /// <summary>A tile's component within its chunk.</summary>
+    static int Local(Reach r, int width, int i)
+    {
+        int x = i % width, y = (i - x) / width;
+        var a = r.local[y / REACH_CHUNK * r.cw + x / REACH_CHUNK];
+        return a == null ? 0 : a[(y % REACH_CHUNK) * REACH_CHUNK + x % REACH_CHUNK];
+    }
+
     static int BaseLabel(Reach r, int width, int i)
     {
-        int l = r.local[i];
+        int l = Local(r, width, i);
         return l < 0 ? -1 : r.baseRoot[r.offsets[ChunkOf(r, width, i)] + l];
     }
 
     sealed class Rules
     {
         public required Func<int, int, bool> pass;
+        /// <summary>Whether the mover crosses an edge with something on it (its kind, never EDGE_NONE: that is open to
+        /// all and the callers don't ask), between two tiles.</summary>
         public required Func<int, int, int, int, int, bool> across;
     }
 
@@ -159,58 +167,68 @@ public static partial class Pathfinding
         bool shut = DOOR_MOVERS.Contains(mover);
         return new Rules
         {
-            pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && grid.tiles[y * grid.width + x] == DOOR),
-            across = (e, ax, ay, bx, by) =>
-            {
-                int kind = e >= 0 && e < grid.edges.Count ? grid.edges[e] : 0;
-                if (kind == 0) return true;
-                return !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
-            },
+            pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && getTile(grid, x, y) == DOOR),
+            across = (kind, ax, ay, bx, by) => !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover),
         };
     }
 
     static void FloodChunk(Grid grid, Reach r, int c, Rules rule, int[] stack)
     {
-        int width = grid.width, height = grid.height;
-        int x0 = c % r.cw * REACH_CHUNK;
-        int y0 = c / r.cw * REACH_CHUNK;
-        int x1 = Math.Min(width, x0 + REACH_CHUNK);
-        int y1 = Math.Min(height, y0 + REACH_CHUNK);
-        for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) r.local[y * width + x] = rule.pass(x, y) ? -2 : -1;
-        int next = 0;
-        for (int y = y0; y < y1; y++)
+        // Bare land: one component, whoever walks. Not flooded, nothing allocated: most of a big world.
+        if (Grids.bareChunk(grid, c))
         {
-            for (int x = x0; x < x1; x++)
+            r.local[c] = null;
+            r.counts[c] = 1;
+            return;
+        }
+        const int N = REACH_CHUNK;
+        int width = grid.width, height = grid.height;
+        int x0 = c % r.cw * N;
+        int y0 = c / r.cw * N;
+        int w = Math.Min(width, x0 + N) - x0;
+        int h = Math.Min(height, y0 + N) - y0;
+        // A chunk has at most 1,024 components: a short a tile (2 KB a chunk a mover).
+        var local = r.local[c] ??= new short[N * N];
+        // The chunk's own edges (two a tile: north, west), or none at all: a tile's neighbours within the chunk are read
+        // straight from them, and an edge with nothing on it is crossed without asking.
+        var edges = Grids.edgeChunk(grid, c, out int noEdges);
+        for (int ly = 0; ly < h; ly++) for (int lx = 0; lx < w; lx++) local[ly * N + lx] = (short)(rule.pass(x0 + lx, y0 + ly) ? -2 : -1);
+        short next = 0;
+        for (int sy = 0; sy < h; sy++)
+        {
+            for (int sx = 0; sx < w; sx++)
             {
-                int start = y * width + x;
-                if (r.local[start] != -2) continue;
-                r.local[start] = next;
+                int start = sy * N + sx;
+                if (local[start] != -2) continue;
+                local[start] = next;
                 int top = 0;
                 stack[top++] = start;
                 while (top > 0)
                 {
                     int cur = stack[--top];
-                    int cx = cur % width;
-                    int cy = (cur - cx) / width;
-                    if (cy > y0)
+                    int lx = cur % N, ly = cur / N;
+                    int cx = x0 + lx, cy = y0 + ly;
+                    // North: this tile's north edge. South: the next row's north edge. West: this tile's west edge. East:
+                    // the next tile's west edge.
+                    if (ly > 0)
                     {
-                        int n = cur - width;
-                        if (r.local[n] == -2 && rule.across(cur * 2, cx, cy, cx, cy - 1)) { r.local[n] = next; stack[top++] = n; }
+                        int n = cur - N, kind = edges == null ? noEdges : edges[2 * cur];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx, cy - 1))) { local[n] = next; stack[top++] = n; }
                     }
-                    if (cy < y1 - 1)
+                    if (ly < h - 1)
                     {
-                        int n = cur + width;
-                        if (r.local[n] == -2 && rule.across(n * 2, cx, cy, cx, cy + 1)) { r.local[n] = next; stack[top++] = n; }
+                        int n = cur + N, kind = edges == null ? noEdges : edges[2 * n];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx, cy + 1))) { local[n] = next; stack[top++] = n; }
                     }
-                    if (cx > x0)
+                    if (lx > 0)
                     {
-                        int n = cur - 1;
-                        if (r.local[n] == -2 && rule.across(cur * 2 + 1, cx, cy, cx - 1, cy)) { r.local[n] = next; stack[top++] = n; }
+                        int n = cur - 1, kind = edges == null ? noEdges : edges[2 * cur + 1];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx - 1, cy))) { local[n] = next; stack[top++] = n; }
                     }
-                    if (cx < x1 - 1)
+                    if (lx < w - 1)
                     {
-                        int n = cur + 1;
-                        if (r.local[n] == -2 && rule.across(n * 2 + 1, cx, cy, cx + 1, cy)) { r.local[n] = next; stack[top++] = n; }
+                        int n = cur + 1, kind = edges == null ? noEdges : edges[2 * n + 1];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx + 1, cy))) { local[n] = next; stack[top++] = n; }
                     }
                 }
                 next++;
@@ -219,6 +237,10 @@ public static partial class Pathfinding
         r.counts[c] = next;
     }
 
+    /// <summary>The links between two bare chunks: their one component each, joined (shared, never changed).</summary>
+    static readonly List<int> BARE_LINK = [0, 0];
+    static readonly List<int> NO_LINK = [];
+
     static void BorderLinks(Grid grid, Reach r, int c, Rules rule)
     {
         int width = grid.width, height = grid.height;
@@ -226,32 +248,49 @@ public static partial class Pathfinding
         int y0 = c / r.cw * REACH_CHUNK;
         int x1 = Math.Min(width, x0 + REACH_CHUNK);
         int y1 = Math.Min(height, y0 + REACH_CHUNK);
-        var east = new List<int>();
-        var south = new List<int>();
+        // Two bare chunks side by side: nothing stands between them (an edge there would be the far chunk's).
+        const int N = REACH_CHUNK;
+        var mine = r.local[c];
+        bool bare = mine == null;
+        List<int> east = NO_LINK, south = NO_LINK;
         var seen = new HashSet<int>();
         if (x1 < width)
         {
-            for (int y = y0; y < y1; y++)
+            if (bare && r.local[c + 1] == null) east = BARE_LINK;
+            else
             {
-                int b = y * width + x1;
-                int la = r.local[b - 1], lb = r.local[b];
-                if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2 + 1, x1, y, x1 - 1, y)) continue;
-                seen.Add(la * 2048 + lb);
-                east.Add(la);
-                east.Add(lb);
+                east = new List<int>();
+                var theirs = r.local[c + 1];
+                for (int y = y0; y < y1; y++)
+                {
+                    int la = mine == null ? 0 : mine[(y - y0) * N + (N - 1)], lb = theirs == null ? 0 : theirs[(y - y0) * N];
+                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb)) continue;
+                    int kind = Grids.edgeOf(grid, grid.ox + x1, grid.oy + y, 1); // the far tile's west edge
+                    if (kind != EDGE_NONE && !rule.across(kind, x1, y, x1 - 1, y)) continue;
+                    seen.Add(la * 2048 + lb);
+                    east.Add(la);
+                    east.Add(lb);
+                }
             }
         }
         seen.Clear();
         if (y1 < height)
         {
-            for (int x = x0; x < x1; x++)
+            if (bare && r.local[c + r.cw] == null) south = BARE_LINK;
+            else
             {
-                int b = y1 * width + x;
-                int la = r.local[b - width], lb = r.local[b];
-                if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2, x, y1, x, y1 - 1)) continue;
-                seen.Add(la * 2048 + lb);
-                south.Add(la);
-                south.Add(lb);
+                south = new List<int>();
+                var theirs = r.local[c + r.cw];
+                for (int x = x0; x < x1; x++)
+                {
+                    int la = mine == null ? 0 : mine[(N - 1) * N + (x - x0)], lb = theirs == null ? 0 : theirs[x - x0];
+                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb)) continue;
+                    int kind = Grids.edgeOf(grid, grid.ox + x, grid.oy + y1, 0); // the far tile's north edge
+                    if (kind != EDGE_NONE && !rule.across(kind, x, y1, x, y1 - 1)) continue;
+                    seen.Add(la * 2048 + lb);
+                    south.Add(la);
+                    south.Add(lb);
+                }
             }
         }
         r.east[c] = east;
@@ -299,7 +338,7 @@ public static partial class Pathfinding
     static void Join(Grid grid, Reach r, string mover)
     {
         int width = grid.width;
-        var doorTiles = grid.open.Where(i => grid.tiles[i] == DOOR && isPassable(grid, i % width, i / width, mover)).ToList();
+        var doorTiles = grid.open.Where(i => tileAt(grid, i) == DOOR && isPassable(grid, i % width, i / width, mover)).ToList();
         r.doorIds = new Dictionary<int, int>();
         for (int k = 0; k < doorTiles.Count; k++) r.doorIds[doorTiles[k]] = r.count + k;
         var root = new int[r.count + doorTiles.Count];
@@ -313,7 +352,7 @@ public static partial class Pathfinding
             }
             return k;
         }
-        int LabelAt(int i) => r.local[i] >= 0 ? BaseLabel(r, width, i) : r.doorIds.TryGetValue(i, out int d) ? d : -1;
+        int LabelAt(int i) => Local(r, width, i) >= 0 ? BaseLabel(r, width, i) : r.doorIds.TryGetValue(i, out int d) ? d : -1;
         void Unite(int a, int b)
         {
             if (a < 0 || b < 0) return;
@@ -332,7 +371,7 @@ public static partial class Pathfinding
         }
         foreach (int e in grid.edgeOpen)
         {
-            if (grid.edges[e] != EDGE_DOOR) continue;
+            if (edgeKind(grid, e) != EDGE_DOOR) continue;
             int i = e / 2;
             int x = i % width, y = i / width;
             int ox = e % 2 == 0 ? x : x - 1;
@@ -362,7 +401,7 @@ public static partial class Pathfinding
                 int ch = (height + REACH_CHUNK - 1) / REACH_CHUNK;
                 r = new Reach
                 {
-                    version = version, cursor = cursor, cw = cw, ch = ch, local = new int[width * height], counts = new int[cw * ch], offsets = new int[cw * ch],
+                    version = version, cursor = cursor, cw = cw, ch = ch, local = new short[]?[cw * ch], counts = new int[cw * ch], offsets = new int[cw * ch],
                     east = new List<int>[cw * ch], south = new List<int>[cw * ch],
                 };
                 perMover[mover] = r;
@@ -402,7 +441,7 @@ public static partial class Pathfinding
         if (!doorMover) return i => BaseLabel(reach, width, i);
         return i =>
         {
-            int l = reach.local[i] >= 0 ? BaseLabel(reach, width, i) : reach.doorIds.TryGetValue(i, out int d) ? d : -1;
+            int l = Local(reach, width, i) >= 0 ? BaseLabel(reach, width, i) : reach.doorIds.TryGetValue(i, out int d) ? d : -1;
             return l < 0 ? -1 : reach.root[l];
         };
     }
@@ -429,30 +468,66 @@ public static partial class Pathfinding
         return goals.Any(g => Passable(g) && startLabels.Contains(label(g.y * width + g.x)));
     }
 
+    /// <summary>A search's working data for one tile: valid when its stamp is the search's (`gen`).</summary>
+    struct AStarCell
+    {
+        public uint seen, closed;
+        public int from;
+        public double g;
+    }
+
+    /// <summary>A*'s per-tile data, in 32 x 32 chunks allocated where a search first goes: a search costs what it
+    /// visits, whatever the map's size (it was four arrays the size of the map: 2 GB at 10,000). Kept between searches
+    /// (stamped, never cleared); dropped whole when it has grown past MAX_SCRATCH_CHUNKS, at the start of a search.</summary>
     sealed class AStarScratch
     {
-        public int size;
+        public int width, height, cw;
         public uint gen;
-        public uint[] seen = Array.Empty<uint>();
-        public double[] g = Array.Empty<double>();
-        public int[] from = Array.Empty<int>();
-        public uint[] closed = Array.Empty<uint>();
+        public int allocated;
+        public AStarCell[]?[] chunks = [];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref AStarCell At(int x, int y)
+        {
+            int c = (y >> 5) * cw + (x >> 5);
+            var cells = chunks[c] ?? Allocate(c);
+            return ref cells[((y & 31) << 5) | (x & 31)];
+        }
+
+        AStarCell[] Allocate(int c)
+        {
+            allocated++;
+            return chunks[c] = new AStarCell[REACH_CHUNK * REACH_CHUNK];
+        }
     }
+
+    /// <summary>About 100 MB of search data (24 bytes a tile).</summary>
+    const int MAX_SCRATCH_CHUNKS = 4096;
 
     static AStarScratch? scratch;
 
-    static AStarScratch ScratchFor(int size)
+    static AStarScratch ScratchFor(Grid grid)
     {
-        if (scratch == null || scratch.size != size || scratch.gen >= 0xfffffff0)
-            scratch = new AStarScratch { size = size, gen = 0, seen = new uint[size], g = new double[size], from = new int[size], closed = new uint[size] };
+        if (scratch == null || scratch.width != grid.width || scratch.height != grid.height || scratch.gen >= 0xfffffff0 || scratch.allocated > MAX_SCRATCH_CHUNKS)
+        {
+            int cw = (grid.width + REACH_CHUNK - 1) / REACH_CHUNK, ch = (grid.height + REACH_CHUNK - 1) / REACH_CHUNK;
+            scratch = new AStarScratch { width = grid.width, height = grid.height, cw = cw, gen = 0, chunks = new AStarCell[]?[cw * ch] };
+        }
         scratch.gen += 1;
         return scratch;
     }
 
-    static List<Point> Reconstruct(int[] cameFrom, int end, int width)
+    static List<Point> Reconstruct(AStarScratch sc, int end, int width)
     {
         var path = new List<Point>();
-        for (int idx = end; cameFrom[idx] != -1; idx = cameFrom[idx]) path.Add(new Point(idx % width, idx / width));
+        for (int idx = end; ; )
+        {
+            int x = idx % width, y = idx / width;
+            int from = sc.At(x, y).from;
+            if (from == -1) break;
+            path.Add(new Point(x, y));
+            idx = from;
+        }
         path.Reverse();
         return path;
     }
@@ -555,13 +630,13 @@ public static partial class Pathfinding
         int sx = Math.Sign(b.x - a.x), sy = Math.Sign(b.y - a.y);
         int x = a.x, y = a.y;
         int err = dx - dy;
-        bool Open(int px, int py) => inBounds(grid, px, py) && grid.tiles[py * grid.width + px] == FLOOR && isPassable(grid, px, py, SURVIVOR);
-        bool Door(int px, int py) => grid.tiles[py * grid.width + px] == DOOR;
+        bool Open(int px, int py) => getTile(grid, px, py) == FLOOR && isPassable(grid, px, py, SURVIVOR);
+        bool Door(int px, int py) => getTile(grid, px, py) == DOOR;
         bool Bare(int ax, int ay, int bx, int by)
         {
-            int e = edgeBetween(grid, ax, ay, bx, by);
+            int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
             // grid.edges[-1] is undefined in the TypeScript, which is not EDGE_NONE.
-            return e >= 0 && grid.edges[e] == EDGE_NONE;
+            return e >= 0 && kind == EDGE_NONE;
         }
         while (x != b.x || y != b.y)
         {
@@ -603,8 +678,8 @@ public static partial class Pathfinding
 
     static int EdgeKindOf(Grid grid, int ax, int ay, int bx, int by)
     {
-        int e = edgeBetween(grid, ax, ay, bx, by);
-        return e < 0 ? EDGE_NONE : grid.edges[e];
+        edgeBetween(grid, ax, ay, bx, by, out int kind);
+        return kind;
     }
 
     /// <summary>Nothing solid between two tiles at most a step apart (for blows and bites).</summary>
@@ -614,20 +689,30 @@ public static partial class Pathfinding
         if ((dx == 0 && dy == 0) || Math.Abs(dx) > 1 || Math.Abs(dy) > 1) return true;
         bool Open(int px, int py, int qx, int qy)
         {
-            int e = edgeBetween(grid, px, py, qx, qy);
+            int e = edgeBetween(grid, px, py, qx, qy, out int kind);
             if (e < 0) return true;
-            int kind = grid.edges[e];
             return kind == EDGE_NONE || kind == EDGE_BARRICADE || (kind == EDGE_DOOR && edgeIsOpen(grid, e)) || (kind == EDGE_WINDOW_BROKEN && !grid.edgeBoarded.Contains(e));
         }
         if (dx == 0 || dy == 0) return Open(a.x, a.y, b.x, b.y);
         return (Open(a.x, a.y, b.x, a.y) && Open(b.x, a.y, b.x, b.y)) || (Open(a.x, a.y, a.x, b.y) && Open(a.x, b.y, b.x, b.y));
     }
 
+    /// <summary>Does sight pass between two tiles side by side? seesThrough of the edge between them, read by tile.</summary>
+    public static bool seesBetween(Grid grid, int ax, int ay, int bx, int by)
+    {
+        int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
+        if (e < 0) return true;
+        if (kind == EDGE_WALL) return false;
+        if (kind == EDGE_DOOR) return edgeIsOpen(grid, e);
+        if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);
+        return true;
+    }
+
     /// <summary>Does sight pass this edge? Not a wall, a shut door or boards.</summary>
     public static bool seesThrough(Grid grid, int e)
     {
         if (e < 0) return true;
-        int kind = e < grid.edges.Count ? grid.edges[e] : EDGE_NONE;
+        int kind = edgeKind(grid, e);
         if (kind == EDGE_WALL) return false;
         if (kind == EDGE_DOOR) return edgeIsOpen(grid, e);
         if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);

@@ -63,7 +63,7 @@ public sealed class Trees
     /// <summary>A tree tile's species, place (size, turn, the trunk nudged off the centre) and tint, as Build draws it
     /// (the far field draws the same trees).</summary>
     public static (int species, Transform3D t, Color custom) Placement(Grid g, int x, int y, bool coarse = false) =>
-        Placement(x, y, g.ground[y * g.width + x] == FOREST, coarse);
+        Placement(x, y, Grids.groundAt(g, y * g.width + x) == FOREST, coarse);
 
     /// <summary>A growing tree's size as a share of its full size (Growth.treeScale), for a tile whose tree came up from a sapling (its id starts with g); 1 for any other.</summary>
     static float GrowthScale(SimState state, Furniture f) =>
@@ -190,7 +190,7 @@ public sealed class Trees
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
             {
                 int i = y * g.width + x;
-                if (g.ground[i] == FOREST && g.tiles[i] == "floor") h = h * 31 + i;
+                if (Grids.groundAt(g, i) == FOREST && Grids.tileAt(g, i) == "floor") h = h * 31 + i;
             }
         return h;
     }
@@ -210,7 +210,7 @@ public sealed class Trees
                 if (f.kind != "tree") continue;
                 int i = f.y * g.width + f.x;
                 taken.Add(i);
-                bool forest = g.ground[i] == FOREST;
+                bool forest = Grids.groundAt(g, i) == FOREST;
                 int s = Species(f.x, f.y, forest);
                 var (lo, hi) = SIZE[s];
                 float size = lo + (hi - lo) * U(f.x, f.y, 3);
@@ -224,7 +224,7 @@ public sealed class Trees
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
             {
                 int i = y * g.width + x;
-                if (g.ground[i] != FOREST || g.tiles[i] != "floor" || taken.Contains(i)) continue;
+                if (Grids.groundAt(g, i) != FOREST || Grids.tileAt(g, i) != "floor" || taken.Contains(i)) continue;
                 double r = U(x, y, 11);
                 int u = r < FERN ? 1 : r < FERN + BUSH ? 0 : -1;
                 if (u < 0) continue;

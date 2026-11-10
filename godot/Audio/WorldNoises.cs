@@ -110,8 +110,8 @@ public sealed class WorldNoises
             for (int x = x0; x <= x1; x++)
             {
                 int e = (y * grid.width + x) * 2;
-                if (grid.edges[e] == Grids.EDGE_WINDOW) windows.Add(e);
-                if (grid.edges[e + 1] == Grids.EDGE_WINDOW) windows.Add(e + 1);
+                if (Grids.edgeKind(grid, e) == Grids.EDGE_WINDOW) windows.Add(e);
+                if (Grids.edgeKind(grid, e + 1) == Grids.EDGE_WINDOW) windows.Add(e + 1);
             }
         windowsVersion = state.walkabilityVersion;
         windowsX = you.pos.x;

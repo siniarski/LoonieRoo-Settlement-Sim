@@ -3,25 +3,50 @@ namespace LoonieRoo.Sim;
 
 public static partial class Space
 {
+    /// <summary>NearestTile's working data: a stamp a tile, in 32 x 32 chunks allocated where a search first goes, and
+    /// the queue, grown as a search needs. It was two arrays the size of the map (800 MB at 10,000).</summary>
     sealed class Scratch
     {
-        public int size;
+        public int width, height, cw;
         public uint gen;
-        public uint[] seen = Array.Empty<uint>();
-        public int[] queue = Array.Empty<int>();
+        public int allocated;
+        public uint[]?[] seen = [];
+        public int[] queue = new int[1024];
+
+        /// <summary>Marks a tile seen; false if it already was.</summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool Mark(int x, int y)
+        {
+            int c = (y >> 5) * cw + (x >> 5);
+            var a = seen[c] ?? Allocate(c);
+            ref uint stamp = ref a[((y & 31) << 5) | (x & 31)];
+            if (stamp == gen) return false;
+            stamp = gen;
+            return true;
+        }
+
+        uint[] Allocate(int c)
+        {
+            allocated++;
+            return seen[c] = new uint[32 * 32];
+        }
     }
 
-    /// <summary>NearestTile's working arrays, by nesting depth (accept may search too), for the map size last used.</summary>
+    /// <summary>16 MB of stamps: more than that, and they're dropped at the start of the next search.</summary>
+    const int MAX_SCRATCH_CHUNKS = 4096;
+
+    /// <summary>NearestTile's working data, by nesting depth (accept may search too), for the map size last used.</summary>
     static readonly List<Scratch?> pool = new();
     static int depth;
 
-    static Scratch GetScratch(int d, int size)
+    static Scratch GetScratch(int d, Grid grid)
     {
         while (pool.Count <= d) pool.Add(null);
         var sc = pool[d];
-        if (sc == null || sc.size != size || sc.gen >= 0xfffffff0)
+        if (sc == null || sc.width != grid.width || sc.height != grid.height || sc.gen >= 0xfffffff0 || sc.allocated > MAX_SCRATCH_CHUNKS)
         {
-            sc = new Scratch { size = size, gen = 0, seen = new uint[size], queue = new int[size] };
+            int cw = (grid.width + 31) >> 5, ch = (grid.height + 31) >> 5;
+            sc = new Scratch { width = grid.width, height = grid.height, cw = cw, gen = 0, seen = new uint[]?[cw * ch], queue = sc?.queue ?? new int[1024] };
             pool[d] = sc;
         }
         return sc;
@@ -35,18 +60,16 @@ public static partial class Space
     {
         if (!Grids.inBounds(grid, from.x, from.y)) return null;
         int width = grid.width;
-        int size = width * grid.height;
-        var sc = GetScratch(depth, size);
+        var sc = GetScratch(depth, grid);
         depth++;
         try
         {
-            uint gen = ++sc.gen;
-            var seen = sc.seen;
+            ++sc.gen;
             var queue = sc.queue;
             int tail = 0;
             int start = from.y * width + from.x;
             queue[tail++] = start;
-            seen[start] = gen;
+            sc.Mark(from.x, from.y);
             for (int head = 0; head < tail && head < limit; head++)
             {
                 int i = queue[head];
@@ -59,10 +82,13 @@ public static partial class Space
                     int nx = d == 1 ? x + 1 : d == 3 ? x - 1 : x;
                     int ny = d == 0 ? y - 1 : d == 2 ? y + 1 : y;
                     if (!Grids.isWalkable(grid, nx, ny)) continue;
-                    int n = ny * width + nx;
-                    if (seen[n] == gen) continue;
-                    seen[n] = gen;
-                    queue[tail++] = n;
+                    if (!sc.Mark(nx, ny)) continue;
+                    if (tail == queue.Length)
+                    {
+                        Array.Resize(ref queue, tail * 2);
+                        sc.queue = queue;
+                    }
+                    queue[tail++] = ny * width + nx;
                 }
             }
             return null;

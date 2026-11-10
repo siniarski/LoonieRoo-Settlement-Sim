@@ -136,7 +136,7 @@ public class GrowthTest
     {
         var s = Meadow();
         var road = Array.IndexOf(Grids.GROUNDS, "road");
-        for (var x = 0; x < 24; x++) for (var y = 8; y < 13; y++) s.grid.ground[Grids.tileIndex(s.grid, x, y)] = road;
+        for (var x = 0; x < 24; x++) for (var y = 8; y < 13; y++) Grids.setGround(s.grid, Grids.tileIndex(s.grid, x, y), road);
         s.tick = TickAt(30.25);
         expect(Growth.cover(s, 6, 10).crack).toBe(0);
         s.tick = TickAt(360.25);   // about a year

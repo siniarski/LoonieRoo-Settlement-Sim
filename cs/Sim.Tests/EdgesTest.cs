@@ -83,7 +83,7 @@ public partial class EdgesTest
                 s.priorities[Js.Idx(k)] = 0;
             }
             var door = Grids.edgeBetween(state.grid, 2, 3, 2, 4);
-            expect(Js.Missing(state.grid.edges, door) ? null : (object?)(Js.Get(state.grid.edges, door))).toBe(Grids.EDGE_DOOR);
+            expect(Js.Missing(Grids.allEdges(state.grid), door) ? null : (object?)(Grids.edgeKind(state.grid, door))).toBe(Grids.EDGE_DOOR);
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(2), y = Js.I(6) });
             var wasOpen = false;
             for (var t = 0; t < 60; t++)
@@ -125,7 +125,7 @@ public partial class EdgesTest
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = box(1, 1, 3, 3) });
             var back = Savefile.loadFile(Savefile.toSaveFile(state));
-            expect((back.ok ? (object?)(back.state.grid.edges) : false)).toEqual(state.grid.edges);
+            expect((back.ok ? (object?)(Grids.allEdges(back.state.grid)) : false)).toEqual(Grids.allEdges(state.grid));
         }
 
         [Fact(DisplayName = "walls on tile edges > the dead batter an edge door down to get at someone inside")]
@@ -144,7 +144,7 @@ public partial class EdgesTest
             for (var t = 0; (t < 400) && !broke; t++)
             {
                 Tick.tick(state);
-                broke = Js.Get(state.grid.edges, door) != Grids.EDGE_DOOR;
+                broke = Grids.edgeKind(state.grid, door) != Grids.EDGE_DOOR;
             }
             expect(broke).toBe(true);
             expect(state.events.some((e) => e.message.includes("broke through the door"))).toBe(true);
@@ -167,7 +167,7 @@ public partial class EdgesTest
                 Tick.tick(state);
             }
             expect(Js.Missing(state.grid.edgeDamage, Js.Str(wall)) ? null : (object?)(Js.Get(state.grid.edgeDamage, Js.Str(wall)))).toBeUndefined();
-            expect(Js.Missing(state.grid.edges, wall) ? null : (object?)(Js.Get(state.grid.edges, wall))).toBe(1);
+            expect(Js.Missing(Grids.allEdges(state.grid), wall) ? null : (object?)(Grids.edgeKind(state.grid, wall))).toBe(1);
         }
 
         [Fact(DisplayName = "walls on tile edges > a colonist builds an edge wall you designate: wood brought, built from either side")]
@@ -185,11 +185,11 @@ public partial class EdgesTest
             expect(Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(3), y = Js.I(1), structure = "trap", side = "n" }).ok).toBe(false);
             expect(Commands.applyCommand(state, new Command { type = "designateBuild", x = Js.I(3), y = Js.I(0), structure = "wall", side = "n" }).ok).toBe(false);
             var wall = Grids.edgeBetween(state.grid, 3, 1, 3, 0);
-            for (var t = 0; (t < 600) && (Js.Get(state.grid.edges, wall) != 1); t++)
+            for (var t = 0; (t < 600) && (Grids.edgeKind(state.grid, wall) != 1); t++)
             {
                 Tick.tick(state);
             }
-            expect(Js.Missing(state.grid.edges, wall) ? null : (object?)(Js.Get(state.grid.edges, wall))).toBe(1);
+            expect(Js.Missing(Grids.allEdges(state.grid), wall) ? null : (object?)(Grids.edgeKind(state.grid, wall))).toBe(1);
             expect(state.blueprints).toHaveLength(0);
         }
 

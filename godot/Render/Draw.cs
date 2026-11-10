@@ -71,21 +71,21 @@ public sealed partial class Painter
         double size = tileSize(camera);
         var range = visibleTiles(camera, viewport, grid.width, grid.height);
         // On screen and explored: everything else is skipped (big maps, fog of war).
-        bool shown(int x, int y) => x >= range.x0 && x <= range.x1 && y >= range.y0 && y <= range.y1 && grid.explored[y * grid.width + x] == 1;
+        bool shown(int x, int y) => x >= range.x0 && x <= range.x1 && y >= range.y0 && y <= range.y1 && Grids.exploredAt(grid, y * grid.width + x) == 1;
 
         for (int y = range.y0; y <= range.y1; y++)
         {
             for (int x = range.x0; x <= range.x1; x++)
             {
                 int i = y * grid.width + x;
-                var tile = grid.tiles[i];
-                if (grid.explored[i] != 1)
+                var tile = Grids.tileAt(grid, i);
+                if (Grids.exploredAt(grid, i) != 1)
                 {
                     var r = tileRect(x, y);
                     ctx.fillStyle = COLOURS.fog;
                     ctx.fillRect(r.x, r.y, r.w, r.h);
                 }
-                else drawTile(x, y, tile, grid.ground[i], size, tile == "door" && grid.locked.Contains(i), tile == "door" && grid.open.Contains(i));
+                else drawTile(x, y, tile, Grids.groundAt(grid, i), size, tile == "door" && grid.locked.Contains(i), tile == "door" && grid.open.Contains(i));
                 if (state.settings.winter && Climate.isRadioactive(state, x, y))
                 {
                     var r = tileRect(x, y);
@@ -101,14 +101,14 @@ public sealed partial class Painter
             for (int x = range.x0; x <= range.x1; x++)
             {
                 int i = y * grid.width + x;
-                double damage = grid.damage[i];
-                var tile = grid.tiles[i];
+                double damage = Grids.damageAt(grid, i);
+                var tile = Grids.tileAt(grid, i);
                 if (damage > 0 && (tile == "wall" || tile == "door")) drawDamage(x, y, damage / Breach.structureHealth(grid, i));
             }
 
         for (int y = range.y0; y <= range.y1; y++)
             for (int x = range.x0; x <= range.x1; x++)
-                if (grid.dirt[y * grid.width + x] == 1) drawDirt(x, y, size);
+                if (Grids.dirtAt(grid, y * grid.width + x) == 1) drawDirt(x, y, size);
 
         if (size >= MIN_GRID_LINE_PX) drawGridLines(range);
         drawMapEdge(grid.width, grid.height);
@@ -198,7 +198,7 @@ public sealed partial class Painter
             for (int x = range.x0; x <= range.x1; x++)
             {
                 int i = y * grid.width + x;
-                if (grid.explored[i] != 1 || seen[i] == 1) continue;
+                if (Grids.exploredAt(grid, i) != 1 || seen[i] == 1) continue;
                 var r = tileRect(x, y);
                 ctx.fillRect(r.x, r.y, r.w, r.h);
             }
@@ -471,12 +471,12 @@ public sealed partial class Painter
             for (int x = range.x0; x <= range.x1 + 1; x++)
             {
                 if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) continue;
-                bool seen = grid.explored[y * grid.width + x] == 1 || (y > 0 && grid.explored[(y - 1) * grid.width + x] == 1) || (x > 0 && grid.explored[y * grid.width + x - 1] == 1);
+                bool seen = Grids.exploredAt(grid, y * grid.width + x) == 1 || (y > 0 && Grids.exploredAt(grid, (y - 1) * grid.width + x) == 1) || (x > 0 && Grids.exploredAt(grid, y * grid.width + x - 1) == 1);
                 if (!seen) continue;
                 for (int side = 0; side <= 1; side++)
                 {
                     int e = (y * grid.width + x) * 2 + side;
-                    int kind = grid.edges[e];
+                    int kind = Grids.edgeKind(grid, e);
                     if (kind == 0) continue;
                     var r = tileRect(x, y);
                     // North edge: along the top of the tile; west edge: down its left side.

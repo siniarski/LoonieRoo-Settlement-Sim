@@ -188,7 +188,7 @@ public partial class VehiclesTest
             }
             var cars = state.vehicles ?? [];
             expect(cars.length).toBeGreaterThan(4);
-            var onRoad = cars.filter((c) => Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, ((double)(c.pos.y) * (256)) + c.pos.x))) == "road").length;
+            var onRoad = cars.filter((c) => Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(c.pos.y) * (256)) + c.pos.x))) == "road").length;
             expect(onRoad).toBeGreaterThan(((double)(cars.length) / (2)));
             foreach (var c in Js.Iter(cars))
             {
@@ -211,7 +211,7 @@ public partial class VehiclesTest
                 var car_2 = __d6.car;
                 if (road)
                 {
-                    state_1.grid.ground.fill(Grids.GROUNDS.indexOf("road"));
+                    Grids.fillGround(state_1.grid, Grids.GROUNDS.indexOf("road"));
                 }
                 getIn(state_1);
                 Commands.applyCommand(state_1, new Command { type = "steer", dx = 0, dy = -1 });
@@ -264,7 +264,7 @@ public partial class VehiclesTest
             var state = Worldgen.createWorld(2, 128);
             var t = Js.NN((state.vehicles ?? []).find((v) => v.kind == "truck"));
             expect(t).toBeDefined();
-            state.grid.explored.fill(1);
+            Grids.fillExplored(state.grid, 1);
             expect(Outposts.truck(state)).toEqual(t.pos);
             var fuel = t.fuel;
             expect(Outposts.takeTruck(state)).toBe(true);

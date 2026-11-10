@@ -3,7 +3,7 @@
 // steps summed over survivors. Also the whole tick's ticks/s and bytes/tick, and sampled allocations by type (the
 // runtime's AllocationTick events, about one per 100 KB). Report: cs/Harness/out/profile.txt.
 // Keep the replay in step with Tick.tick and Tick.behave (it must call the same things in the same order).
-// Env: SCENES=a,b (default all), TICKS (measured ticks per scene, 300), WARM (warm-up ticks, 20: as the stress test).
+// Env: SCENES=a,b (default all but the big worlds new-2048, new-4096 and new-10000), TICKS (measured ticks per scene, 300), WARM (warm-up ticks, 20: as the stress test).
 //
 // "tick dumps": the states of fixed scenes (four seeds: a generated 512 world, a crowded 128, a 512 ringed by the dead) at several ticks, as
 // JSON files (DUMP=folder), for checking that a speed change moves nothing: compare two runs' files byte for byte.
@@ -66,6 +66,14 @@ public class Profile
         ("colony-512", () => Scenarios.STRESS.First((x) => x.name == "colony-512").build()),
         ("colony-128", () => Crowd(7, 128, 100, 0, false)),
         ("mixed-128", () => Crowd(7, 128, 50, 200, false)),
+    };
+
+    /// <summary>New games on big worlds (the start's chunks only): run only when named in SCENES.</summary>
+    public static readonly (string name, Func<SimState> build)[] BIG =
+    {
+        ("new-2048", () => Worldgen.createWorld(42, 2048, Difficulty.NORMAL)),
+        ("new-4096", () => Worldgen.createWorld(42, 4096, Difficulty.NORMAL)),
+        ("new-10000", () => Worldgen.createWorld(42, 10000, Difficulty.NORMAL)),
     };
 
     // --- The replayed tick. ---
@@ -336,7 +344,7 @@ public class Profile
         var want = Env("SCENES")?.Split(',');
         var out_ = new List<string>();
         using var listener = new AllocListener();
-        foreach (var (name, build) in SCENES.Where((x) => want == null || want.Contains(x.name)))
+        foreach (var (name, build) in want == null ? SCENES : SCENES.Concat(BIG).Where((x) => want.Contains(x.name)).ToArray())
         {
             var state = build();
             Pathfinding.warmReach(state.grid, state.walkabilityVersion);

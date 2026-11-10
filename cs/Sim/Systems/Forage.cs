@@ -38,7 +38,7 @@ public static partial class Forage
         var today = Time.dayOf(state.tick);
         bool open(double x, double y)
         {
-            var g = Js.Get(Grids.GROUNDS, Js.NN(Js.Get(grid.ground, Grids.tileIndex(grid, x, y))));
+            var g = Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(grid, Grids.tileIndex(grid, x, y))));
             return ((((g == "grass") || (g == "field")) && Grids.isWalkable(grid, x, y)) && (Js.Get(state.foraged, Js.Str(Grids.tileIndex(grid, x, y))) != today)) && !Rooms.isIndoors(state, x, y);
         }
         var p = Space.nearestTile(grid, s.pos, (__f0, __f1) => open(__f0, __f1), FORAGE_SEARCH);

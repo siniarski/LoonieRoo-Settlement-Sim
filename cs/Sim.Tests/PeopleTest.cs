@@ -87,7 +87,7 @@ public partial class PeopleTest
             var state = setup(["s...N", "....."], new() { ["clean"] = 3 });
             var s = Js.NN(Js.Get(state.survivors, 0));
             runUntil(state, (_) => (Js.Q(s.reading?.progress, 0)) > 10, 100);
-            state.grid.dirt[Js.Idx(((double)(1) * (5)) + 0)] = 0;
+            Grids.putDirt(state.grid, ((double)(1) * (5)) + 0, 0);
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(0), y = Js.I(1) });
             Js.NN(Js.Get(state.survivors, 0)).priorities["haul"] = 3;
             state.items.push(new() { id = "w1", kind = "wood", pos = new Point { x = Js.I(2), y = Js.I(1) }, carriedBy = null, reservedBy = null, wear = 0, tag = null });

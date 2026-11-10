@@ -61,12 +61,12 @@ public partial class MapShot : Node
             for (int x = 0; x < size; x++)
             {
                 int i = y * size + x;
-                string t = g.tiles[i];
-                Color c = t == "water" ? water : t == "floor" ? grounds[Math.Clamp(g.ground[i], 0, grounds.Length - 1)] : t == "door" ? door : wall;
+                string t = Grids.tileAt(g, i);
+                Color c = t == "water" ? water : t == "floor" ? grounds[Math.Clamp(Grids.groundAt(g, i), 0, grounds.Length - 1)] : t == "door" ? door : wall;
                 // A touch of noise, so even ground isn't a flat sheet.
                 float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
                 c = c.Lightened(Math.Abs(n) * 0.05f);
-                int north = g.edges[2 * i], west = g.edges[2 * i + 1];
+                int north = Grids.edgeKind(g, 2 * i), west = Grids.edgeKind(g, 2 * i + 1);
                 int e = north != 0 ? north : west;
                 if (e == Grids.EDGE_WALL || e == Grids.EDGE_BARRICADE) c = wall;
                 else if (e == Grids.EDGE_DOOR) c = door;

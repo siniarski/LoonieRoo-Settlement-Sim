@@ -440,7 +440,7 @@ public static partial class ControlMod
         {
             Point to = new Point { x = Js.I(from.x + d.x), y = Js.I(from.y + d.y) };
             var e = Grids.edgeBetween(state.grid, from.x, from.y, to.x, to.y);
-            if (((e >= 0) && (Js.Get(state.grid.edges, e) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(e))
+            if (((e >= 0) && (Grids.edgeKind(state.grid, e) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(e))
             {
                 return new PaneInFrontResult { edge = e, to = to };
             }
@@ -535,7 +535,7 @@ public static partial class ControlMod
             return edgeDoor;
         }
         var pane = Grids.edgeBetween(state.grid, s.pos.x, s.pos.y, target.x, target.y);
-        if (((pane >= 0) && (Js.Get(state.grid.edges, pane) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(pane))
+        if (((pane >= 0) && (Grids.edgeKind(state.grid, pane) == Grids.EDGE_WINDOW)) && !state.grid.edgeBoarded.includes(pane))
         {
             Breach.smashGlass(state, pane);
             TimelineMod.maybeAlarm(state, target, pane);

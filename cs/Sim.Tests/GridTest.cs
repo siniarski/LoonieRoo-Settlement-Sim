@@ -15,7 +15,7 @@ public partial class GridTest
         public void T002_creates_a_grid_filled_with_floor()
         {
             var grid = Grids.createGrid(3, 2);
-            expect(grid.tiles).toEqual(Js.Arr(["floor", "floor", "floor", "floor", "floor", "floor"]));
+            expect(Grids.allTiles(grid)).toEqual(Js.Arr(["floor", "floor", "floor", "floor", "floor", "floor"]));
         }
 
         [Fact(DisplayName = "grid > rejects invalid sizes")]
@@ -42,7 +42,7 @@ public partial class GridTest
             var grid = Grids.createGrid(4, 3);
             expect(Grids.setTile(grid, 2, 1, "wall")).toBe(true);
             expect(Grids.getTile(grid, 2, 1)).toBe("wall");
-            expect(Js.Missing(grid.tiles, ((double)(1) * (4)) + 2) ? null : (object?)(Js.Get(grid.tiles, ((double)(1) * (4)) + 2))).toBe("wall");
+            expect((object?)(Grids.tileAt(grid, ((double)(1) * (4)) + 2))).toBe("wall");
             expect(Grids.getTile(grid, 9, 9)).toBeUndefined();
         }
 

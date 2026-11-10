@@ -445,7 +445,7 @@ public static partial class Commands
             var __d3 = command;
             var x_7 = __d3.x;
             var y_8 = __d3.y;
-            if (((command.side != null) && Grids.inBounds(state.grid, Js.NN(x_7), Js.NN(y_8))) && (Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side)) == Grids.EDGE_DOOR))
+            if (((command.side != null) && Grids.inBounds(state.grid, Js.NN(x_7), Js.NN(y_8))) && (Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side)) == Grids.EDGE_DOOR))
             {
                 var e = Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side);
                 var open_9 = state.grid.edgeOpen.indexOf(e);
@@ -816,7 +816,7 @@ public static partial class Commands
         {
             return reject(why);
         }
-        var here = Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, x, y, side));
+        var here = Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, x, y, side));
         var boarding = ((structure == "barricade") && Grids.isWindow(here)) && !state.grid.edgeBoarded.includes(Grids.edgeIndex(state.grid, x, y, side));
         if ((here != Grids.EDGE_NONE) && !Js.T(boarding))
         {

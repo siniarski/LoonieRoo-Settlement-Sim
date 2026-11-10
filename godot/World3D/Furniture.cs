@@ -174,9 +174,9 @@ void fragment() {
             3 => (y * g.width + x) * 2 + 1,
             _ => (y * g.width + nx) * 2 + 1,
         };
-        int kind = g.edges[e];
+        int kind = Grids.edgeKind(g, e);
         if (kind is Grids.EDGE_WALL or Grids.EDGE_WINDOW or Grids.EDGE_WINDOW_BROKEN or Grids.EDGE_BARRICADE) return true;
-        return g.tiles[ny * g.width + nx] == "wall";
+        return Grids.tileAt(g, ny * g.width + nx) == "wall";
     }
 
     /// <summary>Tiles clear of walls from (x, y) along d, up to max.</summary>

@@ -360,7 +360,7 @@ public static partial class Colonies
                     FurnitureMod.removeFurniture(state, old);
                 }
                 state.items = state.items.filter((i) => (!Js.T(i.pos) || (i.pos.x != x)) || (i.pos.y != y));
-                grid.ground[Js.Idx(Grids.tileIndex(grid, x, y))] = Grids.GROUNDS.indexOf("dirt");
+                Grids.setGround(grid, Grids.tileIndex(grid, x, y), Grids.GROUNDS.indexOf("dirt"));
                 var edge = (((x == box.x0) || (x == box.x1)) || (y == box.y0)) || (y == box.y1);
                 var broken = fallen && (Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25);
                 Grids.setTile(grid, x, y, (Js.T(edge) && !Js.T(broken)) ? (((x == door.x) && (y == door.y)) ? "door" : "wall") : "floor");

@@ -290,7 +290,7 @@ public static partial class Zombies
         {
             return (((Grids.getTile(state.grid, x, y) == "floor") && (Rooms.labelAt(state, x, y) == Rooms.OUTDOORS)) && !state.survivors.some((s) => Space.manhattan(s.pos, new Point { x = Js.I(x), y = Js.I(y) }) < SPAWN_MIN_DISTANCE)) && !lamps.some((l) => Space.manhattan(l, new Point { x = Js.I(x), y = Js.I(y) }) < Power.LAMP_DETER);
         }
-        if ((state.survivors.length > 0) && state.grid.explored.includes(0))
+        if ((state.survivors.length > 0) && Grids.anyUnexplored(state.grid))
         {
             for (var attempt = 0; attempt < 8; attempt++)
             {
@@ -768,7 +768,7 @@ public static partial class Zombies
         var y = ty;
         bool open(int px, int py, int qx, int qy)
         {
-            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKind(grid, Grids.edgeBetween(grid, px, py, qx, qy)) == Grids.EDGE_WINDOW_BROKEN))
+            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKindBetween(grid, px, py, qx, qy) == Grids.EDGE_WINDOW_BROKEN))
             {
                 return false;
             }
@@ -1142,7 +1142,7 @@ public static partial class Zombies
     /// <summary>Through a broken window between two tiles: a climb, at half speed.</summary>
     public static bool climbing(SimState state, Point a, Point b)
     {
-        return Js.Get(state.grid.edges, Grids.edgeBetween(state.grid, a.x, a.y, b.x, b.y)) == Grids.EDGE_WINDOW_BROKEN;
+        return Grids.edgeKindBetween(state.grid, a.x, a.y, b.x, b.y) == Grids.EDGE_WINDOW_BROKEN;
     }
 }
 

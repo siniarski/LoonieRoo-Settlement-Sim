@@ -14,8 +14,9 @@
 // Loading makes every generated chunk again, lays the differences over it, and rebuilds the lists from the runs.
 // Hand-made maps (no world) are saved whole, as before. The save is written straight to text (SaveWriter).
 //
-// For the grid in chunks (still to do): the save reads the world's grid only in Differs, WriteLayer and GridHash (a
-// chunk's values, by map tile) and writes it only in unpack; each would read or write the chunk's own lists instead.
+// The grid is in chunks in memory too (2026-11-10, GridLayers.cs): the save reads it a chunk's row at a time in
+// Differs, WriteLayer and GridHash, and writes it in unpack. A chunk with no slot allocated in a layer is that layer's
+// fill, which is answered without looking at a tile: bare land costs the save nothing.
 using System.Buffers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -75,20 +76,21 @@ public static partial class SavefileChunks
     {
         int count = layer == "edges" ? 2 * wd * h : wd * h, v = 0;
         s.Fit(count);
+        Span<byte> row = stackalloc byte[2 * CHUNK];
+        var names = Grids.tileNames;
         for (int ly = 0; ly < h; ly++)
-            for (int lx = 0; lx < wd; lx++)
+        {
+            int y = y0 + ly;
+            switch (layer)
             {
-                int i = (y0 + ly) * g.width + x0 + lx;
-                switch (layer)
-                {
-                    case "tiles": s.strings[v++] = g.tiles[i]; break;
-                    case "ground": s.ints[v++] = g.ground[i]; break;
-                    case "dirt": s.ints[v++] = g.dirt[i]; break;
-                    case "damage": s.doubles[v++] = g.damage[i]; break;
-                    case "explored": s.ints[v++] = g.explored[i]; break;
-                    case "edges": s.ints[v++] = g.edges[2 * i]; s.ints[v++] = g.edges[2 * i + 1]; break;
-                }
+                case "tiles": g.tileLayer.ReadRow(x0, y, row[..wd]); foreach (byte code in row[..wd]) s.strings[v++] = names[code]; break;
+                case "ground": g.groundLayer.ReadRow(x0, y, row[..wd]); foreach (byte b in row[..wd]) s.ints[v++] = b; break;
+                case "dirt": g.dirtLayer.ReadRow(x0, y, row[..wd]); foreach (byte b in row[..wd]) s.ints[v++] = b; break;
+                case "explored": g.exploredLayer.ReadRow(x0, y, row[..wd]); foreach (byte b in row[..wd]) s.ints[v++] = b; break;
+                case "edges": g.edgeLayer.ReadRow(x0, y, row[..(2 * wd)]); foreach (byte b in row[..(2 * wd)]) s.ints[v++] = b; break;
+                case "damage": g.damageLayer.ReadRow(x0, y, s.doubles.AsSpan(v, wd)); v += wd; break;
             }
+        }
         w.WritePropertyName(layer);
         switch (layer)
         {
@@ -116,35 +118,28 @@ public static partial class SavefileChunks
     }
 
     /// <summary>Whether a chunk's layer in the world's grid differs from its chunk's own grid (c), or from bare land
-    /// (c null): straight on the values, a row at a time (most of a big world is bare and unseen: a vector scan).</summary>
+    /// (c null: floor, grass, no edges, clean, undamaged, unseen). A layer with no slot allocated there is its fill:
+    /// answered without reading a tile, which is what most of a big world is.</summary>
     static bool Differs(Grid g, Grid? c, string layer, int x0, int y0, int w, int h)
     {
-        for (int ly = 0; ly < h; ly++)
+        switch (layer)
         {
-            int i = (y0 + ly) * g.width + x0;
-            int j = c == null ? -1 : (y0 + ly - c.oy) * c.width + (x0 - c.ox);
-            bool differs = layer switch
-            {
-                "tiles" => c == null ? SaveWriter.Span(g.tiles).Slice(i, w).IndexOfAnyExcept(Grids.FLOOR) >= 0
-                    : !SaveWriter.Span(g.tiles).Slice(i, w).SequenceEqual(SaveWriter.Span(c.tiles).Slice(j, w)),
-                "ground" => c == null ? SaveWriter.Span(g.ground).Slice(i, w).IndexOfAnyExcept(0) >= 0
-                    : !SaveWriter.Span(g.ground).Slice(i, w).SequenceEqual(SaveWriter.Span(c.ground).Slice(j, w)),
-                "edges" => c == null ? SaveWriter.Span(g.edges).Slice(2 * i, 2 * w).IndexOfAnyExcept(Grids.EDGE_NONE) >= 0
-                    : !SaveWriter.Span(g.edges).Slice(2 * i, 2 * w).SequenceEqual(SaveWriter.Span(c.edges).Slice(2 * j, 2 * w)),
-                "dirt" => SaveWriter.Span(g.dirt).Slice(i, w).IndexOfAnyExcept(0) >= 0,
-                "explored" => SaveWriter.Span(g.explored).Slice(i, w).IndexOfAnyExcept(0) >= 0,
-                "damage" => NonZero(SaveWriter.Span(g.damage).Slice(i, w)),
-                _ => false,
-            };
-            if (differs) return true;
+            case "tiles": return c == null ? g.tileLayer.AnyNot(x0, y0, w, h, 0) : !g.tileLayer.SameAs(c.tileLayer, x0, y0, x0 - c.ox, y0 - c.oy, w, h);
+            case "ground": return c == null ? g.groundLayer.AnyNot(x0, y0, w, h, 0) : !g.groundLayer.SameAs(c.groundLayer, x0, y0, x0 - c.ox, y0 - c.oy, w, h);
+            case "edges": return c == null ? g.edgeLayer.AnyNot(x0, y0, w, h, 0) : !g.edgeLayer.SameAs(c.edgeLayer, x0, y0, x0 - c.ox, y0 - c.oy, w, h);
+            case "dirt": return g.dirtLayer.AnyNot(x0, y0, w, h, 0);
+            case "explored": return g.exploredLayer.AnyNot(x0, y0, w, h, 0);
+            case "damage":
+                // Any value != 0 (NaN is; -0 isn't, as before).
+                if (!g.damageLayer.Allocated(x0 / CHUNK, y0 / CHUNK)) return g.damageLayer.fill != 0;
+                Span<double> row = stackalloc double[CHUNK];
+                for (int ly = 0; ly < h; ly++)
+                {
+                    g.damageLayer.ReadRow(x0, y0 + ly, row[..w]);
+                    foreach (double d in row[..w]) if (d != 0) return true;
+                }
+                return false;
         }
-        return false;
-    }
-
-    /// <summary>Any value != 0 (NaN is; -0 isn't, as before).</summary>
-    static bool NonZero(ReadOnlySpan<double> v)
-    {
-        foreach (var d in v) if (d != 0) return true;
         return false;
     }
 
@@ -291,13 +286,9 @@ public static partial class SavefileChunks
         o["grid"]!.AsObject().Remove("chunked");
         var state = o.Deserialize<SimState>(StateJson.Options) ?? throw new InvalidDataException("not a sim state");
         var g = state.grid;
-        int size = g.width, total = g.width * g.height, n = (int)state.world!.chunks;
-        g.tiles = Enumerable.Repeat(Grids.FLOOR, total).ToList();
-        g.ground = Enumerable.Repeat(0, total).ToList();
-        g.edges = Enumerable.Repeat(Grids.EDGE_NONE, 2 * total).ToList();
-        g.dirt = Enumerable.Repeat(0, total).ToList();
-        g.damage = Enumerable.Repeat(0.0, total).ToList();
-        g.explored = Enumerable.Repeat(0, total).ToList();
+        int size = g.width, n = (int)state.world!.chunks;
+        // The layers came back empty, so every tile is bare land (floor, grass, no edges, clean, undamaged, unseen)
+        // and no chunk is allocated: only what is laid in below takes memory.
 
         // Every generated chunk made again, laid in.
         // Each one's hash as made noted (in the file's order; a schema-77 save has none, so they're added in index order).
@@ -308,14 +299,9 @@ public static partial class SavefileChunks
             var chunk = made.Get(state, index);
             state.world.made[Js.Str(index)] = madeHash(chunk);
             var c = chunk.grid;
-            for (int i = 0; i < c.tiles.Count; i++)
-            {
-                int at = (c.oy + i / c.width) * size + c.ox + i % c.width;
-                g.tiles[at] = c.tiles[i];
-                g.ground[at] = c.ground[i];
-                g.edges[2 * at] = c.edges[2 * i];
-                g.edges[2 * at + 1] = c.edges[2 * i + 1];
-            }
+            g.tileLayer.CopyFrom(c.tileLayer, c.ox, c.oy);
+            g.groundLayer.CopyFrom(c.groundLayer, c.ox, c.oy);
+            g.edgeLayer.CopyFrom(c.edgeLayer, c.ox, c.oy);
         }
         // The differences over it.
         foreach (var node in chunks)
@@ -333,12 +319,12 @@ public static partial class SavefileChunks
                 {
                     switch (layer)
                     {
-                        case "tiles": { var x = value?.GetValue<string>()!; for (int k = 0; k < count; k++) g.tiles[At(v++)] = x; break; }
-                        case "ground": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.ground[At(v++)] = x; break; }
-                        case "dirt": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.dirt[At(v++)] = x; break; }
-                        case "damage": { double x = Num(value); for (int k = 0; k < count; k++) g.damage[At(v++)] = x; break; }
-                        case "explored": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.explored[At(v++)] = x; break; }
-                        case "edges": { int x = (int)Num(value); for (int k = 0; k < count; k++, v++) g.edges[2 * At(v / 2) + v % 2] = x; break; }
+                        case "tiles": { byte x = Grids.tileCode(value?.GetValue<string>() ?? throw new InvalidDataException($"chunk {index}: a tile is a string")); for (int k = 0; k < count; k++) g.tileLayer.Put(At(v++), x); break; }
+                        case "ground": { byte x = Grids.small(Num(value)); for (int k = 0; k < count; k++) g.groundLayer.Put(At(v++), x); break; }
+                        case "dirt": { byte x = Grids.small(Num(value)); for (int k = 0; k < count; k++) g.dirtLayer.Put(At(v++), x); break; }
+                        case "damage": { double x = Num(value); for (int k = 0; k < count; k++) g.damageLayer.Put(At(v++), x); break; }
+                        case "explored": { byte x = Grids.small(Num(value)); for (int k = 0; k < count; k++) g.exploredLayer.Put(At(v++), x); break; }
+                        case "edges": { byte x = Grids.small(Num(value)); for (int k = 0; k < count; k++, v++) g.edgeLayer.Put2(2 * At(v / 2) + v % 2, x); break; }
                     }
                 });
             }

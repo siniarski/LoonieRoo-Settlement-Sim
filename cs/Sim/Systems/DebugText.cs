@@ -15,8 +15,8 @@ public static partial class DebugText
         var __d0 = state.grid;
         var width = __d0.width;
         var height = __d0.height;
-        var tiles = __d0.tiles;
-        var dirt = __d0.dirt;
+        var tiles = Grids.allTiles(__d0);
+        var dirt = Grids.allDirt(__d0);
         List<List<string>> rows = [];
         for (var y = 0; y < height; y++)
         {
@@ -77,7 +77,7 @@ public static partial class DebugText
             put(s.pos.x, s.pos.y, ScenarioMod.ENTITY_CHARS["survivor"]);
         }
         var map = rows.map((r) => r.join("")).join("\n");
-        return state.grid.edges.some((e) => e != 0) ? $"{Js.Str(map)}\n\nedges:\n{Js.Str(dumpEdges(state, rows))}" : map;
+        return Grids.anyEdges(state.grid) ? $"{Js.Str(map)}\n\nedges:\n{Js.Str(dumpEdges(state, rows))}" : map;
     }
 
     /// <summary>The map with its edges: tiles at odd positions, borders between them: '-' and '|' an edge wall, '=' an edge door ('o' when open), ':' a barricade, '%' a window ('/' broken, '#' boarded), '+' where borders meet.</summary>
@@ -86,7 +86,7 @@ public static partial class DebugText
         var __d1 = state.grid;
         var width = __d1.width;
         var height = __d1.height;
-        var edges = __d1.edges;
+        var edges = Grids.allEdges(__d1);
         var edgeOpen = __d1.edgeOpen;
         List<List<string>> @out = Js.ArrayFrom<List<string>>(((double)(height) * (2)) + 1, (int _i) => Js.Filled<string>(((double)(width) * (2)) + 1, " "));
         for (var y = 0; y < height; y++)
@@ -130,7 +130,7 @@ public static partial class DebugText
         var __d3 = state.grid;
         var width = __d3.width;
         var height = __d3.height;
-        var tiles = __d3.tiles;
+        var tiles = Grids.allTiles(__d3);
         List<string> rows = [];
         for (var y = 0; y < height; y++)
         {
@@ -138,7 +138,7 @@ public static partial class DebugText
             for (var x = 0; x < width; x++)
             {
                 var i = ((double)(y) * (width)) + x;
-                var label = Js.NN(Js.Get(labels, i));
+                var label = labels.at(Js.I(i));
                 if (label >= 0)
                 {
                     row += JsString.fromCharCode(97 + (label % 26));

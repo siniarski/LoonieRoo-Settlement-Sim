@@ -149,7 +149,7 @@ public static class Growth
         G_PAVING = Array.IndexOf(Grids.GROUNDS, "paving"), G_BOARDS = Array.IndexOf(Grids.GROUNDS, "boards"), G_TILES = Array.IndexOf(Grids.GROUNDS, "tiles"),
         G_CONCRETE = Array.IndexOf(Grids.GROUNDS, "concrete");
 
-    static int groundAt(Grid grid, int x, int y) => Grids.inBounds(grid, x, y) ? grid.ground[Grids.tileIndex(grid, x, y)] : -1;
+    static int groundAt(Grid grid, int x, int y) => Grids.inBounds(grid, x, y) ? Grids.groundAt(grid, Grids.tileIndex(grid, x, y)) : -1;
 
     static bool isRoadish(int g) => g == G_ROAD || g == G_BRIDGE || g == G_PAVING;
 
@@ -159,8 +159,8 @@ public static class Growth
         var grid = state.grid;
         if (!Grids.inBounds(grid, x, y)) return GrowthKind.None;
         int i = Grids.tileIndex(grid, x, y);
-        if (grid.tiles[i] != Grids.FLOOR) return GrowthKind.None;
-        int g = grid.ground[i];
+        if (Grids.tileAt(grid, i) != Grids.FLOOR) return GrowthKind.None;
+        int g = Grids.groundAt(grid, i);
         if (state.farm.Count > 0 && Farming.plotAt(state, x, y) != null) return GrowthKind.None;
         if (g == G_FOREST) return GrowthKind.Forest;
         if (g == G_ROAD) return GrowthKind.Road;

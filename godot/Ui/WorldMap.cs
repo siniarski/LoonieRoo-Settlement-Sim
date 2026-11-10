@@ -145,11 +145,11 @@ public sealed partial class WorldMap : Control
         if (image == null || image.GetWidth() != grid.width || image.GetHeight() != grid.height) image = Image.CreateEmpty(grid.width, grid.height, false, Image.Format.Rgba8);
         for (int i = 0; i < grid.width * grid.height; i++)
         {
-            int edge = grid.edges[i * 2] != 0 ? grid.edges[i * 2] : grid.edges[i * 2 + 1];
-            var tile = grid.tiles[i];
-            var c = grid.explored[i] != 1 ? RGB["fog"]
+            int edge = Grids.edgeKind(grid, i * 2) != 0 ? Grids.edgeKind(grid, i * 2) : Grids.edgeKind(grid, i * 2 + 1);
+            var tile = Grids.tileAt(grid, i);
+            var c = Grids.exploredAt(grid, i) != 1 ? RGB["fog"]
                 : edge != 0 ? (edge == 2 ? RGB["door"] : RGB["wall"])
-                : tile == "floor" ? RGB[grid.ground[i] >= 0 && grid.ground[i] < Grids.GROUNDS.Length ? Grids.GROUNDS[grid.ground[i]] : "grass"]
+                : tile == "floor" ? RGB[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
                 : RGB.TryGetValue(tile, out var t) ? t : RGB["wall"];
             image.SetPixel(i % grid.width, i / grid.width, c);
         }
@@ -207,7 +207,7 @@ public sealed partial class WorldMap : Control
         bool seen(double x, double y)
         {
             int ix = (int)Math.Floor(x), iy = (int)Math.Floor(y);
-            return ix >= 0 && iy >= 0 && ix < s.grid.width && iy < s.grid.height && s.grid.explored[iy * s.grid.width + ix] == 1;
+            return ix >= 0 && iy >= 0 && ix < s.grid.width && iy < s.grid.height && Grids.exploredAt(s.grid, iy * s.grid.width + ix) == 1;
         }
         // Towns: named once you've seen the middle.
         foreach (var t in Mapnotes.townNames(s)) if (seen(t.x, t.y)) Label(t.x + 0.5, t.y + 0.5, t.name.ToUpperInvariant(), "#e8d9a8", 14, true);

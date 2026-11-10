@@ -80,7 +80,7 @@ public partial class DrawBench : Node3D
                 for (int dx = -4; dx <= 4; dx++)
                 {
                     int i = (y + dy) * g.width + x + dx;
-                    if (g.tiles[i] != "floor" || Grids.GROUNDS[g.ground[i]] is not ("grass" or "road" or "field" or "dirt")) return false;
+                    if (Grids.tileAt(g, i) != "floor" || Grids.GROUNDS[Grids.groundAt(g, i)] is not ("grass" or "road" or "field" or "dirt")) return false;
                 }
             return true;
         }
@@ -117,7 +117,7 @@ public partial class DrawBench : Node3D
                 int n = 0;
                 for (int y = by; y < Math.Min(g.height, by + 128); y += 2)
                     for (int x = bx; x < Math.Min(g.width, bx + 128); x += 2)
-                        if (Grids.GROUNDS[g.ground[y * g.width + x]] is "boards" or "tiles") n++;
+                        if (Grids.GROUNDS[Grids.groundAt(g, y * g.width + x)] is "boards" or "tiles") n++;
                 if (n > best.n) best = (n, bx + 64, by + 64);
             }
         return new Vector2(best.x, best.y);

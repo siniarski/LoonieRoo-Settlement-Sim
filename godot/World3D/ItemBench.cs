@@ -87,8 +87,8 @@ public partial class ItemBench : Node3D
                 if (x < 0 || y < 0 || x >= g.width || y >= g.height) continue;
                 if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > SPREAD * SPREAD || (x == cx && y == cy)) continue;
                 int i = y * g.width + x;
-                string ground = g.ground[i] >= 0 && g.ground[i] < Grids.GROUNDS.Length ? Grids.GROUNDS[g.ground[i]] : "grass";
-                if (g.tiles[i] != "floor" || !OPEN.Contains(ground)) continue;
+                string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
+                if (Grids.tileAt(g, i) != "floor" || !OPEN.Contains(ground)) continue;
                 s.items.Add(new Item { id = $"b{count}", kind = KINDS[count % KINDS.Length], pos = new Point(x, y) });
                 count++;
             }

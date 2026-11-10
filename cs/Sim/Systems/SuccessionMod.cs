@@ -122,7 +122,7 @@ public static partial class SuccessionMod
             {
                 if ((((x >= 0) && (y >= 0)) && (x < width)) && (y < height))
                 {
-                    state.grid.explored[Js.Idx(((double)(y) * (width)) + x)] = 1;
+                    Grids.setExplored(state.grid, ((double)(y) * (width)) + x, 1);
                 }
             }
         }

@@ -216,7 +216,7 @@ public partial class MesshallTest
                     Mood.addThought(state, s, "sleptOnFloor");
                 }
                 Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(1), y = Js.I(0) });
-                return runUntil(state, (st) => Js.Get(st.grid.tiles, 1) == "floor");
+                return runUntil(state, (st) => Grids.tileAt(st.grid, 1) == "floor");
             }
             var content = timeToRemove(false);
             var miserable = timeToRemove(true);

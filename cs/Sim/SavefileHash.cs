@@ -66,25 +66,54 @@ public static partial class SavefileChunks
         var hs = new Hasher();
         hs.Add((ulong)w);
         hs.Add((ulong)h);
-        // A tile's kind hashed once per string (a grid holds a handful of them, shared), by reference.
-        var kinds = new (string? s, ulong code)[8];
-        int next = 0;
-        ulong Code(string? t)
+        // A tile's kind hashed once per kind (its name's hash, as when the grid held the names), a row at a time.
+        var names = Grids.tileNames;
+        Span<ulong> kinds = stackalloc ulong[names.Length];
+        Span<bool> known = stackalloc bool[names.Length];
+        ulong Kind(int code, Span<ulong> kinds, Span<bool> known)
         {
-            foreach (var (s, code) in kinds) if (s != null && ReferenceEquals(s, t)) return code;
-            var k = new Hasher();
-            k.Add(t);
-            kinds[next++ % kinds.Length] = (t, k.Value);
-            return k.Value;
+            if (!known[code])
+            {
+                var k = new Hasher();
+                k.Add(names[code]);
+                kinds[code] = k.Value;
+                known[code] = true;
+            }
+            return kinds[code];
         }
+        // A whole chunk slot (every caller's case): read from the layers' own arrays, or their fill where there is none.
+        int cx0 = x0 - g.ox, cy0 = y0 - g.oy;
+        if (cx0 % CHUNK == 0 && cy0 % CHUNK == 0 && w <= CHUNK && h <= CHUNK)
+        {
+            int ci = cy0 / CHUNK * g.tileLayer.cw + cx0 / CHUNK;
+            var t = g.tileLayer.chunks[ci];
+            var gr = g.groundLayer.chunks[ci];
+            var ed = g.edgeLayer.chunks[ci];
+            int tf = g.tileLayer.fill, gf = g.groundLayer.fill, ef = g.edgeLayer.fill;
+            for (int ly = 0; ly < h; ly++)
+                for (int lx = 0; lx < w; lx++)
+                {
+                    int l = ly * CHUNK + lx;
+                    hs.Add(Kind(t == null ? tf : t[l], kinds, known));
+                    hs.Add((ulong)(gr == null ? gf : gr[l]) << 32 | (uint)(ed == null ? ef : ed[2 * l]));
+                    hs.Add((uint)(ed == null ? ef : ed[2 * l + 1]));
+                }
+            return hs.Value;
+        }
+        Span<byte> tiles = stackalloc byte[CHUNK], ground = stackalloc byte[CHUNK], edges = stackalloc byte[2 * CHUNK];
         for (int ly = 0; ly < h; ly++)
+        {
+            int x = x0 - g.ox, y = y0 + ly - g.oy;
+            g.tileLayer.ReadRow(x, y, tiles[..w]);
+            g.groundLayer.ReadRow(x, y, ground[..w]);
+            g.edgeLayer.ReadRow(x, y, edges[..(2 * w)]);
             for (int lx = 0; lx < w; lx++)
             {
-                int i = (y0 + ly - g.oy) * g.width + (x0 + lx - g.ox);
-                hs.Add(Code(g.tiles[i]));
-                hs.Add((ulong)(uint)g.ground[i] << 32 | (uint)g.edges[2 * i]);
-                hs.Add((uint)g.edges[2 * i + 1]);
+                hs.Add(Kind(tiles[lx], kinds, known));
+                hs.Add((ulong)ground[lx] << 32 | edges[2 * lx]);
+                hs.Add(edges[2 * lx + 1]);
             }
+        }
         return hs.Value;
     }
 

@@ -272,14 +272,14 @@ public sealed partial class Hud : Control
     {
         var hover = view.hover;
         var grid = state.grid;
-        string? tile = hover != null && hover.x >= 0 && hover.y >= 0 && hover.x < grid.width && hover.y < grid.height ? grid.tiles[hover.y * grid.width + hover.x] : null;
+        string? tile = hover != null && hover.x >= 0 && hover.y >= 0 && hover.x < grid.width && hover.y < grid.height ? Grids.tileAt(grid, hover.y * grid.width + hover.x) : null;
         var selected = state.survivors.FirstOrDefault((s) => s.id == view.selectedId);
         int wood = state.items.Count((i) => i.kind == "wood");
         int food = state.items.Count((i) => i.kind is "food" or "meal");
         string mode = view.tool != null ? $"building: {Tools.getTool(view.tool).label}" : view.buildOpen ? "build: pick a tool" : "";
         bool isYou = state.control?.survivorId == selected?.id;
         string place = hover != null && tile != null
-            ? grid.explored[hover.y * grid.width + hover.x] == 1
+            ? Grids.exploredAt(grid, hover.y * grid.width + hover.x) == 1
                 ? $"({hover.x}, {hover.y}) {tile}{furnitureText(state, hover)}{(state.world != null ? $" · {Climate.climateAt(state, hover.x, hover.y)}{(Climate.isRadioactive(state, hover.x, hover.y) ? " · RADIOACTIVE" : "")}" : "")}"
                 : $"({hover.x}, {hover.y}) unexplored"
             : "";

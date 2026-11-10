@@ -181,11 +181,21 @@ public static class WorldPreview
         var g = state.grid;
         int size = g.width, px = sideFor(size);
         var seen = new byte[px * px];
-        for (int y = 0; y < g.height; y++)
+        // Chunk by chunk: one with nothing seen in it (most of a big world) isn't looked at.
+        var layer = g.exploredLayer;
+        const int SIDE = GridLayer<byte>.SIDE;
+        for (int ci = 0; ci < layer.chunks.Length; ci++)
         {
-            int j = (int)((long)y * px / size), row = y * g.width;
-            for (int x = 0; x < g.width; x++)
-                if (g.explored[row + x] != 0) seen[j * px + (int)((long)x * px / size)] = 1;
+            var c = layer.chunks[ci];
+            if (c == null && layer.fill == 0) continue;
+            int x0 = ci % layer.cw * SIDE, y0 = ci / layer.cw * SIDE;
+            int w = Math.Min(SIDE, g.width - x0), h = Math.Min(SIDE, g.height - y0);
+            for (int ly = 0; ly < h; ly++)
+            {
+                int j = (int)((long)(y0 + ly) * px / size);
+                for (int lx = 0; lx < w; lx++)
+                    if ((c == null ? layer.fill : c[ly * SIDE + lx]) != 0) seen[j * px + (int)((long)(x0 + lx) * px / size)] = 1;
+            }
         }
         return seen;
     }

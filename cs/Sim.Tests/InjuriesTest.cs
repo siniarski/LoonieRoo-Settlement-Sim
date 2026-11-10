@@ -62,7 +62,7 @@ public partial class InjuriesTest
                 var state = setup(["s#"], new() { ["build"] = 3 });
                 hurt(state, Js.NN(Js.Get(state.survivors, 0)), health);
                 Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(1), y = Js.I(0) });
-                return runUntil(state, (st) => Js.Get(st.grid.tiles, 1) == "floor");
+                return runUntil(state, (st) => Grids.tileAt(st.grid, 1) == "floor");
             }
             var healthy = timeToRemove(1000);
             var injured = timeToRemove(450);

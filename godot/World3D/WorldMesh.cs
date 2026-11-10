@@ -58,8 +58,8 @@ public static class WorldMesh
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
             {
                 int i = y * g.width + x;
-                h = h * 31 + g.tiles[i].GetHashCode();
-                h = h * 31 + g.edges[i * 2] * 7 + g.edges[i * 2 + 1];
+                h = h * 31 + Grids.tileAt(g, i).GetHashCode();
+                h = h * 31 + Grids.edgeKind(g, i * 2) * 7 + Grids.edgeKind(g, i * 2 + 1);
                 if (look.open.Contains(i)) h = h * 31 + 1;
                 if (look.edgeOpen.Contains(i * 2)) h = h * 31 + 2;
                 if (look.edgeOpen.Contains(i * 2 + 1)) h = h * 31 + 3;
@@ -116,8 +116,8 @@ public static class WorldMesh
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
             {
                 int i = y * g.width + x;
-                string tile = g.tiles[i];
-                string ground = g.ground[i] >= 0 && g.ground[i] < Grids.GROUNDS.Length ? Grids.GROUNDS[g.ground[i]] : "grass";
+                string tile = Grids.tileAt(g, i);
+                string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
                 Ground(gs, x, y, tile, ground);
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), WALL);
@@ -128,7 +128,7 @@ public static class WorldMesh
                 for (int side = 0; side < 2; side++)
                 {
                     int e = i * 2 + side;
-                    int kind = g.edges[e];
+                    int kind = Grids.edgeKind(g, e);
                     if (kind == Grids.EDGE_NONE) continue;
                     anyGlass |= Edge(st, gl, x, y, side == 0, kind, look.edgeOpen.Contains(e), look.edgeLocked.Contains(e), look.edgeBoarded.Contains(e));
                 }

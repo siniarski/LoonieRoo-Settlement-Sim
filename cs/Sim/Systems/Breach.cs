@@ -20,7 +20,7 @@ public static partial class Breach
     /// <summary>What it takes to break this structure (reinforced ones take more; defences.ts).</summary>
     public static double structureHealth(Grid grid, int i)
     {
-        var tile = Js.NN(Js.Get(grid.tiles, i));
+        var tile = Js.NN(Grids.tileAt(grid, i));
         if (!isStructure(tile))
         {
             return 0;
@@ -36,7 +36,7 @@ public static partial class Breach
 
     public static double structureDamage(SimState state, int x, int y)
     {
-        return isStructure(Grids.getTile(state.grid, x, y)) ? Js.NN(Js.Get(state.grid.damage, Grids.tileIndex(state.grid, x, y))) : 0;
+        return isStructure(Grids.getTile(state.grid, x, y)) ? Js.NN(Grids.damageAt(state.grid, Grids.tileIndex(state.grid, x, y))) : 0;
     }
     public static double structureDamage(SimState state, double x, double y) => structureDamage(state, Js.I(x), Js.I(y));
 
@@ -49,8 +49,8 @@ public static partial class Breach
             return false;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, Js.NN(Js.Get(state.grid.damage, i)) + amount);
-        if (Js.NN(Js.Get(state.grid.damage, i)) < structureHealth(state.grid, i))
+        Grids.setDamage(state.grid, i, Js.NN(Grids.damageAt(state.grid, i)) + amount);
+        if (Js.NN(Grids.damageAt(state.grid, i)) < structureHealth(state.grid, i))
         {
             return false;
         }
@@ -75,15 +75,15 @@ public static partial class Breach
             return 0;
         }
         var i = Grids.tileIndex(state.grid, x, y);
-        Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(Js.Get(state.grid.damage, i)) - amount));
-        return Js.NN(Js.Get(state.grid.damage, i));
+        Grids.setDamage(state.grid, i, JsMath.max(0, Js.NN(Grids.damageAt(state.grid, i)) - amount));
+        return Js.NN(Grids.damageAt(state.grid, i));
     }
     public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, Js.I(x), Js.I(y), amount);
 
     /// <summary>What it takes to break an edge wall or door: the same as the tile kinds.</summary>
     public static double edgeHealth(Grid grid, int e)
     {
-        var kind = Js.Get(grid.edges, e);
+        var kind = Grids.edgeKind(grid, e);
         if (grid.edgeBoarded.includes(e))
         {
             return BOARDS_HEALTH;
@@ -107,7 +107,7 @@ public static partial class Breach
     {
         var __d0 = state;
         var grid = __d0.grid;
-        var kind = Js.Get(grid.edges, e);
+        var kind = Grids.edgeKind(grid, e);
         var boarded = grid.edgeBoarded.includes(e);
         if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && !boarded)
         {
@@ -138,7 +138,7 @@ public static partial class Breach
             Events.logEvent(state, ((((("Zombies " + (boarded ? "tore the boards off" : "smashed")) + " the window at (") + x) + ", ") + y) + ")");
             return true;
         }
-        grid.edges[Js.Idx(e)] = Grids.EDGE_NONE;
+        Grids.putEdge(grid, e, Grids.EDGE_NONE);
         Grids.noteEdgeChange(grid, e);
         grid.edgeDamage.Remove(Js.Str(Js.Str(e)));
         var open = grid.edgeOpen.indexOf(e);
@@ -184,11 +184,11 @@ public static partial class Breach
     {
         var __d1 = state;
         var grid = __d1.grid;
-        if (Js.Get(grid.edges, e) != Grids.EDGE_WINDOW)
+        if (Grids.edgeKind(grid, e) != Grids.EDGE_WINDOW)
         {
             return;
         }
-        grid.edges[Js.Idx(e)] = Grids.EDGE_WINDOW_BROKEN;
+        Grids.putEdge(grid, e, Grids.EDGE_WINDOW_BROKEN);
         Grids.noteEdgeChange(grid, e);
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         var tile = JsMath.floor(((double)(e) / (2)));
