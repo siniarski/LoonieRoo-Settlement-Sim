@@ -7,25 +7,32 @@
 // Heights live on the tile corners (integer points; tile (x, y) spans x..x+1, y..y+1): `corner(cx, cy)`.
 // Between corners the ground is bilinear (`at(x, y)`), so a mesh built on the corners matches it exactly.
 // How a corner's height is made, in order:
-//   1. relief(x, y): large-scale hills and valleys. 0 for now: they come later and add in here (and
-//      the water level follows them, so rivers stay in their valleys).
-//   2. rolling ground: three octaves of value noise (NatureMod.noise, a stateless hash): ~2.4 m over
-//      ~56 m, ~0.6 m over ~21 m, ~0.2 m over ~8 m. Gentle: a few per cent, rarely 10.
-//   3. towns: the rolling is damped (the big octave halved, the small ones gone) within a town's radius,
-//      eased out over TOWN_EASE. Roads: the small octaves fade out near a road (ROAD_EASE), so roads
-//      follow the big swell smoothly with a gentle shoulder. The start: flattened to one level round
-//      the start shelter (START_FLAT, eased out).
-//   4. water: the water level is the big octave (as damped) less WATER_DROP, so it is always under
-//      the land beside it; land eases down to it over BANK tiles; shore corners sit just under the
-//      water's surface and the bed deepens away from the shore. A road over water (a bridge) is a deck
-//      DECK over the surface, its sides running down into the water.
-//   5. buildings (each lot's placements, Lots.layoutLot): each sits on one level (the mean of steps
-//      1-4 at its footprint's corners and centre), flat over its whole footprint rectangle, and the
-//      ground eases to it over BUILDING_EASE round it (inverse-distance blended between neighbours,
-//      so it is continuous and exact on every footprint).
+//   1. relief(x, y): large-scale hills and valleys (2026-11-10): Terrain's elevation (0..1 on a 16-tile lattice, the
+//      world's drainage) x RELIEF metres, eased between the lattice points with smoothstep weights (no creases on
+//      the lattice lines), from the start's level (the start is 0, on its rise). Over a world: ~8 to 10 m from the
+//      valley floors to the highest land, at most ~7% a tile, ~1% in the middle. Terrain's water follows it:
+//      rivers run in the valleys, and a hollow's lake stands level at its spill level (the fill level).
+//   2. the wave, rolling ground over the relief: three octaves of value noise (NatureMod.noise, a stateless
+//      hash): ~1.6 m over ~56 m, ~0.6 m over ~21 m, ~0.2 m over ~8 m. Gentle: a few per cent.
+//   3. towns: the wave is damped (the big octave halved, the small ones gone) within a town's radius, eased out
+//      over TOWN_EASE. Roads: the small octaves fade out near a road (ROAD_EASE), so roads follow the swell
+//      with a gentle shoulder. The start: flattened to one level round the start shelter (START_FLAT, eased out).
+//   4. water: the water level is the relief (and over a hollow Terrain's fill level less the lake threshold:
+//      a lake's shore is where the ground meets it) less WATER_DROP: a smooth function of the lattice only, so a
+//      lake is level and a river tilts with its valley. The wave fades out toward water (over WAVE_FADE tiles),
+//      the land is lifted to the water's lip if it dips under it, and rises from the water no faster than
+//      BANK_SLOPE (a smoothed cone, so a bank is a shelving beach, not a wall). Shore corners sit just under
+//      the surface and the bed deepens away. A road over water (a bridge) is a deck DECK over the surface, its
+//      sides running down into the water.
+//   5. buildings (each lot's placements, Lots.layoutLot): each sits on one level (the mean of steps 1-4 at its
+//      footprint's corners and centre), flat over its whole footprint rectangle, and the ground eases to it over
+//      BUILDING_EASE round it (inverse-distance blended between neighbours, so it is continuous and exact on
+//      every footprint); the ground one tile round a building (APRON) is exactly its level: no step at a door.
+//      Streets are not levelled on their own: they follow the relief (~1% in the middle, 7% at most) and the
+//      buildings' levels beside them (steps between neighbouring lots ease over a few tiles).
 // Bounded (rule 14): corners are computed a plan chunk (32 x 32 tiles) at a time, once, and cached
 // (at most MAX_CHUNKS a world, oldest dropped). Water and road distances are a chamfer transform over
-// the chunk and a margin, capped below the margin, so neighbouring chunks agree on shared corners.
+// the chunk and a margin (MARGIN), capped below the margin, so neighbouring chunks agree on shared corners.
 // Pure: every number is a function of (seed, size, map, x, y), whatever order chunks are asked for in.
 // Hand-made maps (no world plan) are flat: 0 everywhere.
 #nullable disable warnings
@@ -35,24 +42,35 @@ public static class Heights
 {
     public const int CHUNK = Worldplan.PLAN_CHUNK;
     /// <summary>Rolling ground: amplitude (m, peak to peak at most) and scale (tiles) of each octave.</summary>
-    public const double A1 = 2.4, S1 = 56, A2 = 0.6, S2 = 21, A3 = 0.2, S3 = 8;
+    public const double A1 = 1.6, S1 = 56, A2 = 0.6, S2 = 21, A3 = 0.2, S3 = 8;
     const int SALT1 = 0x4E01, SALT2 = 0x4E02, SALT3 = 0x4E03;
+    /// <summary>Metres of height per unit of Terrain's elevation (0..1): the world's hills and valleys.</summary>
+    public const double RELIEF = 7;
     public const double TOWN_EASE = 20;
     /// <summary>How far round a corner townness looks for towns: a city's biggest radius (Towns.RADII), TOWN_EASE and a tile.</summary>
     const double TOWN_REACH = 66 + TOWN_EASE + 1;
     public const double ROAD_EASE = 4;
     public const double START_FLAT = NatureMod.START_CLEAR_RADIUS + 2, START_EASE = 12;
     /// <summary>The water's surface under the big octave (m): more than the small octaves can dip, so land is always above it.</summary>
-    public const double WATER_DROP = 0.55;
-    /// <summary>Land eases down to the water over this many tiles; it ends this far over the surface.</summary>
-    public const double BANK = 8, BANK_TOP = 0.15;
+    public const double WATER_DROP = 1.0;
+    /// <summary>The wave (the rolling ground over the relief) fades out toward water, over this many tiles: the land beside a
+    /// river or lake follows the relief, so the level water is never over a pit.</summary>
+    public const double WAVE_FADE = 14;
+    /// <summary>The land at the water's edge is this far over the surface (m).</summary>
+    public const double BANK_TOP = 0.15;
+    /// <summary>The land rises from the water's edge no faster than this (m per tile): its bank is a cone, smoothed over SMOOTH metres.</summary>
+    public const double BANK_SLOPE = 0.1, SMOOTH = 0.5;
+    /// <summary>The cone binds out to this many tiles from water, then lifts away over 3 more (so chunks agree: MARGIN reads that far).</summary>
+    const double CONE = 13;
     /// <summary>A shore corner (touching water and land) is this far under the surface; the bed goes down from it.</summary>
     public const double SHORE = 0.05, BED = 0.35, BED_STEP = 0.3, BED_MAX = 3;
     /// <summary>A road over water (a bridge: Worldgen's "bridge" ground) is a deck this far over the surface.</summary>
     public const double DECK = 0.35;
     public const double BUILDING_EASE = 4;
-    /// <summary>Tiles round a chunk read for the distance transforms: more than BANK, so chunks agree.</summary>
-    const int MARGIN = 10;
+    /// <summary>The ground this far round a building is at its level exactly (tiles): the door's step.</summary>
+    public const double APRON = 1;
+    /// <summary>Tiles round a chunk read for the distance transforms: more than CONE + 3, so chunks agree.</summary>
+    const int MARGIN = 18;
     public const int MAX_CHUNKS = 1024;
 
     /// <summary>A world's height field: its corners by plan chunk, filled in when first asked for.</summary>
@@ -113,7 +131,7 @@ public static class Heights
         public double coarse(int x, int y, bool water)
         {
             double town = townness(this, x, y);
-            if (water) return swell(this, x, y, town) - WATER_DROP - SHORE;
+            if (water) return waterAt(this, x, y) - SHORE;
             double small = (octave(this, x, y, S2, SALT2, A2) + octave(this, x, y, S3, SALT3, A3)) * (1 - town);
             double h = swell(this, x, y, town) + small;
             var s = nature.start;
@@ -193,8 +211,29 @@ public static class Heights
 
     // --- steps 1-3: the rolling ground, as damped by towns, roads and the start ---
 
-    /// <summary>Large-scale relief (m): hills and valleys. Flat for now; they go here.</summary>
-    public static double relief(Field f, int x, int y) => 0;
+    /// <summary>Terrain's lattice, eased smoothly between its points (smoothstep weights, so the ground has no creases on
+    /// the lattice lines and a flat hollow stays exactly flat): the elevation (0..1) and the water's depth over it.</summary>
+    static double lattice(Terrain t, double x, double y, out double depth)
+    {
+        double gx = x / Terrain.CELL, gy = y / Terrain.CELL;
+        double mx = t.W - 1.001;
+        gx = gx < 0 ? 0 : gx > mx ? mx : gx;
+        gy = gy < 0 ? 0 : gy > mx ? mx : gy;
+        int i = (int)gx, j = (int)gy;
+        double fx = smoothstep(gx - i), fy = smoothstep(gy - j);
+        double e00 = t.pointElevation(i, j), e10 = t.pointElevation(i + 1, j), e01 = t.pointElevation(i, j + 1), e11 = t.pointElevation(i + 1, j + 1);
+        double d00 = t.pointDepth(i, j), d10 = t.pointDepth(i + 1, j), d01 = t.pointDepth(i, j + 1), d11 = t.pointDepth(i + 1, j + 1);
+        depth = (d00 + (d10 - d00) * fx) * (1 - fy) + (d01 + (d11 - d01) * fx) * fy;
+        return (e00 + (e10 - e00) * fx) * (1 - fy) + (e01 + (e11 - e01) * fx) * fy;
+    }
+
+    /// <summary>Large-scale relief (m): hills and valleys, Terrain's elevation over the start's, so the start is at 0.</summary>
+    public static double relief(Field f, int x, int y)
+    {
+        var t = Terrain.Of(f.nature);
+        var s = f.nature.start;
+        return RELIEF * (lattice(t, x, y, out _) - lattice(t, s.x, s.y, out _));
+    }
 
     static double octave(Field f, int x, int y, double scale, int salt, double amp) => amp * (NatureMod.noise(f.seed, x, y, scale, salt) - 0.5);
 
@@ -214,18 +253,29 @@ public static class Heights
         return most;
     }
 
-    /// <summary>The big octave as towns damp it, with the relief: what the water level follows.</summary>
+    /// <summary>The relief and the big octave as towns damp it: the ground without its small octaves.</summary>
     static double swell(Field f, int x, int y, double town) => relief(f, x, y) + octave(f, x, y, S1, SALT1, A1) * (1 - 0.5 * town);
 
-    /// <summary>The water's surface at a corner (m).</summary>
-    static double waterAt(Field f, int x, int y) => swell(f, x, y, townness(f, x, y)) - WATER_DROP;
+    /// <summary>The water's surface at a corner (m): the relief, and over a hollow Terrain's fill level (the depth of the
+    /// water there, less what makes a lake: a lake's shore is where the ground is at the surface), less WATER_DROP.
+    /// A smooth function of the lattice only, so a lake is level and a river runs downhill.</summary>
+    static double waterAt(Field f, int x, int y)
+    {
+        var t = Terrain.Of(f.nature);
+        var s = f.nature.start;
+        double e = lattice(t, x, y, out double d);
+        double lake = t.lakeAt;
+        return RELIEF * (e - lattice(t, s.x, s.y, out _) + d - lake * smoothstep(d / lake)) - WATER_DROP;
+    }
 
-    /// <summary>The ground before water and buildings at a corner, given its distance to a road (tiles).</summary>
-    static double rolling(Field f, int x, int y, double road)
+    /// <summary>The ground before water and buildings at a corner, given its distance to a road (tiles) and how far the wave
+    /// is let through (0 at water, 1 away from it).</summary>
+    static double rolling(Field f, int x, int y, double road, double wave)
     {
         double town = townness(f, x, y);
         double small = (octave(f, x, y, S2, SALT2, A2) + octave(f, x, y, S3, SALT3, A3)) * (1 - town) * smoothstep(road / ROAD_EASE);
-        double h = swell(f, x, y, town) + small;
+        double big = octave(f, x, y, S1, SALT1, A1) * (1 - 0.5 * town);
+        double h = relief(f, x, y) + (big + small) * wave;
         var s = f.nature.start;
         double ds = JsMath.sqrt((double)(x - s.x) * (x - s.x) + (double)(y - s.y) * (y - s.y));
         double flat = 1 - smoothstep((ds - START_FLAT) / START_EASE);
@@ -302,16 +352,27 @@ public static class Heights
                 else if (wetTiles > 0) h = surface - SHORE;
                 else
                 {
-                    h = rolling(f, x, y, dr);
-                    if (dw < BANK)
+                    h = rolling(f, x, y, dr, smoothstep(dw / WAVE_FADE));
+                    if (dw < CONE + 3)
                     {
+                        // Never under the water's lip near it (a pit is filled, fading out over WAVE_FADE), and never rising from
+                        // it faster than BANK_SLOPE (a smooth min with the cone, so the bank has no crease).
                         double top = surface + BANK_TOP;
-                        h = top + (h - top) * smoothstep(dw / BANK);
+                        if (h < top) h += (top - h) * (1 - smoothstep(dw / WAVE_FADE));
+                        h = smin(h, top + BANK_SLOPE * dw + 100 * smoothstep((dw - CONE) / 3), SMOOTH);
                     }
                 }
                 out_[cy * (CHUNK + 1) + cx] = h;
             }
         return out_;
+    }
+
+    /// <summary>The smaller of a and b, rounded off over k metres (never over either).</summary>
+    static double smin(double a, double b, double k)
+    {
+        double t = (0.5 + 0.5 * (b - a) / k);
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        return b + (a - b) * t - k * t * (1 - t);
     }
 
     /// <summary>Two-pass chamfer distance (1 along, 1.414 across), in place, capped by what's in the window.</summary>
@@ -404,7 +465,7 @@ public static class Heights
                     if (d2 == 0) { inside = r[4]; break; }
                     double d = JsMath.sqrt(d2);
                     if (d >= BUILDING_EASE) continue;
-                    double w = 1 - smoothstep(d / BUILDING_EASE);
+                    double w = 1 - smoothstep((d - APRON) / (BUILDING_EASE - APRON));
                     if (w > most) most = w;
                     sumW += w / d2;
                     sumWL += w / d2 * r[4];
