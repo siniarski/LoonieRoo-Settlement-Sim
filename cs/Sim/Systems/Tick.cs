@@ -12,10 +12,12 @@ public static partial class Tick
     public static void tick(SimState state)
     {
         Time.setDayScale(state.settings.dayScale);
-        foreach (var e in Js.Iter(movers(state)))
-        {
-            e.was = new Point { x = Js.I(e.at.x), y = Js.I(e.at.y) };
-        }
+        // Over the movers' lists in turn (no combined list: nothing here adds or removes one).
+        markWas(state.survivors);
+        markWas(state.zombies);
+        markWas(state.dogs);
+        markWas(state.animals);
+        markWas(state.residents);
         Zombies.updateZombies(state);
         FireMod.updateFires(state);
         Corpses.updateCorpses(state);
@@ -112,13 +114,11 @@ public static partial class Tick
         Wanderers.reconcileWanderers(state);
         ControlMod.reconcileControl(state);
         Doors.closeBehind(state);
-        foreach (var e in Js.Iter(movers(state)))
-        {
-            if (!isFree(state, e))
-            {
-                Motion.syncStep(e);
-            }
-        }
+        syncSteps(state, state.survivors);
+        syncSteps(state, state.zombies);
+        syncSteps(state, state.dogs);
+        syncSteps(state, state.animals);
+        syncSteps(state, state.residents);
         Fog.updateFog(state);
         state.tick = Js.I(state.tick + 1);
     }
@@ -144,6 +144,27 @@ public static partial class Tick
         else if (((!Js.T(s.breakdown) && !Orders.keepOrder(state, s)) && !Leisure.updateLeisure(state, s)) && !Books.updateReading(state, s))
         {
             Work.updateWork(state, s);
+        }
+    }
+
+    static void markWas<T>(List<T> list) where T : Body
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            var e = list[i];
+            e.was = new Point { x = Js.I(e.at.x), y = Js.I(e.at.y) };
+        }
+    }
+
+    static void syncSteps<T>(SimState state, List<T> list) where T : Body
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            var e = list[i];
+            if (!isFree(state, e))
+            {
+                Motion.syncStep(e);
+            }
         }
     }
 
