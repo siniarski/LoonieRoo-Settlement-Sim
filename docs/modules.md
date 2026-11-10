@@ -59,6 +59,8 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
 - **Rooms**: flood fill, purposes, requirements. **Breach**: battering doors and walls. **FireMod**: fire.
 - **Defences**: traps, barricades, turrets, lures, pits. **Towers**: watchtowers. **Power**, **Water**.
+- **Lights**: room lights behind switches, porch lights, street lamps, headlights, the flashlight, fire; what is lit
+  and by what (`near`, `lightAt`, `isLit`). The game draws them in `World3D/Lights.cs` (keys and debug flags: GameLights.cs).
 - **Farming**: plots and crops. **Animals**: deer, rabbits, wolf packs, bears. **Forage**: foraging.
 - **Vehicles**: cars, fuel, the boot. **TimelineMod**: the world winding down (water, power, helicopter, alarms).
 - **CharacterMod**: character creation. **Difficulty**: presets (start, zombies, weather, progression, nuclear

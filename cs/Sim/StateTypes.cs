@@ -427,6 +427,8 @@ public partial class Item : IHasId
     public double wear { get; set; }
     public string? tag { get; set; }
     public string? inside { get; set; }
+    /// <summary>A flashlight switched on (lights.cs); null when off.</summary>
+    public bool? lit { get; set; }
 }
 
 /// <summary>Haul jobs come in two kinds: - deliver: `blueprintId` set; any free wood is chosen at claim time (`itemId`). - store:   `blueprintId` null; `itemId` is the loose item the job exists for, and `dest` (a free tile in a complete storage room) is chosen at claim time.</summary>
@@ -912,6 +914,8 @@ public partial class SimState
     public int namesGiven { get; set; }
     public List<LoggedCommand> commandLog { get; set; } = new();
     public List<GameEvent> events { get; set; } = new();
+    /// <summary>Room light switches that differ from their default, by the room's anchor tile "x,y" (lights.cs); null when none.</summary>
+    public JsRecord<bool>? lightSwitches { get; set; }
 }
 
 public partial class Sleep
@@ -1198,6 +1202,8 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public string? kind { get; set; }
     public bool bootOpen { get; set; }
     public bool hoodOpen { get; set; }
+    /// <summary>Headlights switched on (lights.cs); null when off.</summary>
+    public bool? lights { get; set; }
 }
 
 public partial class Wanderer : IHasId

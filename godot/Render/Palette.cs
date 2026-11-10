@@ -137,6 +137,6 @@ public static class COLOURS
         ["hammer"] = ("#707880", "H"), ["knife"] = ("#b8bcc4", "k"), ["hatchet"] = ("#9a8a70", "h"), ["machete"] = ("#a8b0b8", "m"), ["crowbar"] = ("#b03a30", "j"),
         ["bat"] = ("#c8a070", "t"), ["pipe"] = ("#7a7e88", "p"), ["sledge"] = ("#606870", "S"), ["spear"] = ("#a08a60", "l"), ["plank"] = ("#9a7a4a", "n"),
         ["pistol"] = ("#2e3238", "G"), ["revolver"] = ("#3a3e46", "R"), ["shotgun"] = ("#4a3a2a", "Y"), ["rifle"] = ("#5a4430", "F"), ["crossbow"] = ("#46503a", "W"),
-        ["ammo38"] = ("#6a7ab0", "a"), ["shells"] = ("#b0402e", "a"), ["ammo308"] = ("#8a8a6a", "a"), ["bolts"] = ("#b09a6a", "a"), ["medkit"] = ("#c84040", "+"), ["sample"] = ("#7ab06a", "s"), ["scrap"] = ("#8a8f96", "#"), ["fuel"] = ("#b06a2a", "f"),
+        ["ammo38"] = ("#6a7ab0", "a"), ["shells"] = ("#b0402e", "a"), ["ammo308"] = ("#8a8a6a", "a"), ["bolts"] = ("#b09a6a", "a"), ["medkit"] = ("#c84040", "+"), ["sample"] = ("#7ab06a", "s"), ["scrap"] = ("#8a8f96", "#"), ["fuel"] = ("#b06a2a", "f"), ["flashlight"] = ("#d8c860", "i"),
     };
 }

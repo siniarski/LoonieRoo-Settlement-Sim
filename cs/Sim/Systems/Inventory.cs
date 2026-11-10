@@ -23,7 +23,7 @@ public static partial class Inventory
 {
 
     /// <summary>Weight in tenths of a kilo. A cart or a body can't go in a bag (Infinity).</summary>
-    public static readonly JsRecord<double> ITEM_WEIGHT = new() { ["wood"] = 30, ["food"] = 5, ["meal"] = 5, ["bandage"] = 1, ["medicine"] = 1, ["weapon"] = 20, ["knife"] = 5, ["hatchet"] = 15, ["machete"] = 15, ["crowbar"] = 30, ["bat"] = 20, ["pipe"] = 30, ["sledge"] = 60, ["spear"] = 20, ["plank"] = 20, ["pistol"] = 15, ["revolver"] = 20, ["shotgun"] = 35, ["rifle"] = 40, ["crossbow"] = 30, ["ammo38"] = 2, ["shells"] = 3, ["ammo308"] = 2, ["bolts"] = 2, ["cloth"] = 2, ["coat"] = 15, ["armour"] = 40, ["boots"] = 10, ["gun"] = 30, ["ammo"] = 2, ["corpse"] = double.PositiveInfinity, ["book"] = 5, ["cart"] = double.PositiveInfinity, ["axe"] = 25, ["hammer"] = 15, ["medkit"] = 3, ["sample"] = 1, ["scrap"] = 10, ["fuel"] = 20 };
+    public static readonly JsRecord<double> ITEM_WEIGHT = new() { ["wood"] = 30, ["food"] = 5, ["meal"] = 5, ["bandage"] = 1, ["medicine"] = 1, ["weapon"] = 20, ["knife"] = 5, ["hatchet"] = 15, ["machete"] = 15, ["crowbar"] = 30, ["bat"] = 20, ["pipe"] = 30, ["sledge"] = 60, ["spear"] = 20, ["plank"] = 20, ["pistol"] = 15, ["revolver"] = 20, ["shotgun"] = 35, ["rifle"] = 40, ["crossbow"] = 30, ["ammo38"] = 2, ["shells"] = 3, ["ammo308"] = 2, ["bolts"] = 2, ["cloth"] = 2, ["coat"] = 15, ["armour"] = 40, ["boots"] = 10, ["gun"] = 30, ["ammo"] = 2, ["corpse"] = double.PositiveInfinity, ["book"] = 5, ["cart"] = double.PositiveInfinity, ["axe"] = 25, ["hammer"] = 15, ["medkit"] = 3, ["sample"] = 1, ["scrap"] = 10, ["fuel"] = 20, ["flashlight"] = 3 };
 
     /// <summary>What a bag holds: 12 kilos.</summary>
     public const int PACK_MAX = 120;

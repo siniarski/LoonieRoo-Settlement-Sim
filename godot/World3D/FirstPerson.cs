@@ -48,6 +48,9 @@ public sealed partial class FirstPerson : Node3D
     readonly Trees trees;
     readonly FarField far;
     readonly Roofs roofs;
+    readonly WorldLights lights;
+    /// <summary>The world's lights (the debug panel, the light bench).</summary>
+    public WorldLights Lights => lights;
     /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
     public readonly Audio.Sounds sounds = new();
     /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
@@ -84,6 +87,7 @@ public sealed partial class FirstPerson : Node3D
         trees = new Trees(this);
         far = new FarField(this, trees);
         roofs = new Roofs(this);
+        lights = new WorldLights(this, camera);
         AddChild(sounds);
         look.indoor = roofs.Indoor;
     }
@@ -147,6 +151,7 @@ public sealed partial class FirstPerson : Node3D
         bodies.Update(state, alpha, eye, you.id, modelled);
         items.Update(state, eye);
         held.Update(state, you, alpha, delta, inCar || EyeAt != null);
+        lights.Update(state, eye, alpha, delta, inCar);
         sounds.Update(state, alpha, you, people.Steps);
     }
 
@@ -167,13 +172,14 @@ public sealed partial class FirstPerson : Node3D
         if (state.weather != "clear") sky = sky.Darkened(0.25f);
         env.BackgroundColor = sky;
         env.FogLightColor = sky;
-        env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.08f, 0.09f, 0.13f), (float)dark);
+        env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.045f, 0.05f, 0.075f), (float)dark);
         int tile = (int)Math.Floor(eye.Z) * state.grid.width + (int)Math.Floor(eye.X);
         float want = roofs.Indoor.Contains(tile) ? 0.45f : 1;
         ambient += (want - ambient) * (float)Math.Min(1, delta * 3);
         env.AmbientLightEnergy = 0.5f * ambient;
-        // What you can make out round you in the dark.
-        near.LightEnergy = (float)(0.5 * dark);
+        // What you can make out round you in the dark (faint: the world's lights and your flashlight do the rest).
+        near.LightEnergy = (float)(0.22 * dark);
+        near.OmniRange = 5;
     }
 
     void Chunks(SimState state, Vector3 eye)

@@ -6,9 +6,9 @@
 // something to power, burning one wood every FUEL_TICKS (furniture.loot
 // counts the ticks), and it's noisy (once an hour). Lamps light up at night
 // when powered: night zombies don't arrive within LAMP_DETER of a lit lamp
-// (zombies.ts), and guards fight better in the light. A powered fridge keeps
-// the food round it from spoiling. While the mains are on (timeline.ts), iceboxes are fridges
-// and indoors is lit at night.
+// (zombies.ts), and guards fight better in the light (inLight: any light, lights.cs). A powered
+// fridge keeps the food round it from spoiling. While the mains are on (timeline.ts), iceboxes are
+// fridges. Room lights switched on in reach load a generator at night once the mains are off (lights.cs).
 //
 // Spoilage (harsh games only): food and hot meals age (item.wear) and rot
 // at FOOD_SHELF and MEAL_SHELF. They age twice as fast in summer, not at all
@@ -82,9 +82,10 @@ public static partial class Power
         return FurnitureMod.ofKind(state, "lamp").filter((f) => isPowered(state, f));
     }
 
+    /// <summary>At night, is this point lit (any light, lights.cs)? Guards hit harder in it.</summary>
     public static bool inLight(SimState state, Point p)
     {
-        return TimelineMod.mainsLit(state, p) || litLamps(state).some((l) => Space.manhattan(l, p) <= LAMP_LIGHT);
+        return Time.isNight(state.tick) && Lights.isLit(state, p);
     }
 
     /// <summary>Generators burn fuel while they have something to power. Every tick.</summary>
@@ -97,7 +98,7 @@ public static partial class Power
                 continue;
             }
             var load = CONSUMERS.some((kind) => ((kind != "lamp") || Time.isNight(state.tick)) && FurnitureMod.ofKind(state, kind).some((f) => Space.manhattan(g, f) <= POWER_RADIUS));
-            if (!Js.T(load))
+            if (!Js.T(load) && !Lights.loadsGenerator(state, g))
             {
                 continue;
             }

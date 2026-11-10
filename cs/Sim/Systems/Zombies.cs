@@ -302,7 +302,8 @@ public static partial class Zombies
                     continue;
                 }
                 Point near = new Point { x = Js.I(JsMath.max(0, JsMath.min(state.grid.width - 1, s.pos.x + dx))), y = Js.I(JsMath.max(0, JsMath.min(state.grid.height - 1, s.pos.y + dy))) };
-                var p = Space.nearestTile(state.grid, near, (x, y) => !Fog.isExplored(state, x, y) && open(x, y));
+                var lit = Lights.near(state, near.x + 0.5, near.y + 0.5, FRONTIER_MAX + Lights.REACH);
+                var p = Space.nearestTile(state.grid, near, (x, y) => !Fog.isExplored(state, x, y) && open(x, y) && ((lit.Count == 0) || (Lights.lightFrom(state, lit, Js.I(x), Js.I(y)).level < Lights.LIT)));
                 if (Js.T(p) && (Space.manhattan(p, near) <= FRONTIER_MAX))
                 {
                     return p;

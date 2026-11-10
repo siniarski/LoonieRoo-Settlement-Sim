@@ -124,10 +124,10 @@ public static partial class Sight
         return @out;
     }
 
-    /// <summary>How far a survivor sees: less at night (unless the lights are on indoors: timeline.ts); more from a tower, or with the vigilant trait.</summary>
+    /// <summary>How far a survivor sees: less at night (unless the room's light is on: lights.cs); more from a tower, or with the vigilant trait.</summary>
     public static double sightRadius(SimState state, Survivor s)
     {
-        var @base = Towers.onTower(state, s) ? Towers.TOWER_SIGHT : ((Time.isNight(state.tick) && !TimelineMod.mainsLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS);
+        var @base = Towers.onTower(state, s) ? Towers.TOWER_SIGHT : ((Time.isNight(state.tick) && !Lights.roomLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS);
         return @base + (Skills.hasTrait(s, "vigilant") ? Skills.VIGILANT_SIGHT : 0);
     }
 

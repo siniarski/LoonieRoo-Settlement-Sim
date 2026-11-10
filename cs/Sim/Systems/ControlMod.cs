@@ -287,6 +287,13 @@ public static partial class ControlMod
             crate.loot -= 1;
             found.push(item.kind);
         }
+        if (Lights.flashlightIn(crate))
+        {
+            var torch = Items.spawnItem(state, Lights.FLASHLIGHT, s.pos.x, s.pos.y);
+            torch.pos = null;
+            torch.inside = crate.id;
+            found.push(torch.kind);
+        }
         FurnitureMod.setScavenge(state, crate, false);
         s.note = Js.T(found.length) ? $"found {Js.Str(found.join(", "))}" : "nothing in it";
     }

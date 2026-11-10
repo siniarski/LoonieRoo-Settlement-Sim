@@ -52,6 +52,10 @@ G is gone.
   Weapons above); in the Colony tab a click on a tile fires a loaded gun at it.
 - T talk (neighbours' people may ask you for an errand), V "follow me", H "hold here", L "loot that room" (under the
   mouse), K the full key list.
+- Lights (2026-11-10): G switches your flashlight on or off (one in your bag; using it from the bag does the same); in
+  a car, G is its headlights. Z flips the light switch of the room you're in, or of the room past the door in front
+  of you (the HUD says "Z: light on" or "light off" in a room). A room's light needs power: the mains, or a generator
+  in reach.
 
 ## Saves
 

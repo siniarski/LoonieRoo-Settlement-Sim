@@ -26,6 +26,7 @@
 //                                          ammunition in your bag) for screenshots of the HUD's readout; not a command
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
+//   --hour=H --switch=X,Y --give=flashlight:on --car=X,Y,H --fire= --stove= --heater= --lights=N --lightbench   lights (GameLights.cs)
 //   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
 //                                          Options page's (not saved); a --shot or --selftest ignores the player's options
 
@@ -169,6 +170,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             me.was = Motion.centre(me.pos);
         }
         if (args.TryGetValue("day", out var dayArg)) StartDay(double.Parse(dayArg, CultureInfo.InvariantCulture));
+        LightArgs(args); // --hour, --switch, --give, --car, --fire, --stove, --heater, --lights, --lightbench (GameLights.cs)
         if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
         if (args.TryGetValue("arm", out var armArg) && ControlMod.controlled(state) is { } armMe)
         {
@@ -1034,6 +1036,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             case Key.V:
             case Key.H: Command(new Command { type = "shout", order = key == Key.V ? "follow" : "hold" }); break;
             case Key.E: UseAhead(); break;
+            case Key.G: LightKey(you); break;   // your flashlight; in a car, its headlights (GameLights.cs)
+            case Key.Z: SwitchKey(you); break;  // the room's light switch (X is reload)
         }
     }
 }

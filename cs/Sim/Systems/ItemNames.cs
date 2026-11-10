@@ -52,6 +52,7 @@ public static partial class Items
         ["sample"] = ["blood sample"],
         ["scrap"] = ["scrap metal"],
         ["fuel"] = ["fuel can"],
+        ["flashlight"] = ["flashlight"],
     };
 
     /// <summary>Which of its kind's names an item goes by (0 if the kind has one, or none).</summary>
