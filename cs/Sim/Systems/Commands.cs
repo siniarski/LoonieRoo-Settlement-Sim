@@ -58,7 +58,8 @@ public static partial class Commands
             s.note = done;
             return Js.T(Js.NN(state.control).busy) ? changed() : reject(done);
         }
-        if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash") || (command.type == "stashAll") || (command.type == "unequip"))
+        if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash") || (command.type == "stashAll") || (command.type == "unequip")
+            || Inventory.GRID_COMMANDS.includes(command.type))
         {
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
@@ -1268,6 +1269,11 @@ public static partial class Commands
     /// Returns why not, or null when done.</summary>
     public static string? bagCommand(SimState state, Survivor s, Command command)
     {
+        // The grid inventory's commands (InventoryGrid.cs): moveItem, swapItems, splitStack, quickMove, arrange, setQuick.
+        if (Inventory.GRID_COMMANDS.includes(command.type))
+        {
+            return Inventory.gridCommand(state, s, command);
+        }
         if (command.type == "takeAll")
         {
             var box = Inventory.containerOf(state, command.containerId);

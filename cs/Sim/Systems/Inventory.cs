@@ -16,6 +16,8 @@
 //   slots      what you wear and wield (weapon, body, feet, tool): useItem puts it on from the
 //              bag, unequip takes it off into the bag, drop takes it off onto the ground.
 //   death      the bag's contents fall where you fall.
+//   grids      since 2026-11-10 every container is a grid and every item has a footprint (InventoryGrid.cs):
+//              stow and stash place by first-fit, and fail when there's no room as well as when too heavy.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -24,6 +26,44 @@ public static partial class Inventory
 
     /// <summary>Weight in tenths of a kilo. A cart or a body can't go in a bag (Infinity).</summary>
     public static readonly JsRecord<double> ITEM_WEIGHT = new() { ["wood"] = 30, ["food"] = 5, ["meal"] = 5, ["bandage"] = 1, ["medicine"] = 1, ["weapon"] = 20, ["cloth"] = 2, ["coat"] = 15, ["armour"] = 40, ["boots"] = 10, ["gun"] = 30, ["ammo"] = 2, ["corpse"] = double.PositiveInfinity, ["book"] = 5, ["cart"] = double.PositiveInfinity, ["axe"] = 25, ["hammer"] = 15, ["medkit"] = 3, ["sample"] = 1, ["scrap"] = 10, ["fuel"] = 20 };
+
+    /// <summary>Footprint in cells (w across, h down, as it lies unturned) and how many stack in one cell, by kind:
+    /// the grid inventory (InventoryGrid.cs). A kind not here is 1x1, one to a cell; a new kind needs one line.</summary>
+    public static readonly JsRecord<(int w, int h, int stack)> ITEM_SIZE = new()
+    {
+        ["wood"] = (2, 4, 1), // a bundle of planks
+        ["food"] = (1, 1, 1), // a tin
+        ["meal"] = (1, 1, 1),
+        ["bandage"] = (1, 1, 5),
+        ["medicine"] = (1, 1, 5),
+        ["weapon"] = (1, 3, 1), // by name in NAME_SIZE: a knife 1x2, a bat 1x4
+        ["cloth"] = (1, 1, 5),
+        ["coat"] = (2, 3, 1),
+        ["armour"] = (2, 3, 1),
+        ["boots"] = (2, 2, 1),
+        ["gun"] = (2, 2, 1),
+        ["ammo"] = (1, 1, 10),
+        ["book"] = (1, 2, 1),
+        ["axe"] = (2, 4, 1),
+        ["hammer"] = (1, 3, 1),
+        ["medkit"] = (2, 2, 1),
+        ["sample"] = (1, 1, 5),
+        ["scrap"] = (2, 2, 1),
+        ["fuel"] = (2, 2, 1), // a can
+        ["cart"] = (4, 3, 1), // never in a bag (it weighs Infinity), but it takes room in a crate
+        ["corpse"] = (5, 2, 1), // lying down: only ever on the ground
+    };
+
+    /// <summary>Sizes by name, where a kind's names differ in size (Items.NAMES): a knife is shorter than a bat.</summary>
+    public static readonly JsRecord<(int w, int h, int stack)> NAME_SIZE = new()
+    {
+        ["kitchen knife"] = (1, 2, 1),
+        ["hunting knife"] = (1, 2, 1),
+        ["machete"] = (1, 3, 1),
+        ["crowbar"] = (1, 3, 1),
+        ["baseball bat"] = (1, 4, 1),
+        ["tyre iron"] = (1, 3, 1),
+    };
 
     /// <summary>What a bag holds: 12 kilos.</summary>
     public const int PACK_MAX = 120;
@@ -38,16 +78,22 @@ public static partial class Inventory
         return (packWeight(state, s) + Js.Get(ITEM_WEIGHT, item.kind)) <= PACK_MAX;
     }
 
+    /// <summary>Whether stow would take it: light enough, and room for it in one of your grids.</summary>
+    public static bool canStow(SimState state, Survivor s, Item item)
+    {
+        return (tooHeavy(state, s, BAG, [item]) == null) && Js.T(firstFit(state, s, item, yourGrids(state, s)));
+    }
+
     /// <summary>What's inside a container (a crate, a car's boot), by its id.</summary>
     public static List<Item> contents(SimState state, Furniture f)
     {
         return state.items.filter((i) => i.inside == f.id);
     }
 
-    /// <summary>The weight of what's in a container (tenths of a kilo).</summary>
+    /// <summary>The weight of what's in a container (tenths of a kilo), what's in the pockets of what's in it too.</summary>
     public static double load(SimState state, string containerId)
     {
-        return state.items.filter((i) => i.inside == containerId).reduce((sum, i) => sum + Js.Get(ITEM_WEIGHT, i.kind), 0.0);
+        return state.items.filter((i) => i.inside == containerId).reduce((sum, i) => sum + Js.Get(ITEM_WEIGHT, i.kind) + (hasGrid(i.kind) ? load(state, i.id) : 0), 0.0);
     }
 
     /// <summary>The slots you wear and wield things in, in the order the inventory shows them.</summary>
@@ -107,13 +153,7 @@ public static partial class Inventory
         {
             return "you don't have it on";
         }
-        Js.SetProp(s, slot, null);
-        var why = stow(state, s, item);
-        if (why != null)
-        {
-            Js.SetProp(s, slot, item.id);
-        }
-        return why;
+        return stow(state, s, item); // (stow takes it out of the slot once there's room)
     }
 
     /// <summary>Takes off what you wear or wield and puts it down at your feet.</summary>
@@ -124,17 +164,27 @@ public static partial class Inventory
         {
             return "you don't have it on";
         }
-        Js.SetProp(s, slot, null);
-        Items.dropItem(state, item, s.pos);
+        dropHere(state, s, item);
         return null;
     }
 
     /// <summary>What a crate holds (tenths of a kilo).</summary>
     public const int CRATE_HOLD = 300;
 
-    /// <summary>A container by id: a crate, or a car's boot. Where it is, and what it holds.</summary>
+    /// <summary>A container by id: a crate, a car's boot, or something with pockets (a coat, a body: no weight limit of
+    /// its own). Where it is, and what it holds.</summary>
     public static ContainerOfResult? containerOf(SimState state, string id)
     {
+        var item = Items.getItem(state, id);
+        if (Js.T(item))
+        {
+            if (!hasGrid(item.kind))
+            {
+                return null;
+            }
+            var at = item.pos ?? (Js.T(item.inside) ? containerOf(state, item.inside)?.at : null) ?? (Js.T(item.carriedBy) ? Survivors.getSurvivor(state, item.carriedBy)?.pos : null);
+            return Js.T(at) ? new() { at = at, max = double.PositiveInfinity } : null;
+        }
         var f = FurnitureMod.getFurniture(state, id);
         if (Js.T(f))
         {
@@ -156,16 +206,11 @@ public static partial class Inventory
         {
             return "not in your bag";
         }
-        if ((load(state, containerId) + Js.Get(ITEM_WEIGHT, item.kind)) > box.max)
+        if (tooHeavy(state, s, containerId, [item]) != null)
         {
             return "it won't fit";
         }
-        unpack(s, item.id);
-        item.carriedBy = null;
-        item.pos = null;
-        item.reservedBy = null;
-        item.inside = containerId;
-        return null;
+        return placeFirstFit(state, s, item, [containerId], "no room in it");
     }
 
     /// <summary>Puts an item into the bag: from the ground, a container, or your hands. Returns why not, or null.</summary>
@@ -175,20 +220,11 @@ public static partial class Inventory
         {
             return "already in your bag";
         }
-        if (!fitsInPack(state, s, item))
+        if (Js.Get(ITEM_WEIGHT, item.kind) == double.PositiveInfinity)
         {
-            return (Js.Get(ITEM_WEIGHT, item.kind) == double.PositiveInfinity) ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
+            return $"a {Js.Str(item.kind)} won't go in a bag";
         }
-        if (s.carrying == item.id)
-        {
-            s.carrying = null;
-        }
-        item.pos = null;
-        item.inside = null;
-        item.carriedBy = s.id;
-        item.reservedBy = null;
-        s.pack.push(item.id);
-        return null;
+        return placeFirstFit(state, s, item, yourGrids(state, s), "no room in your bag");
     }
 
     /// <summary>Takes an item out of the bag (it's being used up, or moving to a slot).</summary>
@@ -209,8 +245,7 @@ public static partial class Inventory
         {
             return "not in your bag";
         }
-        unpack(s, id);
-        Items.dropItem(state, item, s.pos);
+        dropHere(state, s, item);
         return null;
     }
 
@@ -219,14 +254,18 @@ public static partial class Inventory
     {
         var slot = slotFor(item.kind);
         unpack(s, item.id);
+        unplace(item);
         var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.NN(Js.GetProp<string?>(s, slot))) : null;
         Js.SetProp(s, slot, item.id);
+        follow(state, s, item);
         if (Js.T(old))
         {
             Js.SetProp(s, slot, item.id);
             if (stow(state, s, old) != null)
             {
+                unplace(old);
                 Items.dropItem(state, old, where);
+                follow(state, s, old);
             }
         }
         return Clothing.isGarment(item.kind) ? $"put on the {Items.nameOf(item)}" : ((slot == "tool") ? $"took the {Items.nameOf(item)} in hand" : $"took up the {Items.nameOf(item)}");
@@ -241,6 +280,7 @@ public static partial class Inventory
             unpack(s, id);
             if (Js.T(item))
             {
+                unplace(item);
                 Items.dropItem(state, item, s.pos);
             }
         }

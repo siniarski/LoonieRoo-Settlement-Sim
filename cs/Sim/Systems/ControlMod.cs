@@ -283,6 +283,7 @@ public static partial class ControlMod
             found.push(item.kind);
         }
         FurnitureMod.setScavenge(state, crate, false);
+        Inventory.settle(state, s, crate.id); // the finds laid out in its grid by first-fit
         s.note = Js.T(found.length) ? $"found {Js.Str(found.join(", "))}" : "nothing in it";
     }
 
@@ -669,7 +670,7 @@ public static partial class ControlMod
             return "eating";
         }
         var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
-        if ((slot == "carrying") && Inventory.fitsInPack(state, s, item))
+        if ((slot == "carrying") && Inventory.canStow(state, s, item))
         {
             Inventory.stow(state, s, item);
             return $"put the {Items.nameOf(item)} in your bag";
@@ -679,9 +680,11 @@ public static partial class ControlMod
         item.pos = null;
         item.carriedBy = s.id;
         Js.SetProp(s, slot, item.id);
+        Inventory.follow(state, s, item); // a coat's pockets come with it
         if (Js.T(old))
         {
             Items.dropItem(state, old, where);
+            Inventory.follow(state, s, old);
         }
         return (slot == "carrying") ? $"picked up the {Items.nameOf(item)}" : $"took the {Items.nameOf(item)}";
     }

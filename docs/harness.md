@@ -26,5 +26,10 @@ vars below for each.
 Run several seeds as separate background processes (one SEEDS value each) to stay inside a few minutes. For a CPU
 profile, run under dotnet-trace (not installed: ask first).
 
+**The grid inventory (2026-11-10)** left the solo player's runs unchanged, seed for seed (`SEEDS=1` and `SEEDS=2`,
+before and after the change): seed 1 dies of starvation on day 5 at tick 39306 (searched 107, ate 8, kills 25), seed 2
+of thirst on day 4 at tick 30421 (searched 92, ate 10, kills 16), every daily line identical. Its `takeAll` goes through
+first-fit, and 12 kg of what it carries always fits the 8 x 6 bag by area.
+
 **Comparing two runs:** LOG= and LOG_AT= dump whole states; with determinism, two runs that should agree can be
 bisected tick by tick to the first difference (how the port's bugs were found).

@@ -42,6 +42,7 @@ public static partial class Items
     /// <summary>Puts an item on the ground at the nearest free tile and clears carry/reservation.</summary>
     public static void dropItem(SimState state, Item item, Point near)
     {
+        Inventory.unplace(item);
         item.carriedBy = null;
         item.reservedBy = null;
         placeNear(state, item, near);
@@ -49,6 +50,8 @@ public static partial class Items
 
     public static void removeItem(SimState state, Item item)
     {
+        Inventory.forgetQuick(state, item); // its quick slot passes to another of its kind
+        Inventory.spill(state, item); // what was in its pockets stays behind
         var i = state.items.indexOf(item);
         if (i >= 0)
         {

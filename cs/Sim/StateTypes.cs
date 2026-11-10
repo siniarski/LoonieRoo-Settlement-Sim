@@ -183,6 +183,9 @@ public partial class Command
     public bool? run { get; set; }
     public string? itemId { get; set; }
     public string? containerId { get; set; }
+    /// <summary>The grid inventory: an item placed a quarter turn round; a quick slot (0 to 8).</summary>
+    public bool? turned { get; set; }
+    public int? slot { get; set; }
     public string? order { get; set; }
     public string? choice { get; set; }
     public string? who { get; set; }
@@ -427,6 +430,13 @@ public partial class Item : IHasId
     public double wear { get; set; }
     public string? tag { get; set; }
     public string? inside { get; set; }
+    /// <summary>The grid inventory (InventoryGrid.cs): the cell its top-left corner is in, in the grid it's in (null: not
+    /// placed yet; it's arranged by first-fit when the grid is next touched), and whether it lies a quarter turn round.</summary>
+    public int? gx { get; set; }
+    public int? gy { get; set; }
+    public bool? turned { get; set; }
+    /// <summary>Carried in your grids: which one, the id of a container item you carry (a coat's pockets); null: the bag.</summary>
+    public string? grid { get; set; }
 }
 
 /// <summary>Haul jobs come in two kinds: - deliver: `blueprintId` set; any free wood is chosen at claim time (`itemId`). - store:   `blueprintId` null; `itemId` is the loose item the job exists for, and `dest` (a free tile in a complete storage room) is chosen at claim time.</summary>
@@ -1036,6 +1046,8 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public string? cart { get; set; }
     public List<string> cartLoad { get; set; } = new();
     public List<string> pack { get; set; } = new();
+    /// <summary>Quick slots 1 to 9 (InventoryGrid.cs): an item id each, "" for none; null until first set (then keys 1-9 use the bag's first nine).</summary>
+    public List<string>? quick { get; set; }
     public string? tool { get; set; }
     public string shift { get; set; } = "";
     public double kills { get; set; }
