@@ -136,7 +136,7 @@ public static partial class Expeditions
         var v = Js.T(x.truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId) : null;
         if (Js.T(v))
         {
-            var spot = Vehicles.parkable(state, x.home) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }), 400) ?? x.home);
+            var spot = Vehicles.parkable(state, x.home, v.heading, v.kind, v) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }, v.heading, v.kind, v), 400) ?? x.home);
             v.pos = Js.CopyAs<Point>(spot);
             v.at = Motion.centre(spot);
             v.was = Js.CopyAs<Point>(v.at);

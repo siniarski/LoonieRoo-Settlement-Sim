@@ -391,7 +391,9 @@ public static partial class Lights
                 var d = Js.Get(Vehicles.HEADING_DIRS, v.heading);
                 double hx = d[0] / 256.0, hy = d[1] / 256.0;
                 double cx = (double)v.at.x / Motion.SUB, cy = (double)v.at.y / Motion.SUB;
-                var s = point(HEADLIGHTS, v.id, cx + hx, cy + hy, OUT);
+                // From the front of the body (VehicleBody.cs), not a metre ahead of its centre.
+                double nose = (double)Vehicles.shapeOf(v).halfLength / Motion.SUB;
+                var s = point(HEADLIGHTS, v.id, cx + hx * nose, cy + hy * nose, OUT);
                 s.dx = hx; s.dy = hy; s.cone = HEADLIGHT_CONE;
                 add(s);
             }

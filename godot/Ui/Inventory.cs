@@ -155,7 +155,7 @@ public sealed partial class InventoryScreen : Control
     {
         if (Vehicles.vehicleOf(state, s) != null) return null;
         if (open != null && Inventory.containerOf(state, open) is { } o && Inventory.reachable(state, s, open) && !IsYours(state, s, open)) return (open, Inventory.gridName(state, open), o.max);
-        var car = Vehicles.vehicleNear(state, s.at, Motion.SUB * 1.5);
+        var car = Vehicles.vehicleNear(state, s.at);
         if (car != null && Inventory.containerOf(state, car.id) is { } b && Commands.besideYou(s, b.at)) return (car.id, Inventory.gridName(state, car.id), b.max);
         Furniture? searched = null;
         for (int dy = -1; dy <= 1; dy++)

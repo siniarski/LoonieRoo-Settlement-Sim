@@ -633,7 +633,8 @@ public static partial class ControlMod
         {
             return null;
         }
-        var car = Vehicles.vehiclesOf(state).find((v) => (Motion.distance2(v.at, Motion.centre(target)) <= (JsMath.pow((Vehicles.VEHICLE_RADIUS + ((double)(Motion.SUB) / (2))), 2))) && (Motion.distance2(v.at, s.at) <= (JsMath.pow(Vehicles.ENTER_REACH, 2))));
+        // The car whose body is on the tile you use and within your reach (VehicleBody.cs: its real footprint).
+        var car = Vehicles.vehiclesOf(state).find((v) => Vehicles.within(v, Motion.centre(target), ((double)(Motion.SUB) / (2))) && Vehicles.within(v, s.at, Vehicles.ENTER_REACH));
         if (Js.T(car))
         {
             c.busy = null;

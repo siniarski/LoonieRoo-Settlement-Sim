@@ -144,12 +144,14 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
 ## First person and the look
 
 - Left from the first-person start (2026-11-08): the world's look (textures); what line of sight and fog of war mean
-  in first person; **the car's size** (the sim's is a 0.43 m circle; since 2026-11-11 it is drawn as the 4.2 m
-  sedan or the 5 m pickup, so a car against a wall stands into it and you get in through its side: the sim's car
-  wants a real footprint, the player's call).
+  in first person.
+- Cars (log/2026-11-11-04-car-body.md): a car's body in the sim is the size of the car drawn (VehicleBody.cs).
+  Left: people, the dead and animals walk through a parked car (pathfinding doesn't know cars); a wall doesn't
+  turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
+  call whether cars should be faster now that they are car-sized).
 - Models added 2026-11-11 (log/2026-11-11-03-models.md): farm plots and crops, building sites, cars, the
   helicopter, the flashlight, and the people the sim keeps as a tile (wanderers, traders, prisoners, caravans,
-  scavenging parties: `Others.cs`'s stand-ins). Left: the car you sit in isn't drawn (no bonnet or dash); a
+  scavenging parties: `Others.cs`'s stand-ins). Left: a
   prisoner stands like anyone (no bound pose, no cell); a caravan or a run draws four people at most; a party
   walks straight at its next tile (through a wall if the sim's step crosses one); stand-ins have no names over
   them and can't be looked at for a card; ferns near trees still poke through a farm plot (Trees.cs draws them

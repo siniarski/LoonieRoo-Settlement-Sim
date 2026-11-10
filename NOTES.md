@@ -45,7 +45,7 @@ cheaper models for mechanical work.
    tracks, weapon options, the bag).
 3. Big worlds: unloading chunks (furniture per chunk, an active region), loading off the main thread, then the
    very large stress test before storeys or long-path work.
-4. The look and sound: textures, the car's real footprint in the sim, weapon, fire and rain sounds, bloom for lights.
+4. The look and sound: textures, weapon, fire and rain sounds, bloom for lights.
 
 **Where to read what** (read only what your task touches).
 - README.md: the shape and a reading order, for a person reviewing the code.

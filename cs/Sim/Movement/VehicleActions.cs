@@ -12,8 +12,9 @@
 // stays reachable either way (inventory.ts stash and take, as before).
 //
 // Anchors: where a body stands to do each (SUB, the car's frame turned by its heading), and the way
-// it faces (a heading index): the driver's door on the car's left, the boot behind, the bonnet in
-// front, each just clear of the car's circle. The 3D renderer maps the same names onto its model.
+// it faces (a heading index): the driver's door on the car's left beside the seat, the boot behind,
+// the bonnet in front, each just clear of the car's body (VehicleBody.cs). The 3D renderer maps the
+// same names onto its model.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -36,14 +37,16 @@ public static partial class Vehicles
     {
         var d = Js.Get(HEADING_DIRS, Js.I(v.heading));
         double dx = Js.Get(d, 0), dy = Js.Get(d, 1);
-        double reach = VEHICLE_RADIUS + Motion.BODY_RADIUS + 16;
+        var shape = shapeOf(v);
+        double clear = Motion.BODY_RADIUS + 16;
         // The car's left, on screen (y down): heading 0 is east, its left is north.
         double lx = dy, ly = -dx;
-        double ox, oy, facing;
-        if (anchor == "boot") { ox = -dx; oy = -dy; facing = v.heading; }
-        else if (anchor == "hood") { ox = dx; oy = dy; facing = (v.heading + 16) % HEADINGS; }
-        else { ox = lx; oy = ly; facing = (v.heading + 8) % HEADINGS; }
-        var at = new Point { x = Js.I(v.at.x + JsMath.round(((double)(ox) * (reach)) / 256)), y = Js.I(v.at.y + JsMath.round(((double)(oy) * (reach)) / 256)) };
+        // How far along the car (ahead of its centre) and how far out to its left the body stands.
+        double along, left, facing;
+        if (anchor == "boot") { along = -(shape.halfLength + clear); left = 0; facing = v.heading; }
+        else if (anchor == "hood") { along = shape.halfLength + clear; left = 0; facing = (v.heading + 16) % HEADINGS; }
+        else { along = shape.seat; left = shape.halfWidth + clear; facing = (v.heading + 8) % HEADINGS; }
+        var at = new Point { x = Js.I(v.at.x + JsMath.round((dx * along + lx * left) / 256)), y = Js.I(v.at.y + JsMath.round((dy * along + ly * left) / 256)) };
         return (at, facing);
     }
 
@@ -89,7 +92,7 @@ public static partial class Vehicles
         switch (busy.what)
         {
             case "getIn":
-                if (Motion.distance2(v.at, s.at) > JsMath.pow(ENTER_REACH, 2)) return "the car moved off";
+                if (!within(v, s.at, ENTER_REACH)) return "the car moved off";
                 return enterVehicle(state, s, v);
             case "getOut":
                 return leaveVehicle(state, s);

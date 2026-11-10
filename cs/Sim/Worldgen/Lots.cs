@@ -400,8 +400,9 @@ public static partial class Lots
             p = lotToMap(lot, u, -2);
             next = lotToMap(lot, u + 1, -2);
         }
-        if (!inside(p.x, p.y) || !Vehicles.parkable(state, p) || Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) return;
+        // Along the street or the drive, either way round; only where the whole car fits (its body, not its tile).
         var heading = Vehicles.headingOf(next.x - p.x, next.y - p.y) + (r(2) < 0.5 ? 0 : 16);
+        if (!inside(p.x, p.y) || !Vehicles.parkable(state, p, heading) || Js.T(FurnitureMod.furnitureAt(state, p.x, p.y))) return;
         Vehicles.addVehicle(state, p.x, p.y, heading, Math.Floor(r(3) * 0.6 * Vehicles.FUEL_MAX), Math.Floor((0.4 + r(4) * 0.6) * Vehicles.VEHICLE_HEALTH));
     }
 

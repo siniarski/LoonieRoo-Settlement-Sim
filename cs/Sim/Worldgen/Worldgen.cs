@@ -488,10 +488,12 @@ public static partial class Worldgen
         Point near = new Point { x = Js.I(JsMath.round(l.start.x + ((double)(JsMath.cos(angle)) * (35)))), y = Js.I(JsMath.round(l.start.y + ((double)(JsMath.sin(angle)) * (35)))) };
         Point clamped = new Point { x = Js.I(JsMath.max(1, JsMath.min(size - 2, near.x))), y = Js.I(JsMath.max(1, JsMath.min(size - 2, near.y))) };
         var spot = Space.nearestTile(state.grid, clamped, (x, y) => ((Grids.getTile(state.grid, x, y) == "floor") && !Js.T(FurnitureMod.furnitureAt(state, x, y))) && !Js.T(Items.itemAt(state, x, y)));
-        var park = (Js.T(spot) ? (Vehicles.parkable(state, spot) ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }))) : null);
+        // The truck stands where its whole body fits on the heading it was left at (VehicleBody.cs), within a short walk of the spot.
+        var truckHeading = JsMath.floor(((double)(Hash.hashRoll(seed, 0x7a0d)) * (32)));
+        var park = (Js.T(spot) ? (Vehicles.parkable(state, spot, truckHeading, "truck") ? spot : Space.nearestTile(state.grid, spot, (x, y) => Vehicles.parkable(state, new Point { x = Js.I(x), y = Js.I(y) }, truckHeading, "truck"), 2000)) : null);
         if (Js.T(park))
         {
-            Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(((double)(Hash.hashRoll(seed, 0x7a0d)) * (32))), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");
+            Vehicles.addVehicle(state, park.x, park.y, truckHeading, ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");
         }
         Grids.fillExplored(state.grid, 0);
         for (var y = l.start.y - START_REVEAL_RADIUS; y <= (l.start.y + START_REVEAL_RADIUS); y++)

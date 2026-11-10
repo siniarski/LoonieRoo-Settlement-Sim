@@ -9,16 +9,17 @@
 //   driving     W accelerates (ACCEL a tick, up to MAX_SPEED), S brakes then reverses (down to
 //               -REVERSE_MAX), and nothing held lets it roll to a stop (FRICTION). A and D turn
 //               one of HEADINGS steps every TURN_EVERY ticks, only while it's moving (backwards,
-//               the other way). It's a circle of VEHICLE_RADIUS that slides on walls like any
-//               mover ('vehicle': floor only, no doors, no windows, no barricades).
+//               the other way), about the rear axle. Its body is as long and wide as the car
+//               drawn (VehicleBody.cs: a row of circles), and slides on walls like any mover
+//               ('vehicle': floor only, no doors, no windows, no barricades). Other cars are solid.
 //   fuel        a point a tick moving, a point every IDLE_BURN ticks idling; empty, it won't go.
 //   noise       the engine (noise 'engine') every ENGINE_NOISE_EVERY ticks while you're in it.
 //   crashes     hitting a wall faster than CRASH_SPEED stops you dead and dents it
 //               ((speed - CRASH_SPEED) * CRASH_DAMAGE); at 0 health it's wrecked: it won't go.
 //   off-road    on grass, dirt, fields and forest floor it won't go past OFFROAD_MAX. Trees and
 //               furniture block it (all but traps and pits): it hits them as it would a wall. A tree's
-//               trunk (Trunks.cs) is solid to the car's circle as to a walker: it slides round a
-//               glancing one and, head on, loses its speed and crashes like a wall.
+//               trunk (Trunks.cs) is solid to the car's body: clipped, the car scrapes past along
+//               one axis; head on, it loses its speed and crashes like a wall.
 //   the boot    a car carries BOOT_MAX (a truck TRUCK_BOOT_MAX) of things: items with `inside`
 //               set to its id, like a container (inventory.ts stash, take, takeAll).
 //   the truck   a generated world leaves one out past the camp; expeditions take it
@@ -37,8 +38,6 @@ public static partial class Vehicles
 
     /// <summary>cos and sin of each heading, times 256, rounded: integers, the same everywhere.</summary>
     public static readonly List<List<double>> HEADING_DIRS = [[256, 0], [251, 50], [237, 98], [213, 142], [181, 181], [142, 213], [98, 237], [50, 251], [0, 256], [-50, 251], [-98, 237], [-142, 213], [-181, 181], [-213, 142], [-237, 98], [-251, 50], [-256, 0], [-251, -50], [-237, -98], [-213, -142], [-181, -181], [-142, -213], [-98, -237], [-50, -251], [0, -256], [50, -251], [98, -237], [142, -213], [181, -181], [213, -142], [237, -98], [251, -50]];
-
-    public const int VEHICLE_RADIUS = 110;
 
     public const int MAX_SPEED = 160;
 
@@ -77,8 +76,8 @@ public static partial class Vehicles
 
     public const int ENGINE_NOISE_EVERY = 20;
 
-    /// <summary>You get into a car whose centre is this close to yours.</summary>
-    public const int ENTER_REACH = 400;
+    /// <summary>You get into a car whose body is this close to you (SUB: a little over a metre).</summary>
+    public const int ENTER_REACH = 290;
 
     /// <summary>Top speed off the road (grass, dirt, fields, forest).</summary>
     public const int OFFROAD_MAX = 80;
@@ -116,15 +115,21 @@ public static partial class Vehicles
         return vehiclesOf(state).find((v) => v.driverId == s.id);
     }
 
-    /// <summary>The nearest car within reach of a point (SUB units), or undefined.</summary>
+    /// <summary>The nearest car whose body is within reach of a point (SUB units), or undefined.</summary>
     public static Vehicle? vehicleNear(SimState state, Point at, double reach = ENTER_REACH)
     {
         Vehicle? best = null;
+        double bestGap = double.PositiveInfinity;
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
-            if ((Motion.distance2(v.at, at) <= ((double)(reach) * (reach))) && (!Js.T(best) || (Motion.distance2(v.at, at) < Motion.distance2(best.at, at))))
+            // A cheap look first: nothing of a car is further from its centre than half its length.
+            double far = reach + shapeOf(v).halfLength;
+            if (Motion.distance2(v.at, at) > far * far) continue;
+            var g = gap(v, at);
+            if ((g <= reach) && (g < bestGap))
             {
                 best = v;
+                bestGap = g;
             }
         }
         return best;
@@ -168,7 +173,7 @@ public static partial class Vehicles
         return (v.health <= 0) ? "got in: it's a wreck, it won't go" : ((v.fuel <= 0) ? "got in: the tank is empty" : "got in");
     }
 
-    /// <summary>Out of the car, onto the nearest free tile beside it.</summary>
+    /// <summary>Out of the car, by the driver's door if there's room there, else onto the nearest free tile clear of its body.</summary>
     public static string? leaveVehicle(SimState state, Survivor s)
     {
         var v = vehicleOf(state, s);
@@ -178,7 +183,21 @@ public static partial class Vehicles
         }
         v.driverId = null;
         v.speed = 0;
-        var spot = Space.nearestTile(state.grid, v.pos, (x, y) => ((x != v.pos.x) || (y != v.pos.y)) && Motion.fits(state.grid, Motion.centre(new Point { x = Js.I(x), y = Js.I(y) }), "free")) ?? v.pos;
+        var beside = anchorAt(v, "driverDoor").at;
+        var door = Motion.tileOf(beside);
+        bool clear(int x, int y)
+        {
+            var c = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
+            return Motion.fits(state.grid, c, "free") && (gap(v, c) >= Motion.BODY_RADIUS);
+        }
+        // Right where the door is, if a body fits there; else the nearest tile clear of the car.
+        if (Grids.inBounds(state.grid, door.x, door.y) && Motion.fits(state.grid, beside, "free"))
+        {
+            s.at = beside;
+            s.pos = door;
+            return "got out";
+        }
+        var spot = (Grids.inBounds(state.grid, door.x, door.y) ? Space.nearestTile(state.grid, door, clear) : null) ?? Space.nearestTile(state.grid, v.pos, clear) ?? v.pos;
         s.at = Motion.centre(spot);
         s.pos = spot;
         return "got out";
@@ -212,7 +231,7 @@ public static partial class Vehicles
         }
         if (((dx != 0) && (JsMath.abs(v.speed) >= TURN_MIN_SPEED)) && ((state.tick % TURN_EVERY) == 0))
         {
-            v.heading = ((v.heading + ((double)(dx) * (JsMath.sign(v.speed)))) + HEADINGS) % HEADINGS;
+            turn(state, v, ((double)(dx) * (JsMath.sign(v.speed))));
         }
         if (Js.T(runs))
         {
@@ -246,9 +265,7 @@ public static partial class Vehicles
     {
         var (cx, cy) = Js.NN(Js.Get(HEADING_DIRS, v.heading));
         Point want = new Point { x = Js.I(JsMath.trunc(((double)(((double)(cx) * (v.speed))) / (256)))), y = Js.I(JsMath.trunc(((double)(((double)(cy) * (v.speed))) / (256)))) };
-        var slid = Motion.slide(state, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
-        var into = Motion.tileOf(slid);
-        var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && blocked(state, into)) ? v.at : slid;
+        var to = advance(state, v, want.x, want.y);
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
@@ -268,10 +285,11 @@ public static partial class Vehicles
         {
             return;
         }
-        var reach = VEHICLE_RADIUS + Motion.BODY_RADIUS;
+        double far = shapeOf(v).halfLength + Motion.BODY_RADIUS;
         foreach (var z in Js.Iter((state.zombies).ToList()))
         {
-            if (Motion.distance2(z.at, v.at) > ((double)(reach) * (reach)))
+            // Anything of the body touching it (a cheap look at the centres first).
+            if ((Motion.distance2(z.at, v.at) > far * far) || (gap(v, z.at) > Motion.BODY_RADIUS))
             {
                 continue;
             }
@@ -295,13 +313,6 @@ public static partial class Vehicles
         var ground = Js.At(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(v.pos.y) * (state.grid.width)) + v.pos.x)), "grass");
         var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
-    }
-
-    /// <summary>Is there something on this tile a car can't drive through (a tree, any furniture but a trap or a pit)?</summary>
-    public static bool blocked(SimState state, Point p)
-    {
-        var f = FurnitureMod.furnitureAt(state, p.x, p.y);
-        return ((f != null) && (f.kind != "trap")) && (f.kind != "pit");
     }
 
     /// <summary>How much a vehicle's boot holds.</summary>
@@ -362,9 +373,9 @@ public static partial class Vehicles
     }
     public static double headingOf(double dx, double dy) => headingOf(Js.I(dx), Js.I(dy));
 
-    /// <summary>Can a car be parked here (a floor tile it fits on)?</summary>
-    public static bool parkable(SimState state, Point p)
+    /// <summary>Can a car be parked with its centre on this tile, on this heading (a floor tile, and its whole body fits)?</summary>
+    public static bool parkable(SimState state, Point p, double heading = 0, string kind = "car", Vehicle? self = null)
     {
-        return ((Grids.getTile(state.grid, p.x, p.y) == "floor") && !blocked(state, p)) && Motion.fits(state.grid, Motion.centre(p), "vehicle", VEHICLE_RADIUS);
+        return (Grids.getTile(state.grid, p.x, p.y) == "floor") && fitsAt(state, shapeOf(kind), Motion.centre(p), ((heading % HEADINGS) + HEADINGS) % HEADINGS, self);
     }
 }

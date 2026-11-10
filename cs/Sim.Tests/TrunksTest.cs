@@ -316,9 +316,9 @@ public class TrunksTest
         for (var t = 0; t < 120; t++)
         {
             Tick.tick(state);
-            closest = JsMath.min(closest, JsMath.sqrt(Motion.distance2(car.at, trunk)) - (Vehicles.VEHICLE_RADIUS + Trunks.RADIUS));
+            closest = JsMath.min(closest, Vehicles.gap(car, trunk) - Trunks.RADIUS);
         }
-        expect(closest).toBeGreaterThanOrEqual(-1);   // the circle never entered the trunk
+        expect(closest).toBeGreaterThanOrEqual(-1);   // the car's body never entered the trunk
         expect(car.at.x).toBeLessThan(trunk.x);       // and it didn't get past the tree
         expect(car.speed).toBe(0);
         // Reverse away.

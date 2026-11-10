@@ -459,6 +459,10 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 - **Alerts, overview.** `alerts(state)` (sim, pure): threats, the infected, hunger and thirst, winter food, beds, bodies, fuel, neighbours, visitors; worst first. HUD shows the top
   six (click to look); O opens the overview (people, stock, storage filters, knowledge, neighbours)
   *Why:* Too much going on to follow from the event feed
+- **A car's body (2026-11-11).** A car is as long and wide in the sim as the model drawn (the sedan 4.2 x 1.7 m, the pickup 5 x 1.9 m): a row of circles its own width, so
+  `Motion.fits` does the walls. It turns about its rear axle; other cars are solid; people and the dead are not obstacles to it. A car that starts out in something solid may
+  move as long as no more of it ends up in something. "Near a car" is near its body, and the boot is reached at the boot
+  *Why:* The cars became real-size models while the sim's car was a 0.43 m circle: they stood into walls, and you got in through the side of one
 - **The code's structure (2026-11-11).** `cs/Sim` is a folder per area (Js, State, Core, Save, Grid, Debug, Movement, Worldgen, World, Combat, Dead, Items, Colony,
   Survivors, You, Others) in one namespace: the folders are for finding things, and nothing in the code changed with the move. Tests stay flat (`XTest.cs`; the files ported
   from TypeScript cover several systems each, so folders would mislead). The game class is in parts by concern under `godot/App`; labs and benches are in `godot/Labs`, the

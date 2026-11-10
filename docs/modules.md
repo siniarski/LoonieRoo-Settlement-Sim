@@ -80,8 +80,9 @@ git tag `ts-final`.
 - **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers, tile
   walkers' bodies (`at` only) and cars.
 - **PoseIntents**: what a mover's body is doing, read for the renderer (docs/characters.md section 1).
-- **Vehicles**: cars, fuel, the boot. **VehicleActions** (part of Vehicles): timed car actions and anchors (get in,
-  out, boot, bonnet).
+- **Vehicles**: cars, fuel, the boot. **VehicleBody** (part of Vehicles): the room a car takes up, as long and wide as
+  the car drawn (a row of circles), what is solid to it, turning about the rear axle, how near a point is to it.
+  **VehicleActions** (part of Vehicles): timed car actions and anchors (get in, out, boot, bonnet).
 
 ### `Worldgen/`: making the world from a seed
 

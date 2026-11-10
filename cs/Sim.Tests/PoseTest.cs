@@ -78,7 +78,9 @@ public class PoseTest
         expect(boot.facing).toBe(0);
         expect(hood.facing).toBe(16);
         foreach (var a in new[] { door, boot, hood })
-            expect(Motion.distance2(a.at, f.car.at)).toBeLessThanOrEqual(JsMath.pow(Vehicles.ENTER_REACH, 2));
+            expect(Vehicles.within(f.car, a.at, Vehicles.ENTER_REACH)).toBe(true);   // within reach of its body, and clear of it
+        foreach (var a in new[] { door, boot, hood })
+            expect(Vehicles.gap(f.car, a.at)).toBeGreaterThanOrEqual(Motion.BODY_RADIUS);
     }
 
     [Fact(DisplayName = "lost limbs > an amputation says which side and where, and the pose limps on it")]

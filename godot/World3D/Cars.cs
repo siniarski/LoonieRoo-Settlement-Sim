@@ -1,10 +1,9 @@
 // Cars you can drive, in first person (2026-11-11): the sedan and the pickup the furniture file already had for
 // parked wrecks (art/scripts/build_furniture.py: car, car_v1, truck), where Bodies.cs drew a grey box.
 //
-// The size is the model's (4.2 m and 5 m long). The sim's car is still a circle 0.43 m in radius (Vehicles.cs), so a
-// car drawn against a wall stands into it: the sim's size is the player's open decision (docs/open-work.md), and the
-// picture no longer pretends it is a box. The car you are sitting in isn't drawn (you look out from inside it).
-// Reads state only.
+// The size is the model's (4.2 m and 5 m long), and the sim's body is the same size (cs/Sim/Movement/VehicleBody.cs),
+// so what the car hits is what you see. The car you are sitting in isn't drawn here: Cockpit.cs draws it from the
+// inside. Reads state only.
 
 using System;
 using Godot;

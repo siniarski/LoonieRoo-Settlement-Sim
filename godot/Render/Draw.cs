@@ -282,8 +282,10 @@ public sealed partial class Painter
             ctx.translate(p.x, p.y);
             ctx.rotate(v.heading / Vehicles.HEADINGS * Math.PI * 2);
             bool truck = v.kind == "truck";
-            double len = size * (truck ? 1.4 : 1.05);
-            double wid = size * (truck ? 0.72 : 0.6);
+            // The size of its body in the sim (VehicleBody.cs), which is the size of the model first person draws.
+            var shape = Vehicles.shapeOf(v);
+            double len = size * 2 * shape.halfLength / Motion.SUB;
+            double wid = size * 2 * shape.halfWidth / Motion.SUB;
             ctx.fillStyle = v.health <= 0 ? "#4a4440" : truck ? "#5a6338" : CAR_COLOURS[(int)(double.TryParse(v.id[1..], out var num) ? num : 0) % CAR_COLOURS.Length];
             ctx.fillRect(-len / 2, -wid / 2, len, wid);
             ctx.fillStyle = "rgba(170, 210, 235, 0.8)";

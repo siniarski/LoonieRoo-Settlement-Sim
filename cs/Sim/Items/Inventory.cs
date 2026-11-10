@@ -211,7 +211,7 @@ public static partial class Inventory
             return (f.kind == "crate") ? new() { at = new Point { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
         }
         var v = Vehicles.vehiclesOf(state).find((x) => x.id == id);
-        return Js.T(v) ? new() { at = v.pos, max = Vehicles.bootMax(v) } : null;
+        return Js.T(v) ? new() { at = Vehicles.bootTile(v), max = Vehicles.bootMax(v) } : null;
     }
 
     /// <summary>Puts something from the bag into a container. Returns why not, or null. (Is it beside you? The caller checks.)</summary>
