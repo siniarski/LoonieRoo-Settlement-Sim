@@ -71,7 +71,12 @@ public static partial class Worldgen
     public static void ground(SimState state, double x, double y, string g) => ground(state, Js.I(x), Js.I(y), g);
 
     /// <summary>Generates a chunk into the world: makes it on its own (makeChunk) and takes it in (adoptChunk).</summary>
-    public static void generateChunk(SimState state, Layout l, int cx, int cy) => adoptChunk(state, makeChunk(state, l, cx, cy));
+    public static void generateChunk(SimState state, Layout l, int cx, int cy)
+    {
+        var c = makeChunk(state, l, cx, cy);
+        SavefileChunks.noteMade(state, c, cx, cy); // its hash as made, for saves (WorldInfo.made)
+        adoptChunk(state, c);
+    }
 
     /// <summary>A chunk as generation makes it, on its own (2026-11-09, schema 75): into a small state of its own whose
     /// grid is the chunk (its corner at the chunk's: Grid.ox, oy), from the seed, the plan and the world's settings

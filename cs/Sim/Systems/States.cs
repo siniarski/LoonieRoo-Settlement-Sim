@@ -8,7 +8,8 @@ public static partial class States
 {
 
     /// <summary>Bump when the shape of SimState changes. Hot reload and (later) save loading discard state with a different version instead of crashing on it.</summary>
-    public const int SCHEMA_VERSION = 77;
+    /// 78 (2026-11-10): WorldInfo.made, each generated chunk's hash as made. Schema 77 saves still load (Savefile.OLDEST_SCHEMA).
+    public const int SCHEMA_VERSION = 78;
 
     public static SimState createState(NewStateOptions __o0)
     {

@@ -8,9 +8,11 @@ namespace LoonieRoo.Sim;
 public static partial class Replay
 {
 
-    public static SimState replay(SimState initial, List<LoggedCommand> log, double untilTick)
+    public static SimState replay(SimState initial, List<LoggedCommand> log, double untilTick) => replayFrom(States.cloneState(initial), log, untilTick);
+
+    /// <summary>replay, but played on `state` itself (a state nothing else holds: a bug report's, just loaded).</summary>
+    public static SimState replayFrom(SimState state, List<LoggedCommand> log, double untilTick)
     {
-        var state = States.cloneState(initial);
         double next = 0;
         for (; ; )
         {

@@ -7,13 +7,20 @@ namespace LoonieRoo.Sim;
 
 public static class StateJson
 {
-    /// <summary>Public fields, names as written (they're the TypeScript names), nulls left out (as undefined is in JSON.stringify).</summary>
-    public static readonly JsonSerializerOptions Options = new()
+    /// <summary>Public fields, names as written (they're the TypeScript names), nulls left out (as undefined is in JSON.stringify).
+    /// Locked at once, with the default (reflection) resolver, so the save writer can read the members' order (GetTypeInfo).</summary>
+    public static readonly JsonSerializerOptions Options = Locked(new()
     {
         IncludeFields = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-    };
+    });
+
+    static JsonSerializerOptions Locked(JsonSerializerOptions o)
+    {
+        o.MakeReadOnly(populateMissingResolver: true);
+        return o;
+    }
 
     public static SimState Read(string json) => JsonSerializer.Deserialize<SimState>(json, Options) ?? throw new InvalidDataException("not a sim state");
 

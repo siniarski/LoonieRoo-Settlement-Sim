@@ -80,6 +80,12 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
   Formats live in `sim/savefile.ts` (pure, tested): a save is `{format, schemaVersion, state}`; a bug report is the state play started from (`handle.initial`: the scenario or the
   last loaded save) plus the commands since and the tick, and importing one replays it. Other schema versions are refused, not migrated. Loading pauses the game
   *Why:* Long games need saves; bug reports turn "it got stuck" into a file that reproduces it
+- **Fast saves (2026-11-10, schema 78).** Saves are written straight to UTF-8 (`SaveWriter`), never as JSON nodes, in the
+  same layout byte for byte. Each generated chunk keeps its hash as made (`WorldInfo.made`); a save makes again only chunks
+  whose hash now differs. The hashes are remade on every load from the chunks loading makes (so they always match this
+  build's generation, and a schema-77 save gains them); a file of an older schema loads only if its state says the same
+  schema (77 and up). A bug report's start is the packed state (`Savefile.bugStart`), not a copy of the state
+  *Why:* a 512 save took ~0.5 s and a fully explored 2048 ~7 s; a whole copy for bug reports won't fit at 10,000
 - **The ground's height (2026-11-09).** A pure height field in the sim (`Heights.cs`), derived from the seed and the world plan, cached by 32-tile chunk, never saved (no schema
   bump); metres at tile corners, bilinear between; read-only (nothing in the tick reads it)
   *Why:* In the sim so line of sight, movement cost and water can use it later without a second source of truth, and the renderer only reads it (rule 5). Derived like the plan, so
