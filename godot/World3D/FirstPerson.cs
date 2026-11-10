@@ -173,7 +173,6 @@ public sealed partial class FirstPerson : Node3D
         sun.LightEnergy = 0.08f + 1.1f * day;
         sun.LightColor = new Color(1, 0.95f, 0.86f).Lerp(new Color(0.55f, 0.62f, 0.85f), (float)dark);
         var sky = new Color(0.52f, 0.56f, 0.58f).Lerp(new Color(0.02f, 0.025f, 0.04f), (float)dark);
-        if (state.weather != "clear") sky = sky.Darkened(0.25f);
         env.BackgroundColor = sky;
         env.FogLightColor = sky;
         env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.045f, 0.05f, 0.075f), (float)dark);

@@ -1,14 +1,41 @@
 # Open work
 
-What is left, by area, gathered on 2026-11-10 from NOTES.md's "Next", "Open after..." and "Left from..." lists and
-the newest session-log entries (items the log shows as done since were dropped). Read the section your task touches.
-When you finish or find something, add a session-log entry (`log/`) and update the line here.
+What is left, by area. Gathered on 2026-11-10 from NOTES.md and the session log, and rewritten on 2026-11-11 at the
+merge of that day's sessions (log/2026-11-11-01-the-big-merge.md lists them; each has its own entry in `log/` with
+the details behind a line here). Read the section your task touches. When you finish or find something, add a
+session-log entry (`log/`) and update the line here.
+
+## For the player to decide
+
+Options the sessions found and did not take (each session's log entry has the numbers):
+- **Thirst** (balance-check): keep needs as they are (recommended: thirst is ~1% of colony deaths, all among the badly
+  wounded); or relabel the death ("died of their wounds (dehydrated)"); or drink before eating (thirst 8 -> 5 but
+  starvation 31 -> 42 per 30 colonies). **Deer hunting never feeds anyone** (5-12 of ~480 deer seen in 30 colonies,
+  none in 160 solo runs): is it meant to?
+- **Light** (lighting): should light draw the dead, and should it change who sees whom (Sight)? Neither is built.
+- **Snow** (weather): tracks the dead or raiders could follow; cold from snow and wet; `Snow.slowsWalking` is on (deep
+  snow slows walking up to 30%: colonies fell about a day earlier over 4 seeds, within noise).
+- **Fire** (wildfire): survivors don't avoid fire or cut firebreaks; `settings.wildfire` (0 off, 1 default, 2 double).
+- **Weapons**: jamming and condition, attachments, aiming down sights, recovering bolts, a bow, friendly fire, shots
+  breaking glass, cover from furniture. The first colony runs lost ~1.9 days to the new weapons before tuning; after
+  it, +0.04 days colony and +0.13 solo over 150 seeds.
+- **Inventory**: timed identification of finds, a backpack item or bag sizes (loot tables would need reweighting),
+  icons rendered from the item models, bodies holding their kit.
+- **Tools**: installing dotnet-trace for the next round of tick profiling (ask first; only worth it before big worlds).
+- **Keys picked at the merge**: Z is the light switch (lighting had X, which weapons took for reload), G the
+  flashlight or headlights, X reload, Q next weapon.
 
 ## Not played yet
 
 Nothing built since 2026-11-05 has had a full playtest, and the Godot UI is checked only by the self-test and
 screenshots (the browser's 142 UI tests weren't ported). Played 2026-11-09: tree collisions feel good; the shadow and
 anti-aliasing settings look nice; the far view works. To try:
+- **New on 2026-11-10/11:** the Tab screen (the character sheet on the left, the bag as a grid: drag, R to turn,
+  shift- and ctrl-click, right-click menu, quick slots 1-9; tile text is small at 30 px cells); weapons (each kind's
+  feel, pistol, revolver, shotgun, rifle, crossbow; X reload, Q switch); lights at night (Z switches, G flashlight,
+  headlights, street lamps while the mains last, stoves and fires glowing); rain and snow (it lies, you tread a
+  trail, it melts); a grass fire in a heatwave; a town after 30 and 300 days of growth (`--day=30`); the ground's
+  relief (rivers in valleys); the dead in clothes, hair and hats; the new walks, shambles, crawlers and get-ups.
 - Character creation; windows (see through, smash, climb, board up); line of sight and sneaking (C), sneak attacks;
   the water and power going off, the helicopter, alarms; cars (E to get in, W/S/A/D, the boot, fuel cans; timed entry,
   2.5 s in and 2 s out); the map (M) with notes; neighbours' errands, caravans, alliances and feuds; colonists
@@ -18,68 +45,107 @@ anti-aliasing settings look nice; the far view works. To try:
 - The footsteps and sounds (listen: `%APPDATA%\Godot\app_userdata\LoonieRoo\sounds-preview\*.wav`, written by the
   self-test; `step_*.wav` for steps); the furniture models; the pz look; your body in first person; the far field (on
   at 500 m; the menu's Options page sets it, 0-1000 m) and the other graphics options (nobody has used them in play).
-- Inventory and containers; the dead from day one; new worlds (rivers, lakes, woods' edges, towns in clusters) and
-  the New game and Load pictures.
+- The dead from day one; new worlds (rivers, lakes, woods' edges, towns in clusters) and the New game and Load
+  pictures.
 - Questions: does free movement and combat feel right; is solo Apocalypse survivable (the scripted player reaches
   day 5); is the colony's winter readable.
 
 ## Speed
 
-- Saving a 512 world takes ~1 s (Savefile.cs on JSON nodes; ~10 ms in the browser): fix before big worlds.
-- On 512 worlds the C# runs at about half V8's speed (190-250 ticks/s; 40 needed at 4x), colonist-heavy small worlds
-  2-3x slower: profile with dotnet-trace (ask before installing it); likely the JS-style list helpers allocating.
-- Saving a fully explored world regenerates every generated chunk to compare (5.6 s at 2048): keep a hash of each
-  chunk as made (WorldInfo) to skip the unchanged ones.
-- Loading holds the frame (about 5 s at 2048) behind the loading screen's picture: loading on a worker needs the
-  statics it touches made thread-safe first (Worldplan's cache, Heights, Time).
+Done 2026-11-10: saves are written straight to text and skip chunks unchanged since generation (512 explored: 537 ->
+10 ms; 2048: 9.3 s -> 79 ms; schema 78, 77 still loads); the tick is 1.7-2.4x faster with 3-6x less allocation
+(`cs/Harness/Profile.cs`, `tick dumps`). Left:
+- Loading is generation: every generated chunk is made again (2048 fully explored: ~6 of its 7.5 s) and it holds the
+  frame behind the loading picture. Faster chunk generation, or chunks made on a worker (the statics in Worldplan,
+  Heights and Time must be thread-safe first). A game that changed many chunks pays their remaking at each save: a
+  per-session cache of made chunks would remove it.
+- The tick's profile now: Zombies.updateZombies 45-70% (pushApart's bookkeeping, followPath, Motion.slide at ~270
+  bytes a call), reconcileJobs 19% on hordes (guard-job zombie lookups), a new Point per mover per tick (`was`),
+  BodyMod.updateBody 18% and Needs.updateHealth 11.5% on small colonies. Point being a class is the largest
+  allocation left. The 1024 and 2048 stress scenes weren't profiled.
 - Chunk generation is 1.6 ms a chunk at 2048 (0.9 before organic generation: more river curves per 64-tile bucket);
   a smaller bucket or a squared-distance early-out would win it back. The 10,240 preview takes ~20 s for its towns.
 - Far-field regions built from the plan take 5 ms each on the main thread (~5.6 s of build time to fill 1 km): a
   worker would hide it.
 - Shadows, resolution and anti-aliasing options aren't benchmarked; the furniture's draw cost was counted (214-257
-  pieces in range in town) but not timed.
+  pieces in range in town) but not timed. World lights have a budget (`--lights=N`, `--lightbench`).
 - The sim on its own thread (it's plain C#: Godot's main thread only needs a snapshot to draw).
 
 ## Scale and big worlds
 
-- The grid lives whole in memory (3.6 GB at 10,000): the grid in chunks, loaded near survivors and kept as its changes
-  elsewhere, is the next big job (docs/worldplan-regions.md; docs/design.md "Big worlds").
-- Bug reports still copy the whole starting state through JSON (Replay), which doesn't fit at 10,000: give them the
-  chunked form. Saves from before schema 77 don't load.
-- The stress harness exists (a 1024 world with 200 colonists and 1,500 zombies ran at 3.8 ms a tick in the browser).
-  Left: zombies moving and crowding, A* for long paths. Storeys, basements and slopes as data are still to decide,
-  after a very large stress test.
+Done 2026-11-10 (log grid-chunks; docs/worldplan-regions.md): the grid is stored in chunks behind the `Grids`
+accessors (a new 10,000 world is 28 MB, not 4.4 GB; dumps and saves byte-identical); bug reports start from the
+packed state. Left:
+- **Unloading** (stage 5, a written plan only): a generated chunk is 51 KB, 48 KB of it furniture and its index. It
+  needs furniture per chunk with a history-free order and an active region; trees out of `Furniture` (four fifths of
+  the pieces) would cut a chunk to ~12 KB.
+- At 10,000 a region's plan (~1.5 s) is made inside a tick the first time the sim asks beyond the start's region:
+  the sim's askers should use `PlanSoon`, or `planStart` should reach further.
+- Reachability unites every chunk's components at each walkability change (0.33 ms for six movers at 512; grows with
+  the chunk count): per-chunk versions or a hierarchy. Room indexes renumber when an early room is built.
+- A save hashes every generated chunk (~60 ms at 2048; perhaps 1.5 s at a fully explored 10,000): a per-chunk
+  "touched since made" mark needs furniture's writes to go through one place.
+- The map screen and minimap build an image of the whole map (`godot/Ui/WorldMap.cs`, `Minimap.cs`): 100 million
+  pixels at 10,000.
+- The stress harness exists. Left: zombies moving and crowding, A* for long paths. Storeys, basements and slopes as
+  data are still to decide, after a very large stress test.
 
 ## World generation (log/2026-11-10-02-organic-world-generation.md)
 
-- The 3D ground: Heights' `relief()` is still 0; feed it Terrain's elevation so rivers sit in valleys and the start on
-  its rise (Heights is read-only, render only: no sim change).
+- The 3D ground has relief now (`Heights.relief()` = 7 m x Terrain's elevation, render only). Left: a lot is levelled
+  on its mean, so big lots on a slope are cut or filled up to half a metre at the edge (~1 m south of seed 7's
+  start): level to the street side or terrace; a river on a cross slope tilts (its edge up to 0.14 m over the land
+  downhill); the far field's coarse ground differs from the near by p95 0.4 m (max 1.6 m at the seam).
+- Buildings: see "Buildings" below.
 - Towns: streets are still axis-aligned grids (bending them touches lots, buildings and the street-end road links);
   thinner bands of towns along region borders; still three settlements at any world size.
-- Water: rivers and lakes are the same water as ponds (thirst, sickness). 3 thirst deaths in the balance run where
-  there were none (2 colony, 1 solo of 29 runs): watch it, and look at where the dying drank from (the start's river
-  is now 38-68 tiles off, kept two lattice points in from a small map's edge).
+- Water: rivers and lakes are the same water as ponds (thirst, sickness). The thirst worry was checked and is noise
+  (log balance-check); two solo thirst deaths in 40 seeds remain, both mid-fight.
 - Small worlds (128): the start's rise covers most of the map, so lakes are rare; forest varies more by seed at 256
   (12-28%).
 - The preview draws lots whole (yards and all), not their buildings; big worlds (over 2 x 2 regions) show towns only,
   no roads.
 
+## Buildings
+
+Realistic building generation is in progress on `claude/buildings-8a8be2` (not merged yet).
+
+## Growth, fire and weather
+
+- **Growth** (Growth.cs, `state.cleared`, Undergrowth.cs): grass, weeds, bushes, saplings that become trees, cracked
+  roads, by the days gone. Left: the balance players weren't re-run with it (the forage bonus and new trees shift a
+  run slightly after day 1); far trees on land not yet generated don't grow.
+- **Wildfire** (FireMod.cs, `state.burnt`, Fires.cs): fire through grass, undergrowth and trees, by dryness. A burnt
+  tile's growth starts again (`Growth.clear`, wired at the merge) and grass under lying snow doesn't catch. Left: fire
+  sound; Trees still draws ferns on a scar until the tile regrows; survivors don't avoid fire; balanced on two
+  scripted seeds only; `FireMod.dryness` is a table of season and weather (weather's temperature could replace it).
+- **Weather** (Snow.cs, `state.snow`, Weather.cs): temperature, rain, snow that lies by climate region, trodden
+  trails and car ruts, melt. Left: wet ground is one global parameter (`weather_wet`); roofs and trees don't adopt
+  `snow_cover` yet (assets/shaders/snow_cover.gdshaderinc); grass tufts poke green through deep snow.
+- Debug flags were folded at the merge: one `--day=N` (06:00, fractions count, growth brought up to it), `--hour=H`,
+  `--weather=W`, `--snow=CM`, `--clock=TICK`, `--burn=dx,dy,..` (wildfire's offsets), `--fire=X,Y` (one fire at a
+  tile). godot/README.md has them.
+
+## Lighting (log/2026-11-10-05-lighting.md)
+
+Room lights with switches, outdoor house lights, street lamps, car headlights, the flashlight, stoves, heaters and
+fires (Lights.cs; WorldLights.cs with a budget). Left: glows and lit windows are flat (no bloom); headlights are one
+spot; a lit room is one ceiling point (big halls get one light); the flashlight's beam follows the camera's pitch but
+the sim's is yaw only; ovens don't glow while you cook; colonists never touch switches (only the one you control).
+
 ## First person and the look
 
-- Left from the first-person start (2026-11-08): clothes and hair on the dead (all wear the base shirt); cars as models
-  (Bodies.cs boxes); action clips for colonists' work; lighting (lamps, the power, torches); the world's look
-  (textures; roofs and a gentle heightmap are in); what line of sight and fog of war mean in first person; the car's
-  size (the sim's is a 0.43 m circle, drawn 1 x 1.9 m; the model is 4.2 m).
-- Trees: colonists on tile paths and cars still pass through trunks; one trunk radius for every species (the species
-  is drawing-only).
-- Body leaps: the library's jump clip flings the arms wide; no real vault clip (a tuck and a hand on the sill); the eye
-  doesn't dip on landing; the push-off and landing are the step sounds pitched, not their own.
+- Left from the first-person start (2026-11-08): cars as models (Bodies.cs boxes); the world's look (textures); what
+  line of sight and fog of war mean in first person; the car's size (the sim's is a 0.43 m circle, drawn 1 x 1.9 m;
+  the model is 4.2 m).
+- Trees: tile walkers and cars go round trunks now (`Motion.syncStep`, Trunks); in a one-tile corridor they still
+  pass through; one trunk radius for every species (the species is drawing-only).
+- Body leaps: no real vault clip (a tuck and a hand on the sill); the push-off and landing are the step sounds
+  pitched, not their own.
 - Held items: one sleeve colour (clothes are painted maps), not your own clothes'; the body's own hands on the grip
-  (hand IK: held items drawn full size on the body) not done; the bob isn't from your footfalls; the axe's wind-up
-  forearm is long across the view; no aim-down-sights or reload; things carried in both hands have no hands; holds
-  not keyed to the sim's action progress; no knife or torch (the sim has neither).
-- Footsteps: walking plays the jog clip (your walking speed is just over People.cs's 2.2 m/s walk limit); crawling is
-  silent (the crawl clip has no footfalls); a step falling in a 0.25 s clip blend is skipped.
+  (hand IK) not done; the bob isn't from your footfalls; things carried in both hands have no hands; holds not keyed
+  to the sim's action progress; no aim-down-sights.
+- Footsteps: crawling is silent (the crawl clip has no footfalls); a step falling in a 0.25 s clip blend is skipped.
 - Furniture: chairs aren't pieces of their own (tables have two built in); a searched or emptied container looks the
   same; far places (the factory, camp cots) only checked in `--lineup=furniture`.
 - Item models: no LOD (measured: not needed, experiments/item-bench); Godot's automatic mesh LODs never kick in on the
@@ -89,25 +155,39 @@ anti-aliasing settings look nice; the far view works. To try:
 
 - Tuning by ear (levels, falloff, the muffle amounts, step stride); sound round corners (paths, not lines); others'
   footsteps (the dead shuffling, colonists); doors opening and shutting, items picked up, eating; indoor reverb; sound
-  on the Colony tab and the map, if wanted; the rest of Noise's kinds (gunfire, glass, alarms, engines); the startup
-  cost of making the sounds.
+  on the Colony tab and the map, if wanted; the rest of Noise's kinds (glass, alarms, engines); the startup cost of
+  making the sounds.
+- Weapons: a reload, a pump or bolt, a dry click, a crossbow's twang (it plays the swing's whoosh), a report for each
+  gun (all four use one gunshot), blades and clubs on flesh. Fire and rain have no sound.
 - A CC0 pack can replace the made sounds (`res://assets/sounds/<kind>_<n>.ogg`), with the player's OK.
 
-## Inventory (log/2026-11-09-12-the-inventory-s-outstanding-points-names.md)
+## Weapons (log/2026-11-10-06-weapons.md)
 
-- Names are only flavour (one model per kind; `Items.variant` could pick a model: a machete is drawn as a knife); a
-  mixed stack moves its first item, whichever name; no drag from the world into the bag (pick-up stays E); in the
-  Colony tab the dim covers the HUD while the bag is open (Tab/Esc close it).
+Each weapon is a kind of its own (WeaponTable.cs: knife, hatchet, machete, crowbar, bat, pipe, sledge, spear, plank;
+pistol, revolver, shotgun, rifle, crossbow; boxes ammo, ammo38, shells, ammo308, bolts), shots are lines through the
+grid (Shooting.cs), with reload, switch and fire commands. The old `weapon` reads as a crowbar and `gun` as a pistol.
+Left: the options above; the sounds above; cover (furniture doesn't stop a shot); your body doesn't swing weapons in
+the world (Held's arms do).
+
+## Inventory and the Tab screen
+
+- The bag is a grid (InventoryGrid.cs; `Inventory.ITEM_SIZE` holds every kind's footprint, the new weapons' and the
+  flashlight's added at the merge; quick slots take any wieldable weapon and the flashlight). Left: colonists still
+  haul one item at a time and never use grids; a coat a colonist wears hides its pockets' contents until dropped;
+  ammunition boxes both stack in a cell (10) and merge their rounds when stowed: pick one; the self-test's picture mode
+  (`--invshot`) leaves a full bag, which fails the two weapon checks that follow it (the plain self-test is green).
+- The character sheet (CharacterSheet.cs, the left 320 px column): nothing about wounds by place or pain exists in the
+  sim to show; not tuned under 1280x720 (the column scrolls); it covers the left end of the key-hint strip.
+- Names are only flavour (one model per kind; `Items.variant` could pick a model); a mixed stack moves its first
+  item, whichever name; in the Colony tab the dim covers the HUD while the bag is open (Tab/Esc close it).
 
 ## The dead and animals
 
-- From log/2026-11-09-09: the 2D view and the minimap don't show the dormant (fog hides them anyway); lying ones lie
-  at a random heading with no "get up" clip (the blend is 0.25 s); a dormant one's look is lost if it wakes outside
-  the 40 m model range; the solo bot doesn't shut itself in (hiding indoors only counts as out of sight).
+- From log/2026-11-09-09: the 2D view and the minimap don't show the dormant (fog hides them anyway); a dormant one's
+  look is lost if it wakes outside the 40 m model range; the solo bot doesn't shut itself in (hiding indoors only
+  counts as out of sight).
 - The solo bot has no pack sense (it fights three at once, flees in a straight line).
-- Animals off the grid (2026-11-09): a colony (world balance seed 11) fell to the dead on day 12 (was day 21), and
-  none of the 13 lived to day 25 (was 1): check whether it's noise; solo deaths by zombies 3 -> 7 of 16 seeds; how
-  often prey falls wasn't counted.
+- Animals off the grid: checked, the colony result was noise (log balance-check). Deer hunting: see the decisions.
 
 ## Characters (3D)
 
@@ -123,25 +203,31 @@ ragdoll (LabRagdoll.cs on Jolt: knockdown, hit, get-up blend); a VAT horde bench
 HordeBench.tscn); weapon actions (LabActions.cs: swing, stab, recoil, reload); foot locking (FootIK.cs toe ray and
 lock); the sim side (PoseIntents.cs, lostLimbs with side and level, startledAt, VehicleActions.cs); the look
 (art/scripts/sculpt.py, paint.py, build_lookdev.py: "pz" 2.5k and "plus" 30k LOD ladders; experiments/look-lab).
+**2026-11-10:** clothes end at a stump (StumpCut.cs); hair, beards and hats in the world (Looks.cs); the dead dressed
+in recoloured outfits; derived clips (art/scripts/derive_clips.py, clips_more.glb): planted gaits picked and rated by
+speed (Gaits.cs: foot slide 37-46 cm a step before, 0.7-5.7 now), varied shambles by a hash of the id, crawlers,
+getting up when woken, hit reactions, falls, a hop for a lost leg, a held stump, colonists at work, the eye's dip on
+landing, heads turned to a target (HeadLook.cs); `Characters/AnimTest.tscn` measures foot slide.
 Tests: `--iktest`, `--handtest`, `--cartest`, `--ragtest`, `--walktest` (experiments/ik-test); benchmark
 godot/Characters/Bench.tscn (experiments/anim-bench).
 
 Blender 5.2 is installed; the Blender MCP server is in .mcp.json and approved locally (.claude/settings.local.json,
 not in git): Blender must be open (its add-on listens on localhost:9876).
 
-**Next (not started): clothing.** Pinned or knotted sleeves and trouser legs at a stump (lostLimbs says which side and
-where), hair (low-poly caps, a short under-hat variant, colour by shader), real modelled garments in place of the
-scripted shells.
-
-Left from the steps, any time:
+Left, any time:
+- Animation: the mid tier still slides at stops and on-the-spot turns; no ragdoll in the world (the dead fall by
+  clip, then the corpse item takes over with a pop); the weapon actions are better curves over keyed holds, not
+  clips; sim durations that hold animation back (the walk 2.5 m/s, 3.3 on roads so it jogs there; a lost leg's
+  2 m/s; the crawler's 1.45; VAULT 0.4 s; no wake delay).
+- Clothing: real modelled garments over the scripted shells need an artist (folds, retopology, a shared atlas,
+  weights, a recolour mask); the pz jacket and hoodie have blue texels bleeding onto the face; under a beanie the
+  hair's edge at the nape is patchy; shoes aren't recoloured; the lab (Wardrobe.cs) has no pinned sleeve; zombies
+  don't lose limbs in fights (only crawlers' legs).
 - Library locomotion in the lab's blend space (phase-align the cycles); a second clip library to prove the bone-map
   step.
 - A far LOD mesh (500-800 tris: the horde is GPU-bound on triangles); VAT as the lab crowd's far tier; the ragdoll
   budget and freezing bodies.
-- The slow walk: below ~1.2 m/s the lab blends idle into walk and a locked foot still slides ~21 cm a step (a
-  slow-walk clip or stride warping); the mannequin walk's short stance; real clips for the weapon actions (they're
-  keyed holds).
-- Approaches (quiet/fast) as sim data, paired actions, zombies losing limbs in fights, anchors for doors and beds.
+- Approaches (quiet/fast) as sim data, paired actions, anchors for doors and beds.
 - VRAM-compressed textures (32 MB a plus character as imported); a real sculpt or CC0 base over the blockout (plain
   face, mitten hands); the zombie's face driven by the sim's noticing (Sight); the first-person arms rig.
 
