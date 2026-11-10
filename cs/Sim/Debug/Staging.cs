@@ -262,6 +262,31 @@ public static class Staging
         state.runs.Add(new ScavRun { id = $"sr{state.nextId++}", from = "", x = x + 2, y = y + 2, home = new Point(x + 2, y + 2), ruin = new Point(x + 2, y + 2), people = 3, phase = "out", nextStepTick = far, untilTick = far });
     }
 
+    // --- animals and cars ---
+
+    /// <summary>A sedan and, further on, a pickup parked four tiles north of you and east, with animals held
+    /// part way over and under them (for pictures, with --paused): a deer in mid-leap, a rabbit under the sedan and a
+    /// bear climbing it; a wolf up on the pickup's bed and a dog under it. Each is started as the sim starts one
+    /// (AnimalCars.begin, from the tile south of the car to the tile north of it) and moved on that share of the way.</summary>
+    public static void crossings(SimState state, Survivor you)
+    {
+        int x = you.pos.x + 6, y = you.pos.y - 4;
+        var sedan = car(state, x, y, 0, "car");
+        var truck = car(state, x + 8, y, 0, "truck");
+        sedan.lights = truck.lights = false;
+        void across(IWalker w, Vehicle v, double share)
+        {
+            AnimalCars.begin(state, w, v, Motion.centre(new Point(w.pos.x, v.pos.y - 1)));
+            while (w.cross != null && w.cross.done < JsMath.round(w.cross.ticks * share)) AnimalCars.step(state, w);
+            w.was = w.at.Copy(); // held there: drawn there, not blended from where it began
+        }
+        across(Animals.addDeer(state, x - 2, y + 1), sedan, 0.5);
+        across(Animals.addAnimal(state, "rabbit", x, y + 1), sedan, 0.5);
+        across(Animals.addAnimal(state, "bear", x + 2, y + 1), sedan, 0.45);
+        across(Animals.addAnimal(state, "wolf", x + 7, y + 1), truck, 0.5);
+        across(Dogs.addDog(state, x + 9, y + 1), truck, 0.5);
+    }
+
     /// <summary>The helicopter hanging over a tile a little way off, staying (the timeline's own comes on a rolled day).</summary>
     public static void helicopter(SimState state, int x, int y)
     {

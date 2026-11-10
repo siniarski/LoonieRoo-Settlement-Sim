@@ -468,6 +468,26 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   at every place a car is put down, entered, left or taken away, and laid in again when a state is read. A tile the car only overhangs stays open, so a car down the
   middle of a three-tile street leaves both sides to walk. You are also stopped at the car's body itself; the dead and animals at the tiles, as their paths are tiles
   *Why:* Car-sized cars that the dead and colonists walked through; and collision that disagreed with pathfinding would leave the dead pressed against a car for ever
+- **Animals at parked cars (2026-11-11, AnimalCars.cs).** The small go under, the rest go over, by size against the two models (the sedan's underside 0.28 m up,
+  roof 1.28 m; the pickup's underside 0.45 m, bed 1.0 m, cab 1.75 m). Ticks are for a car's width (two tiles); longer crossings take longer in proportion:
+
+  | kind | sedan | pickup | why |
+  |---|---|---|---|
+  | rabbit (0.35 m) | under, 8 | under, 7 | room under either; a car is cover, so it flees under one as soon as round |
+  | dog (0.67 m) | over, 9 | under, 14 | a belly-crawl fits the pickup's 0.45 m, not the sedan's 0.28; a sedan's bonnet is a jump |
+  | deer (1.43 m) | leap, 6 | leap, 7 | clears either in one bound; flees straight over one rather than being cornered |
+  | wolf (1.0 m) | over, 10 | over, 13 | scrambles up and down; the pickup's bed is higher |
+  | bear (1.0 m, 700 hp) | over, 30 | over, 40 | too big to go under, too heavy to leap: a slow climb |
+
+  A crossing is a short straight move it can't steer out of (like your leaps), plain state on the animal (`cross`), integer steps, saved. Paths may cross a car's tiles at
+  a cost by kind (rabbit 1, deer 2, dog and wolf 3, bear 8 tiles' worth), so animals go round when round is short. The far side is checked before (the body fits,
+  the way is open but for cars) and again each tick; one that can't cross is refused and plans off cars for 60 ticks. **Under** is out of reach: no blow, bite or
+  shot finds it (a shot passes it by, a colonist hunting waits, a predator loses it, a zombie's blow on a dog lands on the car), and a rabbit stays under while
+  something it fears is within FLEE (15 s at most). **Over** is in plain sight and can be hit, but can't bite until down. Your own swing still finds an animal under
+  a car (ControlMod, not this change's to edit: one line, `AnimalCars.inTheOpen`, makes it agree)
+  *Why:* Parked cars stopped every animal, so a deer could be cornered against one and a dog left behind by it; the player asked for the small to go under and the
+  rest over. A timed crossing, rather than letting some movers stand on a car's tiles, keeps collision and planning in agreement (no mover ever stands where its
+  body doesn't fit but while crossing)
 - **The code's structure (2026-11-11).** `cs/Sim` is a folder per area (Js, State, Core, Save, Grid, Debug, Movement, Worldgen, World, Combat, Dead, Items, Colony,
   Survivors, You, Others) in one namespace: the folders are for finding things, and nothing in the code changed with the move. Tests stay flat (`XTest.cs`; the files ported
   from TypeScript cover several systems each, so folders would mislead). The game class is in parts by concern under `godot/App`; labs and benches are in `godot/Labs`, the

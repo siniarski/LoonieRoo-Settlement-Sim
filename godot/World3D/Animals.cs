@@ -8,7 +8,9 @@
 // was made at, from <kind>.json), facing the way it moves. Animals and dogs are free movers (the
 // sim's Walkers.cs: they walk at any angle at a steady pace, and stand still to graze or wait), so the
 // speed is eased only enough to hide a tick's jitter, the facing turns towards the velocity, and an
-// animal that stops really stands (idle) until it walks on. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
+// animal that stops really stands (idle) until it walks on. Crossing a parked car (the sim's AnimalCars.cs) it is
+// lifted by AnimalCars.lift (a deer's arc, a wolf up on the roof and down), and under one it keeps to the ground,
+// crouched to the room beneath the body. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
 // (dogs): the attack plays once, turned to whoever it bit. Killed animals leave the sim at once (the
 // meat goes to whoever brought it down), so there's no carcass to draw.
 //
@@ -81,7 +83,7 @@ public sealed class AnimalModels
 
     public int Shown => byBody.Count;
 
-    readonly record struct Wanted(string id, string kind, Point at, Point was, double dist2, double bite, Point? facing);
+    readonly record struct Wanted(string id, string kind, Point at, Point was, double dist2, double bite, Point? facing, Crossing? cross);
 
     public void Update(SimState state, double alpha, Vector3 eye)
     {
@@ -91,12 +93,12 @@ public sealed class AnimalModels
         float vpHeight = parent.GetViewport().GetVisibleRect().Size.Y;
 
         var wanted = new List<Wanted>();
-        void Add(string id, string kind, Point at, Point was, double bite, Point? facing)
+        void Add(string id, string kind, Point at, Point was, double bite, Point? facing, Crossing? cross)
         {
             if (!kinds.ContainsKey(kind)) return;
             var p = worldPos(at, was, alpha);
             double d2 = (p.x - eye.X) * (p.x - eye.X) + (p.y - eye.Z) * (p.y - eye.Z);
-            if (d2 <= RANGE * RANGE) wanted.Add(new Wanted(id, kind, at, was, d2, bite, facing));
+            if (d2 <= RANGE * RANGE) wanted.Add(new Wanted(id, kind, at, was, d2, bite, facing, cross));
         }
         foreach (var a in state.animals)
         {
@@ -104,10 +106,10 @@ public sealed class AnimalModels
             double bite = double.NaN;
             if (a.kind is "wolf" or "bear" && a.nextBite is double nb && nb > 0)
                 bite = nb - (a.kind == "bear" ? LoonieRoo.Sim.Animals.BEAR_BITE_EVERY : LoonieRoo.Sim.Animals.WOLF_BITE_EVERY);
-            Add(a.id, a.kind, a.at, a.was, bite, Js.T(a.targetId) ? TargetAt(state, a.targetId!) : null);
+            Add(a.id, a.kind, a.at, a.was, bite, Js.T(a.targetId) ? TargetAt(state, a.targetId!) : null, a.cross);
         }
         foreach (var d in state.dogs)
-            Add(d.id, "dog", d.at, d.was, d.cooldown >= Dogs.DOG_BITE_EVERY - 1 ? state.tick - (Dogs.DOG_BITE_EVERY - d.cooldown) : double.NaN, null);
+            Add(d.id, "dog", d.at, d.was, d.cooldown >= Dogs.DOG_BITE_EVERY - 1 ? state.tick - (Dogs.DOG_BITE_EVERY - d.cooldown) : double.NaN, null, d.cross);
         wanted.Sort((a, b) => a.dist2.CompareTo(b.dist2));
         if (wanted.Count > MAX_MODELS) wanted.RemoveRange(MAX_MODELS, wanted.Count - MAX_MODELS);
 
@@ -183,13 +185,24 @@ public sealed class AnimalModels
     {
         var kind = kinds[w.kind];
         var p = worldPos(w.at, w.was, alpha);
-        m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y), (float)p.y);
+        // Over a parked car: up off the ground. Under one: crouched to fit the room beneath it (a little to spare).
+        float lift = (float)AnimalCars.lift(w.cross, alpha);
+        m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + lift, (float)p.y);
+        var room = AnimalCars.room(w.cross);
+        float squash = room is double r && kind.height > r ? (float)Math.Max(0.3, (r - 0.03) / kind.height) : 1f;
+        m.root.Scale = new Vector3(1, squash, 1);
         double dx = w.at.x - w.was.x, dy = w.at.y - w.was.y;
         double speed = Math.Sqrt(dx * dx + dy * dy) / Motion.SUB * PoseIntents.TICKS_PER_SECOND;
         // Eased a little (a tick's jitter, a turn round a corner); a stop is a real stand.
         m.speed += (speed - m.speed) * Math.Min(1, delta * (speed > m.speed ? 10 : 6));
         // The model's front is +Z: a heading (cos h, sin h) on the grid's (x, z) is a turn of atan2(cos h, sin h).
-        if (speed > 0.15)
+        if (w.cross != null)
+        {
+            // Crossing a car: the way across (it can't turn until it is down).
+            float want = (float)Math.Atan2(w.cross.to.x - w.cross.from.x, w.cross.to.y - w.cross.from.y);
+            m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * 12)) : want;
+        }
+        else if (speed > 0.15)
         {
             float want = (float)Math.Atan2(dx, dy);
             // Turn towards the way it's going: quicker the faster it goes (a bolting rabbit turns on the spot).

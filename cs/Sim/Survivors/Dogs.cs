@@ -97,6 +97,11 @@ public static partial class Dogs
             dog.waiting = false;
             Events.logEvent(state, $"{Js.Str(found.name)} found {Js.Str(dog.name)}, waiting at the house");
         }
+        // Under or over a parked car (AnimalCars.cs): that is all it does until it is down on the far side.
+        if (AnimalCars.step(state, dog))
+        {
+            return;
+        }
         // A free mover (Walkers.cs): if something moved it by tile, `at` follows.
         dog.move = null;
         Motion.followTile(dog);
@@ -171,6 +176,11 @@ public static partial class Dogs
     /// <summary>A zombie's blow on a dog. Returns true if the dog died.</summary>
     public static bool hitDog(SimState state, Dog dog, double damage)
     {
+        // Under a car (AnimalCars.cs): the blow lands on the car.
+        if (AnimalCars.hidden(dog))
+        {
+            return false;
+        }
         dog.health = JsMath.max(0, dog.health - damage);
         if (dog.health > 0)
         {

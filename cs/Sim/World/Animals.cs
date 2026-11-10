@@ -201,6 +201,11 @@ public static partial class Animals
             {
                 a.hunger += 1;
             }
+            // Under or over a parked car (AnimalCars.cs): that is all it does until it is down on the far side.
+            if (AnimalCars.step(state, a))
+            {
+                continue;
+            }
             // A free mover (Walkers.cs): if something moved it by tile (an eviction), `at` follows.
             a.move = null;
             Motion.followTile(a);
@@ -253,7 +258,7 @@ public static partial class Animals
             return;
         }
         var was = a.at;
-        if (Walkers.walkTo(state, a, a.goal, speed, Pathfinding.ANIMAL, budget) || ((a.at.x == was.x) && (a.at.y == was.y)))
+        if (Walkers.walkTo(state, a, a.goal, speed, Pathfinding.ANIMAL, budget, 0, true) || ((a.at.x == was.x) && (a.at.y == was.y)))
         {
             a.goal = null;
         }
@@ -398,7 +403,7 @@ public static partial class Animals
             Animal? prey = null;
             foreach (var o in Js.Iter(state.animals))
             {
-                if (((o.kind != "rabbit") && (o.kind != "deer")) || (Space.manhattan(o.pos, a.pos) > HUNT_SIGHT))
+                if (((o.kind != "rabbit") && (o.kind != "deer")) || (Space.manhattan(o.pos, a.pos) > HUNT_SIGHT) || AnimalCars.hidden(o))
                 {
                     continue;
                 }

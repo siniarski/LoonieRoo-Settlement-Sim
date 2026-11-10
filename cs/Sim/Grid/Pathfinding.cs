@@ -46,8 +46,9 @@ public static partial class Pathfinding
     /// <summary>Path from start to goal, excluding start, including goal; [] if already there; null if unreachable.</summary>
     public static List<Point>? findPath(Grid grid, Point start, Point goal) => findPathToAny(grid, start, new[] { goal });
 
-    /// <summary>Shortest path to whichever goal is nearest. Unwalkable goals are ignored. `maxExpand`: give up (null) after expanding this many tiles (a bounded search, for movers that only look nearby).</summary>
-    public static List<Point>? findPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR, int maxExpand = int.MaxValue)
+    /// <summary>Shortest path to whichever goal is nearest. Unwalkable goals are ignored. `maxExpand`: give up (null) after expanding this many tiles (a bounded search, for movers that only look nearby).
+    /// `overCar` above 0: a tile under a parked car may be crossed, at that much more than a step (animals: AnimalCars.cs).</summary>
+    public static List<Point>? findPathToAny(Grid grid, Point start, IReadOnlyList<Point> goals, string mover = SURVIVOR, int maxExpand = int.MaxValue, double overCar = 0)
     {
         if (!inBounds(grid, start.x, start.y)) return null;
         var targets = goals.Where(g => isPassable(grid, g.x, g.y, mover)).ToList();
@@ -92,15 +93,17 @@ public static partial class Pathfinding
             {
                 int nx = cx + dir.x;
                 int ny = cy + dir.y;
-                if (!isPassable(grid, nx, ny, mover) || !crossable(grid, cx, cy, nx, ny, mover)) continue;
+                double gn = g;
+                if (!isPassable(grid, nx, ny, mover) && !AnimalCars.underCar(grid, nx, ny, overCar, ref gn)) continue;
+                if (!crossable(grid, cx, cy, nx, ny, mover)) continue;
                 int next = ny * width + nx;
                 ref var there = ref sc.At(nx, ny);
-                if (there.closed == gen || g >= (there.seen == gen ? there.g : double.PositiveInfinity)) continue;
+                if (there.closed == gen || gn >= (there.seen == gen ? there.g : double.PositiveInfinity)) continue;
                 there.seen = gen;
-                there.g = g;
+                there.g = gn;
                 there.from = current;
                 double hn = H(next);
-                open.Push(next, g + hn, hn);
+                open.Push(next, gn + hn, hn);
             }
         }
         return null;
