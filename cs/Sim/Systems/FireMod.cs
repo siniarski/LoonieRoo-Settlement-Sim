@@ -465,6 +465,8 @@ public static partial class FireMod
             var target = fuelAt(state, nx, ny);
             if (target == Fuel.None) continue;
             if (isVegetation(target) && (target != Fuel.Tree) && (state.burnt.Count >= MAX_SCARS)) continue;
+            // Grass and undergrowth under lying snow don't catch (Snow.cs); a tree stands clear of it.
+            if (isVegetation(target) && (target != Fuel.Tree) && (state.snow != null) && (Snow.depthAt(state, nx, ny) > 0)) continue;
             bool caught;
             if ((src == Fuel.Structure) && (target == Fuel.Structure))
             {
@@ -559,7 +561,11 @@ public static partial class FireMod
             Fuel.Tree => SCAR_TREE,
             _ => SCAR_OTHER,
         });
-        // HOOK (foliage regrowth): Growth.clear(state, f.x, f.y); here, for Grass, Undergrowth and Tree, once the sibling's call exists.
+        // What grew here is gone: its growth starts again from now (Growth.cs), under the scar.
+        if (isVegetation(fuel))
+        {
+            Growth.clear(state, f.x, f.y);
+        }
         if (what != "floor")
         {
             // A wood on fire would log a line for every tree: say so of lone trees only.

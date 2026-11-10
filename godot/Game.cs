@@ -1021,9 +1021,9 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             case >= Key.Key1 and <= Key.Key9:
             {
-                // Quick slots: the bag's first nine items (inventory.ts).
+                // Quick slots: survivor.quick, assigned on the inventory screen (InventoryGrid.cs quickItem).
                 int slot = (int)(key - Key.Key1);
-                if (slot < you.pack.Count) Command(new Command { type = "useItem", itemId = you.pack[slot] });
+                if (Inventory.quickItem(state, you, slot) is { } quick) Command(new Command { type = "useItem", itemId = quick.id });
                 break;
             }
             case Key.R: Command(new Command { type = "work", x = at.x + c.facing.x, y = at.y + c.facing.y }); break;

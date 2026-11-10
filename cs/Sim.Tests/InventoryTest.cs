@@ -149,12 +149,12 @@ public partial class InventoryTest
         public void T008_a_stack_goes_in_as_far_as_it_fits()
         {
             var (state, s, crate) = withBag("wood", "wood", "wood", "wood");
-            // Fill the crate to within two planks of its hold.
+            // Fill the crate to within two planks of its hold (with guns: heavy for their size, so there's room left).
             for (var i = 0; i < 8; i++)
             {
-                var plank = Items.spawnItem(state, "wood", 3, 2);
-                plank.pos = null;
-                plank.inside = crate.id;
+                var gun = Items.spawnItem(state, "gun", 3, 2);
+                gun.pos = null;
+                gun.inside = crate.id;
             }
             expect(Inventory.load(state, crate.id)).toBe(240);
             expect(Commands.applyCommand(state, new Command { type = "stashAll", containerId = crate.id, kind = "wood" }).ok).toBe(true);

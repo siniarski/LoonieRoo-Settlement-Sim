@@ -76,7 +76,8 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 
 - **Designations** -> **Jobs** (the queue, `reconcileJobs`) -> **JobChoice** (who takes what) -> **Work** (doing it).
 - **JobTypes**: job types and priorities. **Items**: items (ItemNames: what things are called). **Inventory**: your
-  bag and containers. **FurnitureMod**: furniture. **Crafting**: stations and recipes. **Mess**: mess halls.
+  bag and containers (InventoryGrid: every container a grid of cells, footprints, stacks, pockets, first-fit, quick
+  slots). **FurnitureMod**: furniture. **Crafting**: stations and recipes. **Mess**: mess halls.
 - **Medicine**, **Planner** (the auto-planner: ordinary commands), **Policies**, **Director** (storyteller),
   **EndgameMod** (cure, evacuation, sieges), **Escape** (the helicopter, new game+).
 

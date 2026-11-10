@@ -215,6 +215,13 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 
 ## Needs, health and people
 
+- **The inventory as grids (2026-11-10).** Every container is a grid of cells and every kind a footprint (Inventory.ITEM_SIZE, beside the weights; weapons by name), turnable a
+  quarter turn; small things stack in a cell to a per-kind limit (stacks are items sharing a cell: no counts, so nothing that eats or burns one changed). Weight stays a second
+  limit with its old meaning (PACK_MAX 12 kg kept). The bag is one fixed 8 x 6 grid (12 kg of any kind but medkits fits by area); no backpack item, because adding one would
+  mean reweighting every loot table; a coat's pockets (2 x 2) and a vest's pouches (3 x 1) add grids when worn or carried and keep their contents wherever they go, one level
+  deep. Old saves and a search's finds are placed by first-fit when the grid is first touched (layout is pure, so it shows the same before it's written). Quick slots are nine
+  assignable slots on the survivor, filled on pick-up.
+  *Why:* The player asked for extraction-shooter and attache-case style management; first-fit through every code path kept the scripted solo player's runs unchanged.
 - **Rest and sleep.** Integer rest 0-2000, drains 1/tick awake (tired below 500, ~2.5 min at 1x). Tired survivors drop their job (via releaseSurvivor), reserve the nearest
   reachable free bed, sleep until full. Bed +4/tick (~37s), floor +2/tick (~75s) when no free reachable bed. Survivors start at 100/85/70/55% by index (no RNG). Bed gone / path
   blocked → re-plan or floor, never stuck. A direct order wakes them. `setRest` debug command
