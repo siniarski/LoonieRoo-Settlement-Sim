@@ -121,6 +121,9 @@ public class PoseTest
     public void Locomotion()
     {
         var f = VehiclesTest.field();
+        // Out in the open, away from the car (a parked car is in the way: you'd slide along it).
+        f.s.pos = new Point { x = 12, y = 1 };
+        f.s.at = Motion.centre(f.s.pos);
         Commands.applyCommand(f.state, new Command { type = "steer", dx = 1, dy = 1 });
         run(f.state, 5);
         var p = PoseIntents.ofSurvivor(f.state, f.s);

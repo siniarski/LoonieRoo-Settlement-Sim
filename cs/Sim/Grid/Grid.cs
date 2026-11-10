@@ -80,6 +80,11 @@ public sealed class Grid : IJsonOnDeserialized
     public Dictionary<string, double> edgeDamage = new();
     public List<int> edgeLocked = new();
     public List<int> edgeBoarded = new();
+    /// <summary>1 where a parked car's body is over the tile's centre (Vehicles.park): nobody on foot can stand there.
+    /// Not saved: it is what state.vehicles says, laid in again when a state is read (VehicleParking.cs).</summary>
+    [JsonIgnore] internal ByteLayer parkedLayer = new();
+    /// <summary>How many tiles are marked in it (none: nobody need ask).</summary>
+    [JsonIgnore] internal int parkedCount;
 
     /// <summary>Sizes the layers to the grid (what JSON gave them is cut into chunks).</summary>
     internal void Shape()
@@ -90,6 +95,8 @@ public sealed class Grid : IJsonOnDeserialized
         groundLayer.Shape(width, height);
         exploredLayer.Shape(width, height);
         edgeLayer.Shape(width, height);
+        parkedLayer.Shape(width, height);
+        parkedCount = 0;
     }
 
     void IJsonOnDeserialized.OnDeserialized() => Shape();
@@ -169,7 +176,40 @@ public static partial class Grids
     /// <summary>Whether a chunk (cy * ceil(width / 32) + cx, as reachability numbers them) is bare land: nothing
     /// allocated in its tiles or edges, so every tile is floor with nothing on its edges.</summary>
     internal static bool bareChunk(Grid grid, int c) =>
-        grid.tileLayer.chunks[c] == null && grid.edgeLayer.chunks[c] == null && grid.tileLayer.fill == TILE_FLOOR && grid.edgeLayer.fill == EDGE_NONE;
+        grid.tileLayer.chunks[c] == null && grid.edgeLayer.chunks[c] == null && grid.parkedLayer.chunks[c] == null && grid.tileLayer.fill == TILE_FLOOR && grid.edgeLayer.fill == EDGE_NONE;
+
+    /// <summary>Is a parked car over this tile (VehicleParking.cs)?</summary>
+    public static bool isParked(Grid grid, int x, int y) => grid.parkedCount > 0 && inBounds(grid, x, y) && grid.parkedLayer.Get(x - grid.ox, y - grid.oy) != 0;
+
+    /// <summary>Mark or clear a tile (by index) as under a parked car. True if it changed (noted for rooms and reachability).</summary>
+    public static bool setParked(Grid grid, int i, bool on)
+    {
+        if ((grid.parkedLayer.At(i) != 0) == on) return false;
+        grid.parkedLayer.Put(i, on ? (byte)1 : (byte)0);
+        grid.parkedCount += on ? 1 : -1;
+        noteChange(grid, i);
+        return true;
+    }
+
+    /// <summary>No tile is under a parked car (each one that was is noted as changed).</summary>
+    public static void clearParked(Grid grid)
+    {
+        if (grid.parkedCount == 0) return;
+        // Only the chunks that ever held a mark (a big world's layer is mostly not there).
+        var layer = grid.parkedLayer;
+        const int N = GridLayer<byte>.SIDE;
+        for (int c = 0; c < layer.chunks.Length && grid.parkedCount > 0; c++)
+        {
+            var chunk = layer.chunks[c];
+            if (chunk == null) continue;
+            int x0 = c % layer.cw * N, y0 = c / layer.cw * N;
+            for (int k = 0; k < chunk.Length; k++)
+            {
+                int x = x0 + k % N, y = y0 + k / N;
+                if (chunk[k] != 0 && x < grid.width && y < grid.height) setParked(grid, y * grid.width + x, false);
+            }
+        }
+    }
 
     /// <summary>A chunk's own edges (two a tile: north, west; a tile at (ly * 32 + lx)), or null when it holds none
     /// and every edge there is `fill`. For reachability's flood of one chunk.</summary>

@@ -146,7 +146,12 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
 - Left from the first-person start (2026-11-08): the world's look (textures); what line of sight and fog of war mean
   in first person.
 - Cars (log/2026-11-11-04-car-body.md): a car's body in the sim is the size of the car drawn (VehicleBody.cs).
-  Left: people, the dead and animals walk through a parked car (pathfinding doesn't know cars); a wall doesn't
+  A parked car is in the way of everyone on foot (VehicleParking.cs, log/2026-11-11-06-parked-cars.md). Left: **a
+  parked car is a barricade the dead can't break or climb** (they go round, or stand at it if there is no way
+  round: a car across a gate seals it; Zomboid plays the same, but it is the player's call); the car you are
+  sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
+  the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); you can't
+  jump onto or over a car; a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
   turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
   call whether cars should be faster now that they are car-sized).
 - The driver's seat (log/2026-11-11-05-drivers-seat.md): Left: no hands on the wheel and no body in the seat; the

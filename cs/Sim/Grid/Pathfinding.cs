@@ -14,6 +14,8 @@ public static partial class Pathfinding
 
     public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
+        // A parked car is in everyone's way but another car's (cars meet body to body: VehicleBody.cs).
+        if (grid.parkedCount > 0 && mover != VEHICLE && Grids.isParked(grid, x, y)) return false;
         if (mover == BREACHER) return inBounds(grid, x, y) && getTile(grid, x, y) != WATER;
         var tile = getTile(grid, x, y);
         bool openDoor = tile == DOOR && isOpen(grid, x, y);

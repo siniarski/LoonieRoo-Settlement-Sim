@@ -167,8 +167,10 @@ public class VehicleBodyTest
     {
         var (state, s, car) = field();
         // Standing off the back bumper, using the tile the boot is over.
+        Vehicles.unpark(state, car); // moved by hand: its tiles go with it (VehicleParking.cs)
         car.at = Motion.centre(new Point { x = 8, y = 3 });
         car.pos = new Point { x = 8, y = 3 };
+        Vehicles.park(state, car);
         s.pos = new Point { x = 5, y = 3 };
         s.at = Motion.centre(s.pos);
         expect(Vehicles.gap(car, s.at)).toBeGreaterThan(0);

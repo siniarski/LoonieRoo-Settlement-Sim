@@ -42,7 +42,7 @@ public partial class Game
         // Put the world back as it was.
         state.farm.RemoveRange(plots, state.farm.Count - plots);
         state.blueprints.RemoveRange(sites, state.blueprints.Count - sites);
-        state.vehicles?.Remove(car);
+        Vehicles.remove(state, car);
         state.wanderers.RemoveRange(wanderers, state.wanderers.Count - wanderers);
         state.traders.RemoveRange(traders, state.traders.Count - traders);
         state.prisoners.RemoveRange(prisoners, state.prisoners.Count - prisoners);

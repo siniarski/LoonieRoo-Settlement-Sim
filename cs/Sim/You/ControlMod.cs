@@ -149,7 +149,15 @@ public static partial class ControlMod
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
             var v = Motion.toward(c.dx, c.dy, stepLength(state, s, c, Js.T(run)));
+            var stood = s.at;
             s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
+            // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body
+            // (VehicleParking.cs pushOut). Where that would put you in a wall, you stay where you stood.
+            var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
+            if ((off.x != s.at.x) || (off.y != s.at.y))
+            {
+                s.at = Motion.fits(state.grid, off, "free") ? off : stood;
+            }
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))
             {

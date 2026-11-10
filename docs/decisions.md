@@ -463,6 +463,11 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   `Motion.fits` does the walls. It turns about its rear axle; other cars are solid; people and the dead are not obstacles to it. A car that starts out in something solid may
   move as long as no more of it ends up in something. "Near a car" is near its body, and the boot is reached at the boot
   *Why:* The cars became real-size models while the sim's car was a 0.43 m circle: they stood into walls, and you got in through the side of one
+- **Parked cars are in the way (2026-11-11).** The tiles whose centre is under a car nobody is driving can't be walked on by anyone on foot: a layer of the grid that
+  `Pathfinding.isPassable` asks, so paths go round and free movers stop at it with no new collision code. It is not saved: it is what `state.vehicles` says, kept in step
+  at every place a car is put down, entered, left or taken away, and laid in again when a state is read. A tile the car only overhangs stays open, so a car down the
+  middle of a three-tile street leaves both sides to walk. You are also stopped at the car's body itself; the dead and animals at the tiles, as their paths are tiles
+  *Why:* Car-sized cars that the dead and colonists walked through; and collision that disagreed with pathfinding would leave the dead pressed against a car for ever
 - **The code's structure (2026-11-11).** `cs/Sim` is a folder per area (Js, State, Core, Save, Grid, Debug, Movement, Worldgen, World, Combat, Dead, Items, Colony,
   Survivors, You, Others) in one namespace: the folders are for finding things, and nothing in the code changed with the move. Tests stay flat (`XTest.cs`; the files ported
   from TypeScript cover several systems each, so folders would mislead). The game class is in parts by concern under `godot/App`; labs and benches are in `godot/Labs`, the

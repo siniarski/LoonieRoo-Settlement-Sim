@@ -61,7 +61,7 @@ public partial class Game
 
         // Out again, and the car gone.
         Vehicles.leaveVehicle(state, you);
-        state.vehicles?.Remove(car);
+        Vehicles.remove(state, car);
         you.pos = pos;
         you.at = at;
         you.was = at;

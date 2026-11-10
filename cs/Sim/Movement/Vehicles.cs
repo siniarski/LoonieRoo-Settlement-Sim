@@ -105,6 +105,7 @@ public static partial class Vehicles
         var at = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
         Vehicle v = new Vehicle { id = $"v{Js.Str(state.nextId++)}", at = at, was = Js.Clone(at), pos = new Point { x = Js.I(x), y = Js.I(y) }, heading = ((heading % HEADINGS) + HEADINGS) % HEADINGS, speed = 0, fuel = fuel, health = health, driverId = null, kind = kind };
         state.vehicles.push(v);
+        park(state, v);
         return v;
     }
     public static Vehicle addVehicle(SimState state, double x, double y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car") => addVehicle(state, Js.I(x), Js.I(y), heading, fuel, health, kind);
@@ -166,6 +167,7 @@ public static partial class Vehicles
         {
             return "someone is driving it";
         }
+        unpark(state, v);
         v.driverId = s.id;
         s.move = null;
         s.at = Js.CopyAs<Point>(v.at);
@@ -185,12 +187,14 @@ public static partial class Vehicles
         v.speed = 0;
         var beside = anchorAt(v, "driverDoor").at;
         var door = Motion.tileOf(beside);
+        // The car is standing now: its tiles are in the way (VehicleParking.cs), yours with them.
+        park(state, v);
         bool clear(int x, int y)
         {
             var c = Motion.centre(new Point { x = Js.I(x), y = Js.I(y) });
             return Motion.fits(state.grid, c, "free") && (gap(v, c) >= Motion.BODY_RADIUS);
         }
-        // Right where the door is, if a body fits there; else the nearest tile clear of the car.
+        // Right where the door is, if a body fits there (clear of the car's tiles too); else the nearest tile clear of it.
         if (Grids.inBounds(state.grid, door.x, door.y) && Motion.fits(state.grid, beside, "free"))
         {
             s.at = beside;
@@ -358,6 +362,7 @@ public static partial class Vehicles
             {
                 v.driverId = null;
                 v.speed = 0;
+                park(state, v);
             }
             else if (state.control?.survivorId != s.id)
             {

@@ -107,7 +107,8 @@ public static partial class Worldgen
     }
 
     /// <summary>Takes a chunk made by makeChunk into the world: its tiles, ground and edges (noting each change, for
-    /// rooms and reachability), its open doors and boarded windows, and what it made (furniture, the dormant, cars).</summary>
+    /// rooms and reachability), its open doors and boarded windows, and what it made (furniture, the dormant, cars: each
+    /// car's tiles marked as under a parked car).</summary>
     public static void adoptChunk(SimState state, SimState c)
     {
         var g = state.grid;
@@ -141,7 +142,11 @@ public static partial class Worldgen
         if (c.vehicles is { Count: > 0 } cars)
         {
             state.vehicles ??= [];
-            foreach (var v in cars) state.vehicles.push(v);
+            foreach (var v in cars)
+            {
+                state.vehicles.push(v);
+                Vehicles.mark(state.grid, v); // in the way from the start (the chunk's own grid had it marked; this is the world's)
+            }
         }
     }
 

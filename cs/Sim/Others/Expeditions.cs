@@ -58,6 +58,7 @@ public static partial class Expeditions
         var v = (Js.T(inTruck && Js.T(truckId))) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
         if (Js.T(v))
         {
+            Vehicles.unpark(state, v); // off with the expedition: it's no longer standing in anyone's way
             v.driverId = $"x:{Js.Str(id)}";
         }
         state.expeditions.push(Js.With(new Expedition { id = $"x{Js.Str(state.nextId++)}", members = members, target = new() { x = Js.I(poi.x), y = Js.I(poi.y), label = poi.label }, home = home, returnTick = Js.T(outpost) ? Outposts.NEVER : ((state.tick + ((double)(((double)((inTruck ? 1 : 2)) * (distance))) * (Survivors.TICKS_PER_TILE))) + SEARCH_TICKS), truck = inTruck, outpost = outpost }, __s0 => { if (Js.T(v)) { __s0.truckId = v.id; __s0.leftTick = state.tick; } else {  } }));
@@ -100,6 +101,7 @@ public static partial class Expeditions
         {
             v.driverId = null;
             x.truckId = null;
+            Vehicles.park(state, v);
             return false;
         }
         if (!Js.T(driving) || ((state.tick % Time.TICKS_PER_HOUR) != 0))
@@ -126,6 +128,7 @@ public static partial class Expeditions
         }
         state.expeditions.splice(state.expeditions.indexOf(x), 1);
         v.driverId = null;
+        Vehicles.park(state, v);
         Events.logEvent(state, $"Nobody from the expedition to the {Js.Str(x.target.label)} is coming back. The truck stands empty near ({Js.Str(p.x)}, {Js.Str(p.y)})");
         return true;
     }
@@ -141,6 +144,7 @@ public static partial class Expeditions
             v.at = Motion.centre(spot);
             v.was = Js.CopyAs<Point>(v.at);
             v.driverId = null;
+            Vehicles.park(state, v);
         }
         bool near(Point p)
         {

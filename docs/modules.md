@@ -82,7 +82,9 @@ git tag `ts-final`.
 - **PoseIntents**: what a mover's body is doing, read for the renderer (docs/characters.md section 1).
 - **Vehicles**: cars, fuel, the boot. **VehicleBody** (part of Vehicles): the room a car takes up, as long and wide as
   the car drawn (a row of circles), what is solid to it, turning about the rear axle, how near a point is to it.
-  **VehicleActions** (part of Vehicles): timed car actions and anchors (get in, out, boot, bonnet).
+  **VehicleParking** (part of Vehicles): the tiles under a parked car can't be walked on (a layer of the grid, not
+  saved, laid in again when a state is read); park, unpark, who is moved off. **VehicleActions** (part of Vehicles):
+  timed car actions and anchors (get in, out, boot, bonnet).
 
 ### `Worldgen/`: making the world from a seed
 
