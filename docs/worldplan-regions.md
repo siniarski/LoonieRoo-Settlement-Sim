@@ -45,9 +45,42 @@ A region's plan is a pure function of its own window and its neighbours' towns (
 - MapShot of a whole 10,000 map plans every region (~100 x 0.5-1 s): a tool, not the game.
 - Not solved by this: the grid's memory and saves (below).
 
-## The second job: the grid in chunks (not designed in detail)
+## The second job: the grid in chunks (designed 2026-11-10; "Built" is at the end of this file)
 
-The grid's per-tile layers kept per 32 x 32 chunk, allocated when the chunk is generated (ungenerated land costs nothing), behind the Grids accessors (most code reads `grid.tiles[i]` directly today: a sweep through every system). Saves keep only generated chunks, and for those only what differs from regenerating them from the seed (most of a chunk is unchanged). Pathfinding's and reachability's per-tile data per chunk too. That's what makes 10,000 fit in memory and on disk; it touches nearly every system, so it's its own session after this one.
+The sketch of 2026-11-09: the grid's per-tile layers kept per 32 x 32 chunk, allocated when the chunk is generated (ungenerated land costs nothing), behind the Grids accessors (most code read `grid.tiles[i]` directly: a sweep through every system). Saves keep only generated chunks, and for those only what differs from regenerating them from the seed. Pathfinding's and reachability's per-tile data per chunk too.
+
+### The design
+
+**The layers.** The grid has six per-tile layers: `tiles` (one of five kinds), `ground` (an index into GROUNDS), `explored` (0 or 1), `dirt` (0 or 1), `damage` (a double) and `edges` (two a tile: its north edge, then its west). Everything else on `Grid` is already sparse: lists of tile or edge indexes (`dirtList`, `damageList`, `locked`, `reinforced`, `open`, `passing`, `edgeOpen`, `edgePassing`, `edgeLocked`, `edgeBoarded`) and the `edgeDamage` record. Those stay exactly as they are, on the grid, keyed by the global index, saved as they were.
+
+**Storage.** Each layer is a `GridLayer<T>`: an array of chunk slots (`chunks[cy * cw + cx]`, cw = ceil(width / 32)), each null or an array of 32 x 32 values (2 x 32 x 32 for edges), and one `fill` value. A null slot reads as `fill`. Five layers hold bytes (a tile kind is a code into a small table of names: floor, wall, door, water, barricade, and any other string a hand-made state holds, registered as met), `damage` holds doubles. A chunk on the map's east or south edge is still a whole 32 x 32 array (the part past the edge is never read): no special cases. Chunk slots are aligned with Worldgen's chunks and reachability's (both 32), so a generated chunk is one slot in each layer.
+
+**When a slot is allocated.** On the first write of a value that isn't the layer's fill. So each layer is sparse on its own: a forest chunk has tiles and ground and nothing else (2 KB); a town chunk adds edges (2 KB); explored arrives where someone has looked (1 KB), dirt and damage where there is some (rare). Per tile that is 2 to 5 bytes where there was 36, and nothing for land never generated. The slot arrays themselves cost 8 bytes a chunk a layer (4.7 MB at 10,000).
+
+**A read of ungenerated land** returns the fill: floor, ground 0 (grass), no edges, clean, undamaged, and unexplored in a generated world (a hand-made map made by `createGrid` starts explored and filled with whatever tile it was asked for, so its fills are those). That is what the full-size lists held there, so nothing that reads beyond the generated chunks sees a difference, and "bare land" in the save is the same thing as before. Whether a slot is allocated is never observable: only values are.
+
+**The global tile index stays the key.** `i = y * width + x` and `e = 2 * i + side` are unchanged: rooms, paths, the sparse lists, `state.cleared`, furniture's index, saves and bug reports all keep using them. A layer read by index splits it (`y = i / width`, one integer division) and then goes by (x, y); reads by (x, y) skip the division, so hot loops that have x and y use those forms. Edges need nothing special: an edge belongs to its tile, so it lives in its tile's chunk at `2 * local + side`; the edge between two chunks is the north or west edge of the tile on the far side, as it always was.
+
+**The API.** The layers are not public: `Grids` is the only way in (the fields are internal to the sim, and inside it only Grid.cs and the save code's layer helpers touch them).
+- by tile: `getTile` / `setTile` (as before), `tileAt(grid, i)`, `groundAt(grid, x, y | i)` / `setGround`, `isExplored` / `exploredAt` / `setExplored`, `isDirty` / `setDirty` (as before) / `dirtAt`, `damageAt` / `setDamage` (as before), `edgeKind(grid, e)` (as before) / `setEdge` (as before);
+- raw writes that note nothing (generation, loading, tests): `putTile`, `putEdge`, `putDirt`;
+- whole layers: `fillExplored`, `fillGround`, `anyUnexplored`, `anyEdges`, `tileCount`, and flat copies for tests, dumps and the text map (`Grids.allTiles(grid)`, `allGround`, `allExplored`, `allDirt`, `allDamage`, `allEdges`: O(map), never in a tick);
+- by chunk, for generation, saves and the renderer: `adoptLayers` (a made chunk's arrays moved into the world, not copied), `chunkHas`, row reads into a caller's buffer.
+An index out of range reads as the old `Js.Get` did (null tile, 0), and a write there is ignored or throws as the list did.
+
+**JSON.** Rule 7 holds: `StateJson` writes each layer as the flat array it always was (a converter per layer; the grid shapes them into chunks once its size is known, `IJsonOnDeserialized`), so state dumps, clones, hand-made-map saves and bug reports are the same bytes. The chunked save never wrote the layers whole; it now walks only the slots that exist.
+
+**Small maps and scenarios** are a grid like any other: a 20 x 15 map is one chunk slot a layer. Worldgen's `makeChunk` grid (its corner at `ox, oy`) is one slot too, which is what lets `adoptChunk` hand its arrays over.
+
+### Decided against
+
+- **A chunk object holding all six layers** (`chunks[c].tiles[...]`): one more indirection on every read, and every layer allocated together (5 KB more for each forest chunk). Per-layer slots are both faster and smaller.
+- **Keeping `List<T>`-shaped layers with a chunked indexer** (so `grid.tiles[i]` still compiles): every read would pay the division, list helpers (`fill`, `includes`, `Count`, spans) would silently walk 100 million tiles, and the next person would write `grid.tiles[i]` in a loop. Accessors make the expensive forms visible.
+- **Changing the tile index** to chunk-major order (chunk * 1024 + local): cheaper to split, but it is the key in saves, rooms, paths and every sparse record; all of it would change for a division that the (x, y) forms avoid anyway.
+- **Bits for explored and dirt, nibbles for edges**: 1 KB a chunk less at most; not worth the masking in Fog and Sight until memory says so.
+- **A dictionary of chunks** (keyed by chunk index) instead of a slot array: the slot array is 0.8 MB a layer at 10,000, a lookup is one array read, and iteration order stays the index order (rule 9) for free.
+- **Strings in the tile layer**: 8 bytes a tile, and `getTile(...) == "floor"` on strings read back from JSON compares characters; codes give back the same five interned constants.
+- **Values wider than a byte for ground and edges**: GROUNDS has 10 entries and edges 6 kinds. A value outside 0..255 throws at the write (loud) rather than being stored.
 
 ## Built (2026-11-09; schema 74)
 
