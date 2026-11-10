@@ -137,7 +137,7 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                foreach (var z in Js.Iter(b.cells.get(((double)(y) * (width)) + x) ?? []))
+                if (b.cells.get(((double)(y) * (width)) + x) is { } cell) foreach (var z in Js.Iter(cell))
                 {
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
@@ -818,6 +818,7 @@ public static partial class Zombies
                 }
             }
         }
+        List<PushApartOthers> near = []; // one list, emptied for each zombie
         foreach (var z in Js.Iter(state.zombies))
         {
             for (var dy = -1; dy <= 1; dy++)
@@ -830,7 +831,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    foreach (var o in Js.Iter(buckets.get(((double)(ny) * (width)) + nx) ?? []))
+                    if (buckets.get(((double)(ny) * (width)) + nx) is { } cell) foreach (var o in Js.Iter(cell))
                     {
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
@@ -850,7 +851,7 @@ public static partial class Zombies
                     }
                 }
             }
-            List<PushApartOthers> near = [];
+            near.Clear();
             for (var dy = -1; dy <= 1; dy++)
             {
                 for (var dx = -1; dx <= 1; dx++)

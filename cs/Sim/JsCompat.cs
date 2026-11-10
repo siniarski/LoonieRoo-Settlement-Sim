@@ -71,7 +71,9 @@ public static class JsListExtensions
         /// <summary>push(...xs)</summary>
         public int pushAll(IEnumerable<T> xs)
         {
-            a.AddRange(xs.ToList());
+            // Another list (or array) straight in; anything lazy (it may read `a`) or `a` itself copied first.
+            if (xs is ICollection<T> c && !ReferenceEquals(c, a)) a.AddRange(c);
+            else a.AddRange(xs.ToList());
             return a.Count;
         }
 
@@ -260,6 +262,7 @@ public static class JsListExtensions
         /// <summary>A stable sort in place by a JS comparator (negative, zero, positive), as Array.prototype.sort.</summary>
         public List<T> sort(Func<T, T, double> cmp)
         {
+            if (a.Count < 2) return a;
             var sorted = a.Select((x, i) => (x, i)).OrderBy(p => p, Comparer<(T x, int i)>.Create((p, q) =>
             {
                 double c = cmp(p.x, q.x);
@@ -931,10 +934,8 @@ public static partial class Js
     public static string Idx(string s) => s;
 
     /// <summary>for...of over a list: by index, reading the length each step (so items added during the loop are seen, as in JS).</summary>
-    public static IEnumerable<V> Iter<V>(List<V> list)
-    {
-        for (int i = 0; i < list.Count; i++) yield return list[i];
-    }
+    /// A struct, so a foreach over it allocates nothing (it was an iterator method: an object per loop).
+    public static ListIter<V> Iter<V>(List<V> list) => new(list);
 
     public static IEnumerable<V> Iter<V>(IEnumerable<V> xs) => xs;
     /// <summary>for (const [k, v] of map): its entries, in insertion order.</summary>
@@ -1034,3 +1035,33 @@ public static class JsRegExpExtensions
 
 /// <summary>A list literal written as a loose JS value (Js.Arr).</summary>
 public sealed class JsLooseList(IEnumerable<object?> items) : List<object?>(items);
+
+/// <summary>Js.Iter over a list: by index, reading the length each step (items added during the loop are seen, as in
+/// JS; no version check). A struct with a struct enumerator, so a foreach over it allocates nothing.</summary>
+public readonly struct ListIter<V>(List<V> list) : IEnumerable<V>
+{
+    public Enumerator GetEnumerator() => new(list);
+    IEnumerator<V> IEnumerable<V>.GetEnumerator() => new Enumerator(list);
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => new Enumerator(list);
+
+    public struct Enumerator(List<V> list) : IEnumerator<V>
+    {
+        int i;
+        V current = default!;
+        public readonly V Current => current;
+        readonly object? System.Collections.IEnumerator.Current => current;
+
+        public bool MoveNext()
+        {
+            if (i < list.Count)
+            {
+                current = list[i++];
+                return true;
+            }
+            return false;
+        }
+
+        public void Reset() => i = 0;
+        public readonly void Dispose() { }
+    }
+}
