@@ -57,7 +57,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **WorldPreview**: a small picture of a world from its seed (New game, Load, loading screens; `Savefile.readPreview`).
 - **Climate**: regions, radiation. **Seasons**: weather. **Fog**: exploring. **Mapnotes**: map notes; town names.
 - **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
-- **Rooms**: flood fill, purposes, requirements. **Breach**: battering doors and walls. **FireMod**: fire.
+- **Rooms**: flood fill, purposes, requirements. **Breach**: battering doors and walls. **FireMod**: fire, and wildfire through grass, undergrowth and trees (fuel from the tile, season and weather; scars in `state.burnt`; `settings.wildfire`; bounded by budgets and a far rule).
 - **Defences**: traps, barricades, turrets, lures, pits. **Towers**: watchtowers. **Power**, **Water**.
 - **Lights**: room lights behind switches, porch lights, street lamps, headlights, the flashlight, fire; what is lit
   and by what (`near`, `lightAt`, `isLit`). The game draws them in `World3D/Lights.cs` (keys and debug flags: GameLights.cs).
@@ -109,7 +109,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 
 - `Game.cs`: the fixed-timestep loop, input to commands, saves, the command line, which view.
 - `World3D/`: first person (FirstPerson, WorldMesh chunks, Roofs, Terrain, People, Animals, Items, Furniture, Held,
-  OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls) and benches (DrawBench, ItemBench, TreeBench, MapShot).
+  OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls, Fires: flames, smoke, embers, scorch and charred stumps in a fixed few nodes) and benches (DrawBench, ItemBench, TreeBench, MapShot).
 - `Characters/`: the character lab, look lab, IK, ragdoll, VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.
 - `Ui/`: HUD and panels, inventory, card, build tools, menu, options (Graphics), saves, minimap, map, ScreenTabs

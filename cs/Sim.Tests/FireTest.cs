@@ -66,6 +66,7 @@ public partial class FireTest
         public void T004_firefighters_put_a_fire_out()
         {
             var state = setup(["s......", "...#..."], new() { ["firefight"] = 3 });
+            state.settings.wildfire = 0; // a hand-made map is all grass: this is the old rule, a lone wall (wildfire has its own tests)
             FireMod.ignite(state, 3, 1);
             runUntil(state, (_) => state.fires.length == 0, 400);
             expect(Grids.getTile(state.grid, 3, 1)).toBe("wall");

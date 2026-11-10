@@ -832,6 +832,8 @@ public partial class Settings
     public double progression { get; set; }
     public bool winter { get; set; }
     public double dayScale { get; set; }
+    /// <summary>Wildfire: 0 vegetation never catches fire (only buildings burn), 1 the default, 2 twice the chances (FireMod). Older saves read 1.</summary>
+    public double wildfire { get; set; } = 1;
     /// <summary>The end of the road.</summary>
     public string map { get; set; } = "";
 }
@@ -904,6 +906,8 @@ public partial class SimState
     public JsRecord<double> foraged { get; set; } = new();
     /// <summary>Tiles whose growth was reset (Growth.clear): tile index -> the tick it was cleared; from then it regrows. Sparse; entries go once regrown (Growth.expire). Absent in older saves: none.</summary>
     public JsRecord<double> cleared { get; set; } = new();
+    /// <summary>Tiles a fire has burnt, by "x,y": the tick it burnt times four plus what it was (FireMod.SCAR_*). Sparse; cleared as the ground regrows (FireMod.SCAR_DAYS).</summary>
+    public JsRecord<double> burnt { get; set; } = new();
     public List<Item> items { get; set; } = new();
     public List<Furniture> furniture { get; set; } = new();
     public List<FarmPlot> farm { get; set; } = new();

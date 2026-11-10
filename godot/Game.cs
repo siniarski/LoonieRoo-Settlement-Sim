@@ -82,6 +82,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     WorldMap worldMap = null!;
     ScreenTabs tabs = null!;
     World3D.FirstPerson firstPerson = null!;
+    World3D.Fires fires = null!;
     /// <summary>Last frame was first person (to pick up the survivor's aim on the way in).</summary>
     bool wasFirstPerson;
     bool selftest;
@@ -126,6 +127,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         firstPerson = new World3D.FirstPerson { Visible = false };
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         AddChild(firstPerson);
+        fires = new World3D.Fires();
+        firstPerson.AddChild(fires);
         var layer = new CanvasLayer();
         AddChild(layer);
         hud = new Hud(view, this);
@@ -171,6 +174,15 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         }
         if (args.TryGetValue("day", out var dayArg)) StartDay(double.Parse(dayArg, CultureInfo.InvariantCulture));
         LightArgs(args); // --hour, --switch, --give, --car, --fire, --stove, --heater, --lights, --lightbench (GameLights.cs)
+        // --clock=TICK --fire-weather=KIND --burn=dx,dy,dx,dy..: a debug start for pictures of fire (not commands): the clock set, the weather,
+        // and tiles alight at those offsets from you (a line of grass fire: --burn=4,-3,4,-2,4,-1,4,0; --fire=X,Y is GameLights.cs's one fire at a tile).
+        if (args.TryGetValue("clock", out var clockArg)) state.tick = int.Parse(clockArg);
+        if (args.TryGetValue("fire-weather", out var wxArg)) state.weather = wxArg;
+        if (args.TryGetValue("burn", out var fireArg) && ControlMod.controlled(state) is { } burner)
+        {
+            var d = fireArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i + 1 < d.Length; i += 2) FireMod.ignite(state, burner.pos.x + int.Parse(d[i]), burner.pos.y + int.Parse(d[i + 1]));
+        }
         if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
         if (args.TryGetValue("arm", out var armArg) && ControlMod.controlled(state) is { } armMe)
         {
@@ -259,7 +271,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     static double RandomSeed() => Math.Floor(Random.Shared.NextDouble() * 1e9);
 
-    static Settings CopySettings(Settings s) => new() { start = s.start, zombies = s.zombies, weather = s.weather, progression = s.progression, winter = s.winter, dayScale = s.dayScale, map = s.map };
+    static Settings CopySettings(Settings s) => new() { start = s.start, zombies = s.zombies, weather = s.weather, progression = s.progression, winter = s.winter, dayScale = s.dayScale, wildfire = s.wildfire, map = s.map };
 
     static Dictionary<string, string> ParseArgs()
     {
@@ -507,6 +519,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         {
             var fsw = Stopwatch.StartNew();
             firstPerson.Update(state, alpha, view.yaw, view.pitch, delta);
+            fires.Update(state, firstPerson.camera.GlobalPosition, delta);
             fpMs = fpMs * 0.9 + fsw.Elapsed.TotalMilliseconds * 0.1;
             // The top-down camera keeps up with you, so the Colony tab opens where you are.
             var w = worldPos(you!, alpha);
