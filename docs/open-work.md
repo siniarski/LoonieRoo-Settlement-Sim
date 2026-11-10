@@ -108,7 +108,15 @@ packed state. Left:
 
 ## Buildings
 
-Realistic building generation is in progress on `claude/buildings-8a8be2` (not merged yet).
+Rewritten 2026-11-10/11 (docs/buildings.md; log buildings): plans are rooms with walls, doors and windows on edges;
+dwellings by style (cottage, bungalow, family house, farmhouse, cabin, trailer), shops, bar, diner, workshop,
+office, police, clinic, school, church, warehouse, factory, barn, shed; lots with paths, porches, driveways, plank
+fences and sheds. **Worlds saved before it are refused** (`Worldgen.GEN_VERSION = 2`, saved in `WorldInfo.gen`: bump
+it whenever what a chunk is made of changes). Left: chairs and the other pieces in docs/buildings.md's list; real
+fence and gate edge kinds (fences are barricade edges with a gap); police cells only 1-2 when the corridor's last
+room is short; side windows dropped on narrow lots leave long blank walls; a garage's 3-wide door is drawn as three
+doors; FarField calls a lot's `yard(x, y)` with map coordinates where Lots uses the lot's (u, v) (an old bug);
+storeys and basements (after the stress test).
 
 ## Growth, fire and weather
 
