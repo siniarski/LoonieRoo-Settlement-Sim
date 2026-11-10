@@ -768,7 +768,7 @@ public static partial class Zombies
         var y = ty;
         bool open(int px, int py, int qx, int qy)
         {
-            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKind(grid, Grids.edgeBetween(grid, px, py, qx, qy)) == Grids.EDGE_WINDOW_BROKEN))
+            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKindBetween(grid, px, py, qx, qy) == Grids.EDGE_WINDOW_BROKEN))
             {
                 return false;
             }
@@ -1142,7 +1142,7 @@ public static partial class Zombies
     /// <summary>Through a broken window between two tiles: a climb, at half speed.</summary>
     public static bool climbing(SimState state, Point a, Point b)
     {
-        return Grids.edgeKind(state.grid, Grids.edgeBetween(state.grid, a.x, a.y, b.x, b.y)) == Grids.EDGE_WINDOW_BROKEN;
+        return Grids.edgeKindBetween(state.grid, a.x, a.y, b.x, b.y) == Grids.EDGE_WINDOW_BROKEN;
     }
 }
 

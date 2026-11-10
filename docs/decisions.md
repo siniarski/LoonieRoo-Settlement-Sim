@@ -51,6 +51,19 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
 
 ## The sim's foundations
 
+- **The grid's layers live in chunks, behind `Grids`** (2026-11-10; docs/worldplan-regions.md "The second job").
+  Tiles, ground, explored, dirt, damage and edges are 32 x 32 chunk slots allocated where something differs from
+  the layer's fill; nothing outside Grid.cs, GridLayers.cs and the save code touches them. The tile index
+  (y * width + x) and JSON (flat arrays) are unchanged. A layer holds bytes (damage: doubles): a ground or edge kind
+  outside 0..255 throws at the write.
+  *Why:* memory and saves follow what was generated, not the map's area (10,000: 4.4 GB to 28 MB after createWorld).
+- **Derived per-tile data is in chunks too, allocated where it is used**: room labels (copied on write), reachability
+  labels (a bare chunk is one component, never flooded), A*'s and nearestTile's scratch (dropped past ~100 MB).
+  *Why:* a played 10,000 world held 7.5 GB of it and its first tick took 12 s.
+- **Rooms' change list holds up to 65,536 tiles (was 2,048)** before rooms are worked out in full. Either way gives
+  the same rooms (tested against the plain whole-map flood, `Rooms.computeRoomsWhole`).
+  *Why:* an update now costs what it touches, and generating a few town chunks at once passed 2,048.
+
 - **Sim model.** Pure, deterministic, fixed tick (default 10/sec)
   *Why:* Enables headless runs, replayable bugs, trivial speed controls
 - **Automation model.** Auto mode is a planner that emits the same designations the player does

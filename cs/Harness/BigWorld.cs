@@ -5,6 +5,7 @@
 //   SIZES=2048,10000 TICKS=200 dotnet test cs/Harness -c Release --filter "DisplayName=big world"
 //   Report: cs/Harness/out/big-world.txt (OUT= another path). BOUND_MB=<n> fails the run if the heap after
 //   createWorld at the last size is over n megabytes (the memory bound the grid in chunks is held to).
+//   SIZE=1024 dotnet test cs/Harness -c Release --filter "DisplayName=chunk cost": a generated chunk's memory by part.
 using System.Diagnostics;
 using LoonieRoo.Sim;
 
@@ -97,5 +98,42 @@ public class BigWorld
         out_.Add($"peak working set {p.PeakWorkingSet64 / 1e6:0} MB");
         File.WriteAllText(path, string.Join("\n", out_) + "\n");
         if (Env("BOUND_MB") is { } bound) Assert.True(last <= double.Parse(bound), $"heap after createWorld {last:0} MB, over the bound of {bound} MB");
+    }
+
+    /// <summary>What a generated chunk costs in memory, by part (SIZE, default 1024, every chunk generated): the grid's
+    /// layers (Grids.memory), furniture and the dormant (the heap before and after they're dropped), and what play
+    /// derives (rooms and reachability). For deciding what unloading chunks would be worth. Report: out/chunk-cost.txt.</summary>
+    [Fact(DisplayName = "chunk cost")]
+    public void ChunkCost()
+    {
+        int size = int.Parse(Env("SIZE") ?? "1024");
+        GC.Collect();
+        double m0 = Mb();
+        var s = Worldgen.createWorld(42, size, Difficulty.NORMAL);
+        for (int y = 0; y < size; y += Worldgen.CHUNK)
+            for (int x = 0; x < size; x += Worldgen.CHUNK) Worldgen.ensureGeneratedAround(s, new Point(x, y));
+        int chunks = s.world!.generated.Count((g) => g == 1);
+        double all = Mb() - m0;
+        var m = Grids.memory(s.grid);
+        Pathfinding.warmReach(s.grid, s.walkabilityVersion);
+        int rooms = Rooms.getRoomMap(s).rooms.Count;
+        double derived = Mb() - m0 - all;
+        int furniture = s.furniture.Count, dormant = s.dormant.Count, trees = s.furniture.Count((f) => f.kind == "tree");
+        // The dormant dropped (the list replaced). Furniture can't be measured that way: its index (by state) holds the
+        // pieces, so it is what remains once the grid and the dormant are taken off.
+        s.dormant = [];
+        double noDormant = Mb() - m0 - derived;
+        double rest = noDormant - m.bytes / 1e6;
+        var out_ = new List<string>
+        {
+            $"size {size}: {chunks} chunks generated, heap {all:0.0} MB = {all * 1024 / chunks:0.0} KB a chunk",
+            $"   the grid's layers: {m.bytes / 1e6:0.0} MB = {m.bytes / 1024.0 / chunks:0.0} KB a chunk (slots: tiles {m.tiles}, ground {m.ground}, edges {m.edges}, explored {m.explored}, dirt {m.dirt}, damage {m.damage} of {m.slots})",
+            $"   the dormant: {dormant:N0}, {all - noDormant:0.0} MB = {(all - noDormant) * 1024 / chunks:0.0} KB a chunk, {(all - noDormant) * 1e6 / Math.Max(1, dormant):0} bytes each",
+            $"   the rest, nearly all furniture and its index: {furniture:N0} pieces ({trees:N0} trees), {rest:0.0} MB = {rest * 1024 / chunks:0.0} KB a chunk, {rest * 1e6 / Math.Max(1, furniture):0} bytes a piece",
+            $"   derived by play (reachability for six movers, {rooms} rooms and their labels): {derived:0.0} MB = {derived * 1024 / chunks:0.0} KB a chunk",
+        };
+        string path = Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/chunk-cost.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, string.Join("\n", out_) + "\n");
     }
 }

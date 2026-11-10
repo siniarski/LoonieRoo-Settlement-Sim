@@ -43,7 +43,8 @@ public static partial class Sight
     /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
     public static bool opaque(Grid grid, int x, int y)
     {
-        var t = Grids.tileAt(grid, Grids.tileIndex(grid, x, y));
+        // By tile (off the grid: by the index, as it always read).
+        var t = Grids.inBounds(grid, x, y) ? Grids.getTile(grid, x, y) : Grids.tileAt(grid, Grids.tileIndex(grid, x, y));
         return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Grids.isOpen(grid, x, y));
     }
     public static bool opaque(Grid grid, double x, double y) => opaque(grid, Js.I(x), Js.I(y));
@@ -51,9 +52,9 @@ public static partial class Sight
     /// <summary>A step from one tile to the next (side by side or diagonal) that sight can make: for a diagonal, either way round.</summary>
     public static bool stepSeen(Grid grid, int ax, int ay, int bx, int by)
     {
-        bool clear(double px, double py, double qx, double qy)
+        bool clear(int px, int py, int qx, int qy)
         {
-            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+            return Pathfinding.seesBetween(grid, px, py, qx, qy);
         }
         if ((ax == bx) || (ay == by))
         {

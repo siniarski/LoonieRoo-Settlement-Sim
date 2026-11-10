@@ -236,6 +236,16 @@ public static partial class Grids
         return (y * grid.width + x) * 2 + side;
     }
 
+    /// <summary>What stands between two tiles side by side (EDGE_NONE if they aren't, or either is off the grid).</summary>
+    public static int edgeKindBetween(Grid grid, int ax, int ay, int bx, int by)
+    {
+        edgeBetween(grid, ax, ay, bx, by, out int kind);
+        return kind;
+    }
+
+    /// <summary>What stands on a tile's north (side 0) or west (side 1) edge; EDGE_NONE off the grid.</summary>
+    public static int edgeAt(Grid grid, int x, int y, int side) => inBounds(grid, x, y) ? grid.edgeLayer.Get2(x - grid.ox, y - grid.oy, side) : EDGE_NONE;
+
     /// <summary>What stands on an edge (EDGE_NONE for -1).</summary>
     public static int edgeKind(Grid grid, int e) => (uint)e < (uint)(2 * grid.edgeLayer.count) ? grid.edgeLayer.At2(e) : EDGE_NONE;
 
@@ -514,8 +524,10 @@ public static partial class Grids
 
     public static bool isWalkable(Grid grid, int x, int y)
     {
-        var tile = getTile(grid, x, y);
-        return tile != null && isWalkableTile(tile);
+        if (!inBounds(grid, x, y)) return false;
+        // isWalkableTile, by the tile's code.
+        int code = grid.tileLayer.Get(x - grid.ox, y - grid.oy);
+        return code == TILE_FLOOR || code == TILE_DOOR || code == TILE_BARRICADE;
     }
 
     /// <summary>In-bounds 4-way neighbours in a fixed order: N, E, S, W.</summary>

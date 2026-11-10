@@ -113,7 +113,7 @@ public static partial class Pathfinding
         public int cw, ch;
         /// <summary>Per chunk, each tile's component within the chunk (-1 where it can't stand); null for a bare chunk
         /// (floor, no edges): every tile is component 0, and nobody flooded it.</summary>
-        public int[]?[] local = Array.Empty<int[]?>();
+        public short[]?[] local = Array.Empty<short[]?>();
         public int[] counts = Array.Empty<int>();
         public int[] offsets = Array.Empty<int>();
         public List<int>[] east = Array.Empty<List<int>>();
@@ -190,9 +190,10 @@ public static partial class Pathfinding
         int y0 = c / r.cw * N;
         int w = Math.Min(width, x0 + N) - x0;
         int h = Math.Min(height, y0 + N) - y0;
-        var local = r.local[c] ??= new int[N * N];
-        for (int ly = 0; ly < h; ly++) for (int lx = 0; lx < w; lx++) local[ly * N + lx] = rule.pass(x0 + lx, y0 + ly) ? -2 : -1;
-        int next = 0;
+        // A chunk has at most 1,024 components: a short a tile (2 KB a chunk a mover).
+        var local = r.local[c] ??= new short[N * N];
+        for (int ly = 0; ly < h; ly++) for (int lx = 0; lx < w; lx++) local[ly * N + lx] = (short)(rule.pass(x0 + lx, y0 + ly) ? -2 : -1);
+        short next = 0;
         for (int sy = 0; sy < h; sy++)
         {
             for (int sx = 0; sx < w; sx++)
@@ -248,7 +249,9 @@ public static partial class Pathfinding
         int x1 = Math.Min(width, x0 + REACH_CHUNK);
         int y1 = Math.Min(height, y0 + REACH_CHUNK);
         // Two bare chunks side by side: nothing stands between them (an edge there would be the far chunk's).
-        bool bare = r.local[c] == null;
+        const int N = REACH_CHUNK;
+        var mine = r.local[c];
+        bool bare = mine == null;
         List<int> east = NO_LINK, south = NO_LINK;
         var seen = new HashSet<int>();
         if (x1 < width)
@@ -257,10 +260,11 @@ public static partial class Pathfinding
             else
             {
                 east = new List<int>();
+                var theirs = r.local[c + 1];
                 for (int y = y0; y < y1; y++)
                 {
                     int b = y * width + x1;
-                    int la = Local(r, width, b - 1), lb = Local(r, width, b);
+                    int la = mine == null ? 0 : mine[(y - y0) * N + (N - 1)], lb = theirs == null ? 0 : theirs[(y - y0) * N];
                     if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2 + 1, x1, y, x1 - 1, y)) continue;
                     seen.Add(la * 2048 + lb);
                     east.Add(la);
@@ -275,10 +279,11 @@ public static partial class Pathfinding
             else
             {
                 south = new List<int>();
+                var theirs = r.local[c + r.cw];
                 for (int x = x0; x < x1; x++)
                 {
                     int b = y1 * width + x;
-                    int la = Local(r, width, b - width), lb = Local(r, width, b);
+                    int la = mine == null ? 0 : mine[(N - 1) * N + (x - x0)], lb = theirs == null ? 0 : theirs[x - x0];
                     if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2, x, y1, x, y1 - 1)) continue;
                     seen.Add(la * 2048 + lb);
                     south.Add(la);
@@ -394,7 +399,7 @@ public static partial class Pathfinding
                 int ch = (height + REACH_CHUNK - 1) / REACH_CHUNK;
                 r = new Reach
                 {
-                    version = version, cursor = cursor, cw = cw, ch = ch, local = new int[]?[cw * ch], counts = new int[cw * ch], offsets = new int[cw * ch],
+                    version = version, cursor = cursor, cw = cw, ch = ch, local = new short[]?[cw * ch], counts = new int[cw * ch], offsets = new int[cw * ch],
                     east = new List<int>[cw * ch], south = new List<int>[cw * ch],
                 };
                 perMover[mover] = r;
@@ -688,6 +693,17 @@ public static partial class Pathfinding
         }
         if (dx == 0 || dy == 0) return Open(a.x, a.y, b.x, b.y);
         return (Open(a.x, a.y, b.x, a.y) && Open(b.x, a.y, b.x, b.y)) || (Open(a.x, a.y, a.x, b.y) && Open(a.x, b.y, b.x, b.y));
+    }
+
+    /// <summary>Does sight pass between two tiles side by side? seesThrough of the edge between them, read by tile.</summary>
+    public static bool seesBetween(Grid grid, int ax, int ay, int bx, int by)
+    {
+        int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
+        if (e < 0) return true;
+        if (kind == EDGE_WALL) return false;
+        if (kind == EDGE_DOOR) return edgeIsOpen(grid, e);
+        if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);
+        return true;
     }
 
     /// <summary>Does sight pass this edge? Not a wall, a shut door or boards.</summary>

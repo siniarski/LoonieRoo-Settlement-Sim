@@ -63,10 +63,11 @@ The sketch of 2026-11-09: the grid's per-tile layers kept per 32 x 32 chunk, all
 
 **The API.** The layers are not public: `Grids` is the only way in (the fields are internal to the sim, and inside it only Grid.cs and the save code's layer helpers touch them).
 - by tile: `getTile` / `setTile` (as before), `tileAt(grid, i)`, `groundAt(grid, x, y | i)` / `setGround`, `isExplored` / `exploredAt` / `setExplored`, `isDirty` / `setDirty` (as before) / `dirtAt`, `damageAt` / `setDamage` (as before), `edgeKind(grid, e)` (as before) / `setEdge` (as before);
+- edges by their tiles, with no index to split (the forms for hot loops): `edgeBetween(grid, ax, ay, bx, by, out kind)`, `edgeKindBetween`, `edgeAt(grid, x, y, side)`;
 - raw writes that note nothing (generation, loading, tests): `putTile`, `putEdge`, `putDirt`;
-- whole layers: `fillExplored`, `fillGround`, `anyUnexplored`, `anyEdges`, `tileCount`, and flat copies for tests, dumps and the text map (`Grids.allTiles(grid)`, `allGround`, `allExplored`, `allDirt`, `allDamage`, `allEdges`: O(map), never in a tick);
-- by chunk, for generation, saves and the renderer: `adoptLayers` (a made chunk's arrays moved into the world, not copied), `chunkHas`, row reads into a caller's buffer.
-An index out of range reads as the old `Js.Get` did (null tile, 0), and a write there is ignored or throws as the list did.
+- whole layers: `fillExplored`, `fillGround`, `anyUnexplored`, `anyEdges`, `tileCount`, `dirtyTiles`, `damagedTiles`, `memory` (slots allocated), and flat copies for tests, dumps and the text map (`Grids.allTiles(grid)`, `allGround`, `allExplored`, `allDirt`, `allDamage`, `allEdges`: O(map), never in a tick);
+- inside the sim only (the save code, rooms, reachability): a chunk's rows (`GridLayer.ReadRow` / `WriteRow`), `structureTiles` (the tiles with something on them), `bareChunk`, `tileCodeAt`.
+An index out of range reads as the old `Js.Get` did (null tile, 0), and a write there throws.
 
 **JSON.** Rule 7 holds: `StateJson` writes each layer as the flat array it always was (a converter per layer; the grid shapes them into chunks once its size is known, `IJsonOnDeserialized`), so state dumps, clones, hand-made-map saves and bug reports are the same bytes. The chunked save never wrote the layers whole; it now walks only the slots that exist.
 

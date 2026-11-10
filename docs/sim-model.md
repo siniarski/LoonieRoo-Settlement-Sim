@@ -19,7 +19,10 @@ pathfinding").
 
 ## Rooms
 
-- Rooms are found by flood fill over walls and doors, and recomputed only when walls or doors change.
+- Rooms are found by flood fill over walls and doors, and recomputed only when walls or doors change. The flood is
+  bounded (a region over 600 tiles, or touching water or the map's edge, is outdoors) and starts only from tiles with
+  something on or beside them, so its cost follows what stands on the map, not the map's size; labels are kept in
+  chunks (RoomLabels.cs), a tile in a chunk never labelled reading as outdoors (floor) or not floor.
 - A room has a player-designated purpose with requirements (e.g. housing needs N beds). Unmet requirements produce a
   visible "incomplete" state.
 - The auto-planner (Planner) is just another source of designations. It goes through the same command path as the

@@ -29,7 +29,7 @@ public static partial class Fog
 
     public static bool isExplored(SimState state, int x, int y)
     {
-        return Grids.inBounds(state.grid, x, y) && (Grids.exploredAt(state.grid, Grids.tileIndex(state.grid, x, y)) == 1);
+        return Grids.isExplored(state.grid, x, y);
     }
     public static bool isExplored(SimState state, double x, double y) => isExplored(state, Js.I(x), Js.I(y));
 

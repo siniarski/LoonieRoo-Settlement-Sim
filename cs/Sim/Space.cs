@@ -14,19 +14,21 @@ public static partial class Space
         public int[] queue = new int[1024];
 
         /// <summary>Marks a tile seen; false if it already was.</summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool Mark(int x, int y)
         {
             int c = (y >> 5) * cw + (x >> 5);
-            var a = seen[c];
-            if (a == null)
-            {
-                a = seen[c] = new uint[32 * 32];
-                allocated++;
-            }
+            var a = seen[c] ?? Allocate(c);
             ref uint stamp = ref a[((y & 31) << 5) | (x & 31)];
             if (stamp == gen) return false;
             stamp = gen;
             return true;
+        }
+
+        uint[] Allocate(int c)
+        {
+            allocated++;
+            return seen[c] = new uint[32 * 32];
         }
     }
 
@@ -63,13 +65,14 @@ public static partial class Space
         try
         {
             ++sc.gen;
+            var queue = sc.queue;
             int tail = 0;
             int start = from.y * width + from.x;
-            sc.queue[tail++] = start;
+            queue[tail++] = start;
             sc.Mark(from.x, from.y);
             for (int head = 0; head < tail && head < limit; head++)
             {
-                int i = sc.queue[head];
+                int i = queue[head];
                 int x = i % width;
                 int y = (i - x) / width;
                 if (accept(x, y)) return head == 0 ? from : new Point(x, y);
@@ -80,8 +83,12 @@ public static partial class Space
                     int ny = d == 0 ? y - 1 : d == 2 ? y + 1 : y;
                     if (!Grids.isWalkable(grid, nx, ny)) continue;
                     if (!sc.Mark(nx, ny)) continue;
-                    if (tail == sc.queue.Length) Array.Resize(ref sc.queue, tail * 2);
-                    sc.queue[tail++] = ny * width + nx;
+                    if (tail == queue.Length)
+                    {
+                        Array.Resize(ref queue, tail * 2);
+                        sc.queue = queue;
+                    }
+                    queue[tail++] = ny * width + nx;
                 }
             }
             return null;
