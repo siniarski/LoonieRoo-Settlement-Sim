@@ -353,6 +353,10 @@ public class Profile
             int gcs = GC.CollectionCount(0) - gc0;
             Thread.Sleep(500);
             var types = listener.bytes.OrderByDescending((kv) => kv.Value).Take(25).ToList();
+            // The replay on a second build, over the same ticks.
+            state = build();
+            Pathfinding.warmReach(state.grid, state.walkabilityVersion);
+            for (int t = 0; t < warm; t++) Tick.tick(state);
             acc.Clear();
             order.Clear();
             for (int t = 0; t < ticks; t++) ReplayTick(state);
@@ -360,7 +364,7 @@ public class Profile
             long totalB = acc.Values.Sum((a) => a.bytes);
             out_.Add($"== {name}: size {state.grid.width} survivors {state.survivors.Count} zombies {state.zombies.Count} animals {state.animals.Count} items {state.items.Count} jobs {state.jobs.Count} tick {state.tick}");
             out_.Add($"   whole tick: {ms:0.000} ms ({1000 / ms:0} ticks/s), {bytes / 1024:0.0} KB allocated a tick, {gcs} gen0 GCs over {ticks} ticks");
-            out_.Add($"   replayed:   {total / ticks:0.000} ms, {(double)totalB / ticks / 1024:0.0} KB a tick (step by step; the clocks add a little)");
+            out_.Add($"   replayed:   {total / ticks:0.000} ms, {(double)totalB / ticks / 1024:0.0} KB a tick (the same ticks step by step, on a second build; the clocks add a little)");
             out_.Add($"   {"step",-38} {"ms/tick",8} {"%",5} {"KB/tick",8} {"%",5} {"calls/tick",10}");
             foreach (var k in order.OrderByDescending((k) => acc[k].ms).Where((k) => acc[k].ms / total > 0.002 || (double)acc[k].bytes / Math.Max(1, totalB) > 0.002))
             {
