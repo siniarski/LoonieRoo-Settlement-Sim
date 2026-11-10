@@ -230,8 +230,8 @@ public partial class TalkTest
                     continue;
                 }
                 var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["EI.".padEnd(40, "."), "".padEnd(40, ".")] });
-                state.grid.explored.fill(0);
-                state.grid.explored[Js.Idx(0)] = 1;
+                Grids.fillExplored(state.grid, 0);
+                Grids.setExplored(state.grid, 0, 1);
                 Js.NN(state.furniture.find((f) => f.kind == "generator")).stored = 4;
                 state.nextId = Js.I(n);
                 var s = Survivors.addSurvivor(state, 5, 1);

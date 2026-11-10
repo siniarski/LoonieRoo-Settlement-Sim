@@ -210,7 +210,7 @@ void fragment() {
         int x0 = rx * REGION, y0 = ry * REGION;
         for (int y = y0; y < Math.Min(g.height, y0 + REGION); y += 2)
             for (int x = x0; x < Math.Min(g.width, x0 + REGION); x += 2)
-                h = h * 31 + g.ground[y * g.width + x];
+                h = h * 31 + Grids.groundAt(g, y * g.width + x);
         return h;
     }
 
@@ -230,7 +230,7 @@ void fragment() {
             int tx = Math.Clamp(x, 0, g.width - 1), ty = Math.Clamp(y, 0, g.height - 1), i = ty * g.width + tx;
             bool water;
             int ground;
-            if (Generated(state, tx, ty)) { water = g.tiles[i] == "water"; ground = g.ground[i]; }
+            if (Generated(state, tx, ty)) { water = Grids.tileAt(g, i) == "water"; ground = Grids.groundAt(g, i); }
             else (water, ground, _) = PlanGround(state, tx, ty, Ready(state, tx, ty));
             c = water ? WaterColour : GroundColour(ground);
             float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
@@ -259,8 +259,8 @@ void fragment() {
         bool Floor(int x, int y)
         {
             int i = y * g.width + x;
-            if (g.tiles[i] == "water") return false;
-            int gi = g.ground[i];
+            if (Grids.tileAt(g, i) == "water") return false;
+            int gi = Grids.groundAt(g, i);
             return gi >= 0 && gi < Grids.GROUNDS.Length && FLOORS.Contains(Grids.GROUNDS[gi]);
         }
         for (int y = 0; y < hgt; y++)

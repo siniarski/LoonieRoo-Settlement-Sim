@@ -73,7 +73,7 @@ public partial class SoloHarness
             { stop(); return; }
         }
         var edge = Grids.edgeBetween(state.grid, at.x, at.y, next.x, next.y);
-        var shutEdgeDoor = ((edge >= 0) && (Js.Get(state.grid.edges, edge) == Grids.EDGE_DOOR)) && !Grids.edgeIsOpen(state.grid, edge);
+        var shutEdgeDoor = ((edge >= 0) && (Grids.edgeKind(state.grid, edge) == Grids.EDGE_DOOR)) && !Grids.edgeIsOpen(state.grid, edge);
         if (Js.T(Js.T(shutEdgeDoor) || ((Grids.getTile(state.grid, next.x, next.y) == "door") && !Grids.isOpen(state.grid, next.x, next.y))))
         {
             stop();
@@ -420,7 +420,7 @@ public partial class SoloHarness
                 }
                 var spot = Space.nearestTile(state.grid, s.pos, (x, y) =>
         {
-            var g = Js.Get(Grids.GROUNDS, Js.NN(Js.Get(state.grid.ground, ((double)(y) * (state.grid.width)) + x)));
+            var g = Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(y) * (state.grid.width)) + x)));
             return ((((g == "grass") || (g == "field")) && Grids.isWalkable(state.grid, x, y)) && !Rooms.isIndoors(state, x, y)) && (Js.Get(state.foraged, Js.Str(((double)(y) * (state.grid.width)) + x)) != Time.dayOf(state.tick));
         }, 2000);
                 if (Js.T(spot))

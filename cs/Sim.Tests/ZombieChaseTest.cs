@@ -108,10 +108,10 @@ public partial class ZombieChaseTest
             var z = Js.NN(Js.Get(state.zombies, 0));
             z.kind = "static";
             z.targetId = s.id;
-            for (var t = 0; t < 200 && Js.Get(state.grid.edges, pane) == Grids.EDGE_WINDOW; t++)
+            for (var t = 0; t < 200 && Grids.edgeKind(state.grid, pane) == Grids.EDGE_WINDOW; t++)
             {
                 Tick.tick(state);
-                if (Js.Get(state.grid.edges, pane) == Grids.EDGE_WINDOW) expect(Motion.tileOf(z.at).x, DebugText.dumpText(state)).toBeLessThanOrEqual(8);
+                if (Grids.edgeKind(state.grid, pane) == Grids.EDGE_WINDOW) expect(Motion.tileOf(z.at).x, DebugText.dumpText(state)).toBeLessThanOrEqual(8);
             }
             // It got to the window (and is at it, or has broken it).
             expect(Motion.tileOf(z.at).x).toBeGreaterThanOrEqual(7);

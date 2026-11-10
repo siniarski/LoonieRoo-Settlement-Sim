@@ -84,7 +84,7 @@ public partial class HandiworkTest
             for (var seed = 1; seed <= 12; seed++)
             {
                 var state = ScenarioMod.loadScenario(new Scenario { seed = seed, map = ["s.."] });
-                state.grid.ground.fill(Grids.GROUNDS.indexOf("grass"));
+                Grids.fillGround(state.grid, Grids.GROUNDS.indexOf("grass"));
                 var s = Js.NN(Js.Get(state.survivors, 0));
                 s.id = $"s{Js.Str(((double)(seed) * (7)))}";
                 state.control = new Control { survivorId = s.id, dx = 0, dy = 0, facing = new Point { x = Js.I(1), y = Js.I(0) }, nextSwing = 0, busy = null };

@@ -102,13 +102,13 @@ public partial class HordesTest
             for (var t = 0; (t < 1500) && !doorHit; t++)
             {
                 Tick.tick(state);
-                if (Js.NN(Js.Get(state.grid.damage, ((double)(9) * (40)) + 24)) > 0)
+                if (Js.NN(Grids.damageAt(state.grid, ((double)(9) * (40)) + 24)) > 0)
                 {
                     doorHit = true;
                 }
                 for (var y = 6; y <= 12; y++)
                 {
-                    if (Js.NN(Js.Get(state.grid.damage, ((double)(y) * (40)) + 18)) > 0)
+                    if (Js.NN(Grids.damageAt(state.grid, ((double)(y) * (40)) + 18)) > 0)
                     {
                         wallHit = true;
                     }

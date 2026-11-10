@@ -43,7 +43,7 @@ public static partial class Sight
     /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
     public static bool opaque(Grid grid, int x, int y)
     {
-        var t = Js.Get(grid.tiles, Grids.tileIndex(grid, x, y));
+        var t = Grids.tileAt(grid, Grids.tileIndex(grid, x, y));
         return ((t == "wall") || (t == "barricade")) || ((t == "door") && !Grids.isOpen(grid, x, y));
     }
     public static bool opaque(Grid grid, double x, double y) => opaque(grid, Js.I(x), Js.I(y));

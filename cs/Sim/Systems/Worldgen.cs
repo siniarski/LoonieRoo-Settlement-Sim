@@ -66,7 +66,7 @@ public static partial class Worldgen
 
     public static void ground(SimState state, int x, int y, string g)
     {
-        state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))] = Grids.GROUNDS.indexOf(g);
+        Grids.setGround(state.grid, Grids.tileIndex(state.grid, x, y), Grids.GROUNDS.indexOf(g));
     }
     public static void ground(SimState state, double x, double y, string g) => ground(state, Js.I(x), Js.I(y), g);
 
@@ -90,7 +90,7 @@ public static partial class Worldgen
         var c = States.createState(new NewStateOptions { seed = l.seed, width = w, height = h });
         c.grid.ox = x0;
         c.grid.oy = y0;
-        c.grid.explored.fill(0);
+        Grids.fillExplored(c.grid, 0);
         c.settings = state.settings;
         c.world = state.world;
         drawChunk(c, l, cx, cy);
@@ -109,20 +109,22 @@ public static partial class Worldgen
         var s = c.grid;
         int Map(int i) => (s.oy + i / s.width) * g.width + s.ox + i % s.width;
         int MapEdge(int e) => Map(e / 2) * 2 + e % 2;
-        for (int i = 0; i < s.tiles.Count; i++)
+        for (int i = 0, n = Grids.tileCount(s); i < n; i++)
         {
             int at = Map(i);
-            if (g.tiles[at] != s.tiles[i])
+            var tile = Grids.tileAt(s, i)!;
+            if (Grids.tileAt(g, at) != tile)
             {
-                g.tiles[at] = s.tiles[i];
+                Grids.putTile(g, at, tile);
                 Grids.noteChange(g, at);
             }
-            g.ground[at] = s.ground[i];
+            Grids.setGround(g, at, Grids.groundAt(s, i));
             for (int side = 0; side < 2; side++)
             {
                 int e = 2 * i + side, ge = 2 * at + side;
-                if (g.edges[ge] == s.edges[e]) continue;
-                g.edges[ge] = s.edges[e];
+                int kind = Grids.edgeKind(s, e);
+                if (Grids.edgeKind(g, ge) == kind) continue;
+                Grids.putEdge(g, ge, kind);
                 Grids.noteEdgeChange(g, ge);
             }
         }
@@ -223,7 +225,7 @@ public static partial class Worldgen
                 }
                 var i = Grids.tileIndex(state.grid, x, y);
                 double w = wooded[(Js.I(y) - Js.I(y0)) * CHUNK + (Js.I(x) - Js.I(x0))];
-                if ((Js.Get(state.grid.tiles, i) == "floor") && !double.IsNaN(w) && (NatureMod.roll(l.seed, x, y, 12) < NatureMod.treeChanceAt(w)))
+                if ((Grids.tileAt(state.grid, i) == "floor") && !double.IsNaN(w) && (NatureMod.roll(l.seed, x, y, 12) < NatureMod.treeChanceAt(w)))
                 {
                     FurnitureMod.addFurniture(state, "tree", x, y);
                 }
@@ -254,7 +256,7 @@ public static partial class Worldgen
                     continue;
                 }
                 var chance = ((double)(isRoad(l, x, y) ? ROAD_STRAY_CHANCE : OPEN_STRAY_CHANCE)) * (scale);
-                if ((NatureMod.roll(l.seed, x, y, 0x7a10) >= chance) || (Js.Get(state.grid.tiles, Grids.tileIndex(state.grid, x, y)) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y)))
+                if ((NatureMod.roll(l.seed, x, y, 0x7a10) >= chance) || (Grids.tileAt(state.grid, Grids.tileIndex(state.grid, x, y)) != "floor") || Js.T(FurnitureMod.furnitureAt(state, x, y)))
                 {
                     continue;
                 }
@@ -403,7 +405,7 @@ public static partial class Worldgen
         }
         bool floorOnly(double x, double y)
         {
-            return Js.Get(state.grid.tiles, Grids.tileIndex(state.grid, x, y)) == "floor";
+            return Grids.tileAt(state.grid, Grids.tileIndex(state.grid, x, y)) == "floor";
         }
         foreach (var z in Js.Iter(state.zombies))
         {
@@ -486,14 +488,14 @@ public static partial class Worldgen
         {
             Vehicles.addVehicle(state, park.x, park.y, JsMath.floor(((double)(Hash.hashRoll(seed, 0x7a0d)) * (32))), ((double)(Vehicles.FUEL_MAX) / (2)), 700, "truck");
         }
-        state.grid.explored.fill(0);
+        Grids.fillExplored(state.grid, 0);
         for (var y = l.start.y - START_REVEAL_RADIUS; y <= (l.start.y + START_REVEAL_RADIUS); y++)
         {
             for (var x = l.start.x - START_REVEAL_RADIUS; x <= (l.start.x + START_REVEAL_RADIUS); x++)
             {
                 if (Grids.inBounds(state.grid, x, y) && NatureMod.nearStart(l, x, y, START_REVEAL_RADIUS + 1))
                 {
-                    state.grid.explored[Js.Idx(Grids.tileIndex(state.grid, x, y))] = 1;
+                    Grids.setExplored(state.grid, Grids.tileIndex(state.grid, x, y), 1);
                 }
             }
         }

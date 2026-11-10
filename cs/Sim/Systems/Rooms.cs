@@ -69,12 +69,11 @@ public static partial class Rooms
         var __d0 = grid;
         var width = __d0.width;
         var height = __d0.height;
-        var tiles = __d0.tiles;
         var labels = new Int32Array(((double)(width) * (height))).fill(NOT_FLOOR);
         var UNSEEN = -3;
-        for (var i = 0; i < tiles.length; i++)
+        for (var i = 0; i < Grids.tileCount(grid); i++)
         {
-            if (Js.Get(tiles, i) == "floor")
+            if (Grids.tileAt(grid, i) == "floor")
             {
                 labels[Js.Idx(i)] = UNSEEN;
             }
@@ -108,7 +107,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = ((double)(ny) * (width)) + nx;
-                    var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
+                    var edge = Grids.edgeKind(grid, Grids.edgeBetween(grid, x, y, nx, ny));
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;
@@ -118,11 +117,11 @@ public static partial class Rooms
                         doorSet.add(n);
                         continue;
                     }
-                    if (Js.Get(tiles, n) == "door")
+                    if (Grids.tileAt(grid, n) == "door")
                     {
                         doorSet.add(n);
                     }
-                    if (Js.Get(tiles, n) == "water")
+                    if (Grids.tileAt(grid, n) == "water")
                     {
                         touchesEdge = true;
                     }
@@ -335,7 +334,6 @@ public static partial class Rooms
         var __d2 = grid;
         var width = __d2.width;
         var height = __d2.height;
-        var tiles = __d2.tiles;
         var labels = old.labels.slice();
         var UNSEEN = -3;
         var removed = new JsSet<double>();
@@ -380,7 +378,7 @@ public static partial class Rooms
         }
         foreach (var j in Js.Iter(seeds))
         {
-            labels[Js.Idx(j)] = (Js.Get(tiles, j) == "floor") ? UNSEEN : NOT_FLOOR;
+            labels[Js.Idx(j)] = (Grids.tileAt(grid, j) == "floor") ? UNSEEN : NOT_FLOOR;
         }
         List<Room> fresh = [];
         foreach (var start in Js.Iter(seeds))
@@ -416,7 +414,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = ((double)(ny) * (width)) + nx;
-                    var edge = Js.At(grid.edges, Grids.edgeBetween(grid, x, y, nx, ny), Grids.EDGE_NONE);
+                    var edge = Grids.edgeKind(grid, Grids.edgeBetween(grid, x, y, nx, ny));
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;
@@ -426,15 +424,15 @@ public static partial class Rooms
                         doorSet.add(n);
                         continue;
                     }
-                    if (Js.Get(tiles, n) == "door")
+                    if (Grids.tileAt(grid, n) == "door")
                     {
                         doorSet.add(n);
                     }
-                    if (Js.Get(tiles, n) == "water")
+                    if (Grids.tileAt(grid, n) == "water")
                     {
                         outdoors = true;
                     }
-                    if ((Js.Get(tiles, n) != "floor") || inRegion.has(n))
+                    if ((Grids.tileAt(grid, n) != "floor") || inRegion.has(n))
                     {
                         continue;
                     }

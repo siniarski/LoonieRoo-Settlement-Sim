@@ -31,7 +31,7 @@ public partial class SkillsTest
         s.xp = new() { ["build"] = xp };
         s.traits = traits;
         Commands.applyCommand(state, new Command { type = "designateRemove", x = Js.I(1), y = Js.I(0) });
-        return new RemoveWallResult { ticks = runUntil(state, (st) => Js.Get(st.grid.tiles, 1) == "floor"), s = s };
+        return new RemoveWallResult { ticks = runUntil(state, (st) => Grids.tileAt(st.grid, 1) == "floor"), s = s };
     }
 
     /// <summary>skills</summary>
@@ -123,7 +123,7 @@ public partial class SkillsTest
             s.priorities = new(JobTypes.NO_JOBS) {  };
             for (var x = 0; x < 6; x++)
             {
-                state.grid.ground[Js.Idx(x)] = 2;
+                Grids.setGround(state.grid, x, 2);
             }
             Commands.applyCommand(state, new Command { type = "moveSurvivor", survivorId = s.id, x = Js.I(5), y = Js.I(0) });
             Tick.tick(state);

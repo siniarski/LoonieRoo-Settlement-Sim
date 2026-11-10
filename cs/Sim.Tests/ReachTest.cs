@@ -65,10 +65,10 @@ public partial class ReachTest
             }
             var __d0 = state;
             var grid = __d0.grid;
-            var doorTiles = grid.tiles.flatMap((t, i) => (t == "door") ? ((List<double>)[i]) : ((List<double>)[]));
-            var edgeDoors = grid.edges.flatMap((k, e) => (k == Grids.EDGE_DOOR) ? ((List<double>)[e]) : ((List<double>)[]));
+            var doorTiles = Grids.allTiles(grid).flatMap((t, i) => (t == "door") ? ((List<double>)[i]) : ((List<double>)[]));
+            var edgeDoors = Grids.allEdges(grid).flatMap((k, e) => (k == Grids.EDGE_DOOR) ? ((List<double>)[e]) : ((List<double>)[]));
             expect(edgeDoors.length).toBeGreaterThan(10);
-            var floor = grid.tiles.flatMap((t, i) => (t == "floor") ? ((List<double>)[i]) : ((List<double>)[]));
+            var floor = Grids.allTiles(grid).flatMap((t, i) => (t == "floor") ? ((List<double>)[i]) : ((List<double>)[]));
             Point at(double i)
             {
                 return new Point { x = Js.I(i % grid.width), y = Js.I(JsMath.floor(((double)(i) / (grid.width)))) };
@@ -140,7 +140,7 @@ public partial class ReachTest
                     {
                         Grids.setEdge(grid, bx, y, (roll < 0.55) ? "n" : "w", Js.NN(Js.Get(kinds, JsMath.floor(((double)(Hash.hashRoll(round, k, 15)) * (kinds.length))))));
                     }
-                    else if (Js.Get(grid.tiles, ((double)(y) * (128)) + x) == "door")
+                    else if (Grids.tileAt(grid, ((double)(y) * (128)) + x) == "door")
                     {
                         Commands.applyCommand(state, new Command { type = "toggleLock", x = Js.I(x), y = Js.I(y) });
                     }
@@ -177,7 +177,7 @@ public partial class ReachTest
                         @checked++;
                     }
                 }
-                var floor = grid.tiles.flatMap((t, i) => ((t == "floor") || (t == "door")) ? ((List<double>)[i]) : ((List<double>)[]));
+                var floor = Grids.allTiles(grid).flatMap((t, i) => ((t == "floor") || (t == "door")) ? ((List<double>)[i]) : ((List<double>)[]));
                 foreach (var mover in Js.Iter((List<string>)["zombie", "survivor", "raider", "free", "breacher"]))
                 {
                     for (var k = 0; k < 30; k++)

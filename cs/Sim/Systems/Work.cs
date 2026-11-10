@@ -687,7 +687,7 @@ public static partial class Work
             return;
         }
         Noise.makeNoise(state, job, "building");
-        finishJob(state, s, job, ((((("repaired the " + ((Js.Get(state.grid.edges, e) == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
+        finishJob(state, s, job, ((((("repaired the " + ((Grids.edgeKind(state.grid, e) == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
     }
     public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, Js.I(e));
 

@@ -22,6 +22,21 @@ public static partial class Grids
     public static List<Point> neighbours4(Grid grid, double x, double y) => neighbours4(grid, (int)x, (int)y);
     public static void noteChange(Grid grid, double i) => noteChange(grid, (int)i);
     public static void setDamage(Grid grid, double i, double value) => setDamage(grid, (int)i, value);
+
+    // The layers by a JS-number index: a fractional or out-of-range one reads as a JS array does there (no tile, 0);
+    // writes take the whole part, as `list[Js.Idx(i)] = v` did.
+    static bool Index(double i) => i >= 0 && i < int.MaxValue && i == Math.Floor(i);
+    public static string? tileAt(Grid grid, double i) => Index(i) ? tileAt(grid, (int)i) : null;
+    public static int groundAt(Grid grid, double i) => Index(i) ? groundAt(grid, (int)i) : 0;
+    public static int exploredAt(Grid grid, double i) => Index(i) ? exploredAt(grid, (int)i) : 0;
+    public static int dirtAt(Grid grid, double i) => Index(i) ? dirtAt(grid, (int)i) : 0;
+    public static double damageAt(Grid grid, double i) => Index(i) ? damageAt(grid, (int)i) : 0;
+    public static int edgeKind(Grid grid, double e) => Index(e) ? edgeKind(grid, (int)e) : EDGE_NONE;
+    public static void putTile(Grid grid, double i, string tile) => putTile(grid, (int)i, tile);
+    public static void setGround(Grid grid, double i, double ground) => setGround(grid, (int)i, (int)ground);
+    public static void setExplored(Grid grid, double i, double seen) => setExplored(grid, (int)i, (int)seen);
+    public static void putDirt(Grid grid, double i, double dirt) => putDirt(grid, (int)i, (int)dirt);
+    public static void putEdge(Grid grid, double e, double kind) => putEdge(grid, (int)e, (int)kind);
 }
 
 public static partial class Pathfinding

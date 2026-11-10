@@ -207,7 +207,7 @@ public static partial class Planner
                 continue;
             }
             var around = Grids.neighbours4(grid, p.x, p.y).map((n) => Grids.getTile(grid, n.x, n.y));
-            var edges = Grids.neighbours4(grid, p.x, p.y).map((n) => Js.At(grid.edges, Grids.edgeBetween(grid, p.x, p.y, n.x, n.y), Grids.EDGE_NONE));
+            var edges = Grids.neighbours4(grid, p.x, p.y).map((n) => Grids.edgeKind(grid, Grids.edgeBetween(grid, p.x, p.y, n.x, n.y)));
             if (around.includes("door") || edges.includes(Grids.EDGE_DOOR))
             {
                 continue;

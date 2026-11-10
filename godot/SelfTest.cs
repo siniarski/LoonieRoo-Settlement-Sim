@@ -218,9 +218,9 @@ public partial class Game
         var at = ControlMod.controlled(state)!.pos;
         // The north border of the tile two to your right and two down, clicked just inside its top edge.
         int tx = at.x + 2, ty = at.y + 2, e = (ty * state.grid.width + tx) * 2;
-        int before = state.grid.edges[e];
+        int before = Grids.edgeKind(state.grid, e);
         await Click(ScreenOf(tx + 0.5, ty + 0.05), MouseButton.Left, shift: true);
-        Check("Shift-click places an edge wall", before != Grids.EDGE_WALL && state.grid.edges[e] == Grids.EDGE_WALL, $"edge {before} -> {state.grid.edges[e]}");
+        Check("Shift-click places an edge wall", before != Grids.EDGE_WALL && Grids.edgeKind(state.grid, e) == Grids.EDGE_WALL, $"edge {before} -> {Grids.edgeKind(state.grid, e)}");
         // A drag paints: designate a row of walls (blueprints), not instantly.
         int blueprints = state.blueprints.Count;
         var from = ScreenOf(tx + 0.4, ty + 3.02);

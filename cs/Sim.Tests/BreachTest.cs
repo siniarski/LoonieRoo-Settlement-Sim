@@ -61,7 +61,7 @@ public partial class BreachTest
         {
             var state = setup(HUT);
             var s = Js.NN(Js.Get(state.survivors, 0));
-            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
+            runUntil(state, (_) => Grids.tileAt(state.grid, ((double)(3) * (11)) + 5) == "floor");
             expect(lastEvents(state)).toContain("Zombies broke through the door at (5, 3)");
             expect(state.blueprints).toMatchObject(Js.Arr([Js.Obj(("x", (object?)(5)), ("y", (object?)(3)), ("target", (object?)("door")))]));
             expect(damageAt(state, 5, 3)).toBe(0);
@@ -74,7 +74,7 @@ public partial class BreachTest
             var state = setup(HUT);
             runUntil(state, (_) => damageAt(state, 5, 3) > 0);
             var first = state.tick;
-            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
+            runUntil(state, (_) => Grids.tileAt(state.grid, ((double)(3) * (11)) + 5) == "floor");
             expect(state.tick - first).toBeGreaterThanOrEqual(((double)((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1)) * (10)));
             expect(state.tick - first).toBeLessThanOrEqual(((double)((((double)(Breach.STRUCTURE_HEALTH["door"]) / (40)) - 1)) * (10)) + 2);
         }
@@ -95,7 +95,7 @@ public partial class BreachTest
             {
                 Tick.tick(state);
             }
-            expect(state.grid.damage.every((d) => d == 0)).toBe(true);
+            expect(Grids.allDamage(state.grid).every((d) => d == 0)).toBe(true);
         }
 
         [Fact(DisplayName = "breaching > survivors repair damaged doors from beside them")]
@@ -129,10 +129,10 @@ public partial class BreachTest
         public void T008_a_broken_door_is_rebuilt_with_wood_like_any_other()
         {
             var state = setup(HUT.map((r, y) => (y == 4) ? "w.........." : r));
-            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor");
+            runUntil(state, (_) => Grids.tileAt(state.grid, ((double)(3) * (11)) + 5) == "floor");
             state.zombies = [];
             Js.NN(Js.Get(state.survivors, 0)).priorities = new(JobTypes.NO_JOBS) { ["build"] = 3, ["haul"] = 3 };
-            runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "door", 2000);
+            runUntil(state, (_) => Grids.tileAt(state.grid, ((double)(3) * (11)) + 5) == "door", 2000);
         }
 
         [Fact(DisplayName = "breaching > a repairer slows a breach but cannot hold the door alone")]
@@ -141,7 +141,7 @@ public partial class BreachTest
             double time(JsRecord<double> jobs)
             {
                 var state = setup(HUT, jobs);
-                return runUntil(state, (_) => Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5) == "floor", 3000);
+                return runUntil(state, (_) => Grids.tileAt(state.grid, ((double)(3) * (11)) + 5) == "floor", 3000);
             }
             expect(time(new() { ["build"] = 3 })).toBeGreaterThan(time(new() {  }) + 50);
         }
@@ -154,7 +154,7 @@ public partial class BreachTest
             Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(1), y = Js.I(0) });
             expect(damageAt(state, 1, 0)).toBe(0);
             Commands.applyCommand(state, new Command { type = "placeWall", x = Js.I(1), y = Js.I(0) });
-            expect(Js.Missing(state.grid.damage, 1) ? null : (object?)(Js.Get(state.grid.damage, 1))).toBe(0);
+            expect(Js.Missing(Grids.allDamage(state.grid), 1) ? null : (object?)(Grids.damageAt(state.grid, 1))).toBe(0);
             expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
         }
     }

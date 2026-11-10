@@ -377,7 +377,7 @@ public partial class TownsTest
                 List<double> queue = [];
                 for (var i = 0; i < ((double)(size) * (size)); i++)
                 {
-                    if ((Js.Get(state.grid.ground, i) == road) && (Js.Get(state.grid.tiles, i) == "floor"))
+                    if ((Grids.groundAt(state.grid, i) == road) && (Grids.tileAt(state.grid, i) == "floor"))
                     {
                         seen[Js.Idx(i)] = 1;
                         queue.push(i);

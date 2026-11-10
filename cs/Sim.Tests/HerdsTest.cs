@@ -225,7 +225,7 @@ public partial class HerdsTest
         public void T013_arrive_in_the_dark_past_explored_ground_and_leave_at_dawn_wh()
         {
             var state = field(80, 80);
-            state.grid.explored.fill(0);
+            Grids.fillExplored(state.grid, 0);
             Js.NN(Js.Get(state.survivors, 0)).pos = new Point { x = Js.I(40), y = Js.I(40) };
             Tick.tick(state);
             Zombies.addZombie(state, 0, 0, 200, "static");

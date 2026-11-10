@@ -65,7 +65,7 @@ public partial class World2Test
             generateAll(plain);
             double water(SimState s)
             {
-                return s.grid.tiles.filter((t) => t == "water").length;
+                return Grids.allTiles(s.grid).filter((t) => t == "water").length;
             }
             expect(water(state)).toBeGreaterThan(water(plain));
             var l = Worldgen.layout(11, SIZE, "islands");
@@ -75,7 +75,7 @@ public partial class World2Test
                 {
                     continue;
                 }
-                expect(Js.Missing(state.grid.tiles, i) ? null : (object?)(Js.Get(state.grid.tiles, i))).not.toBe("water");
+                expect((object?)(Grids.tileAt(state.grid, i))).not.toBe("water");
             }
         }
     }

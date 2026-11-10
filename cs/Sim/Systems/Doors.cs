@@ -19,7 +19,7 @@ public static partial class Doors
         if (Js.T(from))
         {
             var e = Grids.edgeBetween(state.grid, from.x, from.y, x, y);
-            if ((((e >= 0) && (Js.Get(state.grid.edges, e) == Grids.EDGE_DOOR)) && !Grids.edgeIsOpen(state.grid, e)) && (hasKey || !state.grid.edgeLocked.includes(e)))
+            if ((((e >= 0) && (Grids.edgeKind(state.grid, e) == Grids.EDGE_DOOR)) && !Grids.edgeIsOpen(state.grid, e)) && (hasKey || !state.grid.edgeLocked.includes(e)))
             {
                 state.grid.edgeOpen.push(e);
                 state.grid.edgePassing.push(e);
@@ -159,7 +159,7 @@ public static partial class Doors
         var __d3 = state;
         var grid = __d3.grid;
         var e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
-        if ((e < 0) || (Js.Get(grid.edges, e) != Grids.EDGE_DOOR))
+        if ((e < 0) || (Grids.edgeKind(grid, e) != Grids.EDGE_DOOR))
         {
             return null;
         }

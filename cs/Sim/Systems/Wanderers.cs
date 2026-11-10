@@ -109,7 +109,7 @@ public static partial class Wanderers
     /// <summary>Out at the edge of what you've seen, a short walk from someone, on open ground.</summary>
     public static Point? frontierSpot(SimState state, JsSet<string> taken)
     {
-        if ((state.survivors.length == 0) || !state.grid.explored.includes(0))
+        if ((state.survivors.length == 0) || !Grids.anyUnexplored(state.grid))
         {
             return null;
         }

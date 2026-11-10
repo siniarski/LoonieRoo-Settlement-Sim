@@ -75,7 +75,7 @@ public partial class DefencesTest
             expect(Pathfinding.findPath(state.grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(11), y = Js.I(0) })).not.toBeNull();
             var fenced = setup(["z..=..s", "###=###"]);
             runUntil(fenced, (_) => fenced.grid.damageList.length > 0);
-            expect(Js.NN(Js.Get(fenced.grid.damage, 3)) + Js.NN(Js.Get(fenced.grid.damage, 7 + 3))).toBeGreaterThan(0);
+            expect(Js.NN(Grids.damageAt(fenced.grid, 3)) + Js.NN(Grids.damageAt(fenced.grid, 7 + 3))).toBeGreaterThan(0);
             expect(Breach.STRUCTURE_HEALTH["barricade"]).toBeLessThan(Breach.STRUCTURE_HEALTH["wall"]);
             runUntil(fenced, (_) => fenced.blueprints.length > 0, 3000);
             expect(fenced.blueprints.map((b) => $"{Js.Str(b.target)}@{Js.Str(b.x)}")).toEqual(Js.Arr(["barricade@3"]));
@@ -86,7 +86,7 @@ public partial class DefencesTest
         {
             var state = setup(["-..", "s.w"], new() { ["build"] = 3, ["haul"] = 3 });
             state.tick = Js.I(((double)(6) * (Time.TICKS_PER_HOUR)));
-            runUntil(state, (_) => Js.Get(state.grid.tiles, 0) == "barricade");
+            runUntil(state, (_) => Grids.tileAt(state.grid, 0) == "barricade");
         }
     }
 }

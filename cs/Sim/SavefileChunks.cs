@@ -81,12 +81,12 @@ public static partial class SavefileChunks
                 int i = (y0 + ly) * g.width + x0 + lx;
                 switch (layer)
                 {
-                    case "tiles": s.strings[v++] = g.tiles[i]; break;
-                    case "ground": s.ints[v++] = g.ground[i]; break;
-                    case "dirt": s.ints[v++] = g.dirt[i]; break;
-                    case "damage": s.doubles[v++] = g.damage[i]; break;
-                    case "explored": s.ints[v++] = g.explored[i]; break;
-                    case "edges": s.ints[v++] = g.edges[2 * i]; s.ints[v++] = g.edges[2 * i + 1]; break;
+                    case "tiles": s.strings[v++] = g.tileLayer[i]; break;
+                    case "ground": s.ints[v++] = g.groundLayer[i]; break;
+                    case "dirt": s.ints[v++] = g.dirtLayer[i]; break;
+                    case "damage": s.doubles[v++] = g.damageLayer[i]; break;
+                    case "explored": s.ints[v++] = g.exploredLayer[i]; break;
+                    case "edges": s.ints[v++] = g.edgeLayer[2 * i]; s.ints[v++] = g.edgeLayer[2 * i + 1]; break;
                 }
             }
         w.WritePropertyName(layer);
@@ -125,15 +125,15 @@ public static partial class SavefileChunks
             int j = c == null ? -1 : (y0 + ly - c.oy) * c.width + (x0 - c.ox);
             bool differs = layer switch
             {
-                "tiles" => c == null ? SaveWriter.Span(g.tiles).Slice(i, w).IndexOfAnyExcept(Grids.FLOOR) >= 0
-                    : !SaveWriter.Span(g.tiles).Slice(i, w).SequenceEqual(SaveWriter.Span(c.tiles).Slice(j, w)),
-                "ground" => c == null ? SaveWriter.Span(g.ground).Slice(i, w).IndexOfAnyExcept(0) >= 0
-                    : !SaveWriter.Span(g.ground).Slice(i, w).SequenceEqual(SaveWriter.Span(c.ground).Slice(j, w)),
-                "edges" => c == null ? SaveWriter.Span(g.edges).Slice(2 * i, 2 * w).IndexOfAnyExcept(Grids.EDGE_NONE) >= 0
-                    : !SaveWriter.Span(g.edges).Slice(2 * i, 2 * w).SequenceEqual(SaveWriter.Span(c.edges).Slice(2 * j, 2 * w)),
-                "dirt" => SaveWriter.Span(g.dirt).Slice(i, w).IndexOfAnyExcept(0) >= 0,
-                "explored" => SaveWriter.Span(g.explored).Slice(i, w).IndexOfAnyExcept(0) >= 0,
-                "damage" => NonZero(SaveWriter.Span(g.damage).Slice(i, w)),
+                "tiles" => c == null ? SaveWriter.Span(g.tileLayer).Slice(i, w).IndexOfAnyExcept(Grids.FLOOR) >= 0
+                    : !SaveWriter.Span(g.tileLayer).Slice(i, w).SequenceEqual(SaveWriter.Span(c.tileLayer).Slice(j, w)),
+                "ground" => c == null ? SaveWriter.Span(g.groundLayer).Slice(i, w).IndexOfAnyExcept(0) >= 0
+                    : !SaveWriter.Span(g.groundLayer).Slice(i, w).SequenceEqual(SaveWriter.Span(c.groundLayer).Slice(j, w)),
+                "edges" => c == null ? SaveWriter.Span(g.edgeLayer).Slice(2 * i, 2 * w).IndexOfAnyExcept(Grids.EDGE_NONE) >= 0
+                    : !SaveWriter.Span(g.edgeLayer).Slice(2 * i, 2 * w).SequenceEqual(SaveWriter.Span(c.edgeLayer).Slice(2 * j, 2 * w)),
+                "dirt" => SaveWriter.Span(g.dirtLayer).Slice(i, w).IndexOfAnyExcept(0) >= 0,
+                "explored" => SaveWriter.Span(g.exploredLayer).Slice(i, w).IndexOfAnyExcept(0) >= 0,
+                "damage" => NonZero(SaveWriter.Span(g.damageLayer).Slice(i, w)),
                 _ => false,
             };
             if (differs) return true;
@@ -292,12 +292,12 @@ public static partial class SavefileChunks
         var state = o.Deserialize<SimState>(StateJson.Options) ?? throw new InvalidDataException("not a sim state");
         var g = state.grid;
         int size = g.width, total = g.width * g.height, n = (int)state.world!.chunks;
-        g.tiles = Enumerable.Repeat(Grids.FLOOR, total).ToList();
-        g.ground = Enumerable.Repeat(0, total).ToList();
-        g.edges = Enumerable.Repeat(Grids.EDGE_NONE, 2 * total).ToList();
-        g.dirt = Enumerable.Repeat(0, total).ToList();
-        g.damage = Enumerable.Repeat(0.0, total).ToList();
-        g.explored = Enumerable.Repeat(0, total).ToList();
+        g.tileLayer = Enumerable.Repeat(Grids.FLOOR, total).ToList();
+        g.groundLayer = Enumerable.Repeat(0, total).ToList();
+        g.edgeLayer = Enumerable.Repeat(Grids.EDGE_NONE, 2 * total).ToList();
+        g.dirtLayer = Enumerable.Repeat(0, total).ToList();
+        g.damageLayer = Enumerable.Repeat(0.0, total).ToList();
+        g.exploredLayer = Enumerable.Repeat(0, total).ToList();
 
         // Every generated chunk made again, laid in.
         // Each one's hash as made noted (in the file's order; a schema-77 save has none, so they're added in index order).
@@ -308,13 +308,13 @@ public static partial class SavefileChunks
             var chunk = made.Get(state, index);
             state.world.made[Js.Str(index)] = madeHash(chunk);
             var c = chunk.grid;
-            for (int i = 0; i < c.tiles.Count; i++)
+            for (int i = 0; i < c.tileLayer.Count; i++)
             {
                 int at = (c.oy + i / c.width) * size + c.ox + i % c.width;
-                g.tiles[at] = c.tiles[i];
-                g.ground[at] = c.ground[i];
-                g.edges[2 * at] = c.edges[2 * i];
-                g.edges[2 * at + 1] = c.edges[2 * i + 1];
+                g.tileLayer[at] = c.tileLayer[i];
+                g.groundLayer[at] = c.groundLayer[i];
+                g.edgeLayer[2 * at] = c.edgeLayer[2 * i];
+                g.edgeLayer[2 * at + 1] = c.edgeLayer[2 * i + 1];
             }
         }
         // The differences over it.
@@ -333,12 +333,12 @@ public static partial class SavefileChunks
                 {
                     switch (layer)
                     {
-                        case "tiles": { var x = value?.GetValue<string>()!; for (int k = 0; k < count; k++) g.tiles[At(v++)] = x; break; }
-                        case "ground": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.ground[At(v++)] = x; break; }
-                        case "dirt": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.dirt[At(v++)] = x; break; }
-                        case "damage": { double x = Num(value); for (int k = 0; k < count; k++) g.damage[At(v++)] = x; break; }
-                        case "explored": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.explored[At(v++)] = x; break; }
-                        case "edges": { int x = (int)Num(value); for (int k = 0; k < count; k++, v++) g.edges[2 * At(v / 2) + v % 2] = x; break; }
+                        case "tiles": { var x = value?.GetValue<string>()!; for (int k = 0; k < count; k++) g.tileLayer[At(v++)] = x; break; }
+                        case "ground": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.groundLayer[At(v++)] = x; break; }
+                        case "dirt": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.dirtLayer[At(v++)] = x; break; }
+                        case "damage": { double x = Num(value); for (int k = 0; k < count; k++) g.damageLayer[At(v++)] = x; break; }
+                        case "explored": { int x = (int)Num(value); for (int k = 0; k < count; k++) g.exploredLayer[At(v++)] = x; break; }
+                        case "edges": { int x = (int)Num(value); for (int k = 0; k < count; k++, v++) g.edgeLayer[2 * At(v / 2) + v % 2] = x; break; }
                     }
                 });
             }

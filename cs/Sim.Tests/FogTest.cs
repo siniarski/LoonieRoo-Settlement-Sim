@@ -26,7 +26,7 @@ public partial class FogTest
     {
         jobs ??= new() {  };
         var state = ScenarioMod.loadScenario(new Scenario { seed = 2, map = map });
-        state.grid.explored.fill(0);
+        Grids.fillExplored(state.grid, 0);
         foreach (var s in Js.Iter(state.survivors))
         {
             s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });

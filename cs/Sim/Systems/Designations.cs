@@ -50,11 +50,11 @@ public static partial class Designations
         if (Js.T(bp.side))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
-            if ((bp.target == "barricade") && Grids.isWindow(Js.Get(state.grid.edges, e)))
+            if ((bp.target == "barricade") && Grids.isWindow(Grids.edgeKind(state.grid, e)))
             {
                 return !state.grid.edgeBoarded.includes(e);
             }
-            return Js.Get(state.grid.edges, e) == Grids.EDGE_NONE;
+            return Grids.edgeKind(state.grid, e) == Grids.EDGE_NONE;
         }
         if (bp.target == "floor")
         {
@@ -101,7 +101,7 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if ((Js.T(bp.side) && (bp.target == "barricade")) && Grids.isWindow(Js.Get(state.grid.edges, Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))))
+        if ((Js.T(bp.side) && (bp.target == "barricade")) && Grids.isWindow(Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
             if (!state.grid.edgeBoarded.includes(e))

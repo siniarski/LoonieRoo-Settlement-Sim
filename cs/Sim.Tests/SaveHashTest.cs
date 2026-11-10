@@ -62,7 +62,7 @@ public class SaveHashTest
         var before = Savefile.toSaveFile(s);
         expect(ChunkEntry(before, index)).toBe(null);
         int x = index % n * Worldgen.CHUNK + 7, y = index / n * Worldgen.CHUNK + 9;
-        Grids.setTile(s.grid, x, y, s.grid.tiles[y * s.grid.width + x] == "wall" ? "floor" : "wall");
+        Grids.setTile(s.grid, x, y, Grids.tileAt(s.grid, y * s.grid.width + x) == "wall" ? "floor" : "wall");
         expect(SavefileChunks.changed(s).Contains(index)).toBe(true);
         var after = Savefile.toSaveFile(s);
         expect(ChunkEntry(after, index)?["tiles"] != null).toBe(true);

@@ -188,8 +188,8 @@ public sealed class Roofs
         int held = 0;
         foreach (var (e, outside) in b.perimeter)
         {
-            if (e >= 0 && g.edges[e] != Grids.EDGE_NONE) held++;
-            else if (outside >= 0 && g.tiles[outside] is "wall" or "door" or "barricade") held++;
+            if (e >= 0 && Grids.edgeKind(g, e) != Grids.EDGE_NONE) held++;
+            else if (outside >= 0 && Grids.tileAt(g, outside) is "wall" or "door" or "barricade") held++;
         }
         return b.perimeter.Count > 0 && held >= STANDING * b.perimeter.Count;
     }
@@ -424,7 +424,7 @@ public sealed class Roofs
             int x = i % g.width, y = i / g.width;
             for (int dy = -1; dy <= 1; dy++)
                 for (int dx = -1; dx <= 1; dx++)
-                    if (Grids.inBounds(g, x + dx, y + dy) && g.tiles[(y + dy) * g.width + x + dx] is "wall" or "door" or "barricade")
+                    if (Grids.inBounds(g, x + dx, y + dy) && Grids.tileAt(g, (y + dy) * g.width + x + dx) is "wall" or "door" or "barricade")
                         under.Add((y + dy) * g.width + x + dx);
         }
         foreach (var r in Rectangles(g, under))

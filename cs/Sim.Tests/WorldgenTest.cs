@@ -42,14 +42,14 @@ public partial class WorldgenTest
 
         public static int count(Func<string, bool> pred)
         {
-            return world.grid.tiles.filter(pred).length;
+            return Grids.allTiles(world.grid).filter(pred).length;
         }
 
         [Fact(DisplayName = "world generation > is the same world every time for a seed, and a different one for another seed")]
         public void T005_is_the_same_world_every_time_for_a_seed_and_a_different_one_()
         {
             expect(Js.Json_stringify(Worldgen.createWorld(7, SIZE))).toBe(Js.Json_stringify(world));
-            expect(Worldgen.createWorld(8, SIZE).grid.tiles.join()).not.toBe(world.grid.tiles.join());
+            expect(Grids.allTiles(Worldgen.createWorld(8, SIZE).grid).join()).not.toBe(Grids.allTiles(world.grid).join());
         }
 
         [Fact(DisplayName = "world generation > generates any chunk the same whatever order the chunks come in")]
@@ -67,8 +67,8 @@ public partial class WorldgenTest
             {
                 Worldgen.generateChunk(backward, l, i % n, JsMath.floor(((double)(i) / (n))));
             }
-            expect(backward.grid.tiles).toEqual(forward.grid.tiles);
-            expect(backward.grid.ground).toEqual(forward.grid.ground);
+            expect(Grids.allTiles(backward.grid)).toEqual(Grids.allTiles(forward.grid));
+            expect(Grids.allGround(backward.grid)).toEqual(Grids.allGround(forward.grid));
             List<string> things(SimState s)
             {
                 return s.furniture.map((f) => $"{Js.Str(f.kind)}@{Js.Str(f.x)},{Js.Str(f.y)}:{Js.Str(f.loot)}").sort();
@@ -79,9 +79,9 @@ public partial class WorldgenTest
         [Fact(DisplayName = "world generation > has roads, ruins with crates, forest, and water")]
         public void T007_has_roads_ruins_with_crates_forest_and_water()
         {
-            expect(world.grid.ground.filter((g) => g == 2).length).toBeGreaterThan(SIZE);
+            expect(Grids.allGround(world.grid).filter((g) => g == 2).length).toBeGreaterThan(SIZE);
             expect(count((t) => t == "water")).toBeGreaterThan(SIZE);
-            expect(world.grid.edges.filter((e) => e == 1).length).toBeGreaterThan(100);
+            expect(Grids.allEdges(world.grid).filter((e) => e == 1).length).toBeGreaterThan(100);
             expect(world.furniture.filter((f) => f.kind == "crate").length).toBeGreaterThan(5);
             expect(world.furniture.filter((f) => f.kind == "tree").length).toBeGreaterThan(50);
         }
@@ -99,11 +99,11 @@ public partial class WorldgenTest
             {
                 for (var x = (sx - NatureMod.START_CLEAR_RADIUS) + 2; x < ((sx + NatureMod.START_CLEAR_RADIUS) - 2); x++)
                 {
-                    expect(Js.Missing(world.grid.tiles, Grids.tileIndex(world.grid, x, y)) ? null : (object?)(Js.Get(world.grid.tiles, Grids.tileIndex(world.grid, x, y)))).not.toBe("water");
+                    expect((object?)(Grids.tileAt(world.grid, Grids.tileIndex(world.grid, x, y)))).not.toBe("water");
                 }
             }
-            expect(Js.Missing(world.grid.explored, Grids.tileIndex(world.grid, sx, sy)) ? null : (object?)(Js.Get(world.grid.explored, Grids.tileIndex(world.grid, sx, sy)))).toBe(1);
-            expect(Js.Missing(world.grid.explored, 0) ? null : (object?)(Js.Get(world.grid.explored, 0))).toBe(0);
+            expect(Js.Missing(Grids.allExplored(world.grid), Grids.tileIndex(world.grid, sx, sy)) ? null : (object?)(Grids.exploredAt(world.grid, Grids.tileIndex(world.grid, sx, sy)))).toBe(1);
+            expect(Js.Missing(Grids.allExplored(world.grid), 0) ? null : (object?)(Grids.exploredAt(world.grid, 0))).toBe(0);
         }
 
         [Fact(DisplayName = "world generation > crates further out hold more")]
@@ -159,7 +159,7 @@ public partial class WorldgenTest
             var n = ((double)(512) / (Worldgen.CHUNK));
             expect(Js.NN(world.world).generated.filter((g) => g == 1)).toHaveLength(JsMath.pow((((double)(2) * (Worldgen.GENERATE_RADIUS)) + 1), 2));
             expect(Js.NN(world.world).generated.length).toBe(((double)(n) * (n)));
-            expect(Js.Missing(world.grid.tiles, 0) ? null : (object?)(Js.Get(world.grid.tiles, 0))).toBe("floor");
+            expect((object?)(Grids.tileAt(world.grid, 0))).toBe("floor");
         }
 
         [Fact(DisplayName = "lazy generation > chunks appear ahead of a survivor as they walk, the same as if made up front")]
@@ -178,7 +178,7 @@ public partial class WorldgenTest
             {
                 for (var x = ((double)(7) * (Worldgen.CHUNK)); x < ((double)(8) * (Worldgen.CHUNK)); x++)
                 {
-                    expect(Js.Missing(lazy.grid.tiles, ((double)(y) * (256)) + x) ? null : (object?)(Js.Get(lazy.grid.tiles, ((double)(y) * (256)) + x))).toBe(Js.Get(alone.grid.tiles, ((double)(y) * (256)) + x));
+                    expect((object?)(Grids.tileAt(lazy.grid, ((double)(y) * (256)) + x))).toBe(Grids.tileAt(alone.grid, ((double)(y) * (256)) + x));
                 }
             }
             expect(Invariants.checkInvariants(lazy)).toEqual(Js.Arr([]));

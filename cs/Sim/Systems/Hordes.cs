@@ -266,11 +266,11 @@ public static partial class Hordes
         var __d2 = state;
         var grid = __d2.grid;
         var e = Grids.edgeBetween(grid, ax, ay, bx, by);
-        if ((e < 0) || (Js.Get(grid.edges, e) == 0))
+        if ((e < 0) || (Grids.edgeKind(grid, e) == 0))
         {
             return 0;
         }
-        if (!(Js.T(asShut) && (Js.Get(grid.edges, e) == Grids.EDGE_DOOR)) && Pathfinding.crossable(grid, ax, ay, bx, by, "zombie"))
+        if (!(Js.T(asShut) && (Grids.edgeKind(grid, e) == Grids.EDGE_DOOR)) && Pathfinding.crossable(grid, ax, ay, bx, by, "zombie"))
         {
             return 0;
         }

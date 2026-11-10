@@ -185,7 +185,7 @@ public static class WorldPreview
         {
             int j = (int)((long)y * px / size), row = y * g.width;
             for (int x = 0; x < g.width; x++)
-                if (g.explored[row + x] != 0) seen[j * px + (int)((long)x * px / size)] = 1;
+                if (Grids.exploredAt(g, row + x) != 0) seen[j * px + (int)((long)x * px / size)] = 1;
         }
         return seen;
     }

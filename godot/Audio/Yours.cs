@@ -70,9 +70,9 @@ public sealed class Yours
         int tx = (int)Math.Floor(x), ty = (int)Math.Floor(y);
         if (!Grids.inBounds(grid, tx, ty)) return "step_grass";
         int i = ty * grid.width + tx;
-        var g = Grids.GROUNDS[Math.Clamp(grid.ground[i], 0, Grids.GROUNDS.Length - 1)];
+        var g = Grids.GROUNDS[Math.Clamp(Grids.groundAt(grid, i), 0, Grids.GROUNDS.Length - 1)];
         if (g == "bridge") return "step_bridge";
-        if (grid.tiles[i] == Grids.WATER) return "step_water";
+        if (Grids.tileAt(grid, i) == Grids.WATER) return "step_water";
         for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++)
             {

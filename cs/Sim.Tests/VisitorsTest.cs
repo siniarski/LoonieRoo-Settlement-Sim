@@ -91,8 +91,8 @@ public partial class VisitorsTest
         {
             var state = night(false);
             runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).health < 1000, 400);
-            expect(Js.Missing(state.grid.tiles, ((double)(3) * (11)) + 5) ? null : (object?)(Js.Get(state.grid.tiles, ((double)(3) * (11)) + 5))).toBe("door");
-            expect(Js.Missing(state.grid.damage, ((double)(3) * (11)) + 5) ? null : (object?)(Js.Get(state.grid.damage, ((double)(3) * (11)) + 5))).toBe(0);
+            expect((object?)(Grids.tileAt(state.grid, ((double)(3) * (11)) + 5))).toBe("door");
+            expect(Js.Missing(Grids.allDamage(state.grid), ((double)(3) * (11)) + 5) ? null : (object?)(Grids.damageAt(state.grid, ((double)(3) * (11)) + 5))).toBe(0);
             expect(Js.NN(Js.Get(state.survivors, 0)).infection).toBeNull();
         }
 
@@ -100,7 +100,7 @@ public partial class VisitorsTest
         public void T006_a_locked_door_must_be_broken_down()
         {
             var state = night(true);
-            runUntil(state, (_) => Js.NN(Js.Get(state.grid.damage, ((double)(3) * (11)) + 5)) > 0, 400);
+            runUntil(state, (_) => Js.NN(Grids.damageAt(state.grid, ((double)(3) * (11)) + 5)) > 0, 400);
             expect(Js.NN(Js.Get(state.survivors, 0)).health).toBe(1000);
         }
 

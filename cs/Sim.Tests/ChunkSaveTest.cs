@@ -24,8 +24,8 @@ public class ChunkSaveTest
         var crate = s.furniture.FirstOrDefault(f => f.kind == "crate");
         if (crate != null) crate.loot = 0;
         Grids.setTile(s.grid, start.x + 5, start.y + 5, "wall");
-        int e = s.grid.edges.FindIndex(v => v == Grids.EDGE_WALL);
-        if (e >= 0) s.grid.edges[e] = Grids.EDGE_NONE;
+        int e = Grids.allEdges(s.grid).FindIndex(v => v == Grids.EDGE_WALL);
+        if (e >= 0) Grids.putEdge(s.grid, e, Grids.EDGE_NONE);
         Grids.setDirty(s.grid, start.x + 2, start.y + 6, true);
         if (s.dormant.Count > 0) Dormant.remove(s, s.dormant[0]);
         FurnitureMod.addFurniture(s, "workbench", start.x + 3, start.y + 3);
@@ -90,9 +90,9 @@ public class ChunkSaveMoreTest
         }
         var a = Gen(false);
         var b = Gen(true);
-        expect(JsonSerializer.Serialize(b.grid.tiles, StateJson.Options) == JsonSerializer.Serialize(a.grid.tiles, StateJson.Options)).toBe(true);
-        expect(JsonSerializer.Serialize(b.grid.edges, StateJson.Options) == JsonSerializer.Serialize(a.grid.edges, StateJson.Options)).toBe(true);
-        expect(JsonSerializer.Serialize(b.grid.ground, StateJson.Options) == JsonSerializer.Serialize(a.grid.ground, StateJson.Options)).toBe(true);
+        expect(JsonSerializer.Serialize(Grids.allTiles(b.grid), StateJson.Options) == JsonSerializer.Serialize(Grids.allTiles(a.grid), StateJson.Options)).toBe(true);
+        expect(JsonSerializer.Serialize(Grids.allEdges(b.grid), StateJson.Options) == JsonSerializer.Serialize(Grids.allEdges(a.grid), StateJson.Options)).toBe(true);
+        expect(JsonSerializer.Serialize(Grids.allGround(b.grid), StateJson.Options) == JsonSerializer.Serialize(Grids.allGround(a.grid), StateJson.Options)).toBe(true);
         string Set<T>(IEnumerable<T> xs) => string.Join("\n", xs.Select(x => JsonSerializer.Serialize(x, StateJson.Options)).OrderBy(x => x, StringComparer.Ordinal));
         expect(Set(b.furniture) == Set(a.furniture)).toBe(true);
         expect(Set(b.dormant) == Set(a.dormant)).toBe(true);

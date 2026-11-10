@@ -323,7 +323,7 @@ public static partial class Lots
                 var __d6 = mapToLot(lot, x, y);
                 var u = __d6.u;
                 var v = __d6.v;
-                state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, x, y))] = Grids.GROUNDS.indexOf(layout.yard(u, v));
+                Grids.setGround(state.grid, Grids.tileIndex(state.grid, x, y), Grids.GROUNDS.indexOf(layout.yard(u, v)));
             }
         }
         var covered = new JsSet<string>();
@@ -413,7 +413,7 @@ public static partial class Lots
                 }
                 var fall = Hash.hashRoll(ctx.seed, w.x, w.y, 19);
                 var outer = (((Buildings.cellAt(plan, x - 1, y) == 0) || (Buildings.cellAt(plan, x + 1, y) == 0)) || (Buildings.cellAt(plan, x, y - 1) == 0)) || (Buildings.cellAt(plan, x, y + 1) == 0);
-                state.grid.ground[Js.Idx(Grids.tileIndex(state.grid, w.x, w.y))] = Grids.GROUNDS.indexOf(Js.At(plan.ground, ((double)(y) * (plan.w)) + x, "dirt"));
+                Grids.setGround(state.grid, Grids.tileIndex(state.grid, w.x, w.y), Grids.GROUNDS.indexOf(Js.At(plan.ground, ((double)(y) * (plan.w)) + x, "dirt")));
                 if (c == Buildings.WALL)
                 {
                     Grids.setTile(state.grid, w.x, w.y, (fall > ((Js.T(outer) ? 0.08 : 0.04) + decay)) ? "wall" : "floor");

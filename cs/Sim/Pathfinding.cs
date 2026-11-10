@@ -30,7 +30,7 @@ public static partial class Pathfinding
     {
         int e = edgeBetween(grid, ax, ay, bx, by);
         if (e < 0) return true;
-        int kind = grid.edges[e];
+        int kind = edgeKind(grid, e);
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
@@ -159,10 +159,10 @@ public static partial class Pathfinding
         bool shut = DOOR_MOVERS.Contains(mover);
         return new Rules
         {
-            pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && grid.tiles[y * grid.width + x] == DOOR),
+            pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && getTile(grid, x, y) == DOOR),
             across = (e, ax, ay, bx, by) =>
             {
-                int kind = e >= 0 && e < grid.edges.Count ? grid.edges[e] : 0;
+                int kind = edgeKind(grid, e);
                 if (kind == 0) return true;
                 return !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
             },
@@ -299,7 +299,7 @@ public static partial class Pathfinding
     static void Join(Grid grid, Reach r, string mover)
     {
         int width = grid.width;
-        var doorTiles = grid.open.Where(i => grid.tiles[i] == DOOR && isPassable(grid, i % width, i / width, mover)).ToList();
+        var doorTiles = grid.open.Where(i => tileAt(grid, i) == DOOR && isPassable(grid, i % width, i / width, mover)).ToList();
         r.doorIds = new Dictionary<int, int>();
         for (int k = 0; k < doorTiles.Count; k++) r.doorIds[doorTiles[k]] = r.count + k;
         var root = new int[r.count + doorTiles.Count];
@@ -332,7 +332,7 @@ public static partial class Pathfinding
         }
         foreach (int e in grid.edgeOpen)
         {
-            if (grid.edges[e] != EDGE_DOOR) continue;
+            if (edgeKind(grid, e) != EDGE_DOOR) continue;
             int i = e / 2;
             int x = i % width, y = i / width;
             int ox = e % 2 == 0 ? x : x - 1;
@@ -555,13 +555,13 @@ public static partial class Pathfinding
         int sx = Math.Sign(b.x - a.x), sy = Math.Sign(b.y - a.y);
         int x = a.x, y = a.y;
         int err = dx - dy;
-        bool Open(int px, int py) => inBounds(grid, px, py) && grid.tiles[py * grid.width + px] == FLOOR && isPassable(grid, px, py, SURVIVOR);
-        bool Door(int px, int py) => grid.tiles[py * grid.width + px] == DOOR;
+        bool Open(int px, int py) => getTile(grid, px, py) == FLOOR && isPassable(grid, px, py, SURVIVOR);
+        bool Door(int px, int py) => getTile(grid, px, py) == DOOR;
         bool Bare(int ax, int ay, int bx, int by)
         {
             int e = edgeBetween(grid, ax, ay, bx, by);
             // grid.edges[-1] is undefined in the TypeScript, which is not EDGE_NONE.
-            return e >= 0 && grid.edges[e] == EDGE_NONE;
+            return e >= 0 && edgeKind(grid, e) == EDGE_NONE;
         }
         while (x != b.x || y != b.y)
         {
@@ -604,7 +604,7 @@ public static partial class Pathfinding
     static int EdgeKindOf(Grid grid, int ax, int ay, int bx, int by)
     {
         int e = edgeBetween(grid, ax, ay, bx, by);
-        return e < 0 ? EDGE_NONE : grid.edges[e];
+        return e < 0 ? EDGE_NONE : edgeKind(grid, e);
     }
 
     /// <summary>Nothing solid between two tiles at most a step apart (for blows and bites).</summary>
@@ -616,7 +616,7 @@ public static partial class Pathfinding
         {
             int e = edgeBetween(grid, px, py, qx, qy);
             if (e < 0) return true;
-            int kind = grid.edges[e];
+            int kind = edgeKind(grid, e);
             return kind == EDGE_NONE || kind == EDGE_BARRICADE || (kind == EDGE_DOOR && edgeIsOpen(grid, e)) || (kind == EDGE_WINDOW_BROKEN && !grid.edgeBoarded.Contains(e));
         }
         if (dx == 0 || dy == 0) return Open(a.x, a.y, b.x, b.y);
@@ -627,7 +627,7 @@ public static partial class Pathfinding
     public static bool seesThrough(Grid grid, int e)
     {
         if (e < 0) return true;
-        int kind = e < grid.edges.Count ? grid.edges[e] : EDGE_NONE;
+        int kind = edgeKind(grid, e);
         if (kind == EDGE_WALL) return false;
         if (kind == EDGE_DOOR) return edgeIsOpen(grid, e);
         if (kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN) return !grid.edgeBoarded.Contains(e);

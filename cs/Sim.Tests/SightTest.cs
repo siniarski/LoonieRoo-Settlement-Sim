@@ -77,7 +77,7 @@ public partial class SightTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP.map((r, y) => (y == 2) ? ("..s" + r.slice(3)) : r), edges = room() });
             quiet(state);
             state.tick = Js.I(NOON);
-            state.grid.explored.fill(0);
+            Grids.fillExplored(state.grid, 0);
             Tick.tick(state);
             expect(Fog.isExplored(state, 7, 2)).toBe(true);
             expect(Fog.isExplored(state, 2, 0)).toBe(false);
@@ -88,7 +88,7 @@ public partial class SightTest
             {
                 night.tick = Js.I(night.tick + 10);
             }
-            night.grid.explored.fill(0);
+            Grids.fillExplored(night.grid, 0);
             Tick.tick(night);
             expect(Fog.isExplored(night, Sight.NIGHT_SIGHT, 2)).toBe(true);
             expect(Fog.isExplored(night, Sight.NIGHT_SIGHT + 1, 2)).toBe(false);

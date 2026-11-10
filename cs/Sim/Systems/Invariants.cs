@@ -454,16 +454,17 @@ public static partial class Invariants
                 problems.push($"{Js.Str(name)} list out of step with the map");
             }
         }
-        listed(grid.dirt.Select(v => (double)v).ToList(), grid.dirtList.Select(v => (double)v).ToList(), "dirt");
-        listed(grid.damage, grid.damageList.Select(v => (double)v).ToList(), "damage");
-        for (var i = 0; i < grid.damage.length; i++)
+        listed(Grids.allDirt(grid).Select(v => (double)v).ToList(), grid.dirtList.Select(v => (double)v).ToList(), "dirt");
+        var allDamage = Grids.allDamage(grid);
+        listed(allDamage, grid.damageList.Select(v => (double)v).ToList(), "damage");
+        for (var i = 0; i < allDamage.length; i++)
         {
-            var d = Js.NN(Js.Get(grid.damage, i));
+            var d = Js.NN(Js.Get(allDamage, i));
             if (d == 0)
             {
                 continue;
             }
-            var tile = Js.NN(Js.Get(grid.tiles, i));
+            var tile = Js.NN(Grids.tileAt(grid, i));
             var at = $"({Js.Str(i % grid.width)}, {Js.Str(JsMath.floor(((double)(i) / (grid.width))))})";
             if (((tile != "wall") && (tile != "door")) && (tile != "barricade"))
             {
@@ -556,16 +557,16 @@ public static partial class Invariants
         }
         foreach (var i in Js.Iter(grid.reinforced))
         {
-            if (((Js.Get(grid.tiles, i) != "wall") && (Js.Get(grid.tiles, i) != "door")) && (Js.Get(grid.tiles, i) != "barricade"))
+            if (((Grids.tileAt(grid, i) != "wall") && (Grids.tileAt(grid, i) != "door")) && (Grids.tileAt(grid, i) != "barricade"))
             {
-                problems.push($"reinforcement on a {Js.Str(Js.Get(grid.tiles, i))} at {Js.Str(i)}");
+                problems.push($"reinforcement on a {Js.Str(Grids.tileAt(grid, i))} at {Js.Str(i)}");
             }
         }
         foreach (var i in Js.Iter(grid.locked))
         {
-            if (Js.Get(grid.tiles, i) != "door")
+            if (Grids.tileAt(grid, i) != "door")
             {
-                problems.push($"lock on a {Js.Str(Js.Get(grid.tiles, i))} at {Js.Str(i)}");
+                problems.push($"lock on a {Js.Str(Grids.tileAt(grid, i))} at {Js.Str(i)}");
             }
         }
         foreach (var d in Js.Iter(state.dormant))
@@ -603,7 +604,7 @@ public static partial class Invariants
             }
             roomsClaimed.add(label);
         }
-        grid.dirt.forEach((d, i) =>
+        Grids.allDirt(grid).forEach((d, i) =>
         {
             if ((d == 1) && (Grids.getTile(grid, i % grid.width, JsMath.floor(((double)(i) / (grid.width)))) != "floor"))
             {

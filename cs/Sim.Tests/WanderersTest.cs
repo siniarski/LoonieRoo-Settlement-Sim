@@ -207,14 +207,14 @@ public partial class WanderersTest
             {
                 s.priorities = new(JobTypes.DEFAULT_PRIORITIES) { ["build"] = 0, ["clean"] = 0 };
             }
-            state.grid.explored.fill(0);
+            Grids.fillExplored(state.grid, 0);
             state.tick = Js.I(at(2, Wanderers.ARRIVAL_HOUR) - 1);
             Tick.tick(state);
             Tick.tick(state);
             var w = Js.NN(Js.Get(state.wanderers, 0));
             bool seen(double x, double y)
             {
-                return Js.Get(state.grid.explored, ((double)(y) * (80)) + x) == 1;
+                return Grids.exploredAt(state.grid, ((double)(y) * (80)) + x) == 1;
             }
             expect(seen(w.x, w.y)).toBe(true);
             expect(Js.Arr([seen(w.x + 1, w.y), seen(w.x - 1, w.y), seen(w.x, w.y + 1), seen(w.x, w.y - 1)])).toContain(false);

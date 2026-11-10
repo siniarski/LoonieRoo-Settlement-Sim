@@ -254,11 +254,11 @@ public static partial class Motion
                     continue;
                 }
                 var i = ((double)((((double)(y) * (grid.width)) + x)) * (2));
-                if ((Js.Get(grid.edges, i) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, ((double)(x) * (SUB)), ((double)(y) * (SUB)), ((double)((x + 1)) * (SUB)), ((double)(y) * (SUB))))
+                if ((Grids.edgeKind(grid, i) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, ((double)(x) * (SUB)), ((double)(y) * (SUB)), ((double)((x + 1)) * (SUB)), ((double)(y) * (SUB))))
                 {
                     return true;
                 }
-                if ((Js.Get(grid.edges, i + 1) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, ((double)(x) * (SUB)), ((double)(y) * (SUB)), ((double)(x) * (SUB)), ((double)((y + 1)) * (SUB))))
+                if ((Grids.edgeKind(grid, i + 1) == Grids.EDGE_WINDOW_BROKEN) && touches(at, r, ((double)(x) * (SUB)), ((double)(y) * (SUB)), ((double)(x) * (SUB)), ((double)((y + 1)) * (SUB))))
                 {
                     return true;
                 }

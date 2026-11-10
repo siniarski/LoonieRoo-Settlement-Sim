@@ -179,7 +179,7 @@ public partial class InvariantsTest
             {
                 for (var x = 12; x <= 23; x++)
                 {
-                    initial.grid.explored[Js.Idx(((double)(y) * (initial.grid.width)) + x)] = 0;
+                    Grids.setExplored(initial.grid, ((double)(y) * (initial.grid.width)) + x, 0);
                 }
             }
             initial.tick = Js.I(((double)(12) * (200)));

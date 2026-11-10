@@ -81,9 +81,9 @@ public static partial class SavefileChunks
             for (int lx = 0; lx < w; lx++)
             {
                 int i = (y0 + ly - g.oy) * g.width + (x0 + lx - g.ox);
-                hs.Add(Code(g.tiles[i]));
-                hs.Add((ulong)(uint)g.ground[i] << 32 | (uint)g.edges[2 * i]);
-                hs.Add((uint)g.edges[2 * i + 1]);
+                hs.Add(Code(g.tileLayer[i]));
+                hs.Add((ulong)(uint)g.groundLayer[i] << 32 | (uint)g.edgeLayer[2 * i]);
+                hs.Add((uint)g.edgeLayer[2 * i + 1]);
             }
         return hs.Value;
     }

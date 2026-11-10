@@ -87,9 +87,9 @@ public partial class TreeBench : Node3D
             for (int x = 0; x < g.width; x++)
             {
                 int i = y * g.width + x;
-                string ground = g.ground[i] >= 0 && g.ground[i] < Grids.GROUNDS.Length ? Grids.GROUNDS[g.ground[i]] : "grass";
-                if (g.tiles[i] != "floor" || !OPEN.Contains(ground) || have.Contains(i)) continue;
-                g.ground[i] = forest;
+                string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
+                if (Grids.tileAt(g, i) != "floor" || !OPEN.Contains(ground) || have.Contains(i)) continue;
+                Grids.setGround(g, i, forest);
                 if (Math.Abs(x - cx) <= 1 && Math.Abs(y - cy) <= 1) continue;
                 uint h = unchecked((uint)x * 0x9E3779B1u ^ (uint)y * 0x85EBCA77u);
                 h ^= h >> 15; h = unchecked(h * 0x2C1B3C6Du); h ^= h >> 12;
