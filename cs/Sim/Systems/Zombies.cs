@@ -112,6 +112,7 @@ public static partial class Zombies
         {
             // A plain dictionary: only looked up, never iterated.
             var cells = new Dictionary<double, List<Zombie>>(list.Count);
+            var occ = new ulong[OCCUPANCY_WORDS];
             foreach (var z in Js.Iter(list))
             {
                 var k = ((double)(z.pos.y) * (width)) + z.pos.x;
@@ -122,9 +123,10 @@ public static partial class Zombies
                 else
                 {
                     cells[k] = [z];
+                    occupy(occ, k);
                 }
             }
-            b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells };
+            b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells, occ = occ };
             buckets.set(list, b);
         }
         double n = 0;
@@ -137,7 +139,8 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                if (b.cells.GetValueOrDefault(((double)(y) * (width)) + x) is { } cell) foreach (var z in Js.Iter(cell))
+                var ck = ((double)(y) * (width)) + x;
+                if (mayHold(b.occ, ck) && b.cells.GetValueOrDefault(ck) is { } cell) foreach (var z in Js.Iter(cell))
                 {
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
@@ -147,6 +150,24 @@ public static partial class Zombies
             }
         }
         return n;
+    }
+
+    // A bit per hashed tile key, set for each bucket: a clear bit means no bucket there, so the lookup is skipped (a
+    // set bit may be another tile's: then the lookup decides). 64K bits.
+    const int OCCUPANCY_WORDS = 1024;
+
+    static int occupancyBit(double k) => (int)(unchecked((ulong)(long)k * 0x9E3779B97F4A7C15UL) >> 48);
+
+    static void occupy(ulong[] occ, double k)
+    {
+        var b = occupancyBit(k);
+        occ[b >> 6] |= 1UL << (b & 63);
+    }
+
+    static bool mayHold(ulong[] occ, double k)
+    {
+        var b = occupancyBit(k);
+        return (occ[b >> 6] & (1UL << (b & 63))) != 0;
     }
 
     public static void removeZombie(SimState state, Zombie z)
@@ -823,6 +844,7 @@ public static partial class Zombies
         var height = __d4.height;
         // Plain dictionaries: only looked up, never iterated.
         var buckets = new Dictionary<double, List<Zombie>>(state.zombies.Count);
+        var occ = new ulong[OCCUPANCY_WORDS];
         foreach (var z in Js.Iter(state.zombies))
         {
             var k = ((double)(z.pos.y) * (width)) + z.pos.x;
@@ -833,6 +855,7 @@ public static partial class Zombies
             else
             {
                 buckets[k] = [z];
+                occupy(occ, k);
             }
         }
         // The others by tile, and (othersAround) each listed under every in-grid tile within 1 of the tile its key names:
@@ -902,7 +925,8 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    if (buckets.GetValueOrDefault(((double)(ny) * (width)) + nx) is { } cell) foreach (var o in Js.Iter(cell))
+                    var ck = ((double)(ny) * (width)) + nx;
+                    if (mayHold(occ, ck) && buckets.GetValueOrDefault(ck) is { } cell) foreach (var o in Js.Iter(cell))
                     {
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
