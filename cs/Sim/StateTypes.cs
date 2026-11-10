@@ -1224,6 +1224,9 @@ public partial class WorldInfo
     public double size { get; set; }
     public double chunks { get; set; }
     public List<double> generated { get; set; } = new();
+    /// <summary>Each generated chunk's hash as generation made it (SavefileChunks.madeHash), by chunk index: a save
+    /// skips a chunk whose hash now is the same without making it again. Made again on load (schema 78).</summary>
+    public JsRecord<string> made { get; set; } = new();
 }
 
 public partial class WorldPlan

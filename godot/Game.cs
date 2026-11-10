@@ -63,7 +63,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     public SimState state = null!;
     /// <summary>Where play started (a new world or a loaded save): bug reports replay from here.</summary>
-    SimState initial = null!;
+    /// <summary>Where a bug report replays from: the state at the start of play (or the last dawn), packed (Savefile.bugStart).</summary>
+    Savefile.BugStart initial = null!;
     readonly View view = new();
     double accumulatorMs;
     double alpha;
@@ -257,7 +258,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             return false;
         }
         state = result.state;
-        initial = States.cloneState(state);
+        initial = Savefile.bugStart(state);
         Time.setDayScale(state.settings.dayScale); // the clock reads right before the first tick
         view.camera = centredOn(state.grid.width, state.grid.height, view.camera.zoom == 0 ? 1 : view.camera.zoom);
         view.paused = false;
@@ -449,7 +450,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             if (Saves.saveToSlot(Saves.AUTO_SLOT, state) == null) view.Toast($"Autosaved at dawn, day {Time.dayOf(state.tick)}.");
             // Start the command log afresh from here, so it doesn't grow all game: a bug report then replays from this dawn.
             state.commandLog = new();
-            initial = States.cloneState(state);
+            initial = Savefile.bugStart(state);
         }
 
         UpdateInput(frameMs);
