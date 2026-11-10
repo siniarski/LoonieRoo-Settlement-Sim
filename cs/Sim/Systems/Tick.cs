@@ -163,7 +163,7 @@ public static partial class Tick
             var e = list[i];
             if (!isFree(state, e))
             {
-                Motion.syncStep(e);
+                Motion.syncStep(state, e);
             }
         }
     }

@@ -1,11 +1,16 @@
-// Trunks: a tree (furniture, kind "tree") is solid where its trunk stands, a circle in its tile, to free
-// movers (you, the dead). The trunk is nudged off the tile's centre by a hash of the tile (no RNG, stable
-// across saves); the game draws the tree there (godot/World3D/Trees.cs reads trunkAt), so what you bump
-// is what you see. Integer maths in SUB units (rule 10).
+// Trunks: a tree (furniture, kind "tree") is solid where its trunk stands, a circle in its tile, to movers
+// with a body: you and the dead (free movers), colonists and survivors on tile paths, and cars. The trunk is
+// nudged off the tile's centre by a hash of the tile (no RNG, stable across saves); the game draws the tree
+// there (godot/World3D/Trees.cs reads trunkAt), so what you bump is what you see. Integer maths in SUB units (rule 10).
 //   pushOut   a body overlapping a trunk is moved out along the line from the trunk's centre, so a
-//             body walking into one at an angle slides round it (Motion.slide calls it each step)
+//             body walking into one at an angle slides round it
+//               free movers   Motion.slide calls it each step (walls first, then trunks)
+//               tile walkers  Motion.syncStep calls it on the step's straight line each tick: `at` goes round
+//                             the trunk while the step's time, `pos` and the path stay the tile's (tree tiles still
+//                             pass in pathfinding), so jobs, arrival times and the tile logic are untouched; a
+//                             moved-out spot that wouldn't fit (a wall, a shut door) is not used: the line stands
+//               cars          Vehicles.move uses the slide above with the car's radius
 // Trees are looked up by tile (FurnitureMod.furnitureAt), only the tiles the body could touch (rule 14).
-// Path walkers (tile steps, Movement) don't collide: their tiles are unchanged.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
