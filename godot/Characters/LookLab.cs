@@ -10,6 +10,8 @@
 //   faces      the zombie's five face candidates side by side (plus, near LOD)
 //   clothes    the survivor painted, in a jacket, in a hoodie (garment meshes with volume) side by side
 //   hair       the survivor with each hair style side by side (hair meshes, attached and tinted)
+//   hats       every hair style under the beanie (its under-hat version), as the game draws them (pz)
+//   people     survivors dressed as the world dresses them (Looks.cs: hair, beard, hat by a hash of the id)
 //   stumps     every lost limb the sim can say (Wounds.lostLimb: an arm below the elbow, a leg below the
 //              knee, either side), on the survivor in a jacket (pinned sleeve, knotted trouser leg) and the
 //              dead (torn), cut at load (StumpCut.cs)
@@ -31,6 +33,7 @@
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
 //   --report=DIR                     the budget sweep (candidates x LODs x crowd sizes), look.md, then quit
+//   --tracehair                      print each character's hair triangles by LOD
 //   --novsync                        frame times uncapped; --nopanel hides the panel in a --shot; --noaim looks level
 //
 // Keys: wheel or [ ] distance, 1-6 distance presets, F face, L LOD (auto, 0..), V wireframe, T turn, right-drag look.
@@ -57,7 +60,7 @@ public partial class LookLab : Node3D
         return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
     }
 
-    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair", "stumps" };
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair", "hats", "people", "stumps" };
     // Lost limbs (the sim's lostLimbs: Wounds.lostLimb cuts arms below the elbow, legs below the knee; crawlers have lost both legs).
     static readonly string[] Losses = { "none", "armLeft:elbow", "armRight:elbow", "legLeft:knee", "legRight:knee", "legLeft:knee,legRight:knee", "armLeft:elbow,legRight:knee" };
     // The stumps lineup: (subject, clothes or face, lost limbs, label).
@@ -75,19 +78,10 @@ public partial class LookLab : Node3D
     // tinted (the texture is grey). A survivor's scalp is painted skin: "none" is shaved bald.
     static readonly string[] HairStyles = { "none", "buzz", "crop", "sidepart", "long", "receding", "ponytail", "matted" };
     static readonly string[] Hats = { "none", "beanie" };
-    static readonly Dictionary<string, Color> HatColours = new()
-    {
-        ["charcoal"] = new Color(0.22f, 0.22f, 0.23f), ["olive"] = new Color(0.32f, 0.33f, 0.20f), ["navy"] = new Color(0.15f, 0.18f, 0.28f), ["red"] = new Color(0.45f, 0.12f, 0.10f),
-    };
-    static readonly Dictionary<string, Color> HairColours = new()
-    {
-        ["black"] = new Color(0.10f, 0.09f, 0.085f), ["brown"] = new Color(0.34f, 0.24f, 0.16f), ["blond"] = new Color(0.78f, 0.64f, 0.42f),
-        ["red"] = new Color(0.58f, 0.27f, 0.13f), ["grey"] = new Color(0.64f, 0.62f, 0.60f),
-    };
-    // A style under a hat is its own file (flattened where the hat covers it, no fringe cards).
-    static string HairPath(string style, bool underHat) =>
-        $"res://assets/characters/look/hair/{(style == "beanie" ? "hat_beanie" : "hair_" + style + (underHat && style != "beard" ? "_hat" : ""))}.glb";
-    readonly Dictionary<string, StandardMaterial3D> hairMats = new();
+    // The palettes are the world's (Looks.cs); a style under a hat is its own file (flattened where the hat
+    // covers it, no fringe cards). The pz candidate wears the hair ladder's 3rd to 5th levels, as in the game.
+    static readonly string[] HatColours = Looks.HAT_COLOURS.Select(x => x.name).ToArray();
+    static readonly string[] HairColours = Looks.HAIR_COLOURS.Select(x => x.name).ToArray();
     // How far each face's jaw hangs at rest (jaw_open), neutral.
     static readonly Dictionary<string, double> Slack = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
     static readonly double[] Presets = { 1, 2, 3, 5, 10, 30 };
@@ -143,6 +137,7 @@ public partial class LookLab : Node3D
         public long TexBytes;
         public string TexDesc = "";
         public double CutMs;
+        public int[] HairTris = Array.Empty<int>();
         public string CutDesc = "";
     }
 
@@ -204,7 +199,7 @@ public partial class LookLab : Node3D
         u.Free();
     }
 
-    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null, string? limbs = null)
+    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null, string? limbs = null, Looks.Hair? dress = null)
     {
         subj ??= subject;
         variant ??= subj == "zombie" ? faceVariant : clothesSet;
@@ -243,9 +238,13 @@ public partial class LookLab : Node3D
                 a.CutDesc = $"{string.Join(", ", lost)} ({cut} meshes, {a.CutMs:0.0} ms)";
                 a.Lods = FindAll<MeshInstance3D>(root).GroupBy(mi => LodIndex(mi.Name)).OrderBy(g => g.Key).Select(g => g.ToArray()).ToArray();
             }
-            foreach (var style in new[] { hair ?? (subj == "zombie" ? "matted" : hairStyle), beard ? "beard" : "none", hat })
-                if (style != "none") AttachHair(a, style, hat != "none");
+            var h = dress ?? new Looks.Hair(hair ?? (subj == "zombie" ? "matted" : hairStyle), Math.Max(0, Array.IndexOf(HairColours, hairColour)),
+                hat, Math.Max(0, Array.IndexOf(HatColours, hatColour)), beard, false);
+            var groups = Looks.Attach(Find<Skeleton3D>(root)!, h, a.Lods.Length, which == "pz" ? Looks.HAIR_LOD_OFFSET : 0);
+            a.Lods = a.Lods.Select((g, i) => g.Concat(groups[i]).ToArray()).ToArray();
             a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
+            a.HairTris = groups.Select(g => g.Sum(Tris)).ToArray();
+            if (OS.GetCmdlineUserArgs().Contains("--tracehair")) GD.Print($"hair {which} {h}: {string.Join(" / ", a.HairTris)} tris by body LOD; body {string.Join(" / ", a.Tris.Zip(a.HairTris, (t, x) => t - x))}");
         }
         (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);
         if (noNormal || noAlbedo)
@@ -258,46 +257,6 @@ public partial class LookLab : Node3D
                     mi.MaterialOverride = m;
                 }
         return a;
-    }
-
-    /// <summary>A hair style's meshes onto the character's skeleton (as the lab's Dresser does garments),
-    /// each into its LOD's group, with the tinted hair material.</summary>
-    void AttachHair(Actor a, string style, bool underHat)
-    {
-        if (!ResourceLoader.Exists(HairPath(style, underHat))) return;
-        var skel = Find<Skeleton3D>(a.Root)!;
-        var scene = GD.Load<PackedScene>(HairPath(style, underHat)).Instantiate<Node3D>();
-        var groups = a.Lods.Select(g => g.ToList()).ToList();
-        foreach (var mi in FindAll<MeshInstance3D>(scene).ToList())
-        {
-            mi.GetParent().RemoveChild(mi);
-            mi.Owner = null;
-            mi.Name = $"{style}_{mi.Name}";
-            skel.AddChild(mi);
-            mi.Skeleton = new NodePath("..");
-            mi.MaterialOverride = HairMaterial(mi, style);
-            int lod = Math.Min(LodIndex(mi.Name), groups.Count - 1);
-            groups[lod].Add(mi);
-        }
-        scene.QueueFree();
-        a.Lods = groups.Select(g => g.ToArray()).ToArray();
-    }
-
-    /// <summary>The mesh's own material (the hair's, or the strand cards' cut-out one), tinted: hair by the
-    /// hair colour, a hat by the hat colour. Shared per material and colour.</summary>
-    StandardMaterial3D HairMaterial(MeshInstance3D mi, string style)
-    {
-        var src = (BaseMaterial3D)mi.Mesh.SurfaceGetMaterial(0);
-        var tint = style == "beanie" ? HatColours.GetValueOrDefault(hatColour, HatColours["charcoal"]) : HairColours.GetValueOrDefault(hairColour, HairColours["brown"]);
-        string key = src.ResourceName + src.GetInstanceId() + "/" + tint.ToHtml();
-        if (!hairMats.TryGetValue(key, out var mat))
-        {
-            mat = (StandardMaterial3D)src.Duplicate();
-            mat.AlbedoColor = tint;
-            mat.Roughness = style == "beanie" ? 0.95f : 0.6f;
-            hairMats[key] = mat;
-        }
-        return mat;
     }
 
     /// <summary>The character's textures as loaded (each once: the pieces share an atlas): their sizes and
@@ -349,14 +308,19 @@ public partial class LookLab : Node3D
             "faces" => Faces.Select(f => ("plus", 0, f, (string?)"zombie", (string?)f)).ToArray(),
             "clothes" => ClothesSets.Select(c => ("plus", 0, c, (string?)"survivor", (string?)c)).ToArray(),
             "hair" => HairStyles.Select(h => ("plus", 0, h, (string?)"survivor", (string?)h)).ToArray(),
+            // (hats and people: below)
             "stumps" => StumpCases.Select(x => ("pz", 0, x.tag, (string?)x.subj, (string?)x.variant)).ToArray(),
+            "hats" => HairStyles.Where(h => h != "matted").Select(h => ("pz", 0, h, (string?)"survivor", (string?)h)).ToArray(),
+            "people" => People().Select(x => ("pz", 0, x.tag, (string?)"survivor", (string?)x.id)).ToArray(),
             _ => new (string c, int lod, string tag, string? subj, string? variant)[] { (cand, -1, cand, null, null) },
         };
         bool row = list.Length > 1;
-        double spacing = cand is "faces" or "hair" ? 0.62 : cand == "stumps" ? 0.95 : 1.05;
+        double spacing = cand is "faces" or "hair" or "hats" ? 0.62 : cand is "stumps" or "people" ? 0.8 : 1.05;
         for (int i = 0; i < list.Length; i++)
         {
             var a = cand == "hair" ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant)
+                : cand == "hats" ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant, null, new Looks.Hair(list[i].variant!, Math.Max(0, Array.IndexOf(HairColours, hairColour)), "beanie", Math.Max(0, Array.IndexOf(HatColours, hatColour)), false, false))
+                : cand == "people" ? MakeActor(list[i].c, this, "survivor", Looks.LivingClothes(list[i].variant!), null, null, Looks.LivingHair(list[i].variant!))
                 : cand == "stumps" ? MakeActor(list[i].c, this, list[i].subj, list[i].variant, null, StumpCases[i].limbs)
                 : MakeActor(list[i].c, this, list[i].subj, list[i].variant);
             if (row)
@@ -373,11 +337,34 @@ public partial class LookLab : Node3D
         RebuildCrowd();
     }
 
+    /// <summary>Eight survivor ids whose looks (Looks.LivingHair) show each style and a couple of hats and beards,
+    /// found by trying ids in turn, labelled with what they wear.</summary>
+    static List<(string id, string tag)> People()
+    {
+        var picked = new List<(string id, string tag)>();
+        var styles = new HashSet<string>();
+        int hats = 0, beards = 0;
+        for (int i = 1; i < 2000 && picked.Count < 8; i++)
+        {
+            string id = "s" + i;
+            var h = Looks.LivingHair(id);
+            int bare = picked.Count - hats;
+            bool wanted = h.hat != "none" ? hats < 2 : bare < 6 && (!styles.Contains(h.style) || (h.beard && beards < 2 && !styles.Contains(h.style + "b")));
+            if (!wanted) continue;
+            styles.Add(h.beard ? h.style + "b" : h.style);
+            if (h.hat != "none") hats++;
+            if (h.beard) beards++;
+            string tag = $"{id}\n{h.style} {Looks.HAIR_COLOURS[h.colour].name}{(h.beard ? " +beard" : "")}{(h.hat != "none" ? $"\n{Looks.HAT_COLOURS[h.hatColour].name} {h.hat}" : "")}\n{Looks.LivingClothes(id)}";
+            picked.Add((id, tag));
+        }
+        return picked;
+    }
+
     void RebuildCrowd()
     {
         foreach (var a in crowd) a.Root.QueueFree();
         crowd.Clear();
-        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand == "stumps" ? "pz" : cand;
+        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand is "stumps" or "hats" or "people" ? "pz" : cand;
         // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
         int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
         for (int i = 0; i < crowdCount; i++)
@@ -492,13 +479,14 @@ public partial class LookLab : Node3D
         if (a != null)
         {
             int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
-            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair" or "stumps");
+            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair" or "stumps" or "hats" or "people");
             sb.AppendLine($"subject   {a.Subject} / {cand}{(a.Cand != "mannequin" && single ? $" lod{lod}" : "")}  {(single && a.Cand != "mannequin" ? a.Variant : "")}");
             sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
             if (single) sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
             if (single) sb.AppendLine($"textures  {a.TexBytes / 1048576.0:0.0} MB: {a.TexDesc}");
             sb.AppendLine($"face      {(a.Subject == "zombie" ? $"{face}, angry {a.Angry:0.00}" : "-")}");
             if (a.CutDesc != "") sb.AppendLine($"lost      {a.CutDesc}");
+            if (single && a.HairTris.Length > 0) sb.AppendLine($"hair      {string.Join(" / ", a.HairTris)} tris by LOD");
             if (single && a.Lods.Length > 0 && a.Lods[0].Length > 1)
                 sb.AppendLine($"pieces    {string.Join("  ", a.Lods[Math.Min(lod, a.Lods.Length - 1)].Select(m => $"{m.Name.ToString().Split("_lod")[0]} {Tris(m):N0}"))}");
         }
@@ -603,10 +591,10 @@ public partial class LookLab : Node3D
         Pick(grid, "Zombie face", Faces, faceVariant, v => { faceVariant = v; Rebuild(); });
         Pick(grid, "Clothes", ClothesSets, clothesSet, v => { clothesSet = v; Rebuild(); });
         Pick(grid, "Hair", HairStyles, hairStyle, v => { hairStyle = v; Rebuild(); });
-        Pick(grid, "Hair colour", HairColours.Keys.ToArray(), hairColour, v => { hairColour = v; Rebuild(); });
+        Pick(grid, "Hair colour", HairColours, hairColour, v => { hairColour = v; Rebuild(); });
         Pick(grid, "Beard", new[] { "none", "beard" }, beard ? "beard" : "none", v => { beard = v == "beard"; Rebuild(); });
         Pick(grid, "Hat", Hats, hat, v => { hat = v; Rebuild(); });
-        Pick(grid, "Hat colour", HatColours.Keys.ToArray(), hatColour, v => { hatColour = v; Rebuild(); });
+        Pick(grid, "Hat colour", HatColours, hatColour, v => { hatColour = v; Rebuild(); });
         Pick(grid, "Missing", Losses, lose == "" ? "none" : lose, v => { lose = v == "none" ? "" : v; Rebuild(); });
         var presets = new HBoxContainer();
         foreach (var p in Presets) presets.AddChild(Btn($"{p} m", () => SetDist(p)));
