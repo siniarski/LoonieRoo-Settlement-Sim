@@ -24,10 +24,19 @@ public static partial class JobChoice
     {
         foreach (var type in Js.Iter(typesByPriority(s)))
         {
-            var open = openJobsByDistance(state, type, s.pos);
+            // openJobsByDistance's order (distance, then place in the list), taken lazily nearest first off a heap: the
+            // first MAX_CANDIDATES that pass the (pure) filter are the ones a full sort and filter would give.
+            var open = state.jobs.filter((j) => (j.type == type) && (j.reservedBy == null));
             var curfew = (((Policies.policyOn(state, "curfew") && Time.isNight(state.tick)) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
-            foreach (var job in Js.Iter(open.filter((j) => (!Js.T(curfew) || Rooms.isIndoors(state, j.x, j.y)) && Orders.withinOrder(state, s, j)).slice(0, Jobs.MAX_CANDIDATES)))
+            var nearest = new NearestFirst(open, s.pos);
+            var taken = 0;
+            while ((taken < Jobs.MAX_CANDIDATES) && nearest.next() is { } job)
             {
+                if (!((!Js.T(curfew) || Rooms.isIndoors(state, job.x, job.y)) && Orders.withinOrder(state, s, job)))
+                {
+                    continue;
+                }
+                taken++;
                 var plan = planJob(state, s, job);
                 if (Js.T(plan))
                 {
@@ -57,6 +66,55 @@ public static partial class JobChoice
         }
         keys.sort();
         return Js.ArrayFromMap(keys, (k) => Js.NN(Js.Get(open, k % 1048576)));
+    }
+
+    /// <summary>Jobs nearest first, by openJobsByDistance's keys (manhattan * 2^20 + place in the list: distinct), off a
+    /// binary min-heap: popping all gives the full sort's order, and stopping early skips the rest of the sort.</summary>
+    sealed class NearestFirst
+    {
+        readonly List<Job> jobs;
+        readonly double[] keys;
+        int n;
+
+        public NearestFirst(List<Job> jobs, Point from)
+        {
+            this.jobs = jobs;
+            n = jobs.Count;
+            keys = new double[n];
+            for (var i = 0; i < n; i++)
+            {
+                keys[i] = ((double)(Space.manhattan(from, jobs[i])) * (1048576)) + i;
+            }
+            for (var i = n / 2 - 1; i >= 0; i--)
+            {
+                down(i);
+            }
+        }
+
+        public Job? next()
+        {
+            if (n == 0)
+            {
+                return null;
+            }
+            var k = keys[0];
+            keys[0] = keys[--n];
+            down(0);
+            return jobs[(int)(k % 1048576)];
+        }
+
+        void down(int i)
+        {
+            while (true)
+            {
+                int l = 2 * i + 1, r = l + 1, m = i;
+                if (l < n && keys[l] < keys[m]) m = l;
+                if (r < n && keys[r] < keys[m]) m = r;
+                if (m == i) return;
+                (keys[i], keys[m]) = (keys[m], keys[i]);
+                i = m;
+            }
+        }
     }
 
     public static JobChoicePlan? planJob(SimState state, Survivor s, Job job)
