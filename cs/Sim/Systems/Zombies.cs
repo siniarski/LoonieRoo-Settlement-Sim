@@ -110,23 +110,7 @@ public static partial class Zombies
         var b = buckets.get(list);
         if ((!Js.T(b) || (b.tick != state.tick)) || (b.edit != edit))
         {
-            // A plain dictionary: only looked up, never iterated.
-            var cells = new Dictionary<double, List<Zombie>>(list.Count);
-            var occ = new ulong[OCCUPANCY_WORDS];
-            foreach (var z in Js.Iter(list))
-            {
-                var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-                if (cells.TryGetValue(k, out var at))
-                {
-                    at.push(z);
-                }
-                else
-                {
-                    cells[k] = [z];
-                    occupy(occ, k);
-                }
-            }
-            b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells, occ = occ };
+            b = new BucketsEntry { tick = state.tick, edit = edit, cells = new ZombieBuckets(list, width) };
             buckets.set(list, b);
         }
         double n = 0;
@@ -139,9 +123,10 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                var ck = ((double)(y) * (width)) + x;
-                if (mayHold(b.occ, ck) && b.cells.GetValueOrDefault(ck) is { } cell) foreach (var z in Js.Iter(cell))
+                var cells = b.cells;
+                for (var i = cells.first(((double)(y) * (width)) + x); i >= 0; i = cells.next[i])
                 {
+                    var z = cells.zs[i];
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
                         n++;
@@ -152,23 +137,6 @@ public static partial class Zombies
         return n;
     }
 
-    // A bit per hashed tile key, set for each bucket: a clear bit means no bucket there, so the lookup is skipped (a
-    // set bit may be another tile's: then the lookup decides). 64K bits.
-    const int OCCUPANCY_WORDS = 1024;
-
-    static int occupancyBit(double k) => (int)(unchecked((ulong)(long)k * 0x9E3779B97F4A7C15UL) >> 48);
-
-    static void occupy(ulong[] occ, double k)
-    {
-        var b = occupancyBit(k);
-        occ[b >> 6] |= 1UL << (b & 63);
-    }
-
-    static bool mayHold(ulong[] occ, double k)
-    {
-        var b = occupancyBit(k);
-        return (occ[b >> 6] & (1UL << (b & 63))) != 0;
-    }
 
     public static void removeZombie(SimState state, Zombie z)
     {
@@ -600,12 +568,14 @@ public static partial class Zombies
     /// <summary>The pos follows the tile under `at` (free movers own `at`); stepping onto a new tile can spring a trap or drop it in a pit. True if a trap took it.</summary>
     public static bool enter(SimState state, Zombie z)
     {
-        var tile = Motion.tileOf(z.at);
-        if ((tile.x == z.pos.x) && (tile.y == z.pos.y))
+        // Motion.tileOf, made only when it differs.
+        var tx = Js.I(JsMath.floor(((double)(z.at.x) / (Motion.SUB))));
+        var ty = Js.I(JsMath.floor(((double)(z.at.y) / (Motion.SUB))));
+        if ((tx == z.pos.x) && (ty == z.pos.y))
         {
             return false;
         }
-        z.pos = tile;
+        z.pos = new Point { x = tx, y = ty };
         if (springTrap(state, z))
         {
             return true;
@@ -785,24 +755,27 @@ public static partial class Zombies
     /// <summary>Can a zombie walk the straight line between two points (SUB units)? Every tile the centre line passes through is open to `mover` and every edge it crosses is crossable (a broken window isn't: climbing goes by the path, tile by tile). Where the line runs exactly through a corner, both tiles beside it must be open. `endMayBeBlocked`: the far end's own tile isn't checked (someone standing in a doorway). Exact integer maths (in doubles): crossing times compared by cross-multiplying.</summary>
     public static bool walkLine(Grid grid, Point a, Point b, string mover, bool endMayBeBlocked)
     {
-        var t = Motion.tileOf(a);
-        var end = Motion.tileOf(b);
+        // Motion.tileOf of each end, without making Points.
+        var tx = Js.I(JsMath.floor(((double)(a.x) / (Motion.SUB))));
+        var ty = Js.I(JsMath.floor(((double)(a.y) / (Motion.SUB))));
+        var endX = Js.I(JsMath.floor(((double)(b.x) / (Motion.SUB))));
+        var endY = Js.I(JsMath.floor(((double)(b.y) / (Motion.SUB))));
         double dx = b.x - a.x;
         double dy = b.y - a.y;
         var sx = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0);
         var sy = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0);
-        var x = t.x;
-        var y = t.y;
+        var x = tx;
+        var y = ty;
         bool open(int px, int py, int qx, int qy)
         {
             if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKind(grid, Grids.edgeBetween(grid, px, py, qx, qy)) == Grids.EDGE_WINDOW_BROKEN))
             {
                 return false;
             }
-            return (Js.T(endMayBeBlocked) && (qx == end.x) && (qy == end.y)) || Pathfinding.isPassable(grid, qx, qy, mover);
+            return (Js.T(endMayBeBlocked) && (qx == endX) && (qy == endY)) || Pathfinding.isPassable(grid, qx, qy, mover);
         }
-        var guard = JsMath.abs(end.x - x) + JsMath.abs(end.y - y);
-        while (((x != end.x) || (y != end.y)) && (guard-- >= 0))
+        var guard = JsMath.abs(endX - x) + JsMath.abs(endY - y);
+        while (((x != endX) || (y != endY)) && (guard-- >= 0))
         {
             // How far along the line the next x and y boundaries are, as |dx| * |dy| fractions.
             double nx = (sx == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sx > 0) ? (x + 1) : x) * (Motion.SUB)) - a.x)) * (JsMath.abs(dy)));
@@ -843,21 +816,7 @@ public static partial class Zombies
         var width = __d4.width;
         var height = __d4.height;
         // Plain dictionaries: only looked up, never iterated.
-        var buckets = new Dictionary<double, List<Zombie>>(state.zombies.Count);
-        var occ = new ulong[OCCUPANCY_WORDS];
-        foreach (var z in Js.Iter(state.zombies))
-        {
-            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-            if (buckets.TryGetValue(k, out var list))
-            {
-                list.push(z);
-            }
-            else
-            {
-                buckets[k] = [z];
-                occupy(occ, k);
-            }
-        }
+        var buckets = new ZombieBuckets(state.zombies, width);
         // The others by tile, and (othersAround) each listed under every in-grid tile within 1 of the tile its key names:
         // the ones a zombie on an in-grid tile meets, in one lookup instead of nine (sorted by order after, as before).
         var others = new Dictionary<double, List<PushApartOthers>>();
@@ -925,9 +884,9 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    var ck = ((double)(ny) * (width)) + nx;
-                    if (mayHold(occ, ck) && buckets.GetValueOrDefault(ck) is { } cell) foreach (var o in Js.Iter(cell))
+                    for (var i = buckets.first(((double)(ny) * (width)) + nx); i >= 0; i = buckets.next[i])
                     {
+                        var o = buckets.zs[i];
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
                             continue;
@@ -1184,5 +1143,53 @@ public static partial class Zombies
     public static bool climbing(SimState state, Point a, Point b)
     {
         return Js.Get(state.grid.edges, Grids.edgeBetween(state.grid, a.x, a.y, b.x, b.y)) == Grids.EDGE_WINDOW_BROKEN;
+    }
+}
+
+/// <summary>The dead by tile (key y * width + x, where each stood when made), in list order within a tile: a copy of
+/// the list, and for each a link to the next in its tile (-1 at the end), so no list per tile. A bitmask of hashed keys
+/// (64K bits) answers most empty tiles without the dictionary: a clear bit means nobody there.</summary>
+public sealed class ZombieBuckets
+{
+    public readonly Zombie[] zs;
+    public readonly int[] next;
+    readonly Dictionary<double, int> head;
+    readonly ulong[] occ = new ulong[1024];
+
+    public ZombieBuckets(List<Zombie> list, int width)
+    {
+        zs = list.ToArray();
+        next = new int[zs.Length];
+        head = new Dictionary<double, int>(zs.Length);
+        // Backwards, each put in front of its tile's chain: the chains run in list order.
+        for (var i = zs.Length - 1; i >= 0; i--)
+        {
+            var z = zs[i];
+            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
+            if (head.TryGetValue(k, out var h))
+            {
+                next[i] = h;
+            }
+            else
+            {
+                next[i] = -1;
+                var b = bit(k);
+                occ[b >> 6] |= 1UL << (b & 63);
+            }
+            head[k] = i;
+        }
+    }
+
+    static int bit(double k) => (int)(unchecked((ulong)(long)k * 0x9E3779B97F4A7C15UL) >> 48);
+
+    /// <summary>The first in this tile's chain (index into zs), or -1.</summary>
+    public int first(double k)
+    {
+        var b = bit(k);
+        if ((occ[b >> 6] & (1UL << (b & 63))) == 0)
+        {
+            return -1;
+        }
+        return head.TryGetValue(k, out var h) ? h : -1;
     }
 }

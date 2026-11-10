@@ -168,9 +168,7 @@ public partial class BucketsEntry
 {
     public int tick { get; set; }
     public double edit { get; set; }
-    public Dictionary<double, List<Zombie>> cells { get; set; }
-    /// <summary>Which tiles may hold a bucket (Zombies.mayHold).</summary>
-    public ulong[] occ { get; set; }
+    public ZombieBuckets cells { get; set; }
 }
 
 public partial class PushApartOthers
