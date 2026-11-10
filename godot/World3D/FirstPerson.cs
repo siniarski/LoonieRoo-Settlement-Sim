@@ -49,6 +49,11 @@ public sealed partial class FirstPerson : Node3D
     readonly FarField far;
     readonly Roofs roofs;
     readonly WorldLights lights;
+    readonly Fields fields;
+    readonly Sites sites;
+    readonly Aircraft aircraft;
+    readonly Cars cars;
+    readonly Others others;
     /// <summary>The world's lights (the debug panel, the light bench).</summary>
     public WorldLights Lights => lights;
     /// <summary>Rain, snow, the snow layer and the overcast sky (Weather.cs).</summary>
@@ -65,6 +70,13 @@ public sealed partial class FirstPerson : Node3D
     public FarField Far => far;
     public int ItemCount => items.Count;
     public int FurnitureCount => furniture.Count;
+    /// <summary>What the newer renderers drew (the self-test): farm plots, building-site pieces, cars, others' props and people, the helicopter.</summary>
+    public int PlotCount => fields.Count;
+    public int SiteCount => sites.Count;
+    public int CarCount => cars.Count;
+    public int OtherProps => others.Props;
+    public int OtherPeople => others.Shown.Count;
+    public bool HelicopterShown => aircraft.Shown;
     /// <summary>--eye: look from here (x, z; y metres over the ground there) instead of your eyes, to see a place from outside or above (a debug view).</summary>
     public Vector3? EyeAt;
     /// <summary>The eye over the (eased) ground under it this frame (m): EYE standing, more in a leap (the self-test compares your body's lift).</summary>
@@ -90,6 +102,11 @@ public sealed partial class FirstPerson : Node3D
         far = new FarField(this, trees);
         roofs = new Roofs(this);
         lights = new WorldLights(this, camera);
+        fields = new Fields(this);
+        sites = new Sites(this);
+        aircraft = new Aircraft(this);
+        cars = new Cars(this);
+        others = new Others(this);
         AddChild(sounds);
         AddChild(weather);
         look.indoor = roofs.Indoor;
@@ -149,10 +166,15 @@ public sealed partial class FirstPerson : Node3D
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
         weather.Update(state, eye, delta, roofs.Indoor, sun, env); // after the lighting and the fog: overcast and fog on bad days, rain, snow (Weather.cs)
-        var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
+        others.Update(state, eye, delta); // wanderers, traders, prisoners, caravans, runs: stand-ins for People and Bodies
+        var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y, others.Shown);
         Modelled = modelled.Count;
         people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
-        bodies.Update(state, alpha, eye, you.id, modelled);
+        bodies.Update(state, alpha, eye, you.id, modelled, others.Shown);
+        cars.Update(state, alpha, eye, you);
+        fields.Update(state, eye);
+        sites.Update(state, eye);
+        aircraft.Update(state, delta);
         items.Update(state, eye);
         held.Update(state, you, alpha, delta, inCar || EyeAt != null);
         lights.Update(state, eye, alpha, delta, inCar);

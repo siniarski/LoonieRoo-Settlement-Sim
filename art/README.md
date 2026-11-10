@@ -111,6 +111,17 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   a hash of its id), and `hand` (the gloved fist and sleeve that holds things in first person) (~1 s):
   `"$B" --background --factory-startup --python
   art/scripts/build_items.py -- --glb godot/assets/items/items.glb [--preview lineup.png]`, then re-import in Godot.
-  A new item kind wants a function here (until then it's a grey box).
+  A new item kind wants a function here (until then it's a grey box). The weapons' kinds and the flashlight are here too.
+- `scripts/build_world.py` (2026-11-11): what first person had no model for, 20 models, 48-1,488 triangles each
+  (~2 s): a farm plot's tilled bed (`soil`) and each crop at three stages on its bed (`potato_1`..`3`, `wheat_1`..`3`,
+  `herb_1`..`3`); building sites (`site` and `site_edge` pegged out, `frame` and `frame_door` going up, `joists`,
+  `planks` delivered); the helicopter (`heli`, and `heli_rotor` apart so the game spins it); a caravan's handcart
+  (`wagon`) and a trader's goods on a blanket (`stall`):
+  `"$B" --background --factory-startup --python art/scripts/build_world.py -- --glb godot/assets/world/world.glb
+  [--preview lineup.png]`, then re-import in Godot. A new crop wants `<crop>_1`, `_2`, `_3` here (until then its
+  plot shows the bare bed).
+- `scripts/lowpoly.py`: the kit build_world.py is made with (boxes, cylinders and cones as coloured faces, one mesh
+  per model, the glTF export, a preview). build_items.py and build_furniture.py carry older copies of the same
+  helpers: fold them in when either is next rebuilt.
 - `blend/`: generated .blend files, not in git (the scripts are the source). **No Git LFS:** a hand-made .blend
   goes in git only if small (compressed, a few MB at most); bigger ones live outside the repo.

@@ -69,7 +69,8 @@ git tag `ts-final`.
 - **ScenarioMod**: ASCII maps for tests. **DebugText**: the ASCII renderer. **Invariants**: cross-checks of survivors,
   jobs, items. **Arena**: debug arenas (the dead round you from the first tick).
 - **Staging**: scenes set by hand for the game's debug flags (a clock, weather, a fire, a gun in your hand, lineups
-  of every item and furniture). Not commands, never logged; the game calls these and never writes state itself.
+  of every item and furniture, a farm, building sites, visitors, the helicopter). Not commands, never logged; the
+  game calls these and never writes state itself.
 
 ### `Movement/`
 
@@ -179,7 +180,9 @@ git tag `ts-final`.
   actions), `GameInput.cs` (keys and mouse into commands), `GameShots.cs` (`--shot`), `GameText.cs` (`--trace`).
 - `World3D/`: first person (FirstPerson, WorldMesh chunks, Roofs, Terrain, People, Animals, Items, Furniture, Held,
   OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls, Lights, Weather, Fires: flames, smoke, embers, scorch and
-  charred stumps in a fixed few nodes).
+  charred stumps in a fixed few nodes; ModelSet: a file of models drawn in batches, used by Fields: farm plots and
+  crops, Sites: blueprints, Cars, Aircraft: the helicopter, Others: stand-in bodies for wanderers, traders,
+  prisoners, caravans and scavenging parties).
 - `Characters/`: what a body needs at runtime: looks and wardrobe, gaits, foot and hand IK, head look, stumps, the
   merged mid tier and VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.

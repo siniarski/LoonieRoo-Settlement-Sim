@@ -4,7 +4,7 @@
 #   "$B" --background --factory-startup --python art/scripts/build_items.py -- \
 #       --glb godot/assets/items/items.glb [--preview lineup.png]
 #
-# The kinds are the sim's (cs/Sim/Items/Inventory.cs ITEM_WEIGHT): wood, food, meal, bandage, medicine,
+# The kinds are the sim's (cs/Sim/Items/Inventory.cs ITEM_WEIGHT; the flashlight too): wood, food, meal, bandage, medicine,
 # weapon, cloth, coat, armour, boots, gun, ammo, corpse, book, cart, axe, hammer, medkit, sample, scrap,
 # fuel, and the weapons' own kinds (knife, hatchet, machete, crowbar, bat, pipe, sledge, spear, plank, pistol,
 # revolver, shotgun, rifle, crossbow and their ammunition: ammo38, shells, ammo308, bolts). Each is a mesh object named after its kind, made of boxes, cylinders and wedges, flat shaded, in
@@ -337,11 +337,22 @@ def fuel(g):
     cyl(g, 0.024, 0.014, (0.13, 0, 0.47), STEEL_D, metal=1, seg=8)
 
 
+def flashlight(g):
+    """A flashlight lying on its side: a ribbed black barrel, a wider head with a pale lens, a switch on top."""
+    body = lin(44, 46, 50)
+    cyl(g, 0.017, 0.15, (-0.02, 0, 0.024), body, metal=0.6, seg=8, axis="x", caps=mul(body, 0.7))
+    for x in (-0.085, -0.06):
+        cyl(g, 0.0195, 0.012, (x, 0, 0.024), mul(body, 0.75), metal=0.6, seg=8, axis="x")
+    cyl(g, 0.025, 0.05, (0.08, 0, 0.025), lin(60, 62, 66), metal=0.8, seg=8, axis="x", caps=body)
+    cyl(g, 0.021, 0.004, (0.106, 0, 0.025), lin(232, 228, 196), metal=0.2, seg=8, axis="x")
+    box(g, (0.022, 0.01, 0.006), (-0.005, 0, 0.04), lin(190, 70, 40))
+
+
 KINDS = {
     "wood": wood, "food": food, "meal": meal, "bandage": bandage, "medicine": medicine,
     "medkit": medkit, "weapon": weapon, "cloth": cloth, "coat": coat, "armour": armour,
     "boots": boots, "gun": gun, "ammo": ammo, "corpse": corpse, "book": book, "cart": cart,
-    "axe": axe, "hammer": hammer, "sample": sample, "scrap": scrap, "fuel": fuel,
+    "axe": axe, "hammer": hammer, "sample": sample, "scrap": scrap, "fuel": fuel, "flashlight": flashlight,
 }
 
 

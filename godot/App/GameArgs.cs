@@ -37,6 +37,8 @@
 //   --clock=TICK --burn=dx,dy,dx,dy..      the clock set; tiles alight at those offsets from you (a line of grass fire: --burn=4,-3,4,-2,4,-1,4,0)
 //   --lineup[=variants|weapons|furniture]  one of every item kind on the ground in front of you (or every model of the kinds with several,
 //                                          the weapons, or every furniture kind and look)
+//   --stage=farm,sites,visitors,heli       east of you: a farm at every stage; building sites; a wanderer, a trader, a prisoner, a caravan
+//                                          and a scavenging party; the helicopter overhead (pictures of what only the Colony tab used to draw)
 //   --arm=KIND[:ROUNDS]                    that weapon in your hand (a gun with ROUNDS in it, else 60% of its magazine, and a box of its
 //                                          ammunition in your bag), for pictures of the HUD's readout
 //   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn, or kinds with counts
@@ -189,6 +191,15 @@ public partial class Game
             if (lineup == "furniture") Staging.furnitureLineup(state, you);
             else World3D.ItemModels.ShowAs(Staging.itemLineup(state, you, lineup));
         }
+        if (args.TryGetValue("stage", out var stage) && you != null)
+            foreach (var scene in stage.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (scene == "farm") Staging.farm(state, you);
+                else if (scene == "sites") Staging.sites(state, you);
+                else if (scene == "visitors") Staging.visitors(state, you);
+                else if (scene == "heli") Staging.helicopter(state, you.pos.x + 14, you.pos.y);
+                else GD.Print($"--stage: no scene called {scene} (farm, sites, visitors, heli)");
+            }
         if (args.TryGetValue("arm", out var arm) && you != null)
         {
             var parts = arm.Split(':');

@@ -1,4 +1,5 @@
-// People in first person: survivors, residents, raiders and the dead near you as the "pz" character
+// People in first person: survivors, residents, raiders, the dead and Others.cs's stand-ins (wanderers, traders,
+// prisoners, caravans, scavenging parties) near you as the "pz" character
 // models (3k / 1.2k / 600 triangles, a 512 painted map, no normal map: picked 2026-11-09 from the style
 // lineup, docs/characters.md "The look"; art/scripts/build_lookdev.py --only pz), animated from the sim's
 // pose intents (PoseIntents.cs: stance, speed, heading) and LOD'd by height on screen as the look lab
@@ -137,7 +138,7 @@ public sealed partial class People
     readonly record struct Wanted(string id, string look, Looks.Outfit dress, Body body, PoseIntent pose, double dist2, bool angry, string action);
 
     /// <summary>Places models for the nearest people; returns the ids drawn, so Bodies leaves them out.</summary>
-    public HashSet<string> Update(SimState state, double alpha, Vector3 eye, string youId, double delta, float vpHeight)
+    public HashSet<string> Update(SimState state, double alpha, Vector3 eye, string youId, double delta, float vpHeight, IReadOnlyList<Others.StandIn> others)
     {
         time += delta;
         Steps.Clear();
@@ -157,6 +158,8 @@ public sealed partial class People
                 Add(s.id, LivingLook(s.id) + Lost(pose), Looks.LivingOutfit(s.id), s, pose, false, "");
             }
         foreach (var r in state.residents) Add(r.id, LivingLook(r.id), Looks.LivingOutfit(r.id), r, Pose(r.at, r.was), false, "");
+        // Those the sim keeps only as a tile (wanderers, traders, prisoners, caravans, runs): Others.cs's stand-ins.
+        foreach (var o in others) Add(o.id, LivingLook(o.id), Looks.LivingOutfit(o.id), o.body, o.pose, false, "");
         foreach (var z in state.zombies)
         {
             bool raider = z.kind == "raider";

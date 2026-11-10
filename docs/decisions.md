@@ -464,4 +464,4 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   from TypeScript cover several systems each, so folders would mislead). The game class is in parts by concern under `godot/App`; labs and benches are in `godot/Labs`, the
   self-test in `godot/SelfTest`. Debug flags that set a scene call `Staging` (cs/Sim/Debug): the game no longer writes a state field anywhere. `ArchitectureTest` checks the
   sim's purity, the game's no-writes rule, and that every sim file is in an area folder and in docs/modules.md
-  *Why:* The player wants to review the project himself; 125 files in one folder and a 1,050-line game file hid the shape, and rule 5 had exceptions nobody could see
+  *Why:* The player wants to review the project in person; 125 files in one folder and a 1,050-line game file hid the shape, and rule 5 had exceptions nobody could see

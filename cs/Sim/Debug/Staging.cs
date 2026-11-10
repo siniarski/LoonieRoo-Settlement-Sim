@@ -195,4 +195,64 @@ public static class Staging
                     FurnitureMod.addFurniture(state, kind, you.pos.x + dx + a, y + b).look = look;
         }
     }
+
+    // --- scenes of the things only the Colony tab used to draw (for pictures of their models) ---
+
+    /// <summary>A farm east of someone: a row for each crop (potato, wheat, herb), from a bare bed through sprouting
+    /// and growing to ripe, two plots of each.</summary>
+    public static void farm(SimState state, Survivor you)
+    {
+        string[] crops = ["potato", "wheat", "herb"];
+        for (int row = 0; row < crops.Length; row++)
+            for (int k = 0; k < 8; k++)
+            {
+                var plot = Farming.addPlot(state, you.pos.x + 2 + k, you.pos.y - 1 + row, crops[row]);
+                int stage = k / 2; // 0 bare, 1 sprouting, 2 growing, 3 ripe
+                plot.planted = stage > 0;
+                plot.growth = stage == 0 ? 0 : Farming.growTicks(plot) * (stage == 1 ? 0.15 : stage == 2 ? 0.7 : 1);
+            }
+    }
+
+    /// <summary>Building sites east of someone: a bed, a floor and a wall tile planned; then, a tile further each, a
+    /// wall, a door and a barricade on a border, each planned, with its material delivered, a third done and nearly
+    /// done.</summary>
+    public static void sites(SimState state, Survivor you)
+    {
+        int x = you.pos.x + 2, y = you.pos.y;
+        Designations.addBlueprint(state, x, y - 2, "bed");
+        Designations.addBlueprint(state, x + 1, y - 2, "floor").workDone = 5;
+        Designations.addBlueprint(state, x + 2, y - 2, "floor");
+        Designations.addBlueprint(state, x + 3, y - 2, "workbench").delivered = true;
+        string[] targets = ["wall", "door", "barricade"];
+        for (int row = 0; row < targets.Length; row++)
+            for (int k = 0; k < 4; k++)
+            {
+                var bp = Designations.addBlueprint(state, x + k, y + row, targets[row], row == 2 ? "w" : "n");
+                bp.delivered = k >= 1;
+                bp.workDone = bp.workRequired * (k == 2 ? 0.33 : k == 3 ? 0.9 : 0);
+            }
+    }
+
+    /// <summary>Those who come by, east of someone: a wanderer, a trader with goods laid out, a prisoner, a caravan
+    /// with its handcart and a neighbours' scavenging party. They stay as long as the sim lets them (a caravan and a
+    /// run head for where they were going on the next step).</summary>
+    public static void visitors(SimState state, Survivor you)
+    {
+        int x = you.pos.x + 3, y = you.pos.y;
+        double far = state.tick + 100000;
+        state.wanderers.Add(new Wanderer { id = $"w{state.nextId++}", name = "Wanderer", x = x, y = y - 3, leavesTick = far });
+        state.traders.Add(new Trader { id = $"t{state.nextId++}", x = x, y = y - 1, leavesTick = far });
+        state.prisoners.Add(new Prisoner { id = $"q{state.nextId++}", name = "Prisoner", x = x, y = y + 1, since = state.tick });
+        state.caravans ??= [];
+        state.caravans.Add(new Caravan { id = $"c{state.nextId++}", from = "", to = "you", x = x + 2, y = y - 2, dest = new Point(x + 2, y - 2), people = 3, nextStepTick = far });
+        state.runs ??= [];
+        state.runs.Add(new ScavRun { id = $"sr{state.nextId++}", from = "", x = x + 2, y = y + 2, home = new Point(x + 2, y + 2), ruin = new Point(x + 2, y + 2), people = 3, phase = "out", nextStepTick = far, untilTick = far });
+    }
+
+    /// <summary>The helicopter hanging over a tile a little way off, staying (the timeline's own comes on a rolled day).</summary>
+    public static void helicopter(SimState state, int x, int y)
+    {
+        if (state.timeline == null) return; // a world with no timeline (a scenario) has no helicopter
+        state.timeline.heli = new TimelineHeli { x = x, y = y, leaveTick = state.tick + 100000, exit = new Point(x, y) };
+    }
 }

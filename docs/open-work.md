@@ -143,9 +143,19 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
 
 ## First person and the look
 
-- Left from the first-person start (2026-11-08): cars as models (Bodies.cs boxes); the world's look (textures); what
-  line of sight and fog of war mean in first person; the car's size (the sim's is a 0.43 m circle, drawn 1 x 1.9 m;
-  the model is 4.2 m).
+- Left from the first-person start (2026-11-08): the world's look (textures); what line of sight and fog of war mean
+  in first person; **the car's size** (the sim's is a 0.43 m circle; since 2026-11-11 it is drawn as the 4.2 m
+  sedan or the 5 m pickup, so a car against a wall stands into it and you get in through its side: the sim's car
+  wants a real footprint, the player's call).
+- Models added 2026-11-11 (log/2026-11-11-03-models.md): farm plots and crops, building sites, cars, the
+  helicopter, the flashlight, and the people the sim keeps as a tile (wanderers, traders, prisoners, caravans,
+  scavenging parties: `Others.cs`'s stand-ins). Left: the car you sit in isn't drawn (no bonnet or dash); a
+  prisoner stands like anyone (no bound pose, no cell); a caravan or a run draws four people at most; a party
+  walks straight at its next tile (through a wall if the sim's step crosses one); stand-ins have no names over
+  them and can't be looked at for a card; ferns near trees still poke through a farm plot (Trees.cs draws them
+  whatever the tile holds); the helicopter has no searchlight and its sound isn't placed at the model; a wall
+  tile's blueprint is pegs only (no frame, as an edge wall has); the furniture docs/buildings.md still wants
+  (chairs and the rest) needs sim looks first, then models.
 - Trees: tile walkers and cars go round trunks now (`Motion.syncStep`, Trunks); in a one-tile corridor they still
   pass through; one trunk radius for every species (the species is drawing-only).
 - Body leaps: no real vault clip (a tuck and a hand on the sill); the push-off and landing are the step sounds
