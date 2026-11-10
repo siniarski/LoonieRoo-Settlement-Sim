@@ -1,0 +1,4 @@
+- **YYYY-MM-DD, what it was** (name the file `log/YYYY-MM-DD-NN-slug.md`: NN one above the day's highest; delete this line). What the player asked for or what was wrong, in a sentence, and what you did.
+  - **Why / what was tried.** The measurements or the failure, with numbers; what you tried that didn't work.
+  - **Decided.** What stays and why; anything the next session must not undo.
+  - **Left.** What's open or not verified. Tests added and the check's result (e.g. "Check green (724), self-test 78").
