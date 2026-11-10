@@ -15,11 +15,16 @@
 #
 #   blender --background --factory-startup --python art/scripts/build_lookdev.py -- \
 #       --subject zombie|survivor --out godot/assets/characters/look [--only plus|pz] [--tex 2048]
-#       [--face feral|slack|gaunt|bloated|torn (feral unless said)] [--clothes jacket|hoodie]
+#       [--face feral|slack|gaunt|bloated|torn (feral unless said)] [--clothes jacket|hoodie] [--outfit longsleeve]
 #       [--blend art/blend/look_zombie.blend] [--preview DIR]
 #
-# Writes <out>/look_<cand>_<subject>[_<face or clothes>].glb, its meshes named <piece>_lod<i> (body,
-# jacket, jeans...), and prints each LOD's triangles and the bake times.
+# Writes <out>/look_<cand>_<subject>[_<face>][_<clothes or outfit>].glb, its meshes named <piece>_lod<i>
+# (body, jacket, jeans...), and prints each LOD's triangles and the bake times. The zombie's pz builds also
+# write the recolour mask the game tints its clothes by (<file>_mask.png: red the top's clean cloth, green
+# the trousers', the blood, dirt and tears left out) and <file>_mask.json (the colours the mask's cloth was
+# painted in, sRGB, and its mean linear luminance), so the dead can wear any colour from the one map
+# (Characters/Looks.cs: the colour wanted, scaled by each texel's brightness against that mean).
+# --clothes and --outfit work on the zombie too: the dead in a jacket, a hoodie, a long-sleeved shirt.
 
 import math
 import os
@@ -246,18 +251,56 @@ def paint_atlas(pieces, outfit, size, style, t0):
     covered = pos[:, 3] > 0.5
     col = np.zeros((len(pos), 4), np.float32)
     col[:, 3] = 1
+    mask = np.zeros((len(pos), 4), np.float32)
+    mask[:, 3] = 1
+    dead = outfit.get("dead", False)
     for k, piece in enumerate(pieces):
         idx = np.nonzero(covered & (ids == k))[0]
         for i in range(0, len(idx), 400000):
             part = idx[i:i + 400000]
             p = pos[part, :3].astype(np.float64) * 2 - np.array([1, 1, 0])
-            col[part, :3] = paint.albedo(p, ao[part], outfit, style) if piece["name"] == "body" else clothes.albedo(piece["name"], p, ao[part])
+            out = {}
+            if piece["name"] == "body":
+                col[part, :3] = paint.albedo(p, ao[part], outfit, style, out)
+            else:
+                col[part, :3] = clothes.albedo(piece["name"], p, ao[part], dead, out)
+            if piece["name"] == "body" and len(pieces) > 1:
+                out = {}  # under garments the body's painted clothes are gone or hidden: only the garments tint
+            mask[part, 0] = out.get("top", 0)
+            mask[part, 1] = out.get("bottom", 0)
     img = new_image(f"albedo_{style}", size, False)
     img.pixels.foreach_set(col.ravel())
     log(t0, f"painted {covered.sum()} texels")
     for im in (pos_img, id_img, ao_img):
         bpy.data.images.remove(im)
-    return img
+    # The cloth's mean brightness under each mask (linear luminance), what the game's tint is scaled from.
+    lin = np.where(col[:, :3] <= 0.04045, col[:, :3] / 12.92, ((col[:, :3] + 0.055) / 1.055) ** 2.4)
+    lum = lin @ np.array([0.2126, 0.7152, 0.0722])
+    stats = {}
+    for k, ch in (("top_lum", 0), ("bottom_lum", 1)):
+        w = mask[:, ch] * covered
+        stats[k] = float((lum * w).sum() / max(w.sum(), 1e-6))
+    return img, _bleed(mask, size, covered), stats
+
+
+def _bleed(mask, size, covered, steps=4):
+    """The mask spread a few texels past each island's edge (as the bake's margin does for the colour), so a
+    mipmapped or filtered lookup at a seam doesn't fall back to 0 there."""
+    m = mask.reshape(size, size, 4).copy()
+    have = covered.reshape(size, size).copy()
+    for _ in range(steps):
+        grow = np.zeros_like(m)
+        n = np.zeros((size, size), np.float32)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            sh = np.roll(np.roll(m, dy, 0), dx, 1)
+            hv = np.roll(np.roll(have, dy, 0), dx, 1)
+            grow += sh * hv[:, :, None]
+            n += hv
+        fill = (~have) & (n > 0)
+        m[fill] = grow[fill] / n[fill][:, None]
+        have = have | fill
+    m[:, :, 3] = 1
+    return m
 
 
 def final_material(name, albedo, normal, two_sided):
@@ -375,7 +418,7 @@ def build_candidate(cand, subject, base, high, garments, arm, src, out_dir, size
         piece["low"], piece["tris0"] = low, tris(low)
         log(t0, f"{cand}: {low.name} {tris(low)} triangles")
     unwrap([p["low"] for p in pieces])
-    albedo = paint_atlas(pieces, outfit, size, cand, t0)
+    albedo, mask, stats = paint_atlas(pieces, outfit, size, cand, t0)
     normal = None
     if cand == "plus":
         normal = new_image("normal", size, True)
@@ -408,10 +451,13 @@ def build_candidate(cand, subject, base, high, garments, arm, src, out_dir, size
     for p in problems:
         print("VALIDATE:", p)
 
-    # The default face (paint.OUTFITS) is the plain file; another face or a clothes set is a suffix.
-    tag = outfit.get("face", "") if subject == "zombie" else outfit.get("clothes", "")
-    tag = "" if tag in ("", paint.OUTFITS[subject].get("face", "")) else "_" + tag
+    # The default face (paint.OUTFITS) is the plain file; another face, a clothes set or an outfit is a suffix.
+    tags = [outfit.get("face", "")] if subject == "zombie" else []
+    tags += [outfit.get("clothes", ""), outfit.get("outfit", "")]
+    tag = "".join("_" + t for t in tags if t and t != paint.OUTFITS[subject].get("face", ""))
     path = os.path.join(out_dir, f"look_{cand}_{subject}{tag}.glb")
+    if subject == "zombie" and cand == "pz":
+        save_mask(mask, os.path.splitext(path)[0], outfit, list(garments), stats)
     bpy.ops.object.select_all(action="DESELECT")
     for o in meshes + [arm]:
         o.hide_set(False)
@@ -429,6 +475,29 @@ def build_candidate(cand, subject, base, high, garments, arm, src, out_dir, size
         o.hide_set(True)
         o.hide_render = True
     return problems
+
+
+def save_mask(mask, base, outfit, garments, stats):
+    """The recolour mask (an 8-bit RGB PNG, written here: rows top first, as the exporter writes the colour
+    map) and the colours its cloth was painted in (JSON, sRGB), beside the .glb."""
+    import json
+    import struct
+    import zlib
+    rgb8 = (np.clip(mask[::-1, :, :3], 0, 1) * 255 + 0.5).astype(np.uint8)
+    h, w = rgb8.shape[:2]
+    raw = b"".join(b"\x00" + rgb8[r].tobytes() for r in range(h))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    with open(base + "_mask.png", "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+    top = clothes.BASE_COLOUR[next(g for g in garments if g != "jeans")] if any(g != "jeans" for g in garments) else outfit["shirt"]
+    bottom = clothes.BASE_COLOUR["jeans"] if "jeans" in garments else outfit["trousers"]
+    with open(base + "_mask.json", "w", encoding="utf-8") as f:
+        json.dump({"top": [round(float(c), 4) for c in top], "bottom": [round(float(c), 4) for c in bottom],
+                   "top_lum": round(stats["top_lum"], 5), "bottom_lum": round(stats["bottom_lum"], 5)}, f)
+        f.write("\n")
 
 
 def render_preview(objs, base):
@@ -478,6 +547,9 @@ def main():
     names = clothes.OUTFITS.get(a.get("clothes", ""), [])
     if names:
         outfit["clothes"] = a["clothes"]
+    if "outfit" in a:
+        outfit.update(paint.OUTFIT_VARIANTS[a["outfit"]])
+        outfit["outfit"] = a["outfit"]
     base, closed = base_mesh(outfit, names)
     src = weight_source(closed, arm)
     log(t0, f"base {tris(base)} triangles; weights from {tris(src)}")

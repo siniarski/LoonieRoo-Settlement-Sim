@@ -12,6 +12,7 @@
 //   hair       the survivor with each hair style side by side (hair meshes, attached and tinted)
 //   hats       every hair style under the beanie (its under-hat version), as the game draws them (pz)
 //   people     survivors dressed as the world dresses them (Looks.cs: hair, beard, hat by a hash of the id)
+//   dead       the dead dressed as the world dresses them (an outfit, its colours, hair, beard, hat by id)
 //   stumps     every lost limb the sim can say (Wounds.lostLimb: an arm below the elbow, a leg below the
 //              knee, either side), on the survivor in a jacket (pinned sleeve, knotted trouser leg) and the
 //              dead (torn), cut at load (StumpCut.cs)
@@ -33,7 +34,10 @@
 //   --shot=out.png [--frames=N]      save a screenshot after N frames and quit
 //   --shots=DIR                      the comparison set (candidates x distances x faces), then quit
 //   --report=DIR                     the budget sweep (candidates x LODs x crowd sizes), look.md, then quit
-//   --tracehair                      print each character's hair triangles by LOD
+//   --tracehair                      print each character's hair triangles by LOD, and what a stump cut cost
+//   --crowdbench=FILE                the dead's crowd, as before this outfit work (one look per face, matted grey
+//                                    hair) and dressed as the world dresses them, 40 and 200 walking: frame,
+//                                    GPU and render CPU ms, draw calls, materials; a table to FILE, then quit
 //   --novsync                        frame times uncapped; --nopanel hides the panel in a --shot; --noaim looks level
 //
 // Keys: wheel or [ ] distance, 1-6 distance presets, F face, L LOD (auto, 0..), V wireframe, T turn, right-drag look.
@@ -60,7 +64,7 @@ public partial class LookLab : Node3D
         return ResourceLoader.Exists(path) ? path : plain;  // the variants are built for plus only
     }
 
-    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair", "hats", "people", "stumps" };
+    static readonly string[] Cands = { "mannequin", "pz", "plus", "lineup", "faces", "clothes", "hair", "hats", "people", "dead", "stumps" };
     // Lost limbs (the sim's lostLimbs: Wounds.lostLimb cuts arms below the elbow, legs below the knee; crawlers have lost both legs).
     static readonly string[] Losses = { "none", "armLeft:elbow", "armRight:elbow", "legLeft:knee", "legRight:knee", "legLeft:knee,legRight:knee", "armLeft:elbow,legRight:knee" };
     // The stumps lineup: (subject, clothes or face, lost limbs, label).
@@ -183,6 +187,7 @@ public partial class LookLab : Node3D
         ApplyView();
         if (args.TryGetValue("shots", out var sd)) _ = RunShots(sd);
         else if (args.TryGetValue("report", out var rd)) _ = RunReport(rd);
+        else if (args.TryGetValue("crowdbench", out var cb)) _ = RunCrowdBench(cb);
     }
 
     // ------------------------------------------------------------------ characters
@@ -199,8 +204,9 @@ public partial class LookLab : Node3D
         u.Free();
     }
 
-    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null, string? limbs = null, Looks.Hair? dress = null)
+    Actor MakeActor(string which, Node parent, string? subj = null, string? variant = null, string? hair = null, string? limbs = null, Looks.Hair? dress = null, Looks.Outfit? outfit = null)
     {
+        if (outfit is { } o) dress = o.hair;
         subj ??= subject;
         variant ??= subj == "zombie" ? faceVariant : clothesSet;
         string path = which == "mannequin" ? MannequinPath : CandPath(which, subj, variant);
@@ -236,6 +242,7 @@ public partial class LookLab : Node3D
                 int cut = StumpCut.Apply(root, lost, subj == "zombie");
                 a.CutMs = (Godot.Time.GetTicksUsec() - t0) / 1000.0;
                 a.CutDesc = $"{string.Join(", ", lost)} ({cut} meshes, {a.CutMs:0.0} ms)";
+                if (OS.GetCmdlineUserArgs().Contains("--tracehair")) GD.Print($"cut {subj}/{variant}: {a.CutDesc}");
                 a.Lods = FindAll<MeshInstance3D>(root).GroupBy(mi => LodIndex(mi.Name)).OrderBy(g => g.Key).Select(g => g.ToArray()).ToArray();
             }
             var h = dress ?? new Looks.Hair(hair ?? (subj == "zombie" ? "matted" : hairStyle), Math.Max(0, Array.IndexOf(HairColours, hairColour)),
@@ -244,6 +251,7 @@ public partial class LookLab : Node3D
             a.Lods = a.Lods.Select((g, i) => g.Concat(groups[i]).ToArray()).ToArray();
             a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
             a.HairTris = groups.Select(g => g.Sum(Tris)).ToArray();
+            if (outfit is { } oc) Looks.Recolour(a.Lods.SelectMany(g => g), path, oc.top, oc.bottom);
             if (OS.GetCmdlineUserArgs().Contains("--tracehair")) GD.Print($"hair {which} {h}: {string.Join(" / ", a.HairTris)} tris by body LOD; body {string.Join(" / ", a.Tris.Zip(a.HairTris, (t, x) => t - x))}");
         }
         (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);
@@ -312,15 +320,17 @@ public partial class LookLab : Node3D
             "stumps" => StumpCases.Select(x => ("pz", 0, x.tag, (string?)x.subj, (string?)x.variant)).ToArray(),
             "hats" => HairStyles.Where(h => h != "matted").Select(h => ("pz", 0, h, (string?)"survivor", (string?)h)).ToArray(),
             "people" => People().Select(x => ("pz", 0, x.tag, (string?)"survivor", (string?)x.id)).ToArray(),
+            "dead" => Dead().Select(x => ("pz", 0, x.tag, (string?)"zombie", (string?)x.id)).ToArray(),
             _ => new (string c, int lod, string tag, string? subj, string? variant)[] { (cand, -1, cand, null, null) },
         };
         bool row = list.Length > 1;
-        double spacing = cand is "faces" or "hair" or "hats" ? 0.62 : cand is "stumps" or "people" ? 0.8 : 1.05;
+        double spacing = cand is "faces" or "hair" or "hats" ? 0.62 : cand is "stumps" or "people" or "dead" ? 0.8 : 1.05;
         for (int i = 0; i < list.Length; i++)
         {
             var a = cand == "hair" ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant)
                 : cand == "hats" ? MakeActor(list[i].c, this, "survivor", clothesSet, list[i].variant, null, new Looks.Hair(list[i].variant!, Math.Max(0, Array.IndexOf(HairColours, hairColour)), "beanie", Math.Max(0, Array.IndexOf(HatColours, hatColour)), false, false))
                 : cand == "people" ? MakeActor(list[i].c, this, "survivor", Looks.LivingClothes(list[i].variant!), null, null, Looks.LivingHair(list[i].variant!))
+                : cand == "dead" ? MakeActor(list[i].c, this, "zombie", Looks.DeadBody(list[i].variant!), null, null, null, Looks.DeadOutfit(list[i].variant!))
                 : cand == "stumps" ? MakeActor(list[i].c, this, list[i].subj, list[i].variant, null, StumpCases[i].limbs)
                 : MakeActor(list[i].c, this, list[i].subj, list[i].variant);
             if (row)
@@ -360,16 +370,41 @@ public partial class LookLab : Node3D
         return picked;
     }
 
+    /// <summary>Eight dead ids showing each outfit (and some colours, hair and hats), labelled with what they wear.</summary>
+    static List<(string id, string tag)> Dead()
+    {
+        var picked = new List<(string id, string tag)>();
+        var seen = new HashSet<string>();
+        int hats = 0;
+        for (int i = 1; i < 4000 && picked.Count < 8; i++)
+        {
+            string id = "z" + i;
+            string body = Looks.DeadBody(id);
+            var o = Looks.DeadOutfit(id);
+            string outfitKey = Looks.FaceOf(body) == body ? "tee" : body;
+            bool wanted = o.hair.hat != "none" ? hats < 1 : !seen.Contains(outfitKey) || (outfitKey == "tee" && !seen.Contains("tee:" + body) && picked.Count >= 4);
+            if (!wanted) continue;
+            seen.Add(outfitKey);
+            seen.Add("tee:" + body);
+            if (o.hair.hat != "none") hats++;
+            string tag = $"{id} {body}\n{Looks.DEAD_TOPS[o.top].name} / {Looks.DEAD_BOTTOMS[o.bottom].name}\n{o.hair.style}{(o.hair.beard ? " +beard" : "")}{(o.hair.hat != "none" ? " +" + o.hair.hat : "")}";
+            picked.Add((id, tag));
+        }
+        return picked;
+    }
+
     void RebuildCrowd()
     {
         foreach (var a in crowd) a.Root.QueueFree();
         crowd.Clear();
-        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand is "stumps" or "hats" or "people" ? "pz" : cand;
+        string which = cand is "lineup" or "faces" or "clothes" or "hair" ? "plus" : cand is "stumps" or "hats" or "people" or "dead" ? "pz" : cand;
         // A field ahead: rows 1.5 m apart from 4 m out, as wide as the view, to ~120 m.
         int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(crowdCount) * 1.6));
         for (int i = 0; i < crowdCount; i++)
         {
-            var a = MakeActor(which, crowdRoot);
+            // The dead lineup's crowd is dressed as the world dresses the dead (a street of them).
+            string zid = "z" + (i + 100);
+            var a = cand == "dead" ? MakeActor("pz", crowdRoot, "zombie", Looks.DeadBody(zid), null, null, null, Looks.DeadOutfit(zid)) : MakeActor(which, crowdRoot);
             int row = i / perRow, col = i % perRow;
             double z = 4 + row * 1.5;
             double half = z * Math.Tan(Mathf.DegToRad(45)) * 0.9;
@@ -458,7 +493,7 @@ public partial class LookLab : Node3D
         var mi = a.Lods[Math.Min(lod, a.Lods.Length - 1)].FirstOrDefault(m => m.FindBlendShapeByName("angry") >= 0);
         if (a.Cand == "mannequin" || mi == null) return;
         double e = a.Angry * a.Angry * (3 - 2 * a.Angry);
-        double slack = Slack.GetValueOrDefault(a.Variant, 0.12) + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
+        double slack = Slack.GetValueOrDefault(Looks.FaceOf(a.Variant), 0.12) + 0.03 * Math.Sin(time * 1.3 + a.Phase * 6);
         double growl = 0.75 + 0.20 * Math.Sin(time * 7.5 + a.Phase * 6) + 0.05 * Math.Sin(time * 17);
         SetShape(mi, "jaw_open", forceJaw >= 0 ? forceJaw : slack + (growl - slack) * e);
         SetShape(mi, "angry", e);
@@ -479,7 +514,7 @@ public partial class LookLab : Node3D
         if (a != null)
         {
             int lod = a.Shown <= -2 ? -2 - a.Shown : Math.Max(a.Shown, 0);
-            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair" or "stumps" or "hats" or "people");
+            bool single = cand is not ("lineup" or "faces" or "clothes" or "hair" or "stumps" or "hats" or "people" or "dead");
             sb.AppendLine($"subject   {a.Subject} / {cand}{(a.Cand != "mannequin" && single ? $" lod{lod}" : "")}  {(single && a.Cand != "mannequin" ? a.Variant : "")}");
             sb.AppendLine($"distance  {distance:0.0} m   height on screen {ScreenHeight(distance, vpH):0} px");
             if (single) sb.AppendLine($"character {a.Tris[Math.Min(lod, a.Tris.Length - 1)]:N0} tris   ladder {string.Join(" / ", a.Tris.Select(t => t >= 1000 ? $"{t / 1000.0:0.#}k" : t.ToString()))}");
@@ -887,6 +922,98 @@ public partial class LookLab : Node3D
         sb.AppendLine("Texture memory with one of each look loaded: see the lab's readout (it counts what's on the GPU).");
         using (var f = FileAccess.Open($"{dir}/look.md", FileAccess.ModeFlags.Write)) f.StoreString(sb.ToString());
         GD.Print($"report: {dir}/look.md");
+        GetTree().Quit();
+    }
+
+    /// <summary>The dead's crowd before and after the outfit work: "before" each wears its face's tee file as
+    /// painted and matted grey hair (the world's look until 2026-11-10); "after" as the world dresses them now
+    /// (Looks.DeadBody and DeadOutfit: eight files, recoloured, hair, beards, hats). 40 (the world's model
+    /// budget) and 200, walking, auto LOD, in the field ahead; means over 240 frames after 60 to settle.</summary>
+    async Task RunCrowdBench(string file)
+    {
+        busy = true;
+        panelLayer.Visible = false;
+        DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+        Engine.MaxFps = 0;
+        var vp = GetViewport().GetViewportRid();
+        foreach (var x in subjects) x.Root.Visible = false;
+        move = "walk";
+        var sb = new StringBuilder();
+        sb.AppendLine("# The dead's crowd: before and after their outfits");
+        sb.AppendLine();
+        sb.AppendLine($"Godot {Engine.GetVersionInfo()["string"]}, {OS.GetProcessorName()}, {RenderingServer.GetVideoAdapterName()}, " +
+                      $"{GetViewport().GetVisibleRect().Size.X}x{GetViewport().GetVisibleRect().Size.Y}, light {light}, shadows on, vsync off. " +
+                      "The look lab's field (rows 1.5 m apart from 4 m out), pz zombies walking (an AnimationPlayer each), auto LOD by height on screen; means over 240 frames after 60.");
+        sb.AppendLine();
+        sb.AppendLine("| dead | crowd | frame ms | gpu ms | render cpu ms | draws | objects | on screen tris | model files | materials | build ms |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|");
+        foreach (var n in new[] { 40, 200 })
+            foreach (var mode in new[] { "before", "after", "before", "after" })
+            {
+                foreach (var a in crowd) a.Root.QueueFree();
+                crowd.Clear();
+                await Frames(2);
+                ulong t0 = Time.GetTicksUsec();
+                var files = new HashSet<string>();
+                int perRow = Math.Max(8, (int)Math.Ceiling(Math.Sqrt(n) * 1.6));
+                for (int i = 0; i < n; i++)
+                {
+                    string id = "z" + (i + 1);
+                    Actor a;
+                    if (mode == "before")
+                    {
+                        string face = Looks.DeadFace(id);
+                        a = MakeActor("pz", crowdRoot, "zombie", face, null, null, new Looks.Hair("matted", 4, "none", 0, false, false));
+                        files.Add(face);
+                    }
+                    else
+                    {
+                        string body = Looks.DeadBody(id);
+                        a = MakeActor("pz", crowdRoot, "zombie", body, null, null, null, Looks.DeadOutfit(id));
+                        files.Add(body);
+                    }
+                    int row = i / perRow, col = i % perRow;
+                    double z = 4 + row * 1.5;
+                    double half = z * Math.Tan(Mathf.DegToRad(45)) * 0.9;
+                    double x = -half + (col + 0.5) / perRow * 2 * half + (Hash(i) - 0.5) * 0.6;
+                    a.Root.Position = new Vector3((float)x, 0, (float)-z);
+                    a.Root.RotationDegrees = new Vector3(0, (float)((Hash(i + 7) - 0.5) * 60), 0);
+                    a.Phase = Hash(i + 3);
+                    Play(a, a.Phase);
+                    crowd.Add(a);
+                }
+                double build = (Time.GetTicksUsec() - t0) / 1000.0;
+                await Frames(60);
+                double gpu = 0, rcpu = 0, tris = 0, draws = 0, objects = 0, ms = 0;
+                const int N = 240;
+                ulong last = Time.GetTicksUsec();
+                for (int i = 0; i < N; i++)
+                {
+                    await Frames(1);
+                    ulong now = Time.GetTicksUsec();
+                    ms += (now - last) / 1000.0;
+                    last = now;
+                    gpu += RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp);
+                    rcpu += RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp);
+                    tris += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame);
+                    draws += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame);
+                    objects += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalObjectsInFrame);
+                }
+                var mats = new HashSet<ulong>();
+                foreach (var a in crowd)
+                    foreach (var mi in a.Lods.SelectMany(g => g))
+                        for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+                            if ((mi.GetSurfaceOverrideMaterial(s) ?? mi.MaterialOverride ?? mi.Mesh.SurfaceGetMaterial(s)) is Material m) mats.Add(m.GetInstanceId());
+                string line = $"| {mode} | {n} | {ms / N:0.00} | {gpu / N:0.00} | {rcpu / N:0.00} | {draws / N:0} | {objects / N:0} | {tris / N:N0} | {files.Count} | {mats.Count} | {build:0} |";
+                sb.AppendLine(line);
+                GD.Print("bench: " + line);
+            }
+        foreach (var a in crowd) a.Root.QueueFree();
+        crowd.Clear();
+        sb.AppendLine();
+        sb.AppendLine("Each crowd size runs before, after, before, after (the second pair shows the noise). Materials: distinct ones on the crowd's meshes (body, garments, hair, beard, hat); after, the dead's recolour materials are shared per model file, surface and colour pair.");
+        using (var f = FileAccess.Open(file, FileAccess.ModeFlags.Write)) f.StoreString(sb.ToString());
+        GD.Print($"bench: {file}");
         GetTree().Quit();
     }
 

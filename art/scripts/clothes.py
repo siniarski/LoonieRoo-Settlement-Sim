@@ -219,6 +219,8 @@ GARMENTS = {
     "jeans": {"mask": jeans_mask, "lift": jeans_lift, "cover": jeans_cover, "extras": jeans_extras, "hang": jeans_hang, "tris": 4500},
 }
 OUTFITS = {"jacket": ["jacket", "jeans"], "hoodie": ["hoodie", "jeans"]}
+# The colour each garment is painted in (sRGB), the recolour mask's reference (build_lookdev.save_mask).
+BASE_COLOUR = {"jacket": (0.34, 0.31, 0.21), "hoodie": (0.24, 0.24, 0.25), "jeans": (0.20, 0.25, 0.35)}
 
 
 # ---------------------------------------------------------------- building
@@ -319,8 +321,10 @@ def detail(name, p):
     return torso * (1 - arm) + sleeve * arm + rib + crumple
 
 
-def albedo(name, p, ao):
-    """Colour per texel (sRGB as displayed), shading from the baked AO."""
+def albedo(name, p, ao, dead=False, out=None):
+    """Colour per texel (sRGB as displayed), shading from the baked AO. dead: worn on the dead (filthier, blood
+    down the front and on the cuffs, torn and frayed). With out (a dict): the recolour mask, out["top"] or
+    out["bottom"] (the jeans), the clean cloth only."""
     x, y, z, ax, arm, neck = _parts(p)
     n1, n2, n3 = fbm(p, 14, 4), fbm(p + 5.1, 40, 3), fbm(p + 9.7, 140, 2)
     front = y < -0.02
@@ -355,7 +359,22 @@ def albedo(name, p, ao):
         belt = sstep(0.958, 0.962, z) * sstep(0.992, 0.988, z)
         col = mix(col, rgb(0.17, 0.11, 0.07) * (0.85 + 0.3 * n2[:, None]), belt)
         col = mix(col, rgb(0.50, 0.48, 0.42), belt * sstep(0.022, 0.018, ax) * front)                            # the buckle
-    dirt = sstep(0.45, 0.75, fbm(p, 8, 4)) * sstep(0.9, 0.0, z) * 0.5
+    dirt = sstep(0.45, 0.75, fbm(p, 8, 4)) * sstep(0.9, 0.0, z) * (0.85 if dead else 0.5)
     col = mix(col, rgb(0.19, 0.15, 0.11), dirt)
+    stain = dirt * 0.9
+    if dead:
+        # Grime all over, blood down the front from the mouth and splashed on the cuffs, tears frayed pale.
+        grime = sstep(0.4, 0.8, fbm(p + 2.2, 5, 3)) * 0.35
+        col = mix(col, rgb(0.17, 0.14, 0.11), grime)
+        front_run = sstep(0.10, 0.0, ax - 0.04 * fbm(p, 9, 2)) * (y < 0.0) * sstep(0.55, 0.3, fbm(p * np.array([3, 3, 0.6]), 16, 3) + 0.35 * sstep(1.45, 0.9, z))
+        splash = sstep(0.70, 0.74, fbm(p + 7.1, 22, 4)) * (0.4 + sstep(0.55, 0.75, ax))
+        blood = np.clip(front_run * (name != "jeans") + splash, 0, 1)
+        col = mix(col, mix(rgb(0.26, 0.04, 0.03), rgb(0.12, 0.04, 0.03), n2[:, None]), blood * 0.9)
+        tear = sstep(0.69, 0.72, fbm(p + 3.3, 12, 4))
+        col = mix(col, col * 0.35, tear)
+        stain = np.maximum(np.maximum(stain, grime), np.maximum(blood, tear))
+    if out is not None:
+        clean = np.clip(1 - stain, 0, 1)
+        out["bottom" if name == "jeans" else "top"] = clean
     col = col * (0.60 + 0.40 * ao)[:, None]
     return np.clip(col, 0, 1)

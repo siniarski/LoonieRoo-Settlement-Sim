@@ -73,6 +73,13 @@ OUTFITS = {
 }
 
 
+# Outfits the dead also wear (build_lookdev.py --outfit): painted like the tee, other cuts and cloth.
+OUTFIT_VARIANTS = {
+    "longsleeve": {"shirt": rgb(0.36, 0.33, 0.27), "sleeve": 0.72, "neck": 1.44, "hem": 0.90,
+                   "trousers": rgb(0.26, 0.24, 0.20), "shoes": rgb(0.22, 0.16, 0.11), "shoe": 0.17},
+}
+
+
 def regions(p, o):
     """Soft masks (N,) by rest position: shirt, trousers, shoes, hair, brows, lips, eye, iris, teeth,
     mouth (the inside), and cloth (any garment)."""
@@ -159,9 +166,11 @@ def detail(p, o):
 # ---------------------------------------------------------------- colour
 
 
-def albedo(p, ao, o, style):
+def albedo(p, ao, o, style, out=None):
     """Colour per texel (N, 3), sRGB as displayed (the palette above is too). style "plus": soft AO (the normal map shades the folds);
-    "pz": strong AO and flatter colour, Zomboid's painted look."""
+    "pz": strong AO and flatter colour, Zomboid's painted look. With out (a dict), also the recolour mask the
+    game tints a dead body's clothes by (out["top"], out["bottom"]: the clean cloth of the shirt and the
+    trousers, 0..1, without the blood, dirt and holes on them)."""
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
     ax = np.abs(x)
     m = regions(p, o)
@@ -216,6 +225,7 @@ def albedo(p, ao, o, style):
     col = mix(col, shoes, m["shoes"])
     dirt = sstep(0.45, 0.75, fbm(p, 8, 4)) * sstep(0.9, 0.0, z) * (0.85 if dead else 0.5)
     col = mix(col, rgb(0.19, 0.15, 0.11), dirt * m["cloth"])
+    stain = dirt * 0.9
 
     if dead:
         # Torn shirt: holes showing the skin under it, frayed round the edge.
@@ -224,6 +234,7 @@ def albedo(p, ao, o, style):
         fray = sstep(0.60, 0.66, holes) * m["shirt"] * (1 - hole)
         col = mix(col, col * 0.7 + 0.08, fray)
         col = mix(col, skin * 0.85, hole)
+        stain = np.maximum(stain, np.clip(hole + fray * 0.6, 0, 1))
         # Blood: round the mouth and down the chin, the throat and the shirt front; splashes on the hands.
         drip = sstep(0.030, 0.0, ax - 0.03 * (1 - sstep(1.56, 1.2, z))) * sstep(S.MOUTH.z + 0.006, S.MOUTH.z - 0.004, z)
         drip = drip * sstep(0.55, 0.3, fbm(p * np.array([3, 3, 0.6]), 18, 3) + 0.25 * sstep(1.55, 1.1, z)) * (y < 0.0)
@@ -232,6 +243,7 @@ def albedo(p, ao, o, style):
         blood = np.clip(drip + mouth_ring * 0.9 + splash, 0, 1) * (1 - m["teeth"]) * (1 - m["eye"])
         dried = mix(rgb(0.28, 0.03, 0.02), rgb(0.12, 0.04, 0.03), n2)
         col = mix(col, dried, blood * 0.92)
+        stain = np.maximum(stain, blood)
 
     # Eyes and teeth.
     sclera = rgb(0.62, 0.62, 0.52) if dead else rgb(0.82, 0.80, 0.76)
@@ -245,6 +257,10 @@ def albedo(p, ao, o, style):
     teeth = rgb(0.55, 0.50, 0.36) if dead else rgb(0.78, 0.74, 0.62)
     col = mix(col, teeth * (0.8 + 0.3 * n3[:, None]), m["teeth"])
 
+    if out is not None:
+        clean = np.clip(1 - stain, 0, 1) * (1 - m["eye"])
+        out["top"] = m["shirt"] * clean
+        out["bottom"] = m["trousers"] * clean
     shade = (0.30 + 0.70 * ao) if style == "pz" else (0.62 + 0.38 * ao)
     col = col * shade[:, None]
     if style == "pz":  # flatter, fewer tones

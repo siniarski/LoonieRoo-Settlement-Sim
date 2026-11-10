@@ -9,7 +9,14 @@
 // limit, docs/characters.md). The palette is small on purpose.
 //
 // Cost: the hair meshes are on the plus ladder (30k ... 600); the pz bodies' 3 LODs take its 3rd to 5th
-// (HAIR_LOD_OFFSET), so a near body wears 150-640 triangles of hair, a far one 30-130, and no strand cards.
+// (HAIR_LOD_OFFSET), so a near body wears 250-850 triangles of hair (with a beard or hat), a far one 60-200,
+// and no strand cards.
+//
+// The dead's clothes: an outfit (a model file: the tee with one of the five faces, a long-sleeved shirt, a
+// jacket, a hoodie) and the colours of its top and trousers, each from a small worn palette, put on by
+// recolouring the model's own painted map through its recolour mask (recolour.gdshaderinc: the palette colour
+// times each texel's brightness against the cloth's mean, so the shading and wear stay): one material per
+// file, surface and colour pair, shared by everyone in it (10 x 7 pairs at most per file; no instance values).
 
 using System;
 using System.Collections.Generic;
@@ -28,6 +35,44 @@ public static class Looks
     public static readonly string[] ZOMBIE_FACES = { "feral", "feral", "slack", "gaunt", "bloated", "torn" };
     public static string LivingClothes(string id) => Pick(CLOTHES, id, 1);
     public static string DeadFace(string id) => Pick(ZOMBIE_FACES, id, 1);
+
+    /// <summary>What the dead died in: the tee (and jeans) half the time, with any face; the rest a long-sleeved
+    /// work shirt and trousers, a jacket and jeans, a hoodie and jeans, each built with one face
+    /// (art/scripts/build_lookdev.py --outfit / --clothes).</summary>
+    public static readonly string[] DEAD_OUTFITS = { "tee", "tee", "tee", "longsleeve", "jacket", "slack_hoodie" };
+
+    /// <summary>The dead's model variant (look_pz_zombie[_variant].glb): a face for the tee, else the outfit's file.</summary>
+    public static string DeadBody(string id) => Pick(DEAD_OUTFITS, id, 40) is var o && o == "tee" ? DeadFace(id) : o;
+
+    /// <summary>The face in a model variant ("slack_hoodie" is slack; "jacket" the default, feral).</summary>
+    public static string FaceOf(string variant) => variant.Split('_')[0] is var f && ZOMBIE_FACES.Contains(f) ? f : "feral";
+
+    /// <summary>Tops and trousers the dead wear: muted, worn (sRGB). The first of each is the tee's own.</summary>
+    public static readonly (string name, Color c)[] DEAD_TOPS =
+    {
+        ("faded blue", new(0.30f, 0.36f, 0.42f)), ("grey", new(0.34f, 0.34f, 0.34f)), ("khaki", new(0.34f, 0.32f, 0.25f)),
+        ("maroon", new(0.25f, 0.15f, 0.15f)), ("forest", new(0.20f, 0.25f, 0.20f)), ("black", new(0.13f, 0.13f, 0.14f)),
+        ("mustard", new(0.34f, 0.30f, 0.18f)), ("off-white", new(0.50f, 0.49f, 0.46f)), ("navy", new(0.17f, 0.19f, 0.26f)),
+        ("brown", new(0.26f, 0.21f, 0.17f)),
+    };
+    public static readonly (string name, Color c)[] DEAD_BOTTOMS =
+    {
+        ("jeans", new(0.17f, 0.21f, 0.30f)), ("dark jeans", new(0.12f, 0.14f, 0.20f)), ("black", new(0.11f, 0.11f, 0.12f)),
+        ("khaki", new(0.32f, 0.30f, 0.24f)), ("grey", new(0.27f, 0.27f, 0.28f)), ("brown", new(0.24f, 0.19f, 0.15f)),
+        ("olive", new(0.23f, 0.25f, 0.18f)),
+    };
+
+    /// <summary>Everything a person wears over their body: the hair, and the clothes' colours (indices into
+    /// DEAD_TOPS and DEAD_BOTTOMS; -1 for the model's own, as painted).</summary>
+    public readonly record struct Outfit(Hair hair, int top, int bottom)
+    {
+        public override string ToString() => $"{hair}/{top}/{bottom}";
+    }
+
+    public static Outfit LivingOutfit(string id) => new(LivingHair(id), -1, -1);
+
+    public static Outfit DeadOutfit(string id) => new(DeadHair(id),
+        (int)(Hash01(id, 41) * DEAD_TOPS.Length) % DEAD_TOPS.Length, (int)(Hash01(id, 42) * DEAD_BOTTOMS.Length) % DEAD_BOTTOMS.Length);
 
     public static readonly string[] LIVING_HAIR = { "buzz", "crop", "sidepart", "long", "receding", "ponytail", "none" };
     /// <summary>The dead: mostly matted; some still with the cut they died with; "none" is their painted, patchy scalp.</summary>
@@ -71,6 +116,78 @@ public static class Looks
         var grime = new Color(0.22f, 0.19f, 0.15f);
         return c.Lerp(grime, hat ? 0.45f : 0.35f);
     }
+
+    // --- recolouring ---
+
+    sealed class MaskInfo
+    {
+        public Texture2D? mask;
+        public Color top, bottom;  // what the mask's cloth was painted in (sRGB)
+        public float topLum, bottomLum;  // its mean linear luminance in the map
+    }
+
+    static readonly Dictionary<string, MaskInfo?> masks = new();
+    static readonly Dictionary<string, ShaderMaterial> recoloured = new();
+    static Shader? recolourShader, recolourCloth;
+
+    /// <summary>A model file's recolour mask and the colours it was painted in (look_..._mask.png and .json beside the .glb), or null.</summary>
+    static MaskInfo? Mask(string modelPath)
+    {
+        if (masks.TryGetValue(modelPath, out var info)) return info;
+        string bas = modelPath[..^4];
+        info = null;
+        if (ResourceLoader.Exists(bas + "_mask.png") && FileAccess.FileExists(bas + "_mask.json"))
+        {
+            var json = Json.ParseString(FileAccess.GetFileAsString(bas + "_mask.json")).AsGodotDictionary();
+            Color C(string k) { var a = json[k].AsFloat32Array(); return new Color(a[0], a[1], a[2]); }
+            float L(string k) => json.ContainsKey(k) ? (float)json[k].AsDouble() : 0.1f;
+            info = new MaskInfo { mask = GD.Load<Texture2D>(bas + "_mask.png"), top = C("top"), bottom = C("bottom"), topLum = L("top_lum"), bottomLum = L("bottom_lum") };
+        }
+        masks[modelPath] = info;
+        return info;
+    }
+
+    /// <summary>Puts the clothes' colours on a look model's pieces (its own surfaces, the ones painted from its map):
+    /// a shared recolour material per surface material and colour pair; top &lt; 0 takes them back to the file's own.</summary>
+    public static void Recolour(IEnumerable<MeshInstance3D> pieces, string modelPath, int top, int bottom)
+    {
+        var info = top >= 0 ? Mask(modelPath) : null;
+        foreach (var mi in pieces)
+            for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+            {
+                if (mi.Mesh.SurfaceGetMaterial(s) is not BaseMaterial3D src || src.AlbedoTexture == null) { continue; }
+                mi.SetSurfaceOverrideMaterial(s, info == null ? null : Recoloured(src, info, top, bottom));
+            }
+    }
+
+    static ShaderMaterial Recoloured(BaseMaterial3D src, MaskInfo info, int top, int bottom)
+    {
+        string key = $"{src.GetInstanceId()}/{top}/{bottom}";
+        if (recoloured.TryGetValue(key, out var mat)) return mat;
+        bool cloth = src.CullMode == BaseMaterial3D.CullModeEnum.Disabled;
+        recolourShader ??= GD.Load<Shader>("res://Characters/recolour.gdshader");
+        recolourCloth ??= GD.Load<Shader>("res://Characters/recolour_cloth.gdshader");
+        mat = new ShaderMaterial { Shader = cloth ? recolourCloth : recolourShader };
+        mat.SetShaderParameter("albedo_tex", src.AlbedoTexture);
+        mat.SetShaderParameter("mask_tex", info.mask);
+        mat.SetShaderParameter("top_colour", Linear(DEAD_TOPS[top].c));
+        mat.SetShaderParameter("bottom_colour", Linear(DEAD_BOTTOMS[bottom].c));
+        mat.SetShaderParameter("top_lum", Math.Max(info.topLum, 1e-3f));
+        mat.SetShaderParameter("bottom_lum", Math.Max(info.bottomLum, 1e-3f));
+        mat.SetShaderParameter("roughness", src.Roughness);
+        recoloured[key] = mat;
+        return mat;
+    }
+
+    /// <summary>A palette colour (sRGB) in linear light, what the shader works in.</summary>
+    static Vector3 Linear(Color c)
+    {
+        var l = c.SrgbToLinear();
+        return new Vector3(l.R, l.G, l.B);
+    }
+
+    /// <summary>How many recolour materials exist (the bench reports it).</summary>
+    public static int RecolourMaterials => recoloured.Count;
 
     // --- the hash (stable between runs and machines: FNV-1a of the id's chars, then a salt) ---
 

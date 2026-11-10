@@ -9,10 +9,12 @@
 // pooled by look: a body leaving hands its model to the next one that needs that look. A few new ones
 // are made a frame at most, so a crowd turning up doesn't stall a frame.
 //
-// Looks, picked by a hash of the body's id (stable, no RNG): the dead get one of the five faces; the living a
-// clothes set (painted, jacket, hoodie); raiders a jacket and a buzz cut. Hair, beards and hats (Characters/
-// Looks.cs) are the dress, put on a model apart from its body: models are pooled by body (and lost limbs),
-// and one handed to a body that wears something else is re-dressed, a few a frame. Lost limbs (the pose intent's lostLimbs: a survivor's amputation, a crawler's legs) are
+// Looks, picked by a hash of the body's id (stable, no RNG, nothing saved: Characters/Looks.cs): the dead an
+// outfit (the tee with one of the five faces, a long-sleeved shirt, a jacket, a hoodie) in a top and trousers
+// of their own colours; the living a clothes set (painted, jacket, hoodie); raiders a jacket and a buzz cut.
+// Hair, beards, hats and the dead's colours are the dress, put on a model apart from its body: models are
+// pooled by body (and lost limbs), and one handed to a body that wears something else is re-dressed, a few a
+// frame. The colours are shared materials per file and colour pair (no instance uniforms). Lost limbs (the pose intent's lostLimbs: a survivor's amputation, a crawler's legs) are
 // part of the look: the model is cut and capped at the stump (Characters/StumpCut.cs).
 //
 // The dormant dead (state.dormant: bare positions till someone comes within Herds.WAKE_RADIUS) are drawn
@@ -42,7 +44,7 @@ public sealed partial class People
     static readonly double[] LOD_AT = { 260, 110, 0 };
     const double FOV = 60;
 
-    static readonly Looks.Hair RAIDER_HAIR = new("buzz", 0, "none", 0, false, false);
+    static readonly Looks.Outfit RAIDER = new(new Looks.Hair("buzz", 0, "none", 0, false, false), -1, -1);
     // How far each face's jaw hangs at rest (the look lab's).
     static readonly Dictionary<string, double> SLACK = new() { ["slack"] = 0.12, ["gaunt"] = 0.22, ["bloated"] = 0.06, ["torn"] = 0.18, ["feral"] = 0.32 };
 
@@ -52,7 +54,7 @@ public sealed partial class People
         public MeshInstance3D[][] lods = Array.Empty<MeshInstance3D[]>();   // the body's and the dress's, by LOD
         public MeshInstance3D[][] body = Array.Empty<MeshInstance3D[]>();   // the body's own pieces, by LOD
         public readonly List<MeshInstance3D> dressed = new();               // the hair, beard and hat on it
-        public string dress = "";
+        public string dress = "", path = "";
         public AnimationPlayer player = null!;
         public string look = "", variant = "", clip = "";
         public string? bodyId;
@@ -103,7 +105,7 @@ public sealed partial class People
     public int Shown => byBody.Count;
 
     /// <summary>One body this frame: who, what look, where, and how it's moving.</summary>
-    readonly record struct Wanted(string id, string look, Looks.Hair hair, Body body, PoseIntent pose, double dist2, bool angry, string action);
+    readonly record struct Wanted(string id, string look, Looks.Outfit dress, Body body, PoseIntent pose, double dist2, bool angry, string action);
 
     /// <summary>Places models for the nearest people; returns the ids drawn, so Bodies leaves them out.</summary>
     public HashSet<string> Update(SimState state, double alpha, Vector3 eye, string youId, double delta, float vpHeight)
@@ -112,32 +114,32 @@ public sealed partial class People
         Steps.Clear();
         var wanted = new List<Wanted>();
         float range2 = MODEL_RANGE * MODEL_RANGE;
-        void Add(string id, string look, Looks.Hair hair, Body b, PoseIntent pose, bool angry, string action)
+        void Add(string id, string look, Looks.Outfit dress, Body b, PoseIntent pose, bool angry, string action)
         {
             var p = worldPos(b, alpha);
             double d2 = (p.x - eye.X) * (p.x - eye.X) + (p.y - eye.Z) * (p.y - eye.Z);
-            if (d2 <= range2) wanted.Add(new Wanted(id, look, hair, b, pose, d2, angry, action));
+            if (d2 <= range2) wanted.Add(new Wanted(id, look, dress, b, pose, d2, angry, action));
         }
         foreach (var s in state.survivors)
             if (s.id != youId && Vehicles.vehicleOf(state, s) == null)
             {
                 var pose = PoseIntents.ofSurvivor(state, s);
-                Add(s.id, LivingLook(s.id) + Lost(pose), Looks.LivingHair(s.id), s, pose, false, "");
+                Add(s.id, LivingLook(s.id) + Lost(pose), Looks.LivingOutfit(s.id), s, pose, false, "");
             }
-        foreach (var r in state.residents) Add(r.id, LivingLook(r.id), Looks.LivingHair(r.id), r, Pose(r.at, r.was), false, "");
+        foreach (var r in state.residents) Add(r.id, LivingLook(r.id), Looks.LivingOutfit(r.id), r, Pose(r.at, r.was), false, "");
         foreach (var z in state.zombies)
         {
             bool raider = z.kind == "raider";
             string action = state.tick < z.staggerUntil ? "hit" : z.windup > 0 ? "attack" : "";
             var zp = PoseIntents.ofZombie(state, z);
-            Add(z.id, (raider ? "survivor/jacket" : DeadLook(z.id)) + Lost(zp), raider ? RAIDER_HAIR : Looks.DeadHair(z.id), z, zp, !raider && z.targetId != null, action);
+            Add(z.id, (raider ? "survivor/jacket" : DeadLook(z.id)) + Lost(zp), raider ? RAIDER : Looks.DeadOutfit(z.id), z, zp, !raider && z.targetId != null, action);
         }
         var dormantNow = new Dictionary<string, Point>();
         foreach (var d in Dormant.near(state, eye.X, eye.Z, MODEL_RANGE, false))
         {
             var b = DormantBody(d);
             dormantNow[d.id] = new Point(d.x, d.y);
-            Add(d.id, DeadLook(d.id), Looks.DeadHair(d.id), b, DormantLies(d.id) ? LYING : STANDING, false, "");
+            Add(d.id, DeadLook(d.id), Looks.DeadOutfit(d.id), b, DormantLies(d.id) ? LYING : STANDING, false, "");
         }
         wanted.Sort((a, b) => a.dist2.CompareTo(b.dist2));
         if (wanted.Count > MAX_MODELS) wanted.RemoveRange(MAX_MODELS, wanted.Count - MAX_MODELS);
@@ -177,13 +179,13 @@ public sealed partial class People
             {
                 var pool = Free(w.look);
                 // A free model of this body, best one already dressed the same (no re-dress).
-                string dress = w.hair.ToString();
+                string dress = w.dress.ToString();
                 int pick = pool.FindLastIndex((x) => x.dress == dress);
                 if (pick < 0 && pool.Count > 0 && redressed < DRESSES_PER_FRAME) { pick = pool.Count - 1; redressed++; }
                 if (pick >= 0) { m = pool[pick]; pool.RemoveAt(pick); }
                 else if (made < MAKES_PER_FRAME) { m = Make(w.look); made++; }
                 else continue; // a capsule this frame
-                Dress(m, w.hair);
+                Dress(m, w.dress);
                 m.bodyId = w.id;
                 m.placed = false;
                 m.clip = "";
@@ -218,7 +220,7 @@ public sealed partial class People
     {
         var pose = PoseIntents.ofSurvivor(state, you);
         show &= pose.stance is "stand" or "sneak";
-        var hair = Looks.LivingHair(you.id);
+        var hair = Looks.LivingOutfit(you.id);
         string look = LivingLook(you.id) + Lost(pose);
         if (show && look + "#" + hair != ownLook)
         {
@@ -361,7 +363,7 @@ public sealed partial class People
     static string Lost(PoseIntent pose) => pose.lostLimbs.Count == 0 ? "" : "|" + string.Join(",", pose.lostLimbs);
 
     /// <summary>A body: "subject/variant" (the model file), then any lost limbs. The hair is the dress (Looks).</summary>
-    static string DeadLook(string id) => $"zombie/{Looks.DeadFace(id)}";
+    static string DeadLook(string id) => $"zombie/{Looks.DeadBody(id)}";
 
     static string LivingLook(string id) => $"survivor/{Looks.LivingClothes(id)}";
 
@@ -384,7 +386,7 @@ public sealed partial class People
         parent.AddChild(root);
         // Lost limbs: the body and its clothes cut and capped (a pinned sleeve, a knotted trouser leg; the dead's torn), before the hair goes on.
         if (cut.Length > 1) StumpCut.Apply(root, cut[1].Split(','), subject == "zombie");
-        var m = new Model { root = root, look = look, variant = variant };
+        var m = new Model { root = root, look = look, variant = Looks.FaceOf(variant), path = path };
         m.body = m.lods = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToArray()).ToArray();
         var player = new AnimationPlayer();
         root.AddChild(player); // its root node ".." is the instance, where "Armature/Skeleton3D:..." starts
@@ -394,11 +396,14 @@ public sealed partial class People
         return m;
     }
 
-    /// <summary>Puts a person's hair, beard and hat on model m (Looks.Attach), taking off what it wore.</summary>
-    static void Dress(Model m, Looks.Hair hair)
+    /// <summary>Puts a person's hair, beard and hat on model m (Looks.Attach), taking off what it wore, and
+    /// the colours of the dead's clothes (Looks.Recolour).</summary>
+    static void Dress(Model m, Looks.Outfit outfit)
     {
-        string key = hair.ToString();
+        string key = outfit.ToString();
         if (m.dress == key) return;
+        Looks.Recolour(m.body.SelectMany((g) => g), m.path, outfit.top, outfit.bottom);
+        var hair = outfit.hair;
         foreach (var mi in m.dressed) { mi.GetParent()?.RemoveChild(mi); mi.QueueFree(); }
         m.dressed.Clear();
         var skel = Find<Skeleton3D>(m.root);
