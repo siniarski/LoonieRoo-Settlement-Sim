@@ -37,13 +37,29 @@ The look-development characters (docs/characters.md "The look"; ~45 s a subject,
 It writes look_plus_<subject>.glb (30k / 12k / 6k / 3k / 1.2k / 600 triangles, 2048 colour and normal maps) and
 look_pz_<subject>.glb (2.5k / 1.2k / 600, a 512 painted colour map), for the look lab (godot/Characters/LookLab.tscn).
 
+The dead the game draws are pz builds (~18 s each; four at once are fine): the tee with each face, and three more
+outfits, worn dirty and bloodied (`--outfit longsleeve`: a painted work shirt and trousers, paint.OUTFIT_VARIANTS;
+`--clothes jacket|hoodie` on the zombie: the garment meshes, clothes.albedo's `dead`). Each zombie pz build also writes
+`<file>_mask.png` (red the top's clean cloth, green the trousers'; blood, dirt and tears left out) and
+`<file>_mask.json` (the colours painted, the cloth's mean luminance): the game recolours the dead's clothes from them
+(godot/Characters/Looks.cs). After a rebuild, Godot must re-extract each file's colour map (`<file>_albedo_pz.jpg`):
+delete that .jpg and its .import with the file's entries in `godot/.godot/imported`, import, then restore the
+committed .jpg.import (it keeps the texture's uid) and import again.
+
+```bash
+for v in "" "--face slack" "--face gaunt" "--face bloated" "--face torn" "--outfit longsleeve" "--clothes jacket" "--face slack --clothes hoodie"; do
+  "$B" --background --factory-startup --python art/scripts/build_lookdev.py -- --subject zombie --only pz --out godot/assets/characters/look $v
+done
+```
+
 Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 `--path godot res://Characters/Lab.tscn -- --check` (skeleton vs the humanoid profile) or `-- --shot=out.png`.
 
 - `scripts/humanoid_profile.json`: Godot 4.6's SkeletonProfileHumanoid (names, parents, reference poses), dumped by
   `dump_profile.gd` (`Godot --headless --script art/scripts/dump_profile.gd -- out.json`). The rig is built from it.
 - `scripts/rig.py`: the shared rig. Profile bone names, parents and rest orientations; our proportions (1.75 m).
-- `scripts/validate.py`: the rules every character file meets (profile skeleton, applied transforms, at most
+- `scripts/validate.py`: the rules every character file meets (on a look build's .blend it also checks the build's own
+  intermediates, the high-poly sources and the weight source, which fail them: the build validates each exported LOD; profile skeleton, applied transforms, at most
   4 weights per vertex and normalised, no unweighted vertices, triangle budget, clip names, no root motion).
 - `scripts/build_test_mannequin.py`: the segmented mannequin (regions, stumps, a face, 27 clips), all by script; with
   `--garments godot/assets/characters/garments.glb` it also exports the garments (and garments.json beside them).
@@ -51,7 +67,8 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   bones' directions; hips placed by the hip joints, scaled by leg length); `scripts/bonemaps/*.json` the bone maps.
 - `scripts/sculpt.py`: the look-development body: metaball masses -> voxel remesh -> the face pushed in by brushes
   (pure functions of the rest position); the zombie's face keys (jaw_open, angry); eyes and teeth.
-- `scripts/paint.py`: colours and cloth relief as numpy functions of the rest position (outfits by region); the build
+- `scripts/paint.py`: colours and cloth relief as numpy functions of the rest position (outfits by region, and the
+  recolour mask of the clean cloth); the build
   bakes each texel's rest position, so the same functions paint the texture and displace the high-poly mesh whose
   normals are baked. `scripts/build_lookdev.py`: the pipeline (sculpt, decimate the ladder, unwrap, bake position, AO
   and normals in Cycles, paint, skin with auto weights on the body bones, face keys, validate, export).
