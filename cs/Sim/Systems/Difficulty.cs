@@ -71,8 +71,9 @@ public static partial class Difficulty
     public static Item spawnFind(SimState state, string kind, int x, int y)
     {
         var item = Items.spawnItem(state, kind, x, y);
-        var life = (kind == "weapon") ? Weapons.WEAPON_KILLS : (Clothing.isGarment(kind) ? Js.Get(Clothing.GARMENT_LIFE, kind) : 0);
-        item.wear = JsMath.floor(((double)(life) * (Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)))));
+        // A melee weapon found is worn by its own life (its kills: WeaponTable.cs); a gun's wear is its rounds and a box's its count: left as made.
+        var life = Weapons.isMeleeKind(item.kind) ? (Weapons.specOf(item)?.durability ?? 0) : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.GARMENT_LIFE, item.kind) : 0);
+        if (!Weapons.isAmmoKind(item.kind) && !Weapons.isGunKind(item.kind)) item.wear = JsMath.floor(((double)(life) * (Js.NN(Js.Get(FOUND_WEAR, state.settings.progression)))));
         return item;
     }
     public static Item spawnFind(SimState state, string kind, double x, double y) => spawnFind(state, kind, Js.I(x), Js.I(y));

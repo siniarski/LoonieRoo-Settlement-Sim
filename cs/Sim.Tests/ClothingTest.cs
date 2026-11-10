@@ -152,9 +152,9 @@ public partial class ClothingTest
         {
             var state = setup(["s.k..ww.L"], new() { ["craft"] = 3 });
             var bench = Js.NN(Js.Get(state.furniture, 0));
-            Commands.applyCommand(state, new Command { type = "setCraftTarget", kind = "weapon", count = 1 });
+            Commands.applyCommand(state, new Command { type = "setCraftTarget", kind = "plank", count = 1 });
             runUntil(state, (_) => bench.stored == 1);
-            Commands.applyCommand(state, new Command { type = "setCraftTarget", kind = "weapon", count = 0 });
+            Commands.applyCommand(state, new Command { type = "setCraftTarget", kind = "plank", count = 0 });
             Commands.applyCommand(state, new Command { type = "setCraftTarget", kind = "boots", count = 1 });
             runUntil(state, (_) => state.items.some((i) => i.kind == "boots"), 3000);
             expect(state.items.filter((i) => i.kind == "wood")).toHaveLength(2);

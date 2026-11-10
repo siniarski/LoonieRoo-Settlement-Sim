@@ -131,26 +131,24 @@ public static partial class Work
             { Jobs.releaseSurvivor(state, s, "zombie gone"); return; }
         }
         var gun = Weapons.loadedGun(state, s);
-        var range = Weapons.GUN_RANGE + (Towers.onTower(state, s) ? Towers.TOWER_RANGE_BONUS : 0);
-        var inReach = Motion.distance2(s.at, z.at) <= ((double)(Motion.SWING_REACH) * (Motion.SWING_REACH));
-        if (((Js.T(gun) && !inReach) && (Space.manhattan(s.pos, z.pos) <= range)) && clearShot(state.grid, s.pos, z.pos))
+        var spec = Weapons.meleeSpec(state, s);
+        var inReach = Motion.distance2(s.at, z.at) <= ((double)(spec.reach) * (spec.reach));
+        if (Js.T(gun) && !inReach)
         {
-            if (Skills.workStep(state, s, "guard") == 0)
+            // A shot, if the gun is loaded and the line clear (Weapons.guardShoot: its own range, friends in the way, the gun's rate).
+            var extra = Towers.onTower(state, s) ? Towers.TOWER_RANGE_BONUS : 0;
+            if (Weapons.guardShoot(state, s, gun, z, extra))
             {
+                if (Skills.workStep(state, s, "guard") == 0)
+                {
+                    return;
+                }
+                if (Zombies.getZombie(state, z.id) == null)
+                {
+                    { finishJob(state, s, job, $"shot a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})"); return; }
+                }
                 return;
             }
-            job.progress += 1;
-            if ((job.progress % Weapons.GUN_EVERY) != 1)
-            {
-                return;
-            }
-            gun.wear -= 1;
-            Noise.makeNoise(state, s.pos, "gunfire");
-            if (!Zombies.damageZombie(state, z, Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0)), s))
-            {
-                return;
-            }
-            { finishJob(state, s, job, $"shot a zombie at ({Js.Str(z.pos.x)}, {Js.Str(z.pos.y)})"); return; }
         }
         if (!inReach)
         {
@@ -161,13 +159,13 @@ public static partial class Work
             return;
         }
         job.progress += 1;
-        if ((job.progress % Jobs.GUARD_ATTACK_EVERY) != 1)
+        if ((job.progress % spec.swing) != 1)
         {
             return;
         }
-        Noise.makeNoise(state, s.pos, "fighting");
-        BodyMod.exert(s, BodyMod.GUARD_BLOW_COST);
-        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+        Noise.makeNoise(state, s.pos, "fighting", spec.noise);
+        BodyMod.exert(s, spec.stamina / 2);
+        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
         if (!Zombies.damageZombie(state, z, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s))
         {
             return;
@@ -263,7 +261,7 @@ public static partial class Work
                 return;
             }
             Noise.makeNoise(state, a.pos, "fighting");
-            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
+            var blow = Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
             if (Handiwork.hitAnimal(state, s, a.id, blow) == "brought it down")
             {
                 finishJob(state, s, job, $"killed a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})");

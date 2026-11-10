@@ -58,14 +58,14 @@ public partial class CraftingTest
         public void T003_a_crafter_carries_wood_to_the_bench_piece_by_piece_then_make()
         {
             var state = setup(["s.k.ww"]);
-            target(state, "weapon", 1);
+            target(state, "plank", 1);
             Tick.tick(state);
             expect(state.jobs).toMatchObject(Js.Arr([Js.Obj(("type", (object?)("craft")), ("x", (object?)(2)), ("y", (object?)(0)))]));
             var bench = Js.NN(Js.Get(state.furniture, 0));
             runUntil(state, (_) => bench.stored == 1);
             expect(Js.NN(Js.Get(state.survivors, 0)).note).toBe("brought wood to the workbench (1/2)");
-            runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).note == "crafted a weapon at (2, 0)");
-            expect(count(state, "weapon")).toBe(1);
+            runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).note == "crafted a plank at (2, 0)");
+            expect(count(state, "plank")).toBe(1);
             expect(count(state, "wood")).toBe(0);
             expect(bench.stored).toBe(0);
         }
@@ -74,10 +74,10 @@ public partial class CraftingTest
         public void T004_stops_at_the_target_and_makes_what_is_short_in_order()
         {
             var state = setup(["s.k.wwww", "........"]);
-            target(state, "weapon", 1);
+            target(state, "plank", 1);
             target(state, "bandage", 2);
             runUntil(state, (_) => Crafting.wantedCraft(state) == null, 3000);
-            expect(Js.Arr([count(state, "weapon"), count(state, "bandage"), count(state, "wood")])).toEqual(Js.Arr([1, 2, 0]));
+            expect(Js.Arr([count(state, "plank"), count(state, "bandage"), count(state, "wood")])).toEqual(Js.Arr([1, 2, 0]));
             for (var i = 0; i < 50; i++)
             {
                 Tick.tick(state);
@@ -88,11 +88,12 @@ public partial class CraftingTest
         [Fact(DisplayName = "crafting > wielded weapons don't count as stock")]
         public void T005_wielded_weapons_don_t_count_as_stock()
         {
-            var state = setup(["s/k.", "...."], new() { ["guard"] = 3 });
+            var state = setup(["s.k.", "...."], new() { ["guard"] = 3 });
+            Items.spawnItem(state, "plank", 1, 0);
             runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).weapon != null);
-            expect(Crafting.craftStock(state, "weapon")).toBe(0);
-            target(state, "weapon", 1);
-            expect(Crafting.wantedCraft(state)).toBe("weapon");
+            expect(Crafting.craftStock(state, "plank")).toBe(0);
+            target(state, "plank", 1);
+            expect(Crafting.wantedCraft(state)).toBe("plank");
         }
 
         [Fact(DisplayName = "crafting > with no wood the job waits, unclaimed, and nobody gets stuck")]
@@ -113,7 +114,7 @@ public partial class CraftingTest
         public void T007_removing_a_bench_gives_its_stored_wood_back_and_frees_the_cr()
         {
             var state = setup(["s.k.ww", "......"]);
-            target(state, "weapon", 1);
+            target(state, "plank", 1);
             var bench = Js.NN(Js.Get(state.furniture, 0));
             runUntil(state, (_) => bench.stored == 1);
             Commands.applyCommand(state, new Command { type = "clearTile", x = Js.I(2), y = Js.I(0) });
@@ -128,10 +129,10 @@ public partial class CraftingTest
         public void T008_lowering_the_target_mid_craft_releases_the_crafter_the_wood_()
         {
             var state = setup(["s.k.ww"]);
-            target(state, "weapon", 1);
+            target(state, "plank", 1);
             var bench = Js.NN(Js.Get(state.furniture, 0));
             runUntil(state, (_) => bench.stored == 1);
-            target(state, "weapon", 0);
+            target(state, "plank", 0);
             Tick.tick(state);
             expect(state.jobs).toEqual(Js.Arr([]));
             expect(Js.NN(Js.Get(state.survivors, 0)).jobId).toBeNull();
@@ -142,10 +143,10 @@ public partial class CraftingTest
         public void T009_targets_are_validated()
         {
             var state = setup(["s.k"]);
-            expect(target(state, "weapon", -1).ok).toBe(false);
-            expect(target(state, "weapon", 21).ok).toBe(false);
-            expect(target(state, "weapon", 2.5).ok).toBe(false);
-            expect(target(state, "weapon", 3).ok).toBe(true);
+            expect(target(state, "plank", -1).ok).toBe(false);
+            expect(target(state, "plank", 21).ok).toBe(false);
+            expect(target(state, "plank", 2.5).ok).toBe(false);
+            expect(target(state, "plank", 3).ok).toBe(true);
         }
 
         [Fact(DisplayName = "crafting > survivors build workbenches from wood")]

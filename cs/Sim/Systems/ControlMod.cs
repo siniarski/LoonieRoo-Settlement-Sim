@@ -172,6 +172,11 @@ public static partial class ControlMod
         {
             { sleepTick(state, s, c, busy); return; }
         }
+        if (busy.what == "reload")
+        {
+            // Counted in ticks whatever the day length (like a car's handling).
+            { reloadTick(state, s, c, busy); return; }
+        }
         if (!Time.slowTick(state.tick))
         {
             return;
@@ -330,7 +335,7 @@ public static partial class ControlMod
         return ((dx == 0) && (dy == 0)) ? null : new Point { x = Js.I(dx), y = Js.I(dy) };
     }
 
-    /// <summary>Swing (or shoot) towards a tile. Returns what happened, or null if nothing could be done.</summary>
+    /// <summary>Swing (or shoot) towards a tile. A loaded gun shoots along the line to the tile's centre; anything else (a gun with nothing in it too) swings by the weapon's own reach, arc and speed. Returns what happened, or null if nothing could be done.</summary>
     public static string? swing(SimState state, Survivor s, Point target)
     {
         var c = Js.NN(state.control);
@@ -344,8 +349,53 @@ public static partial class ControlMod
             c.facing = face;
         }
         c.busy = null;
-        var near = zombieToHit(state, s.at, swingDir(c));
-        var wait = Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY) + (BodyMod.isWinded(s) ? BodyMod.WINDED_WAIT : 0);
+        var gun = Weapons.loadedGun(state, s);
+        if (gun != null)
+        {
+            var aimed = swingDir(c);
+            double ax = (((double)(target.x) * Motion.SUB) + Motion.HALF) - s.at.x, ay = (((double)(target.y) * Motion.SUB) + Motion.HALF) - s.at.y;
+            bool same = (ax == 0) && (ay == 0);
+            return shoot(state, s, c, gun, same ? aimed.x : ax, same ? aimed.y : ay);
+        }
+        return melee(state, s, c, target);
+    }
+
+    /// <summary>Fire the gun in hand along an aim (a direction: whole numbers up to Shooting.AIM_VECTOR_MAX; first person sends its look). Returns what happened, or null if nothing could be done (no loaded gun, not ready).</summary>
+    public static string? fire(SimState state, Survivor s, double ax, double ay)
+    {
+        var c = Js.NN(state.control);
+        var gun = Weapons.loadedGun(state, s);
+        if (((gun == null) || (state.tick < c.nextSwing)) || Js.T(s.move) || Js.T(Vehicles.vehicleOf(state, s)) || ((ax == 0) && (ay == 0)))
+        {
+            return null;
+        }
+        c.busy = null;
+        return shoot(state, s, c, gun, ax, ay);
+    }
+
+    /// <summary>One shot from a loaded gun (the caller has checked it): held fire if one of yours is in the line.</summary>
+    static string shoot(SimState state, Survivor s, Control c, Item gun, double ax, double ay)
+    {
+        var w = Weapons.specOf(gun)!;
+        var friend = Shooting.friendInLine(state, s, w, ax, ay);
+        if (friend != null)
+        {
+            return $"held fire: {Js.Str(friend.name)} is in the way";
+        }
+        c.nextSwing = state.tick + Moodlets.swingWait(s, w.swing);
+        c.swungTick = state.tick;
+        var moving = ((c.dx != 0) || (c.dy != 0));
+        var o = Shooting.fire(state, s, gun, ax, ay, moving);
+        c.facing = eightWay(ax, ay);  // the facing follows the shot (the arc of a later swing)
+        return o.note;
+    }
+
+    /// <summary>A blow: the weapon's reach, arc, damage, speed, endurance and noise (WeaponTable.cs).</summary>
+    static string? melee(SimState state, Survivor s, Control c, Point target)
+    {
+        var spec = Weapons.meleeSpec(state, s);
+        var near = Motion.nearestInArc(state.zombies, s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
+        var wait = Moodlets.swingWait(s, spec.swing) + (BodyMod.isWinded(s) ? BodyMod.WINDED_WAIT : 0);
         if (Js.T(near) && Resolve.freezes(state, s))
         {
             c.nextSwing = state.tick + wait;
@@ -355,19 +405,19 @@ public static partial class ControlMod
         {
             c.nextSwing = state.tick + wait;
             c.swungTick = state.tick;
-            BodyMod.exert(s, BodyMod.SWING_COST);
+            BodyMod.exert(s, spec.stamina);
             return "missed: your hands are shaking";
         }
         if (Js.T(near))
         {
             c.nextSwing = state.tick + wait;
             c.swungTick = state.tick;
-            BodyMod.exert(s, BodyMod.SWING_COST);
-            Noise.makeNoise(state, s.pos, "fighting");
-            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            BodyMod.exert(s, spec.stamina);
+            Noise.makeNoise(state, s.pos, "fighting", spec.noise);
+            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
             var winded = BodyMod.isWinded(s) ? JsMath.round(((double)(((double)(full) * (BodyMod.WINDED_DAMAGE_PCT))) / (100))) : full;
             var unaware = (near.kind != "raider") && (near.targetId != s.id);
-            var blow = Js.T(unaware) ? JsMath.round(((double)(((double)(winded) * (SNEAK_ATTACK_PCT))) / (100))) : winded;
+            var blow = Js.T(unaware) ? JsMath.round(((double)(((double)(winded) * (spec.sneak))) / (100))) : winded;
             var killed = Zombies.damageZombie(state, near, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s);
             if (killed)
             {
@@ -379,56 +429,117 @@ public static partial class ControlMod
             }
             return killed ? (Js.T(unaware) ? "killed it before it knew you were there" : "killed it") : (Js.T(unaware) ? "hit it from behind" : "hit it");
         }
-        var person = residentToHit(state, s.at, swingDir(c));
+        var person = Motion.nearestInArc(state.residents, s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
         if (Js.T(person))
         {
-            c.nextSwing = state.tick + Jobs.GUARD_ATTACK_EVERY;
+            c.nextSwing = state.tick + spec.swing;
             c.swungTick = state.tick;
-            Noise.makeNoise(state, s.pos, "fighting");
-            var blow = Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
+            Noise.makeNoise(state, s.pos, "fighting", spec.noise);
+            var blow = Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
             return Residents.hitResident(state, person, blow, s) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
-        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), Motion.SWING_REACH, state.grid) ?? (Js.T(Weapons.loadedGun(state, s)) ? state.animals.find((a) => (((a.pos.x == target.x) && (a.pos.y == target.y)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, a.pos)) : null);
+        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
         if (Js.T(deer))
         {
-            var shot = !Motion.inReach(deer, s, Motion.SWING_REACH);
-            c.nextSwing = state.tick + (shot ? Weapons.GUN_EVERY : Moodlets.swingWait(s, Jobs.GUARD_ATTACK_EVERY));
-            if (shot)
-            {
-                Js.NN(Weapons.loadedGun(state, s)).wear -= 1;
-                Noise.makeNoise(state, s.pos, "gunfire");
-            }
-            return Handiwork.hitAnimal(state, s, deer.id, shot ? Weapons.GUN_DAMAGE : (Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))));
-        }
-        var gun = Weapons.loadedGun(state, s);
-        var shotAt = Js.T(gun) ? state.zombies.find((z) => (z.pos.x == target.x) && (z.pos.y == target.y)) : null;
-        if (((Js.T(Js.T(gun) && Js.T(shotAt))) && ((JsMath.abs(shotAt.pos.x - s.pos.x) + JsMath.abs(shotAt.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, shotAt.pos))
-        {
-            var blocking = inTheWay(state, s, shotAt.pos);
-            if (Js.T(blocking))
-            {
-                return $"held fire: {Js.Str(blocking.name)} is in the way";
-            }
-            c.nextSwing = state.tick + Weapons.GUN_EVERY;
-            gun.wear -= 1;
-            Noise.makeNoise(state, s.pos, "gunfire");
-            var dmg = Moodlets.boostDamage(s, (Weapons.GUN_DAMAGE + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
-            return Zombies.damageZombie(state, shotAt, dmg, s) ? "shot it dead" : "shot it";
+            c.nextSwing = state.tick + Moodlets.swingWait(s, spec.swing);
+            return Handiwork.hitAnimal(state, s, deer.id, Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard"))));
         }
         var pane = paneInFront(state, s.pos, target, c.facing);
         if (Js.T(pane))
         {
             c.nextSwing = state.tick + wait;
             c.swungTick = state.tick;
-            BodyMod.exert(s, BodyMod.SWING_COST);
+            BodyMod.exert(s, spec.stamina);
             Breach.smashGlass(state, pane.edge);
             TimelineMod.maybeAlarm(state, pane.to, pane.edge);
             return "smashed the window";
         }
         c.nextSwing = state.tick + wait;
         c.swungTick = state.tick;
-        BodyMod.exert(s, BodyMod.SWING_COST);
-        return "swung at nothing";
+        BodyMod.exert(s, spec.stamina);
+        var held = Weapons.specOf(Weapons.wielded(state, s));
+        return ((held != null) && held.twoHanded && !Weapons.handsFree(s)) ? "swung at nothing (your hands are full)" : "swung at nothing";
+    }
+
+    /// <summary>Reload the gun in hand from the bag: a whole magazine in one go, or a round at a time for a revolver, a shotgun, a rifle (shooting or walking off stops it). Returns why not, or null if it began.</summary>
+    public static string? reload(SimState state, Survivor s)
+    {
+        var c = Js.NN(state.control);
+        var gun = Weapons.heldGun(state, s);
+        if (gun == null)
+        {
+            return "no gun in hand";
+        }
+        var w = Weapons.specOf(gun)!;
+        if (gun.wear >= w.magazine)
+        {
+            return "it is full";
+        }
+        if (packAmmo(state, s, w) == null)
+        {
+            return "no ammunition in your bag";
+        }
+        c.busy = new ControlBusy { what = "reload", targetId = gun.id, progress = 0, duration = w.reload };
+        s.note = "reloading";
+        return null;
+    }
+
+    /// <summary>The first box in the bag of the gun's ammunition.</summary>
+    public static Item? packAmmo(SimState state, Survivor s, WeaponSpec w)
+    {
+        foreach (var id in Js.Iter(s.pack))
+        {
+            var item = Items.getItem(state, id);
+            if (item != null && item.kind == w.ammo) return item;
+        }
+        return null;
+    }
+
+    /// <summary>One tick of a reload: at its end the rounds go in; a gun loaded a round at a time goes on to the next.</summary>
+    static void reloadTick(SimState state, Survivor s, Control c, ControlBusy busy)
+    {
+        busy.progress += 1;
+        if (busy.progress < busy.duration)
+        {
+            return;
+        }
+        var gun = Weapons.heldGun(state, s);
+        if (gun == null || gun.id != busy.targetId)
+        {
+            c.busy = null;
+            return;
+        }
+        var w = Weapons.specOf(gun)!;
+        var box = packAmmo(state, s, w);
+        if (box == null)
+        {
+            c.busy = null;
+            s.note = "out of ammunition";
+            return;
+        }
+        Weapons.loadRounds(state, gun, box, w.perRound ? 1 : double.PositiveInfinity);
+        if (w.perRound && (gun.wear < w.magazine) && (packAmmo(state, s, w) != null))
+        {
+            busy.progress = 0;
+            s.note = "reloading";
+            return;
+        }
+        c.busy = null;
+        s.note = (gun.wear >= w.magazine) ? "reloaded" : "loaded what you had";
+    }
+
+    /// <summary>Take up another weapon from the bag (the one named, else the next): what was in hand goes into the bag in its place. Returns why not, or null.</summary>
+    public static string? switchWeapon(SimState state, Survivor s, string? itemId)
+    {
+        var c = Js.NN(state.control);
+        var next = Js.T(itemId) ? Items.getItem(state, itemId!) : s.pack.map((id) => Items.getItem(state, id)).find((i) => (i != null) && Weapons.isWieldKind(i.kind));
+        if (next == null || !s.pack.includes(next.id) || !Weapons.isWieldKind(next.kind))
+        {
+            return Js.T(itemId) ? "that isn't a weapon in your bag" : "no other weapon in your bag";
+        }
+        c.busy = null;
+        s.note = Inventory.equipFromPack(state, s, next, s.pos);
+        return null;
     }
 
     /// <summary>An unboarded window on the edge between you and the tile you swung at (if it's next to you), else the tile you face; facing a corner, either side of it.</summary>
@@ -668,7 +779,7 @@ public static partial class ControlMod
             c.busy = new ControlBusy { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
             return "eating";
         }
-        var slot = ((item.kind == "weapon") || (item.kind == "gun")) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
+        var slot = Weapons.isWieldKind(item.kind) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
         if ((slot == "carrying") && Inventory.fitsInPack(state, s, item))
         {
             Inventory.stow(state, s, item);

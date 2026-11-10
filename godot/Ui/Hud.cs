@@ -48,6 +48,8 @@ public sealed partial class Hud : Control
     // left column
     readonly Label status = Kit.Label("", Kit.Dim, 12);
     readonly UiPanel controlLine = new("#f0c850");
+    /// <summary>First person with a gun in hand: its rounds, the bag's, and what to do (cs/Sim/Systems/WeaponTable.cs).</summary>
+    readonly UiPanel ammoReadout = new("#f0c850", "rgba(20, 23, 21, 0.85)", 14);
     readonly UiPanel alerts = new("#5a4a3a", "rgba(20, 23, 21, 0.85)");
     readonly UiPanel toast = new("rgba(140, 240, 164, 0.95)", "rgba(140, 240, 164, 0.95)", 13);
     readonly UiPanel succession = new("#c9b88a");
@@ -142,6 +144,29 @@ public sealed partial class Hud : Control
 
         AddChild(crosshair);
         crosshair.SetAnchorsPreset(LayoutPreset.Center);
+        AddChild(ammoReadout);
+        Pin(ammoReadout, 0.5f, 1, 0, -64, GrowDirection.Both, GrowDirection.Begin);
+    }
+
+    /// <summary>The gun in your hand: its rounds of its magazine, the bag's, and what to do about an empty one.</summary>
+    void UpdateAmmo(SimState state)
+    {
+        var you = ControlMod.controlled(state);
+        var gun = (you != null && view.firstPerson && !view.showInventory && view.menu == null) ? Weapons.heldGun(state, you) : null;
+        string text = "";
+        if (gun != null && you != null)
+        {
+            var w = Weapons.specOf(gun)!;
+            double bag = 0;
+            foreach (var id in you.pack)
+                if (Sim.Items.getItem(state, id) is { } box && box.kind == w.ammo) bag += Weapons.rounds(box);
+            var loaded = Weapons.loadedGun(state, you);
+            string tail = state.control?.busy?.what == "reload" ? "   reloading..."
+                : loaded == null ? (gun.wear > 0 ? "   (hands full)" : bag > 0 ? "   X: reload" : "   out of ammunition")
+                : gun.wear < w.magazine && bag > 0 && gun.wear <= w.magazine / 3 ? "   X: reload" : "";
+            text = $"{Sim.Items.nameOf(gun)}   {gun.wear:0} / {w.magazine}   ({bag:0} in your bag){tail}";
+        }
+        ammoReadout.Show(text != "", text, (r) => r.Text(text, Kit.Gold, 480));
     }
 
     static void Pin(Control c, float ax, float ay, float x, float y, Control.GrowDirection gx, Control.GrowDirection gy)
@@ -206,7 +231,7 @@ public sealed partial class Hud : Control
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
-                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing or shoot · X reload · Q next weapon · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
                     : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
                 : "K: keys"
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
@@ -235,6 +260,7 @@ public sealed partial class Hud : Control
         UpdatePriorities(state, solo);
         UpdateConditions(state);
         UpdateCard(state);
+        UpdateAmmo(state);
         bool stowed = view.firstPerson && !view.showInventory;
         if (stowed) card.Visible = false;
         crosshair.Visible = view.firstPerson && !view.showInventory && view.menu == null;

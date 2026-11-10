@@ -22,6 +22,8 @@
 //                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
 //   --lineup                               one of every item kind on the ground in front of you (for screenshots; not a command)
+//   --arm=KIND[:ROUNDS]                    put that weapon in your hand (a gun with ROUNDS in it, else 60% of its magazine, and a box of its
+//                                          ammunition in your bag) for screenshots of the HUD's readout; not a command
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
 //   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
@@ -168,6 +170,23 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         }
         if (args.TryGetValue("day", out var dayArg)) StartDay(double.Parse(dayArg, CultureInfo.InvariantCulture));
         if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
+        if (args.TryGetValue("arm", out var armArg) && ControlMod.controlled(state) is { } armMe)
+        {
+            var parts = armArg.Split(':');
+            var arm = LoonieRoo.Sim.Items.spawnItem(state, parts[0], armMe.pos.x, armMe.pos.y);
+            if (Weapons.specOf(arm) is { } armSpec && Weapons.isWieldKind(arm.kind))
+            {
+                arm.pos = null;
+                arm.carriedBy = armMe.id;
+                armMe.weapon = arm.id;
+                if (armSpec.isFirearm)
+                {
+                    arm.wear = parts.Length > 1 ? double.Parse(parts[1], CultureInfo.InvariantCulture) : Math.Ceiling(armSpec.magazine * 0.6);
+                    var box = LoonieRoo.Sim.Items.spawnItem(state, armSpec.ammo!, armMe.pos.x, armMe.pos.y);
+                    LoonieRoo.Sim.Inventory.stow(state, armMe, box);
+                }
+            }
+        }
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
         if (args.TryGetValue("animals", out var an)) SpawnAnimals(an, args.TryGetValue("animal-range", out var ar) ? double.Parse(ar, CultureInfo.InvariantCulture) : 3.5);
@@ -770,8 +789,17 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             var you = ControlMod.controlled(state);
             if (you != null && mb.ButtonIndex == MouseButton.Left)
             {
-                var t = FrontTile(you);
-                Command(new Command { type = "swing", x = t.x, y = t.y });
+                if (Weapons.loadedGun(state, you) != null)
+                {
+                    // A gun with rounds fires along exactly where you look (a direction, fine to 1/4096).
+                    int ax = (int)Math.Round(Math.Cos(view.yaw) * Shooting.AIM_VECTOR_MAX), ay = (int)Math.Round(Math.Sin(view.yaw) * Shooting.AIM_VECTOR_MAX);
+                    Command(new Command { type = "fire", x = ax, y = ay });
+                }
+                else
+                {
+                    var t = FrontTile(you);
+                    Command(new Command { type = "swing", x = t.x, y = t.y });
+                }
             }
             else if (mb.ButtonIndex == MouseButton.Right) UseAhead();
             GetViewport().SetInputAsHandled();
@@ -990,6 +1018,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
                 break;
             }
             case Key.R: Command(new Command { type = "work", x = at.x + c.facing.x, y = at.y + c.facing.y }); break;
+            case Key.X: Command(new Command { type = "reload" }); break;          // the gun in hand, from your bag (a round at a time for a revolver, shotgun, rifle)
+            case Key.Q: Command(new Command { type = "switchWeapon" }); break;    // the next weapon in your bag
             case Key.L:
             {
                 // "Loot that room": the room where you look.

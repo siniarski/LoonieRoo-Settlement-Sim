@@ -37,6 +37,7 @@ public sealed class Yours
     readonly AudioStreamPlayer swing = new();
     int foot, steps;
     double? lastSwung;
+    double? lastGunWear;
     readonly AudioStreamPlayer push = new(), land = new(), land2 = new();
     ControlBusy? leapBusy;
     ulong land2At;
@@ -105,7 +106,10 @@ public sealed class Yours
         Leap(state, you, c, fresh);
 
         var swung = c?.swungTick;
-        if (!fresh && swung != null && swung != lastSwung)
+        // A gun's report is the world's gunshot (WorldNoises.cs); only blows, and a crossbow's twang, whoosh.
+        bool report = Weapons.specOf(Weapons.wielded(state, you)) is { isFirearm: true, cls: not "bow" } && Weapons.heldGun(state, you)?.wear < (lastGunWear ?? double.MaxValue);
+        lastGunWear = Weapons.heldGun(state, you)?.wear;
+        if (!fresh && swung != null && swung != lastSwung && !report)
         {
             var set = sounds.bank.Get("swing");
             swing.Stream = set[(int)(swung.Value % set.Length)];

@@ -69,7 +69,7 @@ public sealed class WorldNoises
         foreach (var s in state.survivors)
         {
             var gun = string.IsNullOrEmpty(s.weapon) ? null : Items.getItem(state, s.weapon!);
-            if (gun == null || gun.kind != "gun") { guns.Remove(s.id); continue; }
+            if (gun == null || !Weapons.isGunKind(gun.kind) || Weapons.specOf(gun)?.cls == "bow") { guns.Remove(s.id); continue; }  // a crossbow's twang is the swing's whoosh (Yours.cs): no report
             if (!fresh && guns.TryGetValue(s.id, out var was) && was.item == gun.id && gun.wear < was.wear)
                 sounds.Play(state, "gunshot", s.id, worldPos(s, alpha), GUN_HEIGHT, me, Hash.idNumber(s.id) + state.tick);
             guns[s.id] = (gun.id, gun.wear);

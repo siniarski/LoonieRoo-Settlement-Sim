@@ -27,4 +27,39 @@ public class Census
         }
         writeFileSync("cs/Harness/out/census.txt", lines.join("\n") + "\n");
     }
+
+    /// <summary>What a weapon's noise wakes: for every tenth of the sleeping dead as a place to fire from (where the dead lie), how many sleepers lie within the radius (Manhattan); and from the start. dotnet test cs/Harness -c Release --filter "DisplayName=census noise" (SEEDS, PRESET; cs/Harness/out/census-noise.txt)</summary>
+    [Fact(DisplayName = "census noise")]
+    public void T002_census_noise()
+    {
+        mkdirSync("cs/Harness/out", new() { recursive = true });
+        var preset = process.env.PRESET ?? "apocalypse";
+        var settings = Js.Get(Difficulty.PRESETS, preset).settings;
+        var radii = new (string, int)[] { ("crossbow", 4), ("a blow (crowbar)", 7), ("pistol", 22), ("revolver", 26), ("shotgun", 32), ("rifle", 36) };
+        List<string> lines = [$"census noise ({preset}): sleepers woken by one report, fired from where the dead lie (every 10th sleeper as a spot: mean / median / 90th percentile / max) and from the start"];
+        var acc = radii.ToDictionary((r) => r.Item1, (r) => new List<double>());
+        var atStart = radii.ToDictionary((r) => r.Item1, (r) => new List<double>());
+        foreach (var seed in Js.Iter((process.env.SEEDS ?? "1,2,3,4,5,6,7,8").split(",").map((v) => Js.Num(v))))
+        {
+            var state = Worldgen.createWorld(seed, settings: settings);
+            // The whole world, generated (the dead are made by region as you go).
+            for (var gy = 0; gy < state.grid.height; gy += Worldgen.CHUNK)
+                for (var gx = 0; gx < state.grid.width; gx += Worldgen.CHUNK)
+                    Worldgen.ensureGeneratedAround(state, new Point { x = Js.I(gx), y = Js.I(gy) });
+            var s = state.survivors[0].pos;
+            var all = state.dormant.ToList();
+            for (var k = 0; k < all.Count; k += 10)
+                foreach (var (name, r) in radii)
+                    acc[name].Add(all.Count((z) => JsMath.abs(z.x - all[k].x) + JsMath.abs(z.y - all[k].y) <= r));
+            foreach (var (name, r) in radii)
+                atStart[name].Add(all.Count((z) => JsMath.abs(z.x - s.x) + JsMath.abs(z.y - s.y) <= r));
+        }
+        foreach (var (name, r) in radii)
+        {
+            var v = acc[name].OrderBy((x) => x).ToList();
+            var n = v.Count;
+            lines.Add($"{name,-18} radius {r,2}: {(n == 0 ? 0 : v.Average()):0.0} / {(n == 0 ? 0 : v[n / 2])} / {(n == 0 ? 0 : v[(int)(n * 0.9)])} / {(n == 0 ? 0 : v[n - 1])}   from the start: mean {(atStart[name].Count == 0 ? 0 : atStart[name].Average()):0.0}, max {(atStart[name].Count == 0 ? 0 : atStart[name].Max())}");
+        }
+        writeFileSync("cs/Harness/out/census-noise.txt", lines.join("\n") + "\n");
+    }
 }

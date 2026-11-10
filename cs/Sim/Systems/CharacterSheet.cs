@@ -419,9 +419,13 @@ public static class CharacterSheet
             var name = Items.nameOf(item);
             string says;
             if (slot == "weapon")
-                says = item.kind == "gun"
-                    ? $"{Weapons.GUN_DAMAGE + guard} a shot; guns don't break"
-                    : $"{Weapons.blowDamage(s, Jobs.GUARD_DAMAGE) + guard} a blow; breaks after {Math.Max(0, Weapons.WEAPON_KILLS - item.wear)} more kills";
+            {
+                var w = Weapons.specOf(item);
+                says = w == null ? "a weapon"
+                    : w.isFirearm
+                        ? $"{w.damage * w.pellets + guard} a shot ({item.wear} of {w.magazine} rounds); guns don't break"
+                        : $"{w.damage + guard} a blow" + (w.durability > 0 ? $"; breaks after {Math.Max(0, w.durability - item.wear)} more kills" : "; doesn't break");
+            }
             else if (Clothing.isGarment(item.kind))
             {
                 var life = Clothing.GARMENT_LIFE[item.kind];

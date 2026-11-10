@@ -28,7 +28,8 @@ public static partial class Items
     /// <summary>Creates an item on the nearest free tile to (x, y).</summary>
     public static Item spawnItem(SimState state, string kind, int x, int y)
     {
-        Item item = new Item { id = $"i{Js.Str(state.nextId++)}", kind = kind, pos = null, carriedBy = null, reservedBy = null, wear = 0, tag = null };
+        // (A request for the old generic "weapon" or "gun" still makes one: WeaponTable.cs reads it as a specific weapon.)
+        Item item = new Item { id = $"i{Js.Str(state.nextId++)}", kind = kind, pos = null, carriedBy = null, reservedBy = null, wear = Weapons.ammoOfKind(kind)?.box ?? 0, tag = null };
         if (kind == "book")
         {
             item.tag = Books.bookSubject(item.id);

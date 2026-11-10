@@ -6,7 +6,8 @@
 #
 # The kinds are the sim's (cs/Sim/Systems/Inventory.cs ITEM_WEIGHT): wood, food, meal, bandage, medicine,
 # weapon, cloth, coat, armour, boots, gun, ammo, corpse, book, cart, axe, hammer, medkit, sample, scrap,
-# fuel. Each is a mesh object named after its kind, made of boxes, cylinders and wedges, flat shaded, in
+# fuel, and the weapons' own kinds (knife, hatchet, machete, crowbar, bat, pipe, sledge, spear, plank, pistol,
+# revolver, shotgun, rifle, crossbow and their ammunition: ammo38, shells, ammo308, bolts). Each is a mesh object named after its kind, made of boxes, cylinders and wedges, flat shaded, in
 # vertex colours (one material, "items", that the game replaces: godot/World3D/Items.cs). Vertex alpha
 # carries how metallic a face is (0 cloth/wood/paper, 1 bare metal), for the game's shader.
 #
@@ -531,6 +532,177 @@ VARIANTS = {
 }
 
 
+# --- the weapons (2026-11-10, cs/Sim/Systems/WeaponTable.cs): a model each, handle along X. Melee weapons keep a grip
+# near x -0.1 .. -0.3 and a working side towards -Y (an edge, a head's face: Held.cs FaceOf); firearms have the muzzle
+# at +X and the top at +Z. Held.cs gives each kind its grip and, for two-handed ones, where the left hand goes.
+
+def knife(g):
+    """A knife: a black handle with a rivet, a short steel blade with a point, edge towards -Y."""
+    box(g, (0.11, 0.024, 0.03), (-0.075, 0, 0.0), lin(40, 36, 34), taper=0.9)
+    box(g, (0.012, 0.03, 0.034), (-0.018, 0, 0.0), STEEL_D, metal=1)
+    box(g, (0.14, 0.03, 0.008), (0.05, -0.004, 0.012), STEEL, metal=1)
+    box(g, (0.07, 0.022, 0.008), (0.155, -0.012, 0.012), lin(200, 204, 210), metal=1, taper=0.3, rz=-8)
+    box(g, (0.012, 0.012, 0.012), (-0.07, 0, 0.03), BRASS, metal=1)
+
+
+def hatchet(g):
+    """A hatchet: a short wooden handle and a small steel head with a poll, edge towards -Y."""
+    cyl(g, 0.014, 0.4, (-0.02, 0, 0.02), WOOD_L, seg=6, axis="x", caps=WOOD)
+    box(g, (0.04, 0.03, 0.1), (0.15, 0, 0.02), STEEL, metal=1, rx=90)
+    box(g, (0.02, 0.006, 0.075), (0.15, -0.09, 0.02), lin(200, 204, 210), metal=1, rx=90)
+    box(g, (0.04, 0.034, 0.03), (0.15, 0.04, 0.02), STEEL_D, metal=1, rx=90)
+    cyl(g, 0.017, 0.1, (-0.1, 0, 0.02), lin(150, 150, 140), seg=6, axis="x")
+
+
+def machete(g):
+    """A machete: a long, broad, slightly flared blade, a black handle, edge towards -Y."""
+    box(g, (0.13, 0.026, 0.03), (-0.235, 0, 0.0), lin(34, 32, 30), taper=0.95)
+    box(g, (0.012, 0.04, 0.03), (-0.165, 0, 0.0), STEEL_D, metal=1)
+    box(g, (0.34, 0.06, 0.006), (0.005, -0.014, 0.012), STEEL, metal=1)
+    box(g, (0.12, 0.05, 0.006), (0.25, -0.016, 0.012), lin(196, 200, 206), metal=1, taper=0.35, rz=-6)
+    box(g, (0.34, 0.006, 0.006), (0.005, -0.046, 0.012), lin(220, 224, 230), metal=1)
+
+
+def crowbar(g):
+    """A crowbar: a red bar with a hooked claw at one end and a flat tip at the other."""
+    red = lin(150, 30, 26)
+    cyl(g, 0.014, 0.7, (0.0, 0, 0.035), red, metal=0.6, seg=6, axis="x", caps=STEEL_D)
+    box(g, (0.07, 0.03, 0.012), (0.36, 0, 0.03), STEEL_D, metal=1, ry=-50)
+    box(g, (0.05, 0.034, 0.012), (0.39, 0, 0.075), STEEL_D, metal=1, ry=-120)
+    box(g, (0.06, 0.028, 0.008), (-0.37, 0, 0.03), STEEL_D, metal=1, ry=12)
+
+
+def bat(g):
+    """A baseball bat: pale wood, tapered, a taped grip and a knob."""
+    cyl(g, 0.019, 0.76, (0, 0, 0.04), WOOD_L, seg=8, axis="x", r2=0.04, caps=WOOD)
+    cyl(g, 0.024, 0.2, (-0.28, 0, 0.04), BLACK, seg=8, axis="x")
+    cyl(g, 0.03, 0.025, (-0.395, 0, 0.04), WOOD_D, seg=8, axis="x")
+
+
+def pipe(g):
+    """A length of lead pipe: grey, dull, a flat end, wrapped with cloth at the grip."""
+    cyl(g, 0.026, 0.56, (0, 0, 0.03), lin(110, 112, 118), metal=0.6, seg=8, axis="x", caps=STEEL_D)
+    cyl(g, 0.03, 0.15, (-0.2, 0, 0.03), lin(150, 140, 120), seg=8, axis="x")
+    cyl(g, 0.02, 0.01, (0.28, 0, 0.03), BLACK, seg=8, axis="x")
+
+
+def sledge(g):
+    """A sledgehammer: a long wooden handle and a big steel block of a head."""
+    cyl(g, 0.017, 0.82, (0, 0, 0.03), WOOD_L, seg=6, axis="x", caps=WOOD)
+    box(g, (0.1, 0.26, 0.1), (0.38, 0, 0.0), STEEL_D, metal=1, taper=0.98, top=STEEL)
+    box(g, (0.104, 0.05, 0.104), (0.38, 0.13, 0.0), STEEL, metal=1)
+    box(g, (0.104, 0.05, 0.104), (0.38, -0.13, 0.0), STEEL, metal=1)
+    cyl(g, 0.02, 0.2, (-0.3, 0, 0.03), BLACK, seg=6, axis="x")
+
+
+def spear(g):
+    """A spear: a long plain shaft, a leaf of steel lashed on at the point."""
+    cyl(g, 0.014, 1.2, (-0.05, 0, 0.025), WOOD_L, seg=6, axis="x", caps=WOOD)
+    box(g, (0.13, 0.04, 0.008), (0.62, 0, 0.012), STEEL, metal=1, taper=0.3)
+    box(g, (0.06, 0.03, 0.008), (0.56, 0, 0.012), STEEL_D, metal=1)
+    cyl(g, 0.02, 0.06, (0.54, 0, 0.025), ROPE, seg=6, axis="x")
+
+
+def plank(g):
+    """A plank with nails: a length of board, a cluster of long nails through its end."""
+    box(g, (0.72, 0.075, 0.025), (0, 0, 0), WOOD, top=WOOD_L, rz=0)
+    cyl(g, 0.022, 0.14, (-0.27, 0, 0.0), lin(150, 150, 140), seg=4, axis="x")
+    for x, y in ((0.24, 0.0), (0.29, 0.02), (0.31, -0.02), (0.27, -0.03), (0.33, 0.03), (0.21, 0.025)):
+        box(g, (0.006, 0.006, 0.05), (x, y, 0.02), STEEL, metal=1)
+    box(g, (0.12, 0.075, 0.01), (0.1, 0, 0.0), RUST, rz=0, top=lin(100, 60, 40))
+
+
+def pistol(g):
+    """A pistol: a slide over a frame with a grip, the grip under the hand's place."""
+    box(g, (0.06, 0.03, 0.075), (-0.07, 0, 0.0), lin(44, 42, 46), taper=0.92)
+    box(g, (0.2, 0.026, 0.03), (0.02, 0, 0.045), STEEL_D, metal=1)
+    box(g, (0.17, 0.03, 0.036), (0.04, 0, 0.073), STEEL, metal=1)
+    cyl(g, 0.007, 0.03, (0.14, 0, 0.09), STEEL_D, metal=1, seg=6, axis="x")
+    box(g, (0.016, 0.006, 0.02), (0.0, 0, 0.012), STEEL_D, metal=1)
+    box(g, (0.012, 0.014, 0.012), (-0.1, 0, 0.11), BLACK)
+
+
+def revolver(g):
+    """A revolver: a fluted cylinder, a long barrel, a hammer, a wooden grip."""
+    box(g, (0.07, 0.034, 0.08), (-0.075, 0, 0.0), WOOD, taper=0.9, top=WOOD_D)
+    box(g, (0.1, 0.03, 0.045), (-0.01, 0, 0.055), STEEL_D, metal=1)
+    cyl(g, 0.031, 0.06, (0.03, 0, 0.083), STEEL, metal=1, seg=8, axis="x", caps=STEEL_D)
+    cyl(g, 0.011, 0.15, (0.15, 0, 0.083), STEEL_D, metal=1, seg=6, axis="x")
+    box(g, (0.02, 0.012, 0.03), (-0.045, 0, 0.1), STEEL_D, metal=1, ry=20)
+    box(g, (0.016, 0.018, 0.02), (0.22, 0, 0.1), BLACK)
+
+
+def shotgun(g):
+    """A pump shotgun: a wooden stock, a steel receiver, a long barrel with a tube under it and a pump."""
+    box(g, (0.32, 0.04, 0.09), (-0.33, 0, 0.0), WOOD, taper=0.85, top=WOOD_D)
+    box(g, (0.17, 0.042, 0.055), (-0.07, 0, 0.03), STEEL_D, metal=1)
+    cyl(g, 0.014, 0.58, (0.28, 0, 0.088), STEEL_D, metal=1, seg=6, axis="x")
+    cyl(g, 0.012, 0.42, (0.2, 0, 0.056), STEEL, metal=1, seg=6, axis="x")
+    box(g, (0.17, 0.045, 0.04), (0.16, 0, 0.026), WOOD_D, top=WOOD)
+    box(g, (0.016, 0.01, 0.014), (0.55, 0, 0.1), BLACK)
+    box(g, (0.03, 0.01, 0.045), (-0.1, 0, 0.0), BLACK)
+
+
+def rifle(g):
+    """A hunting rifle: a wooden stock, a long barrel and a scope."""
+    gun(g)
+
+
+def crossbow(g):
+    """A crossbow: a wooden stock with a rail, a bow across the front, a taut string, a stirrup."""
+    box(g, (0.5, 0.04, 0.07), (-0.05, 0, 0.0), WOOD, taper=0.9, top=WOOD_D)
+    box(g, (0.46, 0.016, 0.02), (0.0, 0, 0.07), STEEL_D, metal=1)
+    box(g, (0.02, 0.5, 0.022), (0.22, 0, 0.04), lin(40, 44, 40), rz=0, taper=0.9)
+    box(g, (0.02, 0.18, 0.02), (0.2, 0.24, 0.04), lin(40, 44, 40), rz=-28)
+    box(g, (0.02, 0.18, 0.02), (0.2, -0.24, 0.04), lin(40, 44, 40), rz=28)
+    box(g, (0.004, 0.46, 0.004), (0.12, 0, 0.058), lin(200, 190, 150))
+    cyl(g, 0.02, 0.01, (0.29, 0, 0.0), STEEL_D, metal=1, seg=8, axis="x")
+    box(g, (0.1, 0.01, 0.01), (0.06, 0, 0.078), RUST, metal=0.6)
+    box(g, (0.04, 0.012, 0.05), (-0.08, 0, -0.0), BLACK)
+
+
+def ammo38(g):
+    """A small box of revolver rounds, open, brass heads, and one spilled."""
+    box(g, (0.09, 0.06, 0.04), (0, 0, 0), lin(60, 70, 110), top=lin(196, 168, 90))
+    for k in range(3):
+        cyl(g, 0.006, 0.02, (-0.025 + 0.025 * k, 0, 0.04), BRASS, metal=1, seg=6)
+    cyl(g, 0.006, 0.04, (0.09, 0.04, 0.006), BRASS, metal=1, seg=6, axis="x", rz=40, caps=lin(150, 90, 50))
+
+
+def shells(g):
+    """A box of shotgun shells, open, red shells standing in it and one spilled."""
+    ammo_v1(g)
+
+
+def ammo308(g):
+    """A box of long rifle rounds: a grey card box, its lid up, tall brass in rows."""
+    box(g, (0.13, 0.07, 0.04), (0, 0, 0), lin(110, 110, 92), top=lin(80, 80, 66))
+    for k in range(4):
+        for y in (-0.016, 0.016):
+            cyl(g, 0.007, 0.04, (-0.04 + 0.026 * k, y, 0.04), BRASS, metal=1, seg=6, r2=0.004, caps=lin(140, 130, 120))
+    cyl(g, 0.007, 0.06, (0.11, -0.04, 0.007), BRASS, metal=1, seg=6, axis="x", rz=-30, caps=lin(150, 90, 50))
+
+
+def bolts(g):
+    """A bundle of crossbow bolts tied with cord: short shafts, steel points, feathers."""
+    for k, (y, z) in enumerate(((-0.02, 0.0), (0.0, 0.0), (0.02, 0.0), (-0.01, 0.018), (0.01, 0.018), (0.0, 0.036))):
+        cyl(g, 0.005, 0.28, (0.0, y, z + 0.01), WOOD_L, seg=5, axis="x", caps=STEEL_D)
+        box(g, (0.05, 0.003, 0.02), (-0.14, y, z + 0.0), lin(180, 40, 36) if k % 2 else WHITE)
+        box(g, (0.03, 0.012, 0.012), (0.15, y, z + 0.004), STEEL, metal=1, taper=0.2)
+    for x in (-0.05, 0.07):
+        cyl(g, 0.026, 0.012, (x, 0.0, 0.017), ROPE, seg=8, axis="x")
+
+
+WEAPON_KINDS = {
+    "knife": knife, "hatchet": hatchet, "machete": machete, "crowbar": crowbar, "bat": bat, "pipe": pipe,
+    "sledge": sledge, "spear": spear, "plank": plank, "pistol": pistol, "revolver": revolver, "shotgun": shotgun,
+    "rifle": rifle, "crossbow": crossbow, "ammo38": ammo38, "shells": shells, "ammo308": ammo308, "bolts": bolts,
+}
+
+KINDS.update(WEAPON_KINDS)
+KINDS["gun"] = pistol  # the old generic gun (a pistol: WeaponTable.cs); "weapon" keeps its club and crowbar variants
+
+
 # --- the hand: a gloved hand round a handle and a sleeved forearm, for what you hold in first person
 # (godot/World3D/Held.cs; the left hand is the same model mirrored). The handle runs along X through the
 # origin (where an item's grip goes), the back of the hand on top (+Z); the fingers come over the front
@@ -610,7 +782,7 @@ def to_object(name, g, mat):
     return ob
 
 
-def preview(path, objs):
+def preview(path, objs, cols=9):
     scene = bpy.context.scene
     try:
         scene.render.engine = "BLENDER_WORKBENCH"
@@ -619,14 +791,14 @@ def preview(path, objs):
     scene.display.shading.color_type = "VERTEX"
     scene.display.shading.light = "STUDIO"
     scene.render.resolution_x, scene.render.resolution_y = 1600, 900
-    cols = 9
     for k, ob in enumerate(objs):
         ob.location = ((k % cols) * 1.3, (k // cols) * 1.3, 0)
+    rows = (len(objs) + cols - 1) // cols
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
     scene.collection.objects.link(cam)
-    cam.location = (3.9, -4.0, 6.5)
+    cam.location = ((cols - 1) * 0.65, -4.0 + (rows - 1) * 0.65 - (3.0 if cols < 9 else 0), 6.5 if cols >= 9 else 5.0)
     cam.rotation_euler = (math.radians(50), 0, 0)
-    cam.data.lens = 24
+    cam.data.lens = 24 if cols >= 9 else 40
     scene.camera = cam
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
@@ -656,7 +828,10 @@ def main():
                               export_apply=True)
     print(f"ITEM glb -> {glb}")
     if "preview" in opts:
-        preview(os.path.abspath(opts["preview"]), objs)
+        # --only a,b,c: just those, six to a row, nearer (the weapons' lineup)
+        only = opts["only"].split(",") if "only" in opts else None
+        shown = [o for o in objs if o.name in only] if only else objs
+        preview(os.path.abspath(opts["preview"]), shown, 6 if only else 9)
 
 
 main()

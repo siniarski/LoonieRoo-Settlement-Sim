@@ -23,7 +23,7 @@ public static partial class Inventory
 {
 
     /// <summary>Weight in tenths of a kilo. A cart or a body can't go in a bag (Infinity).</summary>
-    public static readonly JsRecord<double> ITEM_WEIGHT = new() { ["wood"] = 30, ["food"] = 5, ["meal"] = 5, ["bandage"] = 1, ["medicine"] = 1, ["weapon"] = 20, ["cloth"] = 2, ["coat"] = 15, ["armour"] = 40, ["boots"] = 10, ["gun"] = 30, ["ammo"] = 2, ["corpse"] = double.PositiveInfinity, ["book"] = 5, ["cart"] = double.PositiveInfinity, ["axe"] = 25, ["hammer"] = 15, ["medkit"] = 3, ["sample"] = 1, ["scrap"] = 10, ["fuel"] = 20 };
+    public static readonly JsRecord<double> ITEM_WEIGHT = new() { ["wood"] = 30, ["food"] = 5, ["meal"] = 5, ["bandage"] = 1, ["medicine"] = 1, ["weapon"] = 20, ["knife"] = 5, ["hatchet"] = 15, ["machete"] = 15, ["crowbar"] = 30, ["bat"] = 20, ["pipe"] = 30, ["sledge"] = 60, ["spear"] = 20, ["plank"] = 20, ["pistol"] = 15, ["revolver"] = 20, ["shotgun"] = 35, ["rifle"] = 40, ["crossbow"] = 30, ["ammo38"] = 2, ["shells"] = 3, ["ammo308"] = 2, ["bolts"] = 2, ["cloth"] = 2, ["coat"] = 15, ["armour"] = 40, ["boots"] = 10, ["gun"] = 30, ["ammo"] = 2, ["corpse"] = double.PositiveInfinity, ["book"] = 5, ["cart"] = double.PositiveInfinity, ["axe"] = 25, ["hammer"] = 15, ["medkit"] = 3, ["sample"] = 1, ["scrap"] = 10, ["fuel"] = 20 };
 
     /// <summary>What a bag holds: 12 kilos.</summary>
     public const int PACK_MAX = 120;
@@ -56,7 +56,7 @@ public static partial class Inventory
     /// <summary>The slot an item goes in from the bag (a weapon, a garment, a tool), or null.</summary>
     public static string? slotFor(string kind)
     {
-        if ((kind == "weapon") || (kind == "gun"))
+        if (Weapons.isWieldKind(kind))
         {
             return "weapon";
         }
@@ -175,6 +175,18 @@ public static partial class Inventory
         {
             return "already in your bag";
         }
+        if (Weapons.isAmmoKind(item.kind))
+        {
+            // Ammunition stacks: a box of the same kind in the bag takes the rounds (its `wear` is the count), and this one is used up.
+            var stack = s.pack.map((id) => getItemInBag(state, id)).find((i) => (i != null) && (i.kind == item.kind) && (i.id != item.id));
+            if (stack != null)
+            {
+                stack.wear = Weapons.rounds(stack) + Weapons.rounds(item);
+                if (s.carrying == item.id) s.carrying = null;
+                Items.removeItem(state, item);
+                return null;
+            }
+        }
         if (!fitsInPack(state, s, item))
         {
             return (Js.Get(ITEM_WEIGHT, item.kind) == double.PositiveInfinity) ? $"a {Js.Str(item.kind)} won't go in a bag" : "your bag is too full";
@@ -190,6 +202,8 @@ public static partial class Inventory
         s.pack.push(item.id);
         return null;
     }
+
+    static Item? getItemInBag(SimState state, string id) => Items.getItem(state, id);
 
     /// <summary>Takes an item out of the bag (it's being used up, or moving to a slot).</summary>
     public static void unpack(Survivor s, string id)

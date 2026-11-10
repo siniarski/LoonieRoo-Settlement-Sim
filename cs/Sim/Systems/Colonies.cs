@@ -174,7 +174,7 @@ public static partial class Colonies
             return "nobody armed to send";
         }
         n.lastRaid = state.tick;
-        var guns = armed.filter((s) => state.items.find((i) => i.id == s.weapon)?.kind == "gun").length;
+        var guns = armed.filter((s) => Weapons.heldGun(state, s) != null).length;
         var ours = ((double)(armed.length) * (2)) + ((double)(guns) * (2));
         var theirs = n.people + ((double)(n.defence) * (2));
         var roll = Hash.hashRoll(Hash.idNumber(n.id), state.tick, 0xa1);

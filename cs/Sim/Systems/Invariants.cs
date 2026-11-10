@@ -183,7 +183,7 @@ public static partial class Invariants
             if (Js.T(s.weapon))
             {
                 var weapon = items.get(s.weapon);
-                if (!Js.T(weapon) || ((weapon.kind != "weapon") && (weapon.kind != "gun")))
+                if (!Js.T(weapon) || !Weapons.isWieldKind(weapon.kind))
                 {
                     problems.push($"{Js.Str(s.name)} wields missing weapon {Js.Str(s.weapon)}");
                 }
@@ -195,7 +195,7 @@ public static partial class Invariants
             if (Js.T(s.arming))
             {
                 var weapon = items.get(s.arming);
-                if (!Js.T(weapon) || (((weapon.kind != "weapon") && (weapon.kind != "gun")) && (weapon.kind != "ammo")))
+                if (!Js.T(weapon) || !Weapons.isArmoryKind(weapon.kind))
                 {
                     problems.push($"{Js.Str(s.name)} is fetching missing weapon {Js.Str(s.arming)}");
                 }
