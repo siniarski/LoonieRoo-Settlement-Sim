@@ -65,6 +65,17 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   `--garments godot/assets/characters/garments.glb` it also exports the garments (and garments.json beside them).
 - `scripts/retarget.py`: a clip library onto our rig, baked (rest-relative world rotations, swung to the source
   bones' directions; hips placed by the hip joints, scaled by leg length); `scripts/bonemaps/*.json` the bone maps.
+- `scripts/derive_clips.py` (2026-11-10): the clips the game's people play, derived from `clips_ual.glb` (no download
+  needed) and the mannequin's pose numbers, into `godot/assets/characters/clips_more.glb` and `.json` (47 clips, 1.4 MB;
+  ~20 s): `"$B" --background --factory-startup --python art/scripts/derive_clips.py -- --src
+  godot/assets/characters/clips_ual.glb --glb godot/assets/characters/clips_more.glb [--only walk,dead_lunge]
+  [--measure ual_walk]`, then re-import in Godot. The tools: stride warping (each ankle's forward offset from the hips
+  scaled, the legs solved again by two-bone IK in the clip's knee plane, the hips dropped where a longer reach needs
+  it), bake-time planting (each foot pinned to the ground while down, travelling back at the clip's own pace, so the
+  rate Gaits.cs asks for keeps it still), layers (turns on the spine and head, arm poses relative to the chest, hands
+  placed by IK) and poses from build_test_mannequin's numbers. It also fixes the library's feet: retargeted, they
+  pointed 31 deg toes-down (the ball ~5 cm under the ground). It prints each clip's speed and stride, and where a
+  leg fell short of its pin.
 - `scripts/sculpt.py`: the look-development body: metaball masses -> voxel remesh -> the face pushed in by brushes
   (pure functions of the rest position); the zombie's face keys (jaw_open, angry); eyes and teeth.
 - `scripts/paint.py`: colours and cloth relief as numpy functions of the rest position (outfits by region, and the

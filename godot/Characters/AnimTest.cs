@@ -486,6 +486,8 @@ public partial class AnimTest : Node3D
     {
         var lib = player.GetAnimationLibrary("more");
         if (lib == null) { GD.Print("calibrate: no clips_more"); return; }
+        foreach (var n in new[] { "ual/ual_walk", "ual/ual_idle", "more/walk_brisk", "more/idle", "more/dead_shamble" })
+            GD.Print($"calibrate: {n} has {player.GetAnimation(n).GetTrackCount()} tracks");
         foreach (var name in lib.GetAnimationList())
         {
             var a = lib.GetAnimation(name);
