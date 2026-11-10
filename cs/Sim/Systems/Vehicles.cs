@@ -16,7 +16,9 @@
 //   crashes     hitting a wall faster than CRASH_SPEED stops you dead and dents it
 //               ((speed - CRASH_SPEED) * CRASH_DAMAGE); at 0 health it's wrecked: it won't go.
 //   off-road    on grass, dirt, fields and forest floor it won't go past OFFROAD_MAX. Trees and
-//               furniture block it (all but traps and pits): it hits them as it would a wall.
+//               furniture block it (all but traps and pits): it hits them as it would a wall. A tree's
+//               trunk (Trunks.cs) is solid to the car's circle as to a walker: it slides round a
+//               glancing one and, head on, loses its speed and crashes like a wall.
 //   the boot    a car carries BOOT_MAX (a truck TRUCK_BOOT_MAX) of things: items with `inside`
 //               set to its id, like a container (inventory.ts stash, take, takeAll).
 //   the truck   a generated world leaves one out past the camp; expeditions take it
@@ -244,7 +246,7 @@ public static partial class Vehicles
     {
         var (cx, cy) = Js.NN(Js.Get(HEADING_DIRS, v.heading));
         Point want = new Point { x = Js.I(JsMath.trunc(((double)(((double)(cx) * (v.speed))) / (256)))), y = Js.I(JsMath.trunc(((double)(((double)(cy) * (v.speed))) / (256)))) };
-        var slid = Motion.slide(state.grid, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
+        var slid = Motion.slide(state, v.at, want.x, want.y, "vehicle", VEHICLE_RADIUS);
         var into = Motion.tileOf(slid);
         var to = (((into.x != v.pos.x) || (into.y != v.pos.y)) && blocked(state, into)) ? v.at : slid;
         Point got = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };

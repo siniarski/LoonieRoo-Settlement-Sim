@@ -116,7 +116,7 @@ public static partial class Tick
         {
             if (!isFree(state, e))
             {
-                Motion.syncStep(e);
+                Motion.syncStep(state, e);
             }
         }
         Fog.updateFog(state);

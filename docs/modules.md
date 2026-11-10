@@ -35,7 +35,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
 - **Survivors**: tile-to-tile movement along cached A* paths. **Doors**: doors held open by whoever passes.
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
-- **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers.
+- **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers, tile walkers' bodies (`at` only) and cars.
 - **PoseIntents**: what a mover's body is doing, read for the renderer (docs/characters.md section 1).
 - **VehicleActions** (part of Vehicles): timed car actions and anchors (get in, out, boot, bonnet).
 

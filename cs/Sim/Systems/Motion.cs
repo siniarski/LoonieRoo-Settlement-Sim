@@ -103,6 +103,24 @@ public static partial class Motion
         e.at = new Point { x = Js.I(from.x + JsMath.trunc(((double)(((double)((to.x - from.x)) * (m.progress))) / (m.duration)))), y = Js.I(from.y + JsMath.trunc(((double)(((double)((to.y - from.y)) * (m.progress))) / (m.duration)))) };
     }
 
+    /// <summary>The same, and a tile walker goes round tree trunks (Trunks.cs): `at` is the step's straight line moved out of any trunk it would be in, along the line from the trunk's centre, so a body crossing or standing on a tree's tile is beside the trunk. Only `at` changes: the step's time, `pos` and the path are the tile's, so jobs, reach by tile and balance are untouched. Stateless (a function of the step and the trees now standing), at most four tree lookups, and where the moved-out spot wouldn't fit (a wall, a shut door) the straight line stands.</summary>
+    public static void syncStep(SimState state, Body e)
+    {
+        syncStep(e);
+        var m = e.move;
+        int dx = 0, dy = 0;
+        if (Js.T(m))
+        {
+            dx = JsMath.sign(m.to.x - m.from.x);
+            dy = JsMath.sign(m.to.y - m.from.y);
+        }
+        var o = Trunks.pushOut(state, e.at, BODY_RADIUS, dx, dy);
+        if (((o.x != e.at.x) || (o.y != e.at.y)) && fits(state.grid, o, Pathfinding.FREE))
+        {
+            e.at = o;
+        }
+    }
+
     /// <summary>For a free mover: if someone moved it by tile, follow. `slack` tiles of difference are allowed (a zombie pushed in a crowd can be a tile off until its next move catches its pos up).</summary>
     public static void followTile(Body e, double slack = 0)
     {
