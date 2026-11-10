@@ -1,0 +1,4 @@
+- **2026-11-10, the loop-speed work merged, and ten shards.** The player asked why agent sessions are slow. Measured: the machine loop is fast (edit + build + filtered test 2 s, a `--shot` 3.5 s); the time went to model round trips, 100 KB of standing docs, checking by screenshot and the Debug/Release trap. Four sessions fixed those (the four `2026-11-10-03-*` entries) and were merged into main: check green (727), self-test 78.
+  - **Decided.** `check.sh` defaults to ten shards (was six): 10 s on this 20-core machine against 13-14 s, the same tests. `SHARDS=N` still overrides it on a smaller machine.
+  - **Docs.** godot/README.md points at docs/controls.md and docs/modules.md (not NOTES.md), and says what `./shot.sh` does (it runs with a window: use Godot's `--headless` by hand for text-only runs).
+  - **Left.** InvariantsTest (4-6 s) is the check's floor now; shrinking it would weaken its cross-seed counts.

@@ -1,6 +1,6 @@
 # LoonieRoo in Godot
 
-The game: the sim (`cs/Sim`, pure C#, no Godot) drawn and played in Godot 4.6 .NET. NOTES.md "Start here" has the controls and the map of everything.
+The game: the sim (`cs/Sim`, pure C#, no Godot) drawn and played in Godot 4.6 .NET. The controls are in docs/controls.md, the map of every module in docs/modules.md.
 
 ## Which to use when
 
@@ -22,7 +22,7 @@ dotnet build godot/LoonieRoo.csproj   # the game runs the Debug build: build it 
 "$GODOT" --headless --path godot -- --seed=7 --ticks=12 --hold=w --look=0 --trace=3 --trace-near=6 --textmap=6
 ```
 
-(`./shot.sh <game args>`, when present, builds and runs that for you.)
+(`./shot.sh <game args>` builds Debug and runs the game for you, for runs with a window: it does not pass `--headless`.)
 
 **Text trace** (`GameText.cs`; works under `--headless`):
 - `--trace` one line per tick for the survivor you control; `--trace=K` every

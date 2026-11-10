@@ -9,7 +9,7 @@
 # (build Debug and take a picture) and finish.sh (check, then commit if green).
 # It prints a short summary; everything else is in .check/ (build.log, build-debug.log, tests-N.log, selftest.log): read
 # those rather than running the check again to see more.
-# The sim's tests run as SHARDS processes at once (default 6), each a set of whole test classes, balanced by how long
+# The sim's tests run as SHARDS processes at once (default 10: 10 s here on 20 cores, 13-14 s with 6), each a set of whole test classes, balanced by how long
 # each class took last time (.check/test-times.txt, else the committed cs/Sim.Tests/test-times.txt). Processes,
 # not threads: the sim's statics (the clock scale, caches) are per process, and inside one the tests still run one
 # at a time in file order. One more process runs whatever test class the list missed.
@@ -19,7 +19,7 @@ cd "$(dirname "$0")"
 OUT=.check
 mkdir -p "$OUT"
 rm -f "$OUT"/tests-*.log "$OUT"/tests-*.trx "$OUT"/selftest.log "$OUT"/build.log "$OUT"/build-debug.log
-SHARDS="${SHARDS:-6}"
+SHARDS="${SHARDS:-10}"
 ALL=0; [ "${1:-}" = "--all" ] && ALL=1
 start=$(date +%s)
 secs() { echo "$(( $(date +%s) - start )) s"; }
