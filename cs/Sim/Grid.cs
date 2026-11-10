@@ -114,8 +114,9 @@ public static partial class Grids
     /// <summary>Side of a reachability chunk, in tiles.</summary>
     public const int REACH_CHUNK = 32;
     const int MAX_REACH_LOG = 100000;
-    /// <summary>More changed tiles than this, and rooms are worked out in full.</summary>
-    const int MAX_TRACKED = 2048;
+    /// <summary>More changed tiles than this, and rooms are worked out in full (from the tiles with something on them:
+    /// Rooms.computeRooms). It was 2048 while a full pass was a flood of the whole map and an update copied it.</summary>
+    const int MAX_TRACKED = 65536;
 
     public static bool isWindow(int kind) => kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN;
 
@@ -131,6 +132,44 @@ public static partial class Grids
     }
 
     // --- Tile kinds as codes: a layer holds a byte a tile; the names are these five and whatever else a state held ---
+
+    internal const int TILE_FLOOR = 0, TILE_WALL = 1, TILE_DOOR = 2, TILE_WATER = 3, TILE_BARRICADE = 4;
+
+    /// <summary>A tile's kind as its code (TILE_FLOOR...), by its place in the grid's own layers (x, y from the grid's
+    /// corner, on the grid): for inner loops that would otherwise compare names.</summary>
+    internal static int tileCodeAt(Grid grid, int x, int y) => grid.tileLayer.Get(x, y);
+
+    /// <summary>The tiles with something on them: not floor, or with something on their north or west edge, as tile
+    /// indexes, chunk by chunk (a chunk with nothing allocated in tiles or edges is skipped whole). What rooms and
+    /// reachability need to look at: the rest of the map is bare.</summary>
+    internal static void structureTiles(Grid grid, List<int> into)
+    {
+        var tiles = grid.tileLayer;
+        var edges = grid.edgeLayer;
+        bool every = tiles.fill != TILE_FLOOR || edges.fill != EDGE_NONE;
+        const int SIDE = GridLayer<byte>.SIDE, SHIFT = GridLayer<byte>.SHIFT;
+        for (int ci = 0; ci < tiles.chunks.Length; ci++)
+        {
+            var t = tiles.chunks[ci];
+            var e = edges.chunks[ci];
+            if (t == null && e == null && !every) continue;
+            int x0 = ci % tiles.cw << SHIFT, y0 = ci / tiles.cw << SHIFT;
+            int w = Math.Min(SIDE, grid.width - x0), h = Math.Min(SIDE, grid.height - y0);
+            for (int ly = 0; ly < h; ly++)
+                for (int lx = 0; lx < w; lx++)
+                {
+                    int l = (ly << SHIFT) | lx;
+                    int tile = t == null ? tiles.fill : t[l];
+                    int edge = e == null ? edges.fill : e[2 * l] | e[2 * l + 1];
+                    if (tile != TILE_FLOOR || edge != EDGE_NONE) into.Add((y0 + ly) * grid.width + x0 + lx);
+                }
+        }
+    }
+
+    /// <summary>Whether a chunk (cy * ceil(width / 32) + cx, as reachability numbers them) is bare land: nothing
+    /// allocated in its tiles or edges, so every tile is floor with nothing on its edges.</summary>
+    internal static bool bareChunk(Grid grid, int c) =>
+        grid.tileLayer.chunks[c] == null && grid.edgeLayer.chunks[c] == null && grid.tileLayer.fill == TILE_FLOOR && grid.edgeLayer.fill == EDGE_NONE;
 
     /// <summary>A tile code's name. Replaced (never changed in place) when a new name is met.</summary>
     internal static string[] tileNames = [FLOOR, WALL, DOOR, WATER, BARRICADE];

@@ -48,119 +48,21 @@ public static partial class Rooms
 
     public static readonly List<List<double>> DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
-    public static readonly JsMap<Grid, CacheEntry> cache = new JsMap<Grid, CacheEntry>();
+    // Per grid, and gone with it (a JsMap here kept every grid ever made alive, labels and all).
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Grid, CacheEntry> cache = new();
 
     /// <summary>Memoised per grid + walkabilityVersion. Derived data, outside sim state. When walls change, the rooms are updated round the changed tiles (updateRooms) if the grid knows which they were (grid.ts takeChanges), else worked out in full. Either way the result is the same.</summary>
     public static RoomMap getRoomMap(SimState state)
     {
-        var cached = cache.get(state.grid);
+        cache.TryGetValue(state.grid, out var cached);
         if (Js.T(cached) && (cached.version == state.walkabilityVersion))
         {
             return cached.map;
         }
         var changed = Grids.takeChanges(state.grid);
         var map = (Js.T(Js.T(cached) && Js.T(changed))) ? updateRooms(state.grid, cached.map, changed.Select(v => (double)v).ToList()) : computeRooms(state.grid);
-        cache.set(state.grid, new() { version = state.walkabilityVersion, map = map });
+        cache.AddOrUpdate(state.grid, new() { version = state.walkabilityVersion, map = map });
         return map;
-    }
-
-    public static RoomMap computeRooms(Grid grid)
-    {
-        var __d0 = grid;
-        var width = __d0.width;
-        var height = __d0.height;
-        var labels = new Int32Array(((double)(width) * (height))).fill(NOT_FLOOR);
-        var UNSEEN = -3;
-        for (var i = 0; i < Grids.tileCount(grid); i++)
-        {
-            if (Grids.tileAt(grid, i) == "floor")
-            {
-                labels[Js.Idx(i)] = UNSEEN;
-            }
-        }
-        List<Room> rooms = [];
-        for (var start = 0; start < labels.length; start++)
-        {
-            if (Js.Get(labels, start) != UNSEEN)
-            {
-                continue;
-            }
-            List<double> region = [start];
-            var doorSet = new JsSet<double>();
-            labels[Js.Idx(start)] = -4;
-            var touchesEdge = false;
-            for (var head = 0; head < region.length; head++)
-            {
-                var i = Js.NN(Js.Get(region, head));
-                var x = i % width;
-                var y = JsMath.floor(((double)(i) / (width)));
-                if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
-                {
-                    touchesEdge = true;
-                }
-                foreach (var (dx, dy) in Js.Iter(DIRS))
-                {
-                    var nx = x + dx;
-                    var ny = y + dy;
-                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
-                    {
-                        continue;
-                    }
-                    var n = ((double)(ny) * (width)) + nx;
-                    Grids.edgeBetween(grid, Js.I(x), Js.I(y), Js.I(nx), Js.I(ny), out int edge);
-                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
-                    {
-                        continue;
-                    }
-                    if (edge == Grids.EDGE_DOOR)
-                    {
-                        doorSet.add(n);
-                        continue;
-                    }
-                    if (Grids.tileAt(grid, n) == "door")
-                    {
-                        doorSet.add(n);
-                    }
-                    if (Grids.tileAt(grid, n) == "water")
-                    {
-                        touchesEdge = true;
-                    }
-                    if (Js.Get(labels, n) != UNSEEN)
-                    {
-                        continue;
-                    }
-                    labels[Js.Idx(n)] = -4;
-                    region.push(n);
-                }
-            }
-            if (touchesEdge || (region.length > MAX_ROOM_TILES))
-            {
-                foreach (var i in Js.Iter(region))
-                {
-                    labels[Js.Idx(i)] = OUTDOORS;
-                }
-                continue;
-            }
-            var index = rooms.length;
-            double minX = width;
-            double minY = height;
-            double maxX = 0;
-            double maxY = 0;
-            foreach (var i in Js.Iter(region))
-            {
-                labels[Js.Idx(i)] = index;
-                var x = i % width;
-                var y = JsMath.floor(((double)(i) / (width)));
-                minX = JsMath.min(minX, x);
-                minY = JsMath.min(minY, y);
-                maxX = JsMath.max(maxX, x);
-                maxY = JsMath.max(maxY, y);
-            }
-            region.sort((a, b) => a - b);
-            var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
-            rooms.push(new() { index = index, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
-        }
-        return new RoomMap { labels = labels, rooms = rooms };
     }
 
     public static double labelAt(SimState state, int x, int y)
@@ -169,7 +71,7 @@ public static partial class Rooms
         {
             return NOT_FLOOR;
         }
-        return Js.NN(Js.Get(getRoomMap(state).labels, ((double)(y) * (state.grid.width)) + x));
+        return getRoomMap(state).labels.at(x, y);
     }
     public static double labelAt(SimState state, double x, double y) => labelAt(state, Js.I(x), Js.I(y));
 
@@ -326,159 +228,5 @@ public static partial class Rooms
             return rooms.armory;
         }
         return Js.Get(rooms.storageFor, categoryOf(kind) ?? "gear");
-    }
-
-    /// <summary>Rooms after some tiles changed: the rooms touching a changed tile (or its neighbours) are taken apart, and their tiles and the changed ones flooded again; a flood may run into outdoor tiles (a new wall can close off part of the outdoors), and stops as outdoors once it's bigger than a room can be or reaches the map's edge or water. Rooms are then ordered as computeRooms orders them (by their first tile), so the result is the same as working it all out again.</summary>
-    public static RoomMap updateRooms(Grid grid, RoomMap old, List<double> changed)
-    {
-        var __d2 = grid;
-        var width = __d2.width;
-        var height = __d2.height;
-        var labels = old.labels.slice();
-        var UNSEEN = -3;
-        var removed = new JsSet<double>();
-        List<double> seeds = [];
-        List<double> near(double i)
-        {
-            var x = i % width;
-            var y = JsMath.floor(((double)(i) / (width)));
-            List<double> out_2 = [i];
-            foreach (var (dx, dy) in Js.Iter(DIRS))
-            {
-                var nx = x + dx;
-                var ny = y + dy;
-                if ((((nx >= 0) && (ny >= 0)) && (nx < width)) && (ny < height))
-                {
-                    out_2.push(((double)(ny) * (width)) + nx);
-                }
-            }
-            return out_2;
-        }
-        foreach (var c in Js.Iter(changed))
-        {
-            if ((c < 0) || (c >= labels.length))
-            {
-                continue;
-            }
-            foreach (var j in Js.Iter(near(c)))
-            {
-                if (Js.NN(Js.Get(labels, j)) >= 0)
-                {
-                    removed.add(Js.NN(Js.Get(labels, j)));
-                }
-                seeds.push(j);
-            }
-        }
-        foreach (var r in Js.Iter(removed))
-        {
-            foreach (var t in Js.Iter(Js.NN(Js.Get(old.rooms, r)).tiles))
-            {
-                seeds.push(t);
-            }
-        }
-        foreach (var j in Js.Iter(seeds))
-        {
-            labels[Js.Idx(j)] = (Grids.tileAt(grid, j) == "floor") ? UNSEEN : NOT_FLOOR;
-        }
-        List<Room> fresh = [];
-        foreach (var start in Js.Iter(seeds))
-        {
-            if (Js.Get(labels, start) != UNSEEN)
-            {
-                continue;
-            }
-            List<double> region = [start];
-            var inRegion = new JsSet<double>([start]);
-            var doorSet = new JsSet<double>();
-            var outdoors = false;
-            for (var head = 0; head < region.length; head++)
-            {
-                if (region.length > MAX_ROOM_TILES)
-                {
-                    outdoors = true;
-                    break;
-                }
-                var i = Js.NN(Js.Get(region, head));
-                var x = i % width;
-                var y = JsMath.floor(((double)(i) / (width)));
-                if ((((x == 0) || (y == 0)) || (x == (width - 1))) || (y == (height - 1)))
-                {
-                    outdoors = true;
-                }
-                foreach (var (dx, dy) in Js.Iter(DIRS))
-                {
-                    var nx = x + dx;
-                    var ny = y + dy;
-                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
-                    {
-                        continue;
-                    }
-                    var n = ((double)(ny) * (width)) + nx;
-                    Grids.edgeBetween(grid, Js.I(x), Js.I(y), Js.I(nx), Js.I(ny), out int edge);
-                    if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
-                    {
-                        continue;
-                    }
-                    if (edge == Grids.EDGE_DOOR)
-                    {
-                        doorSet.add(n);
-                        continue;
-                    }
-                    if (Grids.tileAt(grid, n) == "door")
-                    {
-                        doorSet.add(n);
-                    }
-                    if (Grids.tileAt(grid, n) == "water")
-                    {
-                        outdoors = true;
-                    }
-                    if ((Grids.tileAt(grid, n) != "floor") || inRegion.has(n))
-                    {
-                        continue;
-                    }
-                    if ((Js.Get(labels, n) != UNSEEN) && (Js.Get(labels, n) != OUTDOORS))
-                    {
-                        continue;
-                    }
-                    inRegion.add(n);
-                    region.push(n);
-                }
-            }
-            if (outdoors)
-            {
-                foreach (var i in Js.Iter(region))
-                {
-                    labels[Js.Idx(i)] = OUTDOORS;
-                }
-                continue;
-            }
-            region.sort((a, b) => a - b);
-            double minX = width;
-            double minY = height;
-            double maxX = 0;
-            double maxY = 0;
-            foreach (var i in Js.Iter(region))
-            {
-                labels[Js.Idx(i)] = -4;
-                var x = i % width;
-                var y = JsMath.floor(((double)(i) / (width)));
-                minX = JsMath.min(minX, x);
-                minY = JsMath.min(minY, y);
-                maxX = JsMath.max(maxX, x);
-                maxY = JsMath.max(maxY, y);
-            }
-            var doors = Js.ListOf(doorSet).sort((a, b) => a - b).map((i) => new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) });
-            fresh.push(new() { index = -1, tiles = region, doors = doors, minX = minX, minY = minY, maxX = maxX, maxY = maxY });
-        }
-        var rooms = Js.ListOf(old.rooms.filter((r) => !removed.has(r.index)), fresh).sort((a, b) => Js.NN(Js.Get(a.tiles, 0)) - Js.NN(Js.Get(b.tiles, 0)));
-        List<Room> @out = rooms.map((r, index) => Js.With(Js.Clone(r), __s3 => { __s3.index = index; }));
-        foreach (var r in Js.Iter(@out))
-        {
-            foreach (var i in Js.Iter(r.tiles))
-            {
-                labels[Js.Idx(i)] = r.index;
-            }
-        }
-        return new RoomMap { labels = labels, rooms = @out };
     }
 }

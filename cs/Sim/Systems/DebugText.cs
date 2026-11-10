@@ -138,7 +138,7 @@ public static partial class DebugText
             for (var x = 0; x < width; x++)
             {
                 var i = ((double)(y) * (width)) + x;
-                var label = Js.NN(Js.Get(labels, i));
+                var label = labels.at(Js.I(i));
                 if (label >= 0)
                 {
                     row += JsString.fromCharCode(97 + (label % 26));

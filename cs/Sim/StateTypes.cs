@@ -754,7 +754,7 @@ public partial class RoomDesignation : IHasId
 
 public partial class RoomMap
 {
-    public Int32Array labels { get; set; } = null!;
+    public RoomLabels labels { get; set; } = null!;
     public List<Room> rooms { get; set; } = new();
 }
 

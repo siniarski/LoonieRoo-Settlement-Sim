@@ -56,9 +56,13 @@ public partial class RoomsIncrementalTest
                 }
                 state.walkabilityVersion++;
                 var fast = Rooms.getRoomMap(state);
-                var full = Rooms.computeRooms(state.grid);
+                var full = Rooms.computeRoomsWhole(state.grid);
                 expect((fast.labels).ToList(), $"change {Js.Str(n)} at {Js.Str(x)},{Js.Str(y)}").toEqual((full.labels).ToList());
                 expect(fast.rooms.map((q) => Js.Arr([q.index, q.tiles, q.doors])), $"change {Js.Str(n)}").toEqual(full.rooms.map((q) => Js.Arr([q.index, q.tiles, q.doors])));
+                // And worked out from nothing, from the tiles with something on them.
+                var again = Rooms.computeRooms(state.grid);
+                expect((again.labels).ToList(), $"from nothing, change {Js.Str(n)}").toEqual((full.labels).ToList());
+                expect(again.rooms.map((q) => Js.Arr([q.index, q.tiles, q.doors, q.minX, q.minY, q.maxX, q.maxY])), $"from nothing, change {Js.Str(n)}").toEqual(full.rooms.map((q) => Js.Arr([q.index, q.tiles, q.doors, q.minX, q.minY, q.maxX, q.maxY])));
             }
         }
     }
