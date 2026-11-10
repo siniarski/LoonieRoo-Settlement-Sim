@@ -23,6 +23,11 @@ vars below for each.
 - **stress** (Bench.cs): very large worlds (fully generated 512 and 1024; up to 200 colonists, 2,000 zombies, herds
   and caravans): build time, tick mean/p99/max, managed heap, save size and time (ONLY=<scenario>, TICKS).
 
+**PROBE=path** (both players, Probe.cs): a read-only observer that writes path.txt (a summary line per run: deaths by
+cause from every event, prey caught and meat, drinks by source, how thirst met the other needs; each death with the
+dying one's last notes, and for thirst where the water was) and path.events-s<seed>.txt (every event; the state keeps
+only the last 50). It changes nothing: runs with and without it are the same.
+
 Run several seeds as separate background processes (one SEEDS value each) to stay inside a few minutes. For a CPU
 profile, run under dotnet-trace (not installed: ask first).
 
