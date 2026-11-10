@@ -28,9 +28,8 @@ public static partial class Pathfinding
     /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>
     public static bool crossable(Grid grid, int ax, int ay, int bx, int by, string mover = SURVIVOR)
     {
-        int e = edgeBetween(grid, ax, ay, bx, by);
+        int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
         if (e < 0) return true;
-        int kind = edgeKind(grid, e);
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
@@ -559,9 +558,9 @@ public static partial class Pathfinding
         bool Door(int px, int py) => getTile(grid, px, py) == DOOR;
         bool Bare(int ax, int ay, int bx, int by)
         {
-            int e = edgeBetween(grid, ax, ay, bx, by);
+            int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
             // grid.edges[-1] is undefined in the TypeScript, which is not EDGE_NONE.
-            return e >= 0 && edgeKind(grid, e) == EDGE_NONE;
+            return e >= 0 && kind == EDGE_NONE;
         }
         while (x != b.x || y != b.y)
         {
@@ -603,8 +602,8 @@ public static partial class Pathfinding
 
     static int EdgeKindOf(Grid grid, int ax, int ay, int bx, int by)
     {
-        int e = edgeBetween(grid, ax, ay, bx, by);
-        return e < 0 ? EDGE_NONE : edgeKind(grid, e);
+        edgeBetween(grid, ax, ay, bx, by, out int kind);
+        return kind;
     }
 
     /// <summary>Nothing solid between two tiles at most a step apart (for blows and bites).</summary>
@@ -614,9 +613,8 @@ public static partial class Pathfinding
         if ((dx == 0 && dy == 0) || Math.Abs(dx) > 1 || Math.Abs(dy) > 1) return true;
         bool Open(int px, int py, int qx, int qy)
         {
-            int e = edgeBetween(grid, px, py, qx, qy);
+            int e = edgeBetween(grid, px, py, qx, qy, out int kind);
             if (e < 0) return true;
-            int kind = edgeKind(grid, e);
             return kind == EDGE_NONE || kind == EDGE_BARRICADE || (kind == EDGE_DOOR && edgeIsOpen(grid, e)) || (kind == EDGE_WINDOW_BROKEN && !grid.edgeBoarded.Contains(e));
         }
         if (dx == 0 || dy == 0) return Open(a.x, a.y, b.x, b.y);

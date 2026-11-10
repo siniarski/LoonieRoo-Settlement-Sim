@@ -66,25 +66,32 @@ public static partial class SavefileChunks
         var hs = new Hasher();
         hs.Add((ulong)w);
         hs.Add((ulong)h);
-        // A tile's kind hashed once per string (a grid holds a handful of them, shared), by reference.
-        var kinds = new (string? s, ulong code)[8];
-        int next = 0;
-        ulong Code(string? t)
-        {
-            foreach (var (s, code) in kinds) if (s != null && ReferenceEquals(s, t)) return code;
-            var k = new Hasher();
-            k.Add(t);
-            kinds[next++ % kinds.Length] = (t, k.Value);
-            return k.Value;
-        }
+        // A tile's kind hashed once per kind (its name's hash, as when the grid held the names), a row at a time.
+        var names = Grids.tileNames;
+        Span<ulong> kinds = stackalloc ulong[names.Length];
+        Span<bool> known = stackalloc bool[names.Length];
+        Span<byte> tiles = stackalloc byte[CHUNK], ground = stackalloc byte[CHUNK], edges = stackalloc byte[2 * CHUNK];
         for (int ly = 0; ly < h; ly++)
+        {
+            int x = x0 - g.ox, y = y0 + ly - g.oy;
+            g.tileLayer.ReadRow(x, y, tiles[..w]);
+            g.groundLayer.ReadRow(x, y, ground[..w]);
+            g.edgeLayer.ReadRow(x, y, edges[..(2 * w)]);
             for (int lx = 0; lx < w; lx++)
             {
-                int i = (y0 + ly - g.oy) * g.width + (x0 + lx - g.ox);
-                hs.Add(Code(g.tileLayer[i]));
-                hs.Add((ulong)(uint)g.groundLayer[i] << 32 | (uint)g.edgeLayer[2 * i]);
-                hs.Add((uint)g.edgeLayer[2 * i + 1]);
+                int code = tiles[lx];
+                if (!known[code])
+                {
+                    var k = new Hasher();
+                    k.Add(names[code]);
+                    kinds[code] = k.Value;
+                    known[code] = true;
+                }
+                hs.Add(kinds[code]);
+                hs.Add((ulong)ground[lx] << 32 | edges[2 * lx]);
+                hs.Add(edges[2 * lx + 1]);
             }
+        }
         return hs.Value;
     }
 

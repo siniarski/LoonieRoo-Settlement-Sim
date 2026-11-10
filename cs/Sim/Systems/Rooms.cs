@@ -107,7 +107,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = ((double)(ny) * (width)) + nx;
-                    var edge = Grids.edgeKind(grid, Grids.edgeBetween(grid, x, y, nx, ny));
+                    Grids.edgeBetween(grid, Js.I(x), Js.I(y), Js.I(nx), Js.I(ny), out int edge);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;
@@ -414,7 +414,7 @@ public static partial class Rooms
                         continue;
                     }
                     var n = ((double)(ny) * (width)) + nx;
-                    var edge = Grids.edgeKind(grid, Grids.edgeBetween(grid, x, y, nx, ny));
+                    Grids.edgeBetween(grid, Js.I(x), Js.I(y), Js.I(nx), Js.I(ny), out int edge);
                     if (((edge == Grids.EDGE_WALL) || (edge == Grids.EDGE_BARRICADE)) || Grids.isWindow(edge))
                     {
                         continue;

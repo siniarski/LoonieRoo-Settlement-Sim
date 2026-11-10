@@ -69,12 +69,17 @@ public class SaveCompat
                     string same = "";
                     if (kind == "save")
                     {
-                        var file = JsonNode.Parse(Savefile.toSaveFile(r.state))!.AsObject();
-                        file["schemaVersion"] = 77;
-                        file["state"]!["schemaVersion"] = 77;
-                        if (file["state"]!["world"] is JsonObject fw) fw.Remove("made");
                         string old = File.ReadAllText(Path.Combine(check, $"{name}.save.json"));
-                        string mine = file.ToJsonString(StateJson.Options);
+                        string mine = Savefile.toSaveFile(r.state);
+                        // A schema-77 file: this build's save but for what 78 added. A file of this schema: the same bytes.
+                        if (old.Contains("\"schemaVersion\":77"))
+                        {
+                            var file = JsonNode.Parse(mine)!.AsObject();
+                            file["schemaVersion"] = 77;
+                            file["state"]!["schemaVersion"] = 77;
+                            if (file["state"]!["world"] is JsonObject fw) fw.Remove("made");
+                            mine = file.ToJsonString(StateJson.Options);
+                        }
                         int at = 0;
                         while (at < Math.Min(mine.Length, old.Length) && mine[at] == old[at]) at++;
                         same = mine == old ? ", written again the same" : $", WRITTEN AGAIN DIFFERENT at {at}: ...{old[Math.Max(0, at - 60)..Math.Min(old.Length, at + 60)]} vs ...{mine[Math.Max(0, at - 60)..Math.Min(mine.Length, at + 60)]}";

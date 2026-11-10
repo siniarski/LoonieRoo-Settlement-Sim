@@ -45,7 +45,7 @@ public interface IBody : IHasId, IHasAt, IHasPos
 {
 }
 
-public sealed class Grid
+public sealed class Grid : IJsonOnDeserialized
 {
     public int width;
     public int height;
@@ -53,18 +53,19 @@ public sealed class Grid
     /// is generated into (Worldgen.makeChunk), so generation writes in map coordinates. Grids' helpers (tileIndex,
     /// inBounds, edgeIndex) take it into account; nothing else meets such a grid. Not saved.</summary>
     [JsonIgnore] public int ox, oy;
-    // The six per-tile layers. Not public: Grids' accessors are the way in (tileAt, groundAt, setTile...), so the
-    // storage can change under them (docs/worldplan-regions.md "The second job"). JSON keeps their old names.
-    /// <summary>Row-major: index = y * width + x. "floor", "wall", "door", "water" or "barricade".</summary>
-    [JsonInclude, JsonPropertyName("tiles")] internal List<string> tileLayer = new();
+    // The six per-tile layers, each in 32 x 32 chunks allocated where something differs from the layer's fill
+    // (GridLayers.cs; docs/worldplan-regions.md "The second job"). Not public: Grids' accessors are the way in
+    // (getTile, tileAt, groundAt, setTile...). In JSON they are the flat row-major arrays they always were.
+    /// <summary>"floor", "wall", "door", "water" or "barricade" (as codes into Grids.tileNames).</summary>
+    [JsonInclude, JsonPropertyName("tiles")] internal TileLayer tileLayer = new();
     /// <summary>1 where a floor tile is dirty, else 0.</summary>
-    [JsonInclude, JsonPropertyName("dirt")] internal List<int> dirtLayer = new();
+    [JsonInclude, JsonPropertyName("dirt")] internal ByteLayer dirtLayer = new();
     /// <summary>Damage taken by the wall or door on each tile (breach). 0 on floor.</summary>
-    [JsonInclude, JsonPropertyName("damage")] internal List<double> damageLayer = new();
+    [JsonInclude, JsonPropertyName("damage")] internal DoubleLayer damageLayer = new();
     /// <summary>Index into GROUNDS per tile (visual).</summary>
-    [JsonInclude, JsonPropertyName("ground")] internal List<int> groundLayer = new();
+    [JsonInclude, JsonPropertyName("ground")] internal ByteLayer groundLayer = new();
     /// <summary>1 where some survivor has seen the tile (fog).</summary>
-    [JsonInclude, JsonPropertyName("explored")] internal List<int> exploredLayer = new();
+    [JsonInclude, JsonPropertyName("explored")] internal ByteLayer exploredLayer = new();
     public List<int> dirtList = new();
     public List<int> damageList = new();
     public List<int> locked = new();
@@ -72,13 +73,26 @@ public sealed class Grid
     public List<int> open = new();
     public List<int> passing = new();
     /// <summary>Per tile, its north edge then its west edge: EDGE_NONE, EDGE_WALL, EDGE_DOOR...</summary>
-    [JsonInclude, JsonPropertyName("edges")] internal List<int> edgeLayer = new();
+    [JsonInclude, JsonPropertyName("edges")] internal EdgeLayer edgeLayer = new();
     public List<int> edgeOpen = new();
     public List<int> edgePassing = new();
     /// <summary>Damage on edge walls and doors, by edge index (as a string key, like the TypeScript record).</summary>
     public Dictionary<string, double> edgeDamage = new();
     public List<int> edgeLocked = new();
     public List<int> edgeBoarded = new();
+
+    /// <summary>Sizes the layers to the grid (what JSON gave them is cut into chunks).</summary>
+    internal void Shape()
+    {
+        tileLayer.Shape(width, height);
+        dirtLayer.Shape(width, height);
+        damageLayer.Shape(width, height);
+        groundLayer.Shape(width, height);
+        exploredLayer.Shape(width, height);
+        edgeLayer.Shape(width, height);
+    }
+
+    void IJsonOnDeserialized.OnDeserialized() => Shape();
 }
 
 public static partial class Grids
@@ -108,18 +122,47 @@ public static partial class Grids
     public static Grid createGrid(int width, int height, string fill = FLOOR)
     {
         if (width <= 0 || height <= 0) throw new ArgumentException($"createGrid: invalid size {width}x{height}");
-        int n = width * height;
-        return new Grid
+        var grid = new Grid { width = width, height = height };
+        grid.Shape();
+        // Every tile `fill` and seen: no chunk is allocated until something differs.
+        grid.tileLayer.Fill(tileCode(fill));
+        grid.exploredLayer.Fill(1);
+        return grid;
+    }
+
+    // --- Tile kinds as codes: a layer holds a byte a tile; the names are these five and whatever else a state held ---
+
+    /// <summary>A tile code's name. Replaced (never changed in place) when a new name is met.</summary>
+    internal static string[] tileNames = [FLOOR, WALL, DOOR, WATER, BARRICADE];
+
+    /// <summary>The code of a tile's name: the five kinds, or any other string, given the next code when first met.</summary>
+    internal static byte tileCode(string tile)
+    {
+        switch (tile)
         {
-            width = width,
-            height = height,
-            tileLayer = Enumerable.Repeat(fill, n).ToList(),
-            dirtLayer = Enumerable.Repeat(0, n).ToList(),
-            damageLayer = Enumerable.Repeat(0.0, n).ToList(),
-            groundLayer = Enumerable.Repeat(0, n).ToList(),
-            exploredLayer = Enumerable.Repeat(1, n).ToList(),
-            edgeLayer = Enumerable.Repeat(EDGE_NONE, n * 2).ToList(),
-        };
+            case FLOOR: return 0;
+            case WALL: return 1;
+            case DOOR: return 2;
+            case WATER: return 3;
+            case BARRICADE: return 4;
+        }
+        if (tile == null) throw new ArgumentNullException(nameof(tile), "a tile is a string");
+        lock (typeof(Grids))
+        {
+            var names = tileNames;
+            int at = Array.IndexOf(names, tile);
+            if (at >= 0) return (byte)at;
+            if (names.Length >= 256) throw new InvalidOperationException("more than 256 kinds of tile");
+            tileNames = [.. names, tile];
+            return (byte)names.Length;
+        }
+    }
+
+    /// <summary>A ground, edge kind or flag as the byte a layer holds: a whole number from 0 to 255, or it throws.</summary>
+    internal static byte small(double value)
+    {
+        if (!(value >= 0 && value <= 255) || value != Math.Floor(value)) throw new InvalidDataException($"a grid layer holds whole numbers from 0 to 255, not {value}");
+        return (byte)value;
     }
 
     /// <summary>The index of a tile's north ("n") or west ("w") edge.</summary>
@@ -136,16 +179,37 @@ public static partial class Grids
         return -1;
     }
 
+    /// <summary>The edge between two tiles side by side and what stands on it, read by tile (no index to split):
+    /// -1 and EDGE_NONE if they aren't side by side or either is off the grid.</summary>
+    public static int edgeBetween(Grid grid, int ax, int ay, int bx, int by, out int kind)
+    {
+        kind = EDGE_NONE;
+        if (!inBounds(grid, ax, ay) || !inBounds(grid, bx, by)) return -1;
+        int x, y, side;
+        if (ax == bx && by == ay - 1) { x = ax; y = ay; side = 0; }
+        else if (ax == bx && by == ay + 1) { x = bx; y = by; side = 0; }
+        else if (ay == by && bx == ax - 1) { x = ax; y = ay; side = 1; }
+        else if (ay == by && bx == ax + 1) { x = bx; y = by; side = 1; }
+        else return -1;
+        x -= grid.ox;
+        y -= grid.oy;
+        kind = grid.edgeLayer.Get2(x, y, side);
+        return (y * grid.width + x) * 2 + side;
+    }
+
     /// <summary>What stands on an edge (EDGE_NONE for -1).</summary>
-    public static int edgeKind(Grid grid, int e) => (uint)e < (uint)grid.edgeLayer.Count ? grid.edgeLayer[e] : EDGE_NONE;
+    public static int edgeKind(Grid grid, int e) => (uint)e < (uint)(2 * grid.edgeLayer.count) ? grid.edgeLayer.At2(e) : EDGE_NONE;
+
+    /// <summary>What stands on a tile's north (side 0) or west (1) edge; the tile must be on the grid.</summary>
+    internal static int edgeOf(Grid grid, int x, int y, int side) => grid.edgeLayer.Get2(x - grid.ox, y - grid.oy, side);
 
     /// <summary>Puts a wall, a door or nothing on a tile's north or west edge.</summary>
     public static bool setEdge(Grid grid, int x, int y, string side, int kind)
     {
         if (!inBounds(grid, x, y)) return false;
         int e = edgeIndex(grid, x, y, side);
-        if (grid.edgeLayer[e] == kind) return false;
-        grid.edgeLayer[e] = kind;
+        if (grid.edgeLayer.At2(e) == kind) return false;
+        grid.edgeLayer.Put2(e, small(kind));
         noteEdgeChange(grid, e);
         Drop(grid.edgeOpen, e); // a new door starts shut
         Drop(grid.edgePassing, e);
@@ -224,19 +288,20 @@ public static partial class Grids
     public static int tileIndex(Grid grid, int x, int y) => (y - grid.oy) * grid.width + (x - grid.ox);
 
     /// <summary>The tile, or null when out of bounds.</summary>
-    public static string? getTile(Grid grid, int x, int y) => inBounds(grid, x, y) ? grid.tileLayer[tileIndex(grid, x, y)] : null;
+    public static string? getTile(Grid grid, int x, int y) => inBounds(grid, x, y) ? tileNames[grid.tileLayer.Get(x - grid.ox, y - grid.oy)] : null;
 
     /// <summary>Sets a tile. True if it changed. Callers that change walkability bump walkabilityVersion.</summary>
     public static bool setTile(Grid grid, int x, int y, string tile)
     {
         if (!inBounds(grid, x, y)) return false;
-        int i = tileIndex(grid, x, y);
-        if (grid.tileLayer[i] == tile) return false;
-        grid.tileLayer[i] = tile;
+        int i = tileIndex(grid, x, y), lx = x - grid.ox, ly = y - grid.oy;
+        byte code = tileCode(tile);
+        if (grid.tileLayer.Get(lx, ly) == code) return false;
+        grid.tileLayer.Set(lx, ly, code);
         noteChange(grid, i);
-        if (tile != FLOOR && grid.dirtLayer[i] == 1)
+        if (tile != FLOOR && grid.dirtLayer.Get(lx, ly) == 1)
         {
-            grid.dirtLayer[i] = 0;
+            grid.dirtLayer.Set(lx, ly, 0);
             Drop(grid.dirtList, i);
         }
         setDamage(grid, i, 0); // a new (or removed) structure starts undamaged
@@ -247,7 +312,7 @@ public static partial class Grids
         return true;
     }
 
-    public static bool isDirty(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.dirtLayer[tileIndex(grid, x, y)] == 1;
+    public static bool isDirty(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.dirtLayer.Get(x - grid.ox, y - grid.oy) == 1;
 
     /// <summary>Marks a floor tile dirty or clean. True if it changed. Non-floor tiles can't get dirty.</summary>
     public static bool setDirty(Grid grid, int x, int y, bool dirty)
@@ -255,7 +320,7 @@ public static partial class Grids
         if (getTile(grid, x, y) != FLOOR && dirty) return false;
         if (isDirty(grid, x, y) == dirty || !inBounds(grid, x, y)) return false;
         int i = tileIndex(grid, x, y);
-        grid.dirtLayer[i] = dirty ? 1 : 0;
+        grid.dirtLayer.Put(i, dirty ? (byte)1 : (byte)0);
         if (dirty) grid.dirtList.Add(i);
         else Drop(grid.dirtList, i);
         return true;
@@ -264,9 +329,10 @@ public static partial class Grids
     /// <summary>Sets the damage on a tile index, keeping damageList in step.</summary>
     public static void setDamage(Grid grid, int i, double value)
     {
-        double was = grid.damageLayer[i];
+        if ((uint)i >= (uint)grid.damageLayer.count) throw new ArgumentOutOfRangeException(nameof(i), $"tile index {i} is off the grid");
+        double was = grid.damageLayer.At(i);
         if (was == value) return;
-        grid.damageLayer[i] = value;
+        grid.damageLayer.Put(i, value);
         if (was == 0) grid.damageList.Add(i);
         else if (value == 0) Drop(grid.damageList, i);
     }
@@ -278,75 +344,93 @@ public static partial class Grids
     public static int tileCount(Grid grid) => grid.width * grid.height;
 
     /// <summary>The tile at an index, or null off the grid.</summary>
-    public static string? tileAt(Grid grid, int i) => (uint)i < (uint)grid.tileLayer.Count ? grid.tileLayer[i] : null;
+    public static string? tileAt(Grid grid, int i) => (uint)i < (uint)grid.tileLayer.count ? tileNames[grid.tileLayer.At(i)] : null;
 
     /// <summary>Sets a tile and nothing else (no change noted, no dirt, damage, lock or door state dropped): for
     /// generation, loading and tests. setTile is the one for play.</summary>
-    public static void putTile(Grid grid, int i, string tile) => grid.tileLayer[i] = tile;
+    public static void putTile(Grid grid, int i, string tile) => grid.tileLayer.Put(i, tileCode(tile));
 
     /// <summary>The ground (an index into GROUNDS) at a tile index; 0 off the grid.</summary>
-    public static int groundAt(Grid grid, int i) => (uint)i < (uint)grid.groundLayer.Count ? grid.groundLayer[i] : 0;
+    public static int groundAt(Grid grid, int i) => (uint)i < (uint)grid.groundLayer.count ? grid.groundLayer.At(i) : 0;
 
     /// <summary>The ground at a tile; 0 off the grid.</summary>
-    public static int groundAt(Grid grid, int x, int y) => inBounds(grid, x, y) ? grid.groundLayer[tileIndex(grid, x, y)] : 0;
+    public static int groundAt(Grid grid, int x, int y) => inBounds(grid, x, y) ? grid.groundLayer.Get(x - grid.ox, y - grid.oy) : 0;
 
-    public static void setGround(Grid grid, int i, int ground) => grid.groundLayer[i] = ground;
+    public static void setGround(Grid grid, int i, int ground) => grid.groundLayer.Put(i, small(ground));
 
-    public static void setGround(Grid grid, int x, int y, int ground) => grid.groundLayer[tileIndex(grid, x, y)] = ground;
+    public static void setGround(Grid grid, int x, int y, int ground) => grid.groundLayer.Put(tileIndex(grid, x, y), small(ground));
 
     /// <summary>Every tile's ground set to one value.</summary>
-    public static void fillGround(Grid grid, int ground)
-    {
-        for (int i = 0; i < grid.groundLayer.Count; i++) grid.groundLayer[i] = ground;
-    }
+    public static void fillGround(Grid grid, int ground) => grid.groundLayer.Fill(small(ground));
 
     /// <summary>1 where the tile at an index has been seen, else 0 (0 off the grid).</summary>
-    public static int exploredAt(Grid grid, int i) => (uint)i < (uint)grid.exploredLayer.Count ? grid.exploredLayer[i] : 0;
+    public static int exploredAt(Grid grid, int i) => (uint)i < (uint)grid.exploredLayer.count ? grid.exploredLayer.At(i) : 0;
 
     /// <summary>Whether a tile has been seen; false off the grid.</summary>
-    public static bool isExplored(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.exploredLayer[tileIndex(grid, x, y)] == 1;
+    public static bool isExplored(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.exploredLayer.Get(x - grid.ox, y - grid.oy) == 1;
 
-    public static void setExplored(Grid grid, int i, int seen) => grid.exploredLayer[i] = seen;
+    public static void setExplored(Grid grid, int i, int seen) => grid.exploredLayer.Put(i, small(seen));
 
     /// <summary>Every tile seen (1) or unseen (0).</summary>
-    public static void fillExplored(Grid grid, int seen)
-    {
-        for (int i = 0; i < grid.exploredLayer.Count; i++) grid.exploredLayer[i] = seen;
-    }
+    public static void fillExplored(Grid grid, int seen) => grid.exploredLayer.Fill(small(seen));
 
     /// <summary>Whether any tile of the grid is still unseen.</summary>
-    public static bool anyUnexplored(Grid grid) => grid.exploredLayer.Contains(0);
+    public static bool anyUnexplored(Grid grid) => grid.exploredLayer.Has(0);
 
     /// <summary>1 where the tile at an index is dirty, else 0.</summary>
-    public static int dirtAt(Grid grid, int i) => (uint)i < (uint)grid.dirtLayer.Count ? grid.dirtLayer[i] : 0;
+    public static int dirtAt(Grid grid, int i) => (uint)i < (uint)grid.dirtLayer.count ? grid.dirtLayer.At(i) : 0;
 
     /// <summary>Sets a tile's dirt and nothing else (dirtList is not kept in step): for tests. setDirty is the one for play.</summary>
-    public static void putDirt(Grid grid, int i, int dirt) => grid.dirtLayer[i] = dirt;
+    public static void putDirt(Grid grid, int i, int dirt) => grid.dirtLayer.Put(i, small(dirt));
 
     /// <summary>The damage on the wall or door at a tile index; 0 off the grid.</summary>
-    public static double damageAt(Grid grid, int i) => (uint)i < (uint)grid.damageLayer.Count ? grid.damageLayer[i] : 0;
+    public static double damageAt(Grid grid, int i) => (uint)i < (uint)grid.damageLayer.count ? grid.damageLayer.At(i) : 0;
 
     /// <summary>Sets an edge and nothing else (no change noted, no door state dropped): for generation, loading, breach
     /// (which notes the change itself) and tests. setEdge is the one for play.</summary>
-    public static void putEdge(Grid grid, int e, int kind) => grid.edgeLayer[e] = kind;
+    public static void putEdge(Grid grid, int e, int kind) => grid.edgeLayer.Put2(e, small(kind));
+
+    /// <summary>How much of the grid is held in memory: the chunk slots allocated in each layer (of `slots` each),
+    /// and their bytes with the slot arrays. For the debug panel, the harness and tests: not for the sim to act on.</summary>
+    public sealed record Memory(int slots, int tiles, int ground, int explored, int dirt, int damage, int edges, long bytes);
+
+    public static Memory memory(Grid grid)
+    {
+        const int n = GridLayer<byte>.SIDE * GridLayer<byte>.SIDE, header = 24;
+        int t = grid.tileLayer.AllocatedCount(), g = grid.groundLayer.AllocatedCount(), x = grid.exploredLayer.AllocatedCount();
+        int d = grid.dirtLayer.AllocatedCount(), m = grid.damageLayer.AllocatedCount(), e = grid.edgeLayer.AllocatedCount();
+        int slots = grid.tileLayer.chunks.Length;
+        long bytes = 6L * (8L * slots + header) + (long)(t + g + x + d) * (n + header) + (long)m * (8 * n + header) + (long)e * (2 * n + header);
+        return new Memory(slots, t, g, x, d, m, e, bytes);
+    }
 
     /// <summary>Whether anything stands on any edge of the grid.</summary>
-    public static bool anyEdges(Grid grid)
-    {
-        foreach (int kind in grid.edgeLayer) if (kind != EDGE_NONE) return true;
-        return false;
-    }
+    public static bool anyEdges(Grid grid) => grid.edgeLayer.AnyNot(0, 0, grid.width, grid.height, EDGE_NONE);
 
     // Whole layers as flat lists (copies), row-major as they are in JSON: for tests, dumps and the text map. They cost
     // the whole map: never in a tick.
 
-    public static List<string> allTiles(Grid grid) => grid.tileLayer.ToList();
-    public static List<int> allGround(Grid grid) => grid.groundLayer.ToList();
-    public static List<int> allExplored(Grid grid) => grid.exploredLayer.ToList();
-    public static List<int> allDirt(Grid grid) => grid.dirtLayer.ToList();
-    public static List<double> allDamage(Grid grid) => grid.damageLayer.ToList();
+    public static List<string> allTiles(Grid grid)
+    {
+        var names = tileNames;
+        var out_ = new List<string>(grid.tileLayer.count);
+        foreach (byte code in grid.tileLayer.ToFlat()) out_.Add(names[code]);
+        return out_;
+    }
+
+    static List<int> Ints(byte[] flat)
+    {
+        var out_ = new List<int>(flat.Length);
+        foreach (byte v in flat) out_.Add(v);
+        return out_;
+    }
+
+    public static List<int> allGround(Grid grid) => Ints(grid.groundLayer.ToFlat());
+    public static List<int> allExplored(Grid grid) => Ints(grid.exploredLayer.ToFlat());
+    public static List<int> allDirt(Grid grid) => Ints(grid.dirtLayer.ToFlat());
+    public static List<double> allDamage(Grid grid) => grid.damageLayer.ToFlat().ToList();
     /// <summary>Two a tile: its north edge, then its west.</summary>
-    public static List<int> allEdges(Grid grid) => grid.edgeLayer.ToList();
+    public static List<int> allEdges(Grid grid) => Ints(grid.edgeLayer.ToFlat());
 
     static void Drop(List<int> list, int i)
     {
