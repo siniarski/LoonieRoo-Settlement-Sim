@@ -32,21 +32,34 @@ public class ChunkSaveTest
         return s;
     }
 
-    [Fact(DisplayName = "chunk saves > a played and changed world comes back exactly (one region, and several)")]
-    public void round_trip()
+    static void RoundTrip(double seed, int size)
     {
-        foreach (var (seed, size) in new[] { (5.0, 256), (8.0, 1536) })
-        {
-            var s = Played(seed, size);
-            var text = Savefile.toSaveFile(s);
-            var back = Savefile.loadFile(text);
-            expect(back.ok).toBe(true);
-            expect(Whole(back.state) == Whole(s) ? "" : $"{size}: the loaded state differs").toBe("");
-            // And again: a save of the loaded state is the same file.
-            expect(Savefile.toSaveFile(back.state) == text).toBe(true);
-        }
+        var s = Played(seed, size);
+        var text = Savefile.toSaveFile(s);
+        var back = Savefile.loadFile(text);
+        expect(back.ok).toBe(true);
+        expect(Whole(back.state) == Whole(s) ? "" : $"{size}: the loaded state differs").toBe("");
+        // And again: a save of the loaded state is the same file.
+        expect(Savefile.toSaveFile(back.state) == text).toBe(true);
     }
 
+    [Fact(DisplayName = "chunk saves > a played and changed world comes back exactly (one region)")]
+    public void round_trip()
+    {
+        RoundTrip(5, 256);
+    }
+
+    // The several-region world is a second or two of planning before it's played at all (a test of its own, to share out).
+    [Fact(DisplayName = "chunk saves > a played and changed world comes back exactly (several regions)")]
+    public void round_trip_several_regions()
+    {
+        RoundTrip(8, 1536);
+    }
+}
+
+// Its own class so ./check.sh can run it in another process beside the one above (the round trip is seconds).
+public class ChunkSaveMoreTest
+{
     [Fact(DisplayName = "chunk saves > a chunk made again later, in a played state, is the same chunk")]
     public void made_again()
     {

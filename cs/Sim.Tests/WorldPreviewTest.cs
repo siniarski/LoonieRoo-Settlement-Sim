@@ -54,51 +54,6 @@ public class WorldPreviewTest
         expect(counts[WorldPreview.BUILT] > 0).toBe(true);
     }
 
-    [Fact(DisplayName = "world preview > the same picture on a worker thread, in stages, and stoppable")]
-    public async System.Threading.Tasks.Task same_on_a_thread()
-    {
-        var here = WorldPreview.build(new WorldRegions(11, 1280, "mainland"));
-        var stages = new List<string>();
-        var there = await System.Threading.Tasks.Task.Run(() => WorldPreview.build(new WorldRegions(11, 1280, "mainland"), (_, what) => stages.Add(what)));
-        expect(there.SequenceEqual(here)).toBe(true);
-        expect(stages[0]).toBe("the land");
-        expect(stages[1]).toBe("towns");
-        expect(stages[^1]).toBe("done");
-        expect(stages.Count).toBe(2 + 4); // 1280: 2 x 2 regions, every one planned
-        expect(WorldPreview.build(new WorldRegions(11, 1280, "mainland"), null, () => true)).toBe(null);
-    }
-
-    [Fact(DisplayName = "world preview > a big world shows every region's towns, nearest the start first, and plans none")]
-    public void big_world_towns_only()
-    {
-        var r = new WorldRegions(5, 3072, "mainland"); // 3 x 3 regions
-        expect(WorldPreview.plansRegions(r)).toBe(false);
-        expect(WorldPreview.regionOrder(r)[0]).toEqual(r.RegionOf(r.nature.start.x, r.nature.start.y));
-        var stages = new List<string>();
-        var img = WorldPreview.build(r, (_, what) => stages.Add(what));
-        expect(string.Join(", ", stages)).toBe("the land, towns (6 of 9 regions), done");
-        expect(img.Count((k) => k == WorldPreview.TOWN) > 0).toBe(true);
-        expect(img.Count((k) => k == WorldPreview.ROAD || k == WorldPreview.STREET)).toBe(0);
-        for (int ry = 0; ry < r.side; ry++)
-            for (int rx = 0; rx < r.side; rx++) expect(r.IsPlanned(rx, ry)).toBe(false);
-    }
-
-    [Fact(DisplayName = "world preview > a coarse pixel is the most of nine samples across it")]
-    public void coarse_pixels_vote()
-    {
-        var n = NatureMod.natureFor(5, 2048, "mainland");
-        var img = WorldPreview.nature(n, WorldPreview.PX); // 8 tiles a pixel
-        int x0 = 100 * 8, y0 = 37 * 8;
-        var votes = new int[3];
-        for (int b = 0; b < 3; b++)
-            for (int a = 0; a < 3; a++)
-            {
-                int x = x0 + (2 * a + 1) * 8 / 6, y = y0 + (2 * b + 1) * 8 / 6;
-                votes[NatureMod.isWater(n, x, y) ? 2 : NatureMod.isForest(n, x, y) ? 1 : 0]++;
-            }
-        expect(votes[img[37 * WorldPreview.PX + 100]] >= votes.Max()).toBe(true);
-    }
-
     [Fact(DisplayName = "world preview > a save carries its picture at the head of the file")]
     public void save_preview()
     {
@@ -130,5 +85,66 @@ public class WorldPreviewTest
         expect(Savefile.readPreview(Encoding.UTF8.GetBytes(Savefile.toBugReport(world, world)))).toBe(null);
         expect(Savefile.readPreview(Encoding.UTF8.GetBytes("not json"))).toBe(null);
         expect(Savefile.readPreview(Encoding.UTF8.GetBytes("[1, 2]"))).toBe(null);
+    }
+}
+
+// Their own classes so ./check.sh can run them in other processes beside the one above (each takes seconds: a picture of a
+// big world samples its land, and a region's plan is about a second).
+public class WorldPreviewThreadTest
+{
+    [Fact(DisplayName = "world preview > the same picture on a worker thread, in stages, and stoppable")]
+    public async System.Threading.Tasks.Task same_on_a_thread()
+    {
+        // 1088: 2 x 2 regions as 1280 was, the east and south ones 64 tiles wide (a full region's plan is about a second).
+        // The worker starts first and this thread builds its own meanwhile (two second-long builds side by side: the Terrain
+        // cache they share is built under a lock, and each has its own WorldRegions).
+        var stages = new List<string>();
+        var worker = System.Threading.Tasks.Task.Run(() => WorldPreview.build(new WorldRegions(11, 1088, "mainland"), (_, what) => stages.Add(what)));
+        var here = WorldPreview.build(new WorldRegions(11, 1088, "mainland"));
+        var there = await worker;
+        expect(there.SequenceEqual(here)).toBe(true);
+        expect(stages[0]).toBe("the land");
+        expect(stages[1]).toBe("towns");
+        expect(stages[^1]).toBe("done");
+        expect(stages.Count).toBe(2 + 4); // 1088: 2 x 2 regions, every one planned
+        // Stopping is asked before any region is touched, whatever the size (a build of the big one costs a second and a half).
+        expect(WorldPreview.build(new WorldRegions(11, 256, "mainland"), null, () => true)).toBe(null);
+        var asked = 0;
+        expect(WorldPreview.build(new WorldRegions(11, 256, "mainland"), null, () => ++asked == 2)).toBe(null); // after the first region's towns
+        expect(asked).toBe(2);
+    }
+}
+
+public class WorldPreviewBigTest
+{
+    [Fact(DisplayName = "world preview > a big world shows every region's towns, nearest the start first, and plans none")]
+    public void big_world_towns_only()
+    {
+        var r = new WorldRegions(5, 2112, "mainland"); // 3 x 3 regions (the last 64 tiles wide: towns are sited in each, a quarter second a full one)
+        expect(WorldPreview.plansRegions(r)).toBe(false);
+        expect(WorldPreview.regionOrder(r)[0]).toEqual(r.RegionOf(r.nature.start.x, r.nature.start.y));
+        var stages = new List<string>();
+        var img = WorldPreview.build(r, (_, what) => stages.Add(what));
+        expect(string.Join(", ", stages)).toBe("the land, towns (6 of 9 regions), done");
+        expect(img.Count((k) => k == WorldPreview.TOWN) > 0).toBe(true);
+        expect(img.Count((k) => k == WorldPreview.ROAD || k == WorldPreview.STREET)).toBe(0);
+        for (int ry = 0; ry < r.side; ry++)
+            for (int rx = 0; rx < r.side; rx++) expect(r.IsPlanned(rx, ry)).toBe(false);
+    }
+
+    [Fact(DisplayName = "world preview > a coarse pixel is the most of nine samples across it")]
+    public void coarse_pixels_vote()
+    {
+        var n = NatureMod.natureFor(5, 2048, "mainland");
+        var img = WorldPreview.nature(n, WorldPreview.PX); // 8 tiles a pixel
+        int x0 = 100 * 8, y0 = 37 * 8;
+        var votes = new int[3];
+        for (int b = 0; b < 3; b++)
+            for (int a = 0; a < 3; a++)
+            {
+                int x = x0 + (2 * a + 1) * 8 / 6, y = y0 + (2 * b + 1) * 8 / 6;
+                votes[NatureMod.isWater(n, x, y) ? 2 : NatureMod.isForest(n, x, y) ? 1 : 0]++;
+            }
+        expect(votes[img[37 * WorldPreview.PX + 100]] >= votes.Max()).toBe(true);
     }
 }

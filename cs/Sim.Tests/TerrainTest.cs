@@ -80,15 +80,18 @@ public class TerrainTest
     [Fact(DisplayName = "terrain > country roads go round lakes rather than across them")]
     public void roads_round_lakes()
     {
-        for (int seed = 1; seed <= 4; seed++)
+        // One region each, planned in well under a second (a 1024 one took a second, and of seeds 1-4 only seed 3 put a
+        // road over a lake when lakes were made cheap to cross). These worlds are ones where a lake-blind road does, by a
+        // wide margin: 5 to 148 points on a lake against at most 8 as it is.
+        foreach (var (size, seed) in new[] { (512, 20), (512, 23), (768, 4), (768, 9), (768, 14) })
         {
-            var r = new WorldRegions(seed, 1024, "mainland");
+            var r = new WorldRegions(seed, size, "mainland");
             var n = r.nature;
             foreach (var line in r.Region(0, 0).roads)
             {
                 int wet = 0;
                 foreach (var q in line) if (NatureMod.isLake(n, q.x, q.y)) wet++;
-                expect($"seed {seed}: {line.Count} points, {wet} on a lake: {wet <= 40}").toBe($"seed {seed}: {line.Count} points, {wet} on a lake: True");
+                expect($"{size} seed {seed}: {line.Count} points, {wet} on a lake: {wet <= 40}").toBe($"{size} seed {seed}: {line.Count} points, {wet} on a lake: True");
             }
         }
     }

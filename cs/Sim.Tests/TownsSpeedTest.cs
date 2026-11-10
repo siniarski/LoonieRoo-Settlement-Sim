@@ -9,9 +9,11 @@ public class TownsSpeedTest
     [Fact(DisplayName = "towns > siting by prefix sums places the same towns as the original")]
     public void same_towns()
     {
+        // The original is every town x every site x a disc, so its cost climbs with size (about a second for the big
+        // ones): six seeds of the small worlds (sizes off the 8-tile site step and the 4-tile land cells: 200, 700), two of the large.
         foreach (var size in new[] { 128, 200, 256, 384, 512, 700 })
             foreach (var map in new[] { "mainland", "quarantine" })
-                for (int seed = 1; seed <= 6; seed++)
+                for (int seed = 1; seed <= (size <= 256 ? 6 : 2); seed++)
                 {
                     var n = NatureMod.natureFor(seed, size, map);
                     var land = Towns.landGrid(n);
