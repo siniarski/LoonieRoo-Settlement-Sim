@@ -341,10 +341,29 @@ public partial class Game
         for (int i = 0; i < 40 && held.RightAt.DistanceTo(rest) > 0.03f; i++) await Frames(1);
         Check("And comes back to rest", held.RightAt.DistanceTo(rest) < 0.03f, $"{held.RightAt.DistanceTo(rest):0.000} m off");
         Sim.Items.removeItem(state, club);
-        var gun = Arm("gun");
+        var gun = Arm("rifle");
         await Frames(30);
-        Check("A rifle is held in both hands", held.Right.StartsWith("gun") && held.TwoHanded && held.RightHand && held.LeftHand, $"right '{held.Right}', two-handed {held.TwoHanded}");
+        Check("A rifle is held in both hands", held.Right.StartsWith("rifle") && held.TwoHanded && held.RightHand && held.LeftHand, $"right '{held.Right}', two-handed {held.TwoHanded}");
         Sim.Items.removeItem(state, gun);
+        // A pistol: X reloads it from the bag, a click fires one round along the look, Q takes up the next weapon.
+        var pistol = Arm("pistol");
+        var box = Sim.Items.spawnItem(state, "ammo", you.pos.x, you.pos.y);
+        LoonieRoo.Sim.Inventory.stow(state, you, box);
+        var bat = Sim.Items.spawnItem(state, "bat", you.pos.x, you.pos.y);
+        LoonieRoo.Sim.Inventory.stow(state, you, bat);
+        await Frames(30);
+        Check("A pistol is held in one hand", held.Right.StartsWith("pistol") && held.RightHand && !held.TwoHanded, $"right '{held.Right}', two-handed {held.TwoHanded}");
+        await Tap(Key.X);
+        for (int i = 0; i < 400 && pistol.wear < 10; i++) await Frames(1);
+        Check("X reloads the pistol from the bag (a magazine of 10 from a box of 12)", pistol.wear == 10 && box.wear == 2, $"rounds {pistol.wear}, box {box.wear}");
+        double rounds = pistol.wear;
+        double fired = state.control!.swungTick ?? -1;
+        await Click(GetViewport().GetVisibleRect().GetCenter());
+        await Frames(3);
+        Check("A click fires one round", pistol.wear == rounds - 1 && (state.control!.swungTick ?? -1) > fired, $"rounds {pistol.wear}, swungTick {fired} -> {state.control!.swungTick}");
+        await Tap(Key.Q);
+        Check("Q takes up the next weapon and puts the pistol in the bag", you.weapon == bat.id && you.pack.Contains(pistol.id), $"wielding {you.weapon}, bag {string.Join(",", you.pack)}");
+        foreach (var it in new[] { pistol, box, bat }) { LoonieRoo.Sim.Inventory.unpack(you, it.id); Sim.Items.removeItem(state, it); }
         you.weapon = had;
         await Frames(2);
     }

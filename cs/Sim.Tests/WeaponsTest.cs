@@ -122,7 +122,7 @@ public partial class WeaponsTest
             var state = setup(["s/.", "..."], new() { ["guard"] = 3 });
             var s = Js.NN(Js.Get(state.survivors, 0));
             arm(state, s);
-            Js.NN(Js.Get(weapons(state), 0)).wear = Weapons.WEAPON_KILLS - 1;
+            Js.NN(Js.Get(weapons(state), 0)).wear = Weapons.specOf(Js.Get(weapons(state), 0)).durability - 1;
             state.tick = Js.I(NIGHT);
             Zombies.addZombie(state, s.pos.x, s.pos.y + 1);
             runUntil(state, (_) => state.zombies.length == 0);

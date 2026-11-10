@@ -18,6 +18,16 @@ behind it, what you wear and wield, skills and your story. It only reads: nothin
 (wheel) when it is taller than the window, and follows the survivor you control. The same sheet as text:
 `CharacterSheet.textOfControlled(state)` (cs/Sim/Systems/CharacterSheet.cs).
 
+**Weapons** (2026-11-10; the table of every weapon: cs/Sim/Systems/WeaponTable.cs, how shots fly: Shooting.cs).
+Click swings what is in your hand, or, with a loaded gun, fires it exactly where you look (the `fire` command: a
+direction). **X** reloads the gun in hand from your bag (the whole magazine for a pistol, a round at a time for a
+revolver, shotgun or rifle; shooting or walking off stops it). **Q** takes up the next weapon from the bag, the one
+in hand going into the bag in its place (or put a weapon in hand from the Tab screen as before). With a gun in hand
+the bottom of the screen reads its rounds, the bag's rounds and what to do ("X: reload", "out of ammunition"); the
+empty gun is a club. Two-handed weapons (sledgehammer, spear, axe, shotgun, rifle, crossbow) need free hands: not
+while you carry something in them or push a cart. An axe or a hammer in the tool slot is what you hit with when your
+weapon hand is empty. A survivor of yours in the line holds your fire.
+
 The direct-control keys below apply as before (L loots the room where you look). In the Colony tab you stand still
 and the colony's controls apply; M or Esc goes back to first person; F on someone selected plays them instead.
 G is gone.
@@ -38,7 +48,8 @@ G is gone.
   beside you, I its bonnet. E underfoot forages on grass by day or sleeps.
 - In a car: W go, S brake and reverse, A D steer.
 - 1-9 use from the bag (stash into a crate or car beside you from the bag panel). R works the tile in front (repair;
-  with wood: barricade a door or board a window, reinforce, build a wall).
+  with wood: barricade a door or board a window, reinforce, build a wall). X reloads, Q switches weapon (see
+  Weapons above); in the Colony tab a click on a tile fires a loaded gun at it.
 - T talk (neighbours' people may ask you for an errand), V "follow me", H "hold here", L "loot that room" (under the
   mouse), K the full key list.
 

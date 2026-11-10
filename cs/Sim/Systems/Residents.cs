@@ -31,7 +31,7 @@ public static partial class Residents
     public const int TALK_REP = 2;
 
     /// <summary>Food from their stores for each kind of thing you hand over.</summary>
-    public static readonly JsRecord<double> TRADE_FOOD = new() { ["medicine"] = 3, ["ammo"] = 2, ["gun"] = 4, ["weapon"] = 2, ["bandage"] = 1, ["coat"] = 2, ["armour"] = 3, ["boots"] = 1, ["book"] = 1, ["scrap"] = 1, ["fuel"] = 1, ["wood"] = 1, ["cloth"] = 1 };
+    public static readonly JsRecord<double> TRADE_FOOD = new() { ["medicine"] = 3, ["ammo"] = 2, ["gun"] = 4, ["weapon"] = 2, ["pistol"] = 4, ["revolver"] = 5, ["shotgun"] = 6, ["rifle"] = 6, ["crossbow"] = 3, ["ammo38"] = 2, ["shells"] = 2, ["ammo308"] = 2, ["bolts"] = 1, ["knife"] = 1, ["hatchet"] = 2, ["machete"] = 2, ["crowbar"] = 2, ["bat"] = 2, ["pipe"] = 2, ["sledge"] = 3, ["spear"] = 2, ["plank"] = 1, ["bandage"] = 1, ["coat"] = 2, ["armour"] = 3, ["boots"] = 1, ["book"] = 1, ["scrap"] = 1, ["fuel"] = 1, ["wood"] = 1, ["cloth"] = 1 };
 
     public static readonly List<string> NAMES = ["Ada", "Bram", "Cora", "Dov", "Esme", "Fitz", "Greta", "Hank", "Ines", "Jules", "Kai", "Lotte", "Mabel", "Ned", "Olga", "Pim"];
 

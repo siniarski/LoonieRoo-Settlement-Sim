@@ -27,7 +27,7 @@ public partial class ItemBench : Node3D
     const int SPREAD = 60;
     static readonly HashSet<string> OPEN = new() { "grass", "dirt", "field", "forest" };
     static readonly string[] KINDS = ["wood", "food", "meal", "bandage", "medicine", "medkit", "weapon", "cloth", "coat", "armour", "boots",
-        "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "sample", "scrap", "fuel"];
+        "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "sample", "scrap", "fuel", "knife", "hatchet", "machete", "crowbar", "bat", "pipe", "sledge", "spear", "plank", "pistol", "revolver", "shotgun", "rifle", "crossbow", "ammo38", "shells", "ammo308", "bolts"];
 
     readonly List<(string mode, int max)> runs = new();
     readonly StringBuilder report = new();

@@ -1,5 +1,6 @@
 // Ported from src/sim/noise.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Noise: building, fighting and gunfire carry.
+// Noise: building, fighting and gunfire carry. A weapon has its own radius (pistol 22 ... rifle 36, crossbow 4:
+// WeaponTable.cs); "gunfire" below is a turret's and the old default.
 //
 // A noise of radius r (Manhattan) at a point wakes the dormant zombies within
 // r, draws idle static and herd zombies within r to come and look, and turns
@@ -17,9 +18,10 @@ public static partial class Noise
     /// <summary>Herds hear from this many times further than a noise's radius.</summary>
     public const int HERD_HEARING = 2;
 
-    public static void makeNoise(SimState state, Point p, string kind)
+    /// <summary>A noise of the kind's usual radius, or of `radius` (a weapon's own: WeaponTable.cs, a gun's report or a blow).</summary>
+    public static void makeNoise(SimState state, Point p, string kind, double? radius = null)
     {
-        var r = Js.Get(NOISE, kind);
+        var r = radius ?? Js.Get(NOISE, kind);
         var woke = wakeDormantNear(state, p, r);
         if (woke > 0)
         {

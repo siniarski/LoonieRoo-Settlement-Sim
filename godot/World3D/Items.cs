@@ -199,8 +199,17 @@ void fragment() {
                 }
             return;
         }
+        if (Array.Exists(OS.GetCmdlineUserArgs(), a => a.TrimStart('-') == "lineup=weapons"))
+        {
+            // The weapons and their ammunition: two rows of ten, eastward (melee first, then guns, then boxes).
+            string[] arms = ["knife", "hatchet", "machete", "crowbar", "bat", "pipe", "sledge", "spear", "plank", "hammer",
+                "axe", "pistol", "revolver", "shotgun", "rifle", "crossbow", "ammo", "ammo38", "shells", "bolts"];
+            for (int k = 0; k < arms.Length; k++)
+                forced[LoonieRoo.Sim.Items.spawnItem(state, arms[k], you.pos.x + 2 + k % 10, you.pos.y - 1 + k / 10 * 2).id] = 0;
+            return;
+        }
         string[] kinds = ["wood", "food", "meal", "bandage", "medicine", "medkit", "weapon", "cloth", "coat", "armour", "boots",
-            "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "sample", "scrap", "fuel"];
+            "gun", "ammo", "corpse", "book", "cart", "axe", "hammer", "sample", "scrap", "fuel", "knife", "hatchet", "machete", "crowbar", "bat", "pipe", "sledge", "spear", "plank", "pistol", "revolver", "shotgun", "rifle", "crossbow", "ammo38", "shells", "ammo308", "bolts"];
         for (int k = 0; k < kinds.Length; k++)
             forced[LoonieRoo.Sim.Items.spawnItem(state, kinds[k], you.pos.x + 2 + k / 3, you.pos.y - 1 + k % 3).id] = 0;
     }

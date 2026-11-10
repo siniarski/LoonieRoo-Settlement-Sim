@@ -27,7 +27,7 @@ public static partial class Jobs
     public const int SCAVENGE_WORK = 40;
 
     /// <summary>What a crate search turns up (one sim RNG roll against these, in order; they sum to 1).</summary>
-    public static readonly List<(string, double)> SCAVENGE_TABLE = [("food", 0.29), ("wood", 0.2), ("fuel", 0.03), ("scrap", 0.06), ("book", 0.02), ("bandage", 0.12), ("cloth", 0.12), ("weapon", 0.05), ("ammo", 0.03), ("coat", 0.02), ("boots", 0.02), ("armour", 0.01), ("gun", 0.01), ("axe", 0.01), ("hammer", 0.01)];
+    public static readonly List<(string, double)> SCAVENGE_TABLE = [("food", 0.29), ("wood", 0.2), ("fuel", 0.03), ("scrap", 0.06), ("book", 0.02), ("bandage", 0.12), ("cloth", 0.12), ("crowbar", 0.015), ("bat", 0.01), ("knife", 0.015), ("plank", 0.01), ("ammo", 0.03), ("coat", 0.02), ("boots", 0.02), ("armour", 0.01), ("pistol", 0.005), ("ammo38", 0.003), ("shells", 0.002), ("axe", 0.01), ("hammer", 0.01)];
 
     /// <summary>A guard hits an adjacent zombie this often, for this much (zombies have 200: 4 hits).</summary>
     public const int GUARD_ATTACK_EVERY = 10;

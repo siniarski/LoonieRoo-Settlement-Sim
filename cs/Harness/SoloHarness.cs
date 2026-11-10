@@ -236,7 +236,35 @@ public partial class SoloHarness
                 bot.sneaked++;
             }
         }
-        var close = Js.Get(state.zombies.filter((q) => Motion.inReach(s, q, Motion.SWING_REACH, state.grid)).sort((a, b) => Motion.distance2(a.at, s.at) - Motion.distance2(b.at, s.at)), 0);
+        // A gun in hand with rounds: shoot the nearest of the dead in its range along a clear line, standing still (the sim holds fire if one of ours is in the way).
+        var gunNow = Weapons.loadedGun(state, s);
+        if (gunNow != null && (s.health > ((double)(Health.HEALTH_MAX) * (0.3))))
+        {
+            var gw = Weapons.specOf(gunNow)!;
+            var gr = Weapons.guardRange(gw) * Motion.SUB;
+            bool lineClear(Zombie q)
+            {
+                double dx = q.at.x - s.at.x, dy = q.at.y - s.at.y;
+                var d = Math.Sqrt((dx * dx) + (dy * dy));
+                return (d == 0) || (Shooting.wallDistance(state.grid, s.at, dx / d, dy / d, d) >= (d - Motion.HALF));
+            }
+            var target = state.zombies.filter((q) => (q.kind != "raider") && (Motion.distance2(q.at, s.at) <= (gr * gr)) && lineClear(q)).sort((a, b) => Motion.distance2(a.at, s.at) - Motion.distance2(b.at, s.at)).find((q) => true);
+            if (target != null)
+            {
+                if (Js.T(Js.T(c.dx) || Js.T(c.dy)))
+                {
+                    cmd(state, new Command { type = "steer", dx = 0, dy = 0 });
+                }
+                var fx = (int)Math.Round((target.at.x - s.at.x) / 4.0);
+                var fy = (int)Math.Round((target.at.y - s.at.y) / 4.0);
+                if (cmd(state, new Command { type = "fire", x = (fx == 0 && fy == 0) ? 1 : fx, y = fy }).ok)
+                {
+                    bot.goal = "fight";
+                    return;
+                }
+            }
+        }
+        var close = Js.Get(state.zombies.filter((q) => Motion.inReach(s, q, Weapons.meleeSpec(state, s).reach, state.grid)).sort((a, b) => Motion.distance2(a.at, s.at) - Motion.distance2(b.at, s.at)), 0);
         if (Js.T(close) && (s.health > ((double)(Health.HEALTH_MAX) * (0.3))))
         {
             var zt = Motion.tileOf(close.at);
@@ -430,10 +458,40 @@ public partial class SoloHarness
                 }
             }
         }
-        if (!Js.T(s.weapon))
+        var heldGun = Weapons.heldGun(state, s);
+        if (heldGun != null)
         {
-            var w = Js.At(items("weapon"), 0, Js.Get(items("gun"), 0));
-            if (Js.T(w) && (dist(Js.NN(w.pos), s.pos) < 30))
+            var hs = Weapons.specOf(heldGun)!;
+            var boxIn = ControlMod.packAmmo(state, s, hs);
+            if ((heldGun.wear < hs.magazine) && (boxIn != null) && !Js.T(c.busy) && !state.zombies.some((q) => dist(q.pos, s.pos) <= 6))
+            {
+                if (Js.T(Js.T(c.dx) || Js.T(c.dy)))
+                {
+                    cmd(state, new Command { type = "steer", dx = 0, dy = 0 });
+                }
+                if (cmd(state, new Command { type = "reload" }).ok)
+                {
+                    bot.goal = "reload";
+                    return;
+                }
+            }
+            if ((heldGun.wear == 0) && (boxIn == null))
+            {
+                var ammo = Js.Get(items(hs.ammo!), 0);
+                if (Js.T(ammo) && (dist(Js.NN(ammo.pos), s.pos) < 20))
+                {
+                    bot.goal = "ammo";
+                    { goUse(state, s, bot, $"a{Js.Str(ammo.id)}", Js.NN(ammo.pos)); return; }
+                }
+            }
+        }
+        if (!Js.T(s.weapon) || (heldGun != null && heldGun.wear == 0 && ControlMod.packAmmo(state, s, Weapons.specOf(heldGun)!) == null && !Js.T(Js.Get(items(Weapons.specOf(heldGun)!.ammo!), 0))))
+        {
+            // The best weapon lying about: a gun only if ammunition for it is too, else the best melee one.
+            var w = state.items.filter((i) => Js.T(i.pos) && !Js.T(i.reservedBy) && Weapons.isWieldKind(i.kind) && (dist(Js.NN(i.pos), s.pos) < 30)
+                    && (!Weapons.isGunKind(i.kind) || state.items.some((a) => Js.T(a.pos) && (a.kind == Weapons.specOf(i)!.ammo) && (dist(Js.NN(a.pos), s.pos) < 30))))
+                .sort((a, b) => (Weapons.preferenceRank(a.kind) - Weapons.preferenceRank(b.kind)) is var r && r != 0 ? r : (dist(Js.NN(a.pos), s.pos) - dist(Js.NN(b.pos), s.pos))).find((i) => true);
+            if (Js.T(w))
             {
                 bot.goal = "arm";
                 { goUse(state, s, bot, $"w{Js.Str(w.id)}", Js.NN(w.pos)); return; }

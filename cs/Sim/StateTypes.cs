@@ -1016,6 +1016,8 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public string? weapon { get; set; }
     public string? arming { get; set; }
     public double nextArmTick { get; set; }
+    /// <summary>The weapon is busy until this tick: a gun's last shot or its reload (not saved by older games: 0, ready).</summary>
+    public double readyTick { get; set; }
     public List<Thought> thoughts { get; set; } = new();
     public SurvivorLeisure? leisure { get; set; }
     public SurvivorBreakdown? breakdown { get; set; }

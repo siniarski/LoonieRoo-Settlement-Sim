@@ -86,6 +86,40 @@ public static partial class Commands
             Js.NN(state.control).sneaking = command.on;
             return changed();
         }
+        if ((command.type == "fire") || (command.type == "reload") || (command.type == "switchWeapon"))
+        {
+            // Guns (WeaponTable.cs): fire along an aim (x, y: a direction, whole numbers up to Shooting.AIM_VECTOR_MAX), reload the gun in hand from the bag, take up the next weapon in the bag (or the one named by itemId).
+            var s = ControlMod.controlled(state);
+            if (!Js.T(s))
+            {
+                return reject("nobody is under control");
+            }
+            if (Leaps.airborne(Js.NN(state.control)))
+            {
+                return reject("in the air");
+            }
+            if (command.type == "reload")
+            {
+                var why = ControlMod.reload(state, s);
+                return (why == null) ? changed() : reject(why);
+            }
+            if (command.type == "switchWeapon")
+            {
+                var why = ControlMod.switchWeapon(state, s, command.itemId);
+                return (why == null) ? changed() : reject(why);
+            }
+            if (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y) || (JsMath.abs(Js.NN(command.x)) > Shooting.AIM_VECTOR_MAX) || (JsMath.abs(Js.NN(command.y)) > Shooting.AIM_VECTOR_MAX))
+            {
+                return reject("fire takes a direction: whole numbers up to AIM_VECTOR_MAX");
+            }
+            var shot = ControlMod.fire(state, s, Js.NN(command.x), Js.NN(command.y));
+            if (!Js.T(shot))
+            {
+                return reject("nothing to fire");
+            }
+            s.note = shot;
+            return changed();
+        }
         if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim") || (command.type == "boot") || (command.type == "hood"))
         {
             var s = ControlMod.controlled(state);

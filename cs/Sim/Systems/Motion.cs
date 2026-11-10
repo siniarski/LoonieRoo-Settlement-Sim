@@ -34,8 +34,8 @@ public static partial class Motion
         return (distance2(a.at, b.at) <= ((double)(reach) * (reach))) && (!Js.T(grid) || Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at)));
     }
 
-    /// <summary>The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees of `facing` either way). Integer maths: dot &gt; 0 and 4 * dot^2 &gt;= |facing|^2 * |d|^2 (cos 60 = 1/2).</summary>
-    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, double reach = SWING_REACH, Grid? grid = default) where T : class, IHasAt
+    /// <summary>The nearest of `things` within `reach` of `from` and inside the arc in front (within 60 degrees of `facing` either way, or the weapon's: arcCos2 is cos^2 of its half angle, 0.25 for 60). Integer maths: dot &gt; 0 and dot^2 &gt;= |facing|^2 * |d|^2 * cos^2.</summary>
+    public static T? nearestInArc<T>(List<T> things, Point from, Point facing, double reach = SWING_REACH, Grid? grid = default, double arcCos2 = 0.25) where T : class, IHasAt
     {
         var f2 = ((double)(facing.x) * (facing.x)) + ((double)(facing.y) * (facing.y));
         T? best = null;
@@ -50,7 +50,7 @@ public static partial class Motion
                 continue;
             }
             var dot = ((double)(dx) * (facing.x)) + ((double)(dy) * (facing.y));
-            if ((d2 > 0) && ((dot <= 0) || (((double)(((double)(4) * (dot))) * (dot)) < ((double)(f2) * (d2)))))
+            if ((d2 > 0) && ((dot <= 0) || (((double)(dot) * (dot)) < (((double)(f2) * (d2)) * (arcCos2)))))
             {
                 continue;
             }

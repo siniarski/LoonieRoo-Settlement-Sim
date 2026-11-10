@@ -31,6 +31,8 @@ public sealed class Held
     const float SCALE = 0.3f;
     /// <summary>How long a melee swing is drawn (ticks: 10 a second; the sim swings at most every 10), and a gun's kick.</summary>
     const double SWING_TICKS = 6, KICK_TICKS = 2.5;
+    /// <summary>How long (ticks) a muzzle flash shows.</summary>
+    const double FLASH_TICKS = 1.4;
     /// <summary>How long a raise takes (s): an item coming into a hand.</summary>
     const double RAISE_S = 0.35;
     /// <summary>Where the left shoulder is (camera space, before SCALE): a support hand's forearm reaches back towards it.</summary>
@@ -56,22 +58,62 @@ public sealed class Held
         }
     }
 
-    /// <summary>Which of a model's own axes is its working side (Zero: it turns with the hand).</summary>
+    /// <summary>Which of a model's own axes is its working side (Zero: it turns with the hand): an edge, a head's face, a gun's top.</summary>
     static Vector3 FaceOf(string kind) => kind switch
     {
-        "axe" => new(0, 0, 1),
+        "axe" or "hatchet" or "machete" or "knife" => new(0, 0, 1),
         "hammer" => new(0, 0, -1),
-        "gun" => new(0, 1, 0),
+        "gun" or "pistol" or "revolver" or "shotgun" or "rifle" or "crossbow" => new(0, 1, 0),
         _ => Vector3.Zero,
     };
+
+    /// <summary>How an item is held and moved (the weapons' table is cs/Sim/Systems/WeaponTable.cs): "rifle" (a long gun in both hands), "handgun", "axe" (a heavy tool in both hands), "stab" (a knife, a spear) or "club".</summary>
+    static string Family(string kind) => kind switch
+    {
+        "rifle" or "shotgun" or "crossbow" => "rifle",
+        "gun" or "pistol" or "revolver" => "handgun",
+        "axe" or "sledge" => "axe",
+        "knife" or "spear" => "stab",
+        _ => "club",
+    };
+
+    static bool IsGun(string kind) => Family(kind) is "rifle" or "handgun";
+
+    /// <summary>Where the muzzle is (the model's own space), for the flash; none for the crossbow (a bolt makes no flash).</summary>
+    static Vector3? MuzzleOf(string kind) => kind switch
+    {
+        "gun" or "pistol" => new(0.165f, 0.09f, 0),
+        "revolver" => new(0.235f, 0.083f, 0),
+        "shotgun" => new(0.585f, 0.088f, 0),
+        "rifle" => new(0.6f, 0.07f, 0),
+        _ => null,
+    };
+
+    /// <summary>Ticks a blow is drawn: most of the weapon's own swing time (a knife's quick, a sledgehammer's slow).</summary>
+    static double SwingTicksOf(string kind)
+    {
+        var w = Weapons.specOfKind(kind);
+        return w == null ? SWING_TICKS : Math.Clamp(w.swing * 0.6, 4, 14);
+    }
 
     /// <summary>Where each model is gripped (its own space, m: x along it, y up) for a hand.</summary>
     static Vector3 GripOf(string kind) => kind switch
     {
-        "weapon" => new(-0.29f, 0.035f, 0),
+        "weapon" or "bat" or "crowbar" => new(-0.29f, 0.035f, 0),
         "axe" => new(-0.3f, 0.022f, 0),
         "hammer" => new(-0.09f, 0.018f, 0),
-        "gun" => new(-0.1f, 0.03f, 0),
+        "knife" => new(-0.075f, 0.015f, 0),
+        "hatchet" => new(-0.1f, 0.02f, 0),
+        "machete" => new(-0.235f, 0.015f, 0),
+        "pipe" => new(-0.2f, 0.03f, 0),
+        "plank" => new(-0.27f, 0.012f, 0),
+        "sledge" => new(-0.3f, 0.03f, 0),
+        "spear" => new(-0.3f, 0.025f, 0),
+        "gun" or "pistol" => new(-0.05f, 0.037f, 0),
+        "revolver" => new(-0.075f, 0.04f, 0),
+        "shotgun" => new(-0.16f, 0.045f, 0),
+        "rifle" => new(-0.1f, 0.03f, 0),
+        "crossbow" => new(-0.15f, 0.035f, 0),
         "medkit" => new(0, 0.075f, 0.12f),
         _ => Vector3.Zero,
     };
@@ -79,8 +121,12 @@ public sealed class Held
     /// <summary>Where the left hand holds a two-handed item (its own space), or null: one hand.</summary>
     static Vector3? SupportOf(string kind) => kind switch
     {
-        "gun" => new(0.2f, 0.028f, 0),
+        "rifle" => new(0.2f, 0.028f, 0),
+        "shotgun" => new(0.17f, 0.046f, 0),
+        "crossbow" => new(0.12f, 0.045f, 0),
         "axe" => new(-0.16f, 0.022f, 0),
+        "sledge" => new(-0.14f, 0.03f, 0),
+        "spear" => new(0.0f, 0.025f, 0),
         _ => null,
     };
 
@@ -97,6 +143,18 @@ public sealed class Held
     static readonly Pose AXE_FOLLOW = new(new(0.02f, -0.35f, -0.62f), new(-0.35f, -0.45f, -0.8f), new(0.5f, -0.3f, 0.8f), new(0, -0.7f, 0.6f));
     // A rifle at the low ready in both hands: the muzzle ahead, a little left and down, the stock under your arm.
     static readonly Pose GUN = new(new(0.15f, -0.23f, -0.42f), new(-0.14f, -0.08f, -1f), new(0.35f, -0.75f, 0.45f), new(0, 1, 0));
+    // A pistol or revolver out before you in the right hand, the muzzle a little up.
+    static readonly Pose HANDGUN = new(new(0.2f, -0.2f, -0.48f), new(-0.05f, 0.1f, -1f), new(0.45f, -0.7f, 0.55f), new(0, 1, 0));
+    // A knife or spear: held low with the point forward and up, drawn back, thrust straight ahead, carried out.
+    static readonly Pose STAB_REST = new(new(0.24f, -0.2f, -0.5f), new(0.15f, 0.4f, -0.9f), new(0.4f, -0.7f, 0.6f), new(-1, 0, 0));
+    static readonly Pose STAB_WIND = new(new(0.3f, -0.18f, -0.34f), new(0.1f, 0.25f, -0.95f), new(0.4f, -0.7f, 0.55f), new(-1, 0, 0));
+    static readonly Pose STAB_STRIKE = new(new(0.08f, -0.17f, -0.72f), new(0.05f, 0.12f, -1f), new(0.45f, -0.45f, 0.8f), new(-1, 0, 0));
+    static readonly Pose STAB_FOLLOW = new(new(0.04f, -0.19f, -0.78f), new(0.05f, 0.1f, -1f), new(0.45f, -0.4f, 0.8f), new(-1, 0, 0));
+    // A spear in both hands: levelled ahead, drawn back, thrust.
+    static readonly Pose SPEAR_REST = new(new(0.26f, -0.3f, -0.45f), new(0.05f, 0.16f, -1f), new(0.4f, -0.7f, 0.6f), new(-1, 0, 0));
+    static readonly Pose SPEAR_WIND = new(new(0.3f, -0.28f, -0.28f), new(0.03f, 0.1f, -1f), new(0.4f, -0.7f, 0.55f), new(-1, 0, 0));
+    static readonly Pose SPEAR_STRIKE = new(new(0.1f, -0.26f, -0.78f), new(0f, 0.05f, -1f), new(0.45f, -0.45f, 0.8f), new(-1, 0, 0));
+    static readonly Pose SPEAR_FOLLOW = new(new(0.06f, -0.27f, -0.84f), new(0f, 0.04f, -1f), new(0.45f, -0.4f, 0.8f), new(-1, 0, 0));
     // The left hand's tool, lowered at the edge of the view; a case hangs from its handle at your side
     // (its top edge in view, the hand on the handle below the view's edge: not drawn, its forearm would stand up).
     static readonly Pose TOOL = new(new(-0.38f, -0.3f, -0.55f), new(0.1f, 0.5f, -0.85f), new(-0.3f, -0.7f, 0.6f), new(0.2f, 0, -1));
@@ -118,6 +176,8 @@ public sealed class Held
     readonly Slot right = new(), left = new(), both = new();
     /// <summary>The left hand on a two-handed item (a hand only, no item).</summary>
     readonly MeshInstance3D support = new() { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+    /// <summary>The muzzle flash: two crossed quads with a soft star on them, unshaded and additive (it glows: a sibling's lighting session may add a real light), shown a tick or so after a shot.</summary>
+    readonly Node3D flash = new() { Visible = false };
     readonly string? forceModel, forceTool;
     readonly double swingAt = -1, raiseAt = -1;
     double bob, breath, run;
@@ -152,6 +212,7 @@ public sealed class Held
         }
         root.AddChild(support);
         support.Mesh = models.MeshFor("hand");
+        BuildFlash();
         both.hand.Visible = false;
         foreach (var a in OS.GetCmdlineUserArgs())
         {
@@ -167,7 +228,7 @@ public sealed class Held
     public void Update(SimState state, Survivor you, double alpha, double delta, bool hidden)
     {
         var c = state.control;
-        root.Visible = !hidden && you.sleep?.asleep != true && (c?.busy == null || Leaps.airborne(c)); // busy hands put it away; a jump keeps it in hand
+        root.Visible = !hidden && you.sleep?.asleep != true && (c?.busy == null || Leaps.airborne(c) || c.busy.what == "reload"); // busy hands put it away; a jump keeps it in hand, a reload is drawn
         if (!root.Visible)
         {
             right.since = left.since = both.since = 0; // taken out again, it's raised
@@ -216,25 +277,40 @@ public sealed class Held
         var gunTilt = new Basis(Vector3.Up, 0.45f * rk) * new Basis(Vector3.Right, -0.12f * rk);
 
         // The blow: 0..1 since the last swing (or held for a screenshot).
-        double age = swingAt >= 0 ? swingAt * (rightKind == "gun" ? KICK_TICKS : SWING_TICKS) : state.tick + alpha - (c?.swungTick ?? -99);
-        bool swinging = rightKind != "gun" && age >= 0 && age < SWING_TICKS;
+        string family = Family(rightKind);
+        bool gun = IsGun(rightKind);
+        double swingTicks = SwingTicksOf(rightKind);
+        double age = swingAt >= 0 ? swingAt * (gun ? KICK_TICKS : swingTicks) : state.tick + alpha - (c?.swungTick ?? -99);
+        bool swinging = !gun && age >= 0 && age < swingTicks;
         (Transform3D hand, Basis item) r;
-        if (rightKind == "gun")
+        if (family == "rifle" || family == "handgun")
         {
-            r = GUN.Frames(rightKind);
+            r = (family == "rifle" ? GUN : HANDGUN).Frames(rightKind);
             if (age >= 0 && age < KICK_TICKS)
             {
                 float k = (float)Math.Sin(Math.PI * Math.Pow(age / KICK_TICKS, 0.6));
                 var up = new Basis(new Vector3(1, 0, 0), 0.18f * k);
                 r = (new Transform3D(up * r.hand.Basis, r.hand.Origin + new Vector3(0, 0.02f, 0.07f) * k), up * r.item);
             }
+            if (c?.busy is { what: "reload" } busy)
+            {
+                // Reloading: the gun tipped up and in towards you, the muzzle raised, back down at the end.
+                float k = (float)Math.Sin(Math.PI * Math.Clamp(busy.progress / Math.Max(1, busy.duration), 0, 1));
+                var tipUp = new Basis(new Vector3(1, 0, 0), 0.55f * k) * new Basis(Vector3.Up, -0.25f * k);
+                r = (new Transform3D(tipUp * r.hand.Basis, r.hand.Origin + new Vector3(-0.06f, -0.07f, 0.12f) * k), tipUp * r.item);
+            }
+            r = (new Transform3D(gunTilt * r.hand.Basis, r.hand.Origin + new Vector3(0, -0.04f, 0) * rk), gunTilt * r.item);
         }
-        else if (rightKind == "axe")
-            r = swinging ? Swing(age / SWING_TICKS, rightKind, AXE_REST, AXE_WIND, AXE_STRIKE, AXE_FOLLOW) : AXE_REST.Frames(rightKind);
-        else r = swinging ? Swing(age / SWING_TICKS, rightKind, REST, WIND, STRIKE, FOLLOW) : REST.Frames(rightKind);
-        if (rightKind == "gun") r = (new Transform3D(gunTilt * r.hand.Basis, r.hand.Origin + new Vector3(0, -0.04f, 0) * rk), gunTilt * r.item);
-        Show(right, rightModel, r, sway, delta, tilt: rightKind != "gun");
+        else if (family == "axe")
+            r = swinging ? Swing(age / swingTicks, rightKind, AXE_REST, AXE_WIND, AXE_STRIKE, AXE_FOLLOW) : AXE_REST.Frames(rightKind);
+        else if (family == "stab" && rightKind == "spear")
+            r = swinging ? Swing(age / swingTicks, rightKind, SPEAR_REST, SPEAR_WIND, SPEAR_STRIKE, SPEAR_FOLLOW) : SPEAR_REST.Frames(rightKind);
+        else if (family == "stab")
+            r = swinging ? Swing(age / swingTicks, rightKind, STAB_REST, STAB_WIND, STAB_STRIKE, STAB_FOLLOW) : STAB_REST.Frames(rightKind);
+        else r = swinging ? Swing(age / swingTicks, rightKind, REST, WIND, STRIKE, FOLLOW) : REST.Frames(rightKind);
+        Show(right, rightModel, r, sway, delta, tilt: !gun);
         PlaceSupport(twoHands ? rightKind : null);
+        UpdateFlash(rightKind, age, state.tick);
 
         // The left hand: a tool, lowered (put away while both hands are on a rifle or an axe; ducked out of
         // the way during a swing).
@@ -271,6 +347,41 @@ public sealed class Held
         // The item turned as the hold says, its grip point on the hand's origin.
         var local = hand.Basis.Inverse() * item;
         s.item.Transform = new Transform3D(local, -(local * (grip ? GripOf(Kind(model)) : MidOf(mesh))));
+    }
+
+    void BuildFlash()
+    {
+        var grad = new Gradient();
+        grad.SetColor(0, new Color(1f, 0.95f, 0.7f, 1f));
+        grad.SetColor(1, new Color(1f, 0.5f, 0.1f, 0f));
+        var tex = new GradientTexture2D { Gradient = grad, Fill = GradientTexture2D.FillEnum.Radial, FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(1f, 0.5f), Width = 64, Height = 64 };
+        var mat = new StandardMaterial3D
+        {
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+            AlbedoTexture = tex,
+            AlbedoColor = new Color(1.4f, 1.2f, 0.8f),
+            NoDepthTest = true,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        };
+        var across = new MeshInstance3D { Mesh = new QuadMesh { Size = new Vector2(0.18f, 0.18f) }, MaterialOverride = mat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        var along = new MeshInstance3D { Mesh = new QuadMesh { Size = new Vector2(0.34f, 0.1f) }, MaterialOverride = mat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Rotation = new Vector3(0, Mathf.Pi / 2, 0) };
+        flash.AddChild(across);
+        flash.AddChild(along);
+        root.AddChild(flash);
+    }
+
+    /// <summary>The flash at the muzzle for the first tick and a bit of a shot (age 0..FLASH_TICKS, in ticks since the shot), turned a different way each shot.</summary>
+    void UpdateFlash(string kind, double age, double tick)
+    {
+        var muzzle = MuzzleOf(kind);
+        flash.Visible = muzzle != null && IsGun(kind) && right.grip.Visible && age >= 0 && age < FLASH_TICKS;
+        if (!flash.Visible) return;
+        var at = right.grip.Transform * right.item.Transform * muzzle!.Value;
+        flash.Transform = new Transform3D(new Basis(Vector3.Forward, (float)(tick % 7) * 0.9f), at);
+        float s = 1f - (float)(age / FLASH_TICKS) * 0.4f;
+        flash.Scale = new Vector3(s, s, s);
     }
 
     /// <summary>The left hand on a two-handed item: at its support point, the item's way, the forearm back

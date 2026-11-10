@@ -322,7 +322,7 @@ public static partial class Rooms
         {
             return rooms.graveyard;
         }
-        if ((((kind == "weapon") || (kind == "gun")) || (kind == "ammo")) && (rooms.armory.size > 0))
+        if (Weapons.isArmoryKind(kind) && (rooms.armory.size > 0))
         {
             return rooms.armory;
         }

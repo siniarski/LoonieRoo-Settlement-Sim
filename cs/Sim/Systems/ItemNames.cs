@@ -3,7 +3,8 @@
 // The name is a variant of the kind, picked by a stateless hash of the item's id (Hash.hashRoll), so it
 // needs no state: it never changes, it costs the RNG stream nothing, and items in old saves get names too.
 // Books are named by their subject (item.tag), bodies by whose they were (Corpses.describe).
-// A name is flavour only: every variant of a kind weighs and works the same.
+// A name is flavour only: every variant of a kind weighs and works the same. (The weapons' kinds are specific, one per
+// weapon: WeaponTable.cs. The old generic "weapon" is read as a crowbar.)
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -17,17 +18,35 @@ public static partial class Items
         ["meal"] = ["stew", "broth", "roast meat", "fried potatoes"],
         ["bandage"] = ["bandage"],
         ["medicine"] = ["painkillers", "antibiotics", "cold pills"],
-        ["weapon"] = ["kitchen knife", "hunting knife", "machete", "crowbar", "baseball bat", "tyre iron"],
+        ["weapon"] = ["crowbar"],  // the old generic kind (saves before 2026-11-10) is read as a crowbar: see WeaponTable.cs
+        ["knife"] = ["kitchen knife", "hunting knife"],
+        ["hatchet"] = ["hatchet"],
+        ["machete"] = ["machete"],
+        ["crowbar"] = ["crowbar"],
+        ["bat"] = ["baseball bat"],
+        ["pipe"] = ["lead pipe", "tyre iron"],
+        ["sledge"] = ["sledgehammer"],
+        ["spear"] = ["spear"],
+        ["plank"] = ["plank with nails"],
         ["cloth"] = ["rags", "bedsheet", "torn shirt"],
         ["coat"] = ["parka", "wool coat", "rain jacket", "leather jacket"],
         ["armour"] = ["riot vest", "stab vest"],
         ["boots"] = ["work boots", "hiking boots", "rubber boots"],
-        ["gun"] = ["pistol", "revolver"],
-        ["ammo"] = ["box of rounds"],
+        ["gun"] = ["pistol"],
+        ["pistol"] = ["pistol"],
+        ["revolver"] = ["revolver"],
+        ["shotgun"] = ["pump shotgun"],
+        ["rifle"] = ["hunting rifle"],
+        ["crossbow"] = ["crossbow"],
+        ["ammo"] = ["box of 9mm rounds"],
+        ["ammo38"] = ["box of .38 rounds"],
+        ["shells"] = ["box of shotgun shells"],
+        ["ammo308"] = ["box of .308 rounds"],
+        ["bolts"] = ["crossbow bolts"],
         ["corpse"] = ["body"],
         ["book"] = ["book"],
         ["cart"] = ["hand cart"],
-        ["axe"] = ["felling axe", "hatchet"],
+        ["axe"] = ["felling axe"],
         ["hammer"] = ["claw hammer"],
         ["medkit"] = ["first aid kit"],
         ["sample"] = ["blood sample"],
@@ -72,5 +91,9 @@ public static partial class Items
     {
         ["food"] = "tinned food", ["meal"] = "meals", ["medicine"] = "pills", ["weapon"] = "weapons", ["cloth"] = "cloth",
         ["coat"] = "coats", ["armour"] = "vests", ["boots"] = "boots", ["gun"] = "guns", ["book"] = "books", ["axe"] = "axes",
+        ["knife"] = "knives", ["hatchet"] = "hatchets", ["machete"] = "machetes", ["crowbar"] = "crowbars", ["bat"] = "bats", ["pipe"] = "pipes",
+        ["sledge"] = "sledgehammers", ["spear"] = "spears", ["plank"] = "planks with nails", ["pistol"] = "pistols", ["revolver"] = "revolvers",
+        ["shotgun"] = "shotguns", ["rifle"] = "rifles", ["crossbow"] = "crossbows", ["ammo"] = "boxes of 9mm rounds", ["ammo38"] = "boxes of .38 rounds",
+        ["shells"] = "boxes of shells", ["ammo308"] = "boxes of .308 rounds", ["bolts"] = "bundles of bolts",
     };
 }

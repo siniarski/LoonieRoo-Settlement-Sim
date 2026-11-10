@@ -48,8 +48,9 @@ public partial class GunsTest
             var gun = Js.NN(state.items.find((i) => i.id == s.weapon));
             expect(gun.kind).toBe("gun");
             runUntil(state, (_) => gun.wear > 0);
-            expect(gun.wear).toBe(Weapons.AMMO_ROUNDS);
-            expect(state.items.some((i) => i.kind == "ammo")).toBe(false);
+            // A box holds 12 rounds, the old gun (read as a pistol) takes its magazine of 10: two stay in the box.
+            expect(gun.wear).toBe(10);
+            expect(state.items.filter((i) => i.kind == "ammo").map((i) => i.wear)).toEqual(Js.Arr([2]));
             expect(s.note).toBe("loaded their gun");
         }
 
@@ -62,7 +63,7 @@ public partial class GunsTest
             s.weapon = "g1";
             state.tick = Js.I(NIGHT);
             state.zombiesTonight = 0;
-            Zombies.addZombie(state, Weapons.GUN_RANGE, 0, 200, "static");
+            Zombies.addZombie(state, 4, 0, 200, "static");
             runUntil(state, (_) => state.zombies.length == 0);
             expect(s.pos.x).toBeLessThanOrEqual(1);
             expect(Js.NN(Js.Get(state.items, 0)).wear).toBe(1);

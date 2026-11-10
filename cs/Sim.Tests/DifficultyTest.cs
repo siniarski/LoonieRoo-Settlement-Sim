@@ -50,7 +50,7 @@ public partial class DifficultyTest
             expect(crateLoot(Worldgen.createWorld(7, SIZE, Js.With(Js.CopyAs<Settings>(Difficulty.NORMAL), __s3 => { __s3.progression = 0; })))).toBeGreaterThan(crateLoot(Worldgen.createWorld(7, SIZE)));
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.."] });
             state.settings.progression = 3;
-            expect(Difficulty.spawnFind(state, "weapon", 1, 0).wear).toBe(JsMath.floor(((double)(Weapons.WEAPON_KILLS) / (2))));
+            expect(Difficulty.spawnFind(state, "weapon", 1, 0).wear).toBe(JsMath.floor(((double)(Weapons.specOf(new Item { kind = "weapon" })!.durability) / (2))));
             expect(Difficulty.spawnFind(state, "food", 2, 0).wear).toBe(0);
         }
 
