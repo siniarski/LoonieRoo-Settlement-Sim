@@ -401,3 +401,48 @@ public class Profile
             }
     }
 }
+
+/// <summary>Jobs.reconcileJobs's parts timed on one state, each repeated (PROBE_REPS, 200) without advancing the tick
+/// (reconcileJobs is idempotent once it has run). Scene: SCENES (one, default horde-512). Report: out/jobs-probe.txt.</summary>
+public class JobsProbe
+{
+    static string? Env(string name) => System.Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;
+
+    [Fact(DisplayName = "jobs probe")]
+    public void Run()
+    {
+        var name = Env("SCENES") ?? "horde-512";
+        int reps = int.TryParse(Env("PROBE_REPS"), out var r) ? r : 200;
+        var state = Profile.SCENES.First((x) => x.name == name).build();
+        for (int t = 0; t < 20; t++) Tick.tick(state);
+        Jobs.reconcileJobs(state);
+        var out_ = new List<string> { $"{name}: jobs {state.jobs.Count} zombies {state.zombies.Count} items {state.items.Count} designations {state.roomDesignations.Count}" };
+        void T(string what, Action f)
+        {
+            f();
+            long b0 = GC.GetAllocatedBytesForCurrentThread(), t0 = Stopwatch.GetTimestamp();
+            for (int i = 0; i < reps; i++) f();
+            double ms = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency / reps;
+            out_.Add($"   {what,-40} {ms,8:0.000} ms {(GC.GetAllocatedBytesForCurrentThread() - b0) / 1024.0 / reps,8:0.0} KB");
+        }
+        T("reconcileJobs", () => Jobs.reconcileJobs(state));
+        T("Rooms.reconcileRoomDesignations", () => Rooms.reconcileRoomDesignations(state));
+        T("Rooms.completeStoreRooms", () => Rooms.completeStoreRooms(state));
+        var stores = Rooms.completeStoreRooms(state);
+        T("invalidReason x jobs", () => { foreach (var j in state.jobs) Jobs.invalidReason(state, j, stores); });
+        T("jobs.ToList", () => state.jobs.ToList());
+        T("getZombie x zombies", () => { foreach (var z in state.zombies) Zombies.getZombie(state, z.id); });
+        T("set of guard zombieIds", () => new HashSet<string?>(state.jobs.Where((j) => j.type == "guard").Select((j) => j.zombieId)));
+        T("filter x 15", () => { for (int k = 0; k < 15; k++) state.jobs.filter((j) => j.type == "x"); });
+        T("items: homeFor + labelAt", () => { foreach (var item in state.items) if (item.pos != null) { Rooms.homeFor(stores, item.kind); Rooms.labelAt(state, item.pos.x, item.pos.y); } });
+        T("FurnitureMod.ofKinds(FUEL)", () => FurnitureMod.ofKinds(state, Js.ObjectKeys(Jobs.FUEL)));
+        T("FurnitureMod.markedForScavenge", () => FurnitureMod.markedForScavenge(state));
+        T("FurnitureMod.ofKinds(stations)", () => FurnitureMod.ofKinds(state, ["workbench", "stove"]));
+        T("Crafting.wantedCraft x2", () => { Crafting.wantedCraft(state, "workbench", true); Crafting.wantedCraft(state, "stove"); });
+        T("EndgameMod.researchWanted", () => EndgameMod.researchWanted(state));
+        T("animals isMenace", () => { foreach (var a in state.animals) Animals.isMenace(state, a); });
+        T("survivors isPatient", () => { foreach (var p in state.survivors) Medicine.isPatient(p); });
+        T("dirtList sort", () => Js.ListOf(state.grid.dirtList).sort((a, b) => a - b));
+        File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/jobs-probe.txt"), string.Join("\n", out_) + "\n");
+    }
+}
