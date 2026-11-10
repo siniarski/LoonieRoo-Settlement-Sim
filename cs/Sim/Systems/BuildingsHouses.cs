@@ -245,8 +245,8 @@ public static partial class Buildings
 
     static void furnishBedroom(Draft d, int room, Func<double, double> r, int i)
     {
-        d.bed(room, r(50 + i));
-        d.againstWall(room, i == 0 ? "wardrobe" : "dresser", "bedroom", r(54 + i));
+        d.bed(room, r(50 + i), i == 0 || r(57 + i) < 0.5 ? "nightstand" : null);
+        if (i < 2) d.againstWall(room, i == 0 ? "wardrobe" : "dresser", "bedroom", r(54 + i));
     }
 
     static void furnishBathroom(Draft d, int room, Func<double, double> r)

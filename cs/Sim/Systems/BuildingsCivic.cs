@@ -133,9 +133,11 @@ public static partial class Buildings
                 break;
             case "classroom":
                 // Pupils' desks in rows facing the front (the corridor side is the back), the teacher's desk ahead.
-                for (int y = y0 + 1; y < y1 - 1; y += 2) for (int x = x0 + 1; x < x1; x += 2) d.put(x, y, "desk", "school");
+                // (Pupils' desks are tables: only the teacher's desk and the shelves hold anything.)
+                for (int y = y0 + 1; y < y1 - 1; y += 2) for (int x = x0 + 1; x < x1; x += 2) d.put(x, y, "table", null);
                 d.againstWall(room, "desk", "school", r(k), (x, y) => y == y1);
                 d.againstWall(room, "shelf", "school", r(k + 1));
+                d.againstWall(room, "shelf", "school", r(k + 2));
                 break;
         }
     }
@@ -187,7 +189,7 @@ public static partial class Buildings
         d.inCorner(toilet, "toilet", null, r(7));
         // Rows along the depth, two tiles of aisle between, clear of the loading area at the front and a cross-aisle
         // at the back.
-        int racks = 0, most = kind == "factory" ? 10 : 18;
+        int racks = 0, most = kind == "factory" ? 14 : 21;
         int mid = (H - 4) / 2 + 1;
         for (int x = 7; x < W - 2; x += 3)
             for (int y = 2; y < H - 4; y++)

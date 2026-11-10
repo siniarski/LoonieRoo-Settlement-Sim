@@ -32,17 +32,17 @@ public static partial class Buildings
         // a grocery's fridges along the back wall, a pharmacy's cabinets behind its counter.
         d.againstWall(shop, "counter", kind, 0.0, (x, y) => y >= H - 3 && x >= W - 3);
         d.againstWall(shop, "register", null, 0.0, (x, y) => y >= H - 3 && x >= W - 4);
-        if (kind == "grocery") for (int x = 1; x < W - 1; x += 2) d.put(x, bs, "icebox", kind);
-        if (kind == "pharmacy") for (int x = 1; x < W - 1; x += 2) d.put(x, bs, "cabinet", kind);
+        if (kind == "grocery") for (int x = 1; x < W - 1; x += 4) d.put(x, bs, "icebox", kind);
+        if (kind == "pharmacy") for (int x = 1; x < W - 1; x += 4) d.put(x, bs, "cabinet", kind);
         int top = kind == "grocery" || kind == "pharmacy" ? bs + 2 : bs + 1;
-        int shelves = 0, most = kiosk ? 3 : 8;
+        int shelves = 0, most = kiosk ? 3 : 6;
         for (int y = top; y <= H - 3 && shelves < most; y++)
         {
             if (d.put(0, y, "shelf", kind)) shelves++;
             if (shelves < most && d.put(W - 1, y, "shelf", kind)) shelves++;
         }
         for (int x = 2; x <= W - 4 && !kiosk; x += 3)
-            for (int y = top + 1; y <= H - 3 && shelves < most + 2; y++)
+            for (int y = top + 1; y <= H - 3 && shelves < most + 1; y++)
                 if (d.put(x, y, kind == "hardware" && y % 2 == 0 ? "pallet" : "shelf", kind)) shelves++;
         for (int i = 0; i < (kiosk ? 1 : 2); i++) d.againstWall(store, i % 2 == 0 ? "pallet" : "crate", kind, r(7 + i));
         d.inCorner(toilet, "toilet", null, r(9));
@@ -74,7 +74,7 @@ public static partial class Buildings
         }
         else
         {
-            for (int x = 1; x <= W - 3; x++) if (x != 2) d.put(x, 3, x == W - 3 ? "register" : "counter", "bar");
+            for (int x = 1; x <= W - 4; x++) if (x != 2) d.put(x, 3, x == W - 4 ? "register" : "counter", "bar");
             for (int x = 1; x <= W - 2; x += 3) d.put(x, H - 1, "table", null);
             for (int x = 2; x <= W - 3; x += 3) d.put(x, H - 3, "table", null);
         }
@@ -136,7 +136,6 @@ public static partial class Buildings
         {
             d.inMiddle(o, "desk", "office");
             d.againstWall(o, "cabinet", "office", r(8 + rooms.IndexOf(o)));
-            d.againstWall(o, "desk", "office", r(12 + rooms.IndexOf(o)));
         }
         d.inCorner(toilet, "toilet", null, r(14));
         d.againstWall(toilet, "sink", "bathroom", r(15));
