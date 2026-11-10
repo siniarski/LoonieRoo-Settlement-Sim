@@ -48,6 +48,8 @@ public sealed partial class FirstPerson : Node3D
     readonly Trees trees;
     readonly FarField far;
     readonly Roofs roofs;
+    /// <summary>Rain, snow, the snow layer and the overcast sky (Weather.cs).</summary>
+    readonly WeatherLayer weather = new();
     /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
     public readonly Audio.Sounds sounds = new();
     /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
@@ -85,6 +87,7 @@ public sealed partial class FirstPerson : Node3D
         far = new FarField(this, trees);
         roofs = new Roofs(this);
         AddChild(sounds);
+        AddChild(weather);
         look.indoor = roofs.Indoor;
     }
 
@@ -141,6 +144,7 @@ public sealed partial class FirstPerson : Node3D
         far.Update(state, eye, new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK));
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
+        weather.Update(state, eye, delta, roofs.Indoor, sun, env); // after the lighting and the fog: overcast and fog on bad days, rain, snow (Weather.cs)
         var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y);
         Modelled = modelled.Count;
         people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null, held.RightHand, held.LeftHand);

@@ -46,6 +46,7 @@ public static class Node
         public string? OUT => Get("OUT");
         public string? BUDGET_MS => Get("BUDGET_MS");
         public string? DAYS => Get("DAYS");
+        public string? SNOW_SLOW => Get("SNOW_SLOW");
         public string? SEEDS => Get("SEEDS");
         public string? PRESET => Get("PRESET");
         public string? TRACE => Get("TRACE");

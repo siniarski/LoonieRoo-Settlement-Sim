@@ -910,6 +910,39 @@ public partial class SimState
     public int namesGiven { get; set; }
     public List<LoggedCommand> commandLog { get; set; } = new();
     public List<GameEvent> events { get; set; } = new();
+    /// <summary>Snow on the ground (Snow.cs): null until the first flake falls, so a game without snow saves and loads as before.</summary>
+    public SnowState? snow { get; set; }
+}
+
+/// <summary>Snow on the ground, a few numbers and a capped list of trodden tiles (Snow.cs). Never per tile.</summary>
+public partial class SnowState
+{
+    /// <summary>Depth in cm on open ground, one per climate region: [cold, mild, hot].</summary>
+    public List<double> depth { get; set; } = new();
+    /// <summary>Snow that ever fell (cm), per region: a track's refill is what fell since it was trodden.</summary>
+    public List<double> fallen { get; set; } = new();
+    /// <summary>Snow that ever melted (cm), per region.</summary>
+    public List<double> melted { get; set; } = new();
+    /// <summary>Tiles someone walked or drove through: at most Snow.TRACK_CAP, the oldest dropped.</summary>
+    public List<SnowTrack> tracks { get; set; } = new();
+}
+
+/// <summary>A trodden tile: depth d (cm) when last trodden, with the region's `fallen` (f) and `melted` (m) then.</summary>
+public partial class SnowTrack
+{
+    public int x { get; set; }
+    public int y { get; set; }
+    /// <summary>Region: 0 cold, 1 mild, 2 hot.</summary>
+    public int r { get; set; }
+    public double d { get; set; }
+    public double f { get; set; }
+    public double m { get; set; }
+    /// <summary>The tick it was last trodden.</summary>
+    public int t { get; set; }
+    /// <summary>How many times it has been trodden.</summary>
+    public int n { get; set; }
+    /// <summary>0 on foot; 1 + a car's heading for ruts.</summary>
+    public int k { get; set; }
 }
 
 public partial class Sleep

@@ -36,26 +36,31 @@ public static partial class Climate
     /// <summary>Is the open air cold here and now, by region and season? (Blizzards are handled by the caller.)</summary>
     public static bool regionCold(SimState state, int x, int y)
     {
-        var climate = climateAt(state, x, y);
-        var season = Seasons.seasonOf(state.tick);
+        return coldFor(climateAt(state, x, y), Seasons.seasonOf(state.tick), Time.isNight(state.tick), state.settings.winter);
+    }
+    public static bool regionCold(SimState state, double x, double y) => regionCold(state, Js.I(x), Js.I(y));
+
+    /// <summary>The rule itself, from its four inputs (the temperature model in Weather.cs is built to agree with it).</summary>
+    public static bool coldFor(string climate, string season, bool night, bool nuclearWinter)
+    {
         if (climate == "hot")
         {
             return false;
         }
-        var night = Time.isNight(state.tick);
         if (climate == "cold")
         {
-            return ((season == "winter") || (night && (season == "autumn"))) || (night && state.settings.winter);
+            return ((season == "winter") || (night && (season == "autumn"))) || (night && nuclearWinter);
         }
-        return night && ((season == "winter") || state.settings.winter);
+        return night && ((season == "winter") || nuclearWinter);
     }
-    public static bool regionCold(SimState state, double x, double y) => regionCold(state, Js.I(x), Js.I(y));
 
     /// <summary>Summer days in the hot south: thirst comes twice as fast.</summary>
     public static bool scorching(SimState state, int x, int y)
     {
-        return ((Seasons.seasonOf(state.tick) == "summer") && !Time.isNight(state.tick)) && (climateAt(state, x, y) == "hot");
+        return scorchingFor(climateAt(state, x, y), Seasons.seasonOf(state.tick), Time.isNight(state.tick));
     }
+
+    public static bool scorchingFor(string climate, string season, bool night) => ((season == "summer") && !night) && (climate == "hot");
     public static bool scorching(SimState state, double x, double y) => scorching(state, Js.I(x), Js.I(y));
 
     public static bool isRadioactive(SimState state, int x, int y)

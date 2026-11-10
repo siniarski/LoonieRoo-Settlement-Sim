@@ -235,6 +235,7 @@ public partial class ColonyHarness
     [Fact(DisplayName = "world balance")]
     public void T001_world_balance()
     {
+        Snow.slowsWalking = process.env.SNOW_SLOW != "0";  // SNOW_SLOW=0: the walking effect of deep snow off (Snow.cs)
         foreach (var seed in Js.Iter((process.env.SEEDS ?? "1,2,3").split(",").map((__v) => Js.Num(__v))))
         {
             run(seed, Js.Num(Js.Q(process.env.DAYS, 25)));

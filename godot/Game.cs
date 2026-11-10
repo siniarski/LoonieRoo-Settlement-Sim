@@ -22,6 +22,8 @@
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
 //   --lineup                               one of every item kind on the ground in front of you (for screenshots; not a command)
 //   --eye=X,Y,H                            first person: look from tile point (X, Y), H m over the ground, not your eyes (a debug view)
+//   --day=N --weather=W --snow=CM          start on day N at 06:00 (17: second day of winter; 17.33: 14:00), with that day's weather
+//                                          (clear rain storm heatwave snow blizzard) and CM cm of snow on open ground
 //   --flat                                 first person: draw the ground flat, as before the heightmap (to compare)
 //   --view=M --detail=N                    the view distance (m, 0 off) and the detail radius (chunks) for this run, over the
 //                                          Options page's (not saved); a --shot or --selftest ignores the player's options
@@ -148,6 +150,10 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         if (args.TryGetValue("arena", out var arena)) { Replace(new LoadResult { ok = true, state = LoonieRoo.Sim.Arena.createArena(seed, arena == "" ? "crowd" : arena), kind = "save" }, "a debug arena"); direct = true; }
         else if (args.TryGetValue("load", out var load)) Replace(Savefile.loadFile(System.IO.File.ReadAllText(load)), "the file");
         else Replace(new LoadResult { ok = true, state = Worldgen.createWorld(seed, size, settings), kind = "save" }, $"a new {size}×{size} world");
+        // --day=N: start on day N at 06:00 (17 is the second day of winter; 17.33 is 14:00, a day's fraction counts from 06:00); --weather=W: that day's weather (clear, rain, storm, heatwave, snow, blizzard); --snow=CM: that much snow on open ground in every region.
+        if (args.TryGetValue("day", out var dayArg)) { Time.setDayScale(state.settings.dayScale); state.tick = (int)Math.Round((double.Parse(dayArg, CultureInfo.InvariantCulture) - 1) * Time.DAY_LENGTH) + 1; }
+        if (args.TryGetValue("weather", out var wxArg)) state.weather = wxArg;
+        if (args.TryGetValue("snow", out var snowArg)) { var cm = double.Parse(snowArg, CultureInfo.InvariantCulture); state.snow = new SnowState { depth = [cm, cm, cm], fallen = [0, 0, 0], melted = [0, 0, 0] }; }
         if (args.TryGetValue("zoom", out var zoom)) view.camera.zoom = double.Parse(zoom);
         ParseTextOptions(args);
         ParseShotOptions(args);

@@ -51,7 +51,7 @@ Savefile.cs, StateJson.cs, TypedArrays.cs, JsCompat.cs. The TypeScript is at git
 - **Buildings**: plans with rooms and furniture. **Loot**: loot tables by room and building.
 - **Heights**: the ground's height in metres from the seed and plan (cached, never saved, read-only so far).
 - **WorldPreview**: a small picture of a world from its seed (New game, Load, loading screens; `Savefile.readPreview`).
-- **Climate**: regions, radiation. **Seasons**: weather. **Fog**: exploring. **Mapnotes**: map notes; town names.
+- **Climate**: regions, radiation. **Seasons**: weather. **Weather**: temperature in degrees for any place and tick (derived, agrees with the cold and hot rules). **Snow**: depth by climate region, trodden tracks (capped), the slowing of deep snow (`state.snow`). **Fog**: exploring. **Mapnotes**: map notes; town names.
 - **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
 - **Rooms**: flood fill, purposes, requirements. **Breach**: battering doors and walls. **FireMod**: fire.
 - **Defences**: traps, barricades, turrets, lures, pits. **Towers**: watchtowers. **Power**, **Water**.

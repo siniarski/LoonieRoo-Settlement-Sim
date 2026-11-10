@@ -119,6 +119,7 @@ public static partial class Tick
                 Motion.syncStep(e);
             }
         }
+        Snow.tick(state);
         Fog.updateFog(state);
         state.tick = Js.I(state.tick + 1);
     }
