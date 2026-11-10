@@ -2,6 +2,72 @@
 
 The game: the sim (`cs/Sim`, pure C#, no Godot) drawn and played in Godot 4.6 .NET. NOTES.md "Start here" has the controls and the map of everything.
 
+## Which to use when
+
+To check behaviour or layout, read text first. A picture costs a launch
+(~3 s) and a big image to read; text costs a second and a few lines.
+
+1. **Where is it, what is next to it, what happened tick by tick:** the text
+   trace. No window, no picture.
+2. **What is around me, is the wall there:** the text map.
+3. **How the layout looks (what is where on screen, is the HUD in the way):**
+   a small picture, `--shot-width=640`.
+4. **Light, materials, models, animation, anything about how it looks:** a
+   full-size picture (no scale; 1280x720).
+5. **Several moments:** one launch with `--shot-at=5,10,20`, not one each.
+
+```bash
+GODOT="/c/Program Files/Godot_v4.6.1-stable_mono_win64/Godot_v4.6.1-stable_mono_win64_console.exe"
+dotnet build godot/LoonieRoo.csproj   # the game runs the Debug build: build it first
+"$GODOT" --headless --path godot -- --seed=7 --ticks=12 --hold=w --look=0 --trace=3 --trace-near=6 --textmap=6
+```
+
+(`./shot.sh <game args>`, when present, builds and runs that for you.)
+
+**Text trace** (`GameText.cs`; works under `--headless`):
+- `--trace` one line per tick for the survivor you control; `--trace=K` every
+  Kth tick (the first and the last tick are always shown).
+  `t=12 @67.50,65.50 tile 67,65 face 0 stand v2.5 hp 1000 steer 64,0`:
+  the tick, the exact position in tiles, the tile, facing in degrees (0 east,
+  90 south), the stance and speed (m/s), health, and `run`, `airborne`, the
+  steer and the action in progress (`act swing 0.35`) when there are some.
+- `--trace-near=R` adds a line for each mover within R tiles, nearest first
+  (12 at most): `  wolf w1 @68.21,64.27 d3.9 hp 150`. Zombies (`z`, `z-crawl`),
+  animals by kind, `dog`, other survivors `s`, residents `res`.
+- It covers the ticks `--ticks=N` runs, one by one. With `--trace` or
+  `--textmap`, `--at`, `--animals` and `--hold` take effect before those
+  ticks (without them, `--at` comes after). `--hold` keys are applied as the
+  game's frames would. `--look=DEG` sets the way a held key walks.
+- Without `--shot`, the game quits when the text is printed: no frames, no
+  window needed (a headless run of 12 ticks takes ~1.5 s). With `--shot`, the
+  picture follows, and the ticks to `--shot-at` are traced too.
+
+**Text map:**
+- `--textmap=R` prints the sim's `DebugText` map of the (2R+1) tiles square
+  round you at the end of the run; `--textmap-at=5,20` also at those ticks.
+  `@` is you. Where the world has edge walls and a doorway or wall stands in
+  the square, it prints the map with the borders between tiles (see its
+  header line for the characters). The whole world's map is made first, so a
+  huge world is slow.
+
+**Pictures** (they need a window, so not `--headless`; it says so and fails):
+- `--shot=out.png --frames=N` as ever (after N frames, quit).
+- `--shot-at=5,10,20` with `--shot=out.png`: one picture per listed tick,
+  `out-5.png`, `out-10.png`, `out-20.png`, from one launch. The sim runs only
+  to those ticks, one tick at a time (no real-time pacing, so it is exact and
+  repeatable), 3 frames are given to catch up, and the picture shows the tick
+  itself, not a blend with the last. Ticks are the sim's (absolute). The first
+  picture waits for `--frames`.
+- `--shot-width=640` or `--shot-scale=0.5`: save the picture smaller (width in
+  pixels, or a fraction of 1280x720). Each shot prints its path, size and
+  bytes. What an image costs the model follows its pixels, not its bytes:
+  640x360 is about a quarter of a full picture's.
+  - ~640 wide: enough for layout (is it on screen, where, how big, the HUD,
+    the sky and ground, the room's shape). 512 is the least; the HUD's small
+    text is already hard to read.
+  - Full size (1280x720): to judge a model, its edges, a texture, a shadow,
+    text on screen, or a small thing far away.
+
 - `Game.cs`: the loop (10 ticks a second times the speed, fixed timestep, interpolated between ticks), input turned into sim commands, the camera, saves and autosave, the command line.
 - **The views.** Playing a survivor, the game is **first person** (`World3D/`). **M** is the map screen, top-down, with two tabs (`Ui/ScreenTabs.cs`): **Map** (`Ui/WorldMap.cs`) and **Colony** (the colony's management: build, priorities, the overview, neighbours, drawn by `Render/` in 2D top-down). With nobody under your control, the Colony view is the game. There is no isometric view.
 - `World3D/`: first person. `FirstPerson.cs` (the camera at your eyes, the sun, sky, fog and night; chunks of the world built near you), `WorldMesh.cs` (a 16x16-tile chunk as one mesh: ground, tile and edge walls, doors open or shut, windows, boards, barricades, a ceiling over each indoor tile, furniture as boxes; rebuilt only when what it shows changes, 4 a frame at most), `Roofs.cs` (what's indoors and the roofs over it: a generated building's footprint from the world plan while at least half its outer walls stand, else it's a ruin with neither; rooms you wall in yourself; per building its own node, gable or hip for houses, barns, sheds and churches, flat with a parapet for shops, civic buildings and warehouses; flat boards over your rooms; less ambient light under a roof), `People.cs` (the nearest 40 people within 40 m as the look lab's "plus" character models, animated from the sim's pose intents: idle, walk, jog, sprint, crouch, lying, driving, the dead's attack and stagger, their face angry once they're after someone; LOD by height on screen; pooled by look), `Animals.cs` (deer, rabbits, wolves, bears and dogs as their own models: art/scripts/build_animals.py), `Items.cs` (things lying on the ground as their own models, one MultiMesh per model, the nearest 300 within 40 m, on the ground and tilted to its slope, a variant per item by a hash of its id: art/scripts/build_items.py; no LOD, measured by `ItemBench.tscn`), `Held.cs` (what you wield, your tool and what you carry, in first person with the same models and gloved hands and sleeves; a rifle and an axe in both hands; a swing with wind-up and follow-through, a gun's kick, a walking bob, a breath, a lag behind the look, lowered running, a raise on a change), `Bodies.cs` (cars and people past the models' budget, as placeholder capsules and boxes), `Trees.cs` (trees and undergrowth by chunk as MultiMeshes: five species by a hash of the tile, three LODs, sway; docs/trees.md), `Terrain.cs` (the ground's height, the one hook everything stands on: it reads the sim's `Heights` field, gentle rolling ground with level building plots, roads that follow it and water under its banks; hand-made maps are flat). The ground is a quad per tile on shared corner heights (no seams), casting no shadows; walls, doors and windows stand on their tile's floor with a footing down to the lowest ground; your eye's height over the ground is eased. 1 tile = 1 m.
@@ -25,7 +91,7 @@ dotnet build godot/LoonieRoo.csproj
 Without options it opens on the main menu. Options go after `--` and skip the menu:
 
 - `--seed=N --size=N --start=solo|group`: a new world (a solo start, 128 tiles, a random seed by default); `--load=save.json` a save file instead
-- `--ticks=N`: run N ticks first
+- `--ticks=N`: run N ticks first (with `--trace` or `--textmap`, one at a time, each seen: above)
 - `--zoom=Z --paused --debug --map --colony --overview --build=category --menu=main|new|character|load|howto|options`: the view to start in (`--map` and `--colony` open the M screen's tabs)
 - `--look=DEG --pitch=DEG`: first person, which way you look at the start (0 east, 90 south, 270 north; pitch up positive)
 - `--at=X,Y`: put the survivor you control on tile X, Y first (a debug start for screenshots; not a command, so not in the log)
@@ -40,6 +106,8 @@ Without options it opens on the main menu. Options go after `--` and skip the me
 - `--flat`: first person on flat ground, as before the heightmap (to compare; the sim's heights are untouched)
 - `--arena=one|crowd`: a debug arena (the dead round you); `--play`: on a group start, play its first survivor (to see the others in first person)
 - `--animals=N` or `--animals=wolf:3,deer`: animals spawned round you (the `spawnAnimal` command): N of them, the kinds in turn (deer, rabbit, wolf, bear, dog), or kinds with counts; `--animal-range=M` how far out the nearest stand (3.5 m; at 1.6 a wolf or bear bites at once). With `--paused` they hold still for a look: `--animals=deer,wolf,bear,dog,rabbit --paused --look=137`
+- `--trace[=K] --trace-near=R --textmap=R --textmap-at=T,..`: the run as text (above)
+- `--shot-at=T,.. --shot-width=W --shot-scale=F`: a picture per tick, smaller pictures (above)
 - `--shot=out.png --frames=N`: save a screenshot after N frames and quit. The picture is taken even if frames throw (a half-made change): then it says how many did and exits 1, rather than hanging until your timeout. Assets not imported: it says so and quits
 - `STEP_TRACE=1` in the environment: print each locomotion clip's footfall marks and each of your steps (clip, playhead, rate, the ankles' heights); `STEP_SHOT=prefix`: save a picture at your 4th to 6th steps (with `--hold=w --eye=...` to watch your feet)
 - `LEAP_SHOT=prefix` in the environment: save pictures of your first two leaps (jump, vault, hop) at a quarter, half and three quarters of the way, `prefix-<leap>-<25|50|75>.png` (with `--hold=space --eye=...` to watch yourself; `--at` next to a broken window to vault it)
