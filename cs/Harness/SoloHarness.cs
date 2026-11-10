@@ -352,6 +352,28 @@ public partial class SoloHarness
                 }
                 { goUse(state, s, bot, $"water{Js.Str(water.id)}", water); return; }
             }
+            // None of those: the nearest water of any kind (a tank, a pond, a river), as a person would look
+            // for it. Without this the bot never drank from open water (balance check, 2026-11-10: seed 2 died of
+            // thirst with a pond 33 tiles off). Looked up every 40 ticks (it floods ~100 tiles of walking).
+            if (!Js.T(bot.water) || ((state.tick - bot.waterAt) >= 40))
+            {
+                bot.water = Water.findWater(state, s.pos);
+                bot.waterAt = state.tick;
+            }
+            if (Js.T(bot.water))
+            {
+                var from = Js.NN(bot.water).from;
+                bot.goal = "drink";
+                if ((dist(from, s.pos) <= 1) && !Js.T(c.busy))
+                {
+                    bot.drank++;
+                }
+                { goUse(state, s, bot, $"water{Js.Str(from.x)},{Js.Str(from.y)}", from); return; }
+            }
+        }
+        else
+        {
+            bot.water = null;
         }
         if (s.satiety < Food.HUNGRY)
         {
@@ -574,6 +596,7 @@ public partial class SoloHarness
         var bedF = Js.NN(state.furniture.find((f) => f.kind == "bed"));
         Point bed = new Point { x = Js.I(bedF.x), y = Js.I(bedF.y) };
         var home = Js.Clone(s0.pos);
+        var probe = Probe.begin(state, seed, home);
         var door = Space.nearestTile(state.grid, bed, (x, y) => Grids.getTile(state.grid, x, y) == "door", 400);
         Bot bot = new Bot { door = door, hunted = 0, barricaded = 0, goal = "", path = [], pathFor = "", searched = 0, ate = 0, drank = 0, slept = 0, fled = 0, foraged = 0, sneaked = 0, drove = 0, driveTo = null, stuck = 0, treated = 0, amputated = 0 };
         void log(string why)
@@ -589,6 +612,7 @@ public partial class SoloHarness
             {
                 var ev = state.events.filter((e) => Js.T(new JsRegExp("died|killed", "").test(e.message))).slice(-2).map((e) => e.message).join(" / ");
                 @out.push($"  DEAD on day {Js.Str(Time.dayOf(state.tick))} at tick {Js.Str(state.tick)}: {Js.Str(ev)}");
+                probe?.end(state, "dead");
                 log("end");
                 flush();
                 return;
@@ -598,7 +622,9 @@ public partial class SoloHarness
             {
                 @out.push($"   t{Js.Str(state.tick)} z {Js.Str(state.zombies.filter((q) => dist(Motion.tileOf(q.at), s.pos) <= 3).map((q) => $"{Js.Str(Motion.tileOf(q.at).x)},{Js.Str(Motion.tileOf(q.at).y)}{Js.Str(Js.T(q.windup) ? Js.Str("w") : Js.Str(""))}").join(" "))} pos {Js.Str(s.pos.x)},{Js.Str(s.pos.y)} goal {Js.Str(bot.goal)} sat {Js.Str(s.satiety)} hp {Js.Str(s.health)} busy {Js.Str(Js.NN(state.control).busy?.what ?? "-")} steer {Js.Str(Js.NN(state.control).dx)},{Js.Str(Js.NN(state.control).dy)} path {Js.Str(bot.path.length)} note {Js.Str(s.note)}");
             }
+            probe?.before(state);
             Tick.tick(state);
+            probe?.after(state);
             if (Js.T(process.env.LOG) && (((state.tick % Time.DAY_LENGTH) == 0) || (state.tick == Js.Num(process.env.LOG_AT))))
             {
                 writeFileSync($"{Js.Str(process.env.LOG)}-s{Js.Str(seed)}-t{Js.Str(state.tick)}.json", Js.Json_stringify(state));
@@ -610,10 +636,12 @@ public partial class SoloHarness
             if ((performance.now() - began) > BUDGET_MS)
             {
                 @out.push($"  out of time on day {Js.Str(Time.dayOf(state.tick))}");
+                probe?.end(state, "budget");
                 flush();
                 return;
             }
         }
+        probe?.end(state, "alive");
         @out.push($"  SURVIVED {Js.Str(days)} days");
         log("end");
         flush();
@@ -651,4 +679,7 @@ public partial class Bot
     public double amputated { get; set; }
     public Point? hide { get; set; }
     public double hideAt { get; set; }
+    /// <summary>Water of any kind to make for when there's no well, collector or tap (Water.findWater), and when it was looked up.</summary>
+    public Drink? water { get; set; }
+    public double waterAt { get; set; }
 }

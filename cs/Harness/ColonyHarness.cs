@@ -53,6 +53,7 @@ public partial class ColonyHarness
         var began = performance.now();
         var state = Worldgen.createWorld(seed);
         var start = Js.Clone(Js.NN(Js.Get(state.survivors, 0)).pos);
+        var probe = Probe.begin(state, seed, start);
         cmd(state, new Command { type = "designateRoom", x = Js.I(start.x - 3), y = Js.I(start.y - 5), purpose = "housing" });
         foreach (var (kind, count) in new (string, double)[] { ("weapon", 2), ("bandage", 2), ("medicine", 2), ("coat", 3), ("boots", 1), ("cart", 1), ("hammer", 1), ("axe", 1) })
         {
@@ -97,7 +98,10 @@ public partial class ColonyHarness
             }
         }
         List<List<double>> dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-        double seen = 0;
+        // Every event, drained each tick: the state keeps only the last 50, and a bad day logs more than that
+        // (reading state.events once a day lost about a tenth of the deaths: balance check, 2026-11-10).
+        var lastEvent = state.events.Count > 0 ? state.events[^1] : null;
+        var dayEvents = new List<string>();
         for (var day = 1; day <= days; day++)
         {
             cmd(state, new Command { type = "designateRoom", x = Js.I(gx + 2), y = Js.I(gy + 2), purpose = "graveyard" });
@@ -168,6 +172,7 @@ public partial class ColonyHarness
             for (var t = 0; t < Time.DAY_LENGTH; t++)
             {
                 var a = performance.now();
+                probe?.before(state);
                 Tick.tick(state);
                 worst = JsMath.max(worst, performance.now() - a);
                 foreach (var s in Js.Iter(state.survivors))
@@ -195,14 +200,16 @@ public partial class ColonyHarness
                         cmd(state, new Command { type = "acceptWanderer", wandererId = w.id });
                     }
                 }
+                probe?.after(state);
+                dayEvents.AddRange(Probe.newEvents(state, ref lastEvent).Select((e) => e.message));
                 if (state.survivors.length == 0)
                 {
                     break;
                 }
             }
             // (left out: V8 profiling, node:inspector)
-            var ev = state.events.filter((e) => e.tick >= seen).map((e) => e.message);
-            seen = state.tick;
+            var ev = dayEvents.ToList();
+            dayEvents.Clear();
             int n(string k)
             {
                 return state.items.filter((i) => i.kind == k).length;
@@ -212,7 +219,7 @@ public partial class ColonyHarness
             {
                 return ev.filter((m) => Js.T(re.test(m))).length;
             }
-            @out.push(new List<string> { $"s{Js.Str(seed)} day {Js.Str(Js.Str(day).padStart(2))} {Js.Str(Seasons.seasonOf(state.tick - 1).slice(0, 3))} {Js.Str(((double)((performance.now() - t0)) / (Time.DAY_LENGTH)).toFixed(2))}ms/t worst {Js.Str(worst.toFixed(0))}", $"alive {Js.Str(state.survivors.length)}{Js.Str(state.survivors.some((s) => s.childUntil != null) ? Js.Str($" (kids {Js.Str(state.survivors.filter((s) => s.childUntil != null).length)})") : Js.Str(""))}", $"food {Js.Str(n("food"))}+{Js.Str(n("meal"))} ({Js.Str(Alerts.foodDays(state).toFixed(1))}d) wood {Js.Str(n("wood"))} cloth {Js.Str(n("cloth"))}", $"coats {Js.Str(state.survivors.filter((s) => Js.T(s.body)).length)} dogs {Js.Str(state.dogs.length)} med {Js.Str(n("medicine"))} band {Js.Str(n("bandage"))} wpn {Js.Str(n("weapon"))} benches {Js.Str(state.furniture.filter((f) => f.kind == "workbench").length)} crafted {Js.Str(count(new JsRegExp("crafted|made medicine", "")))}", $"zombies {Js.Str(state.zombies.length)}", $"kills {Js.Str(count(new JsRegExp("killed a zombie|shot|brought down", "")))}", $"raids {Js.Str(count(new JsRegExp("^Raiders", "")))} fires {Js.Str(count(new JsRegExp("caught fire|firebombed", "")))} burned {Js.Str(count(new JsRegExp("burned down", "")))}", $"rotted {Js.Str((ev.filter((m) => Js.T(new JsRegExp("rotted", "").test(m))).map((m) => Js.Get(m.split(" "), 0)).join("+") is var __or1 && Js.T(__or1) ? __or1 : Js.Str(0)))}", $"sick {Js.Str(state.survivors.filter((s) => s.sick != null).length)} inf {Js.Str(state.survivors.filter((s) => s.infection != null).length)} corpses {Js.Str(n("corpse"))}", $"mood {Js.Str(Js.T(moods.length) ? Js.Str(JsMath.round(((double)(moods.reduce((a, b) => a + b, 0.0)) / (moods.length)))) : Js.Str("-"))}", $"rep {Js.Str(state.settlements.map((s) => s.reputation).join("/"))}", $"low: {Js.Str(worstFactors(state))}", $"end {Js.Str(state.endgame.won ?? "-")} cure {Js.Str(state.endgame.cure)} evac {Js.Str((state.endgame.evacuation == null) ? Js.Str("-") : Js.Str(Time.dayOf(Js.NN(state.endgame.evacuation))))} sieges {Js.Str(count(new JsRegExp("SIEGE", "")))} bleed {Js.Str(state.survivors.filter((s) => s.bleeding).length)} wx {Js.Str(state.weather)} threat {Js.Str(Director.threatScale(state).toFixed(1))} kinds {Js.Str(count(new JsRegExp("screamer shrieked", "")))}scr hunted {Js.Str(count(new JsRegExp("hunted|Deer seen", "")))} prisoners {Js.Str(state.prisoners.length)} walls {Js.Str(state.grid.tiles.filter((t) => t == "wall").length)}", $"deaths {Js.Str((ev.filter((m) => m.includes(" died of ")).map((m) => m.replace(new JsRegExp("^.* died of ", ""), "")).join(",") is var __or2 && Js.T(__or2) ? __or2 : "-"))}" }.join(" | "));
+            @out.push(new List<string> { $"s{Js.Str(seed)} day {Js.Str(Js.Str(day).padStart(2))} {Js.Str(Seasons.seasonOf(state.tick - 1).slice(0, 3))} {Js.Str(((double)((performance.now() - t0)) / (Time.DAY_LENGTH)).toFixed(2))}ms/t worst {Js.Str(worst.toFixed(0))}", $"alive {Js.Str(state.survivors.length)}{Js.Str(state.survivors.some((s) => s.childUntil != null) ? Js.Str($" (kids {Js.Str(state.survivors.filter((s) => s.childUntil != null).length)})") : Js.Str(""))}", $"food {Js.Str(n("food"))}+{Js.Str(n("meal"))} ({Js.Str(Alerts.foodDays(state).toFixed(1))}d) wood {Js.Str(n("wood"))} cloth {Js.Str(n("cloth"))}", $"coats {Js.Str(state.survivors.filter((s) => Js.T(s.body)).length)} dogs {Js.Str(state.dogs.length)} med {Js.Str(n("medicine"))} band {Js.Str(n("bandage"))} wpn {Js.Str(n("weapon"))} benches {Js.Str(state.furniture.filter((f) => f.kind == "workbench").length)} crafted {Js.Str(count(new JsRegExp("crafted|made medicine", "")))}", $"zombies {Js.Str(state.zombies.length)}", $"kills {Js.Str(count(new JsRegExp("killed a zombie|shot|brought down", "")))}", $"raids {Js.Str(count(new JsRegExp("^Raiders", "")))} fires {Js.Str(count(new JsRegExp("caught fire|firebombed", "")))} burned {Js.Str(count(new JsRegExp("burned down", "")))}", $"rotted {Js.Str((ev.filter((m) => Js.T(new JsRegExp("rotted", "").test(m))).map((m) => Js.Get(m.split(" "), 0)).join("+") is var __or1 && Js.T(__or1) ? __or1 : Js.Str(0)))}", $"sick {Js.Str(state.survivors.filter((s) => s.sick != null).length)} inf {Js.Str(state.survivors.filter((s) => s.infection != null).length)} corpses {Js.Str(n("corpse"))}", $"mood {Js.Str(Js.T(moods.length) ? Js.Str(JsMath.round(((double)(moods.reduce((a, b) => a + b, 0.0)) / (moods.length)))) : Js.Str("-"))}", $"rep {Js.Str(state.settlements.map((s) => s.reputation).join("/"))}", $"low: {Js.Str(worstFactors(state))}", $"end {Js.Str(state.endgame.won ?? "-")} cure {Js.Str(state.endgame.cure)} evac {Js.Str((state.endgame.evacuation == null) ? Js.Str("-") : Js.Str(Time.dayOf(Js.NN(state.endgame.evacuation))))} sieges {Js.Str(count(new JsRegExp("SIEGE", "")))} bleed {Js.Str(state.survivors.filter((s) => s.bleeding).length)} wx {Js.Str(state.weather)} threat {Js.Str(Director.threatScale(state).toFixed(1))} kinds {Js.Str(count(new JsRegExp("screamer shrieked", "")))}scr deer seen {Js.Str(count(new JsRegExp("^Deer seen", "")))} prisoners {Js.Str(state.prisoners.length)} walls {Js.Str(state.grid.tiles.filter((t) => t == "wall").length)}", $"deaths {Js.Str((ev.filter((m) => m.includes(" died of ")).map((m) => m.replace(new JsRegExp("^.* died of ", ""), "")).join(",") is var __or2 && Js.T(__or2) ? __or2 : "-"))}" }.join(" | "));
             flush();
             if (Js.T(process.env.LOG))
             {
@@ -229,6 +236,7 @@ public partial class ColonyHarness
                 break;
             }
         }
+        probe?.end(state, state.survivors.length == 0 ? "fell" : "alive");
         flush();
     }
 
