@@ -171,6 +171,14 @@ public static partial class Grids
     internal static bool bareChunk(Grid grid, int c) =>
         grid.tileLayer.chunks[c] == null && grid.edgeLayer.chunks[c] == null && grid.tileLayer.fill == TILE_FLOOR && grid.edgeLayer.fill == EDGE_NONE;
 
+    /// <summary>A chunk's own edges (two a tile: north, west; a tile at (ly * 32 + lx)), or null when it holds none
+    /// and every edge there is `fill`. For reachability's flood of one chunk.</summary>
+    internal static byte[]? edgeChunk(Grid grid, int c, out int fill)
+    {
+        fill = grid.edgeLayer.fill;
+        return grid.edgeLayer.chunks[c];
+    }
+
     /// <summary>A tile code's name. Replaced (never changed in place) when a new name is met.</summary>
     internal static string[] tileNames = [FLOOR, WALL, DOOR, WATER, BARRICADE];
 

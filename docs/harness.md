@@ -29,6 +29,10 @@ vars below for each.
 - **profile** (Profile.cs): the tick by system, with allocations (SCENES, TICKS, WARM). The big new worlds
   `new-2048`, `new-4096` and `new-10000` run only when named in SCENES. **tick dumps** (same file, DUMP=dir): states
   of fixed scenes as JSON, to compare two builds byte for byte.
+- **micro** (Micro.cs; SCENE=colony-512, ROUNDS=7): the grid's readers one at a time on one fixed state (tile and
+  edge reads, room labels, sight, paths, reachability, and each after a wall change), the best of several rounds in
+  nanoseconds an operation. For comparing two builds when whole ticks are too noisy to call a few percent: build it
+  against each and read the two reports side by side.
 - **save compat** (SaveCompat.cs): DUMP=dir writes saves, bug reports and states of a few played worlds; CHECK=dir
   loads another build's and compares (a file of this schema must also be written again byte for byte).
 

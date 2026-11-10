@@ -157,6 +157,8 @@ public static partial class Pathfinding
     sealed class Rules
     {
         public required Func<int, int, bool> pass;
+        /// <summary>Whether the mover crosses an edge with something on it (its kind, never EDGE_NONE: that is open to
+        /// all and the callers don't ask), between two tiles.</summary>
         public required Func<int, int, int, int, int, bool> across;
     }
 
@@ -166,12 +168,7 @@ public static partial class Pathfinding
         return new Rules
         {
             pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && getTile(grid, x, y) == DOOR),
-            across = (e, ax, ay, bx, by) =>
-            {
-                int kind = edgeKind(grid, e);
-                if (kind == 0) return true;
-                return !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover);
-            },
+            across = (kind, ax, ay, bx, by) => !(shut && kind == EDGE_DOOR) && crossable(grid, ax, ay, bx, by, mover),
         };
     }
 
@@ -192,6 +189,9 @@ public static partial class Pathfinding
         int h = Math.Min(height, y0 + N) - y0;
         // A chunk has at most 1,024 components: a short a tile (2 KB a chunk a mover).
         var local = r.local[c] ??= new short[N * N];
+        // The chunk's own edges (two a tile: north, west), or none at all: a tile's neighbours within the chunk are read
+        // straight from them, and an edge with nothing on it is crossed without asking.
+        var edges = Grids.edgeChunk(grid, c, out int noEdges);
         for (int ly = 0; ly < h; ly++) for (int lx = 0; lx < w; lx++) local[ly * N + lx] = (short)(rule.pass(x0 + lx, y0 + ly) ? -2 : -1);
         short next = 0;
         for (int sy = 0; sy < h; sy++)
@@ -208,27 +208,27 @@ public static partial class Pathfinding
                     int cur = stack[--top];
                     int lx = cur % N, ly = cur / N;
                     int cx = x0 + lx, cy = y0 + ly;
-                    // A tile's edge index: 2 * (y * width + x), + 1 for the west one.
-                    int e = (cy * width + cx) * 2;
+                    // North: this tile's north edge. South: the next row's north edge. West: this tile's west edge. East:
+                    // the next tile's west edge.
                     if (ly > 0)
                     {
-                        int n = cur - N;
-                        if (local[n] == -2 && rule.across(e, cx, cy, cx, cy - 1)) { local[n] = next; stack[top++] = n; }
+                        int n = cur - N, kind = edges == null ? noEdges : edges[2 * cur];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx, cy - 1))) { local[n] = next; stack[top++] = n; }
                     }
                     if (ly < h - 1)
                     {
-                        int n = cur + N;
-                        if (local[n] == -2 && rule.across(e + 2 * width, cx, cy, cx, cy + 1)) { local[n] = next; stack[top++] = n; }
+                        int n = cur + N, kind = edges == null ? noEdges : edges[2 * n];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx, cy + 1))) { local[n] = next; stack[top++] = n; }
                     }
                     if (lx > 0)
                     {
-                        int n = cur - 1;
-                        if (local[n] == -2 && rule.across(e + 1, cx, cy, cx - 1, cy)) { local[n] = next; stack[top++] = n; }
+                        int n = cur - 1, kind = edges == null ? noEdges : edges[2 * cur + 1];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx - 1, cy))) { local[n] = next; stack[top++] = n; }
                     }
                     if (lx < w - 1)
                     {
-                        int n = cur + 1;
-                        if (local[n] == -2 && rule.across(e + 3, cx, cy, cx + 1, cy)) { local[n] = next; stack[top++] = n; }
+                        int n = cur + 1, kind = edges == null ? noEdges : edges[2 * n + 1];
+                        if (local[n] == -2 && (kind == EDGE_NONE || rule.across(kind, cx, cy, cx + 1, cy))) { local[n] = next; stack[top++] = n; }
                     }
                 }
                 next++;
@@ -263,9 +263,10 @@ public static partial class Pathfinding
                 var theirs = r.local[c + 1];
                 for (int y = y0; y < y1; y++)
                 {
-                    int b = y * width + x1;
                     int la = mine == null ? 0 : mine[(y - y0) * N + (N - 1)], lb = theirs == null ? 0 : theirs[(y - y0) * N];
-                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2 + 1, x1, y, x1 - 1, y)) continue;
+                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb)) continue;
+                    int kind = Grids.edgeOf(grid, grid.ox + x1, grid.oy + y, 1); // the far tile's west edge
+                    if (kind != EDGE_NONE && !rule.across(kind, x1, y, x1 - 1, y)) continue;
                     seen.Add(la * 2048 + lb);
                     east.Add(la);
                     east.Add(lb);
@@ -282,9 +283,10 @@ public static partial class Pathfinding
                 var theirs = r.local[c + r.cw];
                 for (int x = x0; x < x1; x++)
                 {
-                    int b = y1 * width + x;
                     int la = mine == null ? 0 : mine[(N - 1) * N + (x - x0)], lb = theirs == null ? 0 : theirs[x - x0];
-                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb) || !rule.across(b * 2, x, y1, x, y1 - 1)) continue;
+                    if (la < 0 || lb < 0 || seen.Contains(la * 2048 + lb)) continue;
+                    int kind = Grids.edgeOf(grid, grid.ox + x, grid.oy + y1, 0); // the far tile's north edge
+                    if (kind != EDGE_NONE && !rule.across(kind, x, y1, x, y1 - 1)) continue;
                     seen.Add(la * 2048 + lb);
                     south.Add(la);
                     south.Add(lb);

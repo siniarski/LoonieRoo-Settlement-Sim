@@ -124,3 +124,86 @@ Tests (ChunkSaveTest): a played and changed world (a tree cut, a crate emptied, 
 Left: saving a fully explored world regenerates every generated chunk to compare (5.6 s at 2048): a hash of each chunk as made, kept in WorldInfo, would skip the unchanged ones. The grid still lives whole in memory (3.6 GB at 10,000): the grid in chunks is the next job. A save made before this change won't load (schema 75).
 
 **Faster saves, chunk hashes (2026-11-10, schema 78; log/2026-11-10-05-save-speed.md).** Saves are written straight to text (`SaveWriter`: the state's members in the serializer's order, the grid's layers, furniture rows and runs value by value; the same files as before, byte for byte, but the new field). `WorldInfo.made` holds each generated chunk's hash as made (`SavefileHash.cs`: tiles, ground, edges, and the chunk's furniture and dormant in list order); a save makes again only the chunks whose hash now differs (a played 2048 world: 6 of 4,096). The hashes are made when a chunk is generated and again on load from the chunks loading makes anyway (so a schema-77 save loads, and gets them). Bug reports start from the packed state (`Savefile.bugStart`, a world's changes only) instead of a whole copy. Save times: 512 fully generated 0.54 s to 10 ms, 2048 fully generated 9.3 s to 79 ms, 10,000 (the start) 1.4 to 0.6 s (scanning the whole grid's bare chunks: the grid in chunks removes it). Loading is still making every generated chunk (2048 fully generated: ~7 s, most of it generation).
+
+## The grid in chunks: built (2026-11-10; no schema change; log/2026-11-10-06-grid-chunks.md)
+
+Built as designed above ("The second job"), in four stages, each its own commit, every one with the state dumps and the save files byte-identical to the branch's start.
+
+- **Code.** `GridLayers.cs`: `GridLayer<T>` (chunk slots, a fill, rows in and out, `AnyNot`, `SameAs`, `CopyFrom`), `TileLayer` / `ByteLayer` / `EdgeLayer` / `DoubleLayer` with their JSON converters (flat arrays), `TileMask`. `Grid.cs`: the layers are internal fields under their JSON names (`[JsonInclude]`), shaped once the size is known (`IJsonOnDeserialized`); every accessor of the design; tile kinds as codes. Nothing outside Grid.cs, GridLayers.cs, the save code, RoomLabels.cs, Pathfinding.cs and WorldPreview.cs sees a layer. The save code reads a chunk a row at a time (`Differs`, `WriteLayer`), hashes it off its own arrays (`GridHash`) and lays generated chunks in with `CopyFrom`.
+- **What else was sized by the map, and isn't now** (found by measuring a played 10,000 world, harness `big world`: after the grid itself was in chunks the heap was still 3.9 GB, the first tick 9 s and a tick 15-20 ms):
+  - **Rooms** (`RoomLabels.cs`): labels in 32 x 32 chunks under 32 x 32 blocks, copied on write (an update copied a label for every tile: 400 MB at 10,000, at every wall or door change); `computeRooms` seeds the bounded flood from the tiles with something on them (`Grids.structureTiles`) and their neighbours: the rooms of a bare map, updated by "everything that isn't bare changed". `computeRoomsWhole` is the old whole-map flood, kept as the tests' definition. `MAX_TRACKED` 2,048 to 65,536. The cache is weak now (a JsMap kept every grid alive).
+  - **Reachability**: a chunk's labels are its own array of shorts, made when it is flooded; a bare chunk (nothing in its tile or edge slots) is one component and is never flooded; two bare chunks side by side share one link.
+  - **A\* and nearestTile**: their per-tile scratch in chunks allocated where a search goes (24 bytes a tile for A\*, stamped, dropped past 4,096 chunks: about 100 MB).
+  - **Sight.visibleNow**: a `TileMask`, in a weak table. **The save's picture**: only chunks holding a seen tile. **Invariants**: dirt and damage from the chunks that hold any.
+- **Still sized by the map** (small, or the game's): `WorldInfo.generated` (a number a chunk: 0.8 MB at 10,000) and the save's per-chunk passes (98,000 cheap steps); reachability's per-chunk tables and its union over every chunk at each walkability change (about 0.3 ms for six movers at 512, growing with the chunk count: per-chunk versions or a hierarchy are the fix); in the game, the map screen and minimap build an image of the whole map (`godot/Ui/WorldMap.cs`, `Minimap.cs`).
+
+### Measured (seed 42, Release, this machine shared with other sessions; before is the branch's start, 2e8d9a2)
+
+Memory and time for a new world (`gen profile big`, `big world`):
+
+| | 2048 before | 2048 now | 10,000 before | 10,000 now |
+|---|--:|--:|--:|--:|
+| heap after createWorld | 211 MB | 26 MB | 4,389 MB | 28 MB |
+| createWorld | 5.3 s | 5.2 s | 4.0 s | 3.0 s |
+| the first tick | 595 ms | 77 ms | 11.9 s | 15 ms |
+| heap after 200 ticks | 347 MB | 28 MB | 7,545 MB | 43 MB |
+| a tick (the first 200) | 1.04 ms | 0.20 ms | 19.8 ms | 8.6 ms (0.39 ms once the next region is planned: below) |
+| 6 chunks walked east | 1.84 s | 34 ms | 4.3 s | 1.5 s (a region's plan) |
+| save | 30 ms | 8 ms | 623 ms | 16 ms |
+| load | 115 ms | 94 ms | 968 ms | 129 ms |
+| the loaded state's heap | 152 MB | 1 MB | 3,606 MB | 10 MB |
+| 20 ticks on the loaded state | 357 ms | 9 ms | 11.8 s | 12 ms |
+| peak working set (2048 then 10,000 in one process) | | | 13,480 MB | 259 MB |
+
+4096: heap after createWorld 766 MB to 28 MB (the bound the harness holds it to is 64 MB: `SIZES=4096 BOUND_MB=64`), the first tick 1.9 s to 22 ms, a tick 1.76 to 0.16 ms.
+
+Saves (`save speed`, a played state, best of 3; save and load):
+
+| world | save before | save now | load before | load now |
+|---|--:|--:|--:|--:|
+| 2048, the start (35 chunks) | 37.5 ms | 18.7 ms | 92.5 ms | 54.0 ms |
+| 2048, every chunk (4,096) | 65.0 ms | 62.3 ms | 6,349 ms | 6,116 ms (generation) |
+| 10,000, the start (40 chunks) | 581 ms | 10.8 ms | 1,043 ms | 65.7 ms |
+| 10,000, a bug report's start | 571 ms | 10.1 ms | | |
+
+The whole-map save a hand-made map gets (the harness applies it to a 2048 world, which no game does) is a little slower than it was (2048, the start: save 15.7 to 24 ms, load 93 to 158 ms): it copies each layer flat before run-length encoding it. Hand-made maps are a few thousand tiles.
+
+The tick (`profile`, 2,000 ticks after 300, builds alternating, each build's runs sorted; ms a tick):
+
+| scene | before, the whole tick | now | before, replayed step by step | now | KB allocated a tick |
+|---|---|---|---|---|---|
+| 512 (3 colonists) | 0.082 0.086 0.100 0.111 | 0.082 0.085 0.085 0.087 | 0.090 0.092 0.110 0.122 | 0.083 0.084 0.084 0.090 | 38.8 to 37.7 |
+| horde-512 | 1.278 1.297 1.391 1.526 | 1.383 1.404 1.428 1.447 | 0.785 0.787 0.787 0.813 | 0.745 0.756 0.769 0.773 | 705 to 695 |
+| colony-512 | 0.362 0.364 0.368 0.375 | 0.354 0.361 0.371 0.374 | 0.342 0.344 0.348 0.358 | 0.339 0.341 0.344 0.371 | 333 to 319 |
+| colony-128 (100 colonists) | 0.171 0.172 0.173 0.175 | 0.168 0.168 0.176 0.229 | 0.193 0.193 0.195 0.197 | 0.185 0.189 0.195 0.208 | 162.6 to 162.5 |
+| mixed-128 | 0.156 0.157 0.157 0.159 | 0.153 0.160 0.161 0.184 | 0.166 0.168 0.171 0.178 | 0.163 0.171 0.175 0.190 | 170.2 to 170.2 |
+
+The first pass (the whole tick, with the allocation sampler on) is the noisier of the two: horde-512 read 6% slower there in three of five rounds over the session and faster in two; the replay of the same ticks, a steadier pass, has it 4% faster, and the stress harness over its first 1,500 ticks (three alternating runs: 1.90 1.91 2.22 before, 1.85 1.88 1.95 now; colony-512 1.49 1.56 1.70 before, 1.57 1.63 1.63 now) agrees. No scene is slower by anything these measurements can hold on to.
+
+Whole ticks could not be told apart to better than a few percent on this machine, so each reader was timed alone (`micro`, colony-512, best of 7 rounds, ns an operation, old to new): getTile 5.3 to 5.6, isWalkable 8.7 to 8.3, crossable 11.2 to 11.7, isPassable (zombie) 20-27 to 25, Rooms.labelAt 47.8 to 19.0, sightLine 572 to 366, sightOf 80,000 to 57,200, findPath 13,400 to 13,500, a zombie's path 15,700 to 16,200, canReach 206 to 219, nearestTile 9,900 to 9,900, a wall changed then rooms 1,188,000 to 43,000, then reachability for six movers 326,000 to 333,000 (runs of each spread about 8%).
+
+**Identical states.** After every stage: the 48 `tick dumps` and the 35 balance dumps (colony `LOG=`, solo `LOG=` with `LOG_AT=1234`, seeds 1-4, 5 days) have the same SHA-256 as the branch's start (83 files); the saves, bug reports and state JSON `save compat` writes (20 files, five played states) are the same bytes, and the old build's files load to identical states and are written again the same. Tests: `GridChunksTest` (chunk borders and the map's edge, off the grid, what allocates, ungenerated land, two chunk orders, a hand-made map in JSON, a played 300 world through a save and through JSON), and `RoomsIncrementalTest` now holds both the update and the from-nothing pass to the whole-map flood after each of its changes. Check green at 781.
+
+**Found on the way, not the grid's:** at 10,000 `createWorld` plans the start's region only; the first time play asks beyond it (within the first 200 ticks, and again walking six chunks east) a region is planned inside a tick: about 1.5 s. The far field already asks on a worker (`PlanSoon`); the sim's askers don't.
+
+### Unloading chunks (stage 5): not built; what it would take
+
+**What a generated chunk costs** (`chunk cost`, 1024, every chunk generated: 51 KB a chunk):
+
+| part | a chunk | of it |
+|---|--:|--:|
+| the grid's layers (tiles in 361 of 1,024 chunks, ground in all, edges in 536) | 2.5 KB | 5% |
+| the dormant (3,060) | 0.5 KB | 1% |
+| furniture and its index (93,714 pieces, 81,437 of them trees; 516 bytes a piece) | 48 KB | 94% |
+| on top, derived by play: reachability for six movers, rooms and labels | 14.5 KB | |
+
+So dropping the grid's layers of untouched chunks would return a twentieth of what a generated chunk holds. Unloading only pays if furniture goes with the chunk, and that is where it stops being safe to do in this session:
+
+1. **"Next needed" isn't defined for furniture.** 31 files read furniture or the dormant as lists of the whole world (42 `FurnitureMod.ofKind(s)` calls, 22 uses of `state.furniture`: the nearest tree or crate anywhere, counts for alerts and jobs, expeditions, herds). With a chunk's pieces gone each of those either reloads it (then far reads keep everything loaded) or is defined not to look that far: an active simulation region, which changes outcomes and was out of scope.
+2. **List order is an outcome.** `state.furniture`'s order (and `IndexesEntry.seq`, which `ofKinds` sorts by) decides ties. A chunk made again must come back at its old place in that order, whatever was unloaded in between: furniture needs a per-chunk home and an order that doesn't depend on history before any of it can leave.
+3. **A read can't generate.** Reading an unloaded chunk's tile has to make the chunk again (1.5 ms, or 1.5 s when its region isn't planned), from wherever the read is: a path search, the far field, the renderer's thread. `makeChunk`'s statics (Worldplan, Heights, Time) aren't thread-safe, and nothing bounds how many reads a tick would do it.
+4. **What holds on to a chunk.** Rooms and reachability are fine (a chunk coming or going is a batch of `noteChange`s, as `adoptChunk` is now; their chunked data can be dropped with it). Paths in flight, jobs, blueprints, designations, items, fires, cars, the dead and the living on its tiles, map notes and settlements all pin a chunk: "far from every survivor" has to become "nothing refers to it", checked per chunk.
+5. **Knowing it is unchanged.** The hash (`WorldInfo.made`) covers tiles, ground, edges, furniture and the dormant, so it is the test, but it costs a pass over the chunk's pieces (the save does it for every generated chunk: about 60 ms at 2048 fully generated, about 1.5 s at a fully explored 10,000). A per-chunk "touched since made" mark would make both the save and unloading cost what changed; furniture's fields are written directly all over the sim (`crate.loot = 0`), so the mark needs those writes to go through one place first.
+6. **The save.** Furniture and the dormant are written as runs over the lists; an unloaded chunk has to be written as "as made" without its pieces in the list (the count as made kept beside the hash: a schema change).
+
+**The order to do it in:** (a) furniture per chunk with a history-free order, and its writes through accessors (this alone allows the "touched" mark, and makes saves of a fully explored world cost what changed); (b) trees out of `Furniture`: four fifths of the pieces are trees at 516 bytes each, and a byte or two a tile as a chunk layer would cut a generated chunk from 51 KB to about 12 without unloading anything; (c) the active region: which systems may look how far, the rest abstract as herds and the dormant already are; (d) read-through generation off a thread-safe `makeChunk`; (e) unloading by the mark, and the save's "as made" form. Measure after (b): unloading may not be needed for memory at all.

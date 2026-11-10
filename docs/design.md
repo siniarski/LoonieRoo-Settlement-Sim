@@ -107,8 +107,11 @@ meshes, CC0 clip libraries allowed, animation update rate by LOD tier.
 
 Written when the world was 256x256 (before 2026-11-09); the code is shaped so it can grow towards 10,000x10,000
 without rewrites. **Since then** (docs/worldgen-speed.md, docs/worldplan-regions.md): the plan is made by region,
-chunks are made again from the seed, and saves keep only what changed (schema 75); the grid in chunks is the next big
-job (docs/open-work.md "Scale and big worlds"). The scale target is Zomboid-sized: ~100k zombies on ~10,000 x 10,000.
+chunks are made again from the seed, saves keep only what changed (schema 75), and the grid, rooms, reachability and
+path scratch are held in chunks allocated where there is something (2026-11-10: a new 10,000 world is 28 MB and its
+first tick 15 ms). What a big world costs now is its furniture (48 KB a generated chunk, four fifths of it trees) and
+the plan of each new region (docs/worldplan-regions.md "Unloading chunks"). The scale target is Zomboid-sized: ~100k
+zombies on ~10,000 x 10,000.
 
 - **Done then:** generation is a pure function of (seed, position) using a stateless hash (never the sim RNG), run
   chunk by chunk (32x32), with buildings that never cross a chunk border, so chunks can be generated in any order
@@ -116,11 +119,11 @@ job (docs/open-work.md "Scale and big worlds"). The scale target is Zomboid-size
   come from the explored frontier). Dirt and damage are index lists, not whole-map scans. Furniture has a cached tile
   and id index. Rendering skips off-screen and unexplored things. World zombies use simulation LOD: dormant zombies
   and herds are cheap markers until survivors are near.
-- **Still to do for a much bigger world:** chunked storage (state still holds full-size arrays; lazy generation only
-  decides *when* chunks are filled in); saves as seed plus changed chunks (done since); a real active region
+- **Still to do for a much bigger world:** chunked storage (done since: 2026-11-10); saves as seed plus changed
+  chunks (done since); a real active region
   (simulate only near survivors); hierarchical pathfinding (HPA*) with per-chunk walkability versions instead of the
-  single counter; bounded room flood fill (the 600-tile cap already defines the answer, but the fill still runs to
-  completion); spatial indexes for items and survivors; a chunk render cache and a world map. Entity ids come from
+  single counter; bounded room flood fill (done since: rooms are worked out from the tiles with something on them);
+  spatial indexes for items and survivors; a chunk render cache and a world map. Entity ids come from
   `nextId`, so they depend on generation order; ids are only labels, but lazy generation should keep that in mind.
 - Measured at 256x256 with a scripted player for 14 days: 0.1-0.5 ms per tick, mostly growing with the number of
   loose items (item lookups are still linear). Fully zoomed out the browser's renderer held 60 fps.
