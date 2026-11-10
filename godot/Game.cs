@@ -17,6 +17,7 @@
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
 //   --at=X,Y                               put the survivor you control on tile X, Y (for screenshots; not a command)
+//   --day=D                                start at noon of day D (only the clock moves: for pictures of growth and the seasons; not a command)
 //   --animals=N | --animals=wolf:3,deer    animals spawned round you (spawnAnimal commands): N of each kind in turn,
 //                                          or kinds with counts (deer, rabbit, wolf, bear, dog); --animal-range=M how far
 //                                          out the nearest stand (3.5 m; a wolf or bear within 2-3 m bites)
@@ -165,6 +166,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             me.at = Motion.centre(me.pos);
             me.was = Motion.centre(me.pos);
         }
+        if (args.TryGetValue("day", out var dayArg)) StartDay(double.Parse(dayArg, CultureInfo.InvariantCulture));
         if (args.ContainsKey("lineup") && ControlMod.controlled(state) is { } lu) World3D.ItemModels.Lineup(state, lu);
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
@@ -408,6 +410,15 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
     /// <summary>Autosave at every dawn (06:00), when the night's zombies have gone. Tick 0 is 06:00.</summary>
     static int Dawns(int tick) => tick / Time.DAY_LENGTH;
+
+    /// <summary>--day=D: the clock to noon of day D (only the clock: needs and events are not played, so it is for looking at what the days grow, Growth.cs, and the seasons).</summary>
+    void StartDay(double day)
+    {
+        Time.setDayScale(state.settings.dayScale);
+        int tick = (int)Math.Round((day - 0.5) * Time.DAY_LENGTH - Time.START_HOUR * Time.TICKS_PER_HOUR);
+        if (tick > state.tick) state.tick = tick;
+        Growth.update(state); // the saplings that have grown solid by then are trees before the first frame
+    }
 
     Vport Vp
     {

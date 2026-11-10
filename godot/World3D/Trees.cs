@@ -65,12 +65,16 @@ public sealed class Trees
     public static (int species, Transform3D t, Color custom) Placement(Grid g, int x, int y, bool coarse = false) =>
         Placement(x, y, g.ground[y * g.width + x] == FOREST, coarse);
 
+    /// <summary>A growing tree's size as a share of its full size (Growth.treeScale), for a tile whose tree came up from a sapling (its id starts with g); 1 for any other.</summary>
+    static float GrowthScale(SimState state, Furniture f) =>
+        f.id.Length > 0 && f.id[0] == 'g' ? (float)Growth.treeScale(Math.Max(Growth.SOLID_AT, Growth.treeProgress(state, f.x, f.y))) : 1f;
+
     /// <summary>The same, told whether the tile is forest ground (the far field, for land not generated yet).</summary>
-    public static (int species, Transform3D t, Color custom) Placement(int x, int y, bool forest, bool coarse)
+    public static (int species, Transform3D t, Color custom) Placement(int x, int y, bool forest, bool coarse, float grown = 1f)
     {
         int s = Species(x, y, forest);
         var (lo, hi) = SIZE[s];
-        float size = lo + (hi - lo) * U(x, y, 3);
+        float size = (lo + (hi - lo) * U(x, y, 3)) * grown;
         var (px, pz) = Trunk(x, y);
         var t = coarse
             ? new Transform3D(new Basis(Vector3.Up, U(x, y, 6) * Mathf.Tau).Scaled(new Vector3(size, size, size)), new Vector3(px, Terrain.Coarse(x, y, false) - SINK, pz))
@@ -80,6 +84,13 @@ public sealed class Trees
 
     /// <summary>Trees in the chunks built (the debug panel).</summary>
     public int Count { get; private set; }
+
+    /// <summary>The grass, weeds, bushes, saplings and road wear (Undergrowth.cs).</summary>
+    public Undergrowth Under => undergrowth;
+    Undergrowth undergrowth;
+
+    /// <summary>The bush (0) or fern (1) model, in the game's materials.</summary>
+    public Mesh UnderMesh(int i) => under[i];
 
     public Trees(Node3D parent)
     {
@@ -98,6 +109,7 @@ public sealed class Trees
         for (int s = 0; s < SPECIES.Length; s++)
             for (int l = 0; l < 3; l++) trees[s, l] = Dressed(byName[$"{SPECIES[s]}_{l}"], mats);
         for (int u = 0; u < UNDER.Length; u++) under[u] = Dressed(byName[$"{UNDER[u]}_0"], mats);
+        undergrowth = new Undergrowth(parent, this);
     }
 
     static void Collect(Node n, Dictionary<string, Mesh> into)
@@ -162,6 +174,7 @@ public sealed class Trees
         int total = 0;
         foreach (var c in chunks.Values) total += c.count;
         Count = total;
+        undergrowth.Update(state, eye, look);
     }
 
     /// <summary>What a chunk's trees depend on: its tree tiles and its forest ground.</summary>
@@ -171,7 +184,7 @@ public sealed class Trees
         long h = 23;
         if (look.furniture.TryGetValue((cx, cy), out var list))
             foreach (var f in list)
-                if (f.kind == "tree") h = h * 31 + f.x * 7919 + f.y;
+                if (f.kind == "tree") h = h * 31 + f.x * 7919 + f.y + (f.id.Length > 0 && f.id[0] == 'g' ? (int)(GrowthScale(state, f) * 16) * 104729 : 0);
         int x0 = cx * CHUNK, y0 = cy * CHUNK;
         for (int y = y0; y < Math.Min(g.height, y0 + CHUNK); y++)
             for (int x = x0; x < Math.Min(g.width, x0 + CHUNK); x++)
@@ -201,6 +214,7 @@ public sealed class Trees
                 int s = Species(f.x, f.y, forest);
                 var (lo, hi) = SIZE[s];
                 float size = lo + (hi - lo) * U(f.x, f.y, 3);
+                size *= GrowthScale(state, f);
                 var (px, pz) = Trunk(f.x, f.y);
                 treeAt[s].Add((s, Place(px, pz, U(f.x, f.y, 6) * Mathf.Tau, size), Tint(f.x, f.y)));
                 count++;

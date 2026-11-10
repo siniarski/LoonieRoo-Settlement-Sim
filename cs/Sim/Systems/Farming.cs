@@ -59,6 +59,7 @@ public static partial class Farming
     {
         FarmPlot plot = new FarmPlot { id = $"p{Js.Str(state.nextId++)}", x = Js.I(x), y = Js.I(y), crop = crop, planted = false, growth = 0 };
         state.farm.push(plot);
+        Growth.clear(state, plot.x, plot.y);
         return plot;
     }
     public static FarmPlot addPlot(SimState state, double x, double y, string crop = "potato") => addPlot(state, Js.I(x), Js.I(y), crop);
@@ -97,6 +98,7 @@ public static partial class Farming
         }
         plot.planted = false;
         plot.growth = 0;
+        Growth.clear(state, plot.x, plot.y);
     }
 
     /// <summary>Crops grow every tick (as the season allows, or always in a greenhouse); plots whose tile stopped being floor are lost. Coops lay.</summary>
@@ -106,7 +108,7 @@ public static partial class Farming
         {
             return;
         }
-        FurnitureMod.regrowTrees(state);
+        Growth.update(state);
         var outdoors = Seasons.cropGrows(state);
         var greenhouses = (state.farm.length > 0) ? Rooms.completeRooms(state, "greenhouse") : new JsSet<double>();
         foreach (var plot in Js.Iter((state.farm).ToList()))

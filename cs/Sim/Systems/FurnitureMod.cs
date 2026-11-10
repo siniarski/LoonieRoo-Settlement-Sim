@@ -190,21 +190,7 @@ public static partial class FurnitureMod
     }
     public static Furniture addFurniture(SimState state, string kind, double x, double y) => addFurniture(state, kind, Js.I(x), Js.I(y));
 
-    /// <summary>Trees grow back a piece of wood each TREE_REGROW_TICKS (up to TREE_WOOD).</summary>
-    public static void regrowTrees(SimState state)
-    {
-        if ((state.tick % TREE_REGROW_TICKS) != 0)
-        {
-            return;
-        }
-        foreach (var f in Js.Iter(state.furniture))
-        {
-            if ((f.kind == "tree") && (f.loot < TREE_WOOD))
-            {
-                f.loot += 1;
-            }
-        }
-    }
+    // Trees coming back (new ones from saplings, and wood on chopped ones) is Growth.cs's: Growth.update, Growth.regrowWood.
 
     public static void removeFurniture(SimState state, Furniture f)
     {

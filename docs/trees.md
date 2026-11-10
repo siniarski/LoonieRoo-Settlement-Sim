@@ -111,6 +111,58 @@ is the near LOD (0-24 m to a chunk's centre, so trees up to ~35 m away) and its 
 be cheaper (the low-end goal), the levers are a finer LOD grid (8 x 8-tile cells, so fewer trees get the near
 LOD), a mid-LOD shadow proxy, or a lighter near LOD; dropping the mid LOD's shadows saves only 0.07 ms.
 
+## Growth: the world overgrows (2026-11-10)
+
+How overgrown a tile is **is computed, not stored** (cs/Sim/Systems/Growth.cs, read its header first): a function of the
+seed, the tile, what its ground is (`GrowthKind`: yard, verge, meadow, field, dirt, forest floor, road, pavement, a
+ruin's floor) and the *growing days* since the tile was last cleared. A spring or summer day is 1 growing day, an autumn
+day 0.35, a winter day 0 (half again in a nuclear winter); a season is 5 game days, so a year is 20 days and 11.75
+growing days. A tile's pace is 0.75-1.25 of that (a hash and a patchy noise). Day 0 of a world is as generated.
+
+| Stage (L = growing days x pace) | At | About game day |
+|---|---|---|
+| grass long on yards, verges, fields | L 0.5-9 | 1-12 |
+| weeds | L 8-36 (yards), 3-20 (fields), 14-50 (meadow) | 14-60 |
+| bushes (a quarter to two fifths of the tiles) | L 25-130 | 40-220 |
+| saplings come up (forest floor 5%, fields 4%, woods' edges up to 6%) | L 30-90 | 50-150 |
+| a sapling is a sim tree (choppable, solid) | start + 40% of 60-140 | 80-280 |
+| a tree at full size | start + 60-140 | 100-390 |
+| cracks in roads, pavement, ruined floors | L 60-200 | 100-340 |
+| grass creeps in from a road's edges | L 130-350 | 220-600 |
+| ...and along its middle | L 300-600 | 510-1020 |
+
+**The record.** The only saved state is `state.cleared`: tile index -> the tick the tile was cleared (`Growth.clear`:
+a wall, door or floor built or a furniture piece set (Designations.completeBlueprint), `Commands.setStructure`, a farm
+plot sown or harvested (Farming); the fire session calls it where something burns out). From then it regrows from
+nothing. Once a day `Growth.expire` drops entries whose tile has grown through every stage (240 growing days at the
+slowest pace, roads 600), when "since the world began" says the same, so the record holds only tiles cleared in the last
+year and a half. No schema bump: an older save has no field and loads with none.
+
+**Trees coming back (one rule).** A sapling site is a stateless hash of the tile and its kind; its maturity tick follows
+from the stage table. `Growth.update` (on slow ticks, from Farming.updateFarm) keeps a plan for each chunk round the
+survivors (at most two made a call): the sites with the tick each is solid, sorted; at that tick the sim gets a real
+`tree` furniture piece (id `g<x>.<y>`, wood TREE_WOOD, solid through Trunks like any tree). Planting is in order of tick,
+row, column, so two runs, a different chunk order or a save and load give the same trees at the same ticks; a chunk first
+looked at long after plants everything due then. A tile cleared before its sapling is solid starts that sapling again.
+The wood a chopped tree grows back (every TREE_REGROW_TICKS) is `Growth.regrowWood`, over the trees only (it swept all
+furniture before).
+
+**Drawn** (godot/World3D/Undergrowth.cs, called from Trees.Update): per chunk within 2 of yours, MultiMeshes of grass
+tufts and weeds (procedural blade meshes, sway in a shader, tinted green to straw by season), Trees' bush model, small
+trees for saplings (Trees' models, scaled by progress) and flat dark crack strips on roads, with tufts leaning to a road's
+edges. Fixed budget: at most 1800 tufts a chunk, drawn to 26 (grass) to 60 (saplings) m, two chunks built a frame, a
+chunk rebuilt when its signature (growth in quarter days, the season, what stands in it) changes. Trees grown from
+saplings are drawn at their size so far. Nothing is a node per tile. Costs (1280x720, RTX 5070, debug panel, day 1 against day 300):
+see log/2026-11-10-05-growth.md. Pictures: experiments/growth/.
+
+**Not done, options.** Growth does nothing to the sim but trees and forage: `Growth.forageBonus` (up to x1.5 forage
+chance on overgrown ground, Handiwork.finishForage). The sim has no cover, hiding or movement-cost notion to hook, so the
+options are: tall growth hides you from the dead (Sight: a chance they lose you, or a shorter notice radius, scaled by
+`Cover.level`), slows walking (a speed factor by `Cover.height` in Motion), muffles or adds noise (Footfalls), hides
+items and bodies in it; trampling (a path worn bare by heavy traffic: a per-step count would have to be saved, so it was
+left); mowing or scything as a job that calls `Growth.clear`; grass in the far field; roofs falling in and floors
+overgrown inside a ruin (Floor kind is outdoors-only now).
+
 ## Left for later
 
 - **Seasons:** the crowns don't change with the season yet (autumn colour, broadleaf bare in winter: a tint and
