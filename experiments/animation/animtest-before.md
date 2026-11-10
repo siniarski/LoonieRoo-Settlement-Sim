@@ -19,6 +19,9 @@ Animation test, logic `before`: a pz survivor model as People.cs plays it, moved
 | dead walker 1.68 (dragging right) | ual_walk | 9 | 31.1 | 41.2 | -2.4 | -5.4 |
 | dead brute 1.25 | ual_walk | 8 | 32.9 | 46.2 | -2.2 | -5.4 |
 | dead runner 2.5 | ual_walk | 10 | 49.7 | 60.8 | -2.3 | -5.5 |
+| left leg lost, 2.0 | ual_walk | 4 | 48.7 | 54.1 | -2.3 | -5.5 |
+| left leg lost, standing | ual_idle | 1 | 2.9 | 2.9 | -5.5 | -5.6 |
+| left arm lost, walking 1.4 (the stump strays up to 18 deg from held) | ual_walk | 7 | 36.7 | 53.8 | -2.4 | -5.5 |
 | dead crawler 1.45 (hands) | zombie_crawl | 9 | 87.1 | 122.8 | -21.4 | -41.1 |
 | up 8 deg at 2.5 | ual_jog_fwd | 7 | 39.5 | 47.5 | -3.6 | -9.0 |
 | down 8 deg at 2.5 | ual_jog_fwd | 7 | 41.2 | 48.5 | -2.8 | -6.7 |

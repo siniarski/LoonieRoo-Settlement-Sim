@@ -2,6 +2,6 @@ Animation test, logic `after`: a pz survivor model as People.cs plays it, moved 
 
 | case | clips | steps | slide mean | slide worst | sole mean | worst sink |
 |---|---|--:|--:|--:|--:|--:|
-| more-vault | vault | 4 | 6.0 | 10.2 | -3.0 | -6.0 |
-| ual-ual_jump_start | ual_jump_start | 3 | 17.2 | 30.5 | -5.5 | -10.6 |
-| more-jump_start | jump_start | 3 | 12.7 | 24.7 | -3.8 | -8.2 |
+| left leg lost, 2.0 | hop_l | 14 | 1.0 | 1.6 | 0.1 | -0.1 |
+| left leg lost, standing | stand_l | 1 | 1.1 | 1.1 | -0.0 | -0.0 |
+| left arm lost, walking 1.4 (the stump strays up to 1 deg from held) | walk | 11 | 4.9 | 11.2 | 0.2 | -0.1 |

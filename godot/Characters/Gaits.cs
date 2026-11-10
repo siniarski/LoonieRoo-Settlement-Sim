@@ -172,6 +172,13 @@ public static class Gaits
     /// <summary>A crawler dragging itself along (or lying still, barely stirring).</summary>
     public static Pick Crawl(double speed) => speed < STILL ? new Pick("more/dead_crawl", 0.12f) : new Pick("more/dead_crawl", (float)Math.Clamp(speed / CRAWL_SPEED, 0.3, 3.0));
 
+    /// <summary>One clip at the rate that matches a speed.</summary>
+    public static (string clip, float rate, double blend) InBandsPick(string clip, double speed)
+    {
+        double at1 = SpeedOf(clip);
+        return (clip, at1 > 0 ? (float)Math.Clamp(speed / at1, 0.3, 3.0) : 1f, 0.2);
+    }
+
     /// <summary>The band for a speed (the current clip's while within HOLD of its edges), at the rate that matches it.</summary>
     public static Pick InBands(Band[] bands, double speed, string current)
     {

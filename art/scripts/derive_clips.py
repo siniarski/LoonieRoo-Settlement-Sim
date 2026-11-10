@@ -867,24 +867,28 @@ def reactions(r, lib, only):
         h = p.head("Head")
         return h + FWD * 0.11 + UP * 0.02 + LEFT * out
 
-    if wanted("eat"):
-        # Bites: the right hand from the chest to the mouth and back, the head meeting it; the left holds the food low.
+    for eat, biter in (("eat", "Right"), ("eat_left", "Left")):
+        # Bites: one hand from the chest to the mouth and back, the head meeting it; the other holds the food low
+        # (eat_left: the left bites, for a right arm lost; a lone hand holds and bites in one).
+        if not wanted(eat):
+            continue
         fr = [idle[i % (len(idle) - 1)].copy() for i in range(61)]
         for i, p in enumerate(fr):
             t = i / 60
             p.turn("Head", pitch(8 + 6 * max(0.0, math.sin(2 * math.pi * (t * 2 - 0.1)))))
+        out_b = -1 if biter == "Right" else 1
 
-        def path(p, s, t):
+        def path(p, s, t, biter=biter, out_b=out_b):
             u = (t * 2) % 1.0
             chest = p.head("UpperChest") + FWD * 0.28 + UP * 0.02
-            if s == "Left":
-                return chest + LEFT * 0.06 - UP * 0.08
-            m = mouth(p, -0.02)
+            if s != biter:
+                return chest - LEFT * (0.06 * out_b) - UP * 0.08
+            m = mouth(p, 0.02 * out_b)
             w = keyed([(0, {"w": 0}), (0.3, {"w": 1}), (0.55, {"w": 1}), (0.85, {"w": 0}), (1, {"w": 0})], u)["w"]
-            return chest - LEFT * 0.04 + (m - chest + LEFT * 0.04) * w
+            return chest + LEFT * (0.04 * out_b) + (m - chest - LEFT * (0.04 * out_b)) * w
         hands_path(r, fr, path)
         fr[-1] = fr[0].copy()
-        make("eat", fr, True)
+        make(eat, fr, True)
     if wanted("drink"):
         # Down on the haunches at the water: both hands cupped in it, up to the mouth, down again.
         fr = [crouch[i % (len(crouch) - 1)].copy() for i in range(61)]
@@ -1016,6 +1020,65 @@ def leaps(r, lib, only):
 
 
 RECIPES.append(leaps)
+
+
+# ---------------------------------------------------------------- missing limbs
+
+HOP_SPEED, HOP_FRAMES = 1.0, 15  # m/s at rate 1, one hop (0.5 s)
+
+
+def limbs(r, lib, only):
+    """A leg lost at the knee (the sim's only cut for legs): no crutch, so a hop on the good leg (planted, pushing off,
+    in the air while it swings through), the stump held up and swinging a little, the arms out for balance; and
+    standing on the one leg, swaying. `_l` is the left leg lost (hopping on the right). Eating with the left hand
+    for a right arm lost."""
+    out = []
+    for lost, good in (("Left", "Right"), ("Right", "Left")):
+        tag = lost[0].lower()
+        side = 1 if good == "Left" else -1  # the good leg's side of the body (+x is the left)
+        if not only or f"hop_{tag}" in only:
+            NOW[0] = f"hop_{tag}"
+            n = HOP_FRAMES
+            T = n / FPS
+            fr = []
+            for i in range(n + 1):
+                t = i / n
+                c = 2 * math.pi * t
+                p = from_numbers(r, {"lean": 8, f"leg_{lost}": 22 + 10 * math.sin(c), f"knee_{lost}": 75, f"knee_{good}": 6,
+                                     "arm_Left": 10 - 12 * math.sin(c) * side, "arm_Right": 10 + 12 * math.sin(c) * side,
+                                     "lower": 58, "elbow": 30})
+                if t < 0.55:  # on the foot: sinking into it, pushing off
+                    u = t / 0.55
+                    dz = -0.05 * math.sin(math.pi * u)
+                    y = -0.20 + HOP_SPEED * T * t
+                    z = 0.09
+                else:  # in the air, the foot swung through ahead
+                    v = (t - 0.55) / 0.45
+                    dz = 0.07 * math.sin(math.pi * v)
+                    e = v * v * (3 - 2 * v)
+                    y = (-0.20 + HOP_SPEED * T * 0.55) + (-0.20 - (-0.20 + HOP_SPEED * T * 0.55)) * e
+                    z = 0.09 + 0.06 * math.sin(math.pi * v) + dz
+                p.move_hips(Vector((side * 0.05, 0, dz - 0.02)))
+                place_foot(r, p, good, Vector((side * 0.07, y, z)), pole=FWD.copy())
+                fr.append(p)
+            fr[-1] = fr[0].copy()
+            out.append((f"hop_{tag}", fr, True, None))
+        if not only or f"stand_{tag}" in only:
+            fr = []
+            for i in range(61):
+                t = i / 60
+                c = 2 * math.pi * t
+                p = from_numbers(r, {"lean": 4, f"leg_{lost}": 18, f"knee_{lost}": 55, f"knee_{good}": 4,
+                                     "arm_Left": 8, "arm_Right": 8, "lower": 62 + 4 * math.sin(c), "elbow": 25})
+                p.move_hips(Vector((side * (0.06 + 0.01 * math.sin(c)), 0.01 * math.sin(2 * c), -0.01)))
+                place_foot(r, p, good, Vector((side * 0.06, -0.02, 0.09)), pole=FWD.copy())
+                fr.append(p)
+            fr[-1] = fr[0].copy()
+            out.append((f"stand_{tag}", fr, True, None))
+    return out
+
+
+RECIPES.append(limbs)
 
 
 

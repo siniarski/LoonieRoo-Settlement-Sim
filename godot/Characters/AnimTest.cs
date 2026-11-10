@@ -26,7 +26,7 @@ public partial class AnimTest : Node3D
 {
     /// <summary>One run: a name, the speed over time (m/s), the ground's slope (degrees, uphill along the walk),
     /// how long, which part is measured (from, to: seconds), and whether the near tier's foot IK is on.</summary>
-    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null);
+    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null, char oneLeg = ' ', bool armLost = false);
 
     const double DT = 1.0 / 60;
     const float HEEL_UP = 0.09f, BALL_UP = 0.02f, DOWN = 0.025f, WRIST_UP = 0.04f;
@@ -47,6 +47,7 @@ public partial class AnimTest : Node3D
     readonly Vector3[] last = new Vector3[2];
     readonly double[] stepSlide = new double[2];
     readonly List<double> slides = new();
+    double stumpWorst;
     Vector3 lastHeel, lastBall;
     double soleSum, soleWorstSink; int soleN;
     readonly StringBuilder report = new();
@@ -56,6 +57,9 @@ public partial class AnimTest : Node3D
     public partial class Probe : SkeletonModifier3D
     {
         public readonly Vector3[] Ankle = new Vector3[2], Ball = new Vector3[2], Wrist = new Vector3[2];
+        /// <summary>The left upper arm's line in the chest's frame (the chest's turn from its rest undone).</summary>
+        public Vector3 ArmInChest;
+        int chest = -1, arm = -1;
         int[] feet = { -1, -1 }, toes = { -1, -1 }, hands = { -1, -1 };
         public bool Fresh;
         public override void _ProcessModificationWithDelta(double delta)
@@ -65,6 +69,9 @@ public partial class AnimTest : Node3D
             if (feet[0] < 0) { feet = new[] { sk.FindBone("LeftFoot"), sk.FindBone("RightFoot") }; toes = new[] { sk.FindBone("LeftToes"), sk.FindBone("RightToes") }; hands = new[] { sk.FindBone("LeftHand"), sk.FindBone("RightHand") }; }
             var xf = sk.GlobalTransform;
             for (int k = 0; k < 2; k++) { Ankle[k] = xf * sk.GetBoneGlobalPose(feet[k]).Origin; Ball[k] = xf * sk.GetBoneGlobalPose(toes[k]).Origin; Wrist[k] = xf * sk.GetBoneGlobalPose(hands[k]).Origin; }
+            if (chest < 0) { chest = sk.FindBone("UpperChest"); arm = sk.FindBone("LeftUpperArm"); }
+            var turn = sk.GetBoneGlobalPose(chest).Basis.Orthonormalized() * sk.GetBoneGlobalRest(chest).Basis.Orthonormalized().Inverse();
+            ArmInChest = (turn.Inverse() * sk.GetBoneGlobalPose(arm).Basis.Y).Normalized();
             Fresh = true;
         }
     }
@@ -111,6 +118,11 @@ public partial class AnimTest : Node3D
             cases.Add(new Case($"dead walker 1.68 ({gait})", (x) => 1.68, 0, 5, 1.5, 5, false, dead: true, h: h));
         cases.Add(new Case("dead brute 1.25", (x) => 1.25, 0, 5, 1.5, 5, false, dead: true, variant: "brute"));
         cases.Add(new Case("dead runner 2.5", (x) => 2.5, 0, 5, 1.5, 5, false, dead: true, variant: "runner"));
+        // Missing limbs: a leg lost at the knee (the sim moves them at 2 m/s: 5 ticks a tile), only the good foot
+        // measured; an arm lost at the elbow, walking: how far its stump strays from held (the stump column).
+        cases.Add(new Case("left leg lost, 2.0", (x) => 2.0, 0, 5, 1.5, 5, false, oneLeg: 'l'));
+        cases.Add(new Case("left leg lost, standing", (x) => 0, 0, 4, 1.5, 4, false, oneLeg: 'l'));
+        cases.Add(new Case("left arm lost, walking 1.4", (x) => 1.4, 0, 5, 1.5, 5, false, armLost: true));
         cases.Add(new Case("dead crawler 1.45 (hands)", (x) => 1.45, 0, 5, 1.5, 5, false, dead: true, stance: "crawl", variant: "crawler"));
         foreach (double slope in new[] { 8.0, -8.0 })
         {
@@ -308,6 +320,15 @@ public partial class AnimTest : Node3D
         clipsUsed.Clear();
         slides.Clear();
         soleSum = soleWorstSink = 0; soleN = 0;
+        stumpWorst = 0;
+        // The stump hold for a lost arm (after: StumpHold.cs, as People.cs puts it on such a model; before: none).
+        var hold = skel.GetNodeOrNull<StumpHold>("StumpHold");
+        if (c.armLost && logic == "after" && hold == null)
+        {
+            skel.AddChild(hold = new StumpHold { Name = "StumpHold", Left = true });
+            skel.MoveChild(hold, probe.GetIndex());  // before the probe, which reads the pose as drawn
+        }
+        if (!c.armLost && hold != null) { skel.RemoveChild(hold); hold.QueueFree(); }
         for (int k = 0; k < 2; k++) { wasDown[k] = false; stepSlide[k] = 0; }
         footIk!.Enabled = false;
         footIk.Enabled = c.ik;
@@ -376,7 +397,7 @@ public partial class AnimTest : Node3D
         }
         else
         {
-            var p = People.LivingClip(ref eased, ref since, v, DT, c.stance, c.running, clip, turning);
+            var p = People.LivingClip(ref eased, ref since, v, DT, c.stance, c.running, clip, turning, c.oneLeg);
             (want, rate, blend) = (p.clip, p.rate, p.blend);
         }
         if (!player.HasAnimation(want)) want = "ual/ual_idle";
@@ -394,8 +415,14 @@ public partial class AnimTest : Node3D
     void Measure()
     {
         bool hands = cases[caseIndex].stance == "crawl";
+        if (cases[caseIndex].armLost)
+        {
+            float a = Mathf.RadToDeg(probe.ArmInChest.AngleTo(new Vector3(0.30f, -0.93f, 0.20f).Normalized()));
+            stumpWorst = Math.Max(stumpWorst, a);
+        }
         for (int k = 0; k < 2; k++)
         {
+            if (cases[caseIndex].oneLeg == 'l' && k == 0 || cases[caseIndex].oneLeg == 'r' && k == 1) continue;  // the lost one
             // A crawl's planted limbs are its hands: the wrist WRIST_UP over the ground when the palm is on it.
             var heel = hands ? probe.Wrist[k] - new Vector3(0, WRIST_UP, 0) : probe.Ankle[k] - new Vector3(0, HEEL_UP, 0);
             var ball = hands ? heel : probe.Ball[k] - new Vector3(0, BALL_UP, 0);
@@ -424,7 +451,8 @@ public partial class AnimTest : Node3D
     {
         for (int k = 0; k < 2; k++) if (wasDown[k] && stepSlide[k] > 0) slides.Add(stepSlide[k]);
         string F(double x) => (x * 100).ToString("0.0", CultureInfo.InvariantCulture);
-        string line = $"| {c.name} | {string.Join(", ", clipsUsed)} | {slides.Count} | {F(slides.Count > 0 ? slides.Average() : 0)} | {F(slides.Count > 0 ? slides.Max() : 0)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(soleWorstSink)} |";
+        string stump = c.armLost ? $" (the stump strays up to {stumpWorst:0} deg from held)" : "";
+        string line = $"| {c.name}{stump} | {string.Join(", ", clipsUsed)} | {slides.Count} | {F(slides.Count > 0 ? slides.Average() : 0)} | {F(slides.Count > 0 ? slides.Max() : 0)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(soleWorstSink)} |";
         report.AppendLine(line);
         GD.Print(line);
     }

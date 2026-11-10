@@ -448,6 +448,9 @@ public sealed partial class People
         parent.AddChild(root);
         // Lost limbs: the body and its clothes cut and capped (a pinned sleeve, a knotted trouser leg; the dead's torn), before the hair goes on.
         if (cut.Length > 1) StumpCut.Apply(root, cut[1].Split(','), subject == "zombie");
+        // An arm lost: its stump held close, whatever the clip does with that arm (StumpHold.cs).
+        if (cut.Length > 1 && cut[1].Contains("arm") && Find<Skeleton3D>(root) is Skeleton3D sk)
+            sk.AddChild(new StumpHold { Name = "StumpHold", Left = cut[1].Contains("armLeft"), Right = cut[1].Contains("armRight") });
         var m = new Model { root = root, look = look, variant = Looks.FaceOf(variant), path = path };
         m.body = m.lods = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToArray()).ToArray();
         var player = new AnimationPlayer();
@@ -501,7 +504,7 @@ public sealed partial class People
         if (m.forced != null) ForcedPlay(m);
         else Clip(m, w, stance, dead, delta);
         int lod = Lod(m, dist, vpHeight, w, dead, delta);
-        FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && stance is "stand" or "sneak");
+        FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && stance is "stand" or "sneak" && OneLeg(w.pose) == ' ');
     }
 
     /// <summary>Model m's skeleton and the bones its footfalls are read from, found once; false if it has no skeleton.</summary>
@@ -560,13 +563,13 @@ public sealed partial class People
         if (OneShot(m, w, stance, dead, delta)) return;
         if (!dead && stance is "stand" or "sneak" && w.action == "")
         {
-            if (BusyClip(w.pose.action) is string busy && w.pose.speed < Gaits.STILL)
+            if (BusyClip(w.pose.action, w.pose) is string busy && w.pose.speed < Gaits.STILL)
             {
                 m.speed += (w.pose.speed - m.speed) * Math.Min(1, delta * 25);
                 Play(m, busy, 1, 0.3);
                 return;
             }
-            var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, m.clip, m.turn);
+            var pick = LivingClip(ref m.speed, ref m.since, w.pose.speed, delta, stance, w.pose.running, m.clip, m.turn, OneLeg(w.pose));
             Play(m, pick.clip, pick.rate, pick.blend);
             return;
         }
@@ -603,10 +606,18 @@ public sealed partial class People
         Play(m, clip, rate, 0.25);
     }
 
-    /// <summary>The living's busy actions as clips (the controlled survivor's: PoseIntent.action), looping while they last.</summary>
-    static string? BusyClip(string? action) => action switch
+    /// <summary>A leg lost (the sim cuts legs at the knee): 'l' or 'r', else ' '. Both lost, the body crawls (the sim's crawler).</summary>
+    static char OneLeg(PoseIntent pose)
     {
-        "eat" => "more/eat", "drink" => "more/drink", "treat" => "more/treat", "search" => "more/search",
+        bool l = false, r = false;
+        foreach (var x in pose.lostLimbs) { l |= x.StartsWith("legLeft"); r |= x.StartsWith("legRight"); }
+        return l == r ? ' ' : l ? 'l' : 'r';
+    }
+
+    /// <summary>The living's busy actions as clips (the controlled survivor's: PoseIntent.action), looping while they last.</summary>
+    static string? BusyClip(string? action, PoseIntent pose) => action switch
+    {
+        "eat" => pose.lostLimbs.Any((l) => l.StartsWith("armRight")) ? "more/eat_left" : "more/eat", "drink" => "more/drink", "treat" => "more/treat", "search" => "more/search",
         "forage" => "more/forage", "cook" => "more/cook", _ => null,
     };
 
@@ -709,12 +720,18 @@ public sealed partial class People
     /// <summary>The living on their feet at sim speed `v` (m/s): `eased` follows it quickly (in about 0.04 s: the sim's
     /// speed changes at once, and a rate behind it slides the feet), the gait from Gaits.cs at a rate
     /// that keeps the planted foot still; standing, the idle, or a shuffle on the spot while `turning` (rad/s).</summary>
-    public static ClipPick LivingClip(ref double eased, ref double since, double v, double dt, string stance, bool running, string current, double turning)
+    public static ClipPick LivingClip(ref double eased, ref double since, double v, double dt, string stance, bool running, string current, double turning, char oneLeg = ' ')
     {
         eased += (v - eased) * Math.Min(1, dt * 25);
         since += dt;
         ClipPick pick;
-        if (v < Gaits.STILL)
+        if (oneLeg != ' ')
+        {
+            // A leg lost at the knee: standing on the other, or hopping on it (the sim moves them at a hobble's pace).
+            var hop = Gaits.InBandsPick($"more/hop_{oneLeg}", eased);
+            pick = v < Gaits.STILL ? new($"more/stand_{oneLeg}", 1, 0.25) : new(hop.clip, hop.rate, hop.blend);
+        }
+        else if (v < Gaits.STILL)
         {
             // Stopped (the sim stops at once): to standing, the stride held as it was while it cross-fades (its feet
             // don't run on; the near tier's foot IK steps them in), rather than slowing through the slower gaits.

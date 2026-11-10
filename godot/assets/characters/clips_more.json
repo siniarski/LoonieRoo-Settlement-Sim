@@ -195,6 +195,12 @@
       "loop": true
     },
     {
+      "name": "eat_left",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
       "name": "drink",
       "frames": 60,
       "seconds": 2.0,
@@ -247,6 +253,30 @@
       "frames": 24,
       "seconds": 0.8,
       "loop": false
+    },
+    {
+      "name": "hop_l",
+      "frames": 15,
+      "seconds": 0.5,
+      "loop": true
+    },
+    {
+      "name": "stand_l",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
+    },
+    {
+      "name": "hop_r",
+      "frames": 15,
+      "seconds": 0.5,
+      "loop": true
+    },
+    {
+      "name": "stand_r",
+      "frames": 60,
+      "seconds": 2.0,
+      "loop": true
     }
   ]
 }
