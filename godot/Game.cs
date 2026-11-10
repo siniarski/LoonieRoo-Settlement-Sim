@@ -12,6 +12,8 @@
 //   --load=path.json                       a save file instead; --arena=one|crowd a debug arena (the dead round you)
 //   --ticks=N                              run N ticks before showing it; --play then takes control of the first survivor
 //   --shot=path.png --frames=N             save a screenshot after N frames and quit
+//   --shot-at=5,10 --shot-scale=F|--shot-width=W   one picture per listed tick (path-5.png, path-10.png), smaller (a fraction, or W pixels wide)
+//   --trace[=K] --trace-near=R --textmap=R --textmap-at=T,..   the same run as text (GameText.cs); works under --headless
 //   --zoom=Z --paused --debug --map --colony --overview --build=category   the view to start with
 //   --look=DEG --pitch=DEG                 first person: which way you look (0 east, 90 south; pitch up)
 //   --at=X,Y                               put the survivor you control on tile X, Y (for screenshots; not a command)
@@ -28,6 +30,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Godot;
 using LoonieRoo.Game.Render;
 using LoonieRoo.Game.Ui;
@@ -146,7 +149,14 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         else if (args.TryGetValue("load", out var load)) Replace(Savefile.loadFile(System.IO.File.ReadAllText(load)), "the file");
         else Replace(new LoadResult { ok = true, state = Worldgen.createWorld(seed, size, settings), kind = "save" }, $"a new {size}×{size} world");
         if (args.TryGetValue("zoom", out var zoom)) view.camera.zoom = double.Parse(zoom);
-        if (args.TryGetValue("ticks", out var t)) Tick.step(state, int.Parse(t));
+        ParseTextOptions(args);
+        ParseShotOptions(args);
+        if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
+        if (args.TryGetValue("hold", out var hk)) holdKeys = hk.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries);
+        // With --trace or --textmap the ticks run tick by tick (GameText.cs), so they come after the placing and spawning below:
+        // the run then starts from the position and the animals you asked for.
+        int ticksArg = args.TryGetValue("ticks", out var t) ? int.Parse(t) : 0;
+        if (!TextRun && ticksArg > 0) Tick.step(state, ticksArg);
         if (args.TryGetValue("at", out var atArg) && ControlMod.controlled(state) is { } me)
         {
             var xy = atArg.Split(',');
@@ -158,12 +168,17 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // --play: a group start, playing its first survivor (to look at the others in first person).
         if (args.ContainsKey("play") && state.control == null && state.survivors.Count > 0) Command(new Command { type = "takeControl", survivorId = state.survivors[0].id });
         if (args.TryGetValue("animals", out var an)) SpawnAnimals(an, args.TryGetValue("animal-range", out var ar) ? double.Parse(ar, CultureInfo.InvariantCulture) : 3.5);
+        if (TextRun || shotAt != null) InitYaw();
+        if (TextRun)
+        {
+            TextRunTicks(ticksArg);
+            // Text only: nothing to draw, so don't open the game's frames at all.
+            if (shotPath == null && !selftest) { TextFinish(); GetTree().Quit(); return; }
+        }
         view.showDebug = args.ContainsKey("debug");
         view.showMap = args.ContainsKey("map");
         view.showOverview = args.ContainsKey("overview");
         view.colonyMode = args.ContainsKey("colony");
-        if (args.TryGetValue("look", out var lk)) lookArg = double.Parse(lk) * Math.PI / 180;
-        if (args.TryGetValue("hold", out var hk)) holdKeys = hk.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries);
         // The graphics options (Ui/Graphics.cs): the player's file, then the command line's for this run. A self-test or a shot sees the defaults.
         Graphics.Transient = selftest || shotPath != null;
         if (args.TryGetValue("view", out var vw)) Graphics.ViewOverride = (int)float.Parse(vw, CultureInfo.InvariantCulture);
@@ -411,7 +426,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         // Fixed timestep: speed changes how many ticks run per frame, never the tick length (rule 6).
         // No ticks while the menu or the map is up, or while someone has to carry on after you die.
         int ticks = 0;
-        if (!view.halted && !AwaitingHeir())
+        if (shotAt != null) AdvanceToShotTick(); // --shot-at: the sim only moves to the next listed tick, a tick at a time
+        else if (!view.halted && !AwaitingHeir())
         {
             accumulatorMs += Math.Min(frameMs, MAX_FRAME_MS) * view.speed;
             ticks = (int)Math.Floor(accumulatorMs / MS_PER_TICK);
@@ -438,7 +454,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
 
         UpdateInput(frameMs);
         if (view.selectedId != null && !state.survivors.Exists((x) => x.id == view.selectedId)) view.selectedId = null;
-        alpha = Math.Min(1, accumulatorMs / MS_PER_TICK);
+        alpha = shotAt != null ? 1 : Math.Min(1, accumulatorMs / MS_PER_TICK); // a --shot-at picture shows the tick itself, not a blend
         var you = ControlMod.controlled(state);
         // First person unless the M screen is up (the menu goes over it).
         bool fpScene = you != null && !view.mScreen(true);
@@ -484,18 +500,95 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     {
         if (shotFrameCount > 0 && frame == lastProcessed) shotBroken++;
         lastProcessed = frame;
-        if (++shotFrameCount == shotFrames) _ = SaveShot();
+        ++shotFrameCount;
+        if (shotAt != null) { ShotAtFrame(); return; }
+        if (shotFrameCount == shotFrames) _ = SaveShot();
     }
     int shotFrameCount, lastProcessed = -1, shotBroken;
 
     async System.Threading.Tasks.Task SaveShot()
     {
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        bool ok = WriteShot(shotPath!);
+        Finish(ok && shotBroken == 0 ? 0 : 1);
+    }
+
+    // --- --shot-at, --shot-scale, --shot-width: several pictures from one launch, smaller ones ---
+
+    /// <summary>--shot-at: the ticks to take a picture at (ascending), and how many are done.</summary>
+    List<int>? shotAt;
+    int shotAtDone;
+    /// <summary>The frame count when the sim got to the tick being waited for (-1: not yet), and frames to wait there so the picture catches up.</summary>
+    int shotReached = -1;
+    const int SHOT_SETTLE_FRAMES = 3;
+    bool shotCapturing, shotAllOk = true;
+    double? shotScale;
+    int? shotWidth;
+
+    void ParseShotOptions(Dictionary<string, string> args)
+    {
+        if (args.TryGetValue("shot-at", out var at))
+        {
+            var ticks = at.Split(',', StringSplitOptions.RemoveEmptyEntries).Select((x) => int.Parse(x, CultureInfo.InvariantCulture)).Distinct().OrderBy((x) => x).ToList();
+            if (shotPath == null) GD.Print("--shot-at needs --shot=out.png (the pictures are out-<tick>.png)");
+            else if (ticks.Count > 0) shotAt = ticks;
+        }
+        if (args.TryGetValue("shot-scale", out var sc)) shotScale = double.Parse(sc, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("shot-width", out var sw)) shotWidth = int.Parse(sw, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>--shot-at: each frame, run ticks (a few at a time, one by one) towards the next listed tick. Nothing else moves the sim.</summary>
+    void AdvanceToShotTick()
+    {
+        if (shotCapturing || shotAtDone >= shotAt!.Count) return;
+        for (int i = 0; i < 20 && state.tick < shotAt[shotAtDone]; i++) StepOne();
+    }
+
+    /// <summary>On the frame signal: at the listed tick, wait out the first --frames and a few frames for the picture to catch up, then take it.</summary>
+    void ShotAtFrame()
+    {
+        if (shotCapturing || shotAtDone >= shotAt!.Count) return;
+        if (state.tick < shotAt[shotAtDone]) { shotReached = -1; return; }
+        if (shotReached < 0) shotReached = shotFrameCount;
+        if (shotFrameCount >= shotFrames && shotFrameCount - shotReached >= SHOT_SETTLE_FRAMES) { shotCapturing = true; _ = SaveShotAt(shotAt[shotAtDone]); }
+    }
+
+    async System.Threading.Tasks.Task SaveShotAt(int tick)
+    {
+        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        string ext = System.IO.Path.GetExtension(shotPath!);
+        shotAllOk &= WriteShot(shotPath![..^ext.Length] + "-" + tick + (ext == "" ? ".png" : ext));
+        shotAtDone++;
+        shotReached = -1;
+        shotCapturing = false;
+        if (shotAtDone >= shotAt!.Count) Finish(shotAllOk && shotBroken == 0 ? 0 : 1);
+    }
+
+    /// <summary>Save the viewport as a picture, scaled down if --shot-scale or --shot-width say so. Says where, how big, and how many bytes.</summary>
+    bool WriteShot(string path)
+    {
+        if (DisplayServer.GetName() == "headless") { GD.Print("shot failed: --headless draws nothing; run without it (the text options work headless)"); return false; }
         var img = GetViewport().GetTexture().GetImage();
-        var err = img.SavePng(shotPath!);
-        GD.Print(err == Error.Ok ? $"shot: {shotPath}" : $"shot failed: {err}");
-        if (shotBroken > 0) GD.Print($"shot: {shotBroken} of {shotFrames} frames threw in _Process (the exception is above)");
-        GetTree().Quit(err == Error.Ok && shotBroken == 0 ? 0 : 1);
+        int w = img.GetWidth(), h = img.GetHeight();
+        double f = shotWidth is { } sw ? (double)sw / w : shotScale ?? 1;
+        if (f > 0 && f < 1)
+        {
+            w = Math.Max(1, (int)Math.Round(w * f));
+            h = Math.Max(1, (int)Math.Round(h * f));
+            img.Resize(w, h, Image.Interpolation.Lanczos);
+        }
+        var err = img.SavePng(path);
+        long bytes = err == Error.Ok ? new System.IO.FileInfo(path).Length : 0;
+        GD.Print(err == Error.Ok ? $"shot: {path} {w}x{h} {bytes / 1024} KB" : $"shot failed: {err}");
+        if (shotBroken > 0) GD.Print($"shot: {shotBroken} of {shotFrameCount} frames threw in _Process (the exception is above)");
+        return err == Error.Ok;
+    }
+
+    /// <summary>The end of a --shot run: the text options' final map, then quit with the exit code.</summary>
+    void Finish(int code)
+    {
+        TextFinish();
+        GetTree().Quit(code);
     }
 
     public override void _Draw()
