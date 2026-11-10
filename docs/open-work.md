@@ -150,10 +150,16 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   parked car is a barricade the dead can't break or climb** (they go round, or stand at it if there is no way
   round: a car across a gate seals it; Zomboid plays the same, but it is the player's call); the car you are
   sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
-  the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); you can't
-  jump onto or over a car; a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
+  the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
   turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
   call whether cars should be faster now that they are car-sized).
+  You go over and onto parked cars (CarLeaps.cs, log/2026-11-11-08-your-leaps.md). Left: **to settle when the dead's
+  climbing merges**: on a roof the dead reach you by distance as on the ground (from beside the car, height not
+  counted), so a roof is no refuge; if they now climb cars, one on the roof with you is the same rule. Also left: no
+  hand on the car as you climb or slide (People.Leap.cs puts a hand only on sills and barricades); the landing sound
+  is the ground's, on a roof too; the truck's bed has no sides to walk into; a car's top is a profile along its length
+  only (its sides as high as its middle); dropping something on a roof puts it on the ground under the car; you can't
+  step from one car's roof onto another's.
 - The driver's seat (log/2026-11-11-05-drivers-seat.md): Left: no hands on the wheel and no body in the seat; the
   mirrors are grey glass (nothing reflects); no windscreen glass, rain on it or wipers working; doors don't open
   as you get in; the tachometer and odometer are the view's (a trip is forgotten on a reload); the speedometer's

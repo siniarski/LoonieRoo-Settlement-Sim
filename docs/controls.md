@@ -7,7 +7,16 @@ the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 
 You see through your survivor's eyes. The mouse looks; WASD walks the way you face (strafing with A and D); Shift
 runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings; right-click
-or E uses what you look at on the ground beside you (else what's in front). Tab opens the inventory (bag, what's
+or E uses what you look at on the ground beside you (else what's in front).
+
+**Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
+(W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof
+(through the cabin, side to side or nose to tail), over a pickup's bed behind its cab. Standing still facing it, Space
+climbs **onto** it; walking into one whose far side has no room (a wall, another car) climbs onto it too. All of these
+cost more endurance than a vault, and winded you can do none of them. **On top** you walk about within the car (the
+eye is higher: 1.28 m more on a sedan's roof, 1.75 m on a pickup's cab); walking off an edge steps you down where
+there is room below, else you stop at the edge; Space jumps down on your way, or where you stand if there is no room
+below. You can get into the car from its roof. The dead reach you up there as on the ground: from beside the car. Tab opens the inventory (bag, what's
 beside you, your card; the mouse is let go). M opens the map screen (tabs: Map, Colony, Back); B, P or O open the
 Colony tab. Esc opens the menu. The map and the menu pause; the Colony tab plays on. There is no pause key.
 
@@ -63,7 +72,7 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
   ms), Esc cancels then opens the menu.
 - **Direct control** (F on the selected survivor, F again to let go) starts in survivor mode, with the colony's
   management put away; B, P or O bring it out (build, priorities, overview, neighbour and visitor panels).
-- WASD/arrows walk (8 ways), Shift run, Space jump (vault, hop), C sneak, the mouse aims, click swing or shoot (a
+- WASD/arrows walk (8 ways), Shift run, Space jump (vault, hop; over or onto a parked car), C sneak, the mouse aims, click swing or shoot (a
   swing at glass in front breaks it).
 - Right-click or E use: pick up, wear, eat, drink, sleep, treat yourself, search, smash a window, get in or out of a
   car (a moment each way: walking off stops it), fill a car from a fuel can. U opens or shuts the boot of the car

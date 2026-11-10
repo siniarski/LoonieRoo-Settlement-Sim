@@ -27,7 +27,8 @@ public sealed partial class People
     static (string clip, double at) LeapClip(string what, double t)
     {
         // A vault: its own clip (derive_clips.py: a tuck, the legs swung out to the left over the edge, down and through).
-        if (what == "vault") return ("more/vault", VAULT_LENGTH * Smooth(t));
+        // Over a car (CarLeaps.cs) is a vault too: the legs swung out over the bonnet, the boot or the roof.
+        if (what == "vault" || what == "over") return ("more/vault", VAULT_LENGTH * Smooth(t));
         // The start clip from 0.07 s (past its one crouched frame) to a light tuck (0.22 s) for a jump, the deepest (0.33 s) else.
         // (more/: the library's jump clips with the arms held in, 2026-11-10: they flung them wide.)
         double tuck = what == "jump" ? 0.22 : 0.33;
@@ -73,10 +74,9 @@ public sealed partial class People
         if (leaping && !ReferenceEquals(b, l.busy)) { l.what = b!.what; l.land = 0; StartHands(m, l, state, you, b, leftFree, rightFree); }
         l.busy = leaping ? b : null;
         m.forced = null;
-        double lift = 0;
+        double lift = Leaps.height(state, you, alpha);  // a leap's arc, or the top of the car you stand on (CarLeaps.cs)
         if (leaping)
         {
-            lift = Leaps.lift(b, alpha);
             double t = b!.duration < 2 ? 1 : Math.Clamp((b.progress - 1 + alpha) / (b.duration - 1), 0, 1);
             var (clip, at) = LeapClip(l.what, t);
             m.forced = clip;

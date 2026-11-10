@@ -1,5 +1,6 @@
 // Leaps (Space in first person): jump, vault or hop, whichever is in front of you. A short busy
-// action under direct control (control.busy.what: jump | vault | hop) that carries you in a
+// action under direct control (control.busy.what: jump | vault | hop, and over | climb | down at a
+// parked car: CarLeaps.cs) that carries you in a
 // straight line for a few ticks:
 //   vault  through a broken window, or over a barricade, on the tile edge just ahead (within
 //          LEAP_REACH of it): VAULT_TICKS, where climbing through a frame goes at a crawl
@@ -14,10 +15,12 @@
 // (pos) follows you only onto ground you could stand on (not the water under a hop).
 // Each costs endurance; winded, you can't. The sim has no heights that block, so a step up is
 // just a jump (the renderer's ground eases the view up a kerb or a rise).
+// A parked car is the one thing you get over or onto (2026-11-11): over it, onto it, standing on it
+// and down off it are CarLeaps.cs (part of Leaps), tried before the vault and the hop.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
-public static class Leaps
+public static partial class Leaps
 {
     public const int JUMP_TICKS = 6, VAULT_TICKS = 4, HOP_TICKS = 6;
     public const int JUMP_COST = 4, VAULT_COST = 6, HOP_COST = 6;
@@ -31,7 +34,7 @@ public static class Leaps
     /// <summary>Highest point of each (metres over the ground, for the renderer's arc).</summary>
     public const double JUMP_HEIGHT = 0.35, VAULT_HEIGHT = 0.55, HOP_HEIGHT = 0.45;
 
-    public static bool isLeap(string? what) => what is "jump" or "vault" or "hop";
+    public static bool isLeap(string? what) => what is "jump" or "vault" or "hop" or "over" or "climb" or "down";
 
     public static bool airborne(Control c) => isLeap(c?.busy?.what);
 
@@ -44,6 +47,7 @@ public static class Leaps
         if (BodyMod.isWinded(s)) return "too winded to jump";
         bool steering = c.dx != 0 || c.dy != 0;
         var ahead = side(steering ? new Point { x = Js.I(c.dx), y = Js.I(c.dy) } : ControlMod.swingDir(c));
+        if (carLeap(state, s, c, ahead, steering)) return null;
         string what = "jump";
         Point land = null;
         string note = "jumped";
@@ -136,17 +140,22 @@ public static class Leaps
         var b = Js.NN(c.busy);
         b.progress += 1;
         var xy = b.targetId.Split(',');
+        bool car = xy.Length >= CAR_PARTS;
         double tx = double.Parse(xy[0], System.Globalization.CultureInfo.InvariantCulture), ty = double.Parse(xy[1], System.Globalization.CultureInfo.InvariantCulture);
         double left = JsMath.max(1, b.duration - b.progress + 1);
         var dx = JsMath.trunc((tx - s.at.x) / left);
         var dy = JsMath.trunc((ty - s.at.y) / left);
-        if (b.what == "jump")
+        if (b.what == "jump" && !car)
         {
+            var was = s.at;
             s.at = Motion.slide(state.grid, s.at, dx, dy, Motion.fits(state.grid, s.at, Pathfinding.FREE) ? Pathfinding.FREE : Pathfinding.SURVIVOR);
+            // A parked car stops a jump at its body, as it stops walking (VehicleParking.cs pushOut).
+            var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
+            if (off.x != s.at.x || off.y != s.at.y) s.at = Motion.fits(state.grid, off, Pathfinding.FREE) ? off : was;
         }
         else
         {
-            // Over the sill or the water: the landing was checked to fit at take-off.
+            // Over the sill, the water or a car: the landing was checked to fit at take-off.
             s.at = new Point { x = Js.I(s.at.x + dx), y = Js.I(s.at.y + dy) };
         }
         var tile = Motion.tileOf(s.at);
@@ -155,7 +164,11 @@ public static class Leaps
             s.pos = tile;
             Survivors.enterTile(state, s);
         }
-        if (b.progress >= b.duration) c.busy = null;
+        if (b.progress >= b.duration)
+        {
+            c.busy = null;
+            if (car) landed(state, s, c, b.what, xy[2]);
+        }
     }
 
     /// <summary>Your feet over the ground (metres) at a moment of the leap: an arc, up and down over the ticks the renderer sees it (busy is gone on the landing tick). `alpha` is the renderer's blend into the tick, 0..1.</summary>

@@ -1235,6 +1235,7 @@ public static partial class Commands
                 return unchanged();
             }
             var was = ControlMod.controlled(state);
+            Leaps.letGo(state);  // off any car's roof, out of any leap
             state.control = null;
             if (Js.T(was))
             {
@@ -1261,6 +1262,7 @@ public static partial class Commands
         {
             return reject($"{Js.Str(survivor.name)} is a child");
         }
+        Leaps.letGo(state);  // whoever you were, off any car's roof
         dropEverything(state, survivor, "you");
         survivor.goal = null;
         survivor.path = [];

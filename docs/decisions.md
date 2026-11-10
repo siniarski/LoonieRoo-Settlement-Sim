@@ -124,6 +124,19 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
   *Why:* Locking/factions deferred
 - **Roads.** Road and bridge tiles are a tick quicker to walk (min 2 a tile)
   *Why:* Roads matter a little
+- **Over and onto parked cars (2026-11-11).** Space at a parked car within CAR_REACH (320 SUB, a swing's reach: walking
+  into a car's end stops you at its tiles, most of a tile short of its body) goes over it when you are walking into it
+  and a body fits past the far side, and climbs onto it when you are standing still (or there is no room past it). No
+  new key: walking into a thing to go over it and standing to climb it is how a body does it. The kind of crossing (a
+  slide over the bonnet or boot, the bed, the roof) is where your line crosses the car along its length; the landing is
+  fixed and checked at take-off, in integers. On top is one plain field, `control.onCar` (the car's id), kept right at
+  the start of each controlled tick (`Leaps.settle`): the car gone, driven, got into, or you off its body, and you are put
+  where a body fits. No schema bump: the field is null on the ground and left out of the save then, and a save without
+  it reads the same. The car's top is a profile of heights along its length from the models' sizes, read only by the
+  view (`Leaps.height`). The dead reach you on a roof by distance, as on the ground: a roof is a lookout, not a refuge
+  *Why:* The player asked to get over the things a person plainly could; a parked car (solid since the same day) was
+  the one thing that stopped you that a person climbs. The simplest rule for the dead keeps the two branches (theirs
+  and this) independent until they merge
 
 ## Jobs, building and hauling
 

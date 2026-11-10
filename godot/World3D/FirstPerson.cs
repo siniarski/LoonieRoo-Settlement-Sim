@@ -144,7 +144,7 @@ public sealed partial class FirstPerson : Node3D
         }
         var p = worldPos(you, alpha);
         float h = you.sleep?.asleep == true ? EYE_ASLEEP : state.control?.sneaking == true ? EYE_SNEAK : EYE;
-        h += (float)Leaps.lift(state.control?.busy, alpha); // a jump, vault or hop: up and down over its ticks
+        h += (float)Leaps.height(state, you, alpha); // a leap up and down over its ticks, or the top of the car you stand on
         return (new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + h, (float)p.y), false, 0);
     }
 

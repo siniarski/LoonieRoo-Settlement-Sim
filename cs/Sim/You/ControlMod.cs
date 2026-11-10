@@ -116,6 +116,7 @@ public static partial class ControlMod
     public static void updateControlled(SimState state, Survivor s)
     {
         var c = Js.NN(state.control);
+        Leaps.settle(state, s, c);  // still on the car you stand on? (CarLeaps.cs)
         if (Js.T(Vehicles.vehicleOf(state, s)))
         {
             if (c.busy?.what == "getOut")
@@ -149,6 +150,11 @@ public static partial class ControlMod
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
             }
             var v = Motion.toward(c.dx, c.dy, stepLength(state, s, c, Js.T(run)));
+            if (Leaps.carOf(state, c) is { } car)
+            {
+                Leaps.walkOnTop(state, s, c, car, v);  // on a car's roof: within its body, or a step down (CarLeaps.cs)
+                return;
+            }
             var stood = s.at;
             s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
             // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body

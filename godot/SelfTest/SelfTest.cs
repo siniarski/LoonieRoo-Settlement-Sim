@@ -213,6 +213,7 @@ public partial class Game
         await FireSteps();
         await WorldSteps();
         await CarSteps();
+        await RoofSteps();
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
