@@ -70,4 +70,30 @@ public class BuildingLoot
         Directory.CreateDirectory(Path.Combine(Node.Root, "cs/Harness/out"));
         File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/building-loot.txt"), string.Join("\n", out_) + "\n");
     }
+
+    /// <summary>Where the buildings are (for pictures): SEED, SIZE; each lot's first building, its style, its front
+    /// door's map tile and facing, its distance from the start. Report: cs/Harness/out/building-sites.txt</summary>
+    [Fact(DisplayName = "building sites")]
+    public void Sites()
+    {
+        double seed = double.Parse(Env("SEED") ?? "42");
+        int size = int.Parse(Env("SIZE") ?? "256");
+        var l = Worldgen.layout(seed, size, "mainland");
+        var out_ = new List<string> { $"seed {seed} size {size} start {l.start.x},{l.start.y}" };
+        var seen = new HashSet<double>();
+        for (int cy = 0; cy < size / Worldgen.CHUNK; cy++)
+            for (int cx = 0; cx < size / Worldgen.CHUNK; cx++)
+                foreach (var id in l.regions.LotsInChunk(cx, cy))
+                {
+                    if (!seen.Add(id)) continue;
+                    var lot = l.regions.Lot(id);
+                    foreach (var b in Lots.layoutLot(seed, lot).buildings)
+                    {
+                        var f = b.plan.front == null ? null : Lots.planToMap(b, b.plan.front.ax, b.plan.front.ay);
+                        double d = Math.Sqrt(Math.Pow(b.ox - l.start.x, 2) + Math.Pow(b.oy - l.start.y, 2));
+                        out_.Add($"{d,5:0} {b.plan.kind,-9} {b.plan.style,-9} rect {b.ox},{b.oy} {b.plan.w}x{b.plan.h} facing {b.facing} door {(f == null ? "-" : $"{f.x},{f.y}")} zone {lot.zone} rooms {string.Join(" ", b.plan.rooms)}");
+                    }
+                }
+        File.WriteAllText(Path.Combine(Node.Root, "cs/Harness/out/building-sites.txt"), string.Join("\n", out_) + "\n");
+    }
 }
