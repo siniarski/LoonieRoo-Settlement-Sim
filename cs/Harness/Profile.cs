@@ -5,7 +5,7 @@
 // Keep the replay in step with Tick.tick and Tick.behave (it must call the same things in the same order).
 // Env: SCENES=a,b (default all), TICKS (measured ticks per scene, 300), WARM (warm-up ticks, 20: as the stress test).
 //
-// "tick dumps": the states of fixed scenes (four seeds, a generated 512 world and a crowded 128) at several ticks, as
+// "tick dumps": the states of fixed scenes (four seeds: a generated 512 world, a crowded 128, a 512 ringed by the dead) at several ticks, as
 // JSON files (DUMP=folder), for checking that a speed change moves nothing: compare two runs' files byte for byte.
 
 using System.Collections.Concurrent;
@@ -101,7 +101,8 @@ public class Profile
     {
         Time.setDayScale(state.settings.dayScale);
         S("movers.was", state, (st) => { foreach (var e in Js.Iter(Tick.movers(st))) e.was = new Point { x = Js.I(e.at.x), y = Js.I(e.at.y) }; });
-        S("Zombies.updateZombies", state, Zombies.updateZombies);
+        if (Env("DEEP") == "zombies") ReplayZombies(state);
+        else S("Zombies.updateZombies", state, Zombies.updateZombies);
         S("FireMod.updateFires", state, FireMod.updateFires);
         S("Corpses.updateCorpses", state, Corpses.updateCorpses);
         S("Water.updateCollectors", state, Water.updateCollectors);
@@ -177,6 +178,128 @@ public class Profile
         S("movers.syncStep", state, (st) => { foreach (var e in Js.Iter(Tick.movers(st))) if (!Tick.isFree(st, e)) Motion.syncStep(e); });
         S("Fog.updateFog", state, Fog.updateFog);
         state.tick = Js.I(state.tick + 1);
+    }
+
+    // Zombies.updateZombies, updateAll and updateZombie step by step (DEEP=zombies).
+    void ReplayZombies(SimState state)
+    {
+        if (!Time.isNight(state.tick))
+        {
+            S("z: dawn leavers", state, (st) =>
+            {
+                st.zombiesTonight = null;
+                var n = st.zombies.filter((z) => z.kind == "night" || z.kind == "raider").length;
+                if (n > 0)
+                {
+                    st.zombies = st.zombies.filter((z) => !(z.kind == "night" || z.kind == "raider"));
+                    Events.logEvent(st, $"{Js.Str(n)} zombie{Js.Str((n == 1) ? Js.Str("") : Js.Str("s"))} shambled off at dawn");
+                }
+            });
+        }
+        else
+        {
+            S("z: night spawns", state, (st) =>
+            {
+                var night = Js.NN(Time.nightNumber(st.tick));
+                if (Time.ticksIntoNight(st.tick) == 0)
+                {
+                    st.zombiesTonight = JsMath.max(1, Difficulty.zombieScale(st, JsMath.round(((double)(((double)(((double)(Zombies.zombiesForNight(night, st.survivors.length)) * (Director.threatScale(st)))) * (EndgameMod.siegeFactor(st, night)))) * ((st.harsh ? Zombies.groupShare(st.survivors.length) : 1))))));
+                    var siege = EndgameMod.siegeFactor(st, night) > 1;
+                    Events.logEvent(st, $"Night {Js.Str(night)} falls: {Js.Str(st.zombiesTonight)} zombies expected{Js.Str(siege ? Js.Str(" (a SIEGE night)") : Js.Str(""))}");
+                }
+                var arriving = JsMath.min(Zombies.spawnsAt(st.tick, Zombies.tonight(st, night)), Zombies.MAX_ZOMBIES - st.zombies.length);
+                if (arriving > 0) Zombies.spawnGroup(st, arriving, Zombies.zombieHealthForNight(night));
+            });
+        }
+        S("z: Hordes.updateHordes", state, Hordes.updateHordes);
+        var budget = F("z: survivorsNear", () => new Budget { plans = Zombies.PLANS_PER_TICK, near = Zombies.survivorsNear(state) });
+        foreach (var z in Js.Iter(state.zombies)) ReplayZombie(state, z, budget);
+        S("z: pushApart", state, Zombies.pushApart);
+        S("z: headings", state, (st) =>
+        {
+            foreach (var z in Js.Iter(st.zombies))
+                if ((Js.T((z.kind == "static") && Js.T(z.heading))) && (Space.manhattan(z.pos, z.heading) <= 1)) z.heading = null;
+            bool gone(Zombie z) => ((Js.T((z.kind == "herd") && Js.T(z.heading))) && (Space.manhattan(z.pos, z.heading) <= 1)) && !Js.T(z.move);
+            if (st.zombies.some((z) => gone(z))) st.zombies = st.zombies.filter((z) => !gone(z));
+        });
+    }
+
+    void ReplayZombie(SimState state, Zombie z, Budget budget)
+    {
+        z.cooldown = JsMath.max(0, z.cooldown - 1);
+        z.move = null;
+        Motion.followTile(z, 1);
+        if (state.tick < z.stuckUntil || state.tick < z.staggerUntil) return;
+        bool done = F("zz: reach and attack", () =>
+        {
+            Survivor? victim = null, first = null;
+            foreach (var s in Js.Iter(budget.near(z.at)))
+            {
+                if ((JsMath.abs(s.at.x - z.at.x) > Motion.REACH) || (JsMath.abs(s.at.y - z.at.y) > Motion.REACH)) continue;
+                if (Motion.inReach(s, z, Motion.REACH, state.grid))
+                {
+                    first ??= s;
+                    if (victim == null && s.id == z.targetId) victim = s;
+                }
+            }
+            victim ??= first;
+            if (Js.T(victim))
+            {
+                if (z.windup > 0)
+                {
+                    z.windup -= 1;
+                    if ((z.windup == 0) && !Vehicles.batterVehicle(state, victim)) Zombies.hit(state, z, victim);
+                }
+                else if (z.cooldown == 0) z.windup = Zombies.WINDUP_TICKS;
+                return true;
+            }
+            if (z.windup > 0)
+            {
+                z.windup = 0;
+                z.cooldown = Zombies.WINDUP_TICKS;
+            }
+            Dog? dog = null;
+            foreach (var d in state.dogs) if (Motion.inReach(d, z, Motion.REACH, state.grid)) { dog = d; break; }
+            if (Js.T(dog))
+            {
+                if (z.cooldown == 0)
+                {
+                    Dogs.hitDog(state, dog, (z.kind == "raider") ? Visitors.RAIDER_DAMAGE : Zombies.ZOMBIE_DAMAGE);
+                    z.cooldown = Zombies.ZOMBIE_ATTACK_EVERY;
+                }
+                return true;
+            }
+            return false;
+        });
+        if (done) return;
+        var speed = JsMath.ceil(((double)(Motion.SUB) / (Js.Get(ZombieKinds.VARIANTS, z.variant).ticksPerTile)));
+        if (F("zz: enter", () => Zombies.enter(state, z))) return;
+        var target = F("zz: chaseTarget", () => Zombies.chaseTarget(state, z));
+        var horde = Hordes.getHorde(state, z.hordeId);
+        var planned = false;
+        if (Js.T(horde) && (z.path.length == 0))
+        {
+            if (!Js.T(target))
+            {
+                var step = F("zz: hordeStep", () => Hordes.hordeStep(state, z, horde));
+                z.path = Js.T(step) ? ((List<Point>)[step]) : ((List<Point>)[]);
+            }
+        }
+        else if (((state.tick >= z.nextThinkTick) || ((z.path.length == 0) && !Js.T(target))) && (budget.plans > 0))
+        {
+            budget.plans -= 1;
+            S("zz: plan", state, (st) => Zombies.plan(st, z));
+            z.nextThinkTick = state.tick + Zombies.REPATH_EVERY;
+            planned = true;
+            target = F("zz: chaseTarget", () => Zombies.chaseTarget(state, z));
+        }
+        if (Js.T(target))
+        {
+            S("zz: chase", state, (st) => Zombies.chase(st, z, target, speed));
+            return;
+        }
+        if (planned) S("zz: aimAhead", state, (st) => Zombies.aimAhead(st, z));
+        S("zz: followPath", state, (st) => Zombies.followPath(st, z, speed));
     }
 
     void Behave(SimState state, Survivor s)
@@ -264,6 +387,7 @@ public class Profile
         {
             ("gen512", (seed) => Crowd(seed, 512, 3, 30, true)),
             ("crowd128", (seed) => Crowd(seed, 128, 50, 150, false)),
+            ("ring512", (seed) => Crowd(seed, 512, 30, 400, false)),
         };
         foreach (var (kind, build) in kinds)
             foreach (var seed in seeds)

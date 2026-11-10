@@ -110,18 +110,18 @@ public static partial class Zombies
         var b = buckets.get(list);
         if ((!Js.T(b) || (b.tick != state.tick)) || (b.edit != edit))
         {
-            var cells = new JsMap<double, List<Zombie>>();
+            // A plain dictionary: only looked up, never iterated.
+            var cells = new Dictionary<double, List<Zombie>>(list.Count);
             foreach (var z in Js.Iter(list))
             {
                 var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-                var at = cells.get(k);
-                if (Js.T(at))
+                if (cells.TryGetValue(k, out var at))
                 {
                     at.push(z);
                 }
                 else
                 {
-                    cells.set(k, [z]);
+                    cells[k] = [z];
                 }
             }
             b = new BucketsEntry { tick = state.tick, edit = edit, cells = cells };
@@ -137,7 +137,7 @@ public static partial class Zombies
                 {
                     continue;
                 }
-                if (b.cells.get(((double)(y) * (width)) + x) is { } cell) foreach (var z in Js.Iter(cell))
+                if (b.cells.GetValueOrDefault(((double)(y) * (width)) + x) is { } cell) foreach (var z in Js.Iter(cell))
                 {
                     if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
                     {
@@ -369,31 +369,55 @@ public static partial class Zombies
         var length = list.length;
         var __d2 = state.grid;
         var width = __d2.width;
-        var order = new JsMap<Survivor, double>();
-        var cells = new JsMap<double, List<Survivor>>();
-        list.forEach((s, i) =>
+        // Plain dictionaries: only looked up, never iterated.
+        var order = new Dictionary<Survivor, double>(length);
+        var cells = new Dictionary<double, List<Survivor>>(length);
+        for (int i = 0; i < list.Count; i++)
         {
-            order.set(s, i);
+            var s = list[i];
+            order[s] = i;
             var t = Motion.tileOf(s.at);
             var k = ((double)(t.y) * (width)) + t.x;
-            var at = cells.get(k);
-            if (Js.T(at))
+            if (cells.TryGetValue(k, out var at))
             {
                 at.push(s);
             }
             else
             {
-                cells.set(k, [s]);
+                cells[k] = [s];
             }
-        });
+        }
+        Comparison<Survivor> byOrder = (a, b) => order[a].CompareTo(order[b]);
+        // Every tile within 2 (each way) of a bucket, so a tile with nobody near costs one lookup, not 25. A bucket's
+        // key k is found from tile (tx, ty) exactly when (k mod width, k div width) is within 2 of it each way. Only
+        // worth making when the dead outnumber the buckets (it costs 25 entries a bucket); null: look every time.
+        HashSet<long>? near = state.zombies.Count > cells.Count ? new HashSet<long>(cells.Count * 25) : null;
+        if (near != null) foreach (var k in cells.Keys)
+        {
+            var ky = JsMath.floor(k / width);
+            int kx = (int)(k - ky * width);
+            for (var dy = -2; dy <= 2; dy++)
+            {
+                for (var dx = -2; dx <= 2; dx++)
+                {
+                    near.Add(tileKey(kx + dx, (int)ky + dy));
+                }
+            }
+        }
+        // One list for every call, emptied each time: read it before the next call.
+        List<Survivor> found = [];
         return (at) =>
         {
             if ((state.survivors != list) || (list.length != length))
             {
                 return list;
             }
-            var t = Motion.tileOf(at);
-            List<Survivor> found = [];
+            Point t = new(Js.I(JsMath.floor(((double)(at.x) / (Motion.SUB)))), Js.I(JsMath.floor(((double)(at.y) / (Motion.SUB))))); // Motion.tileOf
+            found.Clear();
+            if ((near != null) && !near.Contains(tileKey(t.x, t.y)))
+            {
+                return found;
+            }
             for (var dy = -2; dy <= 2; dy++)
             {
                 for (var dx = -2; dx <= 2; dx++)
@@ -403,8 +427,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    var c = cells.get(((double)((t.y + dy)) * (width)) + x);
-                    if (Js.T(c))
+                    if (cells.TryGetValue(((double)((t.y + dy)) * (width)) + x, out var c))
                     {
                         found.pushAll(c);
                     }
@@ -412,11 +435,14 @@ public static partial class Zombies
             }
             if (found.length > 1)
             {
-                found.sort((a, b) => Js.NN(order.get(a)) - Js.NN(order.get(b)));
+                // By place in the list: distinct whole numbers, so any sort gives the one order.
+                found.Sort(byOrder);
             }
             return found;
         };
     }
+
+    static long tileKey(int x, int y) => ((long)y << 32) | (uint)x;
 
     public static void updateZombie(SimState state, Zombie z, Budget budget)
     {
@@ -432,7 +458,8 @@ public static partial class Zombies
             return;
         }
         {
-            List<Survivor> reachable = [];
+            // The target if in reach, else the first in reach (no list made: most zombies have nobody in reach).
+            Survivor? victim = null, first = null;
             foreach (var s in Js.Iter(budget.near(z.at)))
             {
                 if ((JsMath.abs(s.at.x - z.at.x) > Motion.REACH) || (JsMath.abs(s.at.y - z.at.y) > Motion.REACH))
@@ -441,10 +468,11 @@ public static partial class Zombies
                 }
                 if (Motion.inReach(s, z, Motion.REACH, state.grid))
                 {
-                    reachable.push(s);
+                    first ??= s;
+                    if (victim == null && s.id == z.targetId) victim = s;
                 }
             }
-            var victim = reachable.find((s) => s.id == z.targetId) ?? Js.Get(reachable, 0);
+            victim ??= first;
             if (Js.T(victim))
             {
                 if (z.windup > 0)
@@ -466,7 +494,15 @@ public static partial class Zombies
                 z.windup = 0;
                 z.cooldown = WINDUP_TICKS;
             }
-            var dog = state.dogs.find((d) => Motion.inReach(d, z, Motion.REACH, state.grid));
+            Dog? dog = null;
+            foreach (var d in state.dogs)
+            {
+                if (Motion.inReach(d, z, Motion.REACH, state.grid))
+                {
+                    dog = d;
+                    break;
+                }
+            }
             if (Js.T(dog))
             {
                 if (z.cooldown == 0)
@@ -785,21 +821,25 @@ public static partial class Zombies
         var __d4 = state.grid;
         var width = __d4.width;
         var height = __d4.height;
-        var buckets = new JsMap<double, List<Zombie>>();
+        // Plain dictionaries: only looked up, never iterated.
+        var buckets = new Dictionary<double, List<Zombie>>(state.zombies.Count);
         foreach (var z in Js.Iter(state.zombies))
         {
             var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-            var list = buckets.get(k);
-            if (Js.T(list))
+            if (buckets.TryGetValue(k, out var list))
             {
                 list.push(z);
             }
             else
             {
-                buckets.set(k, [z]);
+                buckets[k] = [z];
             }
         }
-        var others = new JsMap<double, List<PushApartOthers>>();
+        // The others by tile, and (othersAround) each listed under every in-grid tile within 1 of the tile its key names:
+        // the ones a zombie on an in-grid tile meets, in one lookup instead of nine (sorted by order after, as before).
+        var others = new Dictionary<double, List<PushApartOthers>>();
+        // Worth making only when the dead outnumber the others (it costs nine entries for each); null: look every time.
+        var othersAround = state.zombies.Count > (state.survivors.Count + state.residents.Count + state.dogs.Count + state.animals.Count) ? new Dictionary<double, List<PushApartOthers>>() : null;
         double order = 0;
         foreach (var list in new List<IEnumerable<Body>> { state.survivors, state.residents, state.dogs, state.animals })
         {
@@ -807,14 +847,45 @@ public static partial class Zombies
             {
                 var k = ((double)(s.pos.y) * (width)) + s.pos.x;
                 PushApartOthers entry = new PushApartOthers { s = s, order = order++ };
-                var at = others.get(k);
-                if (Js.T(at))
+                if (others.TryGetValue(k, out var at))
                 {
                     at.push(entry);
                 }
                 else
                 {
-                    others.set(k, [entry]);
+                    others[k] = [entry];
+                }
+                if (othersAround == null)
+                {
+                    continue;
+                }
+                // The tile its key names (its own, unless it stands off the grid's sides).
+                var ky = JsMath.floor(k / width);
+                var kx = k - ky * width;
+                if ((ky < 0) || (ky >= height))
+                {
+                    continue;
+                }
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        var nx = kx + dx;
+                        var ny = ky + dy;
+                        if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                        {
+                            continue;
+                        }
+                        var nk = ((double)(ny) * (width)) + nx;
+                        if (othersAround.TryGetValue(nk, out var around))
+                        {
+                            around.Add(entry);
+                        }
+                        else
+                        {
+                            othersAround[nk] = [entry];
+                        }
+                    }
                 }
             }
         }
@@ -831,7 +902,7 @@ public static partial class Zombies
                     {
                         continue;
                     }
-                    if (buckets.get(((double)(ny) * (width)) + nx) is { } cell) foreach (var o in Js.Iter(cell))
+                    if (buckets.GetValueOrDefault(((double)(ny) * (width)) + nx) is { } cell) foreach (var o in Js.Iter(cell))
                     {
                         if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
                         {
@@ -852,26 +923,36 @@ public static partial class Zombies
                 }
             }
             near.Clear();
-            for (var dy = -1; dy <= 1; dy++)
+            if ((othersAround != null) && (z.pos.x >= 0) && (z.pos.y >= 0) && (z.pos.x < width) && (z.pos.y < height))
             {
-                for (var dx = -1; dx <= 1; dx++)
+                if (othersAround.TryGetValue(((double)(z.pos.y) * (width)) + z.pos.x, out var around))
                 {
-                    var nx = z.pos.x + dx;
-                    var ny = z.pos.y + dy;
-                    if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                    near.AddRange(around);
+                }
+            }
+            else
+            {
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
                     {
-                        continue;
-                    }
-                    var at = others.get(((double)(ny) * (width)) + nx);
-                    if (Js.T(at))
-                    {
-                        near.pushAll(at);
+                        var nx = z.pos.x + dx;
+                        var ny = z.pos.y + dy;
+                        if ((((nx < 0) || (ny < 0)) || (nx >= width)) || (ny >= height))
+                        {
+                            continue;
+                        }
+                        if (others.TryGetValue(((double)(ny) * (width)) + nx, out var at))
+                        {
+                            near.pushAll(at);
+                        }
                     }
                 }
             }
             if (near.length > 1)
             {
-                near.sort((a, b) => a.order - b.order);
+                // Distinct orders: any sort gives the one order.
+                near.Sort((a, b) => a.order.CompareTo(b.order));
             }
             foreach (var __o5 in Js.Iter(near))
             {
