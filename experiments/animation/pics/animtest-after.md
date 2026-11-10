@@ -2,4 +2,6 @@ Animation test, logic `after`: a pz survivor model as People.cs plays it, moved 
 
 | case | clips | steps | slide mean | slide worst | sole mean | worst sink |
 |---|---|--:|--:|--:|--:|--:|
-| more-dead_lunge | dead_lunge | 2 | 1.5 | 1.8 | 0.3 | -0.0 |
+| more-vault | vault | 4 | 6.0 | 10.2 | -3.0 | -6.0 |
+| ual-ual_jump_start | ual_jump_start | 3 | 17.2 | 30.5 | -5.5 | -10.6 |
+| more-jump_start | jump_start | 3 | 12.7 | 24.7 | -3.8 | -8.2 |

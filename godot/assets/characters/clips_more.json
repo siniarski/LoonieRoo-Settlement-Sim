@@ -223,6 +223,30 @@
       "frames": 60,
       "seconds": 2.0,
       "loop": true
+    },
+    {
+      "name": "jump_start",
+      "frames": 40,
+      "seconds": 1.333,
+      "loop": false
+    },
+    {
+      "name": "jump_air",
+      "frames": 75,
+      "seconds": 2.5,
+      "loop": true
+    },
+    {
+      "name": "jump_land",
+      "frames": 38,
+      "seconds": 1.267,
+      "loop": false
+    },
+    {
+      "name": "vault",
+      "frames": 24,
+      "seconds": 0.8,
+      "loop": false
     }
   ]
 }

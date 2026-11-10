@@ -603,10 +603,19 @@ def yaw(deg):
     return Quaternion(UP, math.radians(deg))
 
 
+def full_numbers(nums):
+    """Pose numbers with the rest's defaults and the per-side arm numbers (lower_Left...) filled from the shared ones."""
+    d = {**btm.REST_POSE, **nums}
+    for k in ("lower", "elbow"):
+        for side in SIDES:
+            d.setdefault(f"{k}_{side}", d[k])
+    return d
+
+
 def through_numbers(r, frames, *keys):
-    """A clip from pose-number keys (t, numbers), eased between them (btm.through), one pose a frame."""
-    at = btm.through(*keys)
-    return [from_numbers(r, at(i / frames)) for i in range(frames + 1)]
+    """A clip from pose-number keys (t, numbers), eased between them (smoothstep, as btm.through), one pose a frame."""
+    keys = [(t, full_numbers(k)) for t, k in keys]
+    return [from_numbers(r, keyed(keys, i / frames)) for i in range(frames + 1)]
 
 
 # ---------------------------------------------------------------- the dead
@@ -958,6 +967,55 @@ def reactions(r, lib, only):
 
 RESULTS = []  # what the recipes made so far (a later recipe can build on an earlier one's clip)
 RECIPES = [locomotion, dead, reactions]
+
+
+# ---------------------------------------------------------------- leaps
+
+# Arms for a jump: forearms up and forward a little, held in (the library's jump flings them wide and up).
+JUMP_ARMS = {"arm_Left": 30, "arm_Right": 30, "lower": 72, "elbow": 70, "shrug": 4}
+
+
+def leaps(r, lib, only):
+    """The library's jump clips with the arms tamed (held in and forward, the clip's own swing kept a quarter), and a
+    vault: a tuck with the legs swung to the left over the edge, the right hand going down for it (HandIK puts it
+    there in the game), the body leaning over; both played by the leap's progress (People.Leap.cs)."""
+    out = []
+    for name, src in (("jump_start", "ual_jump_start"), ("jump_air", "ual_jump"), ("jump_land", "ual_jump_land")):
+        if only and name not in only:
+            continue
+        fr = [p.copy() for p in lib(src)]
+        for p in fr:
+            arms_to(r, p, JUMP_ARMS, 0.75)
+
+        def spread(frames):
+            return (max((p.head("LeftHand") - p.head("RightHand")).length for p in frames),
+                    max(max(p.head("LeftHand").z, p.head("RightHand").z) - p.head("Head").z for p in frames))
+        (a0, h0), (a1, h1) = spread(lib(src)), spread(fr)
+        print(f"  {name}: hands at most {a0:.2f} -> {a1:.2f} m apart, at most {h0:+.2f} -> {h1:+.2f} m over the head")
+        out.append((name, fr, name == "jump_air", None))
+    if not only or "vault" in only:
+        stand = {"lower": 75, "elbow": 20}
+        crouch = {"leg_Left": 40, "leg_Right": 40, "knee_Left": 70, "knee_Right": 70, "lean": 30, "bob": -0.2,
+                  "arm_Left": 50, "arm_Right": 70, "lower": 80, "elbow": 20}
+        # Over: the hips turned and tipped, both knees drawn up and swung out to the left, the right arm down to the
+        # edge, the left out for balance; then the legs come down and through.
+        tuck = {"pitch": -15, "lean": 35, "bob": 0.05, "leg_Left": 95, "leg_Right": 85, "knee_Left": 120, "knee_Right": 110,
+                "leg_out_Left": 35, "leg_out_Right": 5, "leg_roll_Left": 30, "leg_roll_Right": 35, "foot_follow": 0.6,
+                "arm_Right": 75, "lower_Right": 85, "elbow_Right": 5, "arm_Left": 20, "lower_Left": 30, "elbow_Left": 30, "head_yaw": -10}
+        reach = {**tuck, "leg_Left": 60, "leg_Right": 75, "knee_Left": 60, "knee_Right": 80, "leg_out_Left": 15, "lean": 20, "pitch": -5}
+        land = {"leg_Left": 35, "leg_Right": 20, "knee_Left": 55, "knee_Right": 40, "lean": 18, "bob": -0.12,
+                "arm_Left": 25, "arm_Right": 30, "lower": 70, "elbow": 40}
+        fr = through_numbers(r, 24, (0, stand), (0.2, crouch), (0.5, tuck), (0.75, reach), (1, land))
+        n = len(fr) - 1
+        for i, p in enumerate(fr):
+            t = i / n
+            k = keyed([(0, {"Hips_yaw": 0}), (0.5, {"Hips_yaw": 28}), (0.8, {"Hips_yaw": 12}), (1, {"Hips_yaw": 0})], t)
+            turns(p, k)
+        out.append(("vault", fr, False, None))
+    return out
+
+
+RECIPES.append(leaps)
 
 
 
