@@ -723,11 +723,6 @@ public partial class Resident : Body, IHasId, IHasAt, IHasPos, IBody
     public double nextThinkTick { get; set; }
 }
 
-public partial class RngHolder : IRngHolder
-{
-    public double rng { get; set; }
-}
-
 public partial class RoadNode : IHasAt
 {
     public Point at { get; set; } = new();
