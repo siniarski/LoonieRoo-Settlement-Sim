@@ -34,16 +34,24 @@ public partial class Game
             ("in front of it", 4.5, -0.2, false), ("its back corner", -3.2, -2.2, false), ("its front corner", 3.0, 2.4, false) })
         {
             await WalkUpTo(mid.x / (double)Motion.SUB + fx, mid.y / (double)Motion.SUB + fy, mid, -0.3, keepW);
+            // (Each wait runs to the ticks the doors used to take, 25 in and 20 out: the steps after this one were
+            // written against the world as it stood then, to the tick.)
+            int t0 = state.tick;
             await Tap(Godot.Key.E);
             string started = state.control!.busy?.what ?? "-";
-            for (int i = 0; i < 400 && Vehicles.vehicleOf(state, you) == null; i++) await Frames(1);
+            for (int i = 0; i < 400 && (Vehicles.vehicleOf(state, you) == null || state.tick < t0 + 25); i++)
+            {
+                if (Vehicles.vehicleOf(state, you) != null) SendKey(Godot.Key.W, false); // in: don't drive off while waiting
+                await Frames(1);
+            }
             SendKey(Godot.Key.W, false);
             Check($"E at a parked car from {name} gets you in", Vehicles.vehicleOf(state, you) == car,
                 $"started {started}, note {you.note}, {Vehicles.gap(car, you.at):0} SUB from the body");
             if (Vehicles.vehicleOf(state, you) != null)
             {
+                int t1 = state.tick;
                 await Tap(Godot.Key.E);
-                for (int i = 0; i < 400 && Vehicles.vehicleOf(state, you) != null; i++) await Frames(1);
+                for (int i = 0; i < 400 && (Vehicles.vehicleOf(state, you) != null || state.tick < t1 + 20); i++) await Frames(1);
             }
             await Frames(3);
         }

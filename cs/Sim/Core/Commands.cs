@@ -165,12 +165,25 @@ public static partial class Commands
             s.note = shot;
             return changed();
         }
-        if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim") || (command.type == "boot") || (command.type == "hood"))
+        if ((((command.type == "steer") || (command.type == "swing")) || (command.type == "use")) || (command.type == "aim") || (command.type == "boot") || (command.type == "hood") || (command.type == "car"))
         {
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
             {
                 return reject("nobody is under control");
+            }
+            if (command.type == "car")
+            {
+                // E at a car (2026-11-12): out of the one you sit in, or into the nearest one within reach of your
+                // body, whichever tile you look at (the `use` command needs a tile under the car beside yours).
+                if (Leaps.airborne(Js.NN(state.control))) return reject("in the air");
+                var mine = Vehicles.vehicleOf(state, s);
+                var near = mine ?? Vehicles.vehicleNear(state, s.at);
+                if (!Js.T(near)) return reject("no car beside you");
+                if (!Js.T(mine) && Js.T(near.driverId)) return reject("someone is driving it");
+                Js.NN(state.control).busy = null;
+                s.note = Js.T(mine) ? Vehicles.startCarAction(state, s, near, "getOut") : (Vehicles.fillFromCan(state, s, near) ?? Vehicles.startCarAction(state, s, near, "getIn"));
+                return changed();
             }
             if (command.type is "boot" or "hood")
             {

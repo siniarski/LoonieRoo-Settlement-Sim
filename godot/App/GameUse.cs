@@ -26,7 +26,15 @@ public partial class Game
         var you = ControlMod.controlled(state);
         if (you == null) return;
         var at = you.pos;
-        if (Vehicles.vehicleOf(state, you) == null && OpenBootBeside(you)) return;
+        if (Vehicles.vehicleOf(state, you) != null) { Command(new Command { type = "car" }); return; }
+        if (OpenBootBeside(you)) return;
+        // A car within reach that you face: in you get, whatever tile the crosshair is on.
+        if (Vehicles.vehicleNear(state, you.at) is { driverId: null } car)
+        {
+            var look = World3D.FirstPerson.LookDir(view.yaw, view.pitch);
+            double dx = car.at.x - you.at.x, dy = car.at.y - you.at.y, d = Math.Sqrt(dx * dx + dy * dy);
+            if (d > 0 && (look.X * dx + look.Z * dy) / d > 0.2 && Command(new Command { type = "car" })) { view.Toast("getting in", 1200); return; }
+        }
         foreach (var t in UseTiles(you))
         {
             if (!ControlMod.nextTo(at, t) || Space.samePoint(at, t)) continue;

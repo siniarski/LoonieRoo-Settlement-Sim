@@ -20,8 +20,9 @@ namespace LoonieRoo.Sim;
 
 public static partial class Vehicles
 {
-    public const int GET_IN_TICKS = 25;
-    public const int GET_OUT_TICKS = 20;
+    /// <summary>A second in, under a second out (2026-11-12; 2.5 s and 2 s before, long enough to read as E not working).</summary>
+    public const int GET_IN_TICKS = 12;
+    public const int GET_OUT_TICKS = 10;
     public const int BOOT_TICKS = 8;
     public const int HOOD_TICKS = 10;
 
