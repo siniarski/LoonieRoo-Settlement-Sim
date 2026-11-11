@@ -16,7 +16,7 @@ namespace LoonieRoo.Sim;
 
 public static class Trunks
 {
-    /// <summary>A trunk's radius, SUB units: 0.2 tile (the models' trunks are 0.19-0.23 m across at the foot, times a size of 0.7-1.2).</summary>
+    /// <summary>A trunk's radius, SUB units: 0.2 tile (the models' trunks are 0.19-0.23 m in radius at the foot, times a size of 0.7-1.2).</summary>
     public const int RADIUS = 51;
 
     /// <summary>A trunk's centre is at most this far (SUB units, each axis) off its tile's centre: 0.12 tile.</summary>

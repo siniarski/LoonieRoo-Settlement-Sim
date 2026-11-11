@@ -49,6 +49,8 @@ workers, rooms, paths, doors). `docs/decisions.md` records why things are the wa
 | `godot/World3D`, `Characters`, `Audio` | First person: the world's meshes, people, light, weather; bodies; sound |
 | `godot/Ui`, `Render` | The HUD, inventory, menu, map; the 2D top-down Colony tab |
 | `godot/SelfTest`, `Labs` | The game driven by real input and checked; stand-alone scenes and benches |
+| `cs/Sim.Tests`, `cs/Harness` | The sim's tests (`XTest.cs` is system X's); scripted players, benchmarks, profiles |
+| `scenarios` | Small hand-made maps as JSON, which tests load |
 | `art/scripts` | One Blender script per kind of model (`build_items.py`, `build_furniture.py`, ...) |
 | `docs`, `log`, `experiments` | Design notes by topic; a dated entry per piece of work; write-ups behind decisions |
 

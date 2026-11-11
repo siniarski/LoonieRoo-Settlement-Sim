@@ -137,7 +137,7 @@ storeys and basements (after the stress test).
 ## Lighting (log/2026-11-10-05-lighting.md)
 
 Room lights with switches, outdoor house lights, street lamps, car headlights, the flashlight, stoves, heaters and
-fires (Lights.cs; WorldLights.cs with a budget). Left: glows and lit windows are flat (no bloom); headlights are one
+fires (Lights.cs; the game's `WorldLights` in godot/World3D/Lights.cs, with a budget). Left: glows and lit windows are flat (no bloom); headlights are one
 spot; a lit room is one ceiling point (big halls get one light); the flashlight's beam follows the camera's pitch but
 the sim's is yaw only; ovens don't glow while you cook; colonists never touch switches (only the one you control).
 

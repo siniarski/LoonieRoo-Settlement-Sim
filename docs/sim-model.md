@@ -38,7 +38,8 @@ pathfinding").
 
 - Survivors can always walk through doors (and barricades). Zombies can't walk through them: to a moving zombie a door
   is a wall. But a zombie that can't reach anyone batters doors (and walls) down (Breach). Pathfinding takes a `mover`
-  (`survivor`, `zombie`, `breacher`, `raider`, `crawler`, `free`) for this. Raiders open doors unless they're locked.
+  (`survivor`, `zombie`, `breacher`, `raider`, `crawler`, `free`; and `runner`, `vehicle`, `animal`: the list is at the
+  top of Pathfinding.cs) for this. Raiders open doors unless they're locked.
 - For flood fill, doors are room boundaries: they split rooms the way walls do, but survivors can path through them.
 
 ## Walls and doors on tile edges

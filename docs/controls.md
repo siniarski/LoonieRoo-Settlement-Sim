@@ -25,7 +25,7 @@ badly hurt, dying), the body by part (an outline tinted by each part's state; ho
 with you worst first with what would help, then body heat, endurance, wetness and panic, needs, mood and the thoughts
 behind it, what you wear and wield, skills and your story. It only reads: nothing on it changes the game. It scrolls
 (wheel) when it is taller than the window, and follows the survivor you control. The same sheet as text:
-`CharacterSheet.textOfControlled(state)` (cs/Sim/Survivors/CharacterSheet.cs).
+`CharacterSheet.text(CharacterSheet.build(state, survivor))` (cs/Sim/Survivors/CharacterSheet.cs).
 
 **Weapons** (2026-11-10; the table of every weapon: cs/Sim/Combat/WeaponTable.cs, how shots fly: Shooting.cs).
 Click swings what is in your hand, or, with a loaded gun, fires it exactly where you look (the `fire` command: a
@@ -67,7 +67,7 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
 - **Colony:** left click selects, right click moves, B build bar (1-0 tools, Tab/E/Q categories, Shift for
   instant), P the survivor list (fold it, or open it to every need and job priority; Shift-click a priority to step it
   back), O overview, M map (full screen: wheel zoom, drag pan, click to pin a note, right-click a pin to remove,
-  double-click to look there), N minimap, 1x/2x/4x buttons (or + and -), `` ` `` debug panel (with tick/sim/draw
+  double-click to look there), N minimap, Home recentres the view, 1x/2x/4x buttons (or + and -), `` ` `` debug panel (with tick/sim/draw
   ms), Esc cancels then opens the menu.
 - **Direct control** (F on the selected survivor, F again to let go) starts in survivor mode, with the colony's
   management put away; B, P or O bring it out (build, priorities, overview, neighbour and visitor panels).

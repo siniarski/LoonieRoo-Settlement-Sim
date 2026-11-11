@@ -34,7 +34,6 @@ NOSE_TIP = Vector((0, -0.114, 1.606))
 SUBNASALE_Z = 1.596                     # where the nose meets the upper lip
 JAW_HINGE = Vector((0, -0.002, 1.612))  # the jaw turns about the X axis through here
 CHIN_Z = 1.526
-HEAD_TOP = 1.750
 
 
 class Balls:

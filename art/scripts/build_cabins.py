@@ -16,8 +16,8 @@
 # the mirror, the scuttle with the wipers, the bonnet and the wing mirrors. No glass: you look out through nothing.
 #
 # The same space as the car's outside: Blender Z up, the car's centre on the ground at the origin, its front
-# towards +X, its left (the driver's side) towards +Y. The driver's eye is at EYE; the sim seats the driver the same
-# distance ahead of the centre (cs/Sim/Movement/VehicleBody.cs Shape.seat). No randomness.
+# towards +X, its left (the driver's side) towards +Y. The driver's eye is at EYE; the sim seats the driver about there
+# too (cs/Sim/Movement/VehicleBody.cs Shape.seat, some 6 cm further forward than EYE in both cars). No randomness.
 
 import math
 import os
@@ -37,7 +37,6 @@ STEEL = lin(150, 152, 156)
 CHROME = lin(190, 192, 196)
 MIRROR = lin(120, 140, 152)
 DISPLAY = lin(40, 70, 52)
-RED = lin(160, 40, 34)
 
 # The sedan's driver's eye (m): the game puts the camera here (Cockpit.cs EYE), the pickup's is this plus its shift.
 EYE = (0.04, 0.38, 1.08)

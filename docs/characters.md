@@ -308,6 +308,11 @@ LOD has four layers, and the sim already has the outermost one (dormant zombies,
 
 ## 8. Godot structure
 
+**This section is the plan as first written (2026-11-08), kept for its reasoning: the files it names were never made
+under those names.** What exists is in godot/README.md and docs/modules.md: `godot/Characters/` (Looks, Wardrobe,
+OutfitMerge, Gaits, FootIK, HandIK, HeadLook, StumpCut, StumpHold, Vat), `cs/Sim/Movement/PoseIntents.cs`, the labs in
+`godot/Labs/`, and `art/scripts/` as art/README.md lists them (no Git LFS: `art/blend/` is rebuilt, not kept).
+
 ```
 godot/
   Characters/

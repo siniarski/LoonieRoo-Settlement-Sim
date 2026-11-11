@@ -49,8 +49,6 @@ from shapes import box as _box, cone as _cone, material as _material, sphere as 
 # under the one skeleton, so clothing can hide what it covers and a lost limb hides everything
 # below its cut. A cut shows a stump cap (stump_<joint>_<side>, hidden until a limb is lost).
 # Cuts on the mannequin are at the joints: wrist, elbow, shoulder; ankle, knee, hip.
-ARM_REGIONS = ("upperarm", "forearm", "hand")
-LEG_REGIONS = ("thigh", "shin", "foot")
 
 
 def build_mesh(arm_obj):

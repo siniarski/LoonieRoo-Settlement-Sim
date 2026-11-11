@@ -106,7 +106,7 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 - `scripts/build_items.py`: the things lying on the ground in first person, one low-poly model per item kind (the
   sim's 21: wood, food, meal, bandage, medicine, medkit, weapon, cloth, coat, armour, boots, gun, ammo, corpse, book,
   cart, axe, hammer, sample, scrap, fuel), 36-252 triangles each, boxes and cylinders in vertex colours (alpha is
-  metalness), one mesh per kind named after it, variants of the common kinds as `<kind>_v1`, `_v2`... (19 of them:
+  metalness), one mesh per kind named after it, variants of the common kinds as `<kind>_v1`, `_v2`... (20 of them:
   food, wood, medicine, weapon, cloth, book, scrap, bandage, coat, boots, ammo, meal; the game picks one per item by
   a hash of its id), and `hand` (the gloved fist and sleeve that holds things in first person) (~1 s):
   `"$B" --background --factory-startup --python
@@ -120,6 +120,11 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   `"$B" --background --factory-startup --python art/scripts/build_world.py -- --glb godot/assets/world/world.glb
   [--preview lineup.png]`, then re-import in Godot. A new crop wants `<crop>_1`, `_2`, `_3` here (until then its
   plot shows the bare bed).
+- `scripts/build_furniture.py`: the furniture, and the car and the pickup, as low-poly models in one file
+  (`--glb godot/assets/furniture/furniture.glb [--preview lineup.png]`), drawn by `godot/World3D/Furniture.cs` and
+  `Cars.cs`. **The car's and the pickup's sizes are also numbers in the sim**, which must be changed with the models:
+  their length and width (`cs/Sim/Movement/VehicleBody.cs`: `CAR`, `TRUCK`), and their heights (the underside, the
+  boot, roof, bonnet and bed, and where the cabin begins and ends: `cs/Sim/Movement/VehicleHeights.cs`).
 - `scripts/lowpoly.py`: the kit build_world.py is made with (boxes, cylinders and cones as coloured faces, one mesh
   per model, the glTF export, a preview). build_items.py and build_furniture.py carry older copies of the same
   helpers: fold them in when either is next rebuilt.
