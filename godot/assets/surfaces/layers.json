@@ -1,0 +1,105 @@
+{
+ "size": 256,
+ "layers": [
+  {
+   "name": "grass",
+   "metres": 2.0,
+   "for": "tufts of blades; any ground that grows"
+  },
+  {
+   "name": "litter",
+   "metres": 2.0,
+   "for": "fallen leaves and twigs on dark soil; the forest floor"
+  },
+  {
+   "name": "earth",
+   "metres": 2.0,
+   "for": "bare soil with clods and pebbles; dirt, fields, beds"
+  },
+  {
+   "name": "gravel",
+   "metres": 1.0,
+   "for": "small stones; tracks, flat roofs, rubble"
+  },
+  {
+   "name": "asphalt",
+   "metres": 2.0,
+   "for": "fine speckle with light chips; roads"
+  },
+  {
+   "name": "paving",
+   "metres": 2.0,
+   "for": "50 cm slabs in a running bond; pavements, yards"
+  },
+  {
+   "name": "concrete",
+   "metres": 2.0,
+   "for": "mottled, pored, a joint every 2 m; floors, walls, kerbs, footings"
+  },
+  {
+   "name": "plaster",
+   "metres": 2.0,
+   "for": "faint trowel marks and damp; indoor walls, ceilings, render"
+  },
+  {
+   "name": "brick",
+   "metres": 2.0,
+   "for": "25 x 8 cm bricks, lighter mortar; made for a brick-red base"
+  },
+  {
+   "name": "planks",
+   "metres": 2.0,
+   "for": "17 cm boards across, lapped; siding, doors (turned), barricades, fences"
+  },
+  {
+   "name": "floorboards",
+   "metres": 2.0,
+   "for": "12.5 cm boards across, tight; wooden floors, furniture tops"
+  },
+  {
+   "name": "tiles",
+   "metres": 2.0,
+   "for": "33 cm floor tiles, dark grout, a faint chequer; kitchens, shops"
+  },
+  {
+   "name": "shingles",
+   "metres": 2.0,
+   "for": "12.5 cm courses of tabs, butt edges down the picture; pitched roofs"
+  },
+  {
+   "name": "sheetmetal",
+   "metres": 2.0,
+   "for": "corrugated sheet, ribs down the picture, rust runs; barn roofs, sheds"
+  },
+  {
+   "name": "metal",
+   "metres": 1.0,
+   "for": "painted metal: faint mottle, scratches, chips; cars, appliances, tools"
+  },
+  {
+   "name": "rubber",
+   "metres": 0.5,
+   "for": "matt grain, ribs across; tyres, soles, mats, hoses"
+  },
+  {
+   "name": "cloth",
+   "metres": 0.5,
+   "for": "a coarse plain weave, worn; clothes, upholstery, tarpaulins, bedding"
+  },
+  {
+   "name": "grime",
+   "metres": 2.0,
+   "for": "smears and runs; glass, and anything left out"
+  },
+  {
+   "name": "bark",
+   "metres": 1.0,
+   "for": "plates and furrows down the picture; trunks, logs, stumps"
+  },
+  {
+   "name": "fur",
+   "metres": 0.5,
+   "for": "strands down the picture, clumped; animals' coats, hair, hides"
+  }
+ ]
+}

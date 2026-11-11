@@ -198,7 +198,7 @@ git tag `ts-final`.
   charred stumps in a fixed few nodes; ModelSet: a file of models drawn in batches, used by Fields: farm plots and
   crops, Sites: blueprints, Cars, Aircraft: the helicopter, Others: stand-in bodies for wanderers, traders,
   prisoners, caravans and scavenging parties; Cockpit: the car you drive from the inside, its instruments drawn by
-  GaugeCluster).
+  GaugeCluster; Surfaces: the detail textures as one array and the layer numbers by name, docs/textures.md).
 - `Characters/`: what a body needs at runtime: looks and wardrobe, gaits, foot and hand IK, head look, stumps, the
   merged mid tier and VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.
@@ -208,4 +208,5 @@ git tag `ts-final`.
 - `SelfTest/`: `--selftest`, the game driven by real input and checked, a file per feature.
 - `Labs/`: scenes run by path, never part of the game: the character lab (Lab*), LookLab, StyleLineup, AnimTest, the
   benches (Bench, HordeBench, DrawBench, ItemBench, TreeBench) and MapShot.
-- `assets/`: imported models (characters, furniture, items, trees, world, cars) and shaders.
+- `assets/`: imported models (characters, furniture, items, trees, world, cars), the detail textures (`surfaces/`,
+  made by art/scripts/build_surfaces.py) and shader includes (`shaders/`: snow cover, surface detail).

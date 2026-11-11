@@ -57,7 +57,8 @@ cheaper models for mechanical work.
 - docs/controls.md: every key, first person and the Colony tab; where saves go.
 - docs/harness.md: the balance players, bench and stress, and their env vars. For balance or performance.
 - godot/README.md: the game file by file, every command-line flag, the character lab. Before rendering or UI work.
-- docs/characters.md (characters), docs/trees.md (trees), docs/draw-distance.md (far view and options),
+- docs/characters.md (characters), docs/trees.md (trees), docs/textures.md (the detail textures: layers, the shader
+  include, how a mesh picks one), docs/draw-distance.md (far view and options),
   docs/worldgen-speed.md and docs/worldplan-regions.md (world generation at scale), art/README.md (Blender).
 - `log/`: the session log; `grep -ril <word> log/` finds the entry behind any change.
 
