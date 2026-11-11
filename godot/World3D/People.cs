@@ -67,6 +67,10 @@ public sealed partial class People
         public double forcedAt;
         /// <summary>Swimming: the swim clip it plays instead of the stance's (People.Swim.cs), and at what rate.</summary>
         public string? swim;
+        /// <summary>Over a car: its hands on it (People.Climb.cs), the part of the leg it is in, and whether its crawl wants its own phase.</summary>
+        public ClimbHands? climb;
+        public string climbPhase = "";
+        public bool climbSeek;
         public float swimRate = 1;
         public Skeleton3D? skel;
         /// <summary>What it holds, drawn in its hand (People.Hold.cs).</summary>
@@ -149,6 +153,7 @@ public sealed partial class People
         time += delta;
         Steps.Clear();
         iks = 0;
+        climbHands = 0;
         var wanted = new List<Wanted>();
         float range2 = MODEL_RANGE * MODEL_RANGE;
         void Add(string id, string look, Looks.Outfit dress, Body b, PoseIntent pose, bool angry, string action)
@@ -266,7 +271,7 @@ public sealed partial class People
             }
             if (w.body is Zombie zb && !dormantNow.ContainsKey(w.id)) { m.wasZombie = true; m.lastHurt = zb.hurtTick; }
             else m.wasZombie = false;
-            CrossPre(m, w, alpha);
+            CrossPre(m, w, state, alpha);
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
             Hold(m, w);
             CrossPost(m, w);

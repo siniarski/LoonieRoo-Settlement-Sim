@@ -55,5 +55,30 @@ public partial class Game
         await Frames(5);
         Check("Swimming, first person shows the stroke's hands and no body; from outside the body swims at the surface",
             inFirst && clip != null && over < -0.5f && over > -2f, $"first person: body {(inFirst ? "hidden" : "shown")}; outside: {clip ?? "no swim clip"}, root {over:0.00} m from the surface; stance {stance}, car {car}, swimming {swum}");
+
+        // The dead over a car (People.Climb.cs): Staging's scene of them part-way over a sedan and a pickup. Those
+        // hauling up or dropping off play their leg's clip at its progress, a hand on the car near; those on the top
+        // crawl, not all at one place in the crawl's cycle.
+        Staging.climb(state, you);
+        await Frames(6);
+        var cl = ppl.Climbers();
+        var tops = cl.Where((c) => c.phase == "top").Select((c) => Math.Round(c.at, 2)).ToList();
+        // Then over a second and a half: the phases seen, the clips at the ends, the most hands on a car at once.
+        var seen = new System.Collections.Generic.HashSet<string>();
+        bool endsRight = true;
+        int handsOn = 0;
+        for (int f = 0; f < 90; f++)
+        {
+            await Frames(1);
+            foreach (var c in ppl.Climbers())
+            {
+                seen.Add(c.phase);
+                if (c.phase is "haul" or "drop" && c.clip is not ("more/jump_start" or "more/jump_air")) endsRight = false;
+            }
+            handsOn = Math.Max(handsOn, ppl.ClimbHandsOn);
+        }
+        Check("The dead over a car haul up, crawl across and drop off, a hand on it, not in step",
+            cl.Count >= 3 && seen.Contains("top") && (seen.Contains("haul") || seen.Contains("drop")) && endsRight && handsOn > 0 && tops.Distinct().Count() == tops.Count,
+            $"{cl.Count} crossing, seen {string.Join("/", seen)}, hands on {handsOn} at most: " + string.Join(", ", cl.Select((c) => $"{c.id} {c.phase} {c.clip} {c.at:0.00}")));
     }
 }

@@ -8,6 +8,8 @@
 //          reaches down for the edge's top as you go up, the chest leaning over it (LeapLean) so the arm gets there,
 //          and pushes off over the top (higher up the arm can't reach down to it); the hand your body has free (the
 //          left, unless Held shows something in it; with both full, none)
+//   car    over a parked car or onto one (CarLeaps.cs: over, climb), the same hand on the car's top where your line
+//          first meets its body (CarEdge), the chest leant over it; onto one it stays there till you are up
 //   land   the landing clip from part-way down its knee bend, for a moment, then back to walking or standing
 //          through the usual cross-fade; nothing sinks: the lift is 0 on the landing and the clip's feet are at
 //          the standing ankle height there
@@ -55,6 +57,8 @@ public sealed partial class People
         public Node3D grip = null!;
         public Vector3 dir;
         public LeapLean? lean;
+        /// <summary>Over or onto a car: the hand stays on its top longer climbing onto it.</summary>
+        public bool car;
     }
     readonly Leap ownLeap = new(), shadowLeap = new();
 
@@ -171,12 +175,16 @@ public sealed partial class People
         var d = Math.Abs(fx) >= Math.Abs(fy) ? new Vector3(Math.Sign(fx), 0, 0) : new Vector3(0, 0, Math.Sign(fy));
         if (d == Vector3.Zero) return;
         l.dir = d;
-        if (b.what != "vault" || !(leftFree || rightFree)) return;
+        l.car = b.what is "over" or "climb";
+        if (!(b.what == "vault" || l.car) || !(leftFree || rightFree)) return;
         // The edge's line: CLEAR short of the landing; the hand a little to its side of your line over it.
         double clear = (double)Leaps.CLEAR / Motion.SUB;
         float ex = (float)(lx - d.X * clear), ez = (float)(ly - d.Z * clear);
         int hand = leftFree ? 0 : 1;
         var side = Vector3.Up.Cross(d) * (hand == 0 ? 0.18f : -0.18f);  // the character's left is up x forward
+        // Over or onto a car: the hand on its top where your line first meets its body (CarEdge, as the dead's).
+        Vector3? carTop = l.car ? CarEdge(state, you.at, new Point { x = (int)Math.Round(lx * Motion.SUB), y = (int)Math.Round(ly * Motion.SUB) }) : null;
+        if (l.car && carTop == null) return;
         int ax = (int)Math.Floor(ex - d.X * 0.5), ay = (int)Math.Floor(ez - d.Z * 0.5);
         int kind = Grids.edgeKind(state.grid, Grids.edgeBetween(state.grid, ax, ay, ax + (int)d.X, ay + (int)d.Z));
         float top = kind == Grids.EDGE_BARRICADE ? BARRICADE_TOP : SILL_TOP;
@@ -193,6 +201,7 @@ public sealed partial class People
         int ox = Math.Max(ax, ax + (int)d.X), oy = Math.Max(ay, ay + (int)d.Z);
         float floor = d.X != 0 ? Math.Max(Terrain.Corner(ox, oy), Terrain.Corner(ox, oy + 1)) : Math.Max(Terrain.Corner(ox, oy), Terrain.Corner(ox + 1, oy));
         at.Y = floor + top;
+        if (carTop is Vector3 ct) at = ct + side + Vector3.Up * 0.02f;
         l.grip.GlobalPosition = at;
         // The palm down onto the top (the grip's X into the thing held), the fingers the way you go (its Y).
         l.grip.GlobalBasis = new Basis(Vector3.Down, d, Vector3.Down.Cross(d));
@@ -218,13 +227,14 @@ public sealed partial class People
 
     /// <summary>The vault hand's weight over the leap: reaching till HAND_ON, on the edge till HAND_OFF (pushing off as
     /// you go over the top: past it the arm can't reach down to the sill), off 0.25 later.</summary>
-    const double HAND_ON = 0.2, HAND_OFF = 0.45;
+    const double HAND_ON = 0.2, HAND_OFF = 0.45, CLIMB_HAND_OFF = 0.7;
     void Hands(Leap l, double t)
     {
         if (l.hands == null) return;
         for (int i = 0; i < 2; i++)
         {
-            double w = l.hands.Grip[i] == null ? 0 : t < HAND_ON ? Smooth(t / HAND_ON) : t < HAND_OFF ? 1 : 1 - Smooth((t - HAND_OFF) / 0.25);
+            double off = l.car && l.what == "climb" ? CLIMB_HAND_OFF : HAND_OFF;
+            double w = l.hands.Grip[i] == null ? 0 : t < HAND_ON ? Smooth(t / HAND_ON) : t < off ? 1 : 1 - Smooth((t - off) / 0.25);
             l.hands.Weight[i] = (float)w;
         }
         // Leaning over the edge as the hand goes on it: the shoulder down and forward, so the arm reaches.
