@@ -1,7 +1,7 @@
 // Walkers: animals (Animals.cs) and dogs (Dogs.cs) as free movers, like you and the dead (Motion.cs,
 // rule 10). They own `at` (SUB units) and `pos` is the tile under it; nothing steps them tile by tile.
 //   walkTo  heads straight at a goal point (sliding along walls) while the straight way is open
-//           (Zombies.walkLine), and by an A* path only where it isn't: the path is followed smoothed
+//           (Motion.walkLine), and by an A* path only where it isn't: the path is followed smoothed
 //           (straight at the furthest of the next LOOKAHEAD waypoints it can walk to), as the dead's.
 //   legs    a walk to a point a few tiles off at any angle (wanderLeg: grazing, roaming) or away from a
 //           threat (fleeLeg: the straight line away first, then up to 90 degrees either side), picked
@@ -87,7 +87,7 @@ public static class Walkers
             w.path = [];
             return true;
         }
-        if (Zombies.walkLine(grid, w.at, goal, mover, stop > 0))
+        if (Motion.walkLine(grid, w.at, goal, mover, stop > 0))
         {
             var v = Motion.toward(goal.x - w.at.x, goal.y - w.at.y, step);
             var to = Motion.slide(grid, w.at, v.x, v.y, mover);
@@ -128,7 +128,7 @@ public static class Walkers
         }
         for (var j = JsMath.min(LOOKAHEAD, w.path.length) - 1; j >= 1; j--)
         {
-            if (Zombies.walkLine(grid, w.at, Motion.centre(Js.NN(Js.Get(w.path, j))), mover, false))
+            if (Motion.walkLine(grid, w.at, Motion.centre(Js.NN(Js.Get(w.path, j))), mover, false))
             {
                 w.path = w.path.slice(j);
                 break;
@@ -172,7 +172,7 @@ public static class Walkers
             {
                 continue;
             }
-            if (Zombies.walkLine(state.grid, at, goal, mover, false))
+            if (Motion.walkLine(state.grid, at, goal, mover, false))
             {
                 return goal;
             }

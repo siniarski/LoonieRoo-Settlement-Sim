@@ -6,6 +6,7 @@
   - **Changed.**
     - **A car's heights are in one place** (`cs/Sim/Movement/VehicleHeights.cs`, part of Vehicles). The sedan's and the pickup's tops and undersides were written three times: a table in CarLeaps, a step function in Crossings, another in AnimalCars (in metres, its steps 0.4 SUB from Crossings'). Now `Vehicles.alongOf`, `topCm`/`topAt` (sloped across the glass: what you stand on), `partTopCm` (flat by part: what the dead and animals are drawn on), `undersideCm`, `cabin`. The two readings of the top are kept as they were, so nothing drawn moves; the animals' steps are now the dead's (a crossing whose middle is within half a SUB of the glass line reads the other part's height: drawn only).
     - **"Which parked car is over this tile" is one function** (`Vehicles.parkedOver`, VehicleParking.cs). Crossings and AnimalCars each had a `carOver`, one by the car's tiles and one by its body over the tile's centre: the same answer (a car's tiles are those whose centre is in its body).
+    - **The straight-line walk is Motion's** (`Motion.walkLine`). It was `Zombies.walkLine`, though animals and dogs asked it too, and `AnimalCars.lineOver` was a second copy of the same walk with tiles under parked cars left open: now a flag (`overCars`) on the one function.
   - **For the player** (not done: each would change behaviour, a save or the design).
     - (none yet)
   - **Not verified.**

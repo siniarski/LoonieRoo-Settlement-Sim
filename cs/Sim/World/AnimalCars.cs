@@ -141,42 +141,8 @@ public static class AnimalCars
     }
 
     /// <summary>Is the straight way from a to b open to this mover, but for tiles under parked cars (they are open
-    /// here)? As Zombies.walkLine (the tiles the line passes, and the edges between; no broken window), cars or not.</summary>
-    public static bool lineOver(Grid grid, Point a, Point b, string mover)
-    {
-        int x = (int)JsMath.floor((double)a.x / Motion.SUB), y = (int)JsMath.floor((double)a.y / Motion.SUB);
-        int endX = (int)JsMath.floor((double)b.x / Motion.SUB), endY = (int)JsMath.floor((double)b.y / Motion.SUB);
-        double dx = b.x - a.x, dy = b.y - a.y;
-        int sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
-        bool open(int px, int py, int qx, int qy)
-        {
-            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || Grids.edgeKindBetween(grid, px, py, qx, qy) == Grids.EDGE_WINDOW_BROKEN) return false;
-            return Pathfinding.isPassable(grid, qx, qy, mover) || (Grids.isParked(grid, qx, qy) && Grids.getTile(grid, qx, qy) == Grids.FLOOR);
-        }
-        int guard = JsMath.abs(endX - x) + JsMath.abs(endY - y);
-        while ((x != endX || y != endY) && guard-- >= 0)
-        {
-            double nx = sx == 0 ? double.PositiveInfinity : JsMath.abs((double)(sx > 0 ? x + 1 : x) * Motion.SUB - a.x) * JsMath.abs(dy);
-            double ny = sy == 0 ? double.PositiveInfinity : JsMath.abs((double)(sy > 0 ? y + 1 : y) * Motion.SUB - a.y) * JsMath.abs(dx);
-            if (nx < ny)
-            {
-                if (!open(x, y, x + sx, y)) return false;
-                x += sx;
-            }
-            else if (ny < nx)
-            {
-                if (!open(x, y, x, y + sy)) return false;
-                y += sy;
-            }
-            else
-            {
-                if (!open(x, y, x + sx, y) || !open(x, y, x, y + sy) || !open(x + sx, y, x + sx, y + sy) || !open(x, y + sy, x + sx, y + sy)) return false;
-                x += sx;
-                y += sy;
-            }
-        }
-        return true;
-    }
+    /// here)? No wall, no edge, no window between: Motion.walkLine, over cars.</summary>
+    public static bool lineOver(Grid grid, Point a, Point b, string mover) => Motion.walkLine(grid, a, b, mover, false, true);
 
     /// <summary>Where it would come down: `land` if its body fits there clear of walls, cars and trunks (moved off a
     /// trunk if that fits), else null.</summary>

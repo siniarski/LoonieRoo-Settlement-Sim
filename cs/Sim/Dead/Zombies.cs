@@ -13,7 +13,7 @@
 // shamble off. Guards (jobs.ts) hunt them down.
 //
 // Moving (2026-11-08): zombies are free movers. They own `at` and `pos` is the tile under it.
-// With a target within CHASE_RANGE and a straight walk to them (walkLine: no wall, shut door,
+// With a target within CHASE_RANGE and a straight walk to them (Motion.walkLine: no wall, shut door,
 // window or water on the line), a zombie comes straight at where they are (chase), sliding along
 // walls. Otherwise it follows its tile path smoothed: straight at the furthest of the next
 // LOOKAHEAD waypoints it can walk to (aimAhead), and tile by tile only where the next step
@@ -605,7 +605,7 @@ public static partial class Zombies
         {
             return null;
         }
-        return walkLine(state.grid, z.at, target.at, lineMover(z), true) ? target : null;
+        return Motion.walkLine(state.grid, z.at, target.at, lineMover(z), true) ? target : null;
     }
 
     /// <summary>Come straight at where the target is (not their tile), sliding along walls, stopping just inside reach. The tile path is dropped: once the line is lost, it plans afresh.</summary>
@@ -629,7 +629,7 @@ public static partial class Zombies
         var last = JsMath.min(LOOKAHEAD, z.path.length) - 1;
         for (var j = last; j >= 1; j--)
         {
-            if (walkLine(state.grid, z.at, Motion.centre(Js.NN(Js.Get(z.path, j))), lineMover(z), false))
+            if (Motion.walkLine(state.grid, z.at, Motion.centre(Js.NN(Js.Get(z.path, j))), lineMover(z), false))
             {
                 z.path = z.path.slice(j);
                 return;
@@ -651,7 +651,7 @@ public static partial class Zombies
             return;
         }
         var aim = Motion.centre(next);
-        if (walkLine(state.grid, z.at, aim, lineMover(z), false))
+        if (Motion.walkLine(state.grid, z.at, aim, lineMover(z), false))
         {
             var dx = aim.x - z.at.x;
             var dy = aim.y - z.at.y;
@@ -765,63 +765,6 @@ public static partial class Zombies
             Doors.passThrough(state, next.x, next.y, false, z.pos);
         }
         return false;
-    }
-
-    /// <summary>Can a zombie walk the straight line between two points (SUB units)? Every tile the centre line passes through is open to `mover` and every edge it crosses is crossable (a broken window isn't: climbing goes by the path, tile by tile). Where the line runs exactly through a corner, both tiles beside it must be open. `endMayBeBlocked`: the far end's own tile isn't checked (someone standing in a doorway). Exact integer maths (in doubles): crossing times compared by cross-multiplying.</summary>
-    public static bool walkLine(Grid grid, Point a, Point b, string mover, bool endMayBeBlocked)
-    {
-        // Motion.tileOf of each end, without making Points.
-        var tx = Js.I(JsMath.floor(((double)(a.x) / (Motion.SUB))));
-        var ty = Js.I(JsMath.floor(((double)(a.y) / (Motion.SUB))));
-        var endX = Js.I(JsMath.floor(((double)(b.x) / (Motion.SUB))));
-        var endY = Js.I(JsMath.floor(((double)(b.y) / (Motion.SUB))));
-        double dx = b.x - a.x;
-        double dy = b.y - a.y;
-        var sx = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0);
-        var sy = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0);
-        var x = tx;
-        var y = ty;
-        bool open(int px, int py, int qx, int qy)
-        {
-            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || (Grids.edgeKindBetween(grid, px, py, qx, qy) == Grids.EDGE_WINDOW_BROKEN))
-            {
-                return false;
-            }
-            return (Js.T(endMayBeBlocked) && (qx == endX) && (qy == endY)) || Pathfinding.isPassable(grid, qx, qy, mover);
-        }
-        var guard = JsMath.abs(endX - x) + JsMath.abs(endY - y);
-        while (((x != endX) || (y != endY)) && (guard-- >= 0))
-        {
-            // How far along the line the next x and y boundaries are, as |dx| * |dy| fractions.
-            double nx = (sx == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sx > 0) ? (x + 1) : x) * (Motion.SUB)) - a.x)) * (JsMath.abs(dy)));
-            double ny = (sy == 0) ? double.PositiveInfinity : ((double)(JsMath.abs(((double)((sy > 0) ? (y + 1) : y) * (Motion.SUB)) - a.y)) * (JsMath.abs(dx)));
-            if (nx < ny)
-            {
-                if (!open(x, y, x + sx, y))
-                {
-                    return false;
-                }
-                x += sx;
-            }
-            else if (ny < nx)
-            {
-                if (!open(x, y, x, y + sy))
-                {
-                    return false;
-                }
-                y += sy;
-            }
-            else
-            {
-                if (!open(x, y, x + sx, y) || !open(x, y, x, y + sy) || !open(x + sx, y, x + sx, y + sy) || !open(x, y + sy, x + sx, y + sy))
-                {
-                    return false;
-                }
-                x += sx;
-                y += sy;
-            }
-        }
-        return true;
     }
 
     /// <summary>Crowds: zombies closer than CROWD push apart (half each, along the line between them), in a fixed order, sliding along walls. Only neighbours in nearby tiles are compared.</summary>

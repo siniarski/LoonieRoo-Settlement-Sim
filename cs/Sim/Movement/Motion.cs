@@ -226,6 +226,51 @@ public static partial class Motion
     }
     public static Point slide(Grid grid, Point at, double dx, double dy, string mover, double r = BODY_RADIUS) => slide(grid, at, Js.I(dx), Js.I(dy), mover, r);
 
+    /// <summary>Can a body walk the straight line between two points (SUB units)? Every tile the centre line passes
+    /// through is open to `mover` and every edge it crosses is crossable (a broken window isn't: climbing goes by the
+    /// path, tile by tile). Where the line runs exactly through a corner, both tiles beside it must be open.
+    /// `endMayBeBlocked`: the far end's own tile isn't checked (someone standing in a doorway). `overCars`: tiles under
+    /// parked cars count as open (an animal's way over or under one: AnimalCars.cs). Exact integer maths (in
+    /// doubles): crossing times compared by cross-multiplying.</summary>
+    public static bool walkLine(Grid grid, Point a, Point b, string mover, bool endMayBeBlocked, bool overCars = false)
+    {
+        // tileOf of each end, without making Points.
+        int x = Js.I(JsMath.floor((double)a.x / SUB)), y = Js.I(JsMath.floor((double)a.y / SUB));
+        int endX = Js.I(JsMath.floor((double)b.x / SUB)), endY = Js.I(JsMath.floor((double)b.y / SUB));
+        double dx = b.x - a.x, dy = b.y - a.y;
+        int sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+        bool open(int px, int py, int qx, int qy)
+        {
+            if (!Grids.inBounds(grid, qx, qy) || !Pathfinding.crossable(grid, px, py, qx, qy, mover) || Grids.edgeKindBetween(grid, px, py, qx, qy) == Grids.EDGE_WINDOW_BROKEN) return false;
+            if (endMayBeBlocked && qx == endX && qy == endY) return true;
+            return Pathfinding.isPassable(grid, qx, qy, mover) || (overCars && Grids.isParked(grid, qx, qy) && Grids.getTile(grid, qx, qy) == Grids.FLOOR);
+        }
+        int guard = JsMath.abs(endX - x) + JsMath.abs(endY - y);
+        while ((x != endX || y != endY) && guard-- >= 0)
+        {
+            // How far along the line the next x and y boundaries are, as |dx| * |dy| fractions.
+            double nx = sx == 0 ? double.PositiveInfinity : JsMath.abs((double)(sx > 0 ? x + 1 : x) * SUB - a.x) * JsMath.abs(dy);
+            double ny = sy == 0 ? double.PositiveInfinity : JsMath.abs((double)(sy > 0 ? y + 1 : y) * SUB - a.y) * JsMath.abs(dx);
+            if (nx < ny)
+            {
+                if (!open(x, y, x + sx, y)) return false;
+                x += sx;
+            }
+            else if (ny < nx)
+            {
+                if (!open(x, y, x, y + sy)) return false;
+                y += sy;
+            }
+            else
+            {
+                if (!open(x, y, x + sx, y) || !open(x, y, x, y + sy) || !open(x + sx, y, x + sx, y + sy) || !open(x, y + sy, x + sx, y + sy)) return false;
+                x += sx;
+                y += sy;
+            }
+        }
+        return true;
+    }
+
     /// <summary>A vector of length `len` (SUB units) towards (dx, dy), in integers. (0, 0) stays (0, 0).</summary>
     public static Point toward(int dx, int dy, double len)
     {
