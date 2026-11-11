@@ -95,9 +95,15 @@ public partial class Game
 
         if (ParseArgs().TryGetValue("invshot", out var shotAt))
         {
-            // A full bag (and a bandage in the coat's pockets) beside a stocked shelf.
+            // A full bag (and a bandage in the coat's pockets) beside a stocked shelf. What the picture adds is
+            // taken away again after it (below): the steps that follow count on the bag as it was.
+            var added = new System.Collections.Generic.List<string>();
             foreach (var kind in new[] { "wood", "gun", "weapon", "bandage", "bandage", "bandage", "book", "medkit", "ammo", "ammo" })
-                Commands.applyCommand(state, new Command { type = "take", itemId = Items.spawnItem(state, kind, you.pos.x, you.pos.y).id });
+            {
+                var taken = Items.spawnItem(state, kind, you.pos.x, you.pos.y);
+                added.Add(taken.id);
+                Commands.applyCommand(state, new Command { type = "take", itemId = taken.id });
+            }
             var bandage = you.pack.First((id) => It(id).kind == "bandage");
             Commands.applyCommand(state, new Command { type = "moveItem", itemId = bandage, containerId = coat, x = 0, y = 0 });
             foreach (var kind in new[] { "food", "food", "boots", "cloth", "cloth", "scrap", "fuel", "book", "axe", "medicine" })
@@ -105,6 +111,7 @@ public partial class Game
                 var item = Items.spawnItem(state, kind, shelf.x, shelf.y);
                 item.pos = null;
                 item.inside = shelf.id;
+                added.Add(item.id);
             }
             await Frames(3);
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
@@ -128,6 +135,14 @@ public partial class Game
                 await Frames(2);
                 Check("Esc while dragging lets go, and nothing moves", state.items.First((i) => i.id == axe).inside == shelf.id);
             }
+            foreach (var id in added)
+            {
+                var item = state.items.FirstOrDefault((i) => i.id == id);
+                if (item == null) continue;
+                Inventory.unpack(you, id);
+                Items.removeItem(state, item);
+            }
+            await Frames(2);
         }
 
         await Tap(Godot.Key.Escape);
