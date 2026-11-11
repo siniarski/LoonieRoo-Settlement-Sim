@@ -69,7 +69,7 @@ public sealed partial class People
     double LeapPre(Model m, Leap l, SimState state, Survivor you, double alpha, double delta, bool leftFree, bool rightFree)
     {
         var b = state.control?.busy;
-        bool leaping = b != null && Leaps.isLeap(b.what);
+        bool leaping = b != null && Leaps.isLeap(b.what) && b.what != "stroke";  // a stroke (Swim.cs) is no leap to see
         if (!leaping && l.busy != null) l.land = Math.Min(LAND_FOR, l.land <= 0 ? LAND_FOR : l.land);  // just landed
         if (leaping && !ReferenceEquals(b, l.busy)) { l.what = b!.what; l.land = 0; StartHands(m, l, state, you, b, leftFree, rightFree); }
         l.busy = leaping ? b : null;

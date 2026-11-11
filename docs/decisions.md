@@ -148,6 +148,22 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
   the bonnet only if the tick's step moves you (more than STILL_AT_CAR, 12 SUB): W still held from walking up to it,
   the body stops you and E works. *Why:* The player's "E doesn't get me in" was W still down: the old rule cancelled
   the 2.5 s of getting in on the first tick
+- **Into the water: you wade and swim; nobody else does (2026-11-11, Swim.cs; log/2026-11-11-21-play-fixes-rivers.md).**
+  Depth is the distance from the bank, tiles only: a water tile with land (not a bridge's deck) among its eight
+  neighbours is shallow, any other deep. The Heights' bed agrees (under half a metre by the bank, 0.7 m to 1.3 m
+  further out) but the tick doesn't read heights: hand-made maps have none, and the tick stays on the grid. Your body
+  moves as a new mover, "swimmer" (the free mover's rules and water), used only by your walking, jumps and strokes;
+  no path or reachability is planned for it, so colonists, the dead, animals and dogs keep treating water as before
+  (a one-line change would let the dead wade the shallows, but their reachability labels, hordes and the herd paths
+  all assume water is a wall: left for its own change). Space in deep water is a stroke (a leap of its own, busy
+  "stroke", carried like a jump at the water's level) rather than a "swim up": the sim has no depth to dive in, and a
+  rhythm of strokes that is cheaper than paddling makes the choice to swim well a real one. The hop over one tile of
+  water stays: dry and quicker than wading. Letting go of control in the water puts you on the nearest land. One
+  side effect, kept: your body may now overlap the water's edge, so walking a bank no longer slides you along it as a
+  wall; it moved three of six solo balance runs by a few hundred ticks each way (log).
+  *Why:* The player's playtest: "rivers cannot be entered (perhaps the heightmap should continue underwater and your
+  player gets wet as a result of entering and swimming". A depth from the bank is cheap, needs no heights in the tick,
+  and makes a wide river the risk it should be.
 
 ## Jobs, building and hauling
 

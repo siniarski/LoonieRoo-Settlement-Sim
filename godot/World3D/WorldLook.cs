@@ -47,7 +47,20 @@ void fragment() {
     METALLIC = 0.3 * (1.0 - dirt);
 }";
 
-    static ShaderMaterial? solid, roof, glass;
+    // Water (2026-11-11, rivers you can go into): a sheet you see the bed through a little, clearer looking down
+    // into it than across it (the vertex colour's alpha straight down, nearly opaque at a glance), and glossy.
+    const string WATER = HEAD + ", blend_mix, cull_disabled, depth_draw_opaque;\n" + @"
+void fragment() {
+    float facing = clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
+    ALBEDO = COLOR.rgb * vec3(0.26, 0.32, 0.34);
+    ALPHA = mix(0.88, COLOR.a, facing);
+    ROUGHNESS = 0.22;
+    SPECULAR = 0.3;
+}";
+
+    static ShaderMaterial? solid, roof, glass, water;
+    /// <summary>The water's surface (WorldMesh draws it on the ground's mesh, its own surface).</summary>
+    public static ShaderMaterial Water => water ??= new ShaderMaterial { Shader = new Shader { Code = WATER } };
     public static ShaderMaterial Solid => solid ??= new ShaderMaterial { Shader = Surfaces.Shader(SOLID) };
     /// <summary>As Solid, with snow on what faces up (Weather.cs declares `snow_cover`: make a WeatherLayer first).</summary>
     public static ShaderMaterial Roof => roof ??= new ShaderMaterial { Shader = Surfaces.Shader(ROOF) };

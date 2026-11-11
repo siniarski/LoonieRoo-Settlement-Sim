@@ -146,6 +146,11 @@ public sealed partial class FirstPerson : Node3D
         return (new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + h, (float)p.y), false, 0);
     }
 
+    /// <summary>Swimming: the eye this far over the water's surface (m), and how fast it settles there (per second).</summary>
+    public const float SWIM_EYE = 0.14f, SINK_EASE = 3;
+    /// <summary>How far under standing height the eye (and your body with it) is, swimming (m, 0 or less; eased).</summary>
+    float sink;
+
     /// <summary>The ground under the eye, eased: walking over a rise or a kerb lifts the view smoothly.</summary>
     float eyeGround = float.NaN;
     /// <summary>How fast the eye's ground catches up (per second), and a jump past which it snaps (a teleport, a load).</summary>
@@ -165,10 +170,14 @@ public sealed partial class FirstPerson : Node3D
         Terrain.Use(state);
         var car = Vehicles.vehicleOf(state, you);
         var (eye, inCar, _) = Eye(state, you, alpha, car != null && cockpit.Following(car) ? cockpit.Yaw : null);
+        // Out of your depth (Swim.cs) the eye sits just over the water, not standing height over the bed; eased in and out.
+        float sinkTo = !inCar && Swim.swimming(state, you) ? Math.Min(0, Terrain.Water(eye.X, eye.Z) + SWIM_EYE - eye.Y) : 0;
+        sink += (sinkTo - sink) * (float)Math.Min(1, delta * SINK_EASE);
         float ground = Terrain.Height(eye.X, eye.Z);
         if (float.IsNaN(eyeGround) || Math.Abs(ground - eyeGround) > EYE_SNAP) eyeGround = ground;
         else eyeGround += (ground - eyeGround) * (float)Math.Min(1, delta * EYE_EASE);
-        eye.Y += eyeGround - ground;
+        eye.Y += eyeGround - ground + sink;
+        people.YourSink = sink;
         if (EyeAt is { } at) eye = at with { Y = Terrain.Height(at.X, at.Z) + at.Y };
         camera.Position = eye;
         EyeUp = eye.Y - eyeGround;

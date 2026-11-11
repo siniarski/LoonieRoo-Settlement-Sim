@@ -18,8 +18,12 @@ public static partial class Pathfinding
     /// is moved as a zombie: isPassable and crossable know no "runner", so it gets the last line of each, the dead's.</summary>
     public const string RUNNER = "runner";
 
+    /// <summary>Your body in first person (Swim.cs): the free mover's rules, and water too. Nobody paths as one.</summary>
+    public const string SWIMMER = "swimmer";
+
     public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
+        if (mover == SWIMMER) { if (getTile(grid, x, y) == WATER) return true; mover = FREE; }
         // A parked car is in everyone's way but another car's (cars meet body to body: VehicleBody.cs).
         if (grid.parkedCount > 0 && mover != VEHICLE && Grids.isParked(grid, x, y)) return false;
         if (mover == BREACHER) return inBounds(grid, x, y) && getTile(grid, x, y) != WATER;
@@ -38,6 +42,7 @@ public static partial class Pathfinding
     {
         int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
         if (e < 0) return true;
+        if (mover == SWIMMER) mover = FREE;
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);

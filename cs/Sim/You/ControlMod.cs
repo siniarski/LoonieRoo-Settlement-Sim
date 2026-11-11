@@ -124,6 +124,11 @@ public static partial class ControlMod
         {
             pct = ((double)(pct) * snow) / 100;  // deep snow where you stand (Snow.cs): smooth, not a whole tick a tile
         }
+        var swim = Swim.pacePct(state, s);
+        if (swim != 100)
+        {
+            pct = ((double)(pct) * swim) / 100;  // wading, swimming (Swim.cs)
+        }
         return JsMath.round(((double)(((double)(walk) * (pct))) / (10000)));
     }
 
@@ -131,11 +136,12 @@ public static partial class ControlMod
     /// and pushed back out of it, a few SUB either way).</summary>
     public const int STILL_AT_CAR = 12;
 
-    /// <summary>How you walk from where you stand: "free", or where you don't fit as that (a closed door's tile, or
-    /// straddling a broken window's frame or a fence on an old save) as a colonist or the dead do, so you can get clear.</summary>
+    /// <summary>How you walk from where you stand: as the "swimmer" (the free mover's rules, and water too: Swim.cs),
+    /// or where you don't fit as that (a closed door's tile, or straddling a broken window's frame or a fence on an
+    /// old save) as a colonist or the dead do, so you can get clear.</summary>
     public static string walkMover(Grid grid, Point at)
     {
-        if (Motion.fits(grid, at, Pathfinding.FREE)) return Pathfinding.FREE;
+        if (Motion.fits(grid, at, Pathfinding.SWIMMER)) return Pathfinding.SWIMMER;
         return Motion.fits(grid, at, Pathfinding.SURVIVOR) ? Pathfinding.SURVIVOR : Pathfinding.ZOMBIE;
     }
 
@@ -158,6 +164,7 @@ public static partial class ControlMod
             return;
         }
         s.move = null;
+        Swim.tick(state, s, c);  // in deep water: paddling costs, winded you struggle (Swim.cs)
         if (Leaps.airborne(c))
         {
             Leaps.tick(state, s, c);  // in the air: steering waits for the landing
@@ -174,7 +181,7 @@ public static partial class ControlMod
             {
                 c.facing = eightWay(c.dx, c.dy);
             }
-            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s) && !sightsUp(state, s);
+            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s) && !sightsUp(state, s) && !Swim.swimming(state, s);
             if (Js.T(run))
             {
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
@@ -192,7 +199,7 @@ public static partial class ControlMod
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
             if ((off.x != s.at.x) || (off.y != s.at.y))
             {
-                s.at = Motion.fits(state.grid, off, "free") ? off : stood;
+                s.at = Motion.fits(state.grid, off, Pathfinding.SWIMMER) ? off : stood;
             }
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))

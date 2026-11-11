@@ -283,6 +283,9 @@ public sealed partial class People
     /// <summary>Your own body: shown standing or sneaking, posed like everyone's, its legs the way you walk and its
     /// chest the way you look (camYaw, FirstPerson's: the look along (cos, sin) on the grid); its head hidden unless
     /// you look from outside (fromOutside: --eye).</summary>
+    /// <summary>How far your body is let down into the water, swimming (m, 0 or less: FirstPerson's sink, the eye's).</summary>
+    public float YourSink;
+
     public void UpdateYou(SimState state, Survivor you, double alpha, double camYaw, double delta, bool show, bool fromOutside, bool rightHeld = false, bool leftHeld = false)
     {
         var pose = PoseIntents.ofSurvivor(state, you);
@@ -350,7 +353,7 @@ public sealed partial class People
         {
             m.yaw = ownYaw;
             m.root.Rotation = new Vector3(0, ownYaw, 0);
-            m.root.Position += behind;
+            m.root.Position += behind + Vector3.Up * YourSink;  // swimming, in the water to the chin (FirstPerson)
             if (back && m.forced == null) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
             LeapPost(m, lift, m == own);
             m.player.Advance(delta);
