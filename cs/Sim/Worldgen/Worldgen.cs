@@ -371,6 +371,7 @@ public static partial class Worldgen
             weapon.pos = null;
             weapon.carriedBy = you.id;
             you.weapon = weapon.id;
+            Inventory.readyQuick(state, you);  // on the hotbar from the start
             Items.spawnItem(state, "bandage", you.pos.x, you.pos.y);
         }
         for (var i = 0; i < (solo ? 4 : 12); i++)
