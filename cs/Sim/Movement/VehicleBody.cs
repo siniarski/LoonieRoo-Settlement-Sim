@@ -186,6 +186,9 @@ public static partial class Vehicles
         return true;
     }
 
+    /// <summary>Does its engine run: fuel in the tank and not a wreck.</summary>
+    public static bool runs(Vehicle v) => (v.fuel > 0) && (v.health > 0);
+
     /// <summary>How far a point is from the car's body (SUB; 0 inside it).</summary>
     public static double gap(Vehicle v, Point p)
     {

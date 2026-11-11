@@ -118,20 +118,7 @@ public sealed class WorldNoises
         windowsY = you.pos.y;
     }
 
-    // The turrets, found again only when the furniture list changes (a world has hundreds of thousands of trees:
-    // scanning them all every frame cost ~8 ms on a 2048 world).
-    List<Furniture> turretList = new();
-    List<Furniture>? seenList;
-    int seenCount = -1;
-
-    List<Furniture> Of(SimState state)
-    {
-        if (!ReferenceEquals(seenList, state.furniture) || seenCount != state.furniture.Count)
-        {
-            seenList = state.furniture;
-            seenCount = state.furniture.Count;
-            turretList = state.furniture.FindAll((f) => f.kind == "turret");
-        }
-        return turretList;
-    }
+    // The turrets, from the sim's index by kind (a world has hundreds of thousands of trees: scanning them all
+    // every frame cost ~8 ms on a 2048 world).
+    static List<Furniture> Of(SimState state) => FurnitureMod.ofKind(state, "turret");
 }

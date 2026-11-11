@@ -48,7 +48,7 @@ public sealed partial class Menu : Control
         }),
         ("Playing one survivor", new[]
         {
-            "Select someone and press F to take control (F again lets go). The screen shows only what they would see: G brings out the colony management (build, priorities, overview, neighbours) and puts it away.",
+            "Select someone and press F to take control (F again lets go). The screen shows only what they would see: M brings out the map and its Colony tab (build, priorities, overview, neighbours) and puts it away; G is your flashlight.",
             "WASD walk, Shift run, C sneak. The mouse aims; click to swing or shoot. A swing at a window breaks it (loudly).",
             "E or right-click uses what is in front of you: search a fridge or a wardrobe, eat, drink from a tap, sleep in a bed, cook at an oven while the power lasts, get in a car.",
             "R works the tile in front: repair, barricade a door or board a window with wood, build a wall.",

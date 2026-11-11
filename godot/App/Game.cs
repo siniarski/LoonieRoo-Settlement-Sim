@@ -52,7 +52,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     const double CLICK_SLOP_PX = 4;
 
     public SimState state = null!;
-    /// <summary>Where play started (a new world or a loaded save): bug reports replay from here.</summary>
     /// <summary>Where a bug report replays from: the state at the start of play (or the last dawn), packed (Savefile.bugStart).</summary>
     Savefile.BugStart initial = null!;
     readonly View view = new();

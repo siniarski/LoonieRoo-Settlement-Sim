@@ -40,7 +40,7 @@
 //   --clock=TICK --burn=dx,dy,dx,dy..      the clock set; tiles alight at those offsets from you (a line of grass fire: --burn=4,-3,4,-2,4,-1,4,0)
 //   --lineup[=variants|weapons|furniture]  one of every item kind on the ground in front of you (or every model of the kinds with several,
 //                                          the weapons, or every furniture kind and look)
-//   --stage=farm,sites,visitors,heli       east of you: a farm at every stage; building sites; a wanderer, a trader, a prisoner, a caravan
+//   --stage=farm,sites,visitors,heli,climb,crossings   east of you: a farm at every stage; building sites; a wanderer, a trader, a prisoner, a caravan
 //                                          and a scavenging party; the helicopter overhead (pictures of what only the Colony tab used to draw)
 //   --arm=KIND[:ROUNDS]                    that weapon in your hand (a gun with ROUNDS in it, else 60% of its magazine, and a box of its
 //                                          ammunition in your bag), for pictures of the HUD's readout

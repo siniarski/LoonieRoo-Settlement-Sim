@@ -215,7 +215,7 @@ public static partial class Vehicles
         {
             return;
         }
-        var runs = (v.fuel > 0) && (v.health > 0);
+        var runs = Vehicles.runs(v);
         var top = topSpeed(state, v);
         if (Js.T(runs) && (dy < 0))
         {

@@ -125,20 +125,7 @@ public sealed class Loops
         Heard.Clear();
     }
 
-    // The generators, found again only when the furniture list changes (a world has hundreds of thousands of trees:
-    // scanning them all every frame cost ~8 ms on a 2048 world).
-    List<Furniture> generatorList = new();
-    List<Furniture>? seenList;
-    int seenCount = -1;
-
-    List<Furniture> Of(SimState state)
-    {
-        if (!ReferenceEquals(seenList, state.furniture) || seenCount != state.furniture.Count)
-        {
-            seenList = state.furniture;
-            seenCount = state.furniture.Count;
-            generatorList = state.furniture.FindAll((f) => f.kind == "generator");
-        }
-        return generatorList;
-    }
+    // The generators, from the sim's index by kind (a world has hundreds of thousands of trees: scanning them all
+    // every frame cost ~8 ms on a 2048 world).
+    static List<Furniture> Of(SimState state) => FurnitureMod.ofKind(state, "generator");
 }

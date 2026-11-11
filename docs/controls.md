@@ -39,7 +39,6 @@ weapon hand is empty. A survivor of yours in the line holds your fire.
 
 The direct-control keys below apply as before (L loots the room where you look). In the Colony tab you stand still
 and the colony's controls apply; M or Esc goes back to first person; F on someone selected plays them instead.
-G is gone.
 
 ## The inventory screen (Tab)
 

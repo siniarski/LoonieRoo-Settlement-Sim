@@ -149,7 +149,7 @@ public partial class Game
         var at = you.pos;
         var looked = LookedAt(you, USE_REACH);
         // A searched container opens the inventory on it, beside yours.
-        if (looked != null && Math.Abs(looked.x - at.x) <= 1 && Math.Abs(looked.y - at.y) <= 1 && (looked.x != at.x || looked.y != at.y)
+        if (looked != null && ControlMod.nextTo(at, looked) && !Space.samePoint(at, looked)
             && (inventory.OpenAt(state, looked) || Command(new Command { type = "use", x = looked.x, y = looked.y }))) return;
         var front = FrontTile(you);
         if (inventory.OpenAt(state, front)) return;

@@ -484,7 +484,7 @@ public sealed partial class Painter
                     // North edge: along the top of the tile; west edge: down its left side.
                     double bx = r.x - t / 2, by = r.y - t / 2;
                     double bw = side == 0 ? r.w + t : t, bh = side == 0 ? t : r.h + t;
-                    if (kind == 4 || kind == 5)
+                    if (Grids.isWindow(kind))
                     {
                         // A window: the frame's ends as wall; glass a pale pane between, broken a gap with shards;
                         // boarded, planks across it.
@@ -504,7 +504,7 @@ public sealed partial class Painter
                         double gy = side == 0 ? by + t * 0.25 : by + end + t / 2;
                         double gw = side == 0 ? bw - 2 * end - t : t * 0.5;
                         double gh = side == 0 ? t * 0.5 : bh - 2 * end - t;
-                        if (kind == 4)
+                        if (kind == Grids.EDGE_WINDOW)
                         {
                             ctx.fillStyle = "rgba(170, 210, 235, 0.85)";
                             ctx.fillRect(gx, gy, gw, gh);
@@ -529,7 +529,7 @@ public sealed partial class Painter
                         }
                         continue;
                     }
-                    if (kind == 3)
+                    if (kind == Grids.EDGE_BARRICADE)
                     {
                         // A barricade: planks across the border, gaps between.
                         ctx.fillStyle = COLOURS.tiles["door"];

@@ -140,7 +140,7 @@ public sealed class Cockpit
     void Read(SimState state, Vehicle car, double alpha, double delta)
     {
         var g = Gauges;
-        bool runs = car.fuel > 0 && car.health > 0;
+        bool runs = Vehicles.runs(car);
         double kmh = Math.Abs(car.speed) * Tick.TICKS_PER_SECOND / Motion.SUB * 3.6;
         g.Kmh = kmh;
         g.Fuel = car.fuel / Vehicles.FUEL_MAX;

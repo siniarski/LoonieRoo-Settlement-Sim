@@ -238,7 +238,7 @@ public sealed partial class BuildBar : PanelContainer
     static readonly Dictionary<string, string> TOOL_HINTS = new()
     {
         ["scavenge"] = "Drag a box over a ruin or trees to mark crates and trees",
-        ["explore"] = "Drag a box into the dark: a scout goes and looks (up to 64 tiles a side)",
+        ["explore"] = $"Drag a box into the dark: a scout goes and looks (up to {Fog.MAX_EXPLORE_SIDE} tiles a side)",
         ["farm"] = "Drag a box over open ground to lay out plots",
         ["furnish"] = "Click a room: the planner adds what it needs",
         ["remove"] = "Drag over walls, doors, or furniture to take down",

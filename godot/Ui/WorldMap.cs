@@ -148,7 +148,7 @@ public sealed partial class WorldMap : Control
             int edge = Grids.edgeKind(grid, i * 2) != 0 ? Grids.edgeKind(grid, i * 2) : Grids.edgeKind(grid, i * 2 + 1);
             var tile = Grids.tileAt(grid, i);
             var c = Grids.exploredAt(grid, i) != 1 ? RGB["fog"]
-                : edge != 0 ? (edge == 2 ? RGB["door"] : RGB["wall"])
+                : edge != 0 ? (edge == Grids.EDGE_DOOR ? RGB["door"] : RGB["wall"])
                 : tile == "floor" ? RGB[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
                 : RGB.TryGetValue(tile, out var t) ? t : RGB["wall"];
             image.SetPixel(i % grid.width, i / grid.width, c);
@@ -213,7 +213,7 @@ public sealed partial class WorldMap : Control
         foreach (var t in Mapnotes.townNames(s)) if (seen(t.x, t.y)) Label(t.x + 0.5, t.y + 0.5, t.name.ToUpperInvariant(), "#e8d9a8", 14, true);
         foreach (var n in s.settlements)
         {
-            var colour = n.people <= 0 ? "#888888" : n.reputation <= Settlements.HOSTILE ? "#ff7a6a" : "#7ad7ff";
+            var colour = Colonies.isFallen(n) ? "#888888" : n.reputation <= Settlements.HOSTILE ? "#ff7a6a" : "#7ad7ff";
             Dot(n.x + 0.5, n.y + 0.5, colour, 5);
             Label(n.x + 0.5, n.y - 1, n.name, colour);
         }

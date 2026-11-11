@@ -2,8 +2,9 @@
 // seen from their eyes. Reads state only (rule 5): the camera's yaw and pitch are view state, and
 // the game turns them into `aim` and `steer` commands. Chunks of the world (WorldMesh) are built
 // near you and rebuilt only when what they show changes, a few a frame at most (rule 14).
-// People are the character models (People.cs), the nearest MAX_MODELS of them; the rest, animals
-// and cars are drawn by Bodies.cs, things on the ground by Items.cs, what you hold by Held.cs.
+// People are the character models (People.cs), the nearest MAX_MODELS of them, and the rest capsules (Bodies.cs,
+// which also drives the animals' models: Animals.cs); cars are Cars.cs, things on the ground Items.cs, what you
+// hold Held.cs.
 
 using System;
 using System.Collections.Generic;
@@ -125,9 +126,8 @@ public sealed partial class FirstPerson : Node3D
         look.indoor = roofs.Indoor;
     }
 
-    /// <summary>Where the eye is (m) and which way it looks, from the controlled survivor.</summary>
-    /// <summary>Where the eye is (m: on the ground under you, as it is there) and which way it looks. Update eases the ground's height.</summary>
-    /// <summary>In a car the eye is the driver's (Cockpit.Seat: ahead of the car's centre, to its left), on the car's heading
+    /// <summary>Where the eye is (m: on the ground under you, as it is there) and which way it looks, from the controlled
+    /// survivor. Update eases the ground's height. In a car the eye is the driver's (Cockpit.Seat: ahead of the car's centre, to its left), on the car's heading
     /// or `carYaw` if given (the view's eased heading, so the seat doesn't jump between the sim's 32 headings).</summary>
     public static (Vector3 eye, bool inCar, double carYaw) Eye(SimState state, Survivor you, double alpha, double? carYaw = null)
     {

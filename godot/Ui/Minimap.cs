@@ -83,7 +83,7 @@ public sealed partial class Minimap : Control
                 // tile, the walls round a room still outline it.
                 int edge = Grids.edgeKind(grid, i * 2) != 0 ? Grids.edgeKind(grid, i * 2) : Grids.edgeKind(grid, i * 2 + 1);
                 Color colour = Grids.exploredAt(grid, i) != 1 ? RGB["fog"]
-                    : edge != 0 ? (edge == 1 ? RGB["wall"] : edge is 4 or 5 ? RGB["glass"] : RGB["door"])
+                    : edge != 0 ? (edge == Grids.EDGE_WALL ? RGB["wall"] : Grids.isWindow(edge) ? RGB["glass"] : RGB["door"])
                     : tile == "floor" ? RGB[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
                     : RGB.TryGetValue(tile, out var c) ? c : RGB["fog"];
                 image.SetPixel(qx, py, colour);
@@ -95,7 +95,7 @@ public sealed partial class Minimap : Control
         void dot(int x, int y, string colour, int size = 2) => dots.Add((x, y, Ctx.Css(colour), size));
         bool seen(int x, int y) => Grids.exploredAt(grid, y * grid.width + x) == 1;
         foreach (var p in state.pointsOfInterest) dot(p.x, p.y, "#ffd166", 3);
-        foreach (var n in state.settlements) dot(n.x, n.y, n.people <= 0 ? "#777777" : n.reputation <= Settlements.HOSTILE ? "#ff5a4a" : "#7ad7ff", 5);
+        foreach (var n in state.settlements) dot(n.x, n.y, Colonies.isFallen(n) ? "#777777" : n.reputation <= Settlements.HOSTILE ? "#ff5a4a" : "#7ad7ff", 5);
         foreach (var z in state.zombies) if (seen(z.pos.x, z.pos.y)) dot(z.pos.x, z.pos.y, "#ff5a4a");
         foreach (var herd in state.herds) if (herd.heard || seen(herd.x, herd.y)) dot(herd.x, herd.y, "#ff5a4a", 4);
         foreach (var e in Errands.errandsOf(state)) dot(e.x, e.y, "#ffa24a", 4);

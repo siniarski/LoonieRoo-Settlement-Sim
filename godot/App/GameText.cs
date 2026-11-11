@@ -1,4 +1,4 @@
-// The game's text outputs (see the command line in Game.cs and godot/README.md "Which to use when"): what an agent
+// The game's text outputs (see the command line in GameArgs.cs and godot/README.md "Which to use when"): what an agent
 // reads instead of a picture. Read only: they look at the sim state after each tick and print.
 //   --trace[=K]       one line per tick (every Kth) for the survivor you control: tick, where (tiles, two decimals),
 //                     tile, facing, what they're doing, health. --trace-near=R adds the movers within R tiles

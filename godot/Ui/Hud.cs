@@ -290,7 +290,7 @@ public sealed partial class Hud : Control
         var you = ControlMod.controlled(state);
         var car = you != null ? Vehicles.vehicleOf(state, you) : null;
         if (car == null) return "";
-        double tiles = Math.Round(Math.Abs(car.speed) * 10 / Motion.SUB);
+        double tiles = Math.Round(Math.Abs(car.speed) * Tick.TICKS_PER_SECOND / Motion.SUB);
         return $"driving {(car.speed < 0 ? "backwards " : "")}{tiles} tiles/s · fuel {Math.Round(car.fuel * 100 / Vehicles.FUEL_MAX)}% · car {Math.Round(car.health * 100 / Vehicles.VEHICLE_HEALTH)}%";
     }
 
@@ -570,7 +570,7 @@ public sealed partial class Hud : Control
                 string mood = n.reputation <= Settlements.HOSTILE ? "hostile" : n.reputation >= Settlements.FRIENDLY ? "friendly" : "wary";
                 row.Text(Colonies.isFallen(n)
                     ? $"{n.name} ({n.x}, {n.y}): fallen, nobody left"
-                    : $"{n.name} ({n.x}, {n.y}): {mood} {n.reputation} · {n.people} people, {Colonies.hungerOf(n)}, walls {n.defence}/5{standing(state, n)}");
+                    : $"{n.name} ({n.x}, {n.y}): {mood} {n.reputation} · {n.people} people, {Colonies.hungerOf(n)}, walls {n.defence}/{Colonies.MAX_DEFENCE}{standing(state, n)}");
                 if (Colonies.isFallen(n)) continue;
                 row.Button($"Gift {Settlements.GIFT_FOOD} food", () => Command(new Command { type = "giftSettlement", settlementId = n.id }), disabled: food < Settlements.GIFT_FOOD);
                 // The browser asks to confirm; here the first click arms it, a second within 3 s raids.
