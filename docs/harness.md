@@ -46,6 +46,10 @@ vars below for each.
   street's cross-section (the road mask across it), the country roads' widths, and in the generated world each parked
   car on the road with the clear road beside it; MAP adds the plan round a point as text (roads, sidewalks, lots,
   trees, cars).
+- **road edges** (RoadEdges.cs; SEEDS=1,2,3, SIZE=512): how far the drawn country road (a ribbon ROAD_REACH each side
+  of the plan's line) and the road tiles disagree: area that looks like road and drives as grass and the reverse, a
+  metre of road, the share of road tiles with any, how deep a wrong point goes; and each road's ends and bridges
+  (places to look at the joins).
 - **building loot**, **building sites** (BuildingLoot.cs; SEEDS, SIZE, SEED): what generated buildings hold; where
   they stand (for pictures).
 - **census**, **census noise** (Census.cs; SEEDS, PRESET): the dead in a fresh world (how many, how near the start);

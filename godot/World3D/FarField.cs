@@ -3,7 +3,12 @@
 //
 // The world is cut into REGION x REGION-tile regions; each within range is one mesh and a few MultiMeshes:
 //   - the ground on a STEP-tile grid (corner heights from Terrain, vertex colours by ground, water at its
-//     level), a little under the near ground so the two never fight;
+//     level), a little under the near ground so the two never fight; each corner the mean of the sixteen tiles
+//     about it and the water's edge cut where half of them are water, so it is as smooth as the near ground's
+//     edges, coarser (2026-11-12);
+//   - country roads as the near view's ribbons, coarser (Roads: the plan's lines, a strip a piece every 4 m, a
+//     disc at a junction, a deck over water; their lane lines in a mesh seen to LINES_TO), the road's tiles
+//     drawn as the ground it runs over;
 //   - buildings as blocks: floor tiles (boards, tiles, concrete) merged into rectangles, walls to the
 //     eaves and a flat roof in a roof colour (by a hash of the block);
 //   - trees as the far LOD (Trees.TreeMesh(s, 2): 10-86 triangles), one MultiMesh per species, no shadows,
@@ -38,6 +43,10 @@ public sealed class FarField
     /// <summary>Building regions stops for the frame once it has spent this long (ms; at least one is built).</summary>
     const double BUILD_MS = 4;
     const int CHECK_EVERY = 300;
+    /// <summary>The far roads: a piece's length (m), how far over the far ground they lie and their lines over them,
+    /// and how far their lines are seen (m, to the region's middle: past it a line is under a pixel or two).</summary>
+    const float ROAD_STEP = 4, ROAD_LIFT = 0.14f, LINE_UP = 0.03f, LINES_TO = 140;
+    static readonly int ROAD = Array.IndexOf(Grids.GROUNDS, "road"), BRIDGE = Array.IndexOf(Grids.GROUNDS, "bridge");
     /// <summary>How far the far field draws (m); 0 is off. The game's option --view=M; the draw bench's knob.</summary>
     public static float Range;
     /// <summary>Draw the far trees (the options' Far trees: Off).</summary>
@@ -224,33 +233,60 @@ void fragment() {
         st.Begin(Mesh.PrimitiveType.Triangles);
         int tris = 0;
 
-        // Ground: a STEP grid of corner heights, each vertex the colour of the tile it stands on.
-        Vector3 V(int x, int y, out Color c)
+        // Ground: a STEP grid of corner heights. Each corner is the mean of the sixteen tiles about it (as the near
+        // ground's smooth edges count them: WorldMesh.Edges), so kinds of ground fade into each other along the
+        // lines the near view draws, not in squares; a corner is water if half of them are, and a triangle with
+        // water and land corners is cut where that share is a half (Banked: a bank as smooth as the near one, four
+        // times coarser). A country road's tiles count as the ground it runs over (the road is drawn on it: Roads)
+        // and a bridge's as water (its deck is drawn over it).
+        bool ready = Ready(state, x0, y0);
+        const int M = 2;
+        int tw = x1 - x0 + 2 * M;
+        var tiles = new (bool water, Color c)[tw * (y1 - y0 + 2 * M)];
+        // What the plan makes of each tile not generated yet (PlanGround's: the trees below read it too).
+        var planned = new (bool water, int ground, double wooded)[tiles.Length];
+        for (int ty = 0; ty < y1 - y0 + 2 * M; ty++)
+            for (int tx = 0; tx < tw; tx++)
+            {
+                int ax = x0 - M + tx, ay = y0 - M + ty;
+                bool inside = ax >= x0 && ay >= y0 && ax < x1 && ay < y1;
+                var (water, ground) = FarTile(state, ax, ay, ready && (inside || Ready(state, ax, ay)), out planned[ty * tw + tx]);
+                tiles[ty * tw + tx] = (water, water ? WaterColour : GroundColour(ground));
+            }
+        int cw = (x1 - x0 + STEP - 1) / STEP + 1;
+        var corners = new (Vector3 p, Color c, float wet)[cw * ((y1 - y0 + STEP - 1) / STEP + 1)];
+        (Vector3 p, Color c, float wet) V(int x, int y)
         {
-            int tx = Math.Clamp(x, 0, g.width - 1), ty = Math.Clamp(y, 0, g.height - 1), i = ty * g.width + tx;
-            bool water;
-            int ground;
-            if (Generated(state, tx, ty)) { water = Grids.tileAt(g, i) == "water"; ground = Grids.groundAt(g, i); }
-            else (water, ground, _) = PlanGround(state, tx, ty, Ready(state, tx, ty));
-            c = water ? WaterColour : GroundColour(ground);
+            int k = ((y - y0 + STEP - 1) / STEP) * cw + (x - x0 + STEP - 1) / STEP;
+            if (corners[k].wet > 0) return corners[k];
+            Color sum = new(0, 0, 0, 0);
+            int wet = 0, land = 0;
+            for (int dy = -2; dy < 2; dy++)
+                for (int dx = -2; dx < 2; dx++)
+                {
+                    var t = tiles[(y + dy - y0 + M) * tw + (x + dx - x0 + M)];
+                    if (t.water) wet++;
+                    else { sum += t.c; land++; }
+                }
+            var c = land > 0 ? sum / land : GroundColour(0);
             float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
             c = c.Lightened(0.06f + Math.Abs(n) * 0.035f);
-            float h = Terrain.Coarse(Math.Min(x, g.width), Math.Min(y, g.height), water);
-            return new Vector3(x, h - SINK, y);
+            bool water = wet >= 8;
+            float h = Terrain.Coarse(x, y, water);
+            // (wet + 1, so a corner made is never 0: 0 is "not made yet".)
+            return corners[k] = (new Vector3(x, h - SINK, y), c, wet + 1);
         }
+        // The near water is a see-through sheet (58%) over the river bed: the far water is the two mixed, so they meet without a line.
+        var waterC = WaterColour.Lightened(0.08f).Lerp(WorldLook.RiverBed.colour.Lightened(0.07f), 0.42f);
         for (int y = y0; y < y1; y += STEP)
             for (int x = x0; x < x1; x += STEP)
             {
                 int xs = Math.Min(x + STEP, g.width), ys = Math.Min(y + STEP, g.height);
-                var a = V(x, y, out var ca); var b = V(xs, y, out var cb); var c = V(xs, ys, out var cc); var d = V(x, ys, out var cd);
-                // Front faces wind clockwise seen from above (as WorldMesh's).
-                if ((b - a).Cross(c - a).Y > 0) { (b, d) = (d, b); (cb, cd) = (cd, cb); }
-                var nrm = (b - a).Cross(c - a).Normalized();
+                var a = V(x, y); var b = V(xs, y); var c = V(xs, ys); var d = V(x, ys);
+                var nrm = (b.p - a.p).Cross(c.p - a.p).Normalized();
                 if (nrm.Y < 0) nrm = -nrm;
                 st.SetNormal(nrm);
-                st.SetColor(ca); st.AddVertex(a); st.SetColor(cb); st.AddVertex(b); st.SetColor(cc); st.AddVertex(c);
-                st.SetColor(ca); st.AddVertex(a); st.SetColor(cc); st.AddVertex(c); st.SetColor(cd); st.AddVertex(d);
-                tris += 2;
+                tris += Banked(st, a, b, c, waterC) + Banked(st, a, c, d, waterC);
             }
 
         // What the buildings here are made of, as the near view has them (WorldLook.Of, Roofs.RoofOf): each plan's
@@ -326,9 +362,21 @@ void fragment() {
             Block(st, new Vector3(m.x, foot - 0.3f, m.y), new Vector3(m.x + m.w, foot + WorldMesh.WALL_H + 0.25f, m.y + m.h), m.wall, m.roof);
             tris += 10;
         }
+        // Country roads: the plan's lines as strips (Roads), their lane lines in a mesh of their own seen only near.
+        var ls = new SurfaceTool();
+        ls.Begin(Mesh.PrimitiveType.Triangles);
+        int lineTris = 0;
+        if (ready && Plan(state) is { } lay3) tris += Roads(st, ls, g, lay3.regions, x0, y0, x1, y1, ref lineTris);
         var mesh = st.Commit();
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, groundMat);
         node.AddChild(new MeshInstance3D { Mesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        if (lineTris > 0)
+        {
+            var lm = ls.Commit();
+            lm.SurfaceSetMaterial(0, groundMat);
+            node.AddChild(new MeshInstance3D { Mesh = lm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeEnd = LINES_TO });
+            tris += lineTris;
+        }
 
         // Trees: the far LOD, one MultiMesh per species, placed as Trees places them, to TreeTier; crowns past it.
         int treeCount = 0, lodTris = 0, crownTris = 0;
@@ -349,7 +397,7 @@ void fragment() {
                     for (int x = x0; x < x1; x++)
                     {
                         if (Generated(state, x, y) || Worldgen.isRoad(lay2, x, y) || Worldgen.onLot(lay2, x, y) || NatureMod.nearStart(lay2, x, y, NatureMod.START_CLEAR_RADIUS)) continue;
-                        var (wet, _, wooded) = PlanGround(state, x, y, true);
+                        var (wet, _, wooded) = planned[(y - y0 + M) * tw + (x - x0 + M)];
                         if (wet || double.IsNaN(wooded) || NatureMod.roll(lay2.seed, x, y, 12) >= NatureMod.treeChanceAt(wooded)) continue;
                         var (s, t, c) = Trees.Placement(x, y, true, true);
                         bySpecies[s].Add((t, c));
@@ -404,6 +452,185 @@ void fragment() {
             }
         }
         return new Built(node, 0, treeCount, tris, lodTris, crownTris, TreeTier, DrawTrees);
+    }
+
+    /// <summary>A ground triangle, cut where its corners' share of water is a half: the water's side in the water's
+    /// colour, the land's in its corners' colours (a point on the cut takes its land end's). Triangles drawn.</summary>
+    static int Banked(SurfaceTool st, (Vector3 p, Color c, float wet) a, (Vector3 p, Color c, float wet) b, (Vector3 p, Color c, float wet) c, Color water)
+    {
+        // Front faces wind clockwise seen from above (as WorldMesh's).
+        if ((b.p - a.p).Cross(c.p - a.p).Y > 0) (b, c) = (c, b);
+        var v = new[] { a, b, c };
+        var f = new float[3];
+        int wetCorners = 0;
+        for (int k = 0; k < 3; k++) { f[k] = (v[k].wet - 1) / 16f - 0.5f; if (f[k] >= 0) wetCorners++; }
+        if (wetCorners == 0 || wetCorners == 3)
+        {
+            for (int k = 0; k < 3; k++) { st.SetColor(wetCorners == 3 ? water : v[k].c); st.AddVertex(v[k].p); }
+            return 1;
+        }
+        var wetPoly = new List<Vector3>(4);
+        var dry = new List<(Vector3 p, Color c)>(4);
+        for (int k = 0; k < 3; k++)
+        {
+            int e = (k + 1) % 3;
+            if (f[k] >= 0) wetPoly.Add(v[k].p); else dry.Add((v[k].p, v[k].c));
+            if ((f[k] >= 0) != (f[e] >= 0))
+            {
+                var p = v[k].p.Lerp(v[e].p, f[k] / (f[k] - f[e]));
+                wetPoly.Add(p);
+                dry.Add((p, f[k] >= 0 ? v[e].c : v[k].c));
+            }
+        }
+        int n = 0;
+        for (int k = 1; k + 1 < wetPoly.Count; k++, n++)
+        {
+            st.SetColor(water); st.AddVertex(wetPoly[0]); st.AddVertex(wetPoly[k]); st.AddVertex(wetPoly[k + 1]);
+        }
+        for (int k = 1; k + 1 < dry.Count; k++, n++)
+        {
+            st.SetColor(dry[0].c); st.AddVertex(dry[0].p); st.SetColor(dry[k].c); st.AddVertex(dry[k].p); st.SetColor(dry[k + 1].c); st.AddVertex(dry[k + 1].p);
+        }
+        return n;
+    }
+
+    /// <summary>A tile as the far ground draws it: water (a bridge's too) and its ground (a country road's: the ground it runs over).</summary>
+    (bool water, int ground) FarTile(SimState state, int x, int y, bool ready, out (bool water, int ground, double wooded) plan)
+    {
+        var g = state.grid;
+        int tx = Math.Clamp(x, 0, g.width - 1), ty = Math.Clamp(y, 0, g.height - 1), i = ty * g.width + tx;
+        bool water;
+        int ground;
+        plan = (false, 0, double.NaN);
+        if (Generated(state, tx, ty)) { water = Grids.tileAt(g, i) == "water"; ground = Grids.groundAt(g, i); }
+        else (water, ground, _) = plan = PlanGround(state, tx, ty, ready);
+        if (ground == BRIDGE) return (true, 0);
+        if (ground == ROAD && !water && Country(state, tx, ty))
+        {
+            var (w, under, _) = PlanGround(state, tx, ty, false);
+            return (w, under);
+        }
+        return (water, ground);
+    }
+
+    /// <summary>A road tile that is a country road's, not a town street's (by the plan; a region not planned yet: country).</summary>
+    bool Country(SimState state, int x, int y)
+    {
+        var r = Plan(state)?.regions;
+        if (r == null) return false;
+        var (rx, ry) = r.RegionOf(x, y);
+        return !r.IsPlanned(rx, ry) || r.RoadAt(x, y) == Worldplan.ROAD;
+    }
+
+    readonly Dictionary<(int, int), RoadNet> nets = new();
+    WorldRegions? netsFor;
+
+    /// <summary>The road net of the plan region holding tile (x, y) (kept: all its far regions share it; made again
+    /// while a neighbour it reaches into isn't planned).</summary>
+    RoadNet NetOf(WorldRegions regions, int x, int y)
+    {
+        if (!ReferenceEquals(netsFor, regions)) { nets.Clear(); netsFor = regions; }
+        var k = regions.RegionOf(x, y);
+        if (nets.TryGetValue(k, out var hit)) return hit;
+        var w = regions.WindowOf(k.rx, k.ry);
+        var net = RoadNet.Gather(regions, w.x0 - 8, w.y0 - 8, w.x1 + 8, w.y1 + 8, ask: false);
+        if (!net.Missing) nets[k] = net;
+        return net;
+    }
+
+    /// <summary>The far ground's height at a point (on its STEP grid's triangles, split as Build splits them), over land or water.</summary>
+    static float FarHeight(Grid g, float px, float pz, bool water)
+    {
+        int gx = (int)Math.Floor(px / STEP) * STEP, gz = (int)Math.Floor(pz / STEP) * STEP;
+        float u = (px - gx) / STEP, v = (pz - gz) / STEP;
+        float C(int x, int z) => Terrain.Coarse(Math.Clamp(x, 0, g.width), Math.Clamp(z, 0, g.height), water);
+        float a = C(gx, gz), b = C(gx + STEP, gz), c = C(gx + STEP, gz + STEP), d = C(gx, gz + STEP);
+        return (u >= v ? a + u * (b - a) + v * (c - b) : a + v * (d - a) + u * (c - d)) - SINK;
+    }
+
+    /// <summary>The country roads whose line runs through this region (the plan's lines: RoadNet), as the near view
+    /// draws them but coarser: a strip ROAD_REACH each side, ROAD_STEP m a piece, on the far ground's heights; a
+    /// disc where roads meet; over water a deck at the bridge's height (Heights.DECK over the surface). Their edge
+    /// and centre lines go in `lines` (seen to LINES_TO: past that they would be under a pixel). Triangles drawn
+    /// (the strips'; the lines' are added to lineTris).</summary>
+    int Roads(SurfaceTool st, SurfaceTool lines, Grid g, WorldRegions regions, int x0, int y0, int x1, int y1, ref int lineTris)
+    {
+        var net = NetOf(regions, x0, y0);
+        float H = RoadRibbons.HALF;
+        var asphalt = GroundColour(ROAD).Lightened(0.1f);
+        var deck = GroundColour(BRIDGE).Lightened(0.08f);
+        var line = RoadRibbons.LINE;
+        int tris = 0, lt = 0;
+        bool Mine(Vector2 p) => p.X >= x0 && p.X < x1 && p.Y >= y0 && p.Y < y1;
+        // What the line runs over: 0 none (a street, off the plan), 1 a country road, 2 water (a bridge).
+        int Kind(Vector2 p)
+        {
+            int x = (int)Math.Floor(p.X), y = (int)Math.Floor(p.Y);
+            if (x < 0 || y < 0 || x >= g.width || y >= g.height || regions.RoadAt(x, y) != Worldplan.ROAD) return 0;
+            return NatureMod.isWater(regions.nature, x, y) ? 2 : 1;
+        }
+        void Quad(SurfaceTool s, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color col)
+        {
+            s.SetColor(col);
+            s.SetNormal(Vector3.Up);
+            RoadRibbons.Tri(s, a, b, c);
+            RoadRibbons.Tri(s, a, c, d);
+        }
+        static Vector3 P(Vector2 p, Vector2 n, float o, float h) { var q = p + n * o; return new Vector3(q.X, h, q.Y); }
+        for (int li = 0; li < net.lines.Count; li++)
+        {
+            var pts = RoadNet.Resample(net.lines[li], ROAD_STEP);
+            float along = 0;
+            for (int i = 0; i + 1 < pts.Count; i++)
+            {
+                Vector2 a = pts[i], b = pts[i + 1], mid = (a + b) / 2;
+                float len = a.DistanceTo(b), from = along;
+                along += len;
+                if (!Mine(mid) || len < 1e-4f) continue;
+                int kind = Kind(mid);
+                if (kind == 0) continue;
+                Vector2 na = RoadNet.Across(pts, i), nb = RoadNet.Across(pts, i + 1);
+                bool wet = kind == 2;
+                float lift = wet ? (float)Heights.DECK + SINK : ROAD_LIFT;
+                float Ht(Vector2 q) => FarHeight(g, q.X, q.Y, wet) + lift;
+                // A deck is flat across (at its line's height); a road lies on the ground at its edges and middle.
+                float ha = Ht(a), hb = Ht(b);
+                Vector3 l0 = P(a, na, -H, wet ? ha : Ht(a - na * H)), r0 = P(a, na, H, wet ? ha : Ht(a + na * H));
+                Vector3 r1 = P(b, nb, H, wet ? hb : Ht(b + nb * H)), l1 = P(b, nb, -H, wet ? hb : Ht(b - nb * H));
+                Vector3 m0 = P(a, na, 0, ha), m1 = P(b, nb, 0, hb);
+                Quad(st, l0, m0, m1, l1, wet ? deck : asphalt);
+                Quad(st, m0, r0, r1, m1, wet ? deck : asphalt);
+                tris += 4;
+                if (wet) continue;
+                var across = (na + nb).Normalized();
+                bool Clear(float o) => net.DistOther(li, mid + across * o) > H - 0.05f && !net.NearJoin(mid + across * o, H);
+                foreach (var (o0, o1, dashed) in new[] { (-H + 0.24f, -H + 0.36f, false), (H - 0.36f, H - 0.24f, false), (-0.08f, 0.08f, true) })
+                {
+                    float e = (o0 + o1) / 2;
+                    if (!Clear(e)) continue;
+                    float h0 = Ht(a + na * e) + LINE_UP, h1 = Ht(b + nb * e) + LINE_UP;
+                    // The centre line two metres in four, as near: the piece split at its dashes' ends.
+                    for (float s0 = from; s0 < from + len - 1e-3f;)
+                    {
+                        float s1 = dashed ? Math.Min(from + len, (float)Math.Floor(s0 / 2) * 2 + 2) : from + len;
+                        if (!dashed || (int)Math.Floor(s0 / 2) % 2 == 0)
+                        {
+                            float t0 = (s0 - from) / len, t1 = (s1 - from) / len;
+                            Vector2 pa = a.Lerp(b, t0), pb = a.Lerp(b, t1), qa = na.Lerp(nb, t0), qb = na.Lerp(nb, t1);
+                            float ga = Mathf.Lerp(h0, h1, t0), gb = Mathf.Lerp(h0, h1, t1);
+                            Quad(lines, P(pa, qa, o0, ga), P(pa, qa, o1, ga), P(pb, qb, o1, gb), P(pb, qb, o0, gb), line);
+                            lt += 2;
+                        }
+                        s0 = s1;
+                    }
+                }
+            }
+        }
+        var look = new Look(asphalt, Surfaces.None);
+        foreach (var j in net.joins)
+            if (Mine(j) && Kind(j) == 1) { RoadRibbons.Disc(st, j, H, look, q => FarHeight(g, q.X, q.Y, false) + ROAD_LIFT, 10, uv: false); tris += 10; }
+        lineTris += lt;
+        return tris;
     }
 
     (Vector3[] v, Vector3[] n, Color[] c)[]? crowns;

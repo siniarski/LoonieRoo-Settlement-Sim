@@ -160,7 +160,7 @@ public partial class DrawBench : Node3D
             case 0: // build: look at the town till the far field is done
                 fp.EyeAt = null;
                 fp.Update(state, 1, toTown, -0.02, delta);
-                if (frame % 50 == 0) GD.Print($"  building: frame {frame}, regions {fp.Far.Regions}, pending {fp.Far.Pending}, build {fp.Far.BuildMs:0} ms");
+                if (frame % 50 == 0) GD.Print($"  building: frame {frame}, regions {fp.Far.Regions}, pending {fp.Far.Pending}, build {fp.Far.BuildMs:0} ms, road ribbons {fp.Ribbons.BuildMs:0.0} ms ({fp.Ribbons.Drawn:0} m)");
                 if ((frame > Settle && fp.Far.Pending == 0) || frame > MaxWarmup) { phase = 1; frame = 0; }
                 return;
             case 1: // the eye-height shot
