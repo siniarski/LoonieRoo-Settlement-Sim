@@ -471,4 +471,39 @@ public class CrossingsTest
         expect(z.pos.y).toBe(6);
         expect(chase(state, s, z).reached).toBe(true);
     }
+
+    [Fact(DisplayName = "crossings > a body coming over a car thumps: the idle dead near it come to look, those further off don't, once a car per THUMP_GAP")]
+    public void Climbing_is_loud()
+    {
+        var (state, s) = yard();
+        var car = plug(state);
+        expect(car.climbed).toBe(null);
+        var z = dead(state, s);
+        bool thumped = false;
+        for (int t = 0; t < 400 && !thumped; t++) { Tick.tick(state); thumped = car.climbed != null; }
+        expect(thumped).toBe(true);
+        expect(z.crossing?.what).toBe(Crossings.CLIMB);
+
+        // The noise itself, called as a crossing calls it: near and idle comes, far doesn't; and not twice at once.
+        var near = Zombies.addZombie(state, 13, 10, 100, "static");
+        var far = Zombies.addZombie(state, 15, 0, 100, "static");
+        near.targetId = null; far.targetId = null; near.heading = null; far.heading = null;
+        var t0 = state.tick + 100;
+        state.tick = t0;
+        Crossings.carClimbed(state, car, z);
+        expect(car.climbed).toBe(t0);
+        expect(near.heading?.x).toBe(car.pos.x);
+        expect(near.heading?.y).toBe(car.pos.y);
+        expect(far.heading).toBe(null);
+        near.heading = null;
+        state.tick = t0 + Crossings.THUMP_GAP - 1;
+        Crossings.carClimbed(state, car, z);
+        expect(near.heading).toBe(null);
+        expect(car.climbed).toBe(t0);
+        state.tick = t0 + Crossings.THUMP_GAP;
+        Crossings.carClimbed(state, car, z);
+        expect(near.heading).not.toBe(null);
+        expect(Noise.NOISE["thump"]).toBeGreaterThan(Sight.WALK_HEARD);
+        expect(Noise.NOISE["thump"]).toBeLessThan(Noise.NOISE["gunfire"]);
+    }
 }

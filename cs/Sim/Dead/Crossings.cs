@@ -52,6 +52,10 @@ public static class Crossings
     /// onto the tile): more than the time is worth, so the dead keep to the ground while round is near.</summary>
     public const int CAR_COST = 12, VAULT_COST = 3;
 
+    /// <summary>A car thumps (a body coming onto it, across it, off it: carClimbed) no more often than this: a crowd
+    /// going over at once is one din, and the noise's cost (a pass over the dead) stays bounded per car.</summary>
+    public const int THUMP_GAP = 5;
+
     /// <summary>On a car with no way on or down, it waits this long before looking again.</summary>
     public const int PERCH_TICKS = 10;
 
@@ -160,7 +164,7 @@ public static class Crossings
             route.AddRange(z.path.slice(used));
             z.path = route;
         }
-        startLeg(z, next, what);
+        startLeg(state, z, next, what);
         return true;
     }
 
@@ -212,8 +216,13 @@ public static class Crossings
         return null;
     }
 
-    static void startLeg(Zombie z, Point to, string what)
+    static void startLeg(SimState state, Zombie z, Point to, string what)
     {
+        if (what == CLIMB)
+        {
+            var car = Vehicles.parkedOver(state, to.x, to.y) ?? Vehicles.parkedOver(state, z.pos.x, z.pos.y);
+            if (car != null) carClimbed(state, car, z);
+        }
         int n = legTicks(z, what);
         z.crossing = new Crossing { what = what, from = z.at.Copy(), to = Motion.centre(to), ticks = n, of = n };
     }
@@ -281,7 +290,7 @@ public static class Crossings
             z.crossing = new Crossing { what = c.what, from = z.at.Copy(), to = z.at.Copy(), ticks = PERCH_TICKS, of = PERCH_TICKS };
             return;
         }
-        startLeg(z, next, what);
+        startLeg(state, z, next, what);
     }
 
     /// <summary>The crossing is off: the zombie stays where it is if a body fits there, else goes to the nearest
@@ -295,6 +304,19 @@ public static class Crossings
         if (Motion.fits(grid, z.at, body)) return;
         var to = Space.nearestTile(grid, z.pos, (x, y) => Pathfinding.isPassable(grid, x, y, body), 400);
         if (to != null) Motion.place(z, to);
+    }
+
+    // --- the noise of it ---
+
+    /// <summary>One of the dead starts a leg onto, across or off a parked car: a thump ("thump", 10 tiles: louder than
+    /// you walking, 4, quieter than a shot, 22 and up) that draws the idle dead and wakes the dormant (Noise.cs),
+    /// at most once every THUMP_GAP ticks a car. `car.climbed` is the tick of the last thump.
+    /// The place for anything else a climbed car does (its alarm: Vehicle*.cs) is here.</summary>
+    public static void carClimbed(SimState state, Vehicle car, Zombie z)
+    {
+        if (car.climbed != null && state.tick - car.climbed < THUMP_GAP) return;
+        car.climbed = state.tick;
+        Noise.makeNoise(state, car.pos, "thump");
     }
 
     // --- knocked off (Zombies.knockBack) ---
