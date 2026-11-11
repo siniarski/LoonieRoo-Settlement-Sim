@@ -161,9 +161,10 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   `Walkers.walkTo` makes a body caught on a corner inch round it, a few ticks slow); a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
   turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
   call whether cars should be faster now that they are car-sized).
-  You go over and onto parked cars (CarLeaps.cs, log/2026-11-11-08-your-leaps.md). Left: **to settle when the dead's
-  climbing merges**: on a roof the dead reach you by distance as on the ground (from beside the car, height not
-  counted), so a roof is no refuge; if they now climb cars, one on the roof with you is the same rule. Also left: no
+  You go over and onto parked cars (CarLeaps.cs, log/2026-11-11-08-your-leaps.md). Left: **on a roof the dead reach
+  you by distance as on the ground** (from beside the car, height not counted) and now climb up after you too
+  (merged, log/2026-11-11-10-crossings-merged.md): a roof is a lookout, not a refuge; whether height should count is
+  the player's call once it has been played. Also left: no
   hand on the car as you climb or slide (People.Leap.cs puts a hand only on sills and barricades); the landing sound
   is the ground's, on a roof too; the truck's bed has no sides to walk into; a car's top is a profile along its length
   only (its sides as high as its middle); dropping something on a roof puts it on the ground under the car; you can't
