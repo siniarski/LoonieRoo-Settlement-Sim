@@ -72,8 +72,17 @@ void fragment() {
         return what;
     }
 
+    // The ground's colours in first person and the far view (linear, as the walls'). The palette's (Render/Palette.cs)
+    // are the Colony tab's: near-greys made for a dark 2D map, which the sun here lit to one pale grey for everything.
+    static readonly Dictionary<string, Color> GROUND_COLOUR = new()
+    {
+        ["grass"] = new(0.13f, 0.18f, 0.075f), ["forest"] = new(0.1f, 0.115f, 0.06f), ["dirt"] = new(0.21f, 0.16f, 0.105f), ["field"] = new(0.19f, 0.14f, 0.09f),
+        ["road"] = new(0.1f, 0.1f, 0.105f), ["paving"] = new(0.27f, 0.27f, 0.25f), ["concrete"] = new(0.3f, 0.3f, 0.29f),
+        ["boards"] = new(0.27f, 0.19f, 0.115f), ["bridge"] = new(0.25f, 0.18f, 0.115f), ["tiles"] = new(0.33f, 0.34f, 0.33f),
+    };
+
     /// <summary>A ground kind's colour in first person and the far view (the same in both, so they meet).</summary>
-    public static Color GroundColour(string ground) => Ctx.Css(COLOURS.ground.GetValueOrDefault(ground, COLOURS.ground["grass"]));
+    public static Color GroundColour(string ground) => GROUND_COLOUR.TryGetValue(ground, out var c) ? c : GROUND_COLOUR["grass"];
 
     public static Look RiverBed => bed ??= L(0.2f, 0.18f, 0.14f, "earth");
     static Look? bed;

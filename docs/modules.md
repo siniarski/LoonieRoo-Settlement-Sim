@@ -198,7 +198,9 @@ git tag `ts-final`.
   charred stumps in a fixed few nodes; ModelSet: a file of models drawn in batches, used by Fields: farm plots and
   crops, Sites: blueprints, Cars, Aircraft: the helicopter, Others: stand-in bodies for wanderers, traders,
   prisoners, caravans and scavenging parties; Cockpit: the car you drive from the inside, its instruments drawn by
-  GaugeCluster; Surfaces: the detail textures as one array and the layer numbers by name, docs/textures.md).
+  GaugeCluster; Surfaces: the detail textures as one array and the layer numbers by name, docs/textures.md;
+  WorldLook: what each face of the world is made of, a colour and a layer by ground kind and by building, and the
+  chunks', roofs' and glass's materials).
 - `Characters/`: what a body needs at runtime: looks and wardrobe, gaits, foot and hand IK, head look, stumps, the
   merged mid tier and VAT crowds (docs/characters.md).
 - `Audio/`: sounds made in code (Synth*), played from what changes (Sounds), muffling, ambience, volume.

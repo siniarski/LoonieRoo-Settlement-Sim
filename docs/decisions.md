@@ -472,6 +472,15 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   *Why:* The game needed an ending
 - **Growth is computed, with a sparse record (2026-11-10).** Foliage, and trees coming back, are a pure function of the seed, the tile, its ground and the growing days since it was cleared; the only saved state is `state.cleared` (tile -> clearing tick), trimmed once regrown. No per-tile state, no sweep of the map, no schema change. Rates: docs/trees.md "Growth". Saplings that become trees are planted from per-chunk plans in tick order, so the result doesn't depend on who is near or which chunk was made first; they are `tree` furniture like any other.
   *Why:* The world is going to 10,000 x 10,000, saves keep only what differs from the seed, and the player wanted places to look abandoned as days pass
+- **Textures are a neutral detail layer over flat colour (2026-11-11).** Every surface keeps its vertex colour; a small tileable texture (one of twenty in
+  one array, docs/textures.md) multiplies grain and scale into it, laid by position, so no mesh is unwrapped. Each texture averages to no change. A face's layer
+  is a number on its vertices (the UV), not a material: a chunk of the world is one surface and one draw, as before
+  *Why:* The look is low-poly in plain colours and the goal is 60 fps on a weak machine: one sample a fragment and no new draws cost 3-5% of GPU time where a
+  material per kind would have multiplied the chunks' draws. Neutral textures keep colour where it can be changed per thing (a house's paint, a car's) and let
+  the far view go without textures and still match
+- **The 3D ground has colours of its own (2026-11-11).** First person and the far view take the ground's colour from `WorldLook.GroundColour` (grass a muted
+  green, roads dark grey, dirt brown); the Colony tab and the minimap keep `COLOURS.ground`
+  *Why:* The palette's near-greys were made for a dark 2D map; under the 3D sun grass, road and paving were one pale grey that no texture could make read as grass
 
 ## Controls and UI (the browser's, mostly carried into the Colony tab)
 
