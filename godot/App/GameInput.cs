@@ -153,21 +153,6 @@ public partial class Game
         return g is { } p ? new Point((int)Math.Floor(p.X), (int)Math.Floor(p.Y)) : null;
     }
 
-    /// <summary>E or right-click in first person: what you look at on the ground beside you, else what's in front, else underfoot.</summary>
-    void UseAhead()
-    {
-        var you = ControlMod.controlled(state);
-        if (you == null) return;
-        var at = you.pos;
-        var looked = LookedAt(you, USE_REACH);
-        // A searched container opens the inventory on it, beside yours.
-        if (looked != null && ControlMod.nextTo(at, looked) && !Space.samePoint(at, looked)
-            && (inventory.OpenAt(state, looked) || Command(new Command { type = "use", x = looked.x, y = looked.y }))) return;
-        var front = FrontTile(you);
-        if (inventory.OpenAt(state, front)) return;
-        if (!Command(new Command { type = "use", x = front.x, y = front.y })) Command(new Command { type = "use", x = at.x, y = at.y });
-    }
-
     /// <summary>First person takes the mouse before the HUD does: it looks, swings and uses.</summary>
     public override void _Input(InputEvent e)
     {

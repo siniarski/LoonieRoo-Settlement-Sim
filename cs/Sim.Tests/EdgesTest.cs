@@ -218,7 +218,7 @@ public partial class EdgesTest
             expect(z.health).toBe(before);
         }
 
-        [Fact(DisplayName = "walls on tile edges > an edge barricade keeps the dead out but not you or the colonists")]
+        [Fact(DisplayName = "walls on tile edges > an edge barricade keeps the dead out, not the colonists; you vault it")]
         public void T013_an_edge_barricade_keeps_the_dead_out_but_not_you_or_the_colo()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = [new() { x = Js.I(2), y = Js.I(2), side = "w", kind = "wall" }] });
@@ -229,7 +229,7 @@ public partial class EdgesTest
             Designations.completeBlueprint(state, bp);
             expect(Pathfinding.crossable(state.grid, 2, 3, 3, 3, "zombie")).toBe(false);
             expect(Pathfinding.crossable(state.grid, 2, 3, 3, 3, "survivor")).toBe(true);
-            expect(Pathfinding.crossable(state.grid, 2, 3, 3, 3, "free")).toBe(true);
+            expect(Pathfinding.crossable(state.grid, 2, 3, 3, 3, "free")).toBe(false);   // Space vaults it (LeapsTest)
         }
 
         [Fact(DisplayName = "walls on tile edges > a locked edge door: raiders cannot open it, colonists have keys")]

@@ -164,9 +164,12 @@ def drawers(g, w, h, z, y, n, col, handle=BRASS):
         box(g, (0.12, 0.02, 0.018), (0, y - 0.02, z + dh * (k + 0.5)), handle, metal=1)
 
 
-def wheel(g, r, w, loc, col=RUBBER, hub=STEEL, seg=10):
-    cyl(g, r, w, loc, col, seg=seg, axis="x", caps=mul(col, 1.4))
-    cyl(g, r * 0.5, w + 0.01, loc, hub, metal=1, seg=seg, axis="x")
+def wheel(g, r, w, loc, col=RUBBER, hub=STEEL, seg=10, axis="y"):
+    """A wheel of radius r and width w centred on loc, its axle along Y: across a car, a pickup or a tractor, which
+    run along X (until 2026-11-11 it was along X, so their wheels faced forward). A wheelie bin's pair, side by side
+    along X, passes axis "x"."""
+    cyl(g, r, w, loc, col, seg=seg, axis=axis, caps=mul(col, 1.4))
+    cyl(g, r * 0.5, w + 0.01, loc, hub, metal=1, seg=seg, axis=axis)
 
 
 # --- sleeping ---
@@ -630,7 +633,7 @@ def bin(g):
     box(g, (0.6, 0.66, 0.05), (0, 0.02, 0.98), mul(c, 0.9), top=mul(c, 1.1))
     box(g, (0.5, 0.06, 0.04), (0, 0.33, 0.92), BLACK)
     for sx in (-1, 1):
-        wheel(g, 0.1, 0.05, (sx * 0.24, 0.28, 0.1))
+        wheel(g, 0.1, 0.05, (sx * 0.24, 0.28, 0.1), axis="x")
     box(g, (0.3, 0.005, 0.25), (0, -0.28, 0.4), mul(c, 1.15), rx=4)
 
 

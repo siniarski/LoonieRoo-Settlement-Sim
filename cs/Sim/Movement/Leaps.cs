@@ -148,7 +148,7 @@ public static partial class Leaps
         if (b.what == "jump" && !car)
         {
             var was = s.at;
-            s.at = Motion.slide(state.grid, s.at, dx, dy, Motion.fits(state.grid, s.at, Pathfinding.FREE) ? Pathfinding.FREE : Pathfinding.SURVIVOR);
+            s.at = Motion.slide(state.grid, s.at, dx, dy, ControlMod.walkMover(state.grid, s.at));
             // A parked car stops a jump at its body, as it stops walking (VehicleParking.cs pushOut).
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
             if (off.x != s.at.x || off.y != s.at.y) s.at = Motion.fits(state.grid, off, Pathfinding.FREE) ? off : was;

@@ -87,6 +87,12 @@ public partial class SoloHarness
         {
             cmd(state, new Command { type = "steer", dx = dx, dy = dy, run = run });
         }
+        // A fence or a barricade on the way (colonists' paths step over them; you vault: Leaps.cs), once at it.
+        if ((edge >= 0) && (Grids.edgeKind(state.grid, edge) == Grids.EDGE_BARRICADE) && !Leaps.airborne(c)
+            && Leaps.vaultLanding(state.grid, s.at, at, new Point { x = Js.I(next.x - at.x), y = Js.I(next.y - at.y) }).land != null)
+        {
+            cmd(state, new Command { type = "jump" });
+        }
     }
 
     /// <summary>Back off from this many of the dead at once (within PACK_RADIUS, or hunting you within HUNT_RADIUS) instead of fighting them; from two under half health.</summary>

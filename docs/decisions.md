@@ -137,6 +137,17 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
   *Why:* The player asked to get over the things a person plainly could; a parked car (solid since the same day) was
   the one thing that stopped you that a person climbs. The simplest rule for the dead keeps the two branches (theirs
   and this) independent until they merge
+- **A broken window and a fence stop you on foot (2026-11-11).** You (the "free" mover) no longer cross a broken
+  window's or a barricade edge's line walking (Pathfinding.crossable); Space just in front vaults it (Leaps.cs), with
+  the vault clip and the eye going over. Yard fences are barricade edges (Lots.cs), so this is what stops you at a
+  fence; the quarantine fence is wall tiles, solid already. Colonists still step over barricades and use doors; the
+  dead and animals still climb through broken windows. Straddling one (an old save), you walk as a colonist or the
+  dead would until clear (ControlMod.walkMover). The scripted solo player vaults the fences on its paths.
+  *Why:* The player walked through fences and slowly through windows; a person climbs both, deliberately
+- **A car action goes on while you push against the car (2026-11-11).** Steering cancels getting in, the boot and
+  the bonnet only if the tick's step moves you (more than STILL_AT_CAR, 12 SUB): W still held from walking up to it,
+  the body stops you and E works. *Why:* The player's "E doesn't get me in" was W still down: the old rule cancelled
+  the 2.5 s of getting in on the first tick
 
 ## Jobs, building and hauling
 

@@ -127,6 +127,18 @@ public static partial class ControlMod
         return JsMath.round(((double)(((double)(walk) * (pct))) / (10000)));
     }
 
+    /// <summary>How far (SUB) a tick's step may move you and still count as standing at the car (a step into its body
+    /// and pushed back out of it, a few SUB either way).</summary>
+    public const int STILL_AT_CAR = 12;
+
+    /// <summary>How you walk from where you stand: "free", or where you don't fit as that (a closed door's tile, or
+    /// straddling a broken window's frame or a fence on an old save) as a colonist or the dead do, so you can get clear.</summary>
+    public static string walkMover(Grid grid, Point at)
+    {
+        if (Motion.fits(grid, at, Pathfinding.FREE)) return Pathfinding.FREE;
+        return Motion.fits(grid, at, Pathfinding.SURVIVOR) ? Pathfinding.SURVIVOR : Pathfinding.ZOMBIE;
+    }
+
     /// <summary>Called once a tick for the controlled survivor, in place of their own behaviour.</summary>
     public static void updateControlled(SimState state, Survivor s)
     {
@@ -154,6 +166,9 @@ public static partial class ControlMod
         Motion.followTile(s);
         if ((c.dx != 0) || (c.dy != 0))
         {
+            // Walking off stops what you were doing; pushing against the car you're getting into (or at the boot or
+            // the bonnet of) doesn't: W still held from walking up to it, you stay put and it goes on (below).
+            var atCar = (Js.T(c.busy) && Vehicles.isCarAction(c.busy.what)) ? c.busy : null;
             c.busy = null;
             if (!Js.T(c.aim))
             {
@@ -171,7 +186,7 @@ public static partial class ControlMod
                 return;
             }
             var stood = s.at;
-            s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
+            s.at = Motion.slide(state, s.at, v.x, v.y, walkMover(state.grid, s.at));
             // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body
             // (VehicleParking.cs pushOut). Where that would put you in a wall, you stay where you stood.
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
@@ -184,6 +199,11 @@ public static partial class ControlMod
             {
                 s.pos = tile;
                 Survivors.enterTile(state, s);
+            }
+            if (Js.T(atCar) && (Motion.distance2(stood, s.at) <= STILL_AT_CAR * STILL_AT_CAR))
+            {
+                c.busy = atCar;
+                updateBusy(state, s, c);
             }
             return;
         }

@@ -45,7 +45,7 @@ public partial class WindowsTest
             expect(Js.Missing(Grids.allEdges(state.grid), pane) ? null : (object?)(Grids.edgeKind(state.grid, pane))).toBe(Grids.EDGE_WINDOW_BROKEN);
         }
 
-        [Fact(DisplayName = "windows > glass stops everyone walking; broken, you and the dead climb through, colonists use doors")]
+        [Fact(DisplayName = "windows > glass stops everyone walking; broken, the dead climb through, colonists use doors, you vault it")]
         public void T003_glass_stops_everyone_walking_broken_you_and_the_dead_climb_t()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = room() });
@@ -55,7 +55,8 @@ public partial class WindowsTest
             }
             expect(Pathfinding.crossable(state.grid, 3, 2, 4, 2, "breacher")).toBe(true);
             var broken = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = room("brokenWindow") });
-            expect(Pathfinding.crossable(broken.grid, 3, 2, 4, 2, "free")).toBe(true);
+            expect(Pathfinding.crossable(broken.grid, 3, 2, 4, 2, "free")).toBe(false);   // Space vaults it (LeapsTest)
+            expect(Pathfinding.crossable(broken.grid, 3, 2, 4, 2, "animal")).toBe(true);
             expect(Pathfinding.crossable(broken.grid, 3, 2, 4, 2, "zombie")).toBe(true);
             expect(Pathfinding.crossable(broken.grid, 3, 2, 4, 2, "survivor")).toBe(false);
         }
@@ -127,8 +128,8 @@ public partial class WindowsTest
             expect(Js.Missing(Grids.allEdges(state.grid), pane) ? null : (object?)(Grids.edgeKind(state.grid, pane))).toBe(Grids.EDGE_WINDOW_BROKEN);
         }
 
-        [Fact(DisplayName = "windows > climbing through a broken window is slower than walking through a doorway")]
-        public void T008_climbing_through_a_broken_window_is_slower_than_walking_thro()
+        [Fact(DisplayName = "windows > walking, you stop at a broken window; through a doorway you walk on")]
+        public void T008_walking_you_stop_at_a_broken_window()
         {
             double through(string kind)
             {
@@ -145,7 +146,8 @@ public partial class WindowsTest
                 }
                 return t;
             }
-            expect(through("brokenWindow")).toBeGreaterThan(through("none"));
+            expect(through("none")).toBeLessThan(100);
+            expect(through("brokenWindow")).toBe(100);
         }
 
         [Fact(DisplayName = "windows > houses and shops in a generated town have windows, never beside a door")]

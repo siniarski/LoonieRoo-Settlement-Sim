@@ -192,7 +192,7 @@ git tag `ts-final`.
 
 - `App/`: the game itself, class `Game` in parts: `Game.cs` (what it is made of; the frame: ticks, then the views),
   `GameArgs.cs` (the command line and debug flags), `GameSession.cs` (new, load, save, bug reports, the menu's
-  actions), `GameInput.cs` (keys and mouse into commands), `GameShots.cs` (`--shot`), `GameText.cs` (`--trace`).
+  actions), `GameInput.cs` (keys and mouse into commands), `GameUse.cs` (E: what the crosshair is on in reach), `GameShots.cs` (`--shot`), `GameText.cs` (`--trace`).
 - `World3D/`: first person (FirstPerson, WorldMesh chunks, Roofs, Terrain, People, Animals, Items, Furniture, Held,
   OwnBody, Trees, Undergrowth, FarField, Bodies, Footfalls, Lights, Weather, Fires: flames, smoke, embers, scorch and
   charred stumps in a fixed few nodes; ModelSet: a file of models drawn in batches, used by Fields: farm plots and

@@ -1,6 +1,6 @@
 // A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening.
 // Deterministic: ties broken by lower h, then insertion order; neighbours expanded N, E, S, W.
-// Movers: "survivor" (colonists: any door), "free" (you: doors open), "zombie", "breacher" (batters
+// Movers: "survivor" (colonists: any door), "free" (you: doors open; a broken window or a barricade only with a vault, Leaps.cs), "zombie", "breacher" (batters
 // through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
 // "animal" (wild animals: open floor only; through open doors and broken windows, never onto a door's tile).
 // The dead's paths (not their bodies) also go over parked cars, and a "runner"'s over barricades, at a cost:
@@ -41,9 +41,11 @@ public static partial class Pathfinding
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
-        if (kind == EDGE_BARRICADE) return mover == SURVIVOR || mover == FREE || mover == CRAWLER;
+        // A barricade or a yard fence (planks), and a broken window: you (FREE) don't walk through, you vault them
+        // with Space (Leaps.cs); colonists step over barricades and use doors, the dead and animals climb through windows.
+        if (kind == EDGE_BARRICADE) return mover == SURVIVOR || mover == CRAWLER;
         if (kind == EDGE_WINDOW || grid.edgeBoarded.Contains(e)) return false;
-        if (kind == EDGE_WINDOW_BROKEN) return mover != SURVIVOR;
+        if (kind == EDGE_WINDOW_BROKEN) return mover != SURVIVOR && mover != FREE;
         return true;
     }
 

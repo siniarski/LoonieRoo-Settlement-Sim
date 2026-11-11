@@ -1,14 +1,19 @@
 # Controls
 
-The keys as of 2026-11-09 (moved from NOTES.md "Start here" on 2026-11-10). The game's own key list is K in play;
+The keys as of 2026-11-11 (moved from NOTES.md "Start here" on 2026-11-10). The game's own key list is K in play;
 the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 
 ## First person (playing a survivor, since 2026-11-08)
 
 You see through your survivor's eyes. The mouse looks; WASD walks the way you face (strafing with A and D); Shift
-runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings (bare hands
-punch); E uses what you look at on the ground beside you (else what's in front), and so does a right-click unless a gun
-is in your hand (then the right mouse held aims down the sights: Weapons below).
+runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings (bare hands punch); right-click
+or E uses what the crosshair is on (with a gun in hand the right mouse held aims down the sights instead: Weapons below; E still uses) within arm's reach (1.6 m: a drawer, a crate, a door, a car, a thing on the floor;
+else what's in front by the way you face, else what you stand over). **A broken window, a barricade or a yard fence
+stops you walking** (since 2026-11-11): up against it, Space vaults it (the dead and animals still climb through
+windows; colonists step over barricades). **E at a parked car** gets you in from any side you can walk up to (W may
+stay held: pushing against the car doesn't stop it; walking off does). **The boot** (U, from behind the car) opens
+with the inventory screen on what's in it; with it open, E or Tab behind the car shows it again. **The bonnet** is I,
+from in front.
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
 (W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof
@@ -83,11 +88,12 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
   ms), Esc cancels then opens the menu.
 - **Direct control** (F on the selected survivor, F again to let go) starts in survivor mode, with the colony's
   management put away; B, P or O bring it out (build, priorities, overview, neighbour and visitor panels).
-- WASD/arrows walk (8 ways), Shift run, Space jump (vault, hop; over or onto a parked car), C sneak, the mouse aims, click swing or shoot (a
+- WASD/arrows walk (8 ways), Shift run, Space jump (vault a broken window, a barricade or a fence, which stop you walking; hop; over or onto a parked car), C sneak, the mouse aims, click swing or shoot (a
   swing at glass in front breaks it).
 - Right-click or E use: pick up, wear, eat, drink, sleep, treat yourself, search, smash a window, get in or out of a
-  car (a moment each way: walking off stops it), fill a car from a fuel can. U opens or shuts the boot of the car
-  beside you, I its bonnet. E underfoot forages on grass by day or sleeps.
+  car (a moment each way: walking off stops it, pushing against the car doesn't), fill a car from a fuel can. U opens
+  or shuts the boot of the car beside you (from behind it; the inventory screen opens on its contents), I its bonnet
+  (from in front). E underfoot forages on grass by day or sleeps.
 - In a car: W go, S brake and reverse, A D steer. You sit in the driver's seat and the view turns with the car; the
   mouse looks round the cabin and out of it. Look down for the dashboard: the speedometer (km/h), the fuel gauge,
   the temperature (it climbs as the car is damaged), and the lamps (FUEL under 15%, ENGINE under half health, OIL
