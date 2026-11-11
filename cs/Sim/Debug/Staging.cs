@@ -115,6 +115,14 @@ public static class Staging
         return v;
     }
 
+    /// <summary>Someone standing on top of the nearest car (within a few tiles), on its middle: pictures from a roof.
+    /// Null when there is no car near, or no body fits on it.</summary>
+    public static Vehicle? onRoof(SimState state, Survivor s)
+    {
+        var v = Vehicles.vehicleNear(state, s.at, 8 * Motion.SUB);
+        return v != null && Leaps.standOn(state, s, v) ? v : null;
+    }
+
     /// <summary>A fire burning at a tile, whatever the ground: wildfire where it would catch, else a plain fire.</summary>
     public static void fire(SimState state, int x, int y)
     {

@@ -76,8 +76,8 @@ public static class PoseIntents
                 p.approach = "normal";
                 p.progress = (b.what == "sleep" || b.duration <= 0) ? 0 : JsMath.min(1, b.progress / b.duration);
                 if (Vehicles.isCarAction(b.what)) p.anchor = Vehicles.anchorOf(b.what);
-                p.lift = Leaps.lift(b, 1);
             }
+            p.lift = Leaps.height(state, s, 1);  // a leap, or the car you stand on
         }
         else if (s.jobId != null && p.speed < 0.25 && p.stance == "stand")
         {

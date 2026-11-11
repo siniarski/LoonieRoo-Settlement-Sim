@@ -115,6 +115,8 @@ public partial class Game
         sb.Append($"t={state.tick} @{F((double)you.at.x / Motion.SUB)},{F((double)you.at.y / Motion.SUB)} tile {you.pos.x},{you.pos.y} face {face:0} {pose.stance} v{pose.speed.ToString("0.0", Inv)} hp {you.health:0.#}");
         if (c.running == true) sb.Append(" run");
         if (Leaps.airborne(c)) sb.Append(" airborne");
+        if (c.onCar != null) sb.Append($" on {c.onCar}");
+        if (pose.lift != 0) sb.Append($" up {pose.lift.ToString("0.00", Inv)}");
         if (c.dx != 0 || c.dy != 0) sb.Append($" steer {c.dx:0},{c.dy:0}");
         if (pose.action != null) sb.Append($" act {pose.action} {pose.progress.ToString("0.00", Inv)}");
         GD.Print(sb.ToString());

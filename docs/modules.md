@@ -77,7 +77,8 @@ git tag `ts-final`.
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
 - **Survivors**: tile-to-tile movement along cached A* paths. **Doors**: doors held open by whoever passes.
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
-- **Leaps**: Space in first person: jump, vault or hop. **Trunks**: a tree's trunk, solid to free movers, tile
+- **Leaps**: Space in first person: jump, vault or hop. **CarLeaps** (part of Leaps): over a parked car, onto it,
+  walking on its roof and down off it (`control.onCar`), your height for the view. **Trunks**: a tree's trunk, solid to free movers, tile
   walkers' bodies (`at` only) and cars.
 - **PoseIntents**: what a mover's body is doing, read for the renderer (docs/characters.md section 1).
 - **Vehicles**: cars, fuel, the boot. **VehicleBody** (part of Vehicles): the room a car takes up, as long and wide as

@@ -285,6 +285,7 @@ public sealed partial class People
     public void UpdateYou(SimState state, Survivor you, double alpha, double camYaw, double delta, bool show, bool fromOutside, bool rightHeld = false, bool leftHeld = false)
     {
         var pose = PoseIntents.ofSurvivor(state, you);
+        roofUnder = Leaps.carOf(state, state.control);
         show &= pose.stance is "stand" or "sneak";
         var hair = Looks.LivingOutfit(you.id);
         string look = LivingLook(you.id) + Lost(pose);
@@ -544,7 +545,7 @@ public sealed partial class People
         {
             m.skel ??= Find<Skeleton3D>(m.root);
             if (m.skel == null) return;
-            m.ik = new FootIK(m.root, m.skel, parent) { GroundAt = GroundAt };
+            m.ik = new FootIK(m.root, m.skel, parent) { GroundAt = m.own ? OwnGroundAt : GroundAt };
             m.ik.Enabled = false;
         }
         if (on && !m.own) iks++;
@@ -587,6 +588,18 @@ public sealed partial class People
         float dx = Terrain.Height(at.X + E, at.Z) - Terrain.Height(at.X - E, at.Z);
         float dz = Terrain.Height(at.X, at.Z + E) - Terrain.Height(at.X, at.Z - E);
         return (h, new Vector3(-dx / (2 * E), 1, -dz / (2 * E)).Normalized());
+    }
+
+    /// <summary>The car you stand on (CarLeaps.cs), set by UpdateYou: your feet's ground is its top where it is under them.</summary>
+    Vehicle? roofUnder;
+
+    /// <summary>The ground under a point for your own feet: the car's top where you stand on one, else the ground's.</summary>
+    (float y, Vector3 normal) OwnGroundAt(Vector3 at)
+    {
+        var g = GroundAt(at);
+        if (roofUnder == null) return g;
+        var p = new Point { x = (int)Math.Round(at.X * Motion.SUB), y = (int)Math.Round(at.Z * Motion.SUB) };
+        return Vehicles.gap(roofUnder, p) == 0 ? (g.y + (float)Leaps.topAt(roofUnder, p), Vector3.Up) : g;
     }
 
     /// <summary>The turn rate, smoothed (rad/s).</summary>

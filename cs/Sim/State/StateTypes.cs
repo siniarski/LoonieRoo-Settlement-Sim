@@ -219,6 +219,8 @@ public partial class Control
     public bool? running { get; set; }
     public bool? sneaking { get; set; }
     public ControlBusy? busy { get; set; }
+    /// <summary>The id of the parked car you are standing on (CarLeaps.cs), or null on the ground.</summary>
+    public string? onCar { get; set; }
 }
 
 public partial class ControlBusy
