@@ -1,6 +1,7 @@
 // The self-test's steps for what you do with a car on foot (2026-11-12; CarTrickSteps is called after the death steps in
 // SelfTest.cs, so the steps before keep their tick counts): J held pushes a parked car (VehiclePush.cs); a click
-// at a car with an alarm sets it off and the bell is heard (VehicleAlarm.cs). A sedan on
+// at a car with an alarm sets it off and the bell is heard (VehicleAlarm.cs); crouched, E gets you under a pickup
+// and W crawls you out (VehicleHide.cs). A sedan on
 // open ground near you is the fixture, taken away again; `SELFTEST_ONLY=cars` runs only these.
 
 using System;
@@ -91,6 +92,39 @@ public partial class Game
         Check("A car alarm run out is quiet", !firstPerson.sounds.loops.Heard.Any((k) => k.StartsWith("car alarm")));
         you.weapon = weapon;
         Vehicles.remove(state, car);
+
+        // Under a pickup: crouched (C) at its side, E gets you under, the eye low; W (looking across it) crawls you
+        // out on the far side. CARS_SHOT=prefix saves the view from under it.
+        var truck = Staging.car(state, cx, cy, 0, "truck");
+        truck.lights = false;
+        var tmid = truck.at;
+        await WalkUpTo(tmid.x / (double)Motion.SUB, tmid.y / (double)Motion.SUB + 2.5, tmid, -0.2, false);
+        bool sneak0 = state.control!.sneaking == true;
+        if (!sneak0) await Tap(Godot.Key.C);
+        bool sneak1 = state.control!.sneaking == true;
+        await Tap(Godot.Key.E);
+        await Frames(4);
+        var under = Vehicles.underOf(state, you);
+        float eye = World3D.FirstPerson.Eye(state, you, 1).eye.Y;
+        Check("Crouched, E at a pickup gets you under it, lying", under == truck && you.at.x == tmid.x && you.at.y == tmid.y && eye < 0.6f,
+            $"sneaking {sneak0} -> {sneak1}, under {under?.id ?? "-"}, note {you.note}, eye {eye:0.00} m, {Vehicles.gap(truck, you.at):0} SUB from the body");
+        if (OS.GetEnvironment("CARS_SHOT") is { Length: > 0 } shots)
+        {
+            view.pitch = 0;
+            await Frames(3);
+            await ToSignal(Godot.RenderingServer.Singleton, Godot.RenderingServer.SignalName.FramePostDraw);
+            GetViewport().GetTexture().GetImage().SavePng($"{shots}-under.png");
+        }
+        view.yaw = -Math.PI / 2;  // north: across it
+        await Frames(2);
+        SendKey(Godot.Key.W, true);
+        for (int i = 0; i < 200 && Vehicles.underOf(state, you) != null; i++) await Frames(1);
+        SendKey(Godot.Key.W, false);
+        await Frames(3);
+        Check("W from under it crawls you out on that side", Vehicles.underOf(state, you) == null && you.at.y < tmid.y - Vehicles.TRUCK.halfWidth,
+            $"at {you.at.x},{you.at.y}, its middle {tmid.x},{tmid.y}, note {you.note}");
+        if (state.control!.sneaking == true) await Tap(Godot.Key.C);
+        Vehicles.remove(state, truck);
 
         state.zombies = dead;
         Staging.place(you, pos.x, pos.y);

@@ -171,7 +171,10 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   to half a metre behind its boot (its end tiles stop you short of the body); it rolls only along its length, never
   turns; slope isn't felt (Heights.cs is read by nothing in the tick: the player's call). Car alarms (VehicleAlarm.cs): the sound is the
   house alarm's bell pitched up, not a siren or horn; no lights flash; nothing turns one off but time (no fob, no
-  fuse to pull); your own car's alarm goes off when the dead batter it with you inside; the dead and animals stop at
+  fuse to pull); your own car's alarm goes off when the dead batter it with you inside. Under a pickup (VehicleHide.cs): no
+  crawling clip in or out (you are put under its middle and out beside it); only the dead are fooled (a wolf after
+  you still knows where you are and waits by it, unable to bite); your body is
+  drawn lying, not on its back looking up; the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
   left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
   reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;

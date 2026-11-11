@@ -457,6 +457,10 @@ public static partial class Animals
             return;
         }
         var s = (Survivor)target;
+        if (Js.T(Vehicles.underOf(state, s)))
+        {
+            return;  // under a pickup: out of its reach (VehicleHide.cs)
+        }
         if (Vehicles.batterVehicle(state, s))
         {
             return;  // in a car that isn't a wreck: the car takes it (VehicleCabin.cs)

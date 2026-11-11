@@ -208,6 +208,10 @@ public static partial class Zombies
                 {
                     continue;
                 }
+                if ((state.control?.underCar != null) && (z.variant != "crawler") && Js.T(Vehicles.underOf(state, s)))
+                {
+                    continue;  // under a pickup: only a crawler gets at you there (VehicleHide.cs)
+                }
                 if ((JsMath.abs(s.at.x - z.at.x) > Motion.REACH) || (JsMath.abs(s.at.y - z.at.y) > Motion.REACH))
                 {
                     continue;
@@ -374,7 +378,7 @@ public static partial class Zombies
     public static Survivor? chaseTarget(SimState state, Zombie z)
     {
         var target = Js.T(z.targetId) ? Lookup.findById(state.survivors, z.targetId) : null;
-        if (!Js.T(target) || (Motion.distance2(target.at, z.at) > ((double)(CHASE_RANGE) * (CHASE_RANGE))))
+        if (!Js.T(target) || (Motion.distance2(target.at, z.at) > ((double)(CHASE_RANGE) * (CHASE_RANGE))) || Vehicles.unseenUnder(state, z, target))
         {
             return null;
         }
@@ -606,6 +610,10 @@ public static partial class Zombies
         if (d > AGGRO_RADIUS)
         {
             return false;
+        }
+        if (Vehicles.unseenUnder(state, z, s))
+        {
+            return false;  // under a pickup, and this one didn't see you go (VehicleHide.cs)
         }
         if ((z.kind == "raider") || (z.targetId == s.id))
         {

@@ -157,6 +157,10 @@ public static partial class Commands
             {
                 return reject("swimming");
             }
+            if (Js.T(Vehicles.underOf(state, s)) && (command.type == "fire"))
+            {
+                return reject("under a car");
+            }
             if (command.type == "reload")
             {
                 var why = ControlMod.reload(state, s);
@@ -196,6 +200,12 @@ public static partial class Commands
                 if (!Js.T(near)) return reject("no car beside you");
                 if (!Js.T(mine) && Js.T(near.driverId)) return reject("someone is driving it");
                 Js.NN(state.control).busy = null;
+                if (!Js.T(mine) && (Js.NN(state.control).sneaking == true) && Vehicles.roomUnder(near) && !Js.T(Vehicles.underOf(state, s)))
+                {
+                    s.note = Vehicles.hideUnder(state, s, near);  // crouched at a pickup: under it (VehicleHide.cs)
+                    return changed();
+                }
+                if (Js.T(Vehicles.underOf(state, s))) return reject("under a car");
                 s.note = Js.T(mine) ? Vehicles.startCarAction(state, s, near, "getOut") : (Vehicles.fillFromCan(state, s, near) ?? Vehicles.startCarAction(state, s, near, "getIn"));
                 return changed();
             }

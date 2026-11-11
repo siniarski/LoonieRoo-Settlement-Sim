@@ -164,6 +164,10 @@ public static partial class ControlMod
             return;
         }
         s.move = null;
+        if (Vehicles.tickUnder(state, s, c))
+        {
+            return;  // under a pickup: a move key crawls you out (VehicleHide.cs)
+        }
         Swim.tick(state, s, c);  // in deep water: paddling costs, winded you struggle (Swim.cs)
         if (Leaps.airborne(c))
         {
@@ -418,6 +422,10 @@ public static partial class ControlMod
         {
             return null;
         }
+        if (Js.T(Vehicles.underOf(state, s)))
+        {
+            return null;  // no room to swing or shoot under a pickup (VehicleHide.cs)
+        }
         var face = towards(s.pos, target);
         if (Js.T(face))
         {
@@ -649,7 +657,7 @@ public static partial class ControlMod
         {
             return Vehicles.startCarAction(state, s, inCar, "getOut");
         }
-        if (Js.T(Js.T(s.move) || !nextTo(s.pos, target)))
+        if (Js.T(Js.T(s.move) || !nextTo(s.pos, target)) || Js.T(Vehicles.underOf(state, s)))
         {
             return null;
         }
@@ -661,6 +669,10 @@ public static partial class ControlMod
             if (Js.T(car.driverId))
             {
                 return "someone is driving it";
+            }
+            if ((c.sneaking == true) && Vehicles.roomUnder(car))
+            {
+                return Vehicles.hideUnder(state, s, car);  // crouched at a pickup: under it, out of sight (VehicleHide.cs)
             }
             return Vehicles.fillFromCan(state, s, car) ?? Vehicles.startCarAction(state, s, car, "getIn");
         }

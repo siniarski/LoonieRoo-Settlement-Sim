@@ -222,6 +222,10 @@ public partial class Control
     public ControlBusy? busy { get; set; }
     /// <summary>The id of the parked car you are standing on (CarLeaps.cs), or null on the ground.</summary>
     public string? onCar { get; set; }
+    /// <summary>The id of the pickup you lie under (VehicleHide.cs), the tick you went under, and the dead that saw you go.</summary>
+    public string? underCar { get; set; }
+    public double? underTick { get; set; }
+    public List<string>? sawUnder { get; set; }
 }
 
 public partial class ControlBusy
