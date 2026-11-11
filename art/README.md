@@ -132,9 +132,13 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   to no change, laid over the flat colours by `godot/assets/shaders/surface_detail.gdshaderinc`; a model picks a
   layer per face in its UV map. docs/textures.md is the page: the layers, the UV convention (glTF flips V), adding
   or replacing one.
-- `scripts/lowpoly.py`: the kit build_world.py is made with (boxes, cylinders and cones as coloured faces, one mesh
-  per model, the glTF export, a preview). build_items.py and build_furniture.py carry older copies of the same
-  helpers: fold them in when either is next rebuilt.
+- `scripts/lowpoly.py`: the kit build_world.py and build_cabins.py are made with (boxes, cylinders and cones as
+  coloured faces, one mesh per model, the glTF export, a preview). build_items.py and build_furniture.py carry older
+  copies of the shape helpers, and take mul, the materials and write_surfaces from it. **A model's detail texture
+  comes from its colours' materials:** `mat("wood", lin(...))`, `mat("cloth", ...)`, `mat("body", ...)` (a car's
+  paint), `plain(...)` for glass, chrome and screens; a plain colour with metalness wears painted metal, without
+  none. lowpoly.MATERIALS has the materials (layer and repeats per metre); write_surfaces writes the layer and each
+  face's coordinates in metres as two UV maps. docs/textures.md "The models" is the page.
 - `scripts/build_cabins.py` (2026-11-11): a car from the driver's seat, for the car you drive (~1 s): `cabin` and
   `cabin_v1` (the sedan's inside, with the red and the blue bonnet), `cabin_truck` (the pickup's: the same cab
   further forward and higher, a wall and window behind the seats, the load bed), `steeringwheel` (about its hub, so

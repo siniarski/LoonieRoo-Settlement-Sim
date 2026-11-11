@@ -2,12 +2,19 @@
 # metalness each, written out as one mesh per model with vertex colours (metalness in the alpha), and exported as
 # one glTF. The game replaces the material with a shader that reads the vertex colour (godot/World3D/ModelSet.cs).
 #
-# Used by build_world.py. build_items.py and build_furniture.py have their own copies of the same helpers (they
-# came first, and a rebuild of their models must not change): fold them in here when either is next rebuilt.
+# A colour says what it is made of: `mat("wood", lin(...))` is a colour whose faces wear the kit's planks detail
+# (docs/textures.md) at the fineness MATERIALS gives, and `mul` keeps it. A plain colour with some metalness wears
+# painted metal; a plain colour without wears nothing, and `plain(c)` wears nothing whatever its metalness (glass,
+# chrome, lamps, screens, a label). write_surfaces puts the layer in the mesh's UV map, the face's own coordinates
+# in metres in a second.
+#
+# Used by build_world.py and build_cabins.py. build_items.py and build_furniture.py have their own copies of the
+# shape helpers (they came first): they take mul, the materials and write_surfaces from here.
 #
 # Blender space: Z up, a model rests on z = 0, centred on the origin, real sizes in metres (1 tile = 1 m).
 # No randomness: a rebuild gives the same models.
 
+import json
 import math
 import os
 
@@ -21,7 +28,140 @@ def lin(r, g, b):
 
 
 def mul(c, k):
-    return tuple(max(0.0, min(1.0, v * k)) for v in c)
+    """A colour k times as bright (the same material)."""
+    return like(c, tuple(max(0.0, min(1.0, v * k)) for v in c))
+
+
+# --- what a colour is made of: the kit's detail layers (docs/textures.md) ---
+
+def _layers():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "godot", "assets", "surfaces",
+                        "layers.json")
+    with open(path, encoding="utf-8") as f:
+        return [layer["name"] for layer in json.load(f)["layers"]]
+
+
+LAYERS = _layers()
+
+# A material: the layer it wears and how fine, in repeats per metre (a layer's picture is 1 / its repeat in
+# layers.json across; the walls wear them at 0.5, so planks at 1.2 are boards ~7 cm wide where siding's are 17 cm).
+# Fine enough that grain reads at arm's length, coarse enough not to shimmer across the street (mipmaps flatten it).
+MATERIALS = {
+    "wood": ("planks", 1.2),          # furniture: chairs, frames, legs, slats, handles (boards ~7 cm)
+    "boards": ("floorboards", 0.9),   # wide tops and panels: table tops, wardrobes, a bed's head (~9 cm)
+    "rough": ("planks", 0.7),         # crates, pallets, sheds, coops, building sites (~12 cm)
+    "bark": ("bark", 2.5),            # logs, firewood
+    "metal": ("metal", 1.5),          # painted or bare metal: appliances, tools, frames, tins
+    "body": ("metal", 0.8),           # a vehicle's paint
+    "sheet": ("sheetmetal", 1.5),     # corrugated sheet: a coop's roof, a shed's wall
+    "rubber": ("rubber", 3.0),        # tyres, soles, hoses, grips
+    "plastic": ("plaster", 3.0),      # moulded plastic: a dashboard, a bin, a casing (a faint mottle)
+    "cloth": ("cloth", 1.2),          # upholstery, bedding, sacks, tarpaulins, clothes (the weave's wear shows)
+    "fine": ("cloth", 3.0),           # small cloth: bandages, gloves, a sleeve, rope
+    "leather": ("cloth", 1.5),        # leather (no layer of its own: a weave's worn mottle)
+    "painted": ("metal", 1.2),        # painted wood: kitchen units, cupboards (chips and scratches, no boards)
+    "earth": ("earth", 1.5),          # tilled soil, a pit's dirt
+    "straw": ("fur", 2.0),            # hay, straw, a sack's fibre (no layer of its own: strands)
+    "concrete": ("concrete", 1.0),    # concrete and stone
+    "brick": ("brick", 1.0),
+    "paper": ("grime", 2.0),          # card and paper: boxes, books (a faint smear)
+}
+# Grain follows each face's longest side for these: boards run across the picture (along u), strands and ribs
+# down it (along v). The rest lie level: up the picture is up a face that stands.
+GRAIN_U = {"planks", "floorboards"}
+GRAIN_V = {"bark", "fur", "sheetmetal"}
+# Boards on furniture are long: along the grain the picture is drawn this much longer, so a board's butt joints
+# (a third of the picture apart, made for floors and siding) fall ~70 cm apart instead of every ~28 cm across a
+# plank or a chair's rail. The grain itself is streaks along the board, which stretch without looking stretched.
+ALONG = 0.4
+
+
+class Paint(tuple):
+    """A linear RGB colour that says its layer ("" for none) and repeats per metre."""
+    layer = None
+    repeats = 0.0
+
+
+def surface(c, layer, repeats=0.0):
+    """Colour c wearing a layer (a name in layers.json, or "" for none) at `repeats` per metre."""
+    assert layer == "" or layer in LAYERS, f"no layer {layer} in layers.json"
+    p = Paint(tuple(c[:3]))
+    p.layer, p.repeats = layer, repeats
+    return p
+
+
+def mat(name, c):
+    """Colour c made of a material (MATERIALS)."""
+    return surface(c, *MATERIALS[name])
+
+
+def plain(c):
+    """Colour c with no detail, metal or not: glass, chrome, a lamp, a screen, a label."""
+    return surface(c, "")
+
+
+def like(c, rgb):
+    """rgb, made of what c is made of."""
+    return surface(rgb, c.layer, c.repeats) if getattr(c, "layer", None) is not None else tuple(rgb)
+
+
+def layer_of(c, metal):
+    """(layer, repeats) for a face of colour c and metalness `metal`, or None."""
+    layer = getattr(c, "layer", None)
+    if layer is None:
+        return MATERIALS["metal"] if metal > 0.05 else None
+    return (layer, c.repeats) if layer else None
+
+
+def _face_axes(pts, layer):
+    """A face's own axes (u, v), unit vectors in its plane: grain along its longest side for the layers that have
+    it, else v down a face that stands and u along X on one that lies."""
+    n = Vector((0, 0, 0))
+    for k in range(2, len(pts)):
+        n += (pts[k - 1] - pts[0]).cross(pts[k] - pts[0])
+    if n.length < 1e-12:
+        return Vector((1, 0, 0)), Vector((0, 1, 0))
+    n.normalize()
+    if layer in GRAIN_U or layer in GRAIN_V:
+        best, longest = -1.0, None
+        for a in (Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, -1))):
+            t = a - n * a.dot(n)
+            if t.length < 0.3:
+                continue
+            t.normalize()
+            span = max(p.dot(t) for p in pts) - min(p.dot(t) for p in pts)
+            if span > best + 1e-6:
+                best, longest = span, t
+        if layer in GRAIN_U:
+            return longest * ALONG, n.cross(longest)
+        return longest.cross(n), longest
+    if abs(n.z) < 0.7:
+        v = Vector((0, 0, -1)) + n * n.z
+        v.normalize()
+        return v.cross(n), v
+    u = Vector((1, 0, 0)) - n * n.x
+    u.normalize()
+    return u, n.cross(u)
+
+
+def write_surfaces(me, faces):
+    """Each face's layer in the mesh's first UV map as (-(layer + 1), 1 - repeats): the game reads (-(layer + 1),
+    repeats), the layer laid by UV2 (glTF flips V; docs/textures.md). The face's own coordinates in metres in the
+    second, (u, 1 - v), so the game's UV2 is (u, v). A face with no layer gets (0, 1): the game reads 0, none.
+    `faces` as Geo.f, (vertex indices, colour, metal), in the mesh's polygon order."""
+    what = me.uv_layers.new(name="UVMap")
+    where = me.uv_layers.new(name="UVMetres")
+    for poly, (_, c, metal) in zip(me.polygons, faces):
+        lr = layer_of(c, metal)
+        pts = [me.vertices[i].co.copy() for i in poly.vertices]
+        axes = _face_axes(pts, lr[0]) if lr else None
+        for j, li in enumerate(poly.loop_indices):
+            if axes:
+                what.data[li].uv = (-(LAYERS.index(lr[0]) + 1.0), 1.0 - lr[1])
+                where.data[li].uv = (pts[j].dot(axes[0]), 1.0 - pts[j].dot(axes[1]))
+            else:
+                what.data[li].uv = (0.0, 1.0)
+                where.data[li].uv = (0.0, 1.0)
 
 
 class Geo:
@@ -123,6 +263,7 @@ def to_object(name, g, mat):
         for _ in idx:
             col.data[k].color = (c[0], c[1], c[2], metal)
             k += 1
+    write_surfaces(me, g.f)
     me.update()
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)

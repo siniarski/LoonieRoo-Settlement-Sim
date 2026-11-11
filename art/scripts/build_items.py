@@ -22,37 +22,39 @@ import sys
 import bpy
 from mathutils import Matrix, Vector
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# What each colour is made of (its detail layer) and mul, which keeps it, come from the shared kit.
+from lowpoly import mat, mul, plain, write_surfaces  # noqa: E402
+
 
 def lin(r, g, b):
     """An sRGB colour (0-255) as linear (the colour attribute is linear)."""
     return tuple((c / 255) ** 2.2 for c in (r, g, b))
 
 
-def mul(c, k):
-    return tuple(max(0.0, min(1.0, v * k)) for v in c)
-
-
 # --- the palette ---
 
-WOOD = lin(150, 108, 66)
-WOOD_D = lin(112, 78, 46)
-WOOD_L = lin(186, 146, 98)
-BARK = lin(92, 70, 50)
-STEEL = lin(150, 152, 156)
-STEEL_D = lin(78, 80, 86)
-RUST = lin(128, 72, 42)
+# A colour made of something wears that detail (lowpoly.MATERIALS); a plain one with metalness wears painted metal,
+# without none (paint, labels, food).
+WOOD = mat("rough", lin(150, 108, 66))
+WOOD_D = mat("rough", lin(112, 78, 46))
+WOOD_L = mat("rough", lin(186, 146, 98))
+BARK = mat("bark", lin(92, 70, 50))
+STEEL = mat("metal", lin(150, 152, 156))
+STEEL_D = mat("metal", lin(78, 80, 86))
+RUST = mat("metal", lin(128, 72, 42))
 BLACK = lin(30, 30, 32)
 WHITE = lin(228, 226, 218)
 CREAM = lin(222, 212, 184)
 RED = lin(178, 34, 30)
 ORANGE = lin(214, 120, 30)
 BRASS = lin(196, 156, 70)
-OLIVE = lin(88, 94, 58)
-TAN = lin(150, 120, 80)
-LEATHER = lin(88, 56, 34)
+OLIVE = mat("cloth", lin(88, 94, 58))
+TAN = mat("leather", lin(150, 120, 80))
+LEATHER = mat("leather", lin(88, 56, 34))
 BLUE = lin(52, 82, 130)
-TARP = lin(70, 88, 96)
-ROPE = lin(170, 150, 104)
+TARP = mat("cloth", lin(70, 88, 96))
+ROPE = mat("fine", lin(170, 150, 104))
 GREEN = lin(70, 120, 60)
 
 
@@ -181,14 +183,14 @@ def weapon(g):
 
 def cloth(g):
     """A pile of folded cloth: three folds in different colours, a little askew."""
-    box(g, (0.3, 0.24, 0.035), (0, 0, 0), BLUE, rz=4)
-    box(g, (0.28, 0.22, 0.03), (0.01, 0.01, 0.035), lin(160, 150, 130), rz=-6)
-    box(g, (0.26, 0.2, 0.03), (-0.01, 0, 0.065), lin(140, 60, 56), rz=10)
+    box(g, (0.3, 0.24, 0.035), (0, 0, 0), mat("cloth", BLUE), rz=4)
+    box(g, (0.28, 0.22, 0.03), (0.01, 0.01, 0.035), mat("cloth", lin(160, 150, 130)), rz=-6)
+    box(g, (0.26, 0.2, 0.03), (-0.01, 0, 0.065), mat("cloth", lin(140, 60, 56)), rz=10)
 
 
 def coat(g):
     """A coat laid flat: a body, sleeves folded across, a collar and buttons."""
-    c = lin(96, 84, 60)
+    c = mat("cloth", lin(96, 84, 60))
     box(g, (0.48, 0.42, 0.05), (0, 0, 0), c)
     for y in (-0.12, 0.12):
         box(g, (0.1, 0.38, 0.035), (-0.02 + y * 0.3, y * 0.15, 0.05), mul(c, 0.9), rz=-70 if y < 0 else 70)
@@ -209,7 +211,7 @@ def armour(g):
 def boot(g, loc, rz):
     m = place(loc, rz)
     sub = Geo()
-    box(sub, (0.28, 0.1, 0.03), (0.02, 0, 0), BLACK)
+    box(sub, (0.28, 0.1, 0.03), (0.02, 0, 0), mat("rubber", BLACK))
     box(sub, (0.26, 0.095, 0.07), (0.02, 0, 0.03), LEATHER, taper=0.9)
     box(sub, (0.11, 0.09, 0.16), (-0.07, 0, 0.08), mul(LEATHER, 0.9), top=mul(LEATHER, 0.6))
     box(sub, (0.08, 0.06, 0.004), (0.05, 0, 0.1), TAN)
@@ -271,7 +273,7 @@ def book(g):
 
 def cart(g):
     """A wheelbarrow: a tray on two handles, one wheel at the front, two legs at the back."""
-    tray = lin(68, 104, 70)
+    tray = mat("metal", lin(68, 104, 70))
     # An open tray: a floor and four sides leaning out.
     box(g, (0.5, 0.4, 0.02), (0.08, 0, 0.3), mul(tray, 0.7))
     for sx in (-1, 1):
@@ -281,7 +283,7 @@ def cart(g):
         box(g, (1.1, 0.04, 0.04), (-0.05, y, 0.28), WOOD_D, ry=-4)
         box(g, (0.04, 0.04, 0.3), (-0.2, y, 0.0), WOOD_D)
         box(g, (0.14, 0.05, 0.05), (-0.62, y, 0.31), BLACK)
-    cyl(g, 0.17, 0.08, (0.5, 0, 0.17), BLACK, seg=10, axis="x", rz=90, caps=STEEL_D)
+    cyl(g, 0.17, 0.08, (0.5, 0, 0.17), mat("rubber", BLACK), seg=10, axis="x", rz=90, caps=STEEL_D)
     cyl(g, 0.012, 0.44, (0.5, 0, 0.17), STEEL, metal=1, seg=6, axis="x", rz=90)
 
 
@@ -344,7 +346,7 @@ def flashlight(g):
     for x in (-0.085, -0.06):
         cyl(g, 0.0195, 0.012, (x, 0, 0.024), mul(body, 0.75), metal=0.6, seg=8, axis="x")
     cyl(g, 0.025, 0.05, (0.08, 0, 0.025), lin(60, 62, 66), metal=0.8, seg=8, axis="x", caps=body)
-    cyl(g, 0.021, 0.004, (0.106, 0, 0.025), lin(232, 228, 196), metal=0.2, seg=8, axis="x")
+    cyl(g, 0.021, 0.004, (0.106, 0, 0.025), plain(lin(232, 228, 196)), metal=0.2, seg=8, axis="x")
     box(g, (0.022, 0.01, 0.006), (-0.005, 0, 0.04), lin(190, 70, 40))
 
 
@@ -440,22 +442,22 @@ def weapon_v2(g):
 
 def cloth_v1(g):
     """A blanket rolled up and tied with string."""
-    cyl(g, 0.07, 0.42, (0, 0, 0.07), lin(120, 40, 36), seg=10, axis="x", caps=lin(150, 60, 50))
+    cyl(g, 0.07, 0.42, (0, 0, 0.07), mat("cloth", lin(120, 40, 36)), seg=10, axis="x", caps=mat("cloth", lin(150, 60, 50)))
     for x in (-0.12, 0.12):
         cyl(g, 0.072, 0.012, (x, 0, 0.07), ROPE, seg=10, axis="x")
 
 
 def cloth_v2(g):
     """A heap of rags in different colours."""
-    rags = ((0, 0, 0, 10, lin(140, 130, 110)), (0.06, 0.04, 0.02, -25, lin(70, 80, 100)),
-            (-0.05, 0.03, 0.035, 50, lin(150, 140, 60)), (0.02, -0.05, 0.045, -70, lin(110, 60, 56)))
+    rags = ((0, 0, 0, 10, mat("cloth", lin(140, 130, 110))), (0.06, 0.04, 0.02, -25, mat("cloth", lin(70, 80, 100))),
+            (-0.05, 0.03, 0.035, 50, mat("cloth", lin(150, 140, 60))), (0.02, -0.05, 0.045, -70, mat("cloth", lin(110, 60, 56))))
     for k, (x, y, z, a, c) in enumerate(rags):
         box(g, (0.2 - 0.02 * k, 0.12, 0.025), (x, y, z), c, rz=a, taper=0.8)
 
 
 def coat_v1(g):
     """A navy anorak laid flat: its sleeves out, the hood at the top, the zip down the middle."""
-    c = lin(46, 56, 80)
+    c = mat("cloth", lin(46, 56, 80))
     box(g, (0.46, 0.4, 0.05), (0, 0, 0), c)
     for y in (-0.1, 0.1):
         box(g, (0.36, 0.09, 0.035), (0.02, y * 2.0, 0.0), mul(c, 0.9), rz=y * 60)
@@ -465,7 +467,7 @@ def coat_v1(g):
 
 def boots_v1(g):
     """A pair of green wellingtons standing side by side, one a little turned: a sole and toe, a tall leg."""
-    green = lin(52, 74, 46)
+    green = mat("rubber", lin(52, 74, 46))
     for (x, y, a) in ((0, -0.065, 0), (0.02, 0.07, 14)):
         sub = Geo()
         box(sub, (0.27, 0.1, 0.025), (0.02, 0, 0), BLACK)
@@ -721,10 +723,10 @@ KINDS["gun"] = pistol  # the old generic gun (a pistol: WeaponTable.cs); "weapon
 # out along -Y (in the game the mesh's +Z, towards you). Index finger and thumb towards +X (the item's
 # working end). Made for a grip about 2.5 cm round (a club's tape); thinner handles sit loose.
 
-GLOVE = lin(70, 58, 44)
-GLOVE_D = lin(48, 40, 32)
-SLEEVE = lin(62, 70, 60)
-SLEEVE_D = lin(44, 50, 44)
+GLOVE = mat("leather", lin(70, 58, 44))
+GLOVE_D = mat("leather", lin(48, 40, 32))
+SLEEVE = mat("fine", lin(62, 70, 60))
+SLEEVE_D = mat("fine", lin(44, 50, 44))
 
 
 def bar(g, a, b, w, h, col, taper=1.0):
@@ -787,6 +789,7 @@ def to_object(name, g, mat):
         for _ in idx:
             col.data[k].color = (c[0], c[1], c[2], metal)
             k += 1
+    write_surfaces(me, g.f)
     me.update()
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)

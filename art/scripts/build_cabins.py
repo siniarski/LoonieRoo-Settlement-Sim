@@ -24,19 +24,20 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lowpoly import beam, box, build, cyl, lin, mul  # noqa: E402
+from lowpoly import beam, box, build, cyl, lin, mat, mul, plain  # noqa: E402
 
-TRIM = lin(96, 96, 100)
-TRIM_L = lin(128, 128, 130)
-PLASTIC = lin(50, 50, 54)
-CARPET = lin(66, 62, 60)
-SEAT = lin(96, 78, 62)
-SEAT_D = lin(74, 60, 48)
-LINING = lin(168, 162, 150)
-STEEL = lin(150, 152, 156)
-CHROME = lin(190, 192, 196)
-MIRROR = lin(120, 140, 152)
-DISPLAY = lin(40, 70, 52)
+TRIM = mat("plastic", lin(96, 96, 100))
+TRIM_L = mat("plastic", lin(128, 128, 130))
+PLASTIC = mat("plastic", lin(50, 50, 54))
+CARPET = mat("cloth", lin(66, 62, 60))
+SEAT = mat("cloth", lin(96, 78, 62))
+SEAT_D = mat("cloth", lin(74, 60, 48))
+LINING = mat("fine", lin(168, 162, 150))
+STEEL = mat("metal", lin(150, 152, 156))
+# Chrome, the mirrors' glass and the radio's display stay plain.
+CHROME = plain(lin(190, 192, 196))
+MIRROR = plain(lin(120, 140, 152))
+DISPLAY = plain(lin(40, 70, 52))
 
 # The sedan's driver's eye (m): the game puts the camera here (Cockpit.cs EYE), the pickup's is this plus its shift.
 EYE = (0.04, 0.38, 1.08)
@@ -159,9 +160,9 @@ def steering_wheel(g):
     box(g, (0.012, 0.07, 0.04), (-0.03, 0, -0.02), TRIM_L)
 
 
-RED_CAR = lin(110, 40, 36)
-BLUE_CAR = lin(62, 86, 112)
-OLIVE = lin(70, 82, 56)
+RED_CAR = mat("body", lin(110, 40, 36))
+BLUE_CAR = mat("body", lin(62, 86, 112))
+OLIVE = mat("body", lin(70, 82, 56))
 
 MODELS = [
     ("cabin", cabin(RED_CAR)),
