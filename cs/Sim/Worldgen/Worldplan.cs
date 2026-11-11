@@ -1,12 +1,12 @@
 // Ported from src/sim/worldplan.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// The world plan: everything built on the land, laid out once per world from the seed, in order:
+// The world plan: everything built on the land, laid out from the seed, a region at a time (WorldRegions.cs), in order:
 //   1. nature (nature.ts): water and forest, per tile
 //   2. towns sited on suitable land, each growing its streets (towns.ts)
 //   3. country roads routed between towns, to the start, and out to the map's edge (roads.ts)
 //   4. lots cut along the streets by zone (civic, shops, houses, industry), farms along the
 //      country roads near towns, the odd cabin out in the wild
-//   5. a building planned inside each lot (lots.ts)
-// The plan is plain data and derived (never saved): planWorld caches it by seed, size and map.
+// (The building inside a lot is planned when the lot is first drawn or asked about: Lots.layoutLot.)
+// The plan is plain data and derived (never saved): regions() caches it by seed, size and map.
 // Chunks draw their part of it (worldgen.ts), so they come out the same in any order.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -410,8 +410,6 @@ public static partial class Worldplan
             }
         });
     }
-
-    public static void cabinLots(Nature n, List<List<PointD>> roads, Func<Lot, bool> add) => cabinLots(n, roads, add, Win.Whole(n.size));
 
     /// <summary>The same over a window: the map's 48-tile lattice, the cells starting inside it.</summary>
     public static void cabinLots(Nature n, List<List<PointD>> roads, Func<Lot, bool> add, Win w)

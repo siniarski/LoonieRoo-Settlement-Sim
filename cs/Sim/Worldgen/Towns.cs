@@ -96,7 +96,8 @@ public static partial class Towns
     /// <summary>Where the towns go (biggest first): the best-scoring site for each on an 8-tile grid, dry and open,
     /// near water, clear of the start and of the towns already placed.
     ///
-    /// Linear in the map's area (2026-11-09, docs/worldgen-speed.md): it was every town x every site x a disc of the
+    /// Cheap a site (2026-11-09, docs/worldgen-speed.md; the loop is still towns x sites, which is why plans are
+    /// made by region: docs/worldplan-regions.md): it was every town x every site x a disc of the
     /// land grid (14 s at 2048, hours at 10,000). Now each site's counts (inside the town's circle: cells, dry, wooded;
     /// in the ring round it: cells, wet) come from row prefix sums over the land grid (a disc is a stack of row spans),
     /// and the towns placed so far are found through a coarse grid of cells. The counts are the same integers and the

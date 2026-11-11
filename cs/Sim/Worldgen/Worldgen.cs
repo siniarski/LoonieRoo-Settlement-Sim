@@ -10,8 +10,8 @@
 //    of every lot touching it (a lot may span chunks).
 //  - Chunks are generated lazily: the start area when the world is made, then any chunk within
 //    GENERATE_RADIUS chunks of a survivor, well ahead of what they can see (ensureGeneratedAround,
-//    called from fog.ts). (Entity ids come from state.nextId, so they do depend on generation
-//    order; ids are labels, nothing else.)
+//    called from Fog.updateFog). What a chunk makes is named by the chunk (furniture "f{cx}.{cy}.{k}", the
+//    dormant "d...", cars "v...": makeChunk), so ids don't depend on the order chunks are generated in.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

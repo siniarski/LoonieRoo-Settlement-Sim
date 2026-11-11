@@ -238,7 +238,7 @@ public static partial class Roads
         return line;
     }
 
-    /// <summary>The cost of crossing each coarse cell: land 1, woods 3, water 14 (a bridge), sea impassable.</summary>
+    /// <summary>The cost of crossing each coarse cell: land 1, woods 3, a river 14 (a bridge), a lake LAKE_COST, sea impassable.</summary>
     public static Float32Array costGrid(Nature n, List<Town> towns) => costGrid(n, towns, Win.Whole(n.size));
 
     /// <summary>The same over a window's cells (row by row from its first cell).</summary>

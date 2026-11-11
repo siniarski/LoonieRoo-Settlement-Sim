@@ -315,8 +315,6 @@ public sealed class Terrain
     public double pointElevation(int i, int j) => elev[Math.Clamp(j, 0, W - 1) * W + Math.Clamp(i, 0, W - 1)];
     public double pointDepth(int i, int j) => depth[Math.Clamp(j, 0, W - 1) * W + Math.Clamp(i, 0, W - 1)];
 
-    /// <summary>The ground's height, 0..1 (low to high), at a tile.</summary>
-    public double elevation(double x, double y) => Lerp(elev, x, y);
     /// <summary>How wet the land is, 0..1.</summary>
     public double moisture(double x, double y) => Lerp(moist, x, y);
     /// <summary>How settled the land is, 0..1 (towns stand where it's high).</summary>

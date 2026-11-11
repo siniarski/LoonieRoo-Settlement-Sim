@@ -212,11 +212,11 @@ public static partial class Lots
         return @out;
     }
 
-    /// <summary>Leaves out windows on a side wall too near the lot's edge: the building's plan-left and plan-right sides
-    /// map to the lot's low or high u by how it's turned and mirrored.</summary>
     /// <summary>A map tile's (u, v) in the lot's frame, as integers.</summary>
     public static (int u, int v) uv(Lot lot, Point m) { var l = mapToLot(lot, m.x, m.y); return ((int)l.u, (int)l.v); }
 
+    /// <summary>Leaves out windows on a side wall too near the lot's edge: the building's plan-left and plan-right sides
+    /// map to the lot's low or high u by how it's turned and mirrored.</summary>
     static void shutSides(Lot lot, Placement b, int u0, int F)
     {
         var p = b.plan;

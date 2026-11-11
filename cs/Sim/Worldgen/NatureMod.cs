@@ -115,10 +115,6 @@ public static partial class NatureMod
     }
     public static bool isChannel(Nature n, double x, double y) => isChannel(n, Js.I(x), Js.I(y));
 
-    /// <summary>Tiles from (x, y) to the nearest river's bank (Terrain's rivers): 0 in the water, Terrain.FAR at most.</summary>
-    public static double riverDistance(Nature n, int x, int y) => Terrain.Of(n).riverDistance(x, y);
-    public static double riverDistance(Nature n, double x, double y) => riverDistance(n, Js.I(x), Js.I(y));
-
     public static bool isWater(Nature n, int x, int y)
     {
         if (nearStart(n, x, y, START_CLEAR_RADIUS + 8))
@@ -163,13 +159,10 @@ public static partial class NatureMod
     }
     public static bool isForest(Nature n, double x, double y) => isForest(n, Js.I(x), Js.I(y));
 
-    /// <summary>The chance a tree stands on this tile (open ground off roads, lots and the start's clearing: Worldgen
-    /// rolls it, FarField draws what it would roll), 0..1.</summary>
-    /// Thin at a wood's edge (TREE_EDGE) and thicker inside it (TREE_DEEP, FOREST_DEEP over FOREST_AT); out of the
-    /// woods, the odd tree where the land is nearly wooded (up to TREE_STRAY, within TREE_FRINGE under FOREST_AT).</summary>
-    public static double treeChance(Nature n, int x, int y) => treeChanceAt(woodedness(n, x, y));
-
-    /// <summary>treeChance from a tile's woodedness.</summary>
+    /// <summary>The chance a tree stands on a tile of this woodedness (open ground off roads, lots and the start's
+    /// clearing: Worldgen rolls it, FarField draws what it would roll), 0..1. Thin at a wood's edge (TREE_EDGE) and
+    /// thicker inside it (TREE_DEEP, FOREST_DEEP over FOREST_AT); out of the woods, the odd tree where the land is
+    /// nearly wooded (up to TREE_STRAY, within TREE_FRINGE under FOREST_AT).</summary>
     public static double treeChanceAt(double w)
     {
         if (w > FOREST_AT) return TREE_EDGE + (TREE_DEEP - TREE_EDGE) * Math.Min(1, (w - FOREST_AT) / FOREST_DEEP);

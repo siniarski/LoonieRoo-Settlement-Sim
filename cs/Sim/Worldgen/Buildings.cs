@@ -78,8 +78,8 @@ public static partial class Buildings
         public string[] ground;
         public readonly List<string> kinds = new();
         public readonly List<string> grounds = new();
-        /// <summary>Per cell and side (cell * 4 + direction): a door, a window, no window allowed (a neighbour too close).</summary>
-        public bool[] door, window, noWindow;
+        /// <summary>Per cell and side (cell * 4 + direction): a door, a window.</summary>
+        public bool[] door, window;
         /// <summary>Per cell: furniture on it; kept clear (beside a door).</summary>
         public bool[] taken, keep;
         public readonly List<PlanFurniture> furniture = new();
@@ -93,7 +93,6 @@ public static partial class Buildings
             ground = new string[w * h];
             door = new bool[w * h * 4];
             window = new bool[w * h * 4];
-            noWindow = new bool[w * h * 4];
             taken = new bool[w * h];
             keep = new bool[w * h];
         }
@@ -198,27 +197,11 @@ public static partial class Buildings
             return true;
         }
 
-        /// <summary>The rooms a room has a door to (-1 for outside).</summary>
-        public List<int> doorsOf(int a)
-        {
-            var list = new List<int>();
-            for (int i = 0; i < w * h; i++)
-            {
-                if (room[i] != a) continue;
-                for (int d = 0; d < 4; d++)
-                    if (door[i * 4 + d])
-                    {
-                        int b = at(i % w + DX[d], i / w + DY[d]);
-                        if (!list.Contains(b)) list.Add(b);
-                    }
-            }
-            return list;
-        }
-
         // --- windows ---
 
         /// <summary>Windows in every room's outer walls by its kind (WINDOWS), spaced along each wall, never beside a door,
-        /// never at a wall's very end on a long wall, never where noWindow is set (a neighbour's wall too close).</summary>
+        /// never at a wall's very end on a long wall. (A window too near a neighbour's wall is taken out later, on the
+        /// lot: Lots.shutSides.)</summary>
         public void windows()
         {
             for (int r = 0; r < kinds.Count; r++)
@@ -279,7 +262,7 @@ public static partial class Buildings
             if (i < 0 || i >= run.Count) return false;
             var (x, y, d) = run[i];
             int k = (y * w + x) * 4 + d;
-            if (door[k] || noWindow[k]) return false;
+            if (door[k]) return false;
             // Not right beside a door in the same wall.
             int ax = d % 2 == 0 ? 1 : 0, ay = d % 2 == 0 ? 0 : 1;
             foreach (int s in new[] { -1, 1 })
@@ -289,22 +272,6 @@ public static partial class Buildings
             }
             window[k] = true;
             return true;
-        }
-
-        /// <summary>No windows on side d's walls whose outside cell is within `gap` tiles of the plan's edge plus `room`
-        /// tiles beyond it (the lot's clearance on that side): a neighbour's wall would be a hand's breadth off.</summary>
-        public void shutSide(int d, int clearance)
-        {
-            for (int y = 0; y < h; y++)
-                for (int x = 0; x < w; x++)
-                {
-                    if (room[y * w + x] < 0) continue;
-                    int nx = x + DX[d], ny = y + DY[d];
-                    if (at(nx, ny) >= 0) continue;
-                    // Tiles of clear ground beyond this wall: to the plan's edge, then the clearance.
-                    int beyond = d == 1 ? w - 1 - x : d == 3 ? x : d == 0 ? y : h - 1 - y;
-                    if (beyond + clearance < 2) { noWindow[(y * w + x) * 4 + d] = true; window[(y * w + x) * 4 + d] = false; }
-                }
         }
 
         // --- furniture ---
@@ -543,8 +510,6 @@ public static partial class Buildings
         }
     }
 
-    /// <summary>The front door's outside cell's column, and so where a path meets the building (plan coordinates).</summary>
-    public static (int x, int y)? frontStep(BuildingsPlan p) => p.front == null ? null : (p.front.bx, p.front.by);
 }
 
 public static partial class Buildings
@@ -574,7 +539,7 @@ public static partial class Buildings
         ["hay"] = "H", ["sack"] = "q", ["tractor"] = "Y", ["machine"] = "Z", ["bench"] = "_",
     };
 
-    /// <summary>A plan as text, two characters a cell: walls - and |, doors (gaps) as spaces between floor, windows o,
+    /// <summary>A plan as text, two characters a cell: walls - and |, doors ~ and :, windows o,
     /// furniture by GLYPHS, empty floor '.', outside blank. Rows from the back (top) to the front (bottom).</summary>
     public static string ascii(BuildingsPlan p)
     {
@@ -589,8 +554,7 @@ public static partial class Buildings
         {
             int ex = e.ax + e.bx + 1, ey = e.ay + e.by + 1;
             bool vertical = e.ay == e.by;
-            g[ey, ex] = e.door ? (vertical ? ' ' : ' ') : e.window == true ? 'o' : vertical ? '|' : '-';
-            if (e.door) g[ey, ex] = vertical ? ':' : '~';
+            g[ey, ex] = e.door ? (vertical ? ':' : '~') : e.window == true ? 'o' : vertical ? '|' : '-';
         }
         for (int y = 0; y < H; y += 2)
             for (int x = 0; x < W; x += 2)

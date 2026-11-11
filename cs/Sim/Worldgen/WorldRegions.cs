@@ -1,6 +1,7 @@
 // The world plan by region (2026-11-09, docs/worldplan-regions.md). A world is cut into R x R regions; each one's plan
 // (Worldplan.makeRegion: towns, streets, roads, lots, masks over its window) is made the first time something asks
-// about a tile in it, and kept (the KEEP most recent; dropping one only costs remaking it: plans are pure).
+// about a tile in it, and kept (KEEP of them, the oldest made dropped first; dropping one only costs remaking it:
+// plans are pure).
 //
 // What a region's plan depends on: (seed, size, map, its window), and its neighbours' towns, for the one road
 // joining each pair of neighbouring regions (Link: between the nearest pair of towns across their border, routed over
