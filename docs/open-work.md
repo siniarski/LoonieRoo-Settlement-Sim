@@ -97,6 +97,14 @@ packed state. Left:
   start): level to the street side or terrace; a river on a cross slope tilts (its edge up to 0.14 m over the land
   downhill); the far field's coarse ground differs from the near by p95 0.4 m (max 1.6 m at the seam).
 - Buildings: see "Buildings" below.
+- Roads (2026-11-11, log 20): two lanes everywhere, streets with a parking strip, sidewalks and a kerb. Left: towns
+  kept their radii, so they have about a third fewer streets and a fifth fewer lots (bigger radii move every town);
+  no dropped kerb at a driveway (the crossover is concrete, the kerb's face is still drawn); the quarantine fence's
+  gate is as wide as its road (six door tiles); snow lies over the kerb (Weather sits on the corners); road edges
+  off 45 degrees are bevelled steps, straight only if roads are drawn from their lines; no lane markings.
+- The start shelter's door is on an edge since 2026-11-11, and `Handiwork` barricades door tiles only: nobody can
+  nail it shut by hand (R with wood) until edge doors can be barricaded. The solo harness's barricade step finds no
+  door (its player dies on days 4 6 1 5 4 1 where it barricaded and died on 7 4 7 3 4 1: log 2026-11-11-20).
 - Towns: streets are still axis-aligned grids (bending them touches lots, buildings and the street-end road links);
   thinner bands of towns along region borders; still three settlements at any world size.
 - Water: rivers and lakes are the same water as ponds (thirst, sickness). The thirst worry was checked and is noise

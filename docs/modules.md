@@ -96,11 +96,14 @@ git tag `ts-final`.
 - **NatureMod**: water, forest, trees, dirt per tile (noise, fBm, `treeChanceAt`); the map types' seas and fences.
 - **Worldplan**: the plan (towns, streets, roads, lots; cached, never saved). **WorldRegions**: the plan by region
   (docs/worldplan-regions.md). **Win**: a window of the map a region's plan covers.
-- **Towns**: where towns stand and their streets. **TownIndex**: towns by coarse cell.
-- **Roads**: country roads, network and A* routing (RoadPoint/PointD are fractional). **Lots**: what stands on a lot.
+- **Towns**: where towns stand and their streets (8 tiles of asphalt: a parking strip and two lanes; sidewalks; the
+  centre square at `anchor`). **TownIndex**: towns by coarse cell.
+- **Roads**: country roads, network and A* routing (RoadPoint/PointD are fractional), drawn five to six tiles across.
+  **Lots**: what stands on a lot (and where its car parks: the street's strip, its drive).
 - **Buildings** (+ BuildingsHouses, BuildingsTrade, BuildingsCivic): plans as rooms with walls, doors and windows on
   edges, archetypes, furniture by function (docs/buildings.md). **Loot**: loot tables by room and building.
-- **Heights**: the ground's height in metres from the seed and plan (cached, never saved, read-only so far).
+- **Heights**: the ground's height in metres from the seed and plan (cached, never saved, read-only so far); a
+  street's asphalt a kerb's height under it (`sunk`, `kerb`, `surface`: what stands there stands on).
 - **WorldPreview**: a small picture of a world from its seed (New game, Load, loading screens; `Savefile.readPreview`).
 
 ### `World/`: the living world

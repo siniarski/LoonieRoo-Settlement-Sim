@@ -481,6 +481,31 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 - **The 3D ground has colours of its own (2026-11-11).** First person and the far view take the ground's colour from `WorldLook.GroundColour` (grass a muted
   green, roads dark grey, dirt brown); the Colony tab and the minimap keep `COLOURS.ground`
   *Why:* The palette's near-greys were made for a dark 2D map; under the 3D sun grass, road and paving were one pale grey that no texture could make read as grass
+- **Roads are two lanes; streets have a parking strip and sidewalks (2026-11-11, the player's playtest).** A street's asphalt is 8 tiles
+  (`Towns.STREET`): a parking strip of 2 along its low side (north of an east-west street, west of a north-south one) and a carriageway of 6, two
+  lanes of 3 m; a paved sidewalk of 2 each side and round its ends (the plan's road mask 3: paving, not a road), which the lots face. Lots on both
+  sides park their car in the one strip (`Lot.park`). Country roads are five to six tiles across (`Roads.ROAD_REACH` 2.9) and meet a main street on
+  the middle of its carriageway. A town's streets cross on a centre square at `Towns.anchor` (the town's point, or the nearest clear spot), which
+  is always laid. World generation version 3
+  *Why:* A pickup is 1.9 m across and the streets were 2: a car filled the street and every parked car blocked it (0.7 m beside one). One strip
+  on one side, rather than parking on both, keeps both lanes clear whatever is parked (a car on each side of a 6 m street would leave 2 m). The
+  strip is always on the low side so a lot knows where it is from its own frame, without knowing its street. Town radii were left alone, so a
+  town has about a third fewer streets and a fifth fewer lots: bigger towns would have moved every town's site
+- **The kerb is in the sim's heights, by sinking the asphalt (2026-11-11).** `Heights` step 6: a street's asphalt lies `KERB` (14 cm) under the
+  corners (`sunk`, `kerb`, `surface`); the corners stay the level of sidewalks, lots and doors. The game's one height hook reads `surface`, and
+  the ground mesh draws a sunk tile lower with the kerb's face beside it. The drop eases out over 6 tiles toward a country road. Nothing in a
+  tick reads it. A car's top speed on paving is a crawl (`Vehicles.KERB_CRAWL` 24); a driveway's crossover is concrete, which is not
+  *Why:* Sinking puts the one step where a kerb is; raising the sidewalk would have put a second step along every lot's front, path and door.
+  In the heights, not only drawn, because everything in the 3D view stands on that one hook: a drawn-only kerb leaves people on one side of it
+  floating or sunk. A crawl on paving (rather than a blocking kerb) because the sim has no heights that block, and it also slows a car on a
+  path or a square, which reads right
+- **Slanted roads are bevelled in the drawing only (2026-11-11).** A tile of open ground in the inside corner of a step of a road's edge is
+  drawn half road (`WorldMesh.RoadCorner`). The sim's ground, the map and the minimap stay tiles
+  *Why:* It took one check of four neighbours a ground tile. Straight edges at any angle need the road drawn from its line (a ribbon over the
+  ground), which is a renderer of its own
+- **The start shelter is an edge-walled building (2026-11-11).** `Buildings.startPlan`: one room, eight by six, on the footprint the old hut of
+  wall tiles had; a door, windows, a stove, a table, shelves (empty), beds along the back wall. The same for every seed, never decayed
+  *Why:* It was the only building in a generated world made of wall tiles a tile thick, beside neighbours on tile edges
 
 ## Controls and UI (the browser's, mostly carried into the Colony tab)
 
