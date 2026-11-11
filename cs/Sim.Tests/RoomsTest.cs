@@ -78,7 +78,7 @@ public partial class RoomsTest
         {
             List<string> map = ["#######", "#.....#", "#.....#", "#######"];
             var state = ScenarioMod.loadScenario(scenario([".......", .. map, "......."], [new() { x = Js.I(2), y = Js.I(2), purpose = "housing" }]));
-            /*TODO return type*/object unmet()
+            object unmet()
             {
                 return Rooms.designationStatus(state, Js.NN(Js.Get(state.roomDesignations, 0))).requirements.filter((r) => !r.met).map((r) => r.label);
             }

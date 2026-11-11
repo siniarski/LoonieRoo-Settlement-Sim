@@ -9,14 +9,14 @@
 //   growth  well fed, now and then someone new turns up
 //   walls   a surplus goes into defences, now and then
 //   the dead  a night attack can take one or two, less likely behind good walls
-//   help    a fed one sends food to a starving neighbour by caravan (caravans.ts; the two warm
+//   help    a fed one sends food to a starving neighbour by caravan (Caravans.cs; the two warm
 //           to each other when it arrives); allies send to a merely hungry one too
 //   feuds   feuding neighbours raid each other now and then, starving or not
 //   raids   a starving one raids the nearest neighbour for food, and both lose people
 //   splits  past SPLIT_AT people, a would-be leader leaves with a few to found their own
 //   falls   at none left it falls, and its compound is a ruin with the dead still in it
 // When anyone of yours comes within UNFOLD_RADIUS, the settlement unfolds into a
-// real compound: walls with a door, a bed a head, tables, and its people (residents.ts).
+// real compound: walls with a door, a bed a head, tables, and its people (Residents.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

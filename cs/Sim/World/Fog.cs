@@ -1,14 +1,14 @@
 // Ported from src/sim/fog.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Fog of war and exploring.
 //
-// grid.explored marks tiles some survivor has seen: what is in their field of view (sight.ts:
+// grid.explored marks tiles some survivor has seen: what is in their field of view (Sight.cs:
 // walls and shut doors hide what is behind them, glass doesn't, and night shortens it).
 // Scenario maps start fully explored; generated worlds start dark except
 // round the camp. Nothing can be designated on unexplored ground, but
 // survivors may walk into it, and that is how it gets explored.
 //
 // Explore areas are boxes the player wants scouted. Each gets one scout job
-// (jobs.ts), which keeps walking to the nearest unexplored walkable tile in
+// (Jobs.cs), which keeps walking to the nearest unexplored walkable tile in
 // the box until none is left; then the area is done and removed. Scouts
 // head home at SCOUT_HOME_HOUR and go out again in the morning. A newly
 // seen crate with loot marks its ruin as a point of interest.

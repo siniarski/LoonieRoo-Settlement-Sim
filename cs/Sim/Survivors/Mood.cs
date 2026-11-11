@@ -4,7 +4,7 @@
 // A thought is a timed memory ("ate at a table", "saw someone die"). One of
 // each kind at a time: a repeat refreshes the timer. Being hurt or hungry
 // counts as a thought while it lasts. Below MISERABLE, a survivor works at
-// 3/4 speed, like a hurt one; breakdowns and the rec room are in leisure.ts.
+// 3/4 speed, like a hurt one; breakdowns and the rec room are in Leisure.cs.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -23,7 +23,7 @@ public static partial class Mood
 
     public static readonly JsRecord<THOUGHTS> THOUGHTS = new() { ["ateAtTable"] = new() { label = "ate at a table", effect = 10, duration = Time.DAY_LENGTH }, ["ateWithoutTable"] = new() { label = "ate without a table", effect = -5, duration = Time.DAY_LENGTH }, ["sleptInBed"] = new() { label = "slept in a bed", effect = 5, duration = Time.DAY_LENGTH }, ["sleptOnFloor"] = new() { label = "slept on the floor", effect = -10, duration = Time.DAY_LENGTH }, ["sawDeath"] = new() { label = "someone died", effect = -15, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["attacked"] = new() { label = "attacked by a zombie", effect = -10, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["relaxed"] = new() { label = "relaxed in the rec room", effect = 10, duration = Time.DAY_LENGTH }, ["vented"] = new() { label = "got it out of their system", effect = 15, duration = Time.DAY_LENGTH }, ["hotMeal"] = new() { label = "had a hot meal", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["soaked"] = new() { label = "got soaked", effect = -3, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["cold"] = new() { label = "out in the cold (walks slower)", effect = -10, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["lostFriend"] = new() { label = "lost a friend", effect = -25, duration = ((double)(3) * (Time.DAY_LENGTH)) }, ["stench"] = new() { label = "the stench of the dead", effect = -8, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["paidRespects"] = new() { label = "paid their respects", effect = 15, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["dog"] = new() { label = "spent time with a dog", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (2)) }, ["lostLeader"] = new() { label = "lost our leader", effect = -20, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["wentHome"] = new() { label = "saw to their old home", effect = 10, duration = ((double)(3) * (Time.DAY_LENGTH)) }, ["laidToRest"] = new() { label = "laid their dead to rest", effect = 20, duration = ((double)(4) * (Time.DAY_LENGTH)) }, ["petFound"] = new() { label = "their dog was found", effect = 15, duration = ((double)(3) * (Time.DAY_LENGTH)) }, ["burnedThePast"] = new() { label = "burned the past", effect = 15, duration = ((double)(3) * (Time.DAY_LENGTH)) }, ["confessed"] = new() { label = "told the others what they did", effect = 10, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["reunited"] = new() { label = "found someone they lost", effect = 30, duration = ((double)(5) * (Time.DAY_LENGTH)) }, ["lostHope"] = new() { label = "nobody answered the radio", effect = -10, duration = ((double)(3) * (Time.DAY_LENGTH)) }, ["oldFriend"] = new() { label = "met someone from home", effect = 10, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["wellRested"] = new() { label = "well rested (works and swings faster)", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (4)) }, ["bloodUp"] = new() { label = "blood up (hits harder)", effect = 5, duration = ((double)(Time.DAY_LENGTH) / (24)) }, ["shaken"] = new() { label = "shaken (swings slower)", effect = -5, duration = ((double)(Time.DAY_LENGTH) / (24)) }, ["wishMet"] = new() { label = "got what they wanted", effect = 5, duration = Time.DAY_LENGTH }, ["promiseKept"] = new() { label = "a promise kept", effect = 15, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["promiseBroken"] = new() { label = "a promise broken", effect = -10, duration = ((double)(2) * (Time.DAY_LENGTH)) }, ["irradiated"] = new() { label = "in the hot zone", effect = -10, duration = Time.DAY_LENGTH } };
 
-    /// <summary>Thought lengths at day scale 1; THOUGHTS follows the clock (time.ts).</summary>
+    /// <summary>Thought lengths at day scale 1; THOUGHTS follows the clock (Time.cs).</summary>
     public static readonly JsRecord<double> BASE_DURATION = Js.AsRecord<double>(Js.Object_fromEntries(Js.ObjectEntries(THOUGHTS).map((__p0) =>
         {
             var (k, v) = __p0;
@@ -42,10 +42,10 @@ public static partial class Mood
     /// <summary>Below this a survivor is miserable and works at 3/4 speed.</summary>
     public const int MISERABLE = 30;
 
-    /// <summary>While hurt (see health.ts).</summary>
+    /// <summary>While hurt (see Health.cs).</summary>
     public const double HURT_MOOD = -10;
 
-    /// <summary>While hungry (see food.ts).</summary>
+    /// <summary>While hungry (see Food.cs).</summary>
     public const double HUNGRY_MOOD = -10;
 
     public static void addThought(SimState state, Survivor s, string kind)

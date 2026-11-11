@@ -1,4 +1,4 @@
-// World clock (time.ts), derived purely from state.tick. A day is DAY_LENGTH ticks; the game starts at
+// World clock, derived purely from state.tick. A day is DAY_LENGTH ticks; the game starts at
 // START_HOUR. Day length is a world setting (settings.dayScale): tick() sets the scale each tick, and
 // modules whose values derive from the day register with OnClock to recompute them.
 namespace LoonieRoo.Sim;

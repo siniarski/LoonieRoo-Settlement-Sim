@@ -6,13 +6,13 @@
 // bleed and heal. Input arrives as commands like everything else (rule 5):
 //   steer   the held direction (sent when the keys change, not every frame)
 //   swing   attack towards a tile: a shot if a loaded gun is in hand, else a blow at what is in front
-//   work    repair, barricade, reinforce or build at the tile in front (handiwork.ts)
+//   work    repair, barricade, reinforce or build at the tile in front (Handiwork.cs)
 //   use     pick up, put on, eat, search, treat yourself (medicine, a bandage), drink (a well,
 //           a rain collector, the river) or
 //           sleep (a bed; your own tile with nothing on it is the floor) at a tile next to you
 // and more since (aiming and reloading, switching weapon, leaps, sneaking, a car's boot and bonnet, the bag):
 // every command is a case of Commands.execute.
-// Movement is free (motion.ts): the held direction moves your centre a little each tick, at
+// Movement is free (Motion.cs): the held direction moves your centre a little each tick, at
 // your tile pace (roads, a bad leg...), the same speed any way you go, sliding along walls.
 // Your tile (pos) is whatever tile you're over.
 // Searching, eating, drinking and sleeping take time; moving or swinging interrupts them,
@@ -123,7 +123,7 @@ public static partial class ControlMod
         {
             if (c.busy?.what == "getOut")
             {
-                // Getting out: the car rolls to a stop meanwhile (vehicleActions.ts).
+                // Getting out: the car rolls to a stop meanwhile (VehicleActions.cs).
                 Vehicles.drive(state, s, 0, 0);
                 s.note = Vehicles.carActionTick(state, s, c) ?? s.note;
                 return;
@@ -185,7 +185,7 @@ public static partial class ControlMod
         var busy = Js.NN(c.busy);
         if (Vehicles.isCarAction(busy.what))
         {
-            // Seconds of handling, counted in ticks whatever the day length (vehicleActions.ts).
+            // Seconds of handling, counted in ticks whatever the day length (VehicleActions.cs).
             s.note = Vehicles.carActionTick(state, s, c) ?? s.note;
             return;
         }
@@ -717,7 +717,7 @@ public static partial class ControlMod
         return null;
     }
 
-    /// <summary>Work the tile in front: repair, barricade, reinforce or build (handiwork.ts). Returns what happened, or why not.</summary>
+    /// <summary>Work the tile in front: repair, barricade, reinforce or build (Handiwork.cs). Returns what happened, or why not.</summary>
     public static string work(SimState state, Survivor s, Point target)
     {
         var c = Js.NN(state.control);
@@ -761,7 +761,7 @@ public static partial class ControlMod
             c.busy = new ControlBusy { what = "eat", targetId = item.id, progress = 0, duration = Food.EAT_TICKS };
             return "eating";
         }
-        var slot = Weapons.isWieldKind(item.kind) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
+        var slot = Weapons.isWieldKind(item.kind) ? "weapon" : (Clothing.isGarment(item.kind) ? Js.Get(Clothing.SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : "carrying")));
         if ((slot == "carrying") && Inventory.canStow(state, s, item))
         {
             Inventory.stow(state, s, item);

@@ -80,7 +80,7 @@ public static class CameraMath
         return new TileRange { x0 = Math.Max(0, tl.x), y0 = Math.Max(0, tl.y), x1 = Math.Min(mapWidth - 1, br.x), y1 = Math.Min(mapHeight - 1, br.y) };
     }
 
-    /// <summary>Render-time interpolation (interp.ts): a mover's centre in tiles, blended from `was` to `at` by alpha.</summary>
+    /// <summary>Render-time interpolation: a mover's centre in tiles, blended from `was` to `at` by alpha.</summary>
     public static P worldPos(Point at, Point was, double alpha)
     {
         double a = Math.Min(1, Math.Max(0, alpha));

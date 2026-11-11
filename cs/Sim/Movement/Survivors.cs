@@ -16,7 +16,7 @@ public static partial class Survivors
     public const int TICKS_PER_TILE = 4;
 
     /// <summary>Ground indices (GROUNDS) that are quicker to walk on.</summary>
-    public static readonly /*TODO array type*/List<object> ROAD_GROUNDS = [Grids.GROUNDS.indexOf("road"), Grids.GROUNDS.indexOf("bridge"), Grids.GROUNDS.indexOf("paving")];
+    public static readonly List<object> ROAD_GROUNDS = [Grids.GROUNDS.indexOf("road"), Grids.GROUNDS.indexOf("bridge"), Grids.GROUNDS.indexOf("paving")];
 
     /// <summary>Chance that stepping onto an indoor floor tile leaves dirt on it. Uses the sim RNG.</summary>
     public static readonly double DIRT_CHANCE = ((double)(1) / (30));

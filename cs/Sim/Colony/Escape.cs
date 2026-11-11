@@ -1,5 +1,5 @@
 // Ported from src/sim/escape.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Escape, and a new game+. When the helicopter is down (endgame.ts), you choose:
+// Escape, and a new game+. When the helicopter is down (EndgameMod.cs), you choose:
 //   everyone   all aboard: a new game+ in a fresh world (same settings), you alone with what
 //              you carried, your skills, traits, story and resolve (newGamePlus)
 //   others     send everyone else; you stay, and can call another helicopter later for

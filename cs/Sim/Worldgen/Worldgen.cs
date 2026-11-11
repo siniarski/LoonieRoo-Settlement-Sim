@@ -1,6 +1,6 @@
 // Ported from src/sim/worldgen.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// World generation: the natural world first (nature.ts: water, forest), then what was built on
-// it (worldplan.ts: towns sited on good land with streets they grew, country roads routed between
+// World generation: the natural world first (NatureMod.cs: water, forest), then what was built on
+// it (Worldplan.cs: towns sited on good land with streets they grew, country roads routed between
 // them, lots cut along the streets and roads, a building planned in each lot), drawn chunk by chunk.
 //
 //  - Everything is a pure function of the seed and world position (stateless hashes, never the
@@ -49,7 +49,7 @@ public static partial class Worldgen
     }
     public static bool isRoad(Layout l, double x, double y) => isRoad(l, Js.I(x), Js.I(y));
 
-    /// <summary>On a lot (its yard and building are drawn by lots.ts).</summary>
+    /// <summary>On a lot (its yard and building are drawn by Lots.cs).</summary>
     public static bool onLot(Layout l, int x, int y)
     {
         return l.regions.OnLot(x, y);
@@ -434,7 +434,7 @@ public static partial class Worldgen
                 continue;
             }
             a.pos = nearestAcross(state, a.pos, (__f0, __f1) => floorOnly(__f0, __f1)) ?? a.pos;
-            /*TODO Object.assign*/Js.Object_assign(a, Motion.placedAt(a.pos));
+            Js.Object_assign(a, Motion.placedAt(a.pos));
             a.move = null;
         }
         foreach (var s in Js.Iter(state.survivors))
@@ -470,7 +470,7 @@ public static partial class Worldgen
         return null;
     }
 
-    /// <summary>A new generated world; `you`, if given, becomes the first survivor (character.ts).</summary>
+    /// <summary>A new generated world; `you`, if given, becomes the first survivor (CharacterMod.cs).</summary>
     public static SimState createWorld(double seed, double size = WORLD_SIZE, Settings? settings = null, Character? you = default)
     {
         settings ??= Difficulty.NORMAL;

@@ -32,7 +32,7 @@ public partial class VehiclesTest
         }
     }
 
-    /// <summary>Use the car at (3, 3) and wait out getting in (vehicleActions.ts). Returns whether "use" was taken.</summary>
+    /// <summary>Use the car at (3, 3) and wait out getting in (VehicleActions.cs). Returns whether "use" was taken.</summary>
     public static bool getIn(SimState state)
     {
         var ok = Commands.applyCommand(state, new Command { type = "use", x = Js.I(3), y = Js.I(3) }).ok;
@@ -80,7 +80,7 @@ public partial class VehiclesTest
             run(state, 40);
             expect(car.speed).toBeLessThanOrEqual(0);
             expect(Commands.applyCommand(state, new Command { type = "use", x = Js.I(car.pos.x), y = Js.I(car.pos.y) }).ok).toBe(true);
-            expect(Vehicles.vehicleOf(state, s)).toBe(car);  // getting out takes a moment (vehicleActions.ts)
+            expect(Vehicles.vehicleOf(state, s)).toBe(car);  // getting out takes a moment (VehicleActions.cs)
             run(state, Vehicles.GET_OUT_TICKS);
             expect(Vehicles.vehicleOf(state, s)).toBeUndefined();
             expect(JsMath.max(JsMath.abs(s.pos.x - car.pos.x), JsMath.abs(s.pos.y - car.pos.y))).toBe(1);

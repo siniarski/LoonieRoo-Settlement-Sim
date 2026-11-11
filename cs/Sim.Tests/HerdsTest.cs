@@ -172,7 +172,7 @@ public partial class HerdsTest
         [Fact(DisplayName = "herds > set out from day 2 (sim RNG: the same seed, the same herd)")]
         public void T008_set_out_from_day_2_sim_RNG_the_same_seed_the_same_herd()
         {
-            /*TODO return type*/object herd()
+            object herd()
             {
                 var state = field(80, 80);
                 state.tick = Js.I((Time.DAY_LENGTH + ((double)(2) * (Time.TICKS_PER_HOUR))) - 1);

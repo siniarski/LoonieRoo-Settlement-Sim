@@ -1,6 +1,6 @@
 // Ported from src/sim/scenario.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Scenario files: a seed, an ASCII map, and an optional command log.
-// The map legend here is the data format; debug/text.ts renders with it too,
+// The map legend here is the data format; DebugText.cs renders with it too,
 // so a dumped map can be pasted straight back into a scenario.
 #nullable disable warnings
 namespace LoonieRoo.Sim;

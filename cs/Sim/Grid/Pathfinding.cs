@@ -1,4 +1,4 @@
-// A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening (pathfinding.ts).
+// A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening.
 // Deterministic: ties broken by lower h, then insertion order; neighbours expanded N, E, S, W.
 // Movers: "survivor" (colonists: any door), "free" (you: doors open), "zombie", "breacher" (batters
 // through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",

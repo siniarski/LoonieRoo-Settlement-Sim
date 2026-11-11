@@ -9,7 +9,7 @@
 // The leader is whoever the others think best of (an average opinion of at
 // least LEADER_MIN, with three or more in the colony), settled each dawn. A
 // colony with a leader is a little happier (+5); losing them hits everyone
-// hard ("lost our leader", mood.ts).
+// hard ("lost our leader", Mood.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -28,7 +28,7 @@ public static partial class Policies
 
     public static bool isPolicy(object p)
     {
-        return (/*TODO typeof*/Js.TypeOf(p) == "string") && (POLICIES).includes(p);
+        return (Js.TypeOf(p) == "string") && (POLICIES).includes(p);
     }
 
     public static bool policyOn(SimState state, string p)

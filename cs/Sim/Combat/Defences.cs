@@ -5,11 +5,11 @@
 // blueprint like any other, delivering scrap instead of wood). Reinforced
 // structures take REINFORCE_FACTOR times the battering and don't burn.
 //
-// Turrets: a gun emplacement fed ammo by haulers (fuel jobs, jobs.ts). Every
+// Turrets: a gun emplacement fed ammo by haulers (fuel jobs, Jobs.cs). Every
 // TURRET_EVERY ticks it shoots the nearest zombie it can see within
 // TURRET_RANGE with a clear line, loudly.
 //
-// Lures: a noisemaker that rattles every hour at night (noise.ts), drawing
+// Lures: a noisemaker that rattles every hour at night (Noise.cs), drawing
 // the world's zombies and herds to it, away from where they'd otherwise go.
 //
 // Pits: a zombie that steps in one is stuck for PIT_TICKS (no moving, no

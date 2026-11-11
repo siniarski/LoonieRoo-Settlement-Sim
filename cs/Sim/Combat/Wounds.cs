@@ -27,7 +27,7 @@ public static partial class Wounds
     /// <summary>Bleeding stops by itself after this (sooner with a bandage). Balance pass 5: it ran on until bandaged, and bandages ran out.</summary>
     public const int BLEED_TICKS = 300;
 
-    /// <summary>The first quarter of the infection; a function, as INFECTION_TURN follows the day length (time.ts).</summary>
+    /// <summary>The first quarter of the infection; a function, as INFECTION_TURN follows the day length (Time.cs).</summary>
     public static double amputateWindow()
     {
         return ((double)(Infection.INFECTION_TURN) / (4));

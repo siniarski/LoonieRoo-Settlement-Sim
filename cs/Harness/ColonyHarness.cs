@@ -20,7 +20,7 @@ public partial class ColonyHarness
 
     public static readonly string OUT = process.env.OUT ?? "cs/Harness/out/colony.txt";
 
-    public static /*TODO return type*/object flush()
+    public static object flush()
     {
         return writeFileSync(OUT, @out.join("\n") + "\n");
     }

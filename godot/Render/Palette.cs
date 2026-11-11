@@ -7,7 +7,7 @@ namespace LoonieRoo.Game.Render;
 public static class COLOURS
 {
     public const string fog = "#07080a";
-    /// <summary>Over explored ground out of view now (sight.ts).</summary>
+    /// <summary>Over explored ground out of view now (Sight.cs).</summary>
     public const string unseen = "rgba(7, 8, 10, 0.45)";
     public const string background = "#0d0f0e";
     public const string mapEdge = "#3a3f3b";

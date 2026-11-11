@@ -132,7 +132,7 @@ public partial class WildlifeTest
                 s.priorities[Js.Idx(k)] = 0;
             }
             var guard = Js.With(Js.Clone(Js.DeepClone(s)), __s1 => { __s1.id = "s900"; __s1.name = "Guard"; __s1.pos = new Point { x = Js.I(s.pos.x - 6), y = Js.I(s.pos.y) }; });
-            /*TODO Object.assign*/Js.Object_assign(guard, Motion.placedAt(guard.pos));
+            Js.Object_assign(guard, Motion.placedAt(guard.pos));
             foreach (var k in Js.Iter(Js.ObjectKeys(guard.priorities)))
             {
                 guard.priorities[Js.Idx(k)] = (k == "guard") ? 1 : 0;

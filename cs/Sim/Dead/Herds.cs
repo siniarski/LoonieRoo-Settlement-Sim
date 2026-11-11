@@ -4,7 +4,7 @@
 // Built the "simulation LOD" way, so a far bigger world costs nothing extra:
 //  - Dormant zombies are just positions (state.dormant), seeded in ruins by
 //    worldgen. They become real zombies only when a survivor comes within
-//    WAKE_RADIUS, and then hunt only survivors within AGGRO_RADIUS (zombies.ts).
+//    WAKE_RADIUS, and then hunt only survivors within AGGRO_RADIUS (Zombies.cs).
 //  - Herds are single markers crossing the map a tile every
 //    HERD_TICKS_PER_TILE, ignoring terrain. One that comes within
 //    MATERIALIZE_RADIUS of a survivor breaks up into real zombies that keep

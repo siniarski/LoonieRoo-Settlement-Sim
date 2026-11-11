@@ -4,7 +4,7 @@
 // zombie's id, not the sim RNG):
 //   runner    quick (a tile every 4 ticks, walkers take 6), but frail
 //   brute     twice the health, slow, hits hard, and batters walls three times as fast
-//   screamer  frail; when it first spots someone it screams (noise.ts), waking and drawing others
+//   screamer  frail; when it first spots someone it screams (Noise.cs), waking and drawing others
 //   crawler   frail; slips under barricades
 // Each counters a different defence: runners outpace guards, brutes break walls,
 // screamers punish fighting near ruins, crawlers make barricades no wall.

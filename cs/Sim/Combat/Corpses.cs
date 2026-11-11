@@ -11,7 +11,7 @@
 //
 // Sickness lasts SICK_TICKS: slowed like the hurt, a slow loss of health, and
 // a worse mood. Medicine cures it. The grieving pay their respects at a
-// graveyard (leisure.ts).
+// graveyard (Leisure.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

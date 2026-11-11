@@ -69,7 +69,7 @@ public static partial class Work
     public static void workFuel(SimState state, Survivor s, Job job)
     {
         var g = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, Jobs.FUEL)))
+        if (!Js.T(g) || !(Js.In(g.kind, Jobs.FUEL)))
         {
             { Jobs.releaseSurvivor(state, s, $"{Js.Str(g?.kind ?? "generator")} gone"); return; }
         }

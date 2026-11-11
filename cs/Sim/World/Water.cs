@@ -8,7 +8,7 @@
 // takes DRINK_TICKS and fills them up. At 0 they lose health.
 //
 // Rain collectors fill while it rains or snows. While the mains are on, kitchen counters,
-// toilets and baths are taps (timeline.ts).
+// toilets and baths are taps (TimelineMod.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -39,7 +39,7 @@ public static partial class Water
     /// <summary>Water standing in a fitting with the mains off.</summary>
     public static bool isTank(SimState state, Furniture f)
     {
-        return ((((f.kind == "decor") && (f.look != null)) && (/*TODO in*/Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !TimelineMod.waterOn(state);
+        return ((((f.kind == "decor") && (f.look != null)) && (Js.In(f.look, TimelineMod.TANK_WATER))) && (f.loot > 0)) && !TimelineMod.waterOn(state);
     }
 
     /// <summary>A drink taken from a source: collectors and tanks run down.</summary>

@@ -26,7 +26,7 @@ public interface IMenuActions
 {
     void Resume();
     void NewGame(double size, Settings settings, double? seed, Character you);
-    /// <summary>A debug arena: a small solo world with zombies near you from the start (arena.ts).</summary>
+    /// <summary>A debug arena: a small solo world with zombies near you from the start (Arena.cs).</summary>
     void Arena(string kind);
     void Load(string slot);
     void ImportFile();

@@ -189,7 +189,7 @@ public sealed partial class Painter
         }
         foreach (var t in state.tasks) drawTask(t, size);
         foreach (var a in state.exploreAreas) drawAreaBox(new Point(a.x0, a.y0), new Point(a.x1, a.y1), COLOURS.tools["explore"]);
-        // Line of sight (sight.ts): what's explored but out of view now is dimmed, and the people,
+        // Line of sight (Sight.cs): what's explored but out of view now is dimmed, and the people,
         // the dead and animals in it aren't drawn (the debug overlay shows them all).
         var seen = Sight.visibleNow(state);
         bool inView(int x, int y) => shown(x, y) && (options.showDebug || seen[y * grid.width + x] == 1);
@@ -202,7 +202,7 @@ public sealed partial class Painter
                 var r = tileRect(x, y);
                 ctx.fillRect(r.x, r.y, r.w, r.h);
             }
-        // Caravans (caravans.ts): a cart and its people, where you can see them.
+        // Caravans (Caravans.cs): a cart and its people, where you can see them.
         foreach (var c in Caravans.caravansOf(state))
         {
             if (!inView(c.x, c.y)) continue;
@@ -220,7 +220,7 @@ public sealed partial class Painter
                 ctx.fill();
             }
         }
-        // Neighbours' scavengers (runs.ts): a few people on foot, packs on.
+        // Neighbours' scavengers (Runs.cs): a few people on foot, packs on.
         foreach (var r in Runs.runsOf(state))
         {
             if (!inView(r.x, r.y)) continue;
@@ -272,7 +272,7 @@ public sealed partial class Painter
         }
         foreach (var d in state.dogs) if (shown(d.pos.x, d.pos.y)) drawDog(d, options.alpha, size);
         foreach (var s in state.survivors) drawSurvivor(state, s, options, size);
-        // Cars (vehicles.ts), over whoever is in them: a body turned to its heading, a windscreen at the front.
+        // Cars (Vehicles.cs), over whoever is in them: a body turned to its heading, a windscreen at the front.
         foreach (var v in Vehicles.vehiclesOf(state))
         {
             if (!shown(v.pos.x, v.pos.y)) continue;
@@ -297,7 +297,7 @@ public sealed partial class Painter
             ctx.strokeRect(-len / 2, -wid / 2, len, wid);
             ctx.restore();
         }
-        // The world winding down (timeline.ts): alarms ringing (seen or not: you hear them), the helicopter overhead.
+        // The world winding down (TimelineMod.cs): alarms ringing (seen or not: you hear them), the helicopter overhead.
         if (state.timeline != null)
         {
             foreach (var a in state.timeline.alarms)
@@ -462,7 +462,7 @@ public sealed partial class Painter
     }
 
     /// <summary>
-    /// Edge walls and doors (grid.ts): a bar along the border between two tiles, a fifth of a tile
+    /// Edge walls and doors (Grid.cs): a bar along the border between two tiles, a fifth of a tile
     /// thick, centred on it. A door is a wooden leaf in a gap; open, it's swung back along the frame.
     /// </summary>
     void drawEdges(Grid grid, TileRange range, double size)

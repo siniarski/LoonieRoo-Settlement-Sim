@@ -11,7 +11,7 @@ public partial class SimState : IRngHolder, System.Text.Json.Serialization.IJson
         if (grid != null) Vehicles.remask(this);
     }
 
-    /// <summary>The RNG state lives in sim state as a plain number (rng.ts).</summary>
+    /// <summary>The RNG state lives in sim state as a plain number (Rng.cs).</summary>
     double IRngHolder.rng
     {
         get => rng;

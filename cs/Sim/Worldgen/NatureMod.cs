@@ -1,6 +1,6 @@
 // Ported from src/sim/nature.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // The natural world, generated first: per-tile functions of the seed for water (sea, island
-// channels, rivers, lakes, ponds) and forest. Towns, roads and lots (worldplan.ts) are laid out over it.
+// channels, rivers, lakes, ponds) and forest. Towns, roads and lots (Worldplan.cs) are laid out over it.
 // Everything here is a pure function of (seed, position), from a stateless hash, never the sim RNG.
 //
 // Since 2026-11-10 the large scale comes from Terrain (elevation, moisture, where people settled; rivers that drain

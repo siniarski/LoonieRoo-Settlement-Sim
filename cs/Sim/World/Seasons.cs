@@ -4,7 +4,7 @@
 // Seasons run SEASON_DAYS each, from spring. Crops grow at full speed in
 // spring and summer, half speed in autumn, not at all in winter. Each dawn
 // rolls the day's weather (sim RNG): rain (not in winter) makes crops grow
-// half as fast again; anyone outdoors gets wet (body.ts); snow (in winter) just looks
+// half as fast again; anyone outdoors gets wet (BodyMod.cs); snow (in winter) just looks
 // cold. Winter nights are cold outdoors: a slow loss of health, and the mood
 // to match. Indoors (any enclosed room) is warm.
 #nullable disable warnings
@@ -87,7 +87,7 @@ public static partial class Seasons
         return (((seasonOf(state.tick) == "winter") || state.settings.winter) && Time.isNight(state.tick)) || (state.weather == "blizzard");
     }
 
-    /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: climate.ts) without a coat or a heater. Hand-made maps are all mild.</summary>
+    /// <summary>Out of doors in the cold (a winter night, a cold region's autumn night or winter day, or a blizzard: Climate.cs) without a coat or a heater. Hand-made maps are all mild.</summary>
     public static bool isCold(SimState state, Survivor s)
     {
         var cold = Js.T(state.world) ? (Climate.regionCold(state, s.pos.x, s.pos.y) || (state.weather == "blizzard")) : coldOutside(state);

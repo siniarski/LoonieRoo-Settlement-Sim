@@ -5,7 +5,7 @@
 // each other, a little every BOND_EVERY ticks. A breakdown sours things: the
 // survivor lashes out at whoever is nearest, and if that one already
 // disliked them enough, it comes to blows. A friend's death hurts far more
-// than a stranger's (mood.ts).
+// than a stranger's (Mood.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

@@ -1,7 +1,7 @@
 // Ported from src/sim/errands.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Errands: neighbours asking you for help, out in the world.
 //
-// Talk to one of a settlement's people in person (residents.ts meetResident) when it thinks
+// Talk to one of a settlement's people in person (Residents.cs meetResident) when it thinks
 // well enough of you (not hostile) and has nothing open with you, and some days they ask:
 //   nest     the dead have gathered near X (NEST_SIZE of them, asleep on their feet: static):
 //            kill them all.
@@ -9,7 +9,7 @@
 //            coming within FOUND_REACH tiles of the spot finds them, and they go home).
 // The spot is ERRAND_MIN..ERRAND_MAX tiles from the settlement. On the map it's marked, with
 // what it is. Done within ERRAND_DAYS: they think a lot more of you (ERRAND_REP), and a
-// caravan (caravans.ts) brings the thanks to your place. Not done in time: they think a little
+// caravan (Caravans.cs) brings the thanks to your place. Not done in time: they think a little
 // less of you (LAPSED_REP). One errand open per settlement at a time.
 // Rolls are hashes of the settlement, the day and the person, not the sim RNG.
 #nullable disable warnings

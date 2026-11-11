@@ -1,6 +1,6 @@
 // Ported from src/sim/loot.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // What you find depends on where you look: each container carries a loot table, set by the room
-// or building it was generated in (buildings.ts). Kitchens hold food, bathrooms medicine,
+// or building it was generated in (Buildings.cs). Kitchens hold food, bathrooms medicine,
 // garages tools and fuel, police stations guns. A crate with no table uses SCAVENGE_TABLE.
 //
 // One roll per find, as before (findIn takes the same [0, 1) roll scavengeFind did), so the

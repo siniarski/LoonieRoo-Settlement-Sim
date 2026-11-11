@@ -1,7 +1,7 @@
 // Ported from src/sim/medicine.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Doctors and the infirmary.
 //
-// A patient is a hurt survivor asleep in a bed (resting, see needs.ts). Each
+// A patient is a hurt survivor asleep in a bed (resting, see Needs.cs). Each
 // patient gets one doctor job: the doctor fetches the nearest free remedy (a
 // bandage for wounds, medicine for infection or sickness: remediesFor), carries
 // it to the bedside, and treats them (as treating yourself does). The job itself
@@ -9,7 +9,7 @@
 //
 // The infirmary is a room with beds. Hurt survivors pick its beds first and
 // heal INFIRMARY_HEAL_FACTOR times as fast in them; others only use them when
-// there's no other bed. Barracks beds are the guards' (see needs.ts: light sleepers).
+// there's no other bed. Barracks beds are the guards' (see Needs.cs: light sleepers).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

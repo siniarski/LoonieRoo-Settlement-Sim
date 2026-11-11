@@ -1,14 +1,14 @@
 // Ported from src/sim/power.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Power and spoilage.
 //
-// A generator burns wood (haulers keep it fuelled, up to FUEL_MAX: jobs.ts)
+// A generator burns wood (haulers keep it fuelled, up to FUEL_MAX: Jobs.cs)
 // and powers everything within POWER_RADIUS. It runs while there's fuel and
 // something to power, burning one wood every FUEL_TICKS (furniture.loot
 // counts the ticks), and it's noisy (once an hour). Lamps light up at night
 // when powered: night zombies don't arrive within LAMP_DETER of a lit lamp
-// (zombies.ts), and guards fight better in the light (inLight: any light, lights.cs). A powered
-// fridge keeps the food round it from spoiling. While the mains are on (timeline.ts), iceboxes are
-// fridges. Room lights switched on in reach load a generator at night once the mains are off (lights.cs).
+// (Zombies.cs), and guards fight better in the light (inLight: any light, Lights.cs). A powered
+// fridge keeps the food round it from spoiling. While the mains are on (TimelineMod.cs), iceboxes are
+// fridges. Room lights switched on in reach load a generator at night once the mains are off (Lights.cs).
 //
 // Spoilage (harsh games only): food and hot meals age (item.wear) and rot
 // at FOOD_SHELF and MEAL_SHELF. They age twice as fast in summer, not at all
@@ -82,7 +82,7 @@ public static partial class Power
         return FurnitureMod.ofKind(state, "lamp").filter((f) => isPowered(state, f));
     }
 
-    /// <summary>At night, is this point lit (any light, lights.cs)? Guards hit harder in it.</summary>
+    /// <summary>At night, is this point lit (any light, Lights.cs)? Guards hit harder in it.</summary>
     public static bool inLight(SimState state, Point p)
     {
         return Time.isNight(state.tick) && Lights.isLit(state, p);

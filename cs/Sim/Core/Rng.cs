@@ -1,4 +1,4 @@
-// Seeded RNG (mulberry32), from rng.ts. The whole RNG state is one uint32 held in sim state, so
+// Seeded RNG (mulberry32), from Rng.cs. The whole RNG state is one uint32 held in sim state, so
 // save/load and replays restore it exactly. The only randomness the sim may use.
 namespace LoonieRoo.Sim;
 

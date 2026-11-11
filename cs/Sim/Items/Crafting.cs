@@ -37,7 +37,7 @@ public static partial class Crafting
 
     public static bool isCraftKind(object k)
     {
-        return (/*TODO typeof*/Js.TypeOf(k) == "string") && (ORDERABLE).includes(k);
+        return (Js.TypeOf(k) == "string") && (ORDERABLE).includes(k);
     }
 
     public static bool isStation(string kind)

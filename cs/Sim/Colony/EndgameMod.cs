@@ -3,7 +3,7 @@
 //
 // A cure: zombies brought down sometimes leave a tissue sample (SAMPLE_CHANCE,
 // a hash). A powered lab bench gets a research job while there are samples to
-// study (jobs.ts): bring one to the bench, work RESEARCH_WORK, and it's
+// study (Jobs.cs): bring one to the bench, work RESEARCH_WORK, and it's
 // studied. CURE_SAMPLES studied and the colony has a cure.
 //
 // Evacuation: from day EVAC_FROM_DAY, a powered beacon and a powered radio get

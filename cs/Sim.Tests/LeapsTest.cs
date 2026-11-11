@@ -1,4 +1,4 @@
-// Leaps (leaps.cs): Space in first person jumps, vaults a broken window or a barricade, or hops a tile of water.
+// Leaps (Leaps.cs): Space in first person jumps, vaults a broken window or a barricade, or hops a tile of water.
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;

@@ -1,4 +1,4 @@
-// Zombie chasing (zombies.ts chase): with a clear, walkable line to you a zombie comes straight at
+// Zombie chasing (Zombies.cs chase): with a clear, walkable line to you a zombie comes straight at
 // where you are, not tile centre to tile centre; with something in the way it follows its path,
 // smoothed (it heads for the furthest waypoint it can walk straight to).
 #nullable disable warnings

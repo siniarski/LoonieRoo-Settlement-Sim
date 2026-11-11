@@ -8,7 +8,7 @@
 // FRIENDLY or better it sends someone to join you every FRIENDLY_SEND_DAYS.
 //
 // Between themselves (ties, -100..100): at ALLY or better two settlements are allies (they
-// send each other food by caravan when one runs short: colonies.ts); at FEUD or worse they
+// send each other food by caravan when one runs short: Colonies.cs); at FEUD or worse they
 // feud (they raid each other now and then, starving or not). How you're seen spills over:
 // what you do for or to one, its allies feel half as much, and those feuding with it a
 // quarter as much the other way.

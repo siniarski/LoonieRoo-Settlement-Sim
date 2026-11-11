@@ -9,8 +9,8 @@
 //   progression  how long since the outbreak: weeks, months, a year, years. Later means
 //                less left in the crates, worn-out finds, and more fallen-in walls
 //   winter       nuclear winter: crops grow at half speed, and every night is cold outdoors
-//   dayScale     day length, 1-3 times the usual (time.ts)
-//   map          mainland, an island, an island chain, or a fenced quarantine zone (worldgen.ts)
+//   dayScale     day length, 1-3 times the usual (Time.cs)
+//   map          mainland, an island, an island chain, or a fenced quarantine zone (Worldgen.cs)
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -80,7 +80,7 @@ public static partial class Difficulty
 
     public static bool isSettings(object v)
     {
-        if ((/*TODO typeof*/Js.TypeOf(v) != "object") || (Js.Eq(v, null)))
+        if ((Js.TypeOf(v) != "object") || (Js.Eq(v, null)))
         {
             return false;
         }
@@ -89,7 +89,7 @@ public static partial class Difficulty
         {
             return (JsNumber.isInteger(n) && ((Js.Num(n)) >= 0)) && ((Js.Num(n)) < max);
         }
-        return (((((((((Js.Eq(s["start"], "group")) || (Js.Eq(s["start"], "solo"))) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && level(s["weather"], WEATHER_LEVELS.length)) && level(s["progression"], PROGRESSION_LEVELS.length)) && (/*TODO typeof*/Js.TypeOf(s["winter"]) == "boolean")) && (((Js.Eq(s["dayScale"], 1)) || (Js.Eq(s["dayScale"], 2))) || (Js.Eq(s["dayScale"], 3)))) && MAP_TYPES.some((__p0) =>
+        return (((((((((Js.Eq(s["start"], "group")) || (Js.Eq(s["start"], "solo"))) && JsNumber.isInteger(s["zombies"])) && ((Js.Num(s["zombies"])) >= 25)) && ((Js.Num(s["zombies"])) <= 300)) && level(s["weather"], WEATHER_LEVELS.length)) && level(s["progression"], PROGRESSION_LEVELS.length)) && (Js.TypeOf(s["winter"]) == "boolean")) && (((Js.Eq(s["dayScale"], 1)) || (Js.Eq(s["dayScale"], 2))) || (Js.Eq(s["dayScale"], 3)))) && MAP_TYPES.some((__p0) =>
         {
             var m = (__p0)[0];
             return Js.Eq(m, s["map"]);

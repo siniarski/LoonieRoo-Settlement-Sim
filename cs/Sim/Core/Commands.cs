@@ -30,7 +30,7 @@ public static partial class Commands
         }
         if (command.type == "jump")
         {
-            // Space in first person: a jump, a vault or a hop, whichever is in front of you (leaps.cs).
+            // Space in first person: a jump, a vault or a hop, whichever is in front of you (Leaps.cs).
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
             {
@@ -130,7 +130,7 @@ public static partial class Commands
             }
             if (command.type is "boot" or "hood")
             {
-                // Open or shut the boot or the bonnet of the car beside you (vehicleActions.ts).
+                // Open or shut the boot or the bonnet of the car beside you (VehicleActions.cs).
                 var (lid, why) = Vehicles.toggleLid(state, s, command.type);
                 if (Js.T(why)) return reject(why);
                 s.note = lid;
@@ -179,7 +179,7 @@ public static partial class Commands
         }
         if ((command.type == "lightSwitch") || (command.type == "flashlight") || (command.type == "headlights"))
         {
-            // Lights (lights.cs): the switch of the room at x, y (you in it or at its door), your flashlight, your car's headlights.
+            // Lights (Lights.cs): the switch of the room at x, y (you in it or at its door), your flashlight, your car's headlights.
             var s = ControlMod.controlled(state);
             if (!Js.T(s))
             {
@@ -945,7 +945,7 @@ public static partial class Commands
     }
     public static CommandResult designateBuild(SimState state, double x, double y, string structure) => designateBuild(state, Js.I(x), Js.I(y), structure);
 
-    /// <summary>Walls in a box: edge-wall plans on its outer borders (grid.ts edges), a door plan mid-way along each side. Borders on the map's edge, or already built on, are skipped.</summary>
+    /// <summary>Walls in a box: edge-wall plans on its outer borders (Grid.cs edges), a door plan mid-way along each side. Borders on the map's edge, or already built on, are skipped.</summary>
     public static CommandResult planPerimeter(SimState state, int ax, int ay, int bx, int by)
     {
         var ex0 = JsMath.max(0, JsMath.min(ax, bx));
@@ -1244,7 +1244,7 @@ public static partial class Commands
         {
             return reject($"no survivor {Js.Str(id)}");
         }
-        if ((((/*TODO typeof*/Js.TypeOf(value) != "number") || !JsNumber.isInteger(value)) || (Js.Num(value) < 0)) || (Js.Num(value) > max))
+        if ((((Js.TypeOf(value) != "number") || !JsNumber.isInteger(value)) || (Js.Num(value) < 0)) || (Js.Num(value) > max))
         {
             return reject($"{Js.Str(need)} must be an integer 0-{Js.Str(max)}");
         }
@@ -1294,7 +1294,7 @@ public static partial class Commands
         return (JsMath.abs(p.x - s.pos.x) <= 1) && (JsMath.abs(p.y - s.pos.y) <= 1);
     }
 
-    /// <summary>The bag's commands (inventory.ts): take (one, from the ground or a container beside you), takeAll (a container's
+    /// <summary>The bag's commands (Inventory.cs): take (one, from the ground or a container beside you), takeAll (a container's
     /// contents, or every one of `kind`), drop (from the bag, or what you wear), stash (one into a container beside you),
     /// stashAll (the bag, or every one of `kind`), useItem (eat, treat, wear or wield from the bag), unequip (off into the bag).
     /// Returns why not, or null when done.</summary>

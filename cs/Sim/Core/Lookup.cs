@@ -1,4 +1,4 @@
-// Finding things by id in the state's lists without scanning (lookup.ts). Each list gets a derived map from
+// Finding things by id in the state's lists without scanning. Each list gets a derived map from
 // id to index, kept outside sim state and checked on every hit; a miss first indexes what was appended
 // since, and a stale hit or a real miss rebuilds. The answer is always what a scan would give.
 using System.Runtime.CompilerServices;

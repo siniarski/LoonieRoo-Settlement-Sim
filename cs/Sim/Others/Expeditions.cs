@@ -9,7 +9,7 @@
 // not at all. The ruin's sleepers are cleared either way. Abstract on
 // purpose: nobody walks the route, which is what keeps far trips cheap.
 //
-// The truck, though, is seen on the road (when it's a vehicle: outposts.ts): it
+// The truck, though, is seen on the road (when it's a vehicle: Outposts.cs): it
 // drives there in a straight line, waits while they search, and drives back,
 // and nobody else can take it meanwhile. Each hour on the road there's a
 // chance the dead catch it (ROAD_AMBUSH): someone's hurt, or killed if they

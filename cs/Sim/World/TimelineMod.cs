@@ -5,10 +5,10 @@
 //                for good on a day rolled from the seed (rollTimeline), sooner the further on
 //                the world is (settings.progression: weeks, months, a year, years; a year on,
 //                they're off from the start). Hand-made maps have no mains.
-//     water on   kitchen counters, toilets and baths are taps: clean water (water.ts).
-//     power on   iceboxes keep food like fridges (power.ts spoilage); room lights switched on, porch
-//                lights and street lamps light at night (lights.cs: guards hit harder in light, and
-//                in a lit room you see as far as by day: sight.ts).
+//     water on   kitchen counters, toilets and baths are taps: clean water (Water.cs).
+//     power on   iceboxes keep food like fridges (Power.cs spoilage); room lights switched on, porch
+//                lights and street lamps light at night (Lights.cs: guards hit harder in light, and
+//                in a lit room you see as far as by day: Sight.cs).
 //   happenings   while the world is still winding down (until a few days after the power goes):
 //     helicopter on a rolled day a helicopter comes over, hangs over you (the one you control,
 //                else the first survivor) for HELI_HOVER ticks, then flies off, thundering
@@ -17,7 +17,7 @@
 //                (ALARM_CHANCE), ringing (noise 'alarm') for ALARM_TICKS.
 //     far off    now and then, on the hour, gunshots or a scream somewhere FAR_MIN..FAR_MAX
 //                tiles away: real noise, which moves the dead out there.
-// Rolls use hash.ts (seed and tick), not the sim RNG.
+// Rolls use Hash.cs (seed and tick), not the sim RNG.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -55,7 +55,7 @@ public static partial class TimelineMod
     /// <summary>Looks that are taps while the water's on.</summary>
     public static readonly List<string> TAP_LOOKS = ["counter", "sink", "toilet", "bath"];
 
-    /// <summary>Drinks still in a toilet's tank or a bath once the mains are off (lots.ts fills them as the house is made).</summary>
+    /// <summary>Drinks still in a toilet's tank or a bath once the mains are off (Lots.cs fills them as the house is made).</summary>
     public static readonly JsRecord<double> TANK_WATER = new() { ["toilet"] = 2, ["bath"] = 4 };
 
     /// <summary>Sets the days the mains go off and the helicopter comes (generated worlds).</summary>

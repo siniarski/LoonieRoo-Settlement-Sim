@@ -1,6 +1,6 @@
 // Ported from src/sim/designations.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Designations (blueprints): what the player wants built or removed.
-// Each blueprint gets one job at a time from jobs.ts: a haul job while it
+// Each blueprint gets one job at a time from Jobs.cs: a haul job while it
 // still needs material, then a build job.
 #nullable disable warnings
 namespace LoonieRoo.Sim;

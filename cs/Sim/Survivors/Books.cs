@@ -2,7 +2,7 @@
 // Books, found in ruins. Each has a subject (item.tag, from a hash of its id):
 // most teach a skill (a level's worth of practice to whoever reads it), and
 // some teach the colony something new (state.knowledge), which some recipes
-// need (crafting.ts). A survivor with nothing to do reads the nearest free
+// need (Crafting.cs). A survivor with nothing to do reads the nearest free
 // book for READ_TICKS; a job turning up interrupts them (they come back to it).
 // A book is used up once read.
 #nullable disable warnings
@@ -121,7 +121,7 @@ public static partial class Books
 
     public static void learn(SimState state, Survivor s, string subject)
     {
-        if (/*TODO in*/Js.In(subject, KNOWLEDGE))
+        if (Js.In(subject, KNOWLEDGE))
         {
             var k = subject;
             if (!knows(state, k))

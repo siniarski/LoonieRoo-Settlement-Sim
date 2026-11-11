@@ -8,7 +8,7 @@
 //
 // Fires start from a stove now and then, from raiders' firebombs, from a heater, from lightning, on purpose (the Burn
 // order), and (since 2026-11-10) from a spark off a fuelled brazier left standing out in dry weather. Survivors with
-// firefighting on put them out (jobs.ts).
+// firefighting on put them out (Jobs.cs).
 //
 // WILDFIRE (2026-11-10). What a fire can burn is its FUEL (fuelAt), read from the tile each time, never stored:
 //   Structure   a wall, door, barricade or piece of furniture (as before: the old rules, unchanged);

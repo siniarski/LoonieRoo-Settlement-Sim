@@ -1,5 +1,5 @@
 // The character lab, part seven (b): the car's boot and bonnet (LabCar.cs), opened and shut by the
-// character, as the sim's openBoot / closeBoot / openHood / closeHood actions (vehicleActions.ts):
+// character, as the sim's openBoot / closeBoot / openHood / closeHood actions (VehicleActions.cs):
 // one action with progress 0..1, the character at the anchor (behind the car for the boot, in front
 // for the bonnet), facing it.
 //   open   bend to the lid's edge, fingers under it (palms up), lift it until it's near the top of a

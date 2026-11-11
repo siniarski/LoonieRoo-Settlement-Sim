@@ -81,7 +81,7 @@ public partial class OrdersTest
             cmd(state, new Command { type = "takeControl", survivorId = you.id });
             cmd(state, new Command { type = "shout", order = "loot", x = Js.I(4), y = Js.I(3) });
             expect(them.order?.kind).toBe("loot");
-            /*TODO return type*/object loot()
+            object loot()
             {
                 return state.furniture.filter((f) => f.kind == "crate").reduce((n, f) => n + f.loot, 0.0);
             }

@@ -1,6 +1,6 @@
 // Ported from src/sim/towns.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Towns: where they stand and the streets they grow. Laid out over the natural world
-// (nature.ts) once per world, as plain data (worldplan.ts caches it).
+// (NatureMod.cs) once per world, as plain data (Worldplan.cs caches it).
 //
 //   siting   towns go where the land suits them: dry, open ground (little forest), near water
 //            (a river or lake just outside the town), away from the map's edge, the start

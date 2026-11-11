@@ -4,7 +4,7 @@
 // Damage is kept per tile in `grid.damage` (same indexing as tiles; only walls
 // and doors carry any). At STRUCTURE_HEALTH the structure breaks: the tile
 // becomes floor, and a blueprint to rebuild it is left in its place. Damaged
-// structures get repair jobs (build type, see jobs.ts), done from next door.
+// structures get repair jobs (build type, see Jobs.cs), done from next door.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -17,7 +17,7 @@ public static partial class Breach
     /// <summary>Damage a repairer removes per tick of work: half a zombie's rate, so repairs slow a breach but can't stop it alone.</summary>
     public const int REPAIR_PER_TICK = 2;
 
-    /// <summary>What it takes to break this structure (reinforced ones take more; defences.ts).</summary>
+    /// <summary>What it takes to break this structure (reinforced ones take more; Defences.cs).</summary>
     public static double structureHealth(Grid grid, int i)
     {
         var tile = Js.NN(Grids.tileAt(grid, i));

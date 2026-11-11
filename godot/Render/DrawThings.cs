@@ -118,7 +118,7 @@ public sealed partial class Painter
     }
 
     /// <summary>
-    /// Generated fittings and containers (buildings.ts): a shape and colour per look. Containers
+    /// Generated fittings and containers (Buildings.cs): a shape and colour per look. Containers
     /// also show their finds as pips, dim when searched out, and the marked outline.
     /// </summary>
     void drawFixture(Furniture f, double size)

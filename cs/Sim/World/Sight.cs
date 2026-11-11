@@ -3,10 +3,10 @@
 //
 //   sight lines  from tile to tile (Bresenham): blocked by wall and door tiles in between (an
 //                open door tile doesn't block) and by any border sight can't cross
-//                (pathfinding.ts seesThrough: edge walls, shut edge doors, boarded windows; glass
+//                (Pathfinding.cs seesThrough: edge walls, shut edge doors, boarded windows; glass
 //                lets it through). The far end is seen even if it's a wall.
 //   field        the tiles within a radius with a clear sight line (fieldOfView): what a
-//                survivor sees, and so what fog.ts reveals.
+//                survivor sees, and so what Fog.cs reveals.
 //   how far      SIGHT_RADIUS by day, NIGHT_SIGHT at night (plus towers and the vigilant trait);
 //                from a tower you see over walls and roofs (sightOf);
 //                the dead see further (ZOMBIE_SIGHT, ZOMBIE_NIGHT_SIGHT) but need the same line.
@@ -14,8 +14,8 @@
 //                survivor they can see (zombieSees: by day ZOMBIE_SIGHT, at night less, half
 //                that if you're sneaking) or hear moving (heardFrom: running RUN_HEARD tiles off,
 //                walking WALK_HEARD, sneaking SNEAK_HEARD, standing still not at all), and keep
-//                after whoever they were already chasing. Never beyond AGGRO_RADIUS (zombies.ts).
-//                Loud things (noise.ts) carry much further and draw them over.
+//                after whoever they were already chasing. Never beyond AGGRO_RADIUS (Zombies.cs).
+//                Loud things (Noise.cs) carry much further and draw them over.
 //   seen now     visibleNow: what the survivor you control can see this tick (all survivors
 //                when nobody's controlled): derived, cached per state and tick, never stored.
 //                The renderer dims explored tiles outside it and hides the dead you can't see.
@@ -103,7 +103,7 @@ public static partial class Sight
         return true;
     }
 
-    /// <summary>Tile indices within `r` of `p` with a clear sight line from it (from up high, `overWalls`: all of them). Tiles `skip` says no to aren't looked at (fog.ts: those already explored).</summary>
+    /// <summary>Tile indices within `r` of `p` with a clear sight line from it (from up high, `overWalls`: all of them). Tiles `skip` says no to aren't looked at (Fog.cs: those already explored).</summary>
     public static List<double> fieldOfView(Grid grid, Point p, double r, bool overWalls = false, Func<double, bool>? skip = default)
     {
         List<double> @out = [];
@@ -124,7 +124,7 @@ public static partial class Sight
         return @out;
     }
 
-    /// <summary>How far a survivor sees: less at night (unless the room's light is on: lights.cs); more from a tower, or with the vigilant trait.</summary>
+    /// <summary>How far a survivor sees: less at night (unless the room's light is on: Lights.cs); more from a tower, or with the vigilant trait.</summary>
     public static double sightRadius(SimState state, Survivor s)
     {
         var @base = Towers.onTower(state, s) ? Towers.TOWER_SIGHT : ((Time.isNight(state.tick) && !Lights.roomLit(state, s.pos)) ? NIGHT_SIGHT : SIGHT_RADIUS);

@@ -346,7 +346,7 @@ public static partial class Work
         finishJob(state, s, job, (crate.kind == "tree") ? $"chopped wood from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left" : $"scavenged {Js.Str(kind)} from ({Js.Str(crate.x)}, {Js.Str(crate.y)}), {Js.Str(crate.loot)} left");
     }
 
-    /// <summary>Maps a [0, 1) roll to a find: from the container's loot table (loot.ts), else SCAVENGE_TABLE.</summary>
+    /// <summary>Maps a [0, 1) roll to a find: from the container's loot table (Loot.cs), else SCAVENGE_TABLE.</summary>
     public static string scavengeFind(double roll, string? table = null)
     {
         return Loot.pickFrom(Js.T(table) ? Js.Get(Loot.LOOT_TABLES, table) : Jobs.SCAVENGE_TABLE, roll);
@@ -447,7 +447,7 @@ public static partial class Work
         finishJob(state, s, job, $"{Js.Str(made)} at ({Js.Str(bench.x)}, {Js.Str(bench.y)})");
     }
 
-    /// <summary>A guard on the way to their zombie stops walking once it's within swing reach (zombies close in off the grid: motion.ts), so the fight starts there rather than at the tile they were heading for. A step already under way lands first.</summary>
+    /// <summary>A guard on the way to their zombie stops walking once it's within swing reach (zombies close in off the grid: Motion.cs), so the fight starts there rather than at the tile they were heading for. A step already under way lands first.</summary>
     public static void interruptForFight(SimState state, Survivor s)
     {
         if (!Js.T(s.goal) || !Js.T(s.jobId))

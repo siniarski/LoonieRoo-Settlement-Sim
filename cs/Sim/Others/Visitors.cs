@@ -8,7 +8,7 @@
 // TRADER_PATIENCE ticks or at nightfall.
 //
 // Raiders: from RAID_FIRST_DAY, each nightfall may bring a party (RAID_CHANCE).
-// They're zombies of kind 'raider' as far as fighting goes (zombies.ts), but
+// They're zombies of kind 'raider' as far as fighting goes (Zombies.cs), but
 // they open unlocked doors, hit harder, don't infect, and leave at dawn.
 // Lock a door (toggleLock) and they have to batter it like anyone else.
 #nullable disable warnings

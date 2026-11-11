@@ -1,5 +1,5 @@
 // Ported from src/sim/roads.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Country roads: routed between towns across the land (worldplan.ts), once per world.
+// Country roads: routed between towns across the land (Worldplan.cs), once per world.
 //
 //   network  towns (and the start) joined by a minimum spanning tree, plus a few extra links
 //            between near neighbours, and some roads out to the map's edge (the world goes on).

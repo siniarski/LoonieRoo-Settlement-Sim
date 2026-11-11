@@ -41,7 +41,7 @@ public static partial class Alerts
     public static List<Alert> alerts(SimState state)
     {
         List<Alert> @out = [];
-        /*TODO return type*/object add(string level, string text, Point? at = default)
+        object add(string level, string text, Point? at = default)
         {
             return @out.push(Js.With(new Alert { level = level, text = text }, __s0 => { if (Js.T(at)) { __s0.at = at; } else {  } }));
         }

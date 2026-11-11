@@ -11,7 +11,7 @@ public partial class WindowsTest
     public static List<ScenarioEdgesItem> room(string window = "window")
     {
         List<ScenarioEdgesItem> edges = [];
-        /*TODO return type*/object add(double x, double y, string side, string kind = "wall")
+        object add(double x, double y, string side, string kind = "wall")
         {
             return edges.push(new() { x = Js.I(x), y = Js.I(y), side = side, kind = kind });
         }

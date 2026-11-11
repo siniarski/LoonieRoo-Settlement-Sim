@@ -20,7 +20,7 @@ public partial class SoloHarness
 
     public static readonly string OUT = process.env.OUT ?? "cs/Harness/out/solo.txt";
 
-    public static /*TODO return type*/object flush()
+    public static object flush()
     {
         return writeFileSync(OUT, @out.join("\n") + "\n");
     }
@@ -34,7 +34,7 @@ public partial class SoloHarness
         return JsMath.max(JsMath.abs(a.x - b.x), JsMath.abs(a.y - b.y));
     }
 
-    /// <summary>Walk a path to a tile next to (or onto) a target, and use it on arrival. You move freely (motion.ts): steer toward the centre of the next tile on the path, opening a closed door that's next in the way (a colonist's path goes through doors; you have to open them).</summary>
+    /// <summary>Walk a path to a tile next to (or onto) a target, and use it on arrival. You move freely (Motion.cs): steer toward the centre of the next tile on the path, opening a closed door that's next in the way (a colonist's path goes through doors; you have to open them).</summary>
     public static void goUse(SimState state, Survivor s, Bot bot, string key, Point target, bool onto = false, string act = "use", bool run = false)
     {
         var c = Js.NN(state.control);
@@ -174,7 +174,7 @@ public partial class SoloHarness
         }
         if (Js.T(c.busy) && Vehicles.isCarAction(c.busy.what))
         {
-            return;  // getting in or out takes a moment (vehicleActions.ts)
+            return;  // getting in or out takes a moment (VehicleActions.cs)
         }
         var car = Vehicles.vehicleOf(state, s);
         if (Js.T(car))

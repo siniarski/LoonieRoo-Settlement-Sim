@@ -1,5 +1,5 @@
-// Car actions, lost limbs, startles and the pose intent (vehicleActions.ts, wounds.ts, body.ts,
-// poseIntents.ts): what the renderer needs from the sim (docs/characters.md sections 1 and 5).
+// Car actions, lost limbs, startles and the pose intent (VehicleActions.cs, Wounds.cs, BodyMod.cs,
+// PoseIntents.cs): what the renderer needs from the sim (docs/characters.md sections 1 and 5).
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;

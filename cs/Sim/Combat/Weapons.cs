@@ -3,7 +3,7 @@
 //
 // What each weapon does is in WeaponTable.cs (damage, reach, swing time, arc, noise, durability, magazine, range,
 // spread...); shots are in Shooting.cs. Guns go in the same slot as melee weapons. A loaded gun shoots along a
-// line as far as its range, loudly (noise.ts: each weapon its own radius); an empty one is a club. A guard with
+// line as far as its range, loudly (Noise.cs: each weapon its own radius); an empty one is a club. A guard with
 // an empty gun fetches ammo the way they'd fetch a weapon: a box gives as many rounds as the gun has room for,
 // and what is left stays in the box.
 //

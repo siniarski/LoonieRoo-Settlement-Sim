@@ -35,7 +35,7 @@ public partial class WanderersTest
         return state;
     }
 
-    public static /*TODO return type*/object lastEvent(SimState state)
+    public static object lastEvent(SimState state)
     {
         return state.events.at(-1)?.message;
     }
@@ -82,7 +82,7 @@ public partial class WanderersTest
         [Fact(DisplayName = "wanderers > the same seed brings the same wanderer to the same spot")]
         public void T005_the_same_seed_brings_the_same_wanderer_to_the_same_spot()
         {
-            /*TODO return type*/object where()
+            object where()
             {
                 var state = setup();
                 state.tick = Js.I(at(2, Wanderers.ARRIVAL_HOUR));

@@ -1,13 +1,13 @@
 // Ported from src/sim/worldplan.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // The world plan: everything built on the land, laid out from the seed, a region at a time (WorldRegions.cs), in order:
-//   1. nature (nature.ts): water and forest, per tile
-//   2. towns sited on suitable land, each growing its streets (towns.ts)
-//   3. country roads routed between towns, to the start, and out to the map's edge (roads.ts)
+//   1. nature (NatureMod.cs): water and forest, per tile
+//   2. towns sited on suitable land, each growing its streets (Towns.cs)
+//   3. country roads routed between towns, to the start, and out to the map's edge (Roads.cs)
 //   4. lots cut along the streets by zone (civic, shops, houses, industry), farms along the
 //      country roads near towns, the odd cabin out in the wild
 // (The building inside a lot is planned when the lot is first drawn or asked about: Lots.layoutLot.)
 // The plan is plain data and derived (never saved): regions() caches it by seed, size and map.
-// Chunks draw their part of it (worldgen.ts), so they come out the same in any order.
+// Chunks draw their part of it (Worldgen.cs), so they come out the same in any order.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

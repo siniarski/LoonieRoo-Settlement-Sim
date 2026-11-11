@@ -7,10 +7,10 @@
 //   use        an item in the bag: food is eaten, a remedy you need used, a weapon wielded (the
 //              old one into the bag, or down if there's no room), clothing worn the same way.
 //              The UI's quick slots (keys 1 to 9) use the bag's first nine.
-//   containers searching one (control.ts) turns up everything left in it at once: the finds stay
+//   containers searching one (ControlMod.cs) turns up everything left in it at once: the finds stay
 //              inside (item.inside, no pos), listed in the loot list, to take one at a time or all.
 //   stash      put something from the bag into a container beside you: a crate (CRATE_HOLD) or
-//              a car's boot (vehicles.ts bootMax). Containers are found by id (containerOf).
+//              a car's boot (Vehicles.cs bootMax). Containers are found by id (containerOf).
 //              stashAll puts in everything (or every one of a kind) that fits; takeAll (with a
 //              kind) takes every one of a kind out. Things of a kind show as a stack.
 //   slots      what you wear and wield (weapon, body, feet, tool): useItem puts it on from the

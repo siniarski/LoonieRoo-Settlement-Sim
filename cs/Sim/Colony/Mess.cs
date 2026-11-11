@@ -1,7 +1,7 @@
 // Ported from src/sim/mess.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // The mess hall: a room with tables. A seat is a free floor tile next to a
 // table in a complete mess hall. Hungry survivors carry their food to the
-// nearest free seat and eat there (a mood boost; see mood.ts). One eater per seat.
+// nearest free seat and eat there (a mood boost; see Mood.cs). One eater per seat.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

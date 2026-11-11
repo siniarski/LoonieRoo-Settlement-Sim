@@ -1,6 +1,6 @@
 // Ported from src/sim/wellbeing.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Higher needs, above survival: Social and Comfort, 0..100 each. Neither kills anyone;
-// both move mood (mood.ts), and so, day by day, resolve (resolve.ts).
+// both move mood (Mood.cs), and so, day by day, resolve (Resolve.cs).
 //
 //   Social   rises while awake near someone else (within COMPANY tiles) and with every
 //            talk; sinks while alone. Under LOW: "lonely". Over HIGH: "good company".

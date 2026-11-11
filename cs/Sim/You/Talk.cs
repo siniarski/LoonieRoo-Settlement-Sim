@@ -2,7 +2,7 @@
 // Talking to survivors, and the tasks that come out of their stories.
 //
 // Each talk (no more than once every TALK_EVERY ticks per person) tells you the
-// next line of their story (story.ts) and warms you both to each other. Once
+// next line of their story (StoryMod.cs) and warms you both to each other. Once
 // they've told you enough they ask for something, one thing at a time:
 //   home  find their old place: there may be something left (a crate)
 //   bury  bring their dead to a graveyard (a corpse lies at the spot)

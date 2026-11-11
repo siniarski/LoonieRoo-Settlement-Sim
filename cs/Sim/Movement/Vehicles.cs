@@ -2,8 +2,8 @@
 // Vehicles: cars you get into and drive.
 //
 //   where       generated towns leave cars parked in the street in front of some houses and
-//               shops (lots.ts parkCar), with a little fuel and some wear, by hash.
-//   getting in  use a car next to you (control.ts use): with a fuel can in your bag and room in
+//               shops (Lots.cs parkCar), with a little fuel and some wear, by hash.
+//   getting in  use a car next to you (ControlMod.cs use): with a fuel can in your bag and room in
 //               the tank, you fill it up (FUEL_PER_CAN); otherwise you get in. Use again to get
 //               out, beside it. Letting go of control, or dying, puts you out too.
 //   driving     W accelerates (ACCEL a tick, up to MAX_SPEED), S brakes then reverses (down to
@@ -21,13 +21,13 @@
 //               trunk (Trunks.cs) is solid to the car's body: clipped, the car scrapes past along
 //               one axis; head on, it loses its speed and crashes like a wall.
 //   the boot    a car carries BOOT_MAX (a truck TRUCK_BOOT_MAX) of things: items with `inside`
-//               set to its id, like a container (inventory.ts stash, take, takeAll).
+//               set to its id, like a container (Inventory.cs stash, take, takeAll).
 //   the truck   a generated world leaves one out past the camp; expeditions take it
-//               (outposts.ts). It drives like a car, slower, with a big boot.
+//               (Outposts.cs). It drives like a car, slower, with a big boot.
 //   the dead    run one down at RAM_SPEED or more and it takes RAM_DAMAGE per unit of speed and
 //               is knocked aside; the car slows by a quarter and takes RAM_WEAR. The dead can't
 //               bite you through it: they batter the car instead (BATTER_DAMAGE a bite).
-// Positions are fixed point (motion.ts SUB), headings index HEADING_DIRS (integers, |v| = 256).
+// Positions are fixed point (Motion.cs SUB), headings index HEADING_DIRS (integers, |v| = 256).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -85,7 +85,7 @@ public static partial class Vehicles
     /// <summary>The truck's top speed.</summary>
     public const int TRUCK_MAX = 120;
 
-    /// <summary>What a boot holds (tenths of a kilo, as inventory.ts weighs things).</summary>
+    /// <summary>What a boot holds (tenths of a kilo, as Inventory.cs weighs things).</summary>
     public const int BOOT_MAX = 400;
 
     public const int TRUCK_BOOT_MAX = 1200;
@@ -160,7 +160,7 @@ public static partial class Vehicles
         return null;
     }
 
-    /// <summary>In behind the wheel (the end of getting in: vehicleActions.ts).</summary>
+    /// <summary>In behind the wheel (the end of getting in: VehicleActions.cs).</summary>
     public static string enterVehicle(SimState state, Survivor s, Vehicle v)
     {
         if (Js.T(v.driverId))
@@ -207,7 +207,7 @@ public static partial class Vehicles
         return "got out";
     }
 
-    /// <summary>One tick behind the wheel: the held direction is the pedals and the wheel (control.ts dx, dy).</summary>
+    /// <summary>One tick behind the wheel: the held direction is the pedals and the wheel (ControlMod.cs dx, dy).</summary>
     public static void drive(SimState state, Survivor s, int dx, int dy)
     {
         var v = vehicleOf(state, s);

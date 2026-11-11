@@ -29,7 +29,7 @@ public partial class JobsTest
         {
             foreach (var s in Js.Iter(state.survivors))
             {
-                /*TODO Object.assign*/Js.Object_assign(s.priorities, priorities);
+                Js.Object_assign(s.priorities, priorities);
             }
         }
         return state;

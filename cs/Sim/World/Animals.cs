@@ -18,9 +18,9 @@
 // the straight way is blocked); PACE is a walking speed (ticks a tile), and reach is between `at`s.
 // Only near your people: animals turn up round them (a hash of the hour and the survivor) and are
 // gone once nobody of yours is within WILD_RADIUS (they wandered off), so a bigger world costs
-// nothing extra. Rolls are hashes (hash.ts), not the sim RNG, so adding wildlife shifts nothing else.
+// nothing extra. Rolls are hashes (Hash.cs), not the sim RNG, so adding wildlife shifts nothing else.
 // An animal that attacks someone is marked for hunting (the Hunt order's mark): hunters go for it.
-// Hunting and hitting them: handiwork.ts hitAnimal (yours), work.ts (colonists'): MEAT by kind.
+// Hunting and hitting them: Handiwork.cs hitAnimal (yours), Work.cs (colonists'): MEAT by kind.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -40,7 +40,7 @@ public static partial class Animals
     /// <summary>How long after biting someone a wolf or bear counts as a menace to fight off.</summary>
     public const int MENACE_TICKS = 300;
 
-    /// <summary>A wolf or bear that's bitten someone lately, or is out for someone: colonists on guard go for it (jobs.ts).</summary>
+    /// <summary>A wolf or bear that's bitten someone lately, or is out for someone: colonists on guard go for it (Jobs.cs).</summary>
     public static bool isMenace(SimState state, Animal a)
     {
         if ((a.kind != "wolf") && (a.kind != "bear"))
@@ -249,7 +249,7 @@ public static partial class Animals
             return false;
         }
         a.pos = @out;
-        /*TODO Object.assign*/Js.Object_assign(a, Motion.placedAt(@out));
+        Js.Object_assign(a, Motion.placedAt(@out));
         a.goal = null;
         a.path = [];
         return true;
@@ -444,7 +444,7 @@ public static partial class Animals
         }
         var bear = a.kind == "bear";
         a.nextBite = state.tick + (bear ? BEAR_BITE_EVERY : WOLF_BITE_EVERY);
-        if (/*TODO in*/Js.In("kind", target))
+        if (Js.In("kind", target))
         {
             state.animals.splice(state.animals.indexOf((Animal)target), 1);
             a.hunger = 0;

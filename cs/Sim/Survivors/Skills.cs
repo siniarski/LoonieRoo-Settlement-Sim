@@ -22,7 +22,7 @@ public static partial class Skills
     /// <summary>Extra guard damage per guard level.</summary>
     public const int GUARD_DAMAGE_PER_LEVEL = 5;
 
-    /// <summary>The traits people are born with (rollTraits); the rest are earned (earnTrait), or only chosen (character.ts: graceful, clumsy).</summary>
+    /// <summary>The traits people are born with (rollTraits); the rest are earned (earnTrait), or only chosen (CharacterMod.cs: graceful, clumsy).</summary>
     public static readonly List<string> TRAITS = ["tough", "lazy", "greenThumb", "cheerful", "gloomy", "quick"];
 
     public const int HARDENED_KILLS = 15;
@@ -69,7 +69,7 @@ public static partial class Skills
             return 0;
         }
         var kind = state.items.find((i) => i.id == s.tool)?.kind;
-        return ((Js.T(kind) && (/*TODO in*/Js.In(kind, TOOL_FOR))) && (Js.Get(TOOL_FOR, kind) == type)) ? 1 : 0;
+        return ((Js.T(kind) && (Js.In(kind, TOOL_FOR))) && (Js.Get(TOOL_FOR, kind) == type)) ? 1 : 0;
     }
 
     public static double workStep(SimState state, Survivor s, string type)

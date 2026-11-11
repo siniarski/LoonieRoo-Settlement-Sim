@@ -10,8 +10,8 @@
 // ticks. Zombies only walk on floor: walls and doors stop them. With nobody
 // reachable, a zombie heads for the nearest survivor anyway, through doors
 // if it can and through walls if it must, battering whatever is in the way
-// (breach.ts). With no survivors at all they wander. At dawn they all
-// shamble off. Guards (jobs.ts) hunt them down.
+// (Breach.cs). With no survivors at all they wander. At dawn they all
+// shamble off. Guards (Jobs.cs) hunt them down.
 //
 // Moving (2026-11-08): zombies are free movers. They own `at` and `pos` is the tile under it.
 // With a target within CHASE_RANGE and a straight walk to them (Motion.walkLine: no wall, shut door,
@@ -61,7 +61,7 @@ public static partial class Zombies
     /// <summary>Safety cap on zombies alive at once (not a balance lever).</summary>
     public const int MAX_ZOMBIES = 60;
 
-    /// <summary>Static and herd zombies only go for survivors this close (Manhattan), and only ones they see or hear (sight.ts); night zombies go for anyone.</summary>
+    /// <summary>Static and herd zombies only go for survivors this close (Manhattan), and only ones they see or hear (Sight.cs); night zombies go for anyone.</summary>
     public const int AGGRO_RADIUS = 20;
 
     /// <summary>Night zombies arrive in the dark this far (Manhattan, roughly) from a survivor, past explored ground.</summary>
@@ -78,7 +78,7 @@ public static partial class Zombies
     /// <summary>At most this many zombies plan a path in one tick; the rest keep to their old path (or wait a tick) and plan when there's room. Profiling: 144 zombies replanning together cost 14-20 ms in one tick; spread out, the same work never stalls a frame. Deterministic: first come in state order.</summary>
     public const int PLANS_PER_TICK = 20;
 
-    /// <summary>Survivors won't go to bed with a zombie this close (Manhattan); see needs.ts.</summary>
+    /// <summary>Survivors won't go to bed with a zombie this close (Manhattan); see Needs.cs.</summary>
     public const int DANGER_RADIUS = 10;
 
     public static Zombie? getZombie(SimState state, string id)
@@ -509,7 +509,7 @@ public static partial class Zombies
         return false;
     }
 
-    /// <summary>Chase the nearest reachable survivor; failing that, break in to the nearest one; failing that, a herd zombie walks on towards where the herd was going, and others wander. Static and herd zombies only notice survivors within AGGRO_RADIUS that they see or hear (sight.ts), or the one they were already after; raiders anyone within AGGRO_RADIUS.</summary>
+    /// <summary>Chase the nearest reachable survivor; failing that, break in to the nearest one; failing that, a herd zombie walks on towards where the herd was going, and others wander. Static and herd zombies only notice survivors within AGGRO_RADIUS that they see or hear (Sight.cs), or the one they were already after; raiders anyone within AGGRO_RADIUS.</summary>
     public static void plan(SimState state, Zombie z)
     {
         var __d6 = state;

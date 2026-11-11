@@ -3,8 +3,8 @@
 //
 // From a tower a survivor sees TOWER_SIGHT tiles instead of SIGHT_RADIUS and
 // shoots TOWER_RANGE_BONUS tiles further. At night, a guard with nothing to
-// do climbs the nearest free tower and keeps watch (jobs.ts). Any tower at
-// all lets the colony hear herds coming from further off (herds.ts).
+// do climbs the nearest free tower and keeps watch (Jobs.cs). Any tower at
+// all lets the colony hear herds coming from further off (Herds.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

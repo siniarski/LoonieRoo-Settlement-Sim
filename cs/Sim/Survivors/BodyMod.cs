@@ -1,6 +1,6 @@
 // Ported from src/sim/body.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // The body, 0..100 each: endurance, panic, body heat, wetness. Updated every tick
-// (rates per tick, so they slow with longer days: time.ts slowTick).
+// (rates per tick, so they slow with longer days: Time.cs slowTick).
 //
 //   endurance  swings and running (RUN_PCT of walking speed, RUN_TICK_COST a tick) spend it; it
 //              comes back at rest. Under WINDED: swings come later and land softer, and no running.
@@ -8,7 +8,7 @@
 //              when steeled), and with every hit taken; ebbs when none are near. Over
 //              PANICKING: some swings miss, and it weighs on mood. A hit, or the dead turning up
 //              while calm (under CALM), is a startle (startledAt: the renderer's flinch).
-//   body heat  falls fast while exposed (seasons.ts isCold: a winter night or blizzard outdoors,
+//   body heat  falls fast while exposed (Seasons.cs isCold: a winter night or blizzard outdoors,
 //              no coat, no warmth; or soaked through outdoors at night), recovers otherwise.
 //              Under COLD: the "cold" thought; under FREEZING: health goes too (the damage and the coat's
 //              wear are dealt in Seasons.updateWeather, which reads FREEZING).

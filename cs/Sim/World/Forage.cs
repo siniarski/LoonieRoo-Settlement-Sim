@@ -3,10 +3,10 @@
 //
 // A colonist with no job, by day, when the colony has less than a meal each lying about (free food,
 // reachable or not; generated worlds only) or they're hungry with none to reach, walks to the nearest open
-// grass or old field (outdoors, not picked over today: handiwork.ts canForage) within
+// grass or old field (outdoors, not picked over today: Handiwork.cs canForage) within
 // FORAGE_SEARCH tiles and forages there for FORAGE_TICKS (on slowTick ticks, like work). What
-// turns up is dropped at their feet, and they eat it as they would any food (needs.ts). One who
-// is hungry (below FORAGE_HUNGER) drops their job to do it (needs.ts interruptForNeeds).
+// turns up is dropped at their feet, and they eat it as they would any food (Needs.cs). One who
+// is hungry (below FORAGE_HUNGER) drops their job to do it (Needs.cs interruptForNeeds).
 // It's subsistence, not stockpiling: they stop once there's a meal each, and a tile gives once a day.
 // Not at night, and not in winter. When there's nowhere to go they look again after
 // FORAGE_RETRY_TICKS (survivor.nextForageTick).

@@ -32,7 +32,7 @@ namespace LoonieRoo.Game;
 
 public partial class Game : Node2D, IGameFiles, IMenuActions
 {
-    // --- the loop (loop.ts) ---
+    // --- the loop ---
     const double MS_PER_TICK = 1000.0 / Tick.TICKS_PER_SECOND;
     /// <summary>Frames longer than this (window in background, breakpoint) are clamped.</summary>
     const double MAX_FRAME_MS = 250;

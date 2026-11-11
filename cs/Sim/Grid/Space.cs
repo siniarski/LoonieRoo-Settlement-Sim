@@ -1,4 +1,4 @@
-// Spatial search helpers (space.ts).
+// Spatial search helpers.
 namespace LoonieRoo.Sim;
 
 public static partial class Space

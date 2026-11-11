@@ -3,7 +3,7 @@
 // resolve is what the days add up to.
 //
 // Every dawn it drifts with mood (a good day +, a bad day -); loneliness and a poor bed
-// get in through mood (wellbeing.ts).
+// get in through mood (Wellbeing.cs).
 // Events move it directly (steel()): a request seen through, someone found, a confession
 // made lift it; a friend's death, a silent radio cut it.
 //   breaking (under BREAKING)  might walk away in the night; under your control, freezes

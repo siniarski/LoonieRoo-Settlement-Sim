@@ -1,5 +1,5 @@
 // Ported from src/sim/moodlets.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Moodlets: thoughts (mood.ts) that do something beyond mood, while they last.
+// Moodlets: thoughts (Mood.cs) that do something beyond mood, while they last.
 //   faster    well rested (woke in a bed, rested): work a bit faster, swing sooner
 //   harder    blood up (just made a kill): hit a fifth harder
 //   slower    shaken (just got hit): swing later

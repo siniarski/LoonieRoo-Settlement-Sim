@@ -16,7 +16,7 @@
 // Anything that goes wrong (bed or food gone, path blocked) falls back to
 // re-planning or the floor, so a needy survivor is never stuck.
 //
-// Constants live in rest.ts and food.ts.
+// Constants live in Rest.cs and Food.cs.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

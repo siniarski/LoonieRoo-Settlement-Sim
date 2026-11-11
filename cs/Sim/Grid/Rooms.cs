@@ -51,7 +51,7 @@ public static partial class Rooms
     // Per grid, and gone with it (a JsMap here kept every grid ever made alive, labels and all).
     static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Grid, CacheEntry> cache = new();
 
-    /// <summary>Memoised per grid + walkabilityVersion. Derived data, outside sim state. When walls change, the rooms are updated round the changed tiles (updateRooms) if the grid knows which they were (grid.ts takeChanges), else worked out in full. Either way the result is the same.</summary>
+    /// <summary>Memoised per grid + walkabilityVersion. Derived data, outside sim state. When walls change, the rooms are updated round the changed tiles (updateRooms) if the grid knows which they were (Grid.cs takeChanges), else worked out in full. Either way the result is the same.</summary>
     public static RoomMap getRoomMap(SimState state)
     {
         cache.TryGetValue(state.grid, out var cached);

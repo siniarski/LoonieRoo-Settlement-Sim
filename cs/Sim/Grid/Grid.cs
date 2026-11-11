@@ -1,4 +1,4 @@
-// Tiles, walls, doors (grid.ts). The grid is row-major lists of plain values, so it serialises as the
+// Tiles, walls, doors. The grid is row-major lists of plain values, so it serialises as the
 // TypeScript sim's JSON does. Walls and doors are tiles, or stand on the border between two tiles
 // (edges: each tile owns its north and west edge, Edges[i * 2] and Edges[i * 2 + 1]).
 using System.Runtime.CompilerServices;
@@ -18,7 +18,7 @@ public sealed class Point
 }
 
 /// <summary>
-/// A point with fractional coordinates: a road's centre line (roads.ts RoadPoint), where the smoothed curve
+/// A point with fractional coordinates: a road's centre line (Roads.cs RoadPoint), where the smoothed curve
 /// falls between tiles. TypeScript has one number type, so its Point carries these too; here they'd truncate.
 /// </summary>
 public sealed class PointD
@@ -29,7 +29,7 @@ public sealed class PointD
     public override string ToString() => $"({x}, {y})";
 }
 
-/// <summary>Things with an at (a precise position: motion.ts), a pos (the tile under them), or an id.</summary>
+/// <summary>Things with an at (a precise position: Motion.cs), a pos (the tile under them), or an id.</summary>
 public interface IHasAt
 {
     Point at { get; set; }

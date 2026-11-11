@@ -2,14 +2,14 @@
 // name: written here by hand.
 namespace LoonieRoo.Sim;
 
-/// <summary>What working a tile would do (handiwork.ts plan): repair it, or build a wall, barricade or reinforcement.</summary>
+/// <summary>What working a tile would do (Handiwork.cs plan): repair it, or build a wall, barricade or reinforcement.</summary>
 public sealed class WorkPlan
 {
     public string what { get; set; } = "";
     public string? target { get; set; }
 }
 
-/// <summary>A piece of handiwork started (handiwork.ts startWork): what, on which tile (and what), and how long.</summary>
+/// <summary>A piece of handiwork started (Handiwork.cs startWork): what, on which tile (and what), and how long.</summary>
 public sealed class WorkStart
 {
     public string what { get; set; } = "";
@@ -17,7 +17,7 @@ public sealed class WorkStart
     public double duration { get; set; }
 }
 
-/// <summary>A town's centre and name (mapnotes.ts townNames).</summary>
+/// <summary>A town's centre and name (Mapnotes.cs townNames).</summary>
 public sealed class TownName
 {
     public int x { get; set; }

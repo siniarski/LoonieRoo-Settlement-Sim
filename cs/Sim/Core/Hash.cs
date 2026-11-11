@@ -1,4 +1,4 @@
-// A stateless roll in [0, 1) from a few numbers (hash.ts): for chances that mustn't draw on the sim RNG,
+// A stateless roll in [0, 1) from a few numbers: for chances that mustn't draw on the sim RNG,
 // so adding one doesn't shift every other random outcome. Bit for bit the TypeScript hashRoll.
 namespace LoonieRoo.Sim;
 

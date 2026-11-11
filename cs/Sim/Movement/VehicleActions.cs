@@ -1,15 +1,15 @@
 // Car actions and anchors (docs/characters.md section 5): what you do at a car takes time, and the
 // renderer plays it from the sim's progress (a clip at normalised time = progress).
 //
-//   getIn      at the driver's door: GET_IN_TICKS, then you're in (vehicles.ts useVehicle)
+//   getIn      at the driver's door: GET_IN_TICKS, then you're in (Vehicles.cs useVehicle)
 //   getOut     from the seat: GET_OUT_TICKS (the car brakes meanwhile), then you're out beside it
 //   boot       open or shut it from behind the car: BOOT_TICKS
 //   hood       open or shut the bonnet from in front: HOOD_TICKS
-// They're direct control's busy actions (control.ts: what, targetId = the car, progress, duration),
+// They're direct control's busy actions (ControlMod.cs: what, targetId = the car, progress, duration),
 // counted in ticks, not slow ticks: seconds of handling, not hours of work, whatever the day length.
 // Walking (or steering, for getOut: no) cancels one; letting go of control drops it.
 // The boot and the bonnet are state (bootOpen, hoodOpen) for the renderer; what's in the boot
-// stays reachable either way (inventory.ts stash and take, as before).
+// stays reachable either way (Inventory.cs stash and take, as before).
 //
 // Anchors: where a body stands to do each (SUB, the car's frame turned by its heading), and the way
 // it faces (a heading index): the driver's door on the car's left beside the seat, the boot behind,

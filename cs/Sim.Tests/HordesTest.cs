@@ -24,7 +24,7 @@ public partial class HordesTest
         }
     }
 
-    public static /*TODO return type*/object noon(SimState state)
+    public static object noon(SimState state)
     {
         return state.tick = Js.I(JsMath.floor(((double)(Time.DAY_LENGTH) / (2))));
     }

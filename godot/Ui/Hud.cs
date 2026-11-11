@@ -359,7 +359,7 @@ public sealed partial class Hud : Control
         return string.Join("\n", new[] { header, $"{Painter.PURPOSE_NAMES[designation.purpose]} · {(st.complete ? "complete" : "INCOMPLETE")}" }.Concat(st.requirements.Select((q) => $" {(q.met ? "✓" : "✗")} {q.label}")));
     }
 
-    // --- alerts and the overview (overview.ts) -----------------------------------------------------
+    // --- alerts and the overview -----------------------------------------------------
 
     void UpdateAlerts(SimState state)
     {
@@ -748,7 +748,7 @@ public sealed partial class Hud : Control
         });
     }
 
-    // --- the character card (card.ts) ------------------------------------------------------------
+    // --- the character card (Card.cs) ------------------------------------------------------------
 
     Survivor? Subject(SimState state)
     {

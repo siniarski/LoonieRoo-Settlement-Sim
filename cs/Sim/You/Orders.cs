@@ -1,7 +1,7 @@
 // Ported from src/sim/orders.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Group orders: what the people with you do when you aren't running a colony.
 //
-//   follow  keep close to whoever you're steering (control.ts), a couple of tiles behind
+//   follow  keep close to whoever you're steering (ControlMod.cs), a couple of tiles behind
 //   hold    stand at a spot and keep it
 //   loot    search every crate in a room (or around a spot outdoors), then come back to you
 //   settle  (no order) the colony sim: jobs by priority, as usual
@@ -102,7 +102,7 @@ public static partial class Orders
         return !Js.T(o) ? "settled" : ((o.kind == "follow") ? "following" : ((o.kind == "loot") ? $"looting ({Js.Str(o.x)}, {Js.Str(o.y)})" : $"holding ({Js.Str(o.x)}, {Js.Str(o.y)})"));
     }
 
-    /// <summary>A follower falling behind hurries (stepPace in survivors.ts).</summary>
+    /// <summary>A follower falling behind hurries (stepPace in Survivors.cs).</summary>
     public static bool hurries(SimState state, Survivor s)
     {
         if (s.order?.kind != "follow")

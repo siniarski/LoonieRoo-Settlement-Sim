@@ -17,7 +17,7 @@ only the `docs/` file your task touches.**
   CanvasItem drawing (`Render/`), UI as Controls built in code (`Ui/`). Map: docs/modules.md, godot/README.md.
 - .NET SDK 10.x (target net8.0); Godot 4.6.1 .NET at `C:\Program Files\Godot_v4.6.1-stable_mono_win64`. No NuGet
   packages beyond xUnit and the test SDK.
-- TypeScript until 2026-11-08 (git tag `ts-final`); comments still name TS modules: `x.ts` is class `X` (docs/modules.md).
+- TypeScript until 2026-11-08 (git tag `ts-final`); a ported file's first line names its TS module: `x.ts` is class `X` (docs/modules.md).
 
 **The C# keeps JavaScript's semantics, on purpose** (`cs/Sim/Js/JsCompat.cs`: `Js.*`, `JsMath.*`, `JsString`,
 `JsRegExp`, `JsMap`, `JsSet`, `JsRecord`, list methods `push`, `filter`, `map`, `splice`...). Saves, tests and balance

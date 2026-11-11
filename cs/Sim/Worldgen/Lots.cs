@@ -1,4 +1,4 @@
-// What stands on a lot (worldplan.ts cuts the lots), and drawing it a chunk at a time (2026-11-10, the buildings
+// What stands on a lot (Worldplan.cs cuts the lots), and drawing it a chunk at a time (2026-11-10, the buildings
 // session: docs/buildings.md). Ported from src/sim/lots.ts at first.
 //
 // A lot faces its street or road. Its layout is planned in the lot's own frame, u along the frontage and v back from

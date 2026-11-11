@@ -6,7 +6,7 @@
 // for someone passing. A door you opened yourself (toggleDoor) isn't in it, so it stays open.
 // While it's held open, a zombie can slip through.
 // This doesn't bump walkabilityVersion: survivors path through doors either way, and zombies
-// check each next tile as they go (zombies.ts), so nothing cached needs throwing away.
+// check each next tile as they go (Zombies.cs), so nothing cached needs throwing away.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

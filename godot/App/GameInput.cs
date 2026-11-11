@@ -337,7 +337,7 @@ public partial class Game
         {
             switch (key)
             {
-                case Key.Space: if (controlling) Command(new Command { type = "jump" }); return; // jump, vault or hop (leaps.cs)
+                case Key.Space: if (controlling) Command(new Command { type = "jump" }); return; // jump, vault or hop (Leaps.cs)
                 case Key.Tab: view.showInventory = !view.showInventory; return;
                 case Key.Escape when view.showInventory: view.showInventory = false; return;
                 case Key.Escape: ToggleMenu(); return;
@@ -412,7 +412,7 @@ public partial class Game
             }
             case Key.C: Command(new Command { type = "sneak", on = c.sneaking != true }); break;
             case Key.T: Command(new Command { type = "talk" }); break;
-            case Key.U: Command(new Command { type = "boot" }); break;   // the boot of the car beside you (vehicleActions.ts)
+            case Key.U: Command(new Command { type = "boot" }); break;   // the boot of the car beside you (VehicleActions.cs)
             case Key.I: Command(new Command { type = "hood" }); break;   // its bonnet
             case Key.V:
             case Key.H: Command(new Command { type = "shout", order = key == Key.V ? "follow" : "hold" }); break;

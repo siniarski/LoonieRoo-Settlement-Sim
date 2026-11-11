@@ -498,7 +498,7 @@ public static partial class Jobs
                     if (isFuelJob(job))
                     {
                         var g = FurnitureMod.getFurniture(state, Js.NN(job.furnitureId));
-                        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, FUEL)))
+                        if (!Js.T(g) || !(Js.In(g.kind, FUEL)))
                         {
                             return "generator gone";
                         }

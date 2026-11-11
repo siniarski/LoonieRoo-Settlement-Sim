@@ -2,7 +2,7 @@
 // Character creation: who you are, chosen before the world begins.
 //
 //   name        what you're called (NAME_MAX letters, spaces, hyphens and apostrophes).
-//   profession  one of story.ts STORY_JOBS: what you did before. It starts some skills at a level
+//   profession  one of StoryMod.cs STORY_JOBS: what you did before. It starts some skills at a level
 //               (PROFESSIONS: xp of XP_PER_LEVEL a level), puts a few things in your bag, and
 //               costs or gives points (a soldier costs; a student has time on their hands).
 //   traits      chosen from CHOOSABLE, each with a cost (TRAIT_COST): good ones cost points,

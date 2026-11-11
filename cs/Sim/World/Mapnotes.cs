@@ -1,10 +1,10 @@
 // Ported from src/sim/mapnotes.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// The map (ui/worldmap.ts): what's on it besides the ground you've seen.
+// The map (WorldMap.cs): what's on it besides the ground you've seen.
 //
 //   notes   your own marks: a pin and a few words on a tile (addMapNote, removeMapNote commands),
 //           at most MAX_NOTES of NOTE_MAX characters. Saved with the game.
 //   towns   each town in the world plan has a name (townNames: derived, never saved). The first
-//           names are the towns survivors say they came from (story.ts TOWNS), so the place in
+//           names are the towns survivors say they came from (StoryMod.cs TOWNS), so the place in
 //           someone's story can turn up on your map.
 #nullable disable warnings
 namespace LoonieRoo.Sim;

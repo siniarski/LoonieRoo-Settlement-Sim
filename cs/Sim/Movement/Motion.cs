@@ -7,7 +7,7 @@
 //   was   at as it was when this tick began, so the renderer can blend between the two
 //   pos   the tile under `at` (most of the sim only asks which tile someone is on)
 // Movers stepping tile to tile (a Movement in progress) get `at` from the step (syncStep).
-// Free movers (moving under their own steering: control.ts, zombies.ts) own `at`, and their
+// Free movers (moving under their own steering: ControlMod.cs, Zombies.cs) own `at`, and their
 // `pos` follows it; if other code moves them by tile (an eviction), `at` snaps to follow.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -28,7 +28,7 @@ public static partial class Motion
     /// <summary>A blow or a bite reaches this far, centre to centre: orthogonal neighbours' centres are 1 tile apart, diagonal ones 1.41.</summary>
     public const int REACH = 282;
 
-    /// <summary>Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door between their tiles (grid.ts) stops a blow or a bite (pathfinding.ts openBetween).</summary>
+    /// <summary>Within reach, centre to centre. Given the grid, not through a wall: an edge wall or shut door between their tiles (Grid.cs) stops a blow or a bite (Pathfinding.cs openBetween).</summary>
     public static bool inReach(IHasAt a, IHasAt b, double reach = REACH, Grid? grid = default)
     {
         return (distance2(a.at, b.at) <= ((double)(reach) * (reach))) && (!Js.T(grid) || Pathfinding.openBetween(grid, tileOf(a.at), tileOf(b.at)));
@@ -283,7 +283,7 @@ public static partial class Motion
     }
     public static Point toward(double dx, double dy, double len) => toward(Js.I(dx), Js.I(dy), len);
 
-    /// <summary>Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (control.ts).</summary>
+    /// <summary>Is a body in a broken window's frame (its circle on the line)? Climbing through is slow (ControlMod.cs).</summary>
     public static bool inWindowFrame(Grid grid, Point at, double r = BODY_RADIUS)
     {
         var x0 = JsMath.floor(((double)((at.x - r)) / (SUB)));

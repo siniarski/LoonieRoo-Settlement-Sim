@@ -9,7 +9,7 @@ public partial class DifficultyTest
 
     public const int SIZE = 128;
 
-    public static /*TODO return type*/object crateLoot(SimState s)
+    public static object crateLoot(SimState s)
     {
         return s.furniture.filter((f) => f.kind == "crate").reduce((n, f) => n + f.loot, 0.0);
     }

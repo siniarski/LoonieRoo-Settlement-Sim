@@ -235,7 +235,7 @@ public static partial class JobChoice
                     if (Jobs.isFuelJob(job))
                     {
                         var f = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-                        var fuel = (Js.T(f) && (/*TODO in*/Js.In(f.kind, Jobs.FUEL))) ? Js.Get(Jobs.FUEL, f.kind) : "wood";
+                        var fuel = (Js.T(f) && (Js.In(f.kind, Jobs.FUEL))) ? Js.Get(Jobs.FUEL, f.kind) : "wood";
                         var item = Work.freeItemFor(state, fuel, s.pos, site);
                         return Js.T(item) ? pathPlan(state, s.pos, [item.pos], item.id) : null;
                     }

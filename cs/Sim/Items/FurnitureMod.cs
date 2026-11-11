@@ -1,25 +1,25 @@
 // Ported from src/sim/furniture.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Furniture: things on floor tiles that don't change walkability.
 // Survivors can walk over them; items can't be dropped on them.
-//   bed    built by survivors; slept in (see needs.ts)
-//   crate  found in ruins; holds loot that survivors scavenge (see jobs.ts)
-//   table  built by survivors; makes a mess hall (see mess.ts)
-//   workbench  built by survivors; crafting happens here (see crafting.ts)
-//   stove  built by survivors; cooking happens here (see crafting.ts)
-//   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see zombies.ts)
-//   tower  a watchtower: see further and shoot further from it (see towers.ts)
-//   well, collector  clean water (see water.ts); a collector's loot is the water in it
-//   generator, lamp, fridge  power (see power.ts); a generator's stored is its fuel, its loot the burn timer
-//   heater a brazier: warmth outdoors on cold nights, fuelled like a generator (power.ts)
-//   coop   chickens: lays food (farming.ts)
-//   turret, lure, pit  defences (defences.ts); a turret's stored is ammo boxes, its loot the rounds left in one
-//   truck  found out in a generated world; expeditions drive it (outposts.ts)
-//   lab, beacon  the endgame: research a cure, or call for evacuation (endgame.ts)
-//   radio  powered: hears distress calls and neighbours' asks (radio.ts)
+//   bed    built by survivors; slept in (see Needs.cs)
+//   crate  found in ruins; holds loot that survivors scavenge (see Jobs.cs)
+//   table  built by survivors; makes a mess hall (see Mess.cs)
+//   workbench  built by survivors; crafting happens here (see Crafting.cs)
+//   stove  built by survivors; cooking happens here (see Crafting.cs)
+//   trap   spikes: hurts a zombie that steps on it, TRAP_CHARGES times (see Zombies.cs)
+//   tower  a watchtower: see further and shoot further from it (see Towers.cs)
+//   well, collector  clean water (see Water.cs); a collector's loot is the water in it
+//   generator, lamp, fridge  power (see Power.cs); a generator's stored is its fuel, its loot the burn timer
+//   heater a brazier: warmth outdoors on cold nights, fuelled like a generator (Power.cs)
+//   coop   chickens: lays food (Farming.cs)
+//   turret, lure, pit  defences (Defences.cs); a turret's stored is ammo boxes, its loot the rounds left in one
+//   truck  found out in a generated world; expeditions drive it (Outposts.cs)
+//   lab, beacon  the endgame: research a cure, or call for evacuation (EndgameMod.cs)
+//   radio  powered: hears distress calls and neighbours' asks (Radio.cs)
 //   tree   marked like crates; chopping yields wood, and it grows back (TREE_WOOD)
 //   decor  generated fittings (a sofa, a toilet, a pew, a wrecked car): `look` says which. Only for show.
 // Generated containers are crates with a `look` (a kitchen counter, a wardrobe, a police locker)
-// and a loot `table` (loot.ts): what's in them depends on the room they're in.
+// and a loot `table` (Loot.cs): what's in them depends on the room they're in.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -37,7 +37,7 @@ public static partial class FurnitureMod
 
     public static readonly double TREE_REGROW_TICKS = ((double)(3) * (4800));
 
-    /// <summary>Containers (crates) and decor in generated buildings (buildings.ts).</summary>
+    /// <summary>Containers (crates) and decor in generated buildings (Buildings.cs).</summary>
     public static readonly List<string> CONTAINER_LOOKS = ["counter", "icebox", "shelf", "wardrobe", "dresser", "cabinet", "toolbox", "locker", "desk", "pallet", "sack", "crate", "sink", "bin", "nightstand", "bookcase"];
 
     public static readonly List<string> DECOR_LOOKS = ["sofa", "bed", "toilet", "bath", "table", "oven", "tv", "car", "pew", "altar", "hay", "tractor", "pump", "bench", "cot", "register", "machine", "silo", "shower", "armchair", "washer"];
@@ -45,7 +45,7 @@ public static partial class FurnitureMod
     /// <summary>What each look is called (an icebox is a house's fridge; the fridge you build is furniture kind 'fridge').</summary>
     public static readonly JsRecord<string> LOOK_NAMES = new() { ["counter"] = "counter", ["icebox"] = "fridge", ["shelf"] = "shelf", ["wardrobe"] = "wardrobe", ["dresser"] = "dresser", ["cabinet"] = "cabinet", ["toolbox"] = "toolbox", ["locker"] = "locker", ["desk"] = "desk", ["pallet"] = "pallet", ["sack"] = "sacks", ["crate"] = "crate", ["sink"] = "sink", ["bin"] = "bin", ["nightstand"] = "nightstand", ["bookcase"] = "bookcase", ["sofa"] = "sofa", ["bed"] = "bed", ["toilet"] = "toilet", ["bath"] = "bath", ["table"] = "table", ["oven"] = "oven", ["tv"] = "television", ["car"] = "car", ["pew"] = "pew", ["altar"] = "altar", ["hay"] = "hay bales", ["tractor"] = "tractor", ["pump"] = "fuel pump", ["bench"] = "bench", ["cot"] = "cot", ["register"] = "till", ["machine"] = "machine", ["silo"] = "silo", ["shower"] = "shower", ["armchair"] = "armchair", ["washer"] = "washing machine" };
 
-    /// <summary>Small containers hold fewer finds (lots.ts caps a new one's loot at this).</summary>
+    /// <summary>Small containers hold fewer finds (Lots.cs caps a new one's loot at this).</summary>
     public static readonly JsRecord<double> LOOK_CAPACITY = new() { ["bin"] = 2, ["nightstand"] = 2, ["sink"] = 2, ["cabinet"] = 3, ["toolbox"] = 3 };
 
     /// <summary>A container's name from its look and what it holds: a medicine cabinet, a filing cabinet, a kitchen sink.</summary>

@@ -1,5 +1,5 @@
 // Ported from src/sim/handiwork.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Handiwork: what the survivor you control does with their own hands (control.ts), so
+// Handiwork: what the survivor you control does with their own hands (ControlMod.cs), so
 // going solo doesn't mean handing over to the colony to get a door nailed shut.
 //
 //   work (R) the tile in front:

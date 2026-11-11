@@ -6,7 +6,7 @@
 // infection runs for INFECTION_TURN ticks (a day), half as fast for someone
 // resting in an infirmary bed; then the survivor dies and gets up as a
 // zombie. Medicine (crafted in a workshop) cures it: the infected fetch it
-// like a bandage, and doctors bring it to infected patients (needs.ts, jobs.ts).
+// like a bandage, and doctors bring it to infected patients (Needs.cs, Jobs.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

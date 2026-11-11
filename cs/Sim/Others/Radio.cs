@@ -2,7 +2,7 @@
 // The radio. A powered radio picks something up most mornings at RADIO_HOUR
 // (a hash of the day): either a distress call, which marks a point of
 // interest out there (an expedition to it brings the callers home,
-// expeditions.ts), or a neighbour asking for supplies (state.requests:
+// Expeditions.cs), or a neighbour asking for supplies (state.requests:
 // send them within REQUEST_DAYS for a lot of goodwill and something back, by caravan).
 #nullable disable warnings
 namespace LoonieRoo.Sim;

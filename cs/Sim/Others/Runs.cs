@@ -3,7 +3,7 @@
 //
 // At dawn a settlement that's short of food (or now and then one that isn't) with RUN_MIN_HOME
 // people to spare may send RUN_PARTY of them to a ruin RUN_MIN..RUN_MAX tiles off (by hash). The
-// party is a marker, like a caravan (caravans.ts): out a tile every RUN_STEP ticks, searching
+// party is a marker, like a caravan (Caravans.cs): out a tile every RUN_STEP ticks, searching
 // for RUN_SEARCH ticks, and back. Home again, what they found goes into the stores (RUN_FIND a
 // head) and they're counted back in.
 //   the dead   each hour there's a chance they're caught (more at the ruin than on the road):

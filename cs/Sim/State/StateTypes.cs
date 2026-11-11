@@ -24,7 +24,7 @@ public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
     public string id { get; set; } = "";
     public string kind { get; set; } = "";
     public Point pos { get; set; } = new();
-    /// <summary>Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start.</summary>
+    /// <summary>Where exactly, in Motion.cs SUB units (pos is the tile under it); and where at the tick's start.</summary>
     public Point at { get; set; } = new();
     public Point was { get; set; } = new();
     public Movement? move { get; set; }
@@ -74,7 +74,7 @@ public partial class Blueprint : IHasId
     public bool delivered { get; set; }
     public double workDone { get; set; }
     public double workRequired { get; set; }
-    /// <summary>An edge wall or door (grid.ts): on this tile's north or west side, not on the tile.</summary>
+    /// <summary>An edge wall or door (Grid.cs): on this tile's north or west side, not on the tile.</summary>
     public string? side { get; set; }
 }
 
@@ -227,7 +227,7 @@ public partial class Dog : Body, IHasId, IHasAt, IHasPos, IBody
     public string id { get; set; } = "";
     public string name { get; set; } = "";
     public Point pos { get; set; } = new();
-    /// <summary>Where exactly, in motion.ts SUB units (pos is the tile under it); and where at the tick's start.</summary>
+    /// <summary>Where exactly, in Motion.cs SUB units (pos is the tile under it); and where at the tick's start.</summary>
     public Point at { get; set; } = new();
     public Point was { get; set; } = new();
     public Movement? move { get; set; }
@@ -434,7 +434,7 @@ public partial class Item : IHasId
     public double wear { get; set; }
     public string? tag { get; set; }
     public string? inside { get; set; }
-    /// <summary>A flashlight switched on (lights.cs); null when off.</summary>
+    /// <summary>A flashlight switched on (Lights.cs); null when off.</summary>
     public bool? lit { get; set; }
     /// <summary>The grid inventory (InventoryGrid.cs): the cell its top-left corner is in, in the grid it's in (null: not
     /// placed yet; it's arranged by first-fit when the grid is next touched), and whether it lies a quarter turn round.</summary>
@@ -619,7 +619,7 @@ public partial class PlanEdge
     public int bx { get; set; }
     public int by { get; set; }
     public bool door { get; set; }
-    /// <summary>Glass in an outer wall (grid.ts EDGE_WINDOW).</summary>
+    /// <summary>Glass in an outer wall (Grid.cs EDGE_WINDOW).</summary>
     public bool? window { get; set; }
 }
 
@@ -673,7 +673,7 @@ public partial class Profession
     public string about { get; set; } = "";
 }
 
-/// <summary>Reachability labels, per grid and mover. Chunked: each REACH_CHUNK square is flooded on its own into local pieces, and pieces that touch across a chunk border are joined (a union-find over every piece on the map). When walls, doors, locks or edges change, only the chunks they're in are flooded again (grid.ts reachChangesSince: a log of changed chunks), then the borders are joined afresh. A new map chunk generated, or a wall built, re-floods a chunk or two, not the whole map (the stress test, 2026-11-06: on a 1024 map each kind of mover re-flooded a million tiles per change, the 30-60 ms spikes). With no log to go on (the first time, a loaded grid, or more changes than the log keeps) it floods every chunk. Doors: for movers that need a door open to get through it (you, the dead, crawlers: DOOR_MOVERS) the flood is done with every door shut, and the doors open now join the pieces either side (another union-find over the pieces' roots). Doors swing open and shut all the time without bumping the version (held open for someone passing: doors.ts), so only that join is redone. The answer is always the same as one flood of the whole map with the doors as they are (tests/reach.test.ts checks, with walls and doors built, broken and locked between questions).</summary>
+/// <summary>Reachability labels, per grid and mover. Chunked: each REACH_CHUNK square is flooded on its own into local pieces, and pieces that touch across a chunk border are joined (a union-find over every piece on the map). When walls, doors, locks or edges change, only the chunks they're in are flooded again (Grid.cs reachChangesSince: a log of changed chunks), then the borders are joined afresh. A new map chunk generated, or a wall built, re-floods a chunk or two, not the whole map (the stress test, 2026-11-06: on a 1024 map each kind of mover re-flooded a million tiles per change, the 30-60 ms spikes). With no log to go on (the first time, a loaded grid, or more changes than the log keeps) it floods every chunk. Doors: for movers that need a door open to get through it (you, the dead, crawlers: DOOR_MOVERS) the flood is done with every door shut, and the doors open now join the pieces either side (another union-find over the pieces' roots). Doors swing open and shut all the time without bumping the version (held open for someone passing: Doors.cs), so only that join is redone. The answer is always the same as one flood of the whole map with the doors as they are (tests/reach.test.ts checks, with walls and doors built, broken and locked between questions).</summary>
 public partial class Reach
 {
     public double version { get; set; }
@@ -919,7 +919,7 @@ public partial class SimState
     public int namesGiven { get; set; }
     public List<LoggedCommand> commandLog { get; set; } = new();
     public List<GameEvent> events { get; set; } = new();
-    /// <summary>Room light switches that differ from their default, by the room's anchor tile "x,y" (lights.cs); null when none.</summary>
+    /// <summary>Room light switches that differ from their default, by the room's anchor tile "x,y" (Lights.cs); null when none.</summary>
     public JsRecord<bool>? lightSwitches { get; set; }
     /// <summary>Snow on the ground (Snow.cs): null until the first flake falls, so a game without snow saves and loads as before.</summary>
     public SnowState? snow { get; set; }
@@ -1101,7 +1101,7 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public double panic { get; set; }
     public double bodyHeat { get; set; }
     public double wetness { get; set; }
-    /// <summary>Limbs gone for good, with side and level: "armLeft:elbow", "legRight:knee" (wounds.ts amputate).</summary>
+    /// <summary>Limbs gone for good, with side and level: "armLeft:elbow", "legRight:knee" (Wounds.cs amputate).</summary>
     public List<string> lostLimbs { get; set; } = new();
     /// <summary>The tick of the last startle (a hit taken, the dead noticed out of calm), for the renderer's flinch.</summary>
     public double? startledAt { get; set; }
@@ -1239,7 +1239,7 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public string? kind { get; set; }
     public bool bootOpen { get; set; }
     public bool hoodOpen { get; set; }
-    /// <summary>Headlights switched on (lights.cs); null when off.</summary>
+    /// <summary>Headlights switched on (Lights.cs); null when off.</summary>
     public bool? lights { get; set; }
 }
 

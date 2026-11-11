@@ -1,10 +1,10 @@
 // Ported from src/sim/caravans.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Caravans: what settlements send each other (and you) travels the map.
 //
-// A caravan is a marker, like a herd (herds.ts): a few people and a cart, a tile every
+// A caravan is a marker, like a herd (Herds.cs): a few people and a cart, a tile every
 // CARAVAN_STEP ticks in a straight line from where it set out to where it's going. Food a
-// fed neighbour sends a starving one (colonies.ts), allies' trade runs, and the thanks for an
-// errand or a radio request (errands.ts, radio.ts) all go by caravan now, not in an instant.
+// fed neighbour sends a starving one (Colonies.cs), allies' trade runs, and the thanks for an
+// errand or a radio request (Errands.cs, Radio.cs) all go by caravan now, not in an instant.
 //   the road   every hour on the road there's a chance (AMBUSH_CHANCE, more as the days go on
 //              and with more of the dead about) that the dead catch it: one of its people is
 //              lost, and with them a share of the load. Lose them all and the caravan is gone,

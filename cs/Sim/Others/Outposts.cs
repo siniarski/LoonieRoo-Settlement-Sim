@@ -2,10 +2,10 @@
 // Vehicles and outposts.
 //
 // The truck: a generated world leaves one somewhere out past the camp
-// (worldgen): a vehicle you can drive too (vehicles.ts). Once someone has seen
+// (worldgen): a vehicle you can drive too (Vehicles.cs). Once someone has seen
 // it, expeditions take it when it has half a tank (TRIP_FUEL), or there's
 // TRUCK_FUEL free fuel to burn: there and back in half the time, carrying
-// twice as much (expeditions.ts). (Hand-made maps can have a truck as furniture.)
+// twice as much (Expeditions.cs). (Hand-made maps can have a truck as furniture.)
 //
 // Outposts: an expedition can stay where it went (claimOutpost). Each dawn
 // an outpost sends home OUTPOST_FINDS per member (rolled like scavenging, by

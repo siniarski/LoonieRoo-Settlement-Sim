@@ -1,5 +1,5 @@
 // Ported from src/sim/residents.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Residents: a neighbouring settlement's people, once its compound has unfolded (colonies.ts).
+// Residents: a neighbouring settlement's people, once its compound has unfolded (Colonies.cs).
 //
 // One resident per head (synced at unfolding and every dawn: newcomers appear at the
 // door, the dead and the departed vanish). They potter about inside their walls. If

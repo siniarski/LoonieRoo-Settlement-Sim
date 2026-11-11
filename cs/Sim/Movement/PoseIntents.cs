@@ -17,7 +17,7 @@
 //   condition   0..1 weights: limp left/right (a wounded or lost leg), arm left/right (a wounded or
 //               lost arm), exhaustion, panic, cold, pain, infection, blood (bleeding), wet, startle
 //               (1 at the startle, gone after STARTLE_TICKS)
-//   lostLimbs   "armLeft:elbow" and the like (wounds.ts); crawlers have lost both legs at the knee
+//   lostLimbs   "armLeft:elbow" and the like (Wounds.cs); crawlers have lost both legs at the knee
 //   lookAt      what one of the dead is after (its target's position, SUB), for its head to turn to
 // One of the dead crossing something (Crossings.cs) has the crossing as its action (climb, under, vault), the
 // leg's progress, its lift (feet over the ground, at the tick's end), and for a climb or under the crawl stance:

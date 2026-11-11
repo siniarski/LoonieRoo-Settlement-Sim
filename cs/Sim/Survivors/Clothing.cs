@@ -12,7 +12,7 @@
 // empty slot puts on the nearest free garment for it (like guards arming), and
 // one whose garment is half worn mends it with a piece of cloth.
 // Cloth comes from crates and traders; workbenches make clothing from it.
-// (Haulers pick up a cart the same way: see jobs.ts.)
+// (Haulers pick up a cart the same way: see Jobs.cs.)
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -165,7 +165,7 @@ public static partial class Clothing
             s.note = $"mended their {Js.Str(worn.kind)}";
             return true;
         }
-        var slot = isGarment(item.kind) ? Js.Get(SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((/*TODO in*/Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
+        var slot = isGarment(item.kind) ? Js.Get(SLOT_OF, item.kind) : ((item.kind == "cart") ? "cart" : ((Js.In(item.kind, Skills.TOOL_FOR)) ? "tool" : null));
         if (Js.T(!Js.T(slot) || Js.T(Js.GetProp<string?>(s, slot))))
         {
             item.reservedBy = null;

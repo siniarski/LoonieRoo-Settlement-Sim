@@ -13,7 +13,7 @@ public partial class EdgesTest
     public static List<ScenarioEdgesItem> box(int x0, int y0, int x1, int y1)
     {
         List<ScenarioEdgesItem> edges = [];
-        /*TODO return type*/object add(double x, double y, string side, string kind = "wall")
+        object add(double x, double y, string side, string kind = "wall")
         {
             return edges.push(new() { x = Js.I(x), y = Js.I(y), side = side, kind = kind });
         }

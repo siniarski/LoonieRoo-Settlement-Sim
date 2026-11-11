@@ -1,7 +1,7 @@
 // Ported from src/sim/story.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // Backstories: who each survivor was before. Generated from a hash of their id
 // (never the sim RNG), so making someone doesn't change anything else. Stored as
-// small numbers and names; the text is put together when it's told (talk.ts).
+// small numbers and names; the text is put together when it's told (Talk.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

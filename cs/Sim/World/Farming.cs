@@ -3,11 +3,11 @@
 //
 // The player designates farm plots on floor tiles, each with a crop. A plot cycles:
 //   empty --(sow job)--> growing --(its crop's grow time)--> ripe --(harvest job)--> empty, plus the yield
-// Sowing and harvesting are both the `farm` job type (jobs.ts). Harvested
+// Sowing and harvesting are both the `farm` job type (Jobs.cs). Harvested
 // food lands on the plot and is hauled to storage like any other item.
 //
 // Crops: potatoes (quick, one food), wheat (slow, three food), herbs (slow,
-// one medicine). Outdoors they grow as the season allows (seasons.ts); in a
+// one medicine). Outdoors they grow as the season allows (Seasons.cs); in a
 // complete greenhouse they grow at full speed all year, winter included.
 //
 // Chicken coops (furniture) lay a food every EGG_EVERY ticks, half as often in winter.

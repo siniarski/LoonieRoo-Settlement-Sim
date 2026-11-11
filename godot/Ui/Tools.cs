@@ -22,7 +22,7 @@ public sealed class Tool
     public bool furnish;
     /// <summary>Whether Shift (instant) does anything for this tool.</summary>
     public bool hasInstant;
-    /// <summary>Builds on the tile border nearest the cursor, not on a tile (edge walls and doors, grid.ts).</summary>
+    /// <summary>Builds on the tile border nearest the cursor, not on a tile (edge walls and doors, Grid.cs).</summary>
     public bool edge;
     /// <summary>(x, y, instant, side) to a command; null for tools that don't map to a single command.</summary>
     public Func<int, int, bool, string?, Command?> command = (_, _, _, _) => null;
@@ -147,7 +147,7 @@ public static class Tools
         }
     }
 
-    /// <summary>The tile border nearest a world point: the tile, and its north ("n") or west ("w") side (input.ts edgeNear).</summary>
+    /// <summary>The tile border nearest a world point: the tile, and its north ("n") or west ("w") side.</summary>
     public static (int x, int y, string side) edgeNear(double wx, double wy)
     {
         int tx = (int)Math.Floor(wx), ty = (int)Math.Floor(wy);
@@ -159,7 +159,7 @@ public static class Tools
         return (tx + 1, ty, "w");
     }
 
-    // --- build mode (buildMode.ts) ---
+    // --- build mode ---
 
     /// <summary>Closing build mode also drops the armed tool, back to select mode.</summary>
     public static void closeBuild(View view)
@@ -231,7 +231,7 @@ public static class Tools
     }
 }
 
-/// <summary>The build bar (B): category tabs, the tools in the open one, and a hint (hud.ts createBuildBar).</summary>
+/// <summary>The build bar (B): category tabs, the tools in the open one, and a hint.</summary>
 public sealed partial class BuildBar : PanelContainer
 {
     /// <summary>Tools whose action isn't obvious from "click or drag to place".</summary>

@@ -21,7 +21,7 @@ public sealed class View
     public string? toast;
     public ulong toastUntil;
     public Point? hover;
-    /// <summary>Edge tools (Wall, Door): the tile border nearest the cursor, previewed (grid.ts edges).</summary>
+    /// <summary>Edge tools (Wall, Door): the tile border nearest the cursor, previewed (Grid.cs edges).</summary>
     public (int x, int y, string side)? hoverEdge;
     public int speed = 1;
     /// <summary>Held still by the game itself: --paused (screenshots, debugging), the self-test. There's no pause key:
@@ -31,7 +31,7 @@ public sealed class View
     public bool halted => paused || menu != null || showMap;
     public bool showDebug;
     public bool showPriorities = true;
-    /// <summary>The menu screen over the game, or null when playing (menu.ts): main, new, character, load, howto.</summary>
+    /// <summary>The menu screen over the game, or null when playing (Menu.cs): main, new, character, load, howto.</summary>
     public string? menu;
     /// <summary>A game is going on under the menu (so it offers Resume and Save, not Continue).</summary>
     public bool inGame;

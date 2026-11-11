@@ -18,8 +18,8 @@ cs/Sim.Tests/ (xUnit), cs/Harness/ (balance, bench, stress)
 access control. A system is a static class of functions over the state (`Zombies.update(state)`); the state is plain
 data (`State/StateTypes.cs`). `Core/Tick.cs` is the order everything runs in each tick: start there.
 
-**From the port.** File comments still name the TypeScript modules (`(worldplan.ts)`): `x.ts` is now class `X` in the
-folder below, or `XMod` where X is also a type: BodyMod, CharacterMod, ControlMod, EndgameMod, FireMod, FurnitureMod,
+**From the port.** A file that came from the TypeScript says so on its first line (`Ported from src/sim/x.ts`): `x.ts`
+became class `X` in the folder below, or `XMod` where X is also a type: BodyMod, CharacterMod, ControlMod, EndgameMod, FireMod, FurnitureMod,
 NatureMod, ScenarioMod, StoryMod, SuccessionMod, TimelineMod. grid.ts is `Grids` in Grid/Grid.cs. The TypeScript is at
 git tag `ts-final`.
 

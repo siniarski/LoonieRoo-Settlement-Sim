@@ -7,7 +7,7 @@
 // ends it: they go and take it. Someone grieving a death goes to a graveyard
 // instead, if there is one, and pays their respects (a bigger lift, once).
 //
-// Breakdowns: a miserable survivor (see mood.ts) may break down. Rolled
+// Breakdowns: a miserable survivor (see Mood.cs) may break down. Rolled
 // every BREAKDOWN_CHECK_EVERY ticks (sim RNG). For BREAKDOWN_TICKS they drop
 // their work and won't take any; needs still run. Afterwards they've
 // "vented", a good thought, so it doesn't happen again straight away.

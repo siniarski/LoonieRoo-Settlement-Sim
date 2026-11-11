@@ -1,5 +1,5 @@
 // Ported from src/sim/jobTypes.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Job types and priorities. Kept separate from jobs.ts so survivors.ts can
+// Job types and priorities. Kept separate from Jobs.cs so Survivors.cs can
 // use them without an import cycle.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -22,6 +22,6 @@ public static partial class JobTypes
 
     public static bool isJobType(object t)
     {
-        return (/*TODO typeof*/Js.TypeOf(t) == "string") && (JOB_TYPES).includes(t);
+        return (Js.TypeOf(t) == "string") && (JOB_TYPES).includes(t);
     }
 }

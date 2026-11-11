@@ -2,9 +2,9 @@
 // Hordes: zombies moving together, on one flow field.
 //
 // Not every zombie is in one. Sleepers and the odd wanderer stay loners and think for themselves
-// (zombies.ts plan). A horde is:
-//   made     by a night's wave (a group of HORDE_MIN or more arriving together: zombies.ts
-//            spawnGroup), or a herd breaking into real zombies near your people (herds.ts).
+// (Zombies.cs plan). A horde is:
+//   made     by a night's wave (a group of HORDE_MIN or more arriving together: Zombies.cs
+//            spawnGroup), or a herd breaking into real zombies near your people (Herds.cs).
 //   goals    hunting: the survivors it's after (a night wave knows where everyone is; others go
 //            for whoever any member sees or hears). Roaming: a heading, somewhere off across the map.
 //   moves    on one flow field (flowField): the cost to reach a goal from every tile in a box round
@@ -12,7 +12,7 @@
 //            window or barricade in the way costs the time it takes to batter down (its health at
 //            BATTER_RATE), a parked car the steps it costs to climb (Crossings.cs). So a walled-in colony draws a horde to its weakest point, and the whole
 //            horde piles up there. Each member steps to its cheapest neighbour; battering is done as
-//            it always was (zombies.ts). Goals outside the box pull through its edge (each edge tile
+//            it always was (Zombies.cs). Goals outside the box pull through its edge (each edge tile
 //            seeded with its distance to the nearest goal).
 //   refresh  every REFRESH_EVERY ticks: members gone are dropped, goals and the box worked out
 //            again. The field depends only on what's stored here (goals, box) and on the walls and
@@ -22,7 +22,7 @@
 //   joining  two hordes within JOIN_RADIUS of each other that both roam, or both hunt, become one
 //            (the bigger keeps its goals). An awake loner (static or herd, after nobody) within
 //            LONER_JOIN of a horde falls in with it. So hordes snowball as they travel.
-//   noise    (noise.ts) a roaming horde mostly in earshot turns towards a noise; if only some of it
+//   noise    (Noise.cs) a roaming horde mostly in earshot turns towards a noise; if only some of it
 //            is, those split off as their own horde (or loners, if too few).
 //   strays   a member more than STRAY_RADIUS from the horde's middle drops out, a loner.
 //   shedding a big horde (SHED_MIN or more) has a small chance each hour (SHED_CHANCE, a hash roll)
@@ -30,7 +30,7 @@
 //            to one side. So even a huge herd leaves stragglers across the map.
 //   dissolve under HORDE_MIN members, the rest are loners.
 //   far off  a roaming horde with nobody of yours within DEMOTE_RADIUS becomes a herd marker again
-//            (herds.ts), its zombies counted into it, until it comes near someone and breaks up again.
+//            (Herds.cs), its zombies counted into it, until it comes near someone and breaks up again.
 #nullable disable warnings
 using System.Runtime.CompilerServices;
 
@@ -680,7 +680,7 @@ public static partial class Hordes
         Events.logEvent(state, $"{Js.Str(n)} broke away from a horde of {Js.Str(zs.length)} near ({Js.Str(mid.x)}, {Js.Str(mid.y)})");
     }
 
-    /// <summary>A roaming horde with nobody of yours near goes back to being a herd marker (herds.ts).</summary>
+    /// <summary>A roaming horde with nobody of yours near goes back to being a herd marker (Herds.cs).</summary>
     public static void demote(SimState state, Horde h)
     {
         if ((h.mode != "roam") || h.night)
@@ -709,7 +709,7 @@ public static partial class Hordes
         state.herds.push(new() { id = $"h{Js.Str(state.nextId++)}", x = Js.I(mid.x), y = Js.I(mid.y), to = new Point { x = Js.I(JsMath.max(0, JsMath.min(width - 1, to.x))), y = Js.I(JsMath.max(0, JsMath.min(height - 1, to.y))) }, size = zs.length, nextStepTick = state.tick, heard = false });
     }
 
-    /// <summary>A noise (noise.ts): a roaming horde mostly in earshot turns to it; if only part is, that part splits off.</summary>
+    /// <summary>A noise (Noise.cs): a roaming horde mostly in earshot turns to it; if only part is, that part splits off.</summary>
     public static void hordesHear(SimState state, Point p, double r, Func<Point, Point> toward)
     {
         foreach (var h in Js.Iter((hordesOf(state)).ToList()))
