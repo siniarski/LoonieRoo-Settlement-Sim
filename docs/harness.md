@@ -42,6 +42,10 @@ vars below for each.
 - **gen profile**, **gen profile create**, **gen profile big**, **gen profile saves**, **gen profile roads**, **gen plan
   hashes** (GenProfile.cs; SIZES or SIZE, WORLD_SIZES, SAVES, PLAN=0, STATE=0, ALL=1, WHOLE=0, DIAG=x,y): world
   generation by phase, at size, and the plans' hashes to compare two builds.
+- **road widths** (RoadWidths.cs; SEEDS, SIZE=512, CARS=0, MAP=x,y,r): per seed, the plan's towns, streets and lots, a
+  street's cross-section (the road mask across it), the country roads' widths, and in the generated world each parked
+  car on the road with the clear road beside it; MAP adds the plan round a point as text (roads, sidewalks, lots,
+  trees, cars).
 - **building loot**, **building sites** (BuildingLoot.cs; SEEDS, SIZE, SEED): what generated buildings hold; where
   they stand (for pictures).
 - **census**, **census noise** (Census.cs; SEEDS, PRESET): the dead in a fresh world (how many, how near the start);

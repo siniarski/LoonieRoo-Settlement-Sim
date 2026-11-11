@@ -328,8 +328,14 @@ public static partial class Lots
             int bu = leftHouse ? F - 1 - barn.w : 1;
             @out.buildings.push(hp = setIn(lot, house, hu, 1, r(13) < 0.5));
             @out.buildings.push(setIn(lot, barn, bu, 1, r(14) < 0.5));
+            shutSides(lot, hp, hu, F);
         }
-        else @out.buildings.push(hp = setIn(lot, house, Math.Max(1, (F - house.w) / 2), 1, r(13) < 0.5));
+        else
+        {
+            int hu = Math.Max(1, (F - house.w) / 2);
+            @out.buildings.push(hp = setIn(lot, house, hu, 1, r(13) < 0.5));
+            shutSides(lot, hp, hu, F);
+        }
         approach(lot, hp, marks, F, D, true, @out);
         var mid = F / 2;
         foreach (var (du, dv) in new (int, int)[] { (0, 0), (1, 0), (0, 1), (1, 1) })
@@ -359,6 +365,22 @@ public static partial class Lots
                 var l = mapToLot(lot, x, y);
                 Worldgen.ground(state, x, y, layout.yard(l.u, l.v));
             }
+        // A crossover: where concrete runs to a street lot's front (a driveway, a works yard), the sidewalk before it
+        // is concrete too, so a car goes in and out without crawling over paving (Vehicles.topSpeed).
+        if (lot.park > 0)
+        {
+            int paving = Grids.GROUNDS.indexOf("paving");
+            for (int u = 0; u < frame(lot).F; u++)
+            {
+                if (layout.yard(u, 0) != "concrete") continue;
+                for (int v = 1; v <= Towns.SIDEWALK; v++)
+                {
+                    var m = lotToMap(lot, u, -v);
+                    if (inside(m.x, m.y) && Grids.inBounds(state.grid, m.x, m.y) && Grids.groundAt(state.grid, Grids.tileIndex(state.grid, m.x, m.y)) == paving)
+                        Worldgen.ground(state, m.x, m.y, "concrete");
+                }
+            }
+        }
         var covered = new JsSet<string>();
         layout.buildings.forEach((b, bi) => drawBuilding(state, ctx, lot, b, bi, inside, covered));
         foreach (var e in layout.fences)
@@ -395,10 +417,12 @@ public static partial class Lots
         }
         else
         {
+            // In the street's parking strip, at the kerb (a lot on a street: Lot.park); else on the verge by the road.
             var w = frame(lot).F;
             var u = 1 + Math.Floor(r(1) * Math.Max(1, w - 2));
-            p = lotToMap(lot, u, -2);
-            next = lotToMap(lot, u + 1, -2);
+            var v = lot.park > 0 ? -lot.park : -2;
+            p = lotToMap(lot, u, v);
+            next = lotToMap(lot, u + 1, v);
         }
         // Along the street or the drive, either way round; only where the whole car fits (its body, not its tile).
         var heading = Vehicles.headingOf(next.x - p.x, next.y - p.y) + (r(2) < 0.5 ? 0 : 16);

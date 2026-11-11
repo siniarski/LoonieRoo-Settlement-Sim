@@ -22,8 +22,9 @@ public static partial class Worldgen
 
     /// <summary>The world generation version (saved in WorldInfo.gen; absent is 1). Bump it whenever what a chunk is
     /// made of changes: a save keeps only what differs from making its chunks again, so a save made by another version
-    /// is refused (Savefile.loadFile). 2: the buildings of 2026-11-10 (docs/buildings.md).</summary>
-    public const int GEN_VERSION = 2;
+    /// is refused (Savefile.loadFile). 2: the buildings of 2026-11-10 (docs/buildings.md). 3: two-lane roads, and streets
+    /// with a parking strip and sidewalks (2026-11-11).</summary>
+    public const int GEN_VERSION = 3;
 
     /// <summary>Chunks this far (in chunks, each way) from any survivor are always generated.</summary>
     public const int GENERATE_RADIUS = 2;
@@ -192,6 +193,10 @@ public static partial class Worldgen
                 {
                     Grids.setTile(state.grid, x, y, "water");
                 }
+                else if (l.regions.IsSidewalk(Js.I(x), Js.I(y)))
+                {
+                    ground(state, x, y, "paving");
+                }
                 else if (onLot(l, x, y))
                 {
                     continue;
@@ -229,7 +234,7 @@ public static partial class Worldgen
         {
             for (var x = x0; x < (x0 + CHUNK); x++)
             {
-                if (((!Grids.inBounds(state.grid, x, y) || isRoad(l, x, y)) || onLot(l, x, y)) || NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS))
+                if (((!Grids.inBounds(state.grid, x, y) || (l.regions.RoadAt(Js.I(x), Js.I(y)) != 0)) || onLot(l, x, y)) || NatureMod.nearStart(l, x, y, NatureMod.START_CLEAR_RADIUS))
                 {
                     continue;
                 }
@@ -247,7 +252,9 @@ public static partial class Worldgen
     /// <summary>No dead asleep nearer the start than this (tiles, straight line), in ruins or out in the open (was START_CLEAR_RADIUS + 24 for ruins, and none in the open).</summary>
     public const int STRAY_CALM = NatureMod.START_CLEAR_RADIUS + 14;
 
-    /// <summary>Chance a road tile has one of the dead lying in it (dormant till someone comes near), at 100% zombies.</summary>
+    /// <summary>Chance a road tile has one of the dead lying in it (dormant till someone comes near), at 100% zombies.
+    /// (Kept when roads went from two tiles wide to six, 2026-11-11: the wider streets leave room for about a fifth
+    /// fewer buildings and their sleepers, and the roads' dead make up most of it: harness census and road widths.)</summary>
     public const double ROAD_STRAY_CHANCE = 0.003;
 
     /// <summary>The same on open ground off the roads and lots (fields, forest, waste ground).</summary>
@@ -316,7 +323,8 @@ public static partial class Worldgen
         return (FurnitureMod.CRATE_LOOT - 2) + JsMath.min(((double)(2) * (FurnitureMod.CRATE_LOOT)), JsMath.floor(((double)(distance) / (20))));
     }
 
-    /// <summary>The start: an intact hut with three beds, three survivors, and some wood and food.</summary>
+    /// <summary>The start: an intact shelter (edge walls, a door, windows, a little furniture) with three beds (one for a
+    /// solo start), the survivors outside its door, and some wood and food.</summary>
     public static void startCamp(SimState state, Layout l)
     {
         var __d1 = l.start;
@@ -324,21 +332,31 @@ public static partial class Worldgen
         var sy = __d1.y;
         var x0 = sx - 4;
         var y0 = sy - 7;
-        for (var y = y0; y <= (y0 + 5); y++)
+        // The shelter: an ordinary edge-walled building (Buildings.startPlan), whole (no decay), its containers empty.
+        var plan = Buildings.startPlan();
+        for (var y = 0; y < plan.h; y++)
         {
-            for (var x = x0; x <= (x0 + 7); x++)
+            for (var x = 0; x < plan.w; x++)
             {
-                ground(state, x, y, "dirt");
-                if ((((x == x0) || (x == (x0 + 7))) || (y == y0)) || (y == (y0 + 5)))
-                {
-                    Grids.setTile(state.grid, x, y, ((x == (x0 + 3)) && (y == (y0 + 5))) ? "door" : "wall");
-                }
+                ground(state, x0 + x, y0 + y, plan.ground[y * plan.w + x] ?? "boards");
             }
+        }
+        foreach (var e in plan.edges)
+        {
+            var (ox, oy, side) = Lots.edgeOwner(new Point(x0 + e.ax, y0 + e.ay), new Point(x0 + e.bx, y0 + e.by));
+            Grids.setEdge(state.grid, ox, oy, side, e.window == true ? Grids.EDGE_WINDOW : e.door ? Grids.EDGE_DOOR : Grids.EDGE_WALL);
+        }
+        foreach (var f in plan.furniture)
+        {
+            var piece = FurnitureMod.addFurniture(state, Buildings.isContainerLook(f.look) ? "crate" : "decor", x0 + f.x, y0 + f.y);
+            piece.look = f.look;
+            piece.table = f.table;
+            piece.loot = 0;
         }
         var solo = state.settings.start == "solo";
         foreach (var dx in Js.Iter(solo ? ((List<double>)[3]) : ((List<double>)[1, 3, 5])))
         {
-            FurnitureMod.addFurniture(state, "bed", x0 + dx, y0 + 1);
+            FurnitureMod.addFurniture(state, "bed", x0 + dx, y0);
         }
         foreach (var dx in Js.Iter(solo ? ((List<double>)[0]) : ((List<double>)[-2, 0, 2])))
         {

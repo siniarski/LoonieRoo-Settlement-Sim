@@ -125,7 +125,7 @@ public static class WorldMesh
                 int i = y * g.width + x;
                 string tile = Grids.tileAt(g, i);
                 string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
-                Ground(gs, ws, x, y, tile, ground);
+                Ground(gs, ws, x, y, tile, ground, RoadCorner(g, x, y, tile, ground));
                 anyWater |= tile == "water";
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
@@ -170,7 +170,26 @@ public static class WorldMesh
         Quad(st, new(x, h, y), new(x + 1, h, y), new(x + 1, h, y + 1), new(x, h, y + 1), look, Vector3.Down);
     }
 
-    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground)
+    static readonly int ROAD = Array.IndexOf(Grids.GROUNDS, "road");
+
+    /// <summary>A country road on the slant is a staircase of tiles: a tile of open ground in the inside corner of a
+    /// step (road on two sides that meet, none on the other two) is drawn half road, cut along its diagonal, so the
+    /// road's edge runs across the step instead of round it. Which corner the road fills (0 north-east, 1 south-east,
+    /// 2 south-west, 3 north-west), or -1. Drawn only: the tile is still what the sim says it is.</summary>
+    static int RoadCorner(Grid g, int x, int y, string tile, string ground)
+    {
+        if (tile != "floor" || ground is not ("grass" or "dirt" or "forest" or "field")) return -1;
+        bool Road(int ax, int ay) => ax >= 0 && ay >= 0 && ax < g.width && ay < g.height && Grids.groundAt(g, ay * g.width + ax) == ROAD
+            && Grids.tileAt(g, ay * g.width + ax) == "floor" && !Terrain.Sunk(ax, ay);
+        bool n = Road(x, y - 1), e = Road(x + 1, y), s = Road(x, y + 1), w = Road(x - 1, y);
+        if (n && e && !s && !w) return 0;
+        if (e && s && !w && !n) return 1;
+        if (s && w && !n && !e) return 2;
+        if (w && n && !e && !s) return 3;
+        return -1;
+    }
+
+    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)
     {
         bool water = tile == "water";
         // A little variation per tile, so the ground reads as ground and not as a sheet.
@@ -188,9 +207,9 @@ public static class WorldMesh
         // Less from tile to tile than the water's and the far view's (0.06 to 0.095), about the same middle: the
         // detail says "ground" now, and squares a metre across under it said "tiles".
         c = c.Lightened(0.07f + Math.Abs(n) * 0.015f);
-        // Under water the bed darkens with depth (the light doesn't get down): a shelf by the bank, dark further out.
-        if (water) c = c.Darkened(Math.Clamp((Terrain.Water(x + 0.5f, y + 0.5f) - Terrain.Height(x + 0.5f, y + 0.5f)) * 0.45f, 0, 0.6f));
-        GroundQuad(st, x, y, new Look(c, water ? WorldLook.RiverBed.what : WorldLook.Ground(ground)));
+        var own = new Look(c, water ? WorldLook.RiverBed.what : WorldLook.Ground(ground));
+        if (roadCorner >= 0) GroundHalves(st, x, y, own, new Look(WorldLook.GroundColour("road").Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.Ground("road")), roadCorner);
+    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)
         // The surface, on its own heights (it stands where the water level is, over the bed).
         if (water) Quad(ws, new(x, Terrain.Water(x, y), y), new(x + 1, Terrain.Water(x + 1, y), y), new(x + 1, Terrain.Water(x + 1, y + 1), y + 1), new(x, Terrain.Water(x, y + 1), y + 1), w, Vector3.Up);
     }
@@ -198,7 +217,11 @@ public static class WorldMesh
     /// <summary>A tile of ground on its four corner heights, each corner with its own (shared) normal.</summary>
     static void GroundQuad(SurfaceTool st, int x, int y, Look look)
     {
-        Vector3 P((int x, int y) k) => new(k.x, Terrain.Corner(k.x, k.y), k.y);
+        // A street's asphalt lies a kerb's height under its corners (Terrain.Sunk), the kerb's face along each side
+        // that isn't asphalt too.
+        bool sunk = Terrain.Sunk(x, y);
+        Vector3 P((int x, int y) k) => new(k.x, Terrain.Corner(k.x, k.y) - (sunk ? Terrain.Kerb(k.x, k.y) : 0f), k.y);
+        if (sunk) Kerbs(st, x, y);
         // Split along the diagonal whose ends are closer in height, so a ridge or a crease runs the way the ground does.
         bool alt = Math.Abs(Terrain.Corner(x, y) - Terrain.Corner(x + 1, y + 1)) > Math.Abs(Terrain.Corner(x + 1, y) - Terrain.Corner(x, y + 1));
         var (a, b, cc, d) = alt ? ((x + 1, y), (x + 1, y + 1), (x, y + 1), (x, y)) : ((x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1));
@@ -209,6 +232,43 @@ public static class WorldMesh
         if ((P(b) - P(a)).Cross(P(cc) - P(a)).Y > 0) (b, d) = (d, b);
         V(a); V(b); V(cc);
         V(a); V(cc); V(d);
+    }
+
+    /// <summary>A tile of ground as two triangles of different looks, split on the diagonal that cuts off `corner`
+    /// (0 north-east, 1 south-east, 2 south-west, 3 north-west): that half is `cut`, the rest `own`.</summary>
+    static void GroundHalves(SurfaceTool st, int x, int y, Look own, Look cut, int corner)
+    {
+        // The tile's corners in order round it: north-west, north-east, south-east, south-west.
+        var k = new (int x, int y)[] { (x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1) };
+        Vector3 P((int x, int y) q) => new(q.x, Terrain.Corner(q.x, q.y), q.y);
+        void Tri(Look look, int a, int b, int c)
+        {
+            var (pa, pb, pc) = (k[a % 4], k[b % 4], k[c % 4]);
+            // Front faces wind clockwise seen from above (as GroundQuad turns them).
+            if ((P(pb) - P(pa)).Cross(P(pc) - P(pa)).Y > 0) (pb, pc) = (pc, pb);
+            st.SetColor(look.colour);
+            st.SetUV(look.what);
+            foreach (var q in new[] { pa, pb, pc }) { st.SetNormal(Terrain.Normal(q.x, q.y)); st.AddVertex(P(q)); }
+        }
+        // The cut corner is k[corner + 1]: the triangle of it and its two neighbours; the other half is the rest.
+        int at = corner + 1;
+        Tri(cut, at, at + 1, at + 3);
+        Tri(own, at + 1, at + 2, at + 3);
+    }
+
+    /// <summary>The kerb's faces round a sunk tile: from the asphalt up to the ground beside it, on each side whose
+    /// neighbour isn't sunk.</summary>
+    static void Kerbs(SurfaceTool st, int x, int y)
+    {
+        foreach (var (dx, dy, ax, ay, bx, by, n) in new[] {
+            (0, -1, x, y, x + 1, y, Vector3.Back), (0, 1, x, y + 1, x + 1, y + 1, Vector3.Forward),
+            (-1, 0, x, y, x, y + 1, Vector3.Right), (1, 0, x + 1, y, x + 1, y + 1, Vector3.Left) })
+        {
+            if (Terrain.Sunk(x + dx, y + dy)) continue;
+            float ha = Terrain.Corner(ax, ay), hb = Terrain.Corner(bx, by), ka = Terrain.Kerb(ax, ay), kb = Terrain.Kerb(bx, by);
+            if (ka < 0.005f && kb < 0.005f) continue;
+            Quad(st, new(ax, ha - ka, ay), new(bx, hb - kb, by), new(bx, hb, by), new(ax, ha, ay), WorldLook.Kerb, n);
+        }
     }
 
     /// <summary>An edge: a wall, door, barricade or window on the north or west side of tile (x, y). `before` is the

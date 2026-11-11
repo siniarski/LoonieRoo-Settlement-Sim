@@ -83,6 +83,15 @@ An index out of range reads as the old `Js.Get` did (null tile, 0), and a write 
 - **Strings in the tile layer**: 8 bytes a tile, and `getTile(...) == "floor"` on strings read back from JSON compares characters; codes give back the same five interned constants.
 - **Values wider than a byte for ground and edges**: GROUNDS has 10 entries and edges 6 kinds. A value outside 0..255 throws at the write (loud) rather than being stored.
 
+## Roads and streets since 2026-11-11 (world generation version 3)
+
+The road mask has three values (`Worldplan.ROAD` 1 a country road, `STREET` 2 a street's asphalt, `SIDEWALK` 3 a
+street's sidewalk); `IsRoad` is the first two, `IsSidewalk` the third, and lots keep off all three. A street is 8
+tiles of asphalt from its line (a parking strip of 2 on the low side, two lanes of 3) between sidewalks of 2; a
+country road covers the tiles within 2.9 of its line (five to six across) and takes a sidewalk where it crosses one.
+Country roads leave a main street's end on the middle of its carriageway (`streetEnds`), the cross-region links too.
+Lots along a country road start 5 from its line. Measured with the harness's `road widths` (log/2026-11-11-20).
+
 ## Built (2026-11-09; schema 74)
 
 - **Code:** `Win` (a window: tiles, which sides are the map's edge, the region's index), `WorldRegions` (the cache and the questions: `Region`, `RegionAt`, `RoadAt`/`IsRoad`, `LotAt`/`OnLot`, `Lot(id)`, `LotsInChunk`, `TownsOf`, `TownsNear`, `AllTowns`, `PlanSoon`), `Worldplan.makeRegion` (makePlan over a window, with the neighbour links), and windowed `Towns.landGrid/siteTowns`, `Roads.route/costGrid/reuse/drawLine`, `Worldplan.layRoads/cabinLots`. `Worldplan.regions(seed, size, map)` replaces the plan cache; `planWorld` is kept for one-region worlds (the tests) and refuses bigger ones; `Worldplan.prepare` plans the regions round the start (the game runs it on a worker for a new world over 512). Readers moved: Worldgen (Layout.regions), Heights (Field.regions; townness by TownsNear), Mapnotes (towns of regions with a generated chunk, names by `Town.index`), Settlements, and in the game Roofs, FarField, MapShot. `Lots.layouts` is a ConditionalWeakTable (lots of dropped regions go with them).

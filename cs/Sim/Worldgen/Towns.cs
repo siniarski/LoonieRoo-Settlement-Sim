@@ -12,14 +12,41 @@
 //   streets  each town grows from its centre: a main street one way and a cross street the
 //            other, then side streets branching off them at uneven spacing (wide enough for a
 //            lot each side and room between), each as long as the town's circle allows. Streets
-//            stop short of water and of the start clearing. All are axis-aligned and two wide.
+//            stop short of water and of the start clearing. All are axis-aligned.
+//   widths   (2026-11-11, the player's "two lanes, each fits a car") a street's asphalt is STREET tiles across from
+//            its line (x0..x1, y0..y1: its low edge): a parking strip (PARKING) along the low side, then two lanes of
+//            3 m (CARRIAGEWAY); a paved sidewalk (SIDEWALK) each side, which the lots face. Country roads leave a
+//            main street from the middle of its carriageway (laneCentre).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
 public static partial class Towns
 {
 
-    public const int STREET = 2;
+    /// <summary>A street's asphalt, across (tiles): the parking strip and the carriageway.</summary>
+    public const int STREET = PARKING + CARRIAGEWAY;
+
+    /// <summary>The strip along a street's low side (north of an east-west street, west of a north-south one) where
+    /// cars are parked at the kerb (Lots.parkCar), out of the lanes.</summary>
+    public const int PARKING = 2;
+
+    /// <summary>Two lanes of 3 m: each takes a pickup (1.9 m) with room to spare.</summary>
+    public const int CARRIAGEWAY = 6;
+
+    /// <summary>The paved sidewalk each side of a street (the plan's road mask 3; Heights sinks the asphalt a kerb's
+    /// height under it).</summary>
+    public const int SIDEWALK = 2;
+
+    /// <summary>The middle of a street's carriageway, across from its line (tiles): where a country road's centre
+    /// line meets a main street's end, so its lanes run on into the street's.</summary>
+    public const int LANE_CENTRE = PARKING + CARRIAGEWAY / 2;
+
+    /// <summary>A street shorter than this isn't laid.</summary>
+    public const int STREET_MIN = 12;
+
+    /// <summary>A street stops before it would run this close (clear tiles) beside another: room for the sidewalks and
+    /// something between.</summary>
+    public const int STREET_APART = 12;
 
     /// <summary>How much a site's score gains for settled land (x settlement - 0.5).</summary>
     public const double SETTLED_PULL = 0.6;
@@ -35,7 +62,7 @@ public static partial class Towns
     public static double reach(Nature n, Town t, double x, double y) => 0.75 + 0.55 * NatureMod.noiseD(n.seed, x, y, Math.Max(8, t.radius * 0.6), 0x7210 + t.index);
 
     /// <summary>Side streets branch this far apart, at least (a lot's depth each side and a verge).</summary>
-    public const int STREET_GAP = 26;
+    public const int STREET_GAP = 34;
 
     public static readonly JsRecord<List<double>> RADII = new() { ["village"] = [20, 28], ["town"] = [34, 46], ["city"] = [52, 66] };
 
@@ -242,35 +269,107 @@ public static partial class Towns
         return s;
     }
 
-    /// <summary>Streets for a town: main and cross streets through the centre, then side streets off them.</summary>
+    /// <summary>Where a town's streets cross: the corner of its centre square (STREET by STREET: the main street's and
+    /// the cross street's shared asphalt). The town's own point if the square and its sidewalks are clear there (dry,
+    /// on the map, off the start's clearing), else the nearest clear spot, a few tiles at a time out to ANCHOR_REACH
+    /// (a pond at the very centre no longer leaves a town in pieces: streets are twelve tiles across with their
+    /// sidewalks, where they were two). Null if there is none: a town without streets.</summary>
+    public static Point? anchor(Nature n, Town t)
+    {
+        bool clear(double x, double y)
+        {
+            for (var o = 0; o < STREET; o++)
+            {
+                if (blocked(n, x + o, y, 0, 1) || blocked(n, x, y + o, 1, 0))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        for (var ring = 0; ring <= ANCHOR_REACH; ring += 3)
+        {
+            for (var dy = -ring; dy <= ring; dy += 3)
+            {
+                for (var dx = -ring; dx <= ring; dx += 3)
+                {
+                    if ((JsMath.max(JsMath.abs(dx), JsMath.abs(dy)) == ring) && clear(t.x + dx, t.y + dy))
+                    {
+                        return new Point { x = Js.I(t.x + dx), y = Js.I(t.y + dy) };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>How far from a town's point its streets' crossing may be moved (tiles).</summary>
+    public const int ANCHOR_REACH = 15;
+
+    // Whether a street's cross-section at (x, y) (its line; the asphalt and sidewalks lie across, along (px, py))
+    // is off the map, in water or in the start's clearing: every second tile across, and both outer edges.
+    static bool blocked(Nature n, double x, double y, double px, double py)
+    {
+        int lo = 3 + SIDEWALK, hi = (int)n.size - 4 - STREET - SIDEWALK;
+        if ((((x < lo) || (y < lo)) || (x >= hi)) || (y >= hi))
+        {
+            return true;
+        }
+        for (var o = -SIDEWALK; o < STREET + SIDEWALK; o += (o + 2 < STREET + SIDEWALK) ? 2 : 1)
+        {
+            var ox = x + ((double)(px) * (o));
+            var oy = y + ((double)(py) * (o));
+            if (NatureMod.isWater(n, ox, oy) || NatureMod.nearStart(n, ox, oy, NatureMod.START_CLEAR_RADIUS + 3))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Streets for a town: main and cross streets through its centre square (anchor), then side streets off them.</summary>
     public static List<Street> growStreets(Nature n, Town t, double ti)
     {
         List<Street> streets = [];
+        var c = anchor(n, t);
+        if (c == null)
+        {
+            return streets;
+        }
         double r(double k)
         {
             return NatureMod.roll(n.seed, t.x, t.y, 0x7200 + k);
         }
-        bool blocked(double x, double y)
-        {
-            return ((((((x < 3) || (y < 3)) || (x >= (n.size - 4))) || (y >= (n.size - 4))) || NatureMod.isWater(n, x, y)) || NatureMod.isWater(n, x + 1, y + 1)) || NatureMod.nearStart(n, x, y, NatureMod.START_CLEAR_RADIUS + 3);
-        }
+        bool blocked(double x, double y, double px, double py) => Towns.blocked(n, x, y, px, py);
         var laid = new JsSet<double>();
         bool isStreet(double x, double y)
         {
             return laid.has(((double)(y) * (n.size)) + x);
         }
-        double run(double x, double y, double dx, double dy, double len, bool main)
+        double run(double x, double y, double dx, double dy, double len, bool main, double least = STREET_MIN)
         {
-            if (blocked(x, y) || isStreet(x, y))
+            var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
+            // A street's leading edge at (sx, sy): any of its tiles across already a street.
+            bool meets(double sx, double sy)
+            {
+                for (var o = 0; o < STREET; o++)
+                {
+                    if (isStreet(sx + ((double)(px) * (o)), sy + ((double)(py) * (o))))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (blocked(x, y, px, py) || meets(x, y))
             {
                 return 0;
             }
-            var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
             bool crowded(double sx, double sy)
             {
-                for (var o = 2; o <= 9; o++)
+                for (var o = 1; o <= STREET_APART; o++)
                 {
-                    if (isStreet(sx + ((double)(px) * (o)), sy + ((double)(py) * (o))) || isStreet(sx - ((double)(px) * ((o - 1))), sy - ((double)(py) * ((o - 1)))))
+                    if (isStreet(sx + ((double)(px) * ((STREET - 1) + o)), sy + ((double)(py) * ((STREET - 1) + o))) || isStreet(sx - ((double)(px) * (o)), sy - ((double)(py) * (o))))
                     {
                         return true;
                     }
@@ -282,11 +381,11 @@ public static partial class Towns
             {
                 var nx = x + ((double)(dx) * ((steps + 1)));
                 var ny = y + ((double)(dy) * ((steps + 1)));
-                if (blocked(nx, ny) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > ((double)(t.radius) * reach(n, t, nx, ny))))
+                if (blocked(nx, ny, px, py) || (JsMath.sqrt((JsMath.pow((nx - t.x), 2)) + (JsMath.pow((ny - t.y), 2))) > ((double)(t.radius) * reach(n, t, nx, ny))))
                 {
                     break;
                 }
-                if (isStreet(nx, ny) || isStreet(nx + px, ny + py))
+                if (meets(nx, ny))
                 {
                     steps++;
                     break;
@@ -297,7 +396,7 @@ public static partial class Towns
                 }
                 steps++;
             }
-            if (steps < 8)
+            if (steps < least)
             {
                 return 0;
             }
@@ -305,9 +404,9 @@ public static partial class Towns
             var y1 = y + ((double)(dy) * (steps));
             Street s = new Street { x0 = Js.I(JsMath.min(x, x1)), y0 = Js.I(JsMath.min(y, y1)), x1 = Js.I(JsMath.max(x, x1)), y1 = Js.I(JsMath.max(y, y1)), eastWest = dy == 0, main = main, town = ti };
             streets.push(s);
-            for (var yy = s.y0; yy <= (s.y1 + (s.eastWest ? 1 : 0)); yy++)
+            for (var yy = s.y0; yy <= (s.y1 + (s.eastWest ? (STREET - 1) : 0)); yy++)
             {
-                for (var xx = s.x0; xx <= (s.x1 + (s.eastWest ? 0 : 1)); xx++)
+                for (var xx = s.x0; xx <= (s.x1 + (s.eastWest ? 0 : (STREET - 1))); xx++)
                 {
                     laid.add(((double)(yy) * (n.size)) + xx);
                 }
@@ -317,16 +416,16 @@ public static partial class Towns
         var levels = (t.kind == "village") ? 1 : 2;
         var odds = (t.kind == "village") ? 0.55 : 0.75;
         var k = 10;
-        void grow(double x, double y, double dx, double dy, double len, double level)
+        void grow(double x, double y, double dx, double dy, double len, double level, double least = STREET_MIN)
         {
-            var steps = run(x, y, dx, dy, len, level == 0);
+            var steps = run(x, y, dx, dy, len, level == 0, least);
             if ((steps == 0) || (level >= levels))
             {
                 return;
             }
             var (px, py) = (JsMath.abs(dy), JsMath.abs(dx));
             double off = (STREET_GAP - 8) + JsMath.floor(((double)(r(k++)) * (7)));
-            while (off < (steps - 4))
+            while (off <= (steps - STREET))
             {
                 var bx = x + ((double)(dx) * (off));
                 var by = y + ((double)(dy) * (off));
@@ -336,7 +435,7 @@ public static partial class Towns
                     {
                         continue;
                     }
-                    var gap = (side == 1) ? 2 : -1;
+                    var gap = (side == 1) ? STREET : -1;
                     grow(bx + ((double)(px) * (gap)), by + ((double)(py) * (gap)), ((double)(px) * (side)), ((double)(py) * (side)), JsMath.floor(((double)(t.radius) * ((0.5 + ((double)(r(k++)) * (0.6)))))), level + 1);
                 }
                 off += STREET_GAP + JsMath.floor(((double)(r(k++)) * (6)));
@@ -344,10 +443,13 @@ public static partial class Towns
         }
         var __c0 = t.eastWest; var ax = __c0 ? 1 : 0; var ay = __c0 ? 0 : 1;
         var __c1 = t.eastWest; var cx = __c1 ? 0 : 1; var cy = __c1 ? 1 : 0;
-        grow(t.x, t.y, ax, ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(1)) * (0.2)))))), 0);
-        grow(t.x - ax, t.y - ay, -ax, -ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(2)) * (0.2)))))), 0);
-        grow(t.x + ((double)(cx) * (2)), t.y + ((double)(cy) * (2)), cx, cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(3)) * (0.4)))))), 0);
-        grow(t.x - cx, t.y - cy, -cx, -cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(4)) * (0.4)))))), 0);
+        // The main street's two halves: one on from the centre square, the other back from the square's far edge and
+        // through it, laid if it gets no further than the square itself (the anchor says the square is clear): so the
+        // square is always there for the other three arms to meet.
+        grow(c.x + ((double)(ax) * (STREET)), c.y + ((double)(ay) * (STREET)), ax, ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(1)) * (0.2)))))), 0);
+        grow(c.x + ((double)(ax) * ((STREET - 1))), c.y + ((double)(ay) * ((STREET - 1))), -ax, -ay, JsMath.floor(((double)(t.radius) * ((0.9 + ((double)(r(2)) * (0.2)))))) + (STREET - 1), 0, STREET - 1);
+        grow(c.x + ((double)(cx) * (STREET)), c.y + ((double)(cy) * (STREET)), cx, cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(3)) * (0.4)))))), 0);
+        grow(c.x - cx, c.y - cy, -cx, -cy, JsMath.floor(((double)(t.radius) * ((0.6 + ((double)(r(4)) * (0.4)))))), 0);
         return streets;
     }
 }

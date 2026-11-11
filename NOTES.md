@@ -5,7 +5,7 @@ Non-trivial work gets a session-log entry (`log/`), not an edit here; "Session l
 
 ## Start here (state as of 2026-11-11)
 
-**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~940 xUnit tests, schema 78, world generation version 2), the game in
+**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~940 xUnit tests, schema 78, world generation version 3), the game in
 Godot 4.6 .NET (`godot/`). It began as a RimWorld-style colony sim and is now **Project Zomboid-style survival in
 first person** (3D, `godot/World3D`), with an optional colony sim run from the map screen's Colony tab (M; 2D
 top-down, `godot/Render`), neighbouring settlements living their own lives, and survivors with stories and requests.

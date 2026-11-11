@@ -311,7 +311,8 @@ public static partial class Lights
                 int x = st.eastWest ? st.x0 + (int)k : (far ? st.x0 + Towns.STREET : st.x0 - 1);
                 int y = st.eastWest ? (far ? st.y0 + Towns.STREET : st.y0 - 1) : st.y0 + (int)k;
                 if (x < w.x0 || y < w.y0 || x >= w.x1 || y >= w.y1) continue;
-                if (plan.roadMask.a[(y - w.y0) * w.W + (x - w.x0)] != 0) continue;
+                // On the sidewalk at the kerb (or whatever is beside the street there), never on asphalt.
+                if (plan.roadMask.a[(y - w.y0) * w.W + (x - w.x0)] is Worldplan.ROAD or Worldplan.STREET) continue;
                 long c = Key(x / Worldplan.PLAN_CHUNK, y / Worldplan.PLAN_CHUNK);
                 if (!made.byChunk.TryGetValue(c, out var list)) made.byChunk[c] = list = new();
                 list.Add((x, y, works, st.eastWest ? (far ? 2 : 0) : (far ? 1 : 3)));

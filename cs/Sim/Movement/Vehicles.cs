@@ -91,7 +91,10 @@ public static partial class Vehicles
     public const int TRUCK_BOOT_MAX = 1200;
 
     /// <summary>Ground a car goes at full speed on.</summary>
-    public static readonly List<string> PAVED = ["road", "bridge", "paving", "concrete", "tiles", "boards"];
+    public static readonly List<string> PAVED = ["road", "bridge", "concrete", "tiles", "boards"];
+
+    /// <summary>Top speed on paving (a sidewalk, a path, a square: over the kerb, where people walk): a crawl.</summary>
+    public const int KERB_CRAWL = 24;
 
     /// <summary>The cars on the map (older saves have none).</summary>
     public static List<Vehicle> vehiclesOf(SimState state)
@@ -311,11 +314,15 @@ public static partial class Vehicles
         }
     }
 
-    /// <summary>Top speed here: the truck is slower; off the road, slower still.</summary>
+    /// <summary>Top speed here: the truck is slower; off the road, slower still; on a sidewalk (over the kerb), a crawl.</summary>
     public static double topSpeed(SimState state, Vehicle v)
     {
         var ground = Js.At(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(v.pos.y) * (state.grid.width)) + v.pos.x)), "grass");
         var @base = (v.kind == "truck") ? TRUCK_MAX : MAX_SPEED;
+        if (ground == "paving")
+        {
+            return KERB_CRAWL;
+        }
         return PAVED.includes(ground) ? @base : JsMath.min(@base, OFFROAD_MAX);
     }
 

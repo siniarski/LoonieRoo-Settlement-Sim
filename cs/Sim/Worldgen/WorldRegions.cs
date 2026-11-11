@@ -222,7 +222,8 @@ public sealed class WorldRegions
         return Region(rx, ry);
     }
 
-    /// <summary>The road mask at a tile (0 none, 1 a country road, 2 a street); 0 off the map.</summary>
+    /// <summary>The road mask at a tile (0 none, 1 a country road, 2 a street's asphalt, 3 a street's sidewalk:
+    /// Worldplan.ROAD, STREET, SIDEWALK); 0 off the map.</summary>
     public int RoadAt(int x, int y)
     {
         if (x < 0 || y < 0 || x >= size || y >= size) return 0;
@@ -231,7 +232,11 @@ public sealed class WorldRegions
         return p.roadMask.a[(y - w.y0) * w.W + (x - w.x0)];
     }
 
-    public bool IsRoad(int x, int y) => RoadAt(x, y) != 0;
+    /// <summary>A country road or a street's asphalt (not its sidewalk).</summary>
+    public bool IsRoad(int x, int y) => RoadAt(x, y) is Worldplan.ROAD or Worldplan.STREET;
+
+    /// <summary>A street's sidewalk.</summary>
+    public bool IsSidewalk(int x, int y) => RoadAt(x, y) == Worldplan.SIDEWALK;
 
     /// <summary>The lot covering a tile, or null.</summary>
     public Lot LotAt(int x, int y)

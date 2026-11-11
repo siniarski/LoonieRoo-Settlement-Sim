@@ -307,21 +307,81 @@ public partial class TownsTest
             return seen;
         }
 
+        [Fact(DisplayName = "towns > a street is a parking strip and two lanes of asphalt between sidewalks; a country road is two lanes")]
+        public void T012b_streets_and_roads_carry_two_lanes()
+        {
+            expect(Towns.CARRIAGEWAY).toBeGreaterThanOrEqual(6); // two lanes of 3 m: a pickup is 1.9 m across
+            expect(Towns.STREET).toBe(Towns.PARKING + Towns.CARRIAGEWAY);
+            foreach (var (name, p) in Js.Iter(plans))
+            {
+                var size = p.nature.size;
+                double at(double x, double y) => ((((x < 0) || (y < 0)) || (x >= size)) || (y >= size)) ? 0 : Js.Get(p.roadMask, ((double)(y) * (size)) + x);
+                double walks = 0, walked = 0;
+                foreach (var s in Js.Iter(p.streets))
+                {
+                    // Across the street, at every tile along it.
+                    for (var k = 0; k <= (s.eastWest ? (s.x1 - s.x0) : (s.y1 - s.y0)); k++)
+                    {
+                        double cell(double o) => s.eastWest ? at(s.x0 + k, s.y0 + o) : at(s.x0 + o, s.y0 + k);
+                        for (var o = 0; o < Towns.STREET; o++)
+                        {
+                            expect(cell(o), $"{Js.Str(name)}: street {Js.Str(Js.Json_stringify(s))} at {k}, {o} across").toBe(Worldplan.STREET);
+                        }
+                        // Beside it: sidewalk (or the asphalt of a street or road joining it; water at a bank).
+                        foreach (var o in new[] { -Towns.SIDEWALK, -1, Towns.STREET, (Towns.STREET + Towns.SIDEWALK) - 1 })
+                        {
+                            walks++;
+                            if (cell(o) != 0) walked++;
+                        }
+                    }
+                }
+                if (walks > 0) expect(walked / walks, $"{Js.Str(name)}: sidewalks").toBeGreaterThan(0.97);
+                // Country roads: the tiles of road across the line at each point outside the streets (a quarter tile a step).
+                double narrow = 0, points = 0;
+                foreach (var line in Js.Iter(p.roads))
+                {
+                    for (var i = 2; (i + 3) < line.length; i++)
+                    {
+                        var a = Js.NN(Js.Get(line, i));
+                        var b = Js.NN(Js.Get(line, i + 1));
+                        double dx = b.x - a.x, dy = b.y - a.y, len = JsMath.sqrt((dx * dx) + (dy * dy));
+                        if ((len < 0.000001) || (at(JsMath.floor(a.x), JsMath.floor(a.y)) != Worldplan.ROAD)) continue;
+                        double w = 0;
+                        foreach (var sign in new[] { -1, 1 })
+                        {
+                            for (var d = (sign > 0) ? 0 : 0.25; d < 12; d += 0.25)
+                            {
+                                if (at(JsMath.floor(a.x - (((dy / len) * d) * sign)), JsMath.floor(a.y + (((dx / len) * d) * sign))) == 0) break;
+                                w += 0.25;
+                            }
+                        }
+                        points++;
+                        if (w < 4.5) narrow++;
+                        expect(w, $"{Js.Str(name)}: road at {a.x},{a.y}").toBeGreaterThanOrEqual(4);
+                    }
+                }
+                expect(points, name).toBeGreaterThan(20);
+                expect(narrow / points, $"{Js.Str(name)}: road points under 4.5 tiles across").toBeLessThan(0.05);
+            }
+        }
+
         [Fact(DisplayName = "towns > a town's streets all join up, and country roads link every town")]
         public void T013_a_town_s_streets_all_join_up_and_country_roads_link_every_to()
         {
             foreach (var (name, p) in Js.Iter(plans))
             {
                 var size = p.nature.size;
-                var t0 = Js.NN(Js.Get(p.towns, 0));
-                var seen = alongRoads(p, t0);
+                // From the first town's centre square (Towns.anchor: its own point unless that is in a pond).
+                var seen = alongRoads(p, Towns.anchor(p.nature, Js.NN(Js.Get(p.towns, 0))));
                 foreach (var s in Js.Iter(p.streets))
                 {
                     expect(Js.Missing(seen, ((double)(s.y0) * (size)) + s.x0) ? null : (object?)(Js.Get(seen, ((double)(s.y0) * (size)) + s.x0)), $"{Js.Str(name)}: street {Js.Str(Js.Json_stringify(s))}").toBe(1);
                 }
                 foreach (var t in Js.Iter(p.towns))
                 {
-                    expect(Js.Missing(seen, ((double)(t.y) * (size)) + t.x) ? null : (object?)(Js.Get(seen, ((double)(t.y) * (size)) + t.x)), $"{Js.Str(name)}: town at {Js.Str(t.x)},{Js.Str(t.y)}").toBe(1);
+                    var c = Towns.anchor(p.nature, t);
+                    expect(c != null, $"{Js.Str(name)}: town at {Js.Str(t.x)},{Js.Str(t.y)} has a centre square").toBe(true);
+                    expect(Js.Missing(seen, ((double)(c.y) * (size)) + c.x) ? null : (object?)(Js.Get(seen, ((double)(c.y) * (size)) + c.x)), $"{Js.Str(name)}: town at {Js.Str(t.x)},{Js.Str(t.y)}").toBe(1);
                 }
             }
         }
@@ -333,7 +393,9 @@ public partial class TownsTest
             {
                 var size = p.nature.size;
                 var zones = Js.Set(p.lots.map((l) => l.zone));
-                foreach (var z in Js.Iter((List<string>)["residential", "commercial", "field", "cabin"]))
+                // (A 128 map's one town, between the water and the map's edge, has room for a few houses and no more now
+                // that a street with its sidewalks is twelve tiles across.)
+                foreach (var z in Js.Iter(size <= 128 ? (List<string>)["residential"] : (List<string>)["residential", "commercial", "field", "cabin"]))
                 {
                     expect(zones.has(z), $"{Js.Str(name)}: {Js.Str(z)}").toBe(true);
                 }

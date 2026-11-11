@@ -106,6 +106,44 @@ public partial class WorldgenTest
             expect(Js.Missing(Grids.allExplored(world.grid), 0) ? null : (object?)(Grids.exploredAt(world.grid, 0))).toBe(0);
         }
 
+        [Fact(DisplayName = "world generation > the start shelter is walled on its edges like any building: a door, windows, no wall tiles")]
+        public void T008b_the_start_shelter_is_walled_on_its_edges()
+        {
+            foreach (var start in new[] { "group", "solo" })
+            {
+                var settings = Js.CopyAs<Settings>(Difficulty.NORMAL);
+                settings.start = start;
+                var w = Worldgen.createWorld(7, SIZE, settings);
+                var s = Worldgen.layout(7, SIZE).start;
+                int x0 = s.x - 4, y0 = s.y - 7, doors = 0, windows = 0, walls = 0;
+                for (var y = y0 - 1; y <= y0 + 6; y++)
+                {
+                    for (var x = x0 - 1; x <= x0 + 8; x++)
+                    {
+                        expect(Grids.getTile(w.grid, x, y), $"{start} {x},{y}").toBe("floor");
+                        foreach (var side in new[] { "n", "w" })
+                        {
+                            var kind = Grids.edgeKind(w.grid, Grids.edgeIndex(w.grid, x, y, side));
+                            if (kind == Grids.EDGE_DOOR) doors++;
+                            else if (kind == Grids.EDGE_WINDOW) windows++;
+                            else if (kind == Grids.EDGE_WALL) walls++;
+                        }
+                    }
+                }
+                expect(doors, start).toBe(1);
+                expect(windows, start).toBeGreaterThan(3);
+                expect(doors + windows + walls, start).toBe(28); // the whole outline of an 8 x 6 room
+                expect(Grids.edgeKind(w.grid, Grids.edgeIndex(w.grid, x0 + 3, y0 + 6, "n")), start).toBe(Grids.EDGE_DOOR);
+                var beds = w.furniture.filter((f) => f.kind == "bed");
+                expect(beds, start).toHaveLength(start == "solo" ? 1 : 3);
+                // One enclosed room holding every bed, reached from the survivors outside.
+                foreach (var b in beds)
+                {
+                    expect(Js.T(Pathfinding.findPath(w.grid, w.survivors[0].pos, new Point(b.x, b.y + 1))), start).toBe(true);
+                }
+            }
+        }
+
         [Fact(DisplayName = "world generation > crates further out hold more")]
         public void T009_crates_further_out_hold_more()
         {

@@ -27,8 +27,15 @@ public static class Terrain
     /// <summary>No heights: a hand-made map, flat at 0 (water drawn as it always was).</summary>
     public static bool Flat => field == null;
 
-    /// <summary>The ground's height (m) at world x, z (tiles: x is grid x, z is grid y).</summary>
-    public static float Height(float x, float z) => field == null ? 0f : (float)field.at(x, z);
+    /// <summary>The height (m) of what stands at world x, z (tiles: x is grid x, z is grid y): the ground, and on a
+    /// street's asphalt a kerb's height under it (Heights.Field.surface).</summary>
+    public static float Height(float x, float z) => field == null ? 0f : (float)field.surface(x, z);
+
+    /// <summary>Whether a tile is a street's asphalt, drawn a kerb's height under its corners (Heights step 6).</summary>
+    public static bool Sunk(int x, int y) => field != null && field.sunk(x, y);
+
+    /// <summary>How far (m) street asphalt is sunk at tile corner (x, y).</summary>
+    public static float Kerb(int x, int y) => field == null ? 0f : (float)field.kerb(x, y);
 
     /// <summary>A cheap approximate corner height for far away (Heights.Field.coarse): the far field's ground.</summary>
     public static float Coarse(int x, int y, bool water) => field == null ? (water ? -0.25f : 0f) : (float)field.coarse(x, y, water);

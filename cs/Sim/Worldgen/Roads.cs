@@ -6,7 +6,8 @@
 //   routing  A* over a coarse grid (ROAD_CELL tiles a cell, eight ways): open land is cheap, woods
 //            dearer, water dear (a bridge: only where it must), the sea impassable, other towns
 //            avoided, and roads already laid cheap, so later roads join earlier ones.
-//   drawing  the cell path is smoothed (corner cutting) into a curve, drawn two to three tiles wide.
+//   drawing  the cell path is smoothed (corner cutting) into a curve, drawn five to six tiles wide (2026-11-11: two
+//            lanes, so two cars pass; it was two to three).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -284,7 +285,14 @@ public static partial class Roads
         }
     }
 
-    /// <summary>Draws a road's centre line into the mask, about two and a half tiles wide.</summary>
+    /// <summary>A country road covers the tiles whose centres are within this of its centre line (tiles): five tiles
+    /// across where the line runs through tile centres, six where it runs between them (the routes' cells are four
+    /// wide, so their centres are between tiles: six, a street's carriageway), and on the slant about five clear
+    /// between the steps of its edges (2.6 left 4.3 there: tight for two pickups).</summary>
+    public const double ROAD_REACH = 2.9;
+
+    /// <summary>Draws a road's centre line into the mask, five to six tiles wide (ROAD_REACH). It never overwrites a
+    /// street's asphalt, and takes a street's sidewalk where it crosses one (a junction is open).</summary>
     public static void drawLine(Uint8Array mask, double size, List<PointD> line, double value) => drawLine(mask, Win.Whole(size), line, value);
 
     /// <summary>The same into a window's mask (row by row from its corner), the parts of the line outside it left out.</summary>
@@ -294,20 +302,25 @@ public static partial class Roads
         {
             var a = Js.NN(Js.Get(line, i));
             var b = Js.NN(Js.Get(line, i + 1));
-            var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.sqrt((JsMath.pow((b.x - a.x), 2)) + (JsMath.pow((b.y - a.y), 2)))) / (0.4))));
+            var steps = JsMath.max(1, JsMath.ceil(((double)(JsMath.sqrt((JsMath.pow((b.x - a.x), 2)) + (JsMath.pow((b.y - a.y), 2)))) / (0.5))));
             for (var s = 0; s <= steps; s++)
             {
                 var px = a.x + ((double)(((double)((b.x - a.x)) * (s))) / (steps));
                 var py = a.y + ((double)(((double)((b.y - a.y)) * (s))) / (steps));
-                for (var y = JsMath.floor(py - 1); y <= JsMath.ceil(py + 1); y++)
+                for (var y = JsMath.floor(py - ROAD_REACH); y <= JsMath.ceil(py + ROAD_REACH); y++)
                 {
-                    for (var x = JsMath.floor(px - 1); x <= JsMath.ceil(px + 1); x++)
+                    for (var x = JsMath.floor(px - ROAD_REACH); x <= JsMath.ceil(px + ROAD_REACH); x++)
                     {
                         if ((((x < w.x0) || (y < w.y0)) || (x >= w.x1)) || (y >= w.y1))
                         {
                             continue;
                         }
-                        if ((((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) <= 1.1) && (Js.Get(mask, ((double)(y - w.y0) * (w.W)) + (x - w.x0)) == 0))
+                        if (((JsMath.pow(((x + 0.5) - px), 2)) + (JsMath.pow(((y + 0.5) - py), 2))) > (ROAD_REACH * ROAD_REACH))
+                        {
+                            continue;
+                        }
+                        var at = Js.Get(mask, ((double)(y - w.y0) * (w.W)) + (x - w.x0));
+                        if ((at == 0) || (at == Worldplan.SIDEWALK))
                         {
                             mask[Js.Idx(((double)(y - w.y0) * (w.W)) + (x - w.x0))] = value;
                         }

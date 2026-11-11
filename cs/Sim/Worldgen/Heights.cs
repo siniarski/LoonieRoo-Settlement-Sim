@@ -30,6 +30,14 @@
 //      every footprint); the ground one tile round a building (APRON) is exactly its level: no step at a door.
 //      Streets are not levelled on their own: they follow the relief (~1% in the middle, 7% at most) and the
 //      buildings' levels beside them (steps between neighbouring lots ease over a few tiles).
+//   6. kerbs (2026-11-11): a street's asphalt (the plan's road mask 2: Towns.cs) lies a kerb's height (KERB) under
+//      the corners above, which are the level of its sidewalks, the lots and their doors: `sunk(x, y)` says a tile is
+//      street asphalt, `kerb(cx, cy)` how far it is sunk at a corner, and `surface(x, y)` is what stands there stands
+//      on (at(x, y), less the kerb on a sunk tile). So the step is at the asphalt's edge, where a kerb is, and
+//      nothing else moves: a path, a porch and a shop's front meet the sidewalk level. The drop eases to nothing
+//      over KERB_RAMP tiles toward a country road (mask 1, never sunk), so a street runs out of town with no step
+//      across it. The corners themselves are untouched (a mesh draws a sunk tile at corner - kerb, and the kerb's
+//      face along its unsunk neighbours).
 // Bounded (rule 14): corners are computed a plan chunk (32 x 32 tiles) at a time, once, and cached
 // (at most MAX_CHUNKS a world, oldest dropped). Water and road distances are a chamfer transform over
 // the chunk and a margin (MARGIN), capped below the margin, so neighbouring chunks agree on shared corners.
@@ -72,6 +80,13 @@ public static class Heights
     /// <summary>Tiles round a chunk read for the distance transforms: more than CONE + 3, so chunks agree.</summary>
     const int MARGIN = 18;
     public const int MAX_CHUNKS = 1024;
+    /// <summary>A street's asphalt is this far (m) under its sidewalks: a kerb. You step up it without noticing; a car
+    /// crawls over it (Vehicles.topSpeed: paving).</summary>
+    public const double KERB = 0.14;
+    /// <summary>The kerb eases away over this many tiles toward a country road (tiles), and the window round a chunk
+    /// read for it.</summary>
+    public const double KERB_RAMP = 6;
+    const int KERB_MARGIN = 8;
 
     /// <summary>A world's height field: its corners by plan chunk, filled in when first asked for.</summary>
     public sealed class Field
@@ -85,6 +100,9 @@ public static class Heights
         /// <summary>Steps 1-4 (no buildings), and the final corners, per chunk: (CHUNK + 1)^2, row by row.</summary>
         internal readonly Dictionary<int, double[]> bare = new(), done = new();
         internal readonly List<int> bareOrder = new(), doneOrder = new();
+        /// <summary>The kerbs per chunk (kerbChunk).</summary>
+        internal readonly Dictionary<int, double[]> kerbs = new();
+        internal readonly List<int> kerbOrder = new();
         /// <summary>Each lot's buildings: footprint rectangle (x, y, w, h) and level.</summary>
         internal readonly Dictionary<int, List<double[]>> lotLevels = new();
         /// <summary>The plan's towns by cell, and the reach townness asks within (TownIndex).</summary>
@@ -141,6 +159,49 @@ public static class Heights
             return h;
         }
 
+        /// <summary>Whether a tile is a street's asphalt, sunk a kerb's height under the corners (step 6).</summary>
+        public bool sunk(int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= size || y >= size) return false;
+            int kx = x / CHUNK, ky = y / CHUNK;
+            return kerbChunk(kx, ky)[(CHUNK + 1) * (CHUNK + 1) + (y - ky * CHUNK) * CHUNK + (x - kx * CHUNK)] != 0;
+        }
+
+        /// <summary>How far (m) street asphalt is sunk at tile corner (cx, cy): KERB, easing to 0 toward a country road.
+        /// (The same for every sunk tile that shares the corner, so the asphalt has no steps of its own.)</summary>
+        public double kerb(int cx, int cy)
+        {
+            cx = cx < 0 ? 0 : cx > size ? size : cx;
+            cy = cy < 0 ? 0 : cy > size ? size : cy;
+            int kx = cx / CHUNK, ky = cy / CHUNK;
+            if (kx * CHUNK == cx && kx > 0 && kx * CHUNK >= size) kx--;
+            if (ky * CHUNK == cy && ky > 0 && ky * CHUNK >= size) ky--;
+            return kerbChunk(kx, ky)[(cy - ky * CHUNK) * (CHUNK + 1) + (cx - kx * CHUNK)];
+        }
+
+        /// <summary>The height (m) of what stands at a point: the ground (at), less the kerb on a street's asphalt.</summary>
+        public double surface(double x, double y)
+        {
+            double h = at(x, y);
+            double fx0 = JsMath.floor(x), fy0 = JsMath.floor(y);
+            int x0 = (int)fx0, y0 = (int)fy0;
+            if (!sunk(x0, y0)) return h;
+            double fx = x - fx0, fy = y - fy0;
+            double a = kerb(x0, y0), b = kerb(x0 + 1, y0), c = kerb(x0, y0 + 1), d = kerb(x0 + 1, y0 + 1);
+            double top = a + (b - a) * fx, bottom = c + (d - c) * fx;
+            return h - (top + (bottom - top) * fy);
+        }
+
+        /// <summary>A chunk's kerbs: each corner's drop ((CHUNK + 1)^2, row by row), then each tile's sunk flag (CHUNK^2).</summary>
+        internal double[] kerbChunk(int kx, int ky)
+        {
+            int key = ky * 65536 + kx;
+            if (kerbs.TryGetValue(key, out var hit)) return hit;
+            var made = kerbsOf(this, kx, ky);
+            remember(kerbs, kerbOrder, key, made);
+            return made;
+        }
+
         /// <summary>A tile's floor: the highest of its corners (one level under a building).</summary>
         public double floor(int x, int y) => JsMath.max(JsMath.max(corner(x, y), corner(x + 1, y)), JsMath.max(corner(x, y + 1), corner(x + 1, y + 1)));
 
@@ -173,7 +234,7 @@ public static class Heights
             return bareChunk(kx, ky)[(cy - ky * CHUNK) * (CHUNK + 1) + (cx - kx * CHUNK)];
         }
 
-        static void remember(Dictionary<int, double[]> cache, List<int> order, int key, double[] value)
+        internal static void remember(Dictionary<int, double[]> cache, List<int> order, int key, double[] value)
         {
             // Oldest out first (a list, so the order is the order asked: rule 9).
             if (order.Count >= MAX_CHUNKS)
@@ -208,6 +269,9 @@ public static class Heights
 
     /// <summary>The ground's height (m) at a point (tiles) in this state's world: 0 on hand-made maps.</summary>
     public static double height(SimState state, double x, double y) => of(state)?.at(x, y) ?? 0;
+
+    /// <summary>The height (m) of what stands at a point in this state's world (Field.surface): 0 on hand-made maps.</summary>
+    public static double surface(SimState state, double x, double y) => of(state)?.surface(x, y) ?? 0;
 
     // --- steps 1-3: the rolling ground, as damped by towns, roads and the start ---
 
@@ -363,6 +427,36 @@ public static class Heights
                     }
                 }
                 out_[cy * (CHUNK + 1) + cx] = h;
+            }
+        return out_;
+    }
+
+    // --- step 6: kerbs, by chunk ---
+
+    static double[] kerbsOf(Field f, int kx, int ky)
+    {
+        int x0 = kx * CHUNK - KERB_MARGIN, y0 = ky * CHUNK - KERB_MARGIN;
+        int n = CHUNK + 2 * KERB_MARGIN;
+        var out_ = new double[(CHUNK + 1) * (CHUNK + 1) + CHUNK * CHUNK];
+        var toRoad = new double[n * n];
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int x = x0 + i, y = y0 + j;
+                int mask = f.regions.RoadAt(x, y);
+                toRoad[j * n + i] = mask == Worldplan.ROAD ? 0 : 1e9;
+                if (mask != Worldplan.STREET || i < KERB_MARGIN || j < KERB_MARGIN || i >= KERB_MARGIN + CHUNK || j >= KERB_MARGIN + CHUNK) continue;
+                out_[(CHUNK + 1) * (CHUNK + 1) + (j - KERB_MARGIN) * CHUNK + (i - KERB_MARGIN)] = 1;
+            }
+        chamfer(toRoad, n);
+        for (int cy = 0; cy <= CHUNK; cy++)
+            for (int cx = 0; cx <= CHUNK; cx++)
+            {
+                int i = cx + KERB_MARGIN, j = cy + KERB_MARGIN;
+                double d = 1e9;
+                for (int dj = -1; dj <= 0; dj++)
+                    for (int di = -1; di <= 0; di++) d = JsMath.min(d, toRoad[(j + dj) * n + (i + di)]);
+                out_[cy * (CHUNK + 1) + cx] = KERB * smoothstep(d / KERB_RAMP);
             }
         return out_;
     }

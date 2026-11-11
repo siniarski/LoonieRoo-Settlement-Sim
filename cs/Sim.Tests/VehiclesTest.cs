@@ -188,8 +188,25 @@ public partial class VehiclesTest
             }
             var cars = state.vehicles ?? [];
             expect(cars.length).toBeGreaterThan(4);
-            var onRoad = cars.filter((c) => Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(c.pos.y) * (256)) + c.pos.x))) == "road").length;
-            expect(onRoad).toBeGreaterThan(((double)(cars.length) / (2)));
+            bool road(double x, double y) => Grids.inBounds(state.grid, x, y) && (Js.Get(Grids.GROUNDS, Js.NN(Grids.groundAt(state.grid, ((double)(y) * (256)) + x))) == "road");
+            var onRoad = cars.filter((c) => road(c.pos.x, c.pos.y));
+            expect(onRoad.length).toBeGreaterThan(1);
+            // Parked at the kerb, out of the lanes: the kerb within two tiles on one side of the car, and the whole
+            // carriageway (two lanes, less the half tile its body overhangs) clear on the other.
+            foreach (var c in Js.Iter(onRoad))
+            {
+                var alongX = (c.heading % 16) == 0;
+                int px = alongX ? 0 : 1, py = alongX ? 1 : 0;
+                int run(int sign)
+                {
+                    var k = 0;
+                    while ((k < 12) && road(c.pos.x + (px * sign * (k + 1)), c.pos.y + (py * sign * (k + 1)))) k++;
+                    return k;
+                }
+                int a = run(-1), b = run(1);
+                expect(JsMath.min(a, b), $"car at {c.pos.x},{c.pos.y} heading {c.heading}: the kerb").toBeLessThan(Towns.PARKING);
+                expect(JsMath.max(a, b), $"car at {c.pos.x},{c.pos.y} heading {c.heading}: the lanes").toBeGreaterThanOrEqual(Towns.CARRIAGEWAY);
+            }
             foreach (var c in Js.Iter(cars))
             {
                 expect(c.fuel).toBeLessThan(Vehicles.FUEL_MAX);

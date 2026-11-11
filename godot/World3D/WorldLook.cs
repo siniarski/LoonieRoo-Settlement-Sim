@@ -155,9 +155,11 @@ void fragment() {
     // --- the rest ---
 
     public static Look Footing => footing ??= L(0.47f, 0.47f, 0.45f, "concrete");
+    /// <summary>A kerb stone: the face between a street and its sidewalk.</summary>
+    public static Look Kerb => kerb ??= L(0.5f, 0.5f, 0.48f, "concrete");
     public static Look Door => door ??= L(0.42f, 0.28f, 0.16f, "planks", true);
     public static Look DoorLocked => doorLocked ??= L(0.3f, 0.2f, 0.12f, "planks", true);
     public static Look Plank => plank ??= new Look(Ctx.Css(COLOURS.plank), Surfaces.What("planks"));
     public static Look Pane => pane ??= new Look(new Color(0.25f, 0.32f, 0.36f, 0.35f), Surfaces.What("grime"));
-    static Look? footing, door, doorLocked, plank, pane;
+    static Look? footing, kerb, door, doorLocked, plank, pane;
 }

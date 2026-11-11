@@ -269,4 +269,23 @@ public static partial class Buildings
         d.againstWall(s, "shelf", "shed", r(2));
         return d.finish();
     }
+
+    /// <summary>The start's shelter (Worldgen.startCamp): one room of boards, eight by six, walled on its edges like any
+    /// generated building: the door in the middle of the front, windows, a stove, a table, shelves and a bin (all
+    /// empty: what you start with lies outside). The back row is kept clear for the beds, which startCamp adds
+    /// (real beds, not a plan's). The same for every seed.</summary>
+    public static BuildingsPlan startPlan()
+    {
+        var d = new Draft(8, 6, "house", 0) { style = "cabin" };
+        int main = d.add("cabin", "boards", 0, 0, 7, 5);
+        d.putDoor(3, 5, 2);
+        d.front = new PlanEdge { ax = 3, ay = 5, bx = 3, by = 6, door = true };
+        d.windows();
+        for (int x = 0; x < 8; x++) d.keep[x] = true;
+        d.againstWall(main, "oven", null, 0, (x, y) => x == 0 && y >= 2);
+        d.againstWall(main, "shelf", "living", 0, (x, y) => x == 7 && y >= 2);
+        d.againstWall(main, "bin", "trash", 0, (x, y) => y == 5 && x >= 5);
+        d.inMiddle(main, "table", null);
+        return d.finish();
+    }
 }
