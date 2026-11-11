@@ -20,6 +20,20 @@ namespace LoonieRoo.Sim;
 
 public static partial class Expeditions
 {
+    /// <summary>Someone who doesn't come back (killed at a ruin or an outpost): all they wore and carried is gone
+    /// with them, and their bed is anyone's.</summary>
+    public static void lose(SimState state, Survivor s)
+    {
+        Inventory.loseAll(state, s);
+        foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "bed")))
+        {
+            if (f.owner == s.id)
+            {
+                f.owner = null;
+            }
+        }
+    }
+
 
     public const int SEARCH_TICKS = 400;
 
@@ -161,14 +175,7 @@ public static partial class Expeditions
             if (Rng.random(state) < deathChance)
             {
                 lost.push(s);
-                foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
-                {
-                    var item = Js.T(id) ? state.items.find((i) => i.id == id) : null;
-                    if (Js.T(item))
-                    {
-                        state.items.splice(state.items.indexOf(item), 1);
-                    }
-                }
+                lose(state, s);
                 continue;
             }
             if ((sleepers.length > 0) && (Rng.random(state) < INJURY_CHANCE))

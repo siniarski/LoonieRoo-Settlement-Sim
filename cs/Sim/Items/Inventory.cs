@@ -300,6 +300,18 @@ public static partial class Inventory
         return Clothing.isGarment(item.kind) ? $"put on the {Items.nameOf(item)}" : ((slot == "tool") ? $"took the {Items.nameOf(item)} in hand" : $"took up the {Items.nameOf(item)}");
     }
 
+    /// <summary>Everything someone wears and carries leaves the world with them (lost far from home, where nothing
+    /// can fall to be found): the worn slots, the bag, and what is in the pockets of either.</summary>
+    public static void loseAll(SimState state, Survivor s)
+    {
+        var ids = new JsSet<string>(((List<string?>)[s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]).filter((id) => Js.T(id)).map((id) => id!));
+        foreach (var id in Js.Iter(s.pack)) ids.add(id);
+        state.items = state.items.filter((i) => !ids.has(i.id) && (i.carriedBy != s.id));
+        s.weapon = s.body = s.feet = s.cart = s.tool = s.carrying = null;
+        s.pack = [];
+        if (s.quick != null) s.quick = s.quick.map((q) => "");
+    }
+
     /// <summary>Everything in the bag falls where you fall (death, or leaving).</summary>
     public static void dropPack(SimState state, Survivor s)
     {

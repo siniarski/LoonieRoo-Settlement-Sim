@@ -14,6 +14,9 @@ public static partial class Commands
 
     public static CommandResult applyCommand(SimState state, Command command)
     {
+        // The clock runs at this world's day length (a process-wide setting a tick also sets: Time.cs). A command
+        // before the first tick after a load, or at the start of a replay, must not run at the last world's.
+        Time.setDayScale(state.settings.dayScale);
         var result = execute(state, command);
         if (Js.T(result.ok && Js.T(result.changed)))
         {
@@ -54,9 +57,17 @@ public static partial class Commands
             {
                 return reject("not a tile");
             }
+            // Refused, it changes nothing: not the way you face, not your note (a refused command isn't logged, so
+            // a replay would miss either). The game shows the reason itself.
+            var faced = Js.NN(state.control).facing;
             var done = ControlMod.work(state, s, command);
+            if (!Js.T(Js.NN(state.control).busy))
+            {
+                Js.NN(state.control).facing = faced;
+                return reject(done);
+            }
             s.note = done;
-            return Js.T(Js.NN(state.control).busy) ? changed() : reject(done);
+            return changed();
         }
         if (((((command.type == "take") || (command.type == "takeAll")) || (command.type == "drop")) || (command.type == "useItem")) || (command.type == "stash") || (command.type == "stashAll") || (command.type == "unequip")
             || Inventory.GRID_COMMANDS.includes(command.type))
@@ -169,9 +180,11 @@ public static partial class Commands
             {
                 return reject("in the air");
             }
+            var faced = Js.NN(state.control).facing;
             var done = (command.type == "swing") ? ControlMod.swing(state, s, command) : ControlMod.use(state, s, command);
             if (!Js.T(done))
             {
+                Js.NN(state.control).facing = faced; // refused: you don't turn either (as for work, above)
                 return reject("nothing to do there");
             }
             s.note = done;
@@ -247,7 +260,7 @@ public static partial class Commands
                     return Js.T(why_2) ? reject(why_2) : changed();
                 }
             }
-            var s = Js.T(command.survivorId) ? Survivors.getSurvivor(state, command.survivorId) : (Js.T(you) ? Js.Get(state.survivors.filter((o) => o != you).sort((a, b) => (JsMath.abs(a.pos.x - you.pos.x) + JsMath.abs(a.pos.y - you.pos.y)) - (JsMath.abs(b.pos.x - you.pos.x) + JsMath.abs(b.pos.y - you.pos.y))), 0) : null);
+            var s = Js.T(command.survivorId) ? Survivors.getSurvivor(state, command.survivorId) : (Js.T(you) ? Js.Get(state.survivors.filter((o) => o != you).sort((a, b) => Talk.apart(a.pos, you.pos) - Talk.apart(b.pos, you.pos)), 0) : null);
             if (!Js.T(s))
             {
                 return reject(Js.T(command.survivorId) ? $"no survivor {Js.Str(command.survivorId)}" : "nobody to talk to");
@@ -630,6 +643,12 @@ public static partial class Commands
         var __d4 = command;
         var x = __d4.x;
         var y = __d4.y;
+        if ((x == null) || (y == null))
+        {
+            // Every command left is at a tile. With none: one of those sent without it, or a type this build
+            // doesn't know (an old log's, since removed). Refused, not a crash.
+            return reject($"unknown command, or no tile given: {Js.Str(command.type)}");
+        }
         if (!Grids.inBounds(state.grid, Js.NN(x), Js.NN(y)))
         {
             return reject($"({Js.Str(x)}, {Js.Str(y)}) is out of bounds");
@@ -802,7 +821,8 @@ public static partial class Commands
                     return moveSurvivor(state, command.survivorId, Js.NN(x), Js.NN(y));
                 }
         }
-        throw new InvalidOperationException("unreachable: every case returns");
+        // No such command (an old log's, since removed): refused, not a crash.
+        return reject($"unknown command {Js.Str(command.type)}");
     }
 
     public static CommandResult reject(string reason)

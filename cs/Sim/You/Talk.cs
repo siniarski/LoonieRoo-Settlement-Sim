@@ -32,6 +32,15 @@ public static partial class Talk
     /// <summary>Talking needs you within this many tiles.</summary>
     public const int TALK_RANGE = 2;
 
+    /// <summary>How far apart two people are for talking: tiles, a diagonal counting one, then by the steps
+    /// between them (so of two as near, the one straight ahead comes first). The "talk" command picks the nearest
+    /// by this; TALK_RANGE is its whole tiles.</summary>
+    public static double apart(Point a, Point b)
+    {
+        double dx = JsMath.abs(a.x - b.x), dy = JsMath.abs(a.y - b.y);
+        return JsMath.max(dx, dy) + (dx + dy) / 1024;
+    }
+
     public const int TALK_OPINION = 5;
 
     public const int TASK_OPINION = 25;
@@ -366,7 +375,7 @@ public static partial class Talk
                 }
                 }
         }
-        throw new InvalidOperationException("unreachable: every case returns");
+        return null; // a kind of task this build doesn't know (an old save's): never done, not a crash
     }
 
     /// <summary>Noon on the radio: the missing relative answers (and sets out to join you), or nobody does.</summary>

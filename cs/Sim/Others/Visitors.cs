@@ -105,7 +105,7 @@ public static partial class Visitors
         }
         foreach (var item in Js.Iter(free.slice(0, o.wantCount)))
         {
-            state.items.splice(state.items.indexOf(item), 1);
+            Items.removeItem(state, item);
         }
         for (var n = 0; n < o.giveCount; n++)
         {

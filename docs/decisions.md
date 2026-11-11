@@ -499,6 +499,8 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   `Motion.fits` does the walls. It turns about its rear axle; other cars are solid; people and the dead are not obstacles to it. A car that starts out in something solid may
   move as long as no more of it ends up in something. "Near a car" is near its body, and the boot is reached at the boot
   *Why:* The cars became real-size models while the sim's car was a 0.43 m circle: they stood into walls, and you got in through the side of one
+- **A refused command changes nothing (2026-11-11).** Refused commands are not logged, so anything one changed (the way you face, a note) is missing from a replay. `work` and `use` put your facing back when refused and write no note;
+  the game shows the reason. An unknown command type is a reject, not an exception. `applyCommand` sets the day's scale from the state first, so a command before the first tick runs at its own world's. *Why:* replays and bug reports must give the game back exactly (log/2026-11-11-13-clear-bugs.md).
 - **Parked cars are in the way (2026-11-11).** The tiles whose centre is under a car nobody is driving can't be walked on by anyone on foot: a layer of the grid that
   `Pathfinding.isPassable` asks, so paths go round and free movers stop at it with no new collision code. It is not saved: it is what `state.vehicles` says, kept in step
   at every place a car is put down, entered, left or taken away, and laid in again when a state is read. A tile the car only overhangs stays open, so a car down the

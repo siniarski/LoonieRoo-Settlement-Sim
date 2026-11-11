@@ -66,6 +66,8 @@ public partial class Game
     {
         var result = Commands.applyCommand(state, cmd);
         if (cmd.type == "takeControl" && result.ok) view.selectedId = cmd.survivorId ?? view.selectedId;
+        // Work refused (R: nothing to repair or build there, too far): the sim changes nothing, so say why here.
+        if (cmd.type == "work" && !result.ok && result.reason != null) view.Toast(result.reason, 2500);
         return result.ok;
     }
 

@@ -75,7 +75,7 @@ public static partial class Outposts
         }
         foreach (var f in Js.Iter(fuel.slice(0, TRUCK_FUEL)))
         {
-            state.items.splice(state.items.indexOf(f), 1);
+            Items.removeItem(state, f);
         }
         return true;
     }
@@ -86,7 +86,8 @@ public static partial class Outposts
         {
             return;
         }
-        foreach (var x in Js.Iter(state.expeditions))
+        // Over a copy: an outpost whose last member dies is taken off the list.
+        foreach (var x in Js.Iter(state.expeditions.ToList()))
         {
             if (!x.outpost)
             {
@@ -108,21 +109,7 @@ public static partial class Outposts
                 continue;
             }
             x.members.splice(x.members.indexOf(s), 1);
-            foreach (var id in Js.Iter((List<string>)[s.weapon, s.body, s.feet, s.cart, s.tool, s.carrying]))
-            {
-                var item = Js.T(id) ? state.items.find((i) => i.id == id) : null;
-                if (Js.T(item))
-                {
-                    state.items.splice(state.items.indexOf(item), 1);
-                }
-            }
-            foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "bed")))
-            {
-                if (f.owner == s.id)
-                {
-                    f.owner = null;
-                }
-            }
+            Expeditions.lose(state, s);
             Events.logEvent(state, $"{Js.Str(s.name)} was killed at the {Js.Str(x.target.label)} outpost");
             Mood.mournDeath(state, s);
             if (x.members.length == 0)

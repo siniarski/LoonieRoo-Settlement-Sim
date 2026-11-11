@@ -191,12 +191,13 @@ public static partial class Settlements
             {
                 continue;
             }
-            s.people -= 1;
+            // Somewhere for them to arrive first: with nowhere, nobody leaves (and the next settlement still has its turn).
             var spot = Wanderers.frontierSpot(state, new JsSet<string>());
             if (!Js.T(spot))
             {
-                return;
+                continue;
             }
+            s.people -= 1;
             var w = Wanderers.addWanderer(state, spot.x, spot.y);
             Events.logEvent(state, $"{Js.Str(s.name)} sent {Js.Str(w.name)} to join you; they're waiting at ({Js.Str(spot.x)}, {Js.Str(spot.y)})");
         }
@@ -217,7 +218,7 @@ public static partial class Settlements
         }
         foreach (var f in Js.Iter(food.slice(0, GIFT_FOOD)))
         {
-            state.items.splice(state.items.indexOf(f), 1);
+            Items.removeItem(state, f);
         }
         adjustReputation(state, s, (s.food <= 0) ? ((double)(GIFT_REP) * (2)) : GIFT_REP);
         s.food += GIFT_FOOD;
