@@ -219,7 +219,9 @@ public sealed partial class FirstPerson : Node3D
         env.FogLightColor = sky;
         env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.045f, 0.05f, 0.075f), (float)dark);
         int tile = (int)Math.Floor(eye.Z) * state.grid.width + (int)Math.Floor(eye.X);
-        float want = roofs.Indoor.Contains(tile) ? 0.45f : 1;
+        // Under a roof the sun doesn't reach you, so the sky's light through the windows is all a room has by day:
+        // most of it (0.45 left a room at noon too dark to read its walls or what you hold).
+        float want = roofs.Indoor.Contains(tile) ? 0.8f : 1;
         ambient += (want - ambient) * (float)Math.Min(1, delta * 3);
         env.AmbientLightEnergy = 0.5f * ambient;
         // What you can make out round you in the dark (faint: the world's lights and your flashlight do the rest).
