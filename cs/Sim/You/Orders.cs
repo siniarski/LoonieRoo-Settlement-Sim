@@ -26,7 +26,7 @@ public static partial class Orders
     /// <summary>Followers start walking once they're this far behind.</summary>
     public const int FOLLOW_GAP = 3;
 
-    /// <summary>Shouting "follow me" reaches people this close.</summary>
+    /// <summary>A shouted order (follow, hold, loot, settle) reaches people this close.</summary>
     public const int SHOUT_RANGE = 12;
 
     /// <summary>Followers further behind than this walk a tick quicker per tile.</summary>

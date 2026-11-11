@@ -165,7 +165,7 @@ public static partial class Work
         }
         Noise.makeNoise(state, s.pos, "fighting", spec.noise);
         BodyMod.exert(s, spec.stamina / 2);
-        var blow = Moodlets.boostDamage(s, (Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+        var blow = Weapons.meleeBlowAtDead(state, s);
         if (!Zombies.damageZombie(state, z, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s))
         {
             return;
@@ -265,7 +265,7 @@ public static partial class Work
                 return;
             }
             Noise.makeNoise(state, a.pos, "fighting");
-            var blow = Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
+            var blow = Weapons.meleeBlow(state, s);
             if (Handiwork.hitAnimal(state, s, a.id, blow) == "brought it down")
             {
                 finishJob(state, s, job, $"killed a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})");
@@ -282,11 +282,7 @@ public static partial class Work
         {
             return;
         }
-        state.animals.splice(state.animals.indexOf(a), 1);
-        for (var n = 0; n < Js.Get(Animals.MEAT, a.kind); n++)
-        {
-            Items.spawnItem(state, "food", a.pos.x, a.pos.y);
-        }
+        Animals.butcher(state, a);
         Noise.makeNoise(state, a.pos, "fighting");
         finishJob(state, s, job, $"hunted a {Js.Str(a.kind)} at ({Js.Str(a.pos.x)}, {Js.Str(a.pos.y)})");
     }

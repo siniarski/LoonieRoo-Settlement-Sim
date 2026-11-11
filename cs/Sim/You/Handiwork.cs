@@ -220,11 +220,7 @@ public static partial class Handiwork
                 return $"hit the {Js.Str(a.kind)}";
             }
         }
-        state.animals.splice(state.animals.indexOf(a), 1);
-        for (var i = 0; i < Js.Get(Animals.MEAT, a.kind); i++)
-        {
-            Items.spawnItem(state, "food", a.pos.x, a.pos.y);
-        }
+        Animals.butcher(state, a);
         Events.logEvent(state, $"{Js.Str(s.name)} brought down a {Js.Str(a.kind)}");
         return "brought it down";
     }

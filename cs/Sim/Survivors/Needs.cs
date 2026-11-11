@@ -443,7 +443,7 @@ public static partial class Needs
         Weapons.dropWeapon(state, s);
         Inventory.dropPack(state, s);
         Clothing.undress(state, s);
-        if ((cause != "the infection") && !Js.T(walkedAway))
+        if ((cause != Infection.CAUSE) && !Js.T(walkedAway))
         {
             Corpses.leaveCorpse(state, s.pos, s.name);
         }

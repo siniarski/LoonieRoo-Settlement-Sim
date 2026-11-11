@@ -5,11 +5,13 @@
 // or leisure. Their needs still drain, zombies still go for them, and they still
 // bleed and heal. Input arrives as commands like everything else (rule 5):
 //   steer   the held direction (sent when the keys change, not every frame)
-//   swing   attack towards a tile: the zombie in front, else a shot with a loaded gun
+//   swing   attack towards a tile: a shot if a loaded gun is in hand, else a blow at what is in front
 //   work    repair, barricade, reinforce or build at the tile in front (handiwork.ts)
 //   use     pick up, put on, eat, search, treat yourself (medicine, a bandage), drink (a well,
 //           a rain collector, the river) or
 //           sleep (a bed; your own tile with nothing on it is the floor) at a tile next to you
+// and more since (aiming and reloading, switching weapon, leaps, sneaking, a car's boot and bonnet, the bag):
+// every command is a case of Commands.execute.
 // Movement is free (motion.ts): the held direction moves your centre a little each tick, at
 // your tile pace (roads, a bad leg...), the same speed any way you go, sliding along walls.
 // Your tile (pos) is whatever tile you're over.
@@ -441,7 +443,7 @@ public static partial class ControlMod
             c.swungTick = state.tick;
             BodyMod.exert(s, spec.stamina);
             Noise.makeNoise(state, s.pos, "fighting", spec.noise);
-            var full = Moodlets.boostDamage(s, (Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")))) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+            var full = Weapons.meleeBlowAtDead(state, s);
             var winded = BodyMod.isWinded(s) ? JsMath.round(((double)(((double)(full) * (BodyMod.WINDED_DAMAGE_PCT))) / (100))) : full;
             var unaware = (near.kind != "raider") && (near.targetId != s.id);
             var blow = Js.T(unaware) ? JsMath.round(((double)(((double)(winded) * (spec.sneak))) / (100))) : winded;
@@ -462,14 +464,14 @@ public static partial class ControlMod
             c.nextSwing = state.tick + spec.swing;
             c.swungTick = state.tick;
             Noise.makeNoise(state, s.pos, "fighting", spec.noise);
-            var blow = Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
+            var blow = Weapons.meleeBlow(state, s);
             return Residents.hitResident(state, person, blow, s) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
         var deer = Motion.nearestInArc(AnimalCars.inTheOpen(state.animals), s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
         if (Js.T(deer))
         {
             c.nextSwing = state.tick + Moodlets.swingWait(s, spec.swing);
-            return Handiwork.hitAnimal(state, s, deer.id, Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard"))));
+            return Handiwork.hitAnimal(state, s, deer.id, Weapons.meleeBlow(state, s));
         }
         var pane = paneInFront(state, s.pos, target, c.facing);
         if (Js.T(pane))
@@ -584,54 +586,6 @@ public static partial class ControlMod
             }
         }
         return null;
-    }
-
-    /// <summary>A resident (residents.ts) in the arc in front of you, within reach.</summary>
-    public static Resident? residentToHit(SimState state, Point from, Point facing)
-    {
-        return Motion.nearestInArc(state.residents, from, facing, Motion.SWING_REACH, state.grid);
-    }
-
-    /// <summary>Someone of yours standing between you and a tile (Bresenham, like clearShot).</summary>
-    public static Survivor? inTheWay(SimState state, Survivor s, Point to)
-    {
-        var __d0 = s.pos;
-        var x = __d0.x;
-        var y = __d0.y;
-        var dx = JsMath.abs(to.x - x);
-        var dy = -JsMath.abs(to.y - y);
-        var sx = (x < to.x) ? 1 : -1;
-        var sy = (y < to.y) ? 1 : -1;
-        double err = dx + dy;
-        for (; ; )
-        {
-            var e2 = ((double)(2) * (err));
-            if (e2 >= dy)
-            {
-                err += dy;
-                x += sx;
-            }
-            if (e2 <= dx)
-            {
-                err += dx;
-                y += sy;
-            }
-            if ((x == to.x) && (y == to.y))
-            {
-                return null;
-            }
-            var o = state.survivors.find((v) => ((v != s) && (v.pos.x == x)) && (v.pos.y == y));
-            if (Js.T(o))
-            {
-                return o;
-            }
-        }
-    }
-
-    /// <summary>The zombie a swing lands on: the nearest in the arc in front of you, within reach (motion.ts).</summary>
-    public static Zombie? zombieToHit(SimState state, Point from, Point facing)
-    {
-        return Motion.nearestInArc(state.zombies, from, facing, Motion.SWING_REACH, state.grid);
     }
 
     /// <summary>Use what's on a tile next to (or under) you. Returns what happened, or null if there was nothing to do.</summary>
@@ -763,7 +717,7 @@ public static partial class ControlMod
         return null;
     }
 
-    /// <summary>Work the tile in front: repair, barricade, reinforce or build (handiwork.ts). Returns what happened, or why not (null: no).</summary>
+    /// <summary>Work the tile in front: repair, barricade, reinforce or build (handiwork.ts). Returns what happened, or why not.</summary>
     public static string work(SimState state, Survivor s, Point target)
     {
         var c = Js.NN(state.control);

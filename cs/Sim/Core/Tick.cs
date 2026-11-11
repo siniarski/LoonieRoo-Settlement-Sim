@@ -1,6 +1,9 @@
 // Ported from src/sim/tick.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // The fixed-timestep tick. Speed controls change how many ticks run per
 // frame, never what a tick means.
+//
+// tick() is the order everything happens in, and the order is part of the game: same seed and commands, same
+// world, only while it stays as it is (the systems draw from one RNG in turn). Its phases are marked below.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -11,13 +14,18 @@ public static partial class Tick
 
     public static void tick(SimState state)
     {
+        // The clock runs at this world's day length (a process-wide setting: Time.cs).
         Time.setDayScale(state.settings.dayScale);
-        // Over the movers' lists in turn (no combined list: nothing here adds or removes one).
+        // 1. Where every mover is now, for the renderer to blend from (`was`). Over the movers' lists in turn (no
+        //    combined list: nothing here adds or removes one).
         markWas(state.survivors);
         markWas(state.zombies);
         markWas(state.dogs);
         markWas(state.animals);
         markWas(state.residents);
+        // 2. The world, a system at a time: the dead first (tonight's arrivals, the dawn retreat, every zombie's move
+        //    or bite), then fire, power and water, animals, the storyteller, everyone else's lives, the weather,
+        //    cars, the farm. Each update* looks at the clock itself and does nothing on most ticks.
         Zombies.updateZombies(state);
         FireMod.updateFires(state);
         Corpses.updateCorpses(state);
@@ -60,6 +68,8 @@ public static partial class Tick
         Wanderers.updateWanderers(state);
         Fog.reconcileExploreAreas(state);
         Fog.reconcilePointsOfInterest(state);
+        // 3. Sleepers the world just woke (hurt this tick, or guards sleeping light), and those whose resolve gave
+        //    out at dawn, before anyone is handed work.
         foreach (var s in Js.Iter(state.survivors))
         {
             if (Js.T(s.sleep) && (s.hurtTick == state.tick))
@@ -72,8 +82,12 @@ public static partial class Tick
         {
             Needs.killSurvivor(state, s, "walked away", true);
         }
+        // 4. The job queue made to match the world as it now is (docs/sim-model.md), and reservations nobody holds
+        //    any more let go.
         Jobs.reconcileJobs(state);
         Needs.reconcileNeeds(state);
+        // 5. Each survivor's turn: you by your held commands, the rest by themselves (behave); then what a tick does
+        //    to a body. Whoever it kills is noted, not removed: the list is being walked.
         List<TickDying> dying = [];
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -99,20 +113,24 @@ public static partial class Tick
                 dying.push(new() { s = s, cause = cause });
             }
         }
+        // 6. The dying die; one the infection took gets up again.
         foreach (var __o0 in Js.Iter(dying))
         {
             var s = __o0.s;
             var cause = __o0.cause;
             Needs.killSurvivor(state, s, cause);
-            if (cause == "the infection")
+            if (cause == Infection.CAUSE)
             {
                 Zombies.addZombie(state, s.pos.x, s.pos.y, Zombies.ZOMBIE_HEALTH, "static");
             }
         }
+        // 7. Put right what the turns and the deaths left dangling (rooms, reservations, wanderers, who you are).
         Rooms.reconcileRoomDesignations(state);
         Needs.reconcileNeeds(state);
         Wanderers.reconcileWanderers(state);
         ControlMod.reconcileControl(state);
+        // 8. Doors swing shut behind whoever passed; tile walkers' precise positions follow their steps (free movers
+        //    own theirs); tracks in the snow, what has been seen; and the clock moves on.
         Doors.closeBehind(state);
         syncSteps(state, state.survivors);
         syncSteps(state, state.zombies);
@@ -169,13 +187,15 @@ public static partial class Tick
         }
     }
 
-    /// <summary>Everything with a precise position (motion.ts).</summary>
+    /// <summary>Everything with a precise position (Motion.cs), as one list. For the harness's profiler: tick() walks
+    /// the lists themselves.</summary>
     public static List<Body> movers(SimState state)
     {
         return (List<Body>)[.. state.survivors, .. state.zombies, .. state.dogs, .. state.animals, .. state.residents];
     }
 
-    /// <summary>Moving under its own steering, not tile steps (motion.ts): the dead, animals and dogs (Walkers.cs), and you.</summary>
+    /// <summary>Moving under its own steering, not tile steps (Motion.cs): the dead (their ids begin with z), animals
+    /// and dogs (Walkers.cs), and you.</summary>
     public static bool isFree(SimState state, Body e)
     {
         var id = ((IHasId)(e)).id ?? "";

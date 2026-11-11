@@ -21,6 +21,10 @@ public static partial class Infection
 
     public static double INFECTION_TURN = ((double)(2) * (Time.DAY_LENGTH));
 
+    /// <summary>The cause of death the infection gives (updateInfection). Tick.tick raises whoever dies of it, and
+    /// Needs.killSurvivor leaves no corpse for them.</summary>
+    public const string CAUSE = "the infection";
+
     /// <summary>What an infection does to mood while it lasts.</summary>
     public const double INFECTED_MOOD = -15;
 
@@ -57,6 +61,6 @@ public static partial class Infection
         {
             s.infection += 1;
         }
-        return (s.infection >= INFECTION_TURN) ? "the infection" : null;
+        return (s.infection >= INFECTION_TURN) ? CAUSE : null;
     }
 }

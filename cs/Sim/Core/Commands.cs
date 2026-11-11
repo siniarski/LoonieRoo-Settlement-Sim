@@ -985,41 +985,6 @@ public static partial class Commands
     }
     public static CommandResult planPerimeter(SimState state, double ax, double ay, double bx, double by) => planPerimeter(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 
-    /// <summary>The old tile perimeter (kept for reference by replays of older logs: unused).</summary>
-    public static CommandResult planPerimeterTiles(SimState state, int ax, int ay, int bx, int by)
-    {
-        var x0 = JsMath.max(0, JsMath.min(ax, bx));
-        var x1 = JsMath.min(state.grid.width - 1, JsMath.max(ax, bx));
-        var y0 = JsMath.max(0, JsMath.min(ay, by));
-        var y1 = JsMath.min(state.grid.height - 1, JsMath.max(ay, by));
-        if (((x1 - x0) < 2) || ((y1 - y0) < 2))
-        {
-            return reject("too small to wall in");
-        }
-        var mx = JsMath.floor(((double)((x0 + x1)) / (2)));
-        var my = JsMath.floor(((double)((y0 + y1)) / (2)));
-        double planned = 0;
-        for (var y = y0; y <= y1; y++)
-        {
-            for (var x = x0; x <= x1; x++)
-            {
-                if ((((x != x0) && (x != x1)) && (y != y0)) && (y != y1))
-                {
-                    continue;
-                }
-                if (Js.T((Js.T((!Fog.isExplored(state, x, Js.NN(y)) || (Grids.getTile(state.grid, x, Js.NN(y)) != "floor")) || Js.T(FurnitureMod.furnitureAt(state, x, Js.NN(y))))) || Js.T(Designations.blueprintAt(state, x, Js.NN(y)))))
-                {
-                    continue;
-                }
-                var door = ((x == mx) && ((y == y0) || (y == y1))) || ((y == my) && ((x == x0) || (x == x1)));
-                Designations.addBlueprint(state, x, Js.NN(y), Js.T(door) ? "door" : "wall");
-                planned += 1;
-            }
-        }
-        return (planned > 0) ? changed() : unchanged();
-    }
-    public static CommandResult planPerimeterTiles(SimState state, double ax, double ay, double bx, double by) => planPerimeterTiles(state, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
-
     public static CommandResult designateRemove(SimState state, int x, int y)
     {
         var existing = Designations.blueprintAt(state, x, y);

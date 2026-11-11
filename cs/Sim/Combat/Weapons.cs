@@ -260,6 +260,15 @@ public static partial class Weapons
         }
     }
 
+    /// <summary>A blow from this survivor with what is in their hand (a fist: Jobs.GUARD_DAMAGE) and their guard skill,
+    /// before what the moment adds. What a guard, a hunter and you all hit with.</summary>
+    public static double meleeBlow(SimState state, Survivor s) =>
+        blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
+
+    /// <summary>That blow at one of the dead: the hardened trait's bonus added, and a mood's boost (Moodlets.boostDamage).</summary>
+    public static double meleeBlowAtDead(SimState state, Survivor s) =>
+        Moodlets.boostDamage(s, meleeBlow(state, s) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
+
     /// <summary>Damage this survivor deals per blow: the weapon's own (bare hands: `unarmed`).</summary>
     public static double blowDamage(SimState state, Survivor s, double unarmed)
     {

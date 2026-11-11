@@ -132,6 +132,16 @@ public static partial class Animals
     /// <summary>How far a predator looks for prey, or a starving one for people.</summary>
     public const int HUNT_SIGHT = 15;
 
+    /// <summary>An animal brought down: gone, and its meat (MEAT by kind) lies where it fell.</summary>
+    public static void butcher(SimState state, Animal a)
+    {
+        state.animals.splice(state.animals.indexOf(a), 1);
+        for (var n = 0; n < Js.Get(MEAT, a.kind); n++)
+        {
+            Items.spawnItem(state, "food", a.pos.x, a.pos.y);
+        }
+    }
+
     public static Animal? getAnimal(SimState state, string id)
     {
         return state.animals.find((a) => a.id == id);
