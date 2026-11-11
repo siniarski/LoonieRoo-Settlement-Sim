@@ -19,16 +19,17 @@ public sealed class ModelSet
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 #include ""res://assets/shaders/surface_detail.gdshaderinc""
+#include ""res://assets/shaders/snow_cover.gdshaderinc""
 void vertex() {
     SURFACE_BY_OBJECT
 }
 void fragment() {
-    ALBEDO = COLOR.rgb * SURFACE_DETAIL;
+    ALBEDO = snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
     METALLIC = COLOR.a * 0.7;
     ROUGHNESS = mix(0.9, 0.45, COLOR.a);
 }";
 
-    static ShaderMaterial? shared;
+    static ShaderMaterial? shared, bare;
 
     readonly Node3D parent;
     readonly Dictionary<string, Mesh> meshes = new();
@@ -38,23 +39,27 @@ void fragment() {
     /// <summary>Things drawn by the last End (the debug panel, the self-test).</summary>
     public int Count { get; private set; }
 
-    public ModelSet(Node3D parent, string path, bool shadows = true)
+    public ModelSet(Node3D parent, string path, bool shadows = true, bool snow = true)
     {
         this.parent = parent;
         this.shadows = shadows;
         shared ??= new ShaderMaterial { Shader = Surfaces.Shader(SHADER) };
+        bare ??= new ShaderMaterial { Shader = Surfaces.Shader(SHADER.Replace("snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz)", "COLOR.rgb * SURFACE_DETAIL")) };
+        material = snow ? shared : bare;
         var scene = GD.Load<PackedScene>(path).Instantiate<Node3D>();
         Collect(scene);
         scene.Free();
     }
 
     readonly bool shadows;
+    /// <summary>The shared material, with snow on what faces up (outdoors) or without (a cabin's inside).</summary>
+    readonly ShaderMaterial material;
 
     void Collect(Node n)
     {
         if (n is MeshInstance3D mi && mi.Mesh != null)
         {
-            for (int i = 0; i < mi.Mesh.GetSurfaceCount(); i++) mi.Mesh.SurfaceSetMaterial(i, shared);
+            for (int i = 0; i < mi.Mesh.GetSurfaceCount(); i++) mi.Mesh.SurfaceSetMaterial(i, material);
             meshes[n.Name] = mi.Mesh;
         }
         foreach (var c in n.GetChildren()) Collect(c);

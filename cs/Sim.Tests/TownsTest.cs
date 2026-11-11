@@ -394,8 +394,9 @@ public partial class TownsTest
                 var size = p.nature.size;
                 var zones = Js.Set(p.lots.map((l) => l.zone));
                 // (A 128 map's one town, between the water and the map's edge, has room for a few houses and no more now
-                // that a street with its sidewalks is twelve tiles across.)
-                foreach (var z in Js.Iter(size <= 128 ? (List<string>)["residential"] : (List<string>)["residential", "commercial", "field", "cabin"]))
+                // that a street with its sidewalks is twelve tiles across. Likewise a 256 map's cabins, since its towns grew by
+                // a third: they stand in the wild cells between, and a small map has few.)
+                foreach (var z in Js.Iter(size <= 128 ? (List<string>)["residential"] : size <= 256 ? (List<string>)["residential", "commercial", "field"] : (List<string>)["residential", "commercial", "field", "cabin"]))
                 {
                     expect(zones.has(z), $"{Js.Str(name)}: {Js.Str(z)}").toBe(true);
                 }

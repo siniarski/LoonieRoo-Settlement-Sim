@@ -136,6 +136,8 @@ public partial class Game
             $"width {state.grid.width}, {frames} frames, {(Godot.Time.GetTicksMsec() - t0) / 1000.0:0.0} s");
     }
 
+    static bool Skip(string group) => (OS.GetEnvironment("SELFTEST_SKIP") ?? "").Split(',').Contains(group);
+
     async Task SelfTestSteps()
     {
         selfTesting = true;
@@ -147,6 +149,15 @@ public partial class Game
         if (OS.GetEnvironment("SELFTEST_ONLY") == "interact")
         {
             await InteractSteps();
+            GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
+            GetTree().Quit(failures.Count);
+            return;
+        }
+        // SELFTEST_ONLY=sound: only the sound steps, alone. SELFTEST_SKIP=car,roof,interact,...: those groups left out
+        // (the steps after them must not depend on them).
+        if (OS.GetEnvironment("SELFTEST_ONLY") == "sound")
+        {
+            await SoundTest();
             GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
             GetTree().Quit(failures.Count);
             return;
@@ -223,12 +234,12 @@ public partial class Game
         await BodySteps();
         await HeldSteps();
         await HandsSteps();
-        await LightSteps();
-        await FireSteps();
+        if (!Skip("light")) await LightSteps();
+        if (!Skip("fire")) await FireSteps();
         await WorldSteps();
-        await CarSteps();
-        await RoofSteps();
-        await InteractSteps();
+        if (!Skip("car")) await CarSteps();
+        if (!Skip("roof")) await RoofSteps();
+        if (!Skip("interact")) await InteractSteps();
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
@@ -509,7 +520,7 @@ public partial class Game
         }
         Check("The made sounds aren't silent", loud, string.Join(", ", levels));
 
-        view.paused = false;
+        await ClearGroundForSound();
         var you = ControlMod.controlled(state)!;
         int notice0 = sounds.Played["notice"], hit0 = sounds.Played["hit"], kill0 = sounds.Played["kill"];
         // Two tiles the way you look, on floor.

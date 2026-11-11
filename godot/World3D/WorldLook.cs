@@ -105,7 +105,8 @@ void fragment() {
     // Outside: boards in a few paints, brick, render, block, sheet. Colours are linear, as the walls' grey always was.
     static readonly (float r, float g, float b, string layer)[] SIDING = { (0.7f, 0.69f, 0.64f, "planks"), (0.66f, 0.6f, 0.46f, "planks"), (0.46f, 0.53f, 0.58f, "planks"), (0.5f, 0.55f, 0.45f, "planks"), (0.52f, 0.5f, 0.47f, "planks") };
     static readonly (float r, float g, float b, string layer)[] BRICK = { (0.44f, 0.22f, 0.16f, "brick"), (0.5f, 0.3f, 0.2f, "brick"), (0.56f, 0.44f, 0.32f, "brick") };
-    static readonly (float r, float g, float b, string layer)[] RENDER = { (0.68f, 0.65f, 0.58f, "plaster"), (0.62f, 0.6f, 0.56f, "plaster"), (0.66f, 0.58f, 0.47f, "plaster") };
+    static readonly (float r, float g, float b, string layer)[] RENDER = { (0.68f, 0.65f, 0.58f, "plaster"), (0.62f, 0.6f, 0.56f, "plaster"), (0.66f, 0.58f, 0.47f, "plaster"),
+        (0.54f, 0.62f, 0.5f, "plaster"), (0.52f, 0.58f, 0.65f, "plaster"), (0.74f, 0.52f, 0.44f, "plaster") }; // + sage, blue, terracotta: render read as one grey
     static readonly (float r, float g, float b, string layer)[] BLOCK = { (0.56f, 0.55f, 0.52f, "concrete"), (0.5f, 0.5f, 0.49f, "concrete") };
     static readonly (float r, float g, float b, string layer)[] SHEET = { (0.47f, 0.5f, 0.52f, "sheetmetal"), (0.52f, 0.49f, 0.42f, "sheetmetal"), (0.4f, 0.46f, 0.42f, "sheetmetal") };
     static readonly (float r, float g, float b, string layer)[] BARN = { (0.42f, 0.15f, 0.11f, "planks"), (0.42f, 0.36f, 0.29f, "planks") };

@@ -35,11 +35,12 @@ public sealed class FurnitureModels
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 #include ""res://assets/shaders/surface_detail.gdshaderinc""
+#include ""res://assets/shaders/snow_cover.gdshaderinc""
 void vertex() {
     SURFACE_BY_OBJECT
 }
 void fragment() {
-    ALBEDO = COLOR.rgb * SURFACE_DETAIL;
+    ALBEDO = snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
     METALLIC = COLOR.a * 0.7;
     ROUGHNESS = mix(0.9, 0.45, COLOR.a);
 }";

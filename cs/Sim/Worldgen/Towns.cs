@@ -64,7 +64,7 @@ public static partial class Towns
     /// <summary>Side streets branch this far apart, at least (a lot's depth each side and a verge).</summary>
     public const int STREET_GAP = 34;
 
-    public static readonly JsRecord<List<double>> RADII = new() { ["village"] = [20, 28], ["town"] = [34, 46], ["city"] = [52, 66] };
+    public static readonly JsRecord<List<double>> RADII = new() { ["village"] = [26, 36], ["town"] = [44, 60], ["city"] = [68, 86] };
 
     /// <summary>How many towns, and how big, for a map this size.</summary>
     public static List<string> townKinds(double seed, double size)
@@ -223,7 +223,7 @@ public static partial class Towns
                         continue;
                     }
                     var score = ((dryShare - ((double)(((double)(wooded) / (JsMath.max(1, inside)))) * (0.6))) + (((wetShare > 0.02) && (wetShare < 0.3)) ? 0.3 : 0)) + ((double)(NatureMod.roll(n.seed, x, y, 0x7103)) * (0.15)) + Towns.SETTLED_PULL * (settled - 0.5);
-                    if (!Js.T(best) || (score > best.score))
+                    if ((!Js.T(best) || (score > best.score)) && !NatureMod.isWater(n, x, y))   // (a town's own centre is dry: a pond there left larger towns' streets nowhere to cross; tested last, it is dear)
                     {
                         best = new SiteTownsBest { x = Js.I(x), y = Js.I(y), score = score };
                     }

@@ -230,17 +230,21 @@ public sealed partial class FirstPerson : Node3D
     void Light(SimState state, Vector3 eye, double delta)
     {
         double dark = Sim.Time.darkness(state.tick);
-        float day = (float)(1 - dark);
+        // The sim's twilight is two hours of straight ramp, which reads as night for most of it: the light holds
+        // its day a while into dawn and dusk (the square), and warms toward the horizon. The sim's clock is untouched.
+        double lit = dark * dark;
+        float day = (float)(1 - lit);
+        float low = (float)Math.Clamp(Math.Sin(Math.Min(1, dark) * Math.PI), 0, 1); // 0 by day and at night, 1 mid-twilight
         // The sun goes round with the hour; at night a faint moon from the same side.
         double hour = Sim.Time.hourOf(state.tick);
-        float elev = (float)Math.Max(12, 60 - Math.Abs(hour - 13) * 6);
+        float elev = (float)Math.Max(16, 60 - Math.Abs(hour - 13) * 6);
         sun.RotationDegrees = new Vector3(-elev, (float)(hour * 15), 0);
         sun.LightEnergy = 0.08f + 1.1f * day;
-        sun.LightColor = new Color(1, 0.95f, 0.86f).Lerp(new Color(0.55f, 0.62f, 0.85f), (float)dark);
-        var sky = new Color(0.52f, 0.56f, 0.58f).Lerp(new Color(0.02f, 0.025f, 0.04f), (float)dark);
+        sun.LightColor = new Color(1, 0.95f, 0.86f).Lerp(new Color(1, 0.82f, 0.62f), low * 0.7f).Lerp(new Color(0.55f, 0.62f, 0.85f), (float)lit);
+        var sky = new Color(0.52f, 0.56f, 0.58f).Lerp(new Color(0.02f, 0.025f, 0.04f), (float)lit);
         env.BackgroundColor = sky;
         env.FogLightColor = sky;
-        env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.045f, 0.05f, 0.075f), (float)dark);
+        env.AmbientLightColor = new Color(0.55f, 0.58f, 0.6f).Lerp(new Color(0.045f, 0.05f, 0.075f), (float)lit);
         int tile = (int)Math.Floor(eye.Z) * state.grid.width + (int)Math.Floor(eye.X);
         // Under a roof the sun doesn't reach you, so the sky's light through the windows is all a room has by day:
         // most of it (0.45 left a room at noon too dark to read its walls or what you hold).

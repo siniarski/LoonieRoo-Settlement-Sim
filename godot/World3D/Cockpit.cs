@@ -57,7 +57,7 @@ public sealed class Cockpit
 
     public Cockpit(Node3D parent)
     {
-        cabins = new ModelSet(parent, "res://assets/cars/cabins.glb");
+        cabins = new ModelSet(parent, "res://assets/cars/cabins.glb", true, false);
         outsides = new ModelSet(parent, "res://assets/furniture/furniture.glb");
         wheel.Mesh = cabins.MeshOf("steeringwheel");
         viewport.AddChild(Gauges);
