@@ -89,7 +89,8 @@ git tag `ts-final`.
   climbs on or goes under one (you, the dead, animals). **VehicleActions** (part of Vehicles): timed car actions and
   anchors (get in, out, boot, bonnet). **VehicleCabin** (part of Vehicles): the car you sit in is solid to the dead, animals and dogs
   (moved out of its body once a tick), and they batter it, not you, till it is a wreck. **VehiclePush** (part of Vehicles):
-  pushing a parked car along its length (the push key held), its tiles moving with it.
+  pushing a parked car along its length (the push key held), its tiles moving with it. **VehicleAlarm** (part of Vehicles): some sedans have an alarm (by hash); getting in, a dent,
+  the dead climbing over it or your blow sets it off, a noise the dead come to.
 
 ### `Worldgen/`: making the world from a seed
 

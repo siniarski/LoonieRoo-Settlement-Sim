@@ -1252,6 +1252,8 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public bool hoodOpen { get; set; }
     /// <summary>Headlights switched on (Lights.cs); null when off.</summary>
     public bool? lights { get; set; }
+    /// <summary>The tick its alarm stops ringing (VehicleAlarm.cs); null if it never rang.</summary>
+    public double? alarmUntil { get; set; }
 }
 
 public partial class Wanderer : IHasId

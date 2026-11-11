@@ -328,13 +328,15 @@ public partial class Game
         await SoundTest();
 
         await DeathSteps();
+        // After the death steps, on the new survivor: the steps before keep their tick counts, and the new games
+        // after start worlds of their own (SelfTestCarTricks.cs).
+        await CarTrickSteps();
 
         // New game from the menu, from the Colony tab of this one: a group start (the default
         // preset), then a solo one. Each lands in first person on your survivor, playing at once.
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
         await BigNewGame();
-        await CarTrickSteps();  // last: the steps before keep their tick counts (SelfTestCarTricks.cs)
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);

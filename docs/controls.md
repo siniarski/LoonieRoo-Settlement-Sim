@@ -15,7 +15,9 @@ stay held: pushing against the car doesn't stop it; walking off does). **The boo
 with the inventory screen on what's in it; with it open, E or Tab behind the car shows it again. **The bonnet** is I,
 from in front. **J held** while you walk into a parked car nobody is in, from behind or in front, **pushes it**
 (2026-11-12, VehiclePush.cs): it rolls along its length about a metre a second with you behind it, for endurance as a
-run; walls, doors, furniture, trees and other cars stop it; from its side it doesn't move. **R with wood at a door in a wall** boards it up (2026-11-12): you and yours still get by, the dead and raiders batter the boards off first.
+run; walls, doors, furniture, trees and other cars stop it; from its side it doesn't move. **A click at a parked car** (empty hands or a blade: a gun fires) is a blow
+that dents it; about three sedans in ten have an **alarm** (VehicleAlarm.cs), which a blow, getting in the first
+time, any dent or one of the dead climbing it sets off: a minute of noise the dead come to, a lure. **R with wood at a door in a wall** boards it up (2026-11-12): you and yours still get by, the dead and raiders batter the boards off first.
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
 (W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof

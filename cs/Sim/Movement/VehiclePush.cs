@@ -3,7 +3,7 @@
 //
 //   which way   along its length only, as its wheels roll: you must be walking into it, within a turn of 60
 //               degrees of its length (from behind or in front); pushing its side does nothing.
-//   how fast    PUSH_STEP a tick (about a metre a second), you walking behind it at its pace; PUSH_COST endurance a
+//   how fast    PUSH_STEP a tick (about a metre a second), you moved with it (its tiles lifted meanwhile); PUSH_COST endurance a
 //               tick, as running costs; winded, it doesn't move.
 //   stopped     by what stops a driven car (advance: walls, doors, windows, barricades, furniture, trunks, other
 //               cars), as much of the step as fits. Not by the dead or animals: whoever is on its new tiles is
@@ -23,11 +23,11 @@ public static partial class Vehicles
     public const int PUSH_COST = BodyMod.RUN_TICK_COST;
 
     /// <summary>You push a car whose body is this close to your centre (SUB): at its ends the tiles under it stop
-    /// you up to half a tile short of the body.</summary>
-    public const int PUSH_REACH = Motion.BODY_RADIUS + Motion.SUB / 2 + 16;
+    /// you up to half a tile short of the body, and a step more where a step would have overlapped them.</summary>
+    public const int PUSH_REACH = Motion.BODY_RADIUS + Motion.SUB / 2 + 64;
 
-    /// <summary>Push the parked car you are walking into, along its length. Returns how far it rolled (SUB), or null
-    /// if there was nothing to push (no car, not into it, not along it, winded, or something in its way).</summary>
+    /// <summary>Push the parked car you are walking into, along its length, you with it. Returns how far it rolled
+    /// (SUB), or null if there was nothing to push (no car, not into it, not along it, winded, or something in its way).</summary>
     public static Point? push(SimState state, Survivor s, int dx, int dy)
     {
         if ((dx == 0 && dy == 0) || BodyMod.isWinded(s)) return null;
@@ -47,6 +47,8 @@ public static partial class Vehicles
         Point rolled = new Point { x = Js.I(to.x - v.at.x), y = Js.I(to.y - v.at.y) };
         v.at = to;
         v.pos = Motion.tileOf(to);
+        // You go with it while its tiles are lifted (walls still stop you), so you keep at its end at its pace.
+        if (rolled.x != 0 || rolled.y != 0) s.at = Motion.slide(state, s.at, rolled.x, rolled.y, ControlMod.walkMover(state.grid, s.at));
         mark(state.grid, v);
         var after = tilesUnder(state.grid, v);
         if (!sameTiles(before, after))

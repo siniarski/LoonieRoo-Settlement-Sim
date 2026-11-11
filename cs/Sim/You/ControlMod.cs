@@ -192,12 +192,12 @@ public static partial class ControlMod
                 Leaps.walkOnTop(state, s, c, car, v);  // on a car's roof: within its body, or a step down (CarLeaps.cs)
                 return;
             }
-            // The push key held, walking into a parked car: it rolls, and you follow it at its pace (VehiclePush.cs).
-            if ((c.pushing == true) && (Vehicles.push(state, s, Js.I(c.dx), Js.I(c.dy)) is { } rolled))
-            {
-                v = rolled;
-            }
+            // The push key held, walking into a parked car: it rolls, you with it (VehiclePush.cs), and no step of your own.
             var stood = s.at;
+            if ((c.pushing == true) && (Vehicles.push(state, s, Js.I(c.dx), Js.I(c.dy)) != null))
+            {
+                v = new Point { x = 0, y = 0 };
+            }
             s.at = Motion.slide(state, s.at, v.x, v.y, walkMover(state.grid, s.at));
             // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body
             // (VehicleParking.cs pushOut). Where that would put you in a wall, you stay where you stood.
@@ -533,6 +533,11 @@ public static partial class ControlMod
         c.nextSwing = state.tick + wait;
         c.swungTick = state.tick;
         BodyMod.exert(s, spec.stamina);
+        if (Vehicles.strikeParked(state, s, swingDir(c), spec.reach) is { } car)
+        {
+            Noise.makeNoise(state, s.pos, "fighting", spec.noise);
+            return car;  // a parked car: a dent, and its alarm if it has one (VehicleAlarm.cs)
+        }
         var held = Weapons.specOf(Weapons.wielded(state, s));
         return ((held != null) && held.twoHanded && !Weapons.handsFree(s)) ? "swung at nothing (your hands are full)" : "swung at nothing";
     }

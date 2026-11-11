@@ -171,6 +171,7 @@ public static partial class Vehicles
             return "someone is driving it";
         }
         unpark(state, v);
+        if (v.alarmUntil == null) setOffAlarm(state, v);  // breaking in: its alarm, if it has one (VehicleAlarm.cs)
         v.driverId = s.id;
         s.move = null;
         s.at = Js.CopyAs<Point>(v.at);
@@ -336,6 +337,7 @@ public static partial class Vehicles
     {
         var was = v.health;
         v.health = JsMath.max(0, v.health - amount);
+        setOffAlarm(state, v);  // hitting it sets off its alarm, if it has one (VehicleAlarm.cs)
         if ((was > 0) && (v.health == 0))
         {
             Events.logEvent(state, $"The car at ({Js.Str(v.pos.x)}, {Js.Str(v.pos.y)}) is wrecked");
@@ -356,6 +358,7 @@ public static partial class Vehicles
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
             v.was = Js.CopyAs<Point>(v.at);
+            soundAlarm(state, v);
             if (!Js.T(v.driverId) || v.driverId.startsWith("x:"))
             {
                 continue;

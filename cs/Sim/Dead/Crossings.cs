@@ -157,6 +157,7 @@ public static class Crossings
             z.path = route;
         }
         startLeg(z, next, what);
+        Vehicles.climbedOver(state, next);  // a car's alarm (VehicleAlarm.cs)
         return true;
     }
 
