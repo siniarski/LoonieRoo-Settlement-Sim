@@ -17,6 +17,24 @@ namespace LoonieRoo.Game;
 
 public partial class Game
 {
+    /// <summary>A known place for a step that walks or listens for others' footfalls: out of any car, on a patch of open
+    /// ground (OpenGround), the dead and anything solid cleared from round it, facing east, ticks running. So the step
+    /// passes whatever the steps before it left standing (or whenever it runs alone).</summary>
+    async Task ClearGroundForSound()
+    {
+        var you = ControlMod.controlled(state)!;
+        if (Vehicles.vehicleOf(state, you) != null) Vehicles.leaveVehicle(state, you);
+        if (OpenGround(you.pos, 21, 15) is { } o) Staging.place(you, o.x + 10, o.y + 7);
+        var c = you.pos;
+        foreach (var z in state.zombies.Where((z) => Math.Abs(z.pos.x - c.x) <= 14 && Math.Abs(z.pos.y - c.y) <= 14).ToList()) Zombies.removeZombie(state, z);
+        foreach (var f in state.furniture.Where((f) => FurnitureBody.solid(f) && Math.Abs(f.x - c.x) <= 12 && Math.Abs(f.y - c.y) <= 12).ToList())
+            FurnitureMod.removeFurniture(state, f);
+        view.yaw = 0;
+        view.pitch = 0;
+        view.paused = false;
+        await Frames(3);
+    }
+
     async Task SoundSteps()
     {
         var sounds = firstPerson.sounds;
@@ -118,10 +136,8 @@ public partial class Game
         // Your steps: from your own body's footfalls (Footfalls.cs), walking, running and backing off. A step is
         // on a foot that's down: the clip's ankle within 5 cm of its lowest, the drawn one no higher than the other.
         view.paused = false;
-        // Room to walk: the steps before left a stove, a heater and the like round you, and furniture stops you now.
-        var here = ControlMod.controlled(state)!.pos;
-        foreach (var f in state.furniture.Where((f) => FurnitureBody.solid(f) && Math.Abs(f.x - here.x) <= 10 && Math.Abs(f.y - here.y) <= 10).ToList())
-            FurnitureMod.removeFurniture(state, f);
+        await ClearGroundForSound();   // room to walk, no dead about, on your feet
+        you = ControlMod.controlled(state)!;
         var people = firstPerson.People;
         int steps0 = sounds.yours.Steps, swings0 = sounds.yours.Swings;
         static bool Down(World3D.People.YourStep s) => s.clipH <= 0.05f && s.drawnH <= s.otherH + 0.01f;
