@@ -49,7 +49,7 @@ public sealed class Bodies
         return node;
     }
 
-    public void Update(SimState state, double alpha, Vector3 eye, string youId, HashSet<string> modelled, IReadOnlyList<Others.StandIn> others)
+    public void Update(SimState state, double alpha, Vector3 eye, string youId, HashSet<string> modelled, IReadOnlyList<Others.StandIn> others, double delta)
     {
         used.Clear();
         float range2 = 48 * 48;
@@ -79,7 +79,7 @@ public sealed class Bodies
             n.Position = new Vector3(d.x + 0.5f, Terrain.Height(d.x + 0.5f, d.y + 0.5f) + (lying ? 0.3f : 0.875f), d.y + 0.5f);
             n.Rotation = lying ? new Vector3(Mathf.Pi / 2, 0, 0) : Vector3.Zero;
         }
-        animals.Update(state, alpha, eye);
+        animals.Update(state, alpha, eye, delta);
         // Hide what wasn't used this frame.
         foreach (var (kind, pool) in pools)
             for (int k = used.GetValueOrDefault(kind); k < pool.Count; k++) pool[k].Visible = false;

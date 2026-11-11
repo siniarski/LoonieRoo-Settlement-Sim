@@ -218,6 +218,7 @@ public sealed partial class People
         {
             var m = dying[i];
             m.dying -= delta;
+            m.player.Advance(delta);
             if (m.dying > 0) continue;
             dying.RemoveAt(i);
             m.root.Visible = false;
@@ -260,6 +261,7 @@ public sealed partial class People
             CrossPre(m, w, alpha);
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
             CrossPost(m, w);
+            m.player.Advance(delta);
             Footfall(m, w.id, false, w.look.StartsWith("zombie"), delta);
             drawn.Add(w.id);
         }
@@ -351,8 +353,41 @@ public sealed partial class People
             m.root.Position += behind;
             if (back && m.forced == null) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
             LeapPost(m, lift, m == own);
+            m.player.Advance(delta);
         }
         Footfall(own!, you.id, true, false, delta);
+    }
+
+    /// <summary>Every model's clip and playhead (s) this frame, yours as "you" (the self-test: they hold while the world is held).</summary>
+    public List<(string id, string clip, double at)> Playheads()
+    {
+        var l = byBody.Select((kv) => (kv.Key, kv.Value.player.CurrentAnimation.ToString(), kv.Value.player.CurrentAnimationPosition)).ToList();
+        if (own != null && own.root.Visible) l.Add(("you", own.player.CurrentAnimation, own.player.CurrentAnimationPosition));
+        return l;
+    }
+
+    /// <summary>Where a clip carries the hands over its cycle, on your body's skeleton (the self-test: a walk swings them
+    /// at the sides, a carry holds them in front): the most either hand rises over the hips, the furthest behind the
+    /// hips either goes, and the least ahead of them either stays (m; NaN without your body).</summary>
+    public (float up, float behind, float ahead) HandsIn(string clip)
+    {
+        if (own == null || !Bones(own) || !own.player.HasAnimation(clip)) return (float.NaN, float.NaN, float.NaN);
+        var a = own.player.GetAnimation(clip);
+        var fk = new Gaits.Fk(a, own.skel!, Gaits.ToScene(own.root, own.skel!));
+        float up = float.MinValue, behind = float.MinValue, ahead = float.MaxValue;
+        for (int i = 0; i <= 60; i++)
+        {
+            double t = a.Length * i / 60;
+            var hips = fk.Head("Hips", t);
+            foreach (var hand in new[] { "LeftHand", "RightHand" })
+            {
+                var h = fk.Head(hand, t) - hips;  // the model's front is +Z
+                up = Math.Max(up, h.Y);
+                behind = Math.Max(behind, -h.Z);
+                ahead = Math.Min(ahead, h.Z);
+            }
+        }
+        return (up, behind, ahead);
     }
 
     /// <summary>The feet of model m that came down since the last look (its clip's marks crossed): into Steps.</summary>
@@ -462,7 +497,8 @@ public sealed partial class People
             sk.AddChild(new StumpHold { Name = "StumpHold", Left = cut[1].Contains("armLeft"), Right = cut[1].Contains("armRight") });
         var m = new Model { root = root, look = look, variant = Looks.FaceOf(variant), path = path };
         m.body = m.lods = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToArray()).ToArray();
-        var player = new AnimationPlayer();
+        // Played on the world's time (Advance each frame with Update's delta: 0 while the world is held), not the frame's.
+        var player = new AnimationPlayer { CallbackModeProcess = AnimationMixer.AnimationCallbackModeProcess.Manual };
         root.AddChild(player); // its root node ".." is the instance, where "Armature/Skeleton3D:..." starts
         player.AddAnimationLibrary("", mannequinLib);
         player.AddAnimationLibrary("ual", ualLib);

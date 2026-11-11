@@ -320,7 +320,10 @@ def mean_rot(qs):
     for q in qs:
         v = Vector(q)
         acc += v if q.dot(ref) >= 0 else -v
-    return Quaternion(acc.normalized())
+    # Divided by its length, not acc.normalized(): mathutils normalises a 4D Vector's first three parts only (its
+    # w is taken as homogeneous and left alone), which made this mean ~12 long and threw every gait whose arm swing
+    # is scaled (the brisk walk all survivors walk with had the hands up behind the back: 2026-11-11).
+    return Quaternion(acc / acc.length)
 
 
 def scale_swing(frames, bones, k):

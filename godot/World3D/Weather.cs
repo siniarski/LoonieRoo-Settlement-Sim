@@ -121,6 +121,9 @@ public sealed partial class WeatherLayer : Node3D
     }
 
     /// <summary>The one hook: called by FirstPerson after its lighting and its fog, once a frame.</summary>
+    /// <summary>The world is held this frame (the menu, the map, --paused): rain and snow stop where they are.</summary>
+    public bool Held;
+
     public void Update(SimState state, Vector3 eye, double delta, HashSet<int> indoor, DirectionalLight3D sun, Godot.Environment env)
     {
         var t0 = stats ? Stopwatch.GetTimestamp() : 0;
@@ -138,6 +141,8 @@ public sealed partial class WeatherLayer : Node3D
         // Rain and snow: a box over the camera, thicker in a storm or a blizzard.
         rain.GlobalPosition = eye + new Vector3(0, 7, 0);
         snowfall.GlobalPosition = eye + new Vector3(0, 6, 0);
+        // Held (the world paused): the drops and flakes stop in the air, as everything else does.
+        rain.SpeedScale = snowfall.SpeedScale = Held ? 0 : 1;
         rain.Emitting = raining && !roofed;
         rain.AmountRatio = w == "storm" ? 1f : 0.55f;
         snowfall.Emitting = snowing && !roofed;

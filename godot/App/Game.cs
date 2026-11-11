@@ -204,8 +204,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             var fsw = Stopwatch.StartNew();
             // In a car the view turns with it (and faces forward as you get in, unless --look said where to look).
             view.yaw = (view.yaw + firstPerson.CarTurn(state, view.yaw, delta, !lookSet)) % (2 * Math.PI);
-            firstPerson.Update(state, alpha, view.yaw, view.pitch, delta);
-            fires.Update(state, firstPerson.camera.GlobalPosition, delta);
+            // While the world is held (the menu, the map, --paused) its motion gets no time: bodies, animals, the held
+            // item, fire, rain and lights hold still with the sim; the light and the weather's look still ease in
+            // (docs/characters.md "Held still"). A --shot-at run plays on.
+            double world = view.halted && shotAt == null ? 0 : delta;
+            firstPerson.Update(state, alpha, view.yaw, view.pitch, delta, world);
+            fires.Update(state, firstPerson.camera.GlobalPosition, world);
             fpMs = fpMs * 0.9 + fsw.Elapsed.TotalMilliseconds * 0.1;
             // The top-down camera keeps up with you, so the Colony tab opens where you are.
             var w = worldPos(you!, alpha);

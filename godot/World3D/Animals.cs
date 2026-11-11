@@ -61,7 +61,6 @@ public sealed class AnimalModels
     readonly Dictionary<string, Kind> kinds = new();
     readonly Dictionary<string, List<Model>> free = new();
     readonly Dictionary<string, Model> byBody = new();
-    ulong lastUsec;
 
     public AnimalModels(Node3D parent)
     {
@@ -85,11 +84,10 @@ public sealed class AnimalModels
 
     readonly record struct Wanted(string id, string kind, Point at, Point was, double dist2, double bite, Point? facing, CarCrossing? cross);
 
-    public void Update(SimState state, double alpha, Vector3 eye)
+    /// <summary>The animals near the eye this frame; `delta` is the world's time (0 while it is held: they hold still).</summary>
+    public void Update(SimState state, double alpha, Vector3 eye, double delta)
     {
-        ulong now = Godot.Time.GetTicksUsec();
-        double delta = lastUsec == 0 ? 1 / 60.0 : Math.Min(0.25, (now - lastUsec) / 1e6);
-        lastUsec = now;
+        delta = Math.Min(0.25, delta);
         float vpHeight = parent.GetViewport().GetVisibleRect().Size.Y;
 
         var wanted = new List<Wanted>();
@@ -143,6 +141,7 @@ public sealed class AnimalModels
                 byBody[w.id] = m;
             }
             Pose(m, w, state, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
+            m.player.Advance(delta); // played on the world's time, not the frame's (Make: manual)
         }
     }
 
@@ -177,6 +176,7 @@ public sealed class AnimalModels
         m.lods = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToArray()).ToArray();
         foreach (var mi in m.lods.SelectMany((g) => g)) mi.MaterialOverride = Coat(mi.Mesh.SurfaceGetMaterial(0) as BaseMaterial3D);
         m.player = FindAll<AnimationPlayer>(root).First();
+        m.player.CallbackModeProcess = AnimationMixer.AnimationCallbackModeProcess.Manual;
         foreach (var n in new[] { "idle", "walk", "run" })
             if (m.player.HasAnimation(n)) m.player.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
         return m;

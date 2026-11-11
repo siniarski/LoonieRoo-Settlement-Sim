@@ -270,6 +270,29 @@ In the lab (2026-11-08): the mannequin is region meshes with stump caps at the j
   tab plays them. Not done yet: putting library locomotion into the blend space (the cycles start in their own phase,
   not ours), and the library's 10 cm shorter toe bone means feet roll off the toe a little differently.
 
+- **The arms behind the back (fixed 2026-11-11, the player's play):** art/scripts/derive_clips.py scales a gait's arm
+  swing about its mean rotation (`scale_swing`), and the mean was a mathutils 4D `Vector.normalized()`, which leaves the
+  4th part alone (it takes it as homogeneous): a "quaternion" ~12 long. Every gait with an arm scale other than 1 was
+  thrown: the brisk walk every tile-walker plays at the sim's 2.5 m/s raised the hands up behind the back, the jog held
+  them together at the chest like a boxer, and the slow walk, run, sneak, shuffle, the dead's run and the brisk carry
+  were off too. The mean is now divided by its length; the clips were baked again (speeds and strides unchanged).
+  Self-test: the walks' hands stay within 12 cm of the hips' height and 40 cm behind them, the carries' 20 cm ahead.
+  Pictures before and after: experiments/play-fixes/animation/. Others hold nothing yet: an armed survivor walks as
+  an unarmed one (no weapon is drawn on others), and a carry's arms hold no visible load.
+
+### Held still (2026-11-11)
+
+While the world is held (`view.halted`: the menu, the map, `--paused`; the inventory doesn't hold it) nothing in it
+moves. Game.cs gives FirstPerson the frame's time and the world's (0 while held); what moves runs on the world's:
+People's and the animals' AnimationPlayers are on manual and advanced by it (so the dead's jaws, a fall, a rise, a
+one-shot and your own body hold mid-motion), the held item's bob and breath, the stand-ins, the lights' flicker, the
+helicopter, the fire's shaders (a `clock` uniform in place of `TIME`), and rain and snow (the particles' speed 0).
+What eases to the world as it stands keeps the frame's time, so a `--paused` picture still gets its light, its
+weather's look and the dashboard's needles: none of them moves on its own. Left going: the ambient sound loops (wind,
+rain), as a held game sounds wrong silent; the eye's landing dip (People.Leap.cs, 0.28 s, on the frame's time).
+Nothing else in the world animates (no wind in the trees or the grass: no shader there reads `TIME`). A `--shot-at`
+run plays on (it steps the sim itself). Self-test: paused, no body's playhead moves in 30 frames; played, yours does.
+
 ### First person
 
 First person is the solo view (2026-11-08). The player's own body: a separate **arms rig** (the same arm bone names, so arm clips can be shared) with its own FOV-friendly clips, timed from the same sim progress as the third-person clips so intent and timing stay identical. The full body stays for shadows and for others. Nothing in the plan above blocks this.
