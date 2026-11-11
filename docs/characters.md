@@ -277,8 +277,8 @@ In the lab (2026-11-08): the mannequin is region meshes with stump caps at the j
   them together at the chest like a boxer, and the slow walk, run, sneak, shuffle, the dead's run and the brisk carry
   were off too. The mean is now divided by its length; the clips were baked again (speeds and strides unchanged).
   Self-test: the walks' hands stay within 12 cm of the hips' height and 40 cm behind them, the carries' 20 cm ahead.
-  Pictures before and after: experiments/play-fixes/animation/. Others hold nothing yet: an armed survivor walks as
-  an unarmed one (no weapon is drawn on others), and a carry's arms hold no visible load.
+  Pictures before and after: experiments/play-fixes/animation/. Others' weapons and loads in hand: "In hand, in
+  water, over cars" below.
 
 ### Held still (2026-11-11)
 
@@ -292,6 +292,46 @@ weather's look and the dashboard's needles: none of them moves on its own. Left 
 rain), as a held game sounds wrong silent; the eye's landing dip (People.Leap.cs, 0.28 s, on the frame's time).
 Nothing else in the world animates (no wind in the trees or the grass: no shader there reads `TIME`). A `--shot-at`
 run plays on (it steps the sim itself). Self-test: paused, no body's playhead moves in 30 frames; played, yours does.
+
+### In hand, in water, over cars (2026-11-12)
+
+Pictures before and after: experiments/anim-next/ (its README has the commands). Log: log/2026-11-12-10-animation.md.
+
+- **Grips** (World3D/People.Hold.cs). The item's model rides the right hand's bone. On the pz rig that bone's frame is
+  +Y along the fingers, +X to the thumb, +Z out of the palm (printed by `AnimTest --held`). Each item's own grip point
+  (Held.GripOf, the one first person uses) sits in the palm, 8.5 cm along the fingers and 3.5 cm out. The item is
+  turned by its class (Held.Family): its +X (grip to head, or a gun's barrel) points ahead of the fist and droops
+  towards the fingers. The droop is a club's or knife's 45 deg, an axe's 42, a long gun's 31 (kept off the ground)
+  and a handgun's 52 (a low ready). An edge or a face points along the fingers' curl, to the front of a swing; a
+  gun's top points the other way, up when held low. A load carried in both arms is put between the two hands each
+  frame, squared to the body. Lab: `AnimTest --clips=more/idle,more/walk,more/run --views=side,front --held=KIND
+  --sheet=FILE` gives one picture for each class (experiments/anim-next/grips.sh). Others swing a weapon with the
+  walk's arm swing, and running with a long gun swings it upright: nobody carries one at port arms or slung.
+- **Swimming** (World3D/People.Swim.cs). Out of your depth, your body seen from outside plays the library's
+  `ual_swim_fwd` (flat, a breast stroke), with the hips 12 cm under the surface, facing the way you swim. Still, it
+  plays `ual_swim_idle` (treading water upright, the neck at the surface). Its height comes from the clip's own
+  mean bone height (forward kinematics, once a clip). Nothing is in its hand. In first person no body is drawn while
+  you swim, so looking down shows only SwimHands' stroke. Wading is the walk on the bed, with the water round the
+  legs. Nobody else swims.
+- **The dead over a car** (World3D/People.Climb.cs). A leg over a car runs in three parts, each by its progress
+  (Crossings.RISE, the lift's own split), so it holds when paused and keeps up at 4x:
+  - haul: the hands go to the car's top at its near edge, either side of the way over. This is HandIK, as your
+    vault, with the chest leant over the hands. The legs tuck up as the body rises (the jump-start clip's tuck).
+  - top: across on the belly, in the crawl, each body starting at its own place in the cycle (a hash of its id).
+  - drop: the hands push off the far edge, the body upright and its legs reaching down (the in-air clip).
+
+  Hands go only on the dead within 14 m, 8 a frame at most. A crawler crawls throughout.
+- **You and a car** (People.Leap.cs). Going over a car or climbing onto one (CarLeaps' over and climb), the free hand
+  goes on the car's top where your line first meets its body (People.CarEdge), as on a sill. Climbing onto a car,
+  the hand stays there for 70% of the climb. Your body was remade whenever its look changed (a new game), and the
+  vault's hand IK still pointed at the freed skeleton: every frame after that threw. Its hands are now forgotten
+  with the model.
+- **Animals over a car** (World3D/Animals.cs). Over a car (the wolf, the dog and the bear climb it), the body tips
+  nose up climbing the flank, is level across the top and tips nose down coming off. It plays the run clip, quick,
+  going up and down, and the walk on the top. A leap (the deer's bound) is one stride of the run drawn out over the
+  arc, nose up off the ground and down onto it. Under a car, a dog goes on its belly whatever the room: 62% of its
+  height and a little longer. The models have only idle, walk, run and attack: there is no climbing clip, and the
+  legs do not reach for the car.
 
 ### First person
 

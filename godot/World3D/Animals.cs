@@ -10,7 +10,10 @@
 // speed is eased only enough to hide a tick's jitter, the facing turns towards the velocity, and an
 // animal that stops really stands (idle) until it walks on. Crossing a parked car (the sim's AnimalCars.cs) it is
 // lifted by AnimalCars.lift (a deer's arc, a wolf up on the roof and down), and under one it keeps to the ground,
-// crouched to the room beneath the body. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
+// crouched to the room beneath the body (a dog on its belly, low and long, whatever the room). Over one (2026-11-12) the
+// body tips with the way: nose up climbing the flank, level across the top, nose down coming off it, the run clip
+// quick as it scrambles up and down and the walk on the top; a leap (the deer's bound) is one stride of the run drawn
+// out over the arc, nose up off the ground and down onto it. Its playhead and tip are by the crossing's progress. A bite is when its nextBite moved on (wolves, bears) or its cooldown was reset
 // (dogs): the attack plays once, turned to whoever it bit. Killed animals leave the sim at once (the
 // meat goes to whoever brought it down), so there's no carcass to draw.
 //
@@ -220,7 +223,9 @@ void fragment() {
         m.root.Position = new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + lift, (float)p.y);
         var room = AnimalCars.room(w.cross);
         float squash = room is double r && kind.height > r ? (float)Math.Max(0.3, (r - 0.03) / kind.height) : 1f;
-        m.root.Scale = new Vector3(1, squash, 1);
+        // A dog under a car goes on its belly whatever the room (a crouch: low and long); others only as low as they must.
+        if (room != null && w.kind == "dog") squash = Math.Min(squash, CROUCH);
+        m.root.Scale = new Vector3(1, squash, 1 + (1 - squash) * 0.35f);
         double dx = w.at.x - w.was.x, dy = w.at.y - w.was.y;
         double speed = Math.Sqrt(dx * dx + dy * dy) / Motion.SUB * PoseIntents.TICKS_PER_SECOND;
         // Eased a little (a tick's jitter, a turn round a corner); a stop is a real stand.
@@ -249,9 +254,23 @@ void fragment() {
             m.yaw = m.placed ? Mathf.LerpAngle(m.yaw, want, (float)Math.Min(1, delta * 12)) : want;
         }
         m.placed = true;
-        m.root.Rotation = new Vector3(0, m.yaw, 0);
+        m.root.Rotation = new Vector3(Pitch(w.cross, alpha), m.yaw, 0);
 
-        if (bit && m.player.HasAnimation("attack"))
+        if (w.cross is { how: not AnimalCars.UNDER } cc && cc.ticks >= 2 && !bit && m.clip != "attack")
+        {
+            double t = Math.Clamp((cc.done - 1 + alpha) / (cc.ticks - 1), 0, 1);
+            bool leap = cc.how == AnimalCars.LEAP;
+            string clip = leap || t < SCRAMBLE || t > 1 - SCRAMBLE ? "run" : "walk";
+            if (clip != m.clip) { m.player.Play(clip, 0.12); m.clip = clip; }
+            if (leap)
+            {
+                // One bound: from the push-off to the reach for the ground, over the arc.
+                m.player.Seek(m.player.CurrentAnimationLength * (BOUND_FROM + BOUND_SPAN * t), true);
+                m.player.SpeedScale = 1;
+            }
+            else m.player.SpeedScale = clip == "run" ? 1.4f : 0.8f;
+        }
+        else if (bit && m.player.HasAnimation("attack"))
         {
             m.player.Play("attack", 0.1);
             m.player.Seek(0, true);
@@ -288,6 +307,35 @@ void fragment() {
         for (int i = 0; i < m.lods.Length; i++)
             foreach (var piece in m.lods[i])
                 piece.Visible = i == lod && (m.buck || !piece.Name.ToString().Contains("antlers"));
+    }
+
+    /// <summary>A dog under a car: its height to this share (a crouch on its belly).</summary>
+    const float CROUCH = 0.62f;
+    /// <summary>A climb's scramble: the share of the crossing at each end spent going up or down (AnimalCars.lift's 0.3).</summary>
+    const double SCRAMBLE = 0.3;
+    /// <summary>A leap's one bound, as a share of the run clip's cycle: where it starts and how much of it the arc takes.</summary>
+    const double BOUND_FROM = 0.15, BOUND_SPAN = 0.5;
+    /// <summary>The most a body tips nose up or down over a car (radians).</summary>
+    const float MOST_PITCH = 0.6f;
+
+    /// <summary>The body's tip (radians about its side: + nose down) over a car: up the flank nose up, over the top
+    /// level, down it nose down; a leap follows its arc, nose up off the ground and down onto it.</summary>
+    static float Pitch(CarCrossing? c, double alpha)
+    {
+        if (c == null || c.how == AnimalCars.UNDER || c.ticks < 2) return 0;
+        double t = Math.Clamp((c.done - 1 + alpha) / (c.ticks - 1), 0, 1);
+        double span = Math.Sqrt((double)(c.to.x - c.from.x) * (c.to.x - c.from.x) + (double)(c.to.y - c.from.y) * (c.to.y - c.from.y)) / Motion.SUB;
+        if (span < 0.1) return 0;
+        double top = c.top / 100, rise;
+        if (c.how == AnimalCars.LEAP) rise = 4 * (top + 0.3) * (1 - 2 * t);  // d(lift)/dt
+        else
+        {
+            // Up and down the ends (AnimalCars.lift), eased into and out of the tip so it doesn't snap.
+            double up = t < SCRAMBLE ? 1 : t > 1 - SCRAMBLE ? -1 : 0;
+            double edge = Math.Min(Math.Min(t, 1 - t), Math.Abs(Math.Abs(t - 0.5) - (0.5 - SCRAMBLE)));
+            rise = up * top / SCRAMBLE * Math.Min(1, edge / 0.06);
+        }
+        return (float)Math.Clamp(-Math.Atan(rise / span), -MOST_PITCH, MOST_PITCH);
     }
 
     static int LodIndex(StringName name)

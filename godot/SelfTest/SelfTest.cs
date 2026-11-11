@@ -153,6 +153,14 @@ public partial class Game
             GetTree().Quit(failures.Count);
             return;
         }
+        // SELFTEST_ONLY=anim: only the last steps (SelfTestAnim.cs), for working on them.
+        if (OS.GetEnvironment("SELFTEST_ONLY") == "anim")
+        {
+            await AnimSteps();
+            GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
+            GetTree().Quit(failures.Count);
+            return;
+        }
         // SELFTEST_ONLY=sound: only the sound steps, alone. SELFTEST_SKIP=car,roof,interact,...: those groups left out
         // (the steps after them must not depend on them).
         if (OS.GetEnvironment("SELFTEST_ONLY") == "sound")
@@ -345,6 +353,7 @@ public partial class Game
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
         await BigNewGame();
+        await AnimSteps();
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);

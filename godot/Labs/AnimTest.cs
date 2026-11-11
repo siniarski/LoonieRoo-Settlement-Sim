@@ -26,7 +26,7 @@ public partial class AnimTest : Node3D
 {
     /// <summary>One run: a name, the speed over time (m/s), the ground's slope (degrees, uphill along the walk),
     /// how long, which part is measured (from, to: seconds), and whether the near tier's foot IK is on.</summary>
-    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null, char oneLeg = ' ', bool armLost = false, bool look = false);
+    sealed record Case(string name, Func<double, double> speed, double slope, double length, double from, double to, bool ik, bool dead = false, string stance = "stand", bool running = false, double turn = 0, string variant = "walker", double h = 0, string? clip = null, char oneLeg = ' ', bool armLost = false, bool look = false, string view = "side");
 
     const double DT = 1.0 / 60;
     const float HEEL_UP = 0.09f, BALL_UP = 0.02f, DOWN = 0.025f, WRIST_UP = 0.04f;
@@ -151,10 +151,13 @@ public partial class AnimTest : Node3D
             {
                 var a = player.GetAnimation(cl);
                 double len = a?.Length ?? 1;
-                cases.Add(new Case(cl.Replace("/", "-"), (x) => 0, 0, len + 0.5, 0.25, len + 0.25, false, clip: cl));
+                foreach (var view in (args.GetValueOrDefault("views") ?? "side").Split(','))
+                    cases.Add(new Case(cl.Replace("/", "-") + (view == "side" ? "" : "-" + view), (x) => 0, 0, len + 0.5, 0.25, len + 0.25, false, clip: cl, view: view));
             }
             if (stripN > 0) stripEvery = -1;
         }
+        if (args.TryGetValue("held", out var heldKind)) Held(heldKind);
+        sheetFile = args.GetValueOrDefault("sheet") ?? "";
         if (args.TryGetValue("cases", out var only)) cases.RemoveAll((c) => !only.Split(',').Any((o) => c.name.Contains(o)));
         report.AppendLine($"Animation test, logic `{logic}`: a pz survivor model as People.cs plays it, moved along the ground. Slide: how far the planted foot travels along the ground while down, per step (cm). Sole: the planted sole's height over the ground (cm, mean; worst sink).");
         report.AppendLine();
@@ -210,7 +213,7 @@ public partial class AnimTest : Node3D
     {
         if (cam == null) return;
         var at = model.Position;
-        cam.Position = at + new Vector3(3.2f, 1.0f, 0);
+        cam.Position = at + (c.view == "front" ? new Vector3(0, 1.0f, 3.2f) : new Vector3(3.2f, 1.0f, 0));
         cam.LookAt(at + new Vector3(0, 0.85f, 0), Vector3.Up);
         if (ground != null) { ground.Rotation = new Vector3(-(float)(slopeDeg * Math.PI / 180), 0, 0); }
         frame++;
@@ -230,11 +233,43 @@ public partial class AnimTest : Node3D
     void SaveStrip(Case c)
     {
         if (stripImage == null || outDir == "") return;
+        if (sheetFile != "")
+        {
+            // --sheet=FILE: every case's strip a row of one picture, at half size.
+            var row = stripImage;
+            row.Resize(row.GetWidth() / 2, row.GetHeight() / 2);
+            var grown = Image.CreateEmpty(Math.Max(row.GetWidth(), sheet?.GetWidth() ?? 0), row.GetHeight() + (sheet?.GetHeight() ?? 0), false, row.GetFormat());
+            if (sheet != null) grown.BlitRect(sheet, new Rect2I(0, 0, sheet.GetWidth(), sheet.GetHeight()), Vector2I.Zero);
+            grown.BlitRect(row, new Rect2I(0, 0, row.GetWidth(), row.GetHeight()), new Vector2I(0, sheet?.GetHeight() ?? 0));
+            sheet = grown;
+            stripImage = null;
+            System.IO.Directory.CreateDirectory(outDir);
+            sheet.SavePng(System.IO.Path.Combine(outDir, sheetFile));
+            return;
+        }
         System.IO.Directory.CreateDirectory(outDir);
         string file = System.IO.Path.Combine(outDir, "strip-" + string.Concat(c.name.Select((ch) => char.IsLetterOrDigit(ch) ? ch : '-')).Replace("--", "-") + ".png");
         stripImage.SavePng(file);
         GD.Print($"animtest: strip {file}");
         stripImage = null;
+    }
+
+    string sheetFile = "";
+    Image? sheet;
+    MeshInstance3D? heldMesh;
+    string heldKind = "";
+
+    /// <summary>--held=KIND (with --clips): the item in the right hand as People.Hold.cs puts it (a load between the hands).</summary>
+    void Held(string kind)
+    {
+        heldKind = kind;
+        var items = new ItemModels(this);
+        var at = new BoneAttachment3D { BoneName = "RightHand" };
+        skel.AddChild(at);
+        at.AddChild(heldMesh = new MeshInstance3D { Mesh = items.MeshFor(kind) ?? new BoxMesh { Size = new Vector3(0.4f, 0.3f, 0.3f) } });
+        heldMesh.Transform = People.GripFor(kind);
+        var hb = skel.GetBoneGlobalRest(skel.FindBone("RightHand")).Basis;
+        GD.Print($"animtest: right hand rest axes (model space) x {hb.X} y {hb.Y} z {hb.Z}");
     }
 
     // --bench=N [--frames=F]: N models as People.cs draws them (one AnimationPlayer each, on the game's process
@@ -381,6 +416,7 @@ public partial class AnimTest : Node3D
         double turning = c.turn != 0 && t > c.from && t < c.from + 0.5 ? c.turn / 0.5 : 0;
         Step(c, v, turning);
         player.Advance(DT);
+        if (heldMesh != null && People.IsLoad(heldKind)) heldMesh.Transform = People.LoadFrame(skel);
         t += DT;
     }
 

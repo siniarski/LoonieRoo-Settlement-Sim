@@ -66,7 +66,7 @@ public sealed class Held
     }
 
     /// <summary>Which of a model's own axes is its working side (Zero: it turns with the hand): an edge, a head's face, a gun's top.</summary>
-    static Vector3 FaceOf(string kind) => kind switch
+    internal static Vector3 FaceOf(string kind) => kind switch
     {
         "axe" or "hatchet" or "machete" or "knife" => new(0, 0, 1),
         "hammer" => new(0, 0, -1),
@@ -75,7 +75,7 @@ public sealed class Held
     };
 
     /// <summary>How an item is held and moved (the weapons' table is cs/Sim/Combat/WeaponTable.cs): "rifle" (a long gun in both hands), "handgun", "axe" (a heavy tool in both hands), "stab" (a knife, a spear) or "club".</summary>
-    static string Family(string kind) => kind switch
+    internal static string Family(string kind) => kind switch
     {
         "rifle" or "shotgun" or "crossbow" => "rifle",
         "gun" or "pistol" or "revolver" => "handgun",
@@ -104,7 +104,7 @@ public sealed class Held
     }
 
     /// <summary>Where each model is gripped (its own space, m: x along it, y up) for a hand.</summary>
-    static Vector3 GripOf(string kind) => kind switch
+    internal static Vector3 GripOf(string kind) => kind switch
     {
         "weapon" or "bat" or "crowbar" => new(-0.29f, 0.035f, 0),
         "axe" => new(-0.3f, 0.022f, 0),
