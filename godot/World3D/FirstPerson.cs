@@ -40,6 +40,9 @@ public sealed partial class FirstPerson : Node3D
     readonly FurnitureModels furniture;
     readonly Held held;
     readonly SwimHands swimHands;
+    readonly RoadRibbons ribbons;
+    /// <summary>Country roads drawn along their planned lines (the self-test).</summary>
+    public RoadRibbons Ribbons => ribbons;
     /// <summary>Your arms while swimming (the self-test).</summary>
     public SwimHands SwimHands => swimHands;
     /// <summary>What you hold (the self-test).</summary>
@@ -111,6 +114,7 @@ public sealed partial class FirstPerson : Node3D
         furniture = new FurnitureModels(this);
         held = new Held(camera, items);
         swimHands = new SwimHands(camera, items);
+        ribbons = new RoadRibbons(this, solid);
         people = new People(this) { Items = items };
         trees = new Trees(this);
         far = new FarField(this, trees);
@@ -190,6 +194,7 @@ public sealed partial class FirstPerson : Node3D
         sun.ShadowEnabled = ShadowDistance > 0;
         if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
         Light(state, eye, delta);
+        ribbons.Update(state, eye);  // before the chunks: it says whether country roads are ribbons (WorldMesh.Ribboned)
         Chunks(state, eye);
         trees.Update(state, eye, look);
         furniture.Update(state, eye, look);

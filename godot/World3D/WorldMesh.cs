@@ -125,8 +125,15 @@ public static class WorldMesh
                 int i = y * g.width + x;
                 string tile = Grids.tileAt(g, i);
                 string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
-                Ground(gs, ws, x, y, tile, ground, RoadCorner(g, x, y, tile, ground));
-                LaneMark(gs, g, x, y, tile, ground);
+                // A country road's tiles are drawn as the verge beside them while the road itself is a ribbon along
+                // its planned line (RoadRibbons.cs); a street between kerbs keeps its tiles and its lines.
+                bool ribbon = Ribboned && tile == "floor" && ground == "road" && !Terrain.Sunk(x, y);
+                if (ribbon) Ground(gs, ws, x, y, tile, Verge(g, x, y));
+                else
+                {
+                    Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));
+                    LaneMark(gs, g, x, y, tile, ground);
+                }
                 anyWater |= tile == "water";
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
@@ -196,6 +203,25 @@ public static class WorldMesh
         if (s && w && !n && !e) return 2;
         if (w && n && !e && !s) return 3;
         return -1;
+    }
+
+    /// <summary>Country roads are drawn as ribbons (RoadRibbons.cs sets this each frame: a world with a plan).</summary>
+    public static bool Ribboned;
+
+    /// <summary>The ground beside a road tile: the nearest kind that is not road, looking out the four ways (grass if none near).</summary>
+    static string Verge(Grid g, int x, int y)
+    {
+        for (int d = 1; d <= 6; d++)
+            foreach (var (dx, dy) in new[] { (0, -1), (1, 0), (0, 1), (-1, 0) })
+            {
+                int ax = x + dx * d, ay = y + dy * d;
+                if (ax < 0 || ay < 0 || ax >= g.width || ay >= g.height) continue;
+                int i = ay * g.width + ax, k = Grids.groundAt(g, i);
+                if (k < 0 || k >= Grids.GROUNDS.Length || k == ROAD || Grids.tileAt(g, i) != "floor") continue;
+                string kind = Grids.GROUNDS[k];
+                if (kind is "grass" or "dirt" or "forest" or "field") return kind;
+            }
+        return "grass";
     }
 
     static readonly Look LANE = new(new Color(0.62f, 0.6f, 0.5f), Surfaces.None);

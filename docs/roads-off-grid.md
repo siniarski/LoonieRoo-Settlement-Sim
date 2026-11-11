@@ -1,7 +1,8 @@
 # Roads off the tile grid: what it would take (2026-11-12)
 
 The player asked to look at roads that are "not fixed to tile and instead dynamically generated". This is the
-assessment; nothing here is built. Today a road is a ground kind on tiles (`Grids.GROUNDS` "road"), laid by
+assessment. **Step 1 is built** (2026-11-12, `godot/World3D/RoadRibbons.cs`): country roads are drawn as
+ribbons along the plan's lines, with lane lines; the rest is not. Today a road is a ground kind on tiles (`Grids.GROUNDS` "road"), laid by
 `cs/Sim/Worldgen/Roads.cs` from the world plan's road lines (which are already lines between points: `PointD`),
 six tiles wide in towns since 2026-11-11, and everything else reads tiles: lots front onto road tiles, cars
 drive faster on road tiles, kerbs sink road tiles, paths cost by tile.
