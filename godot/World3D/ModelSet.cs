@@ -4,6 +4,8 @@
 // What draws with it says where things stand; this only loads and batches. Use: Begin(), Add(model, transform) for
 // each thing, End(). A model not added this time draws nothing. Fields, Sites, Aircraft, Cars and Others' props use
 // it; the items and the furniture (Items.cs, Furniture.cs) came first and have the same code of their own.
+// The shader (and those two's) lays the detail kit over the colour (docs/textures.md): each face's layer is in the
+// model's UV, laid by its UV2 in metres, so it stays on the thing when it drives, is carried or is turned.
 
 using System;
 using System.Collections.Generic;
@@ -16,8 +18,12 @@ public sealed class ModelSet
     const string SHADER = @"
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+#include ""res://assets/shaders/surface_detail.gdshaderinc""
+void vertex() {
+    SURFACE_BY_OBJECT
+}
 void fragment() {
-    ALBEDO = COLOR.rgb;
+    ALBEDO = COLOR.rgb * SURFACE_DETAIL;
     METALLIC = COLOR.a * 0.7;
     ROUGHNESS = mix(0.9, 0.45, COLOR.a);
 }";
@@ -36,7 +42,7 @@ void fragment() {
     {
         this.parent = parent;
         this.shadows = shadows;
-        shared ??= new ShaderMaterial { Shader = new Shader { Code = SHADER } };
+        shared ??= new ShaderMaterial { Shader = Surfaces.Shader(SHADER) };
         var scene = GD.Load<PackedScene>(path).Instantiate<Node3D>();
         Collect(scene);
         scene.Free();

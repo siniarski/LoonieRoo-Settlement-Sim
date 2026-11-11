@@ -30,47 +30,51 @@ import sys
 import bpy
 from mathutils import Matrix, Vector
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# What each colour is made of (its detail layer) and mul, which keeps it, come from the shared kit.
+from lowpoly import mat, mul, plain, write_surfaces  # noqa: E402
+
 
 def lin(r, g, b):
     """An sRGB colour (0-255) as linear (the colour attribute is linear)."""
     return tuple((c / 255) ** 2.2 for c in (r, g, b))
 
 
-def mul(c, k):
-    return tuple(max(0.0, min(1.0, v * k)) for v in c)
-
-
 # --- the palette: faded, a world gone a few years without paint ---
 
-WOOD = lin(140, 100, 62)
-WOOD_D = lin(98, 68, 42)
-WOOD_L = lin(178, 140, 96)
-PINE = lin(190, 156, 108)
-OAK = lin(120, 84, 52)
-STEEL = lin(150, 152, 156)
-STEEL_D = lin(78, 80, 86)
+# A colour made of something wears that detail (lowpoly.MATERIALS); a plain one with metalness wears painted metal,
+# without none (paint, lights, labels).
+WOOD = mat("wood", lin(140, 100, 62))
+WOOD_D = mat("wood", lin(98, 68, 42))
+WOOD_L = mat("wood", lin(178, 140, 96))
+PINE = mat("wood", lin(190, 156, 108))
+OAK = mat("wood", lin(120, 84, 52))
+STEEL = mat("metal", lin(150, 152, 156))
+STEEL_D = mat("metal", lin(78, 80, 86))
 GREY = lin(122, 124, 122)
-RUST = lin(124, 70, 42)
+RUST = mat("metal", lin(124, 70, 42))
 BLACK = lin(30, 30, 32)
 WHITE = lin(222, 220, 212)
-ENAMEL = lin(208, 206, 196)
+ENAMEL = mat("metal", lin(208, 206, 196))
 CREAM = lin(216, 204, 172)
 RED = lin(160, 36, 30)
 ORANGE = lin(204, 116, 34)
 YELLOW = lin(196, 160, 40)
 BRASS = lin(180, 146, 70)
-OLIVE = lin(86, 92, 58)
+OLIVE = mat("cloth", lin(86, 92, 58))
 GREEN = lin(60, 96, 62)
 BLUE = lin(52, 78, 120)
-TARP = lin(66, 86, 96)
-ROPE = lin(170, 150, 104)
-CONCRETE = lin(140, 138, 130)
-BRICK = lin(128, 64, 48)
-STONE = lin(118, 114, 104)
-SHEET = lin(196, 190, 176)
-GLASS = lin(70, 90, 100)
-DIRT = lin(84, 66, 48)
-HAY = lin(196, 168, 92)
+TARP = mat("cloth", lin(66, 86, 96))
+ROPE = mat("fine", lin(170, 150, 104))
+CONCRETE = mat("concrete", lin(140, 138, 130))
+BRICK = mat("brick", lin(128, 64, 48))
+STONE = mat("concrete", lin(118, 114, 104))
+SHEET = mat("cloth", lin(196, 190, 176))
+GLASS = plain(lin(70, 90, 100))
+DIRT = mat("earth", lin(84, 66, 48))
+HAY = mat("straw", lin(196, 168, 92))
+RUBBER = mat("rubber", BLACK)
+CARD = lin(168, 132, 86)
 
 
 class Geo:
@@ -160,7 +164,7 @@ def drawers(g, w, h, z, y, n, col, handle=BRASS):
         box(g, (0.12, 0.02, 0.018), (0, y - 0.02, z + dh * (k + 0.5)), handle, metal=1)
 
 
-def wheel(g, r, w, loc, col=BLACK, hub=STEEL, seg=10):
+def wheel(g, r, w, loc, col=RUBBER, hub=STEEL, seg=10):
     cyl(g, r, w, loc, col, seg=seg, axis="x", caps=mul(col, 1.4))
     cyl(g, r * 0.5, w + 0.01, loc, hub, metal=1, seg=seg, axis="x")
 
@@ -175,9 +179,9 @@ def bed(g):
     box(g, (W + 0.04, 0.05, 0.95), (0, L / 2, 0), WOOD_D, top=WOOD)
     box(g, (W + 0.04, 0.05, 0.5), (0, -L / 2, 0), WOOD_D, top=WOOD)
     box(g, (W - 0.06, L - 0.1, 0.18), (0, 0, 0.34), SHEET, taper=0.98)
-    box(g, (0.62, 0.36, 0.12), (0, L / 2 - 0.26, 0.52), WHITE, taper=0.85)
-    box(g, (W - 0.02, 1.1, 0.06), (0, -0.33, 0.5), lin(96, 70, 62), rx=-2)
-    box(g, (W + 0.02, 0.4, 0.05), (0, -0.62, 0.53), lin(110, 82, 70), rz=8)
+    box(g, (0.62, 0.36, 0.12), (0, L / 2 - 0.26, 0.52), mat("cloth", WHITE), taper=0.85)
+    box(g, (W - 0.02, 1.1, 0.06), (0, -0.33, 0.5), mat("cloth", lin(96, 70, 62)), rx=-2)
+    box(g, (W + 0.02, 0.4, 0.05), (0, -0.62, 0.53), mat("cloth", lin(110, 82, 70)), rz=8)
 
 
 def bed_v1(g):
@@ -193,9 +197,9 @@ def bed_v1(g):
             cyl(g, 0.008, h - 0.33, (-W / 2 + W * (k + 1) / 6, sy * L / 2, 0.32), STEEL_D, metal=0.8, seg=4)
     for sx in (-1, 1):
         box(g, (0.03, L, 0.04), (sx * W / 2, 0, 0.3), STEEL_D, metal=0.8)
-    box(g, (W - 0.04, L - 0.06, 0.16), (0, 0, 0.32), lin(170, 160, 140), top=lin(184, 176, 150))
-    box(g, (W, 1.2, 0.05), (0, -0.3, 0.47), lin(100, 102, 98))
-    box(g, (0.6, 0.34, 0.11), (0, L / 2 - 0.25, 0.48), CREAM, taper=0.85)
+    box(g, (W - 0.04, L - 0.06, 0.16), (0, 0, 0.32), mat("cloth", lin(170, 160, 140)), top=mat("cloth", lin(184, 176, 150)))
+    box(g, (W, 1.2, 0.05), (0, -0.3, 0.47), mat("cloth", lin(100, 102, 98)))
+    box(g, (0.6, 0.34, 0.11), (0, L / 2 - 0.25, 0.48), mat("cloth", CREAM), taper=0.85)
 
 
 def cot(g):
@@ -209,7 +213,7 @@ def cot(g):
         box(g, (0.025, 0.025, 0.42), (-W / 2, y, 0), STEEL, metal=1, rx=30)
         box(g, (0.025, 0.025, 0.42), (W / 2, y, 0), STEEL, metal=1, rx=-30)
     box(g, (W - 0.02, L - 0.04, 0.02), (0, 0, 0.38), OLIVE)
-    box(g, (0.5, 0.7, 0.09), (0.02, -0.3, 0.4), lin(80, 60, 50), rz=4, taper=0.9)
+    box(g, (0.5, 0.7, 0.09), (0.02, -0.3, 0.4), mat("cloth", lin(80, 60, 50)), rz=4, taper=0.9)
 
 
 # --- tables and seats ---
@@ -276,7 +280,7 @@ def pew(g):
     box(g, (W, 0.12, 0.03), (0, 0.29, 0.72), OAK)
 
 
-def sofa(g, col=lin(92, 84, 96)):
+def sofa(g, col=mat("cloth", lin(92, 84, 96))):
     """A three-seat sofa against the wall: a base, three seat cushions, a back and arms."""
     W, D = 1.9, 0.85
     box(g, (W, D, 0.25), (0, 0, 0.08), mul(col, 0.85))
@@ -292,11 +296,11 @@ def sofa(g, col=lin(92, 84, 96)):
 
 def sofa_v1(g):
     """The same sofa in worn brown leather, a blanket thrown over one end."""
-    sofa(g, lin(96, 62, 40))
-    box(g, (0.6, 0.75, 0.03), (0.55, -0.05, 0.48), lin(140, 120, 70), rz=6)
+    sofa(g, mat("leather", lin(96, 62, 40)))
+    box(g, (0.6, 0.75, 0.03), (0.55, -0.05, 0.48), mat("cloth", lin(140, 120, 70)), rz=6)
 
 
-def armchair(g, col=lin(120, 96, 64)):
+def armchair(g, col=mat("cloth", lin(120, 96, 64))):
     """An armchair: base, seat cushion, back and two arms."""
     W, D = 0.85, 0.85
     box(g, (W, D, 0.25), (0, 0, 0.08), mul(col, 0.85))
@@ -310,7 +314,7 @@ def armchair(g, col=lin(120, 96, 64)):
 
 def armchair_v1(g):
     """A faded green armchair."""
-    armchair(g, lin(78, 96, 72))
+    armchair(g, mat("cloth", lin(78, 96, 72)))
 
 
 # --- storage ---
@@ -334,7 +338,7 @@ def crate(g):
 
 def crate_v1(g):
     """Two cardboard boxes stacked, the top one turned and its flaps open."""
-    c = lin(168, 132, 86)
+    c = mat("paper", CARD)
     box(g, (0.6, 0.45, 0.4), (0, 0, 0), c, top=mul(c, 1.06))
     box(g, (0.6, 0.06, 0.004), (0, 0, 0.4), lin(190, 170, 120))
     box(g, (0.48, 0.38, 0.32), (0.04, 0.0, 0.4), mul(c, 0.94), rz=12, top=mul(c, 0.6))
@@ -354,7 +358,7 @@ def crate_v2(g):
         box(g, (0.05, 0.02, 0.08), (sx * 0.25, -0.235, 0.33), STEEL_D, metal=1)
 
 
-def counter(g, body=lin(196, 186, 160), top=lin(120, 120, 112)):
+def counter(g, body=mat("painted", lin(196, 186, 160)), top=lin(120, 120, 112)):
     """A kitchen counter: a base cabinet with two doors, a plinth, a worktop overhanging the front."""
     W, D, H = 1.0, 0.6, 0.9
     box(g, (W, D - 0.06, 0.1), (0, 0.03, 0), BLACK)
@@ -381,7 +385,7 @@ def counter_v1(g):
 def icebox(g):
     """A kitchen fridge-freezer: almond enamel, the freezer door above, chrome handles."""
     W, D, H = 0.7, 0.68, 1.75
-    c = lin(214, 200, 168)
+    c = mat("metal", lin(214, 200, 168))
     box(g, (W, D, H), (0, 0, 0), c, top=mul(c, 1.03))
     box(g, (W - 0.01, 0.03, 0.55), (0, -D / 2 - 0.01, H - 0.57), mul(c, 1.03))
     box(g, (W - 0.01, 0.03, 1.1), (0, -D / 2 - 0.01, 0.06), mul(c, 1.03))
@@ -395,9 +399,10 @@ def icebox(g):
 def fridge(g):
     """A built fridge (the colony's: wired to the generator): a plain white upright with one door, an extension lead off the back."""
     W, D, H = 0.6, 0.62, 1.5
-    box(g, (W, D, H), (0, 0, 0.05), WHITE, top=mul(WHITE, 1.04))
+    paint = mat("metal", WHITE)
+    box(g, (W, D, H), (0, 0, 0.05), paint, top=mul(paint, 1.04))
     legs(g, W, D, 0.05, 0.04, BLACK, 0.03)
-    box(g, (W - 0.01, 0.03, H - 0.04), (0, -D / 2 - 0.01, 0.07), mul(WHITE, 1.02))
+    box(g, (W - 0.01, 0.03, H - 0.04), (0, -D / 2 - 0.01, 0.07), mul(paint, 1.02))
     box(g, (0.03, 0.04, 0.5), (-W / 2 + 0.07, -D / 2 - 0.04, 0.8), STEEL_D, metal=1)
     box(g, (0.4, 0.05, 0.4), (0, D / 2 + 0.03, 0.15), BLACK, metal=0.6)
     box(g, (0.02, 0.4, 0.02), (0.2, D / 2 + 0.22, 0.0), ORANGE)
@@ -411,11 +416,11 @@ def shelf(g):
             box(g, (0.035, 0.035, H), (sx * (W / 2 - 0.02), sy * (D / 2 - 0.02), 0), GREY, metal=0.8)
     for k, z in enumerate((0.1, 0.55, 1.0, 1.45, 1.82)):
         box(g, (W, D, 0.025), (0, 0, z), GREY, metal=0.6, top=mul(GREY, 1.08))
-    stock = [(0.1, (-0.3, 0, 0.125), (0.16, 0.24, 0.2), lin(150, 120, 80)),
-             (0.1, (0.05, 0, 0.125), (0.3, 0.3, 0.26), lin(168, 132, 86)),
+    stock = [(0.1, (-0.3, 0, 0.125), (0.16, 0.24, 0.2), mat("paper", lin(150, 120, 80))),
+             (0.1, (0.05, 0, 0.125), (0.3, 0.3, 0.26), mat("paper", CARD)),
              (0.55, (-0.25, 0.0, 0.575), (0.22, 0.22, 0.2), lin(60, 80, 120)),
              (1.0, (0.2, 0.02, 1.025), (0.36, 0.28, 0.18), lin(150, 46, 40)),
-             (1.45, (-0.2, 0.02, 1.475), (0.3, 0.3, 0.24), lin(168, 132, 86))]
+             (1.45, (-0.2, 0.02, 1.475), (0.3, 0.3, 0.24), mat("paper", CARD))]
     for _, loc, size, c in stock:
         box(g, size, loc, c)
     for k in range(4):
@@ -437,7 +442,7 @@ def shelf_v1(g):
         cyl(g, 0.04, 0.14, (-0.38 + 0.1 * k, -0.04, 0.53), GLASS, seg=8, caps=[RED, BRASS, RED, BRASS, RED][k])
     for k in range(3):
         box(g, (0.12, 0.08, 0.2), (0.1 + 0.13 * k, 0.0, 0.95), [YELLOW, BLUE, lin(196, 100, 60)][k])
-    box(g, (0.22, 0.25, 0.14), (-0.25, 0.0, 1.37), lin(168, 132, 86), rz=10)
+    box(g, (0.22, 0.25, 0.14), (-0.25, 0.0, 1.37), mat("paper", CARD), rz=10)
 
 
 def wardrobe(g):
@@ -448,7 +453,7 @@ def wardrobe(g):
     box(g, (W + 0.06, D + 0.04, 0.06), (0, -0.01, H - 0.06), WOOD_D, top=OAK)
     doors(g, W - 0.04, H - 0.32, 0.18, -D / 2, 2, mul(OAK, 1.08), BRASS)
     drawers(g, W - 0.04, 0.12, 0.08, -D / 2, 1, mul(OAK, 0.95))
-    box(g, (0.6, 0.4, 0.2), (0.05, 0.02, H), lin(80, 50, 40), rz=-4)
+    box(g, (0.6, 0.4, 0.2), (0.05, 0.02, H), mat("leather", lin(80, 50, 40)), rz=-4)
 
 
 def dresser(g):
@@ -459,7 +464,7 @@ def dresser(g):
     drawers(g, W - 0.04, H - 0.12, 0.08, -D / 2, 4, mul(WOOD, 1.1))
     box(g, (W + 0.02, D + 0.02, 0.03), (0, 0, H - 0.03), WOOD_D, top=WOOD)
     box(g, (0.6, 0.03, 0.6), (0, D / 2 - 0.03, H), WOOD_D)
-    box(g, (0.52, 0.01, 0.52), (0, D / 2 - 0.05, H + 0.04), lin(130, 150, 160), metal=1)
+    box(g, (0.52, 0.01, 0.52), (0, D / 2 - 0.05, H + 0.04), plain(lin(130, 150, 160)), metal=1)
     cyl(g, 0.06, 0.04, (-0.32, -0.05, H), BRASS, metal=1, seg=8)
     cyl(g, 0.012, 0.25, (-0.32, -0.05, H + 0.04), BRASS, metal=1, seg=6)
     cyl(g, 0.12, 0.16, (-0.32, -0.05, H + 0.24), CREAM, seg=8, r2=0.07)
@@ -564,15 +569,15 @@ def locker(g):
 def desk(g):
     """An office desk: a top on a drawer pedestal and a panel, an old beige monitor and a keyboard."""
     W, D, H = 1.2, 0.65, 0.75
-    c = lin(150, 136, 110)
+    c = mat("wood", lin(150, 136, 110))
     box(g, (W, D, 0.03), (0, 0, H - 0.03), c, top=mul(c, 1.08))
     box(g, (0.42, D - 0.04, H - 0.03), (W / 2 - 0.23, 0, 0), mul(c, 0.92))
     drawers(g, 0.4, H - 0.08, 0.02, -D / 2 + 0.02, 3, mul(c, 1.0), STEEL)
     box(g, (0.03, D - 0.04, H - 0.03), (-W / 2 + 0.03, 0, 0), mul(c, 0.92))
     box(g, (W - 0.4, 0.02, 0.45), (-0.2, D / 2 - 0.06, 0.25), mul(c, 0.85))
-    m = lin(200, 192, 170)
+    m = mat("plastic", lin(200, 192, 170))
     box(g, (0.38, 0.38, 0.33), (-0.15, 0.1, H + 0.05), m, taper=0.82, front=mul(m, 1.03))
-    box(g, (0.3, 0.01, 0.24), (-0.15, -0.095, H + 0.09), lin(40, 46, 44), metal=0.6)
+    box(g, (0.3, 0.01, 0.24), (-0.15, -0.095, H + 0.09), plain(lin(40, 46, 44)), metal=0.6)
     box(g, (0.16, 0.16, 0.05), (-0.15, 0.1, H), m)
     box(g, (0.45, 0.16, 0.025), (-0.1, -0.22, H), m, top=mul(m, 0.85))
     chair(g, (-0.1, -0.6, 0), 0, lin(60, 60, 64))
@@ -585,19 +590,19 @@ def pallet(g):
         box(g, (W, 0.1, 0.08), (0, y, 0), WOOD)
     for k in range(5):
         box(g, (W, 0.14, 0.022), (0, -0.43 + 0.215 * k, 0.08), PINE)
-    c = lin(168, 132, 86)
+    c = mat("paper", CARD)
     for sx in (-1, 1):
         for sy in (-1, 1):
             box(g, (0.44, 0.44, 0.35), (sx * 0.23, sy * 0.23, 0.1), c, top=mul(c, 1.05))
     for sx in (-1, 1):
         box(g, (0.44, 0.9, 0.32), (sx * 0.23, 0.0, 0.45), mul(c, 0.94), top=mul(c, 1.02))
-    box(g, (0.94, 0.94, 0.68), (0, 0, 0.1), lin(200, 210, 214), metal=0.2, taper=1.0)
+    box(g, (0.94, 0.94, 0.68), (0, 0, 0.1), plain(lin(200, 210, 214)), metal=0.2, taper=1.0)
 
 
 def sack(g):
     """Three sacks of grain or feed, slumped against each other."""
     for k, (x, y, rz, rx) in enumerate(((-0.2, 0.05, 10, 0), (0.22, 0.1, -12, 0), (0.0, -0.1, 80, 0))):
-        c = [lin(176, 156, 112), lin(160, 140, 100), lin(184, 168, 128)][k]
+        c = mat("cloth", [lin(176, 156, 112), lin(160, 140, 100), lin(184, 168, 128)][k])
         z = 0.0 if k < 2 else 0.25
         box(g, (0.42, 0.6, 0.26), (x, y, z), c, rz=rz, rx=rx, taper=0.8, top=mul(c, 1.05))
         box(g, (0.24, 0.06, 0.08), (x, y, z + 0.24), mul(c, 0.85), rz=rz)
@@ -606,7 +611,7 @@ def sack(g):
 def sink(g):
     """A sink unit: a cabinet, a steel drainer top with a basin, a swan-neck tap."""
     W, D, H = 0.8, 0.6, 0.9
-    c = lin(190, 186, 170)
+    c = mat("painted", lin(190, 186, 170))
     box(g, (W, D - 0.06, 0.1), (0, 0.03, 0), BLACK)
     box(g, (W, D - 0.02, H - 0.14), (0, 0.01, 0.1), c)
     doors(g, W - 0.02, H - 0.16, 0.11, -D / 2 + 0.02, 2, c, STEEL, knob_z=H - 0.2)
@@ -620,7 +625,7 @@ def sink(g):
 
 def bin(g):
     """A wheelie bin: a tapered green body, a hinged lid, two wheels at the back."""
-    c = lin(46, 74, 52)
+    c = mat("plastic", lin(46, 74, 52))
     box(g, (0.56, 0.6, 0.95), (0, 0, 0.03), c, taper=0.9, metal=0.1)
     box(g, (0.6, 0.66, 0.05), (0, 0.02, 0.98), mul(c, 0.9), top=mul(c, 1.1))
     box(g, (0.5, 0.06, 0.04), (0, 0.33, 0.92), BLACK)
@@ -654,7 +659,7 @@ def bath(g):
         cyl(g, 0.03, 0.03, (-W / 2 + 0.06, 0.2 + sx * 0.0, H + 0.08), STEEL, metal=1, seg=6, axis="x")
     # A rail along the front at head height and a pale curtain bunched at one end.
     box(g, (W, 0.02, 0.02), (0, -D / 2 + 0.03, 1.9), STEEL, metal=1)
-    box(g, (0.25, 0.08, 1.2), (W / 2 - 0.15, -D / 2 + 0.03, 0.7), lin(170, 190, 196), taper=1.0)
+    box(g, (0.25, 0.08, 1.2), (W / 2 - 0.15, -D / 2 + 0.03, 0.7), mat("cloth", lin(170, 190, 196)), taper=1.0)
 
 
 def shower(g):
@@ -663,7 +668,7 @@ def shower(g):
     box(g, (S, S, 0.08), (0, 0, 0), ENAMEL, top=mul(ENAMEL, 0.92))
     box(g, (0.08, 0.08, 0.005), (0, 0, 0.08), STEEL_D, metal=1)
     for sx in (-1, 1):
-        box(g, (0.02, S, 1.9), (sx * (S / 2 - 0.01), 0, 0.08), lin(150, 166, 170), metal=0.2)
+        box(g, (0.02, S, 1.9), (sx * (S / 2 - 0.01), 0, 0.08), plain(lin(150, 166, 170)), metal=0.2)
         box(g, (0.03, 0.03, 1.9), (sx * (S / 2 - 0.01), -S / 2 + 0.015, 0.08), STEEL, metal=1)
     box(g, (S, 0.03, 0.03), (0, -S / 2 + 0.015, 1.97), STEEL, metal=1)
     box(g, (0.04, 0.03, 1.2), (0.1, S / 2 - 0.03, 0.85), STEEL, metal=1)
@@ -680,7 +685,7 @@ def washer(g):
     box(g, (0.15, 0.01, 0.06), (-0.18, -D / 2 - 0.012, H - 0.1), STEEL, metal=1)
     cyl(g, 0.03, 0.025, (0.18, -D / 2 - 0.01, H - 0.07), STEEL, metal=1, seg=8, axis="y")
     cyl(g, 0.19, 0.04, (0, -D / 2 - 0.02, 0.4), STEEL, metal=1, seg=14, axis="y", caps=lin(170, 172, 176))
-    cyl(g, 0.14, 0.05, (0, -D / 2 - 0.025, 0.4), GLASS, metal=0.5, seg=14, axis="y", caps=lin(56, 70, 78))
+    cyl(g, 0.14, 0.05, (0, -D / 2 - 0.025, 0.4), GLASS, metal=0.5, seg=14, axis="y", caps=plain(lin(56, 70, 78)))
 
 
 # --- the kitchen and living room ---
@@ -694,7 +699,7 @@ def oven(g):
             cyl(g, 0.08, 0.012, (sx * 0.14, sy * 0.13, H), STEEL_D, metal=1, seg=10, caps=lin(56, 56, 58))
     box(g, (W, 0.05, 0.12), (0, D / 2 - 0.025, H), ENAMEL)
     box(g, (W - 0.04, 0.02, 0.55), (0, -D / 2 - 0.01, 0.1), mul(ENAMEL, 1.03))
-    box(g, (0.36, 0.01, 0.24), (0, -D / 2 - 0.02, 0.3), lin(36, 34, 32), metal=0.5)
+    box(g, (0.36, 0.01, 0.24), (0, -D / 2 - 0.02, 0.3), plain(lin(36, 34, 32)), metal=0.5)
     box(g, (0.45, 0.04, 0.025), (0, -D / 2 - 0.05, 0.6), STEEL, metal=1)
     for k in range(4):
         cyl(g, 0.02, 0.03, (-0.2 + k * 0.13, -D / 2 - 0.015, 0.78), BLACK, seg=8, axis="y")
@@ -726,9 +731,9 @@ def tv(g):
         box(g, (0.3, 0.02, 0.05), (-0.25 + 0.5 * k, -D / 2 - 0.01, 0.3), BLACK)
     c = lin(46, 44, 42)
     box(g, (0.64, 0.42, 0.48), (0, 0.02, 0.48), c, taper=0.86, front=c)
-    box(g, (0.54, 0.02, 0.4), (0, -0.19, 0.51), lin(30, 38, 40), metal=0.7)
+    box(g, (0.54, 0.02, 0.4), (0, -0.19, 0.51), plain(lin(30, 38, 40)), metal=0.7)
     box(g, (0.62, 0.02, 0.46), (0, -0.2, 0.49), c)
-    box(g, (0.54, 0.025, 0.4), (0, -0.21, 0.51), lin(36, 46, 50), metal=0.7)
+    box(g, (0.54, 0.025, 0.4), (0, -0.21, 0.51), plain(lin(36, 46, 50)), metal=0.7)
     box(g, (0.17, 0.05, 0.02), (0.32, -0.12, 0.48), BLACK, rz=-20)
 
 
@@ -768,7 +773,7 @@ def altar(g):
     box(g, (W, D, H - 0.06), (0, 0, 0), STONE, top=mul(STONE, 1.08))
     box(g, (W + 0.08, D + 0.08, 0.06), (0, 0, H - 0.06), mul(STONE, 1.1))
     box(g, (W + 0.1, D + 0.1, 0.01), (0, 0, H), WHITE)
-    box(g, (0.5, 0.01, 0.6), (0, -D / 2 - 0.055, H - 0.6), lin(120, 30, 40))
+    box(g, (0.5, 0.01, 0.6), (0, -D / 2 - 0.055, H - 0.6), mat("cloth", lin(120, 30, 40)))
     for sx in (-1, 1):
         cyl(g, 0.05, 0.03, (sx * 0.5, 0.1, H + 0.01), BRASS, metal=1, seg=8)
         cyl(g, 0.015, 0.25, (sx * 0.5, 0.1, H + 0.04), BRASS, metal=1, seg=6)
@@ -779,7 +784,7 @@ def altar(g):
 
 # --- outside: the yard, the farm, the street ---
 
-def car(g, body=lin(110, 40, 36)):
+def car(g, body=mat("body", lin(110, 40, 36))):
     """A dead sedan along its length (X, real size): a body, the cabin, glass, four flat-ish wheels, rust."""
     L, W = 4.2, 1.7
     box(g, (L, W, 0.5), (0, 0, 0.28), body, metal=0.6, taper=0.99, top=mul(body, 1.1))
@@ -801,13 +806,13 @@ def car(g, body=lin(110, 40, 36)):
 
 def car_v1(g):
     """The same car in faded blue."""
-    car(g, lin(62, 86, 112))
+    car(g, mat("body", lin(62, 86, 112)))
 
 
 def truck(g):
     """A pickup truck along X: a tall cab, a flat bed with low sides, big wheels, a bull bar."""
     L, W = 5.0, 1.9
-    c = lin(70, 82, 56)
+    c = mat("body", lin(70, 82, 56))
     box(g, (L, W, 0.55), (0, 0, 0.45), c, metal=0.5, top=mul(c, 1.1))
     box(g, (1.2, W, 0.25), (1.85, 0, 1.0), c, metal=0.5, ry=6)
     box(g, (1.5, W - 0.1, 0.75), (0.65, 0, 1.0), c, metal=0.5, taper=0.92, top=mul(c, 1.1))
@@ -829,7 +834,7 @@ def truck(g):
 
 def tractor(g):
     """A farm tractor along X: big rear wheels, small front ones, the bonnet, a seat, a roll bar and exhaust."""
-    c = lin(140, 50, 36)
+    c = mat("body", lin(140, 50, 36))
     box(g, (1.6, 0.6, 0.6), (0.55, 0, 0.55), c, metal=0.5, top=mul(c, 1.1))
     box(g, (0.9, 0.9, 0.5), (-0.6, 0, 0.5), mul(c, 0.9), metal=0.5)
     for sy in (-1, 1):
@@ -853,7 +858,7 @@ def hay(g):
         c = [HAY, mul(HAY, 0.92)][k]
         box(g, (0.95, 0.48, 0.4), (0, 0.0, z), c, rz=rz, top=mul(c, 1.06))
         for x in (-0.25, 0.25):
-            box(g, (0.02, 0.5, 0.41), (x, 0, z), lin(160, 120, 60), rz=rz)
+            box(g, (0.02, 0.5, 0.41), (x, 0, z), mat("fine", lin(160, 120, 60)), rz=rz)
     box(g, (0.3, 0.2, 0.06), (0.4, -0.4, 0), mul(HAY, 0.85), rz=30, taper=0.6)
 
 
@@ -878,7 +883,7 @@ def pump(g):
     c = lin(200, 196, 186)
     box(g, (0.55, 0.38, 1.25), (0, 0, 0.15), c, metal=0.3)
     box(g, (0.57, 0.4, 0.2), (0, 0, 1.4), RED, metal=0.3, top=mul(RED, 1.1))
-    box(g, (0.38, 0.01, 0.28), (0, -0.195, 0.95), lin(30, 36, 34), metal=0.6)
+    box(g, (0.38, 0.01, 0.28), (0, -0.195, 0.95), plain(lin(30, 36, 34)), metal=0.6)
     for k in range(3):
         box(g, (0.06, 0.012, 0.03), (-0.12 + 0.08 * k, -0.2, 1.12 - 0.08 * k), lin(160, 150, 90))
     box(g, (0.1, 0.06, 0.2), (0.33, 0, 0.75), BLACK)
@@ -1048,8 +1053,8 @@ def turret(g):
         a = 2 * math.pi * k / 10
         if 3 <= k <= 6:
             continue  # the open back
-        box(g, (0.32, 0.2, 0.15), (0.38 * math.cos(a), 0.38 * math.sin(a), 0), lin(140, 126, 92), rz=math.degrees(a) + 90, taper=0.85)
-        box(g, (0.3, 0.18, 0.14), (0.38 * math.cos(a + 0.3), 0.38 * math.sin(a + 0.3), 0.15), lin(150, 136, 100), rz=math.degrees(a) + 90, taper=0.85)
+        box(g, (0.32, 0.2, 0.15), (0.38 * math.cos(a), 0.38 * math.sin(a), 0), mat("cloth", lin(140, 126, 92)), rz=math.degrees(a) + 90, taper=0.85)
+        box(g, (0.3, 0.18, 0.14), (0.38 * math.cos(a + 0.3), 0.38 * math.sin(a + 0.3), 0.15), mat("cloth", lin(150, 136, 100)), rz=math.degrees(a) + 90, taper=0.85)
     for a in (90, 210, 330):
         box(g, (0.03, 0.03, 0.85), (0.15 * math.cos(math.radians(a)), 0.15 * math.sin(math.radians(a)), 0), STEEL_D, metal=1,
             rz=a - 90, rx=12)
@@ -1078,7 +1083,7 @@ def beacon(g):
     cyl(g, 0.03, 2.4, (0, 0, 0), STEEL, metal=1, seg=6)
     cyl(g, 0.09, 0.18, (0, 0, 2.4), lin(220, 40, 30), seg=8, caps=BLACK)
     box(g, (0.35, 0.25, 0.25), (0.15, -0.2, 0), lin(60, 60, 60), metal=0.4)
-    box(g, (0.02, 0.4, 0.25), (0, 0.2, 1.9), lin(230, 120, 40))
+    box(g, (0.02, 0.4, 0.25), (0, 0.2, 1.9), mat("fine", lin(230, 120, 40)))
 
 
 def trap(g):
@@ -1098,7 +1103,7 @@ def trap(g):
 
 def pit(g):
     """A spiked pit: a black hole with a ring of thrown-up dirt, stakes standing up out of it."""
-    box(g, (0.9, 0.9, 0.012), (0, 0, 0), lin(16, 14, 12))
+    box(g, (0.9, 0.9, 0.012), (0, 0, 0), mat("earth", lin(16, 14, 12)))
     for k in range(4):
         rz = k * 90
         dx, dy = math.cos(math.radians(rz)), math.sin(math.radians(rz))
@@ -1114,7 +1119,7 @@ def workbench(g):
     box(g, (W, D, 0.07), (0, 0, H - 0.07), WOOD, top=WOOD_L)
     legs(g, W, D, H - 0.07, 0.08, WOOD_D, 0.02)
     box(g, (W - 0.1, D - 0.1, 0.03), (0, 0, 0.2), PINE)
-    box(g, (W, 0.03, 0.75), (0, D / 2 - 0.015, H), lin(150, 130, 96))
+    box(g, (W, 0.03, 0.75), (0, D / 2 - 0.015, H), mat("wood", lin(150, 130, 96)))
     box(g, (0.18, 0.12, 0.1), (W / 2 - 0.2, -D / 2 + 0.02, H), STEEL_D, metal=1)
     cyl(g, 0.012, 0.2, (W / 2 - 0.2, -D / 2 - 0.1, H + 0.05), STEEL, metal=1, seg=6, axis="y")
     # Tools on the board and on the top.
@@ -1172,6 +1177,7 @@ def to_object(name, g, mat):
         for _ in idx:
             col.data[k].color = (c[0], c[1], c[2], metal)
             k += 1
+    write_surfaces(me, g.f)
     me.update()
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)

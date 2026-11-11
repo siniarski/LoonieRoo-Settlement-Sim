@@ -33,8 +33,12 @@ public sealed class ItemModels
     const string SHADER = @"
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+#include ""res://assets/shaders/surface_detail.gdshaderinc""
+void vertex() {
+    SURFACE_BY_OBJECT
+}
 void fragment() {
-    ALBEDO = COLOR.rgb;
+    ALBEDO = COLOR.rgb * SURFACE_DETAIL;
     METALLIC = COLOR.a * 0.75;
     ROUGHNESS = mix(0.88, 0.42, COLOR.a);
 }";
@@ -60,7 +64,7 @@ void fragment() {
     public ItemModels(Node3D parent)
     {
         this.parent = parent;
-        var material = new ShaderMaterial { Shader = new Shader { Code = SHADER } };
+        var material = new ShaderMaterial { Shader = Surfaces.Shader(SHADER) };
         var scene = GD.Load<PackedScene>("res://assets/items/items.glb").Instantiate<Node3D>();
         Collect(scene, material);
         scene.Free();

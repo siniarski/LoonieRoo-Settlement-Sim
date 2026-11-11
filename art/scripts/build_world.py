@@ -23,10 +23,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lowpoly import box, build, cyl, lin, mul  # noqa: E402
+from lowpoly import box, build, cyl, lin, mat, mul, plain  # noqa: E402
 
-EARTH = lin(52, 40, 31)
-EARTH_L = lin(66, 51, 39)
+EARTH = mat("earth", lin(52, 40, 31))
+EARTH_L = mat("earth", lin(66, 51, 39))
 LEAF = lin(62, 108, 52)
 LEAF_D = lin(46, 84, 44)
 LEAF_L = lin(104, 146, 70)
@@ -35,19 +35,19 @@ STRAW_D = lin(176, 142, 66)
 WHEAT_G = lin(120, 150, 70)
 BLOOM = lin(150, 110, 190)
 PETAL = lin(232, 228, 214)
-WOOD = lin(170, 134, 90)
-WOOD_D = lin(120, 90, 58)
+WOOD = mat("rough", lin(170, 134, 90))
+WOOD_D = mat("rough", lin(120, 90, 58))
 TAPE = lin(214, 96, 40)
-STEEL_D = lin(70, 72, 78)
+STEEL_D = mat("metal", lin(70, 72, 78))
 BLACK = lin(28, 28, 30)
-GLASS = lin(60, 84, 96)
-OLIVE = lin(84, 92, 62)
-OLIVE_D = lin(60, 68, 46)
-SACK = lin(176, 156, 112)
-TARP = lin(66, 86, 96)
+GLASS = plain(lin(60, 84, 96))
+OLIVE = mat("body", lin(84, 92, 62))
+OLIVE_D = mat("body", lin(60, 68, 46))
+SACK = mat("cloth", lin(176, 156, 112))
+TARP = mat("cloth", lin(66, 86, 96))
 RED = lin(160, 40, 34)
-CLOTH = lin(128, 70, 60)
-TIN = lin(170, 172, 168)
+CLOTH = mat("cloth", lin(128, 70, 60))
+TIN = mat("metal", lin(170, 172, 168))
 
 
 # --- farm plots ---
@@ -173,7 +173,7 @@ def planks(g):
     for k in range(5):
         box(g, (0.9, 0.13, 0.03), (0, -0.07 + 0.14 * (k % 2) - (0.02 if k > 2 else 0), 0.03 * (k // 2)), WOOD if k % 2 else mul(WOOD, 1.1),
             rz=(0, 0, 3, -5, 9)[k])
-    box(g, (0.12, 0.09, 0.06), (0.3, 0.3, 0), lin(110, 96, 70), top=STEEL_D)
+    box(g, (0.12, 0.09, 0.06), (0.3, 0.3, 0), mat("wood", lin(110, 96, 70)), top=STEEL_D)
 
 
 # --- the helicopter (nose towards +X) ---
@@ -229,23 +229,23 @@ def wagon(g):
     box(g, (0.5, 0.34, 0.2), (-0.3, 0.02, 0.8), SACK, taper=0.8, rz=14)
     box(g, (0.42, 0.42, 0.36), (0.36, -0.12, 0.55), WOOD, top=mul(WOOD, 1.1))
     cyl(g, 0.1, 0.7, (0.3, 0.26, 0.65), TARP, seg=8, axis="x", caps=mul(TARP, 0.8))
-    box(g, (0.02, 0.86, 0.012), (-0.3, 0, 1.0), lin(170, 150, 104))
+    box(g, (0.02, 0.86, 0.012), (-0.3, 0, 1.0), mat("fine", lin(170, 150, 104)))
 
 
 def stall(g):
     """A trader's goods on a blanket: tins, a bottle or two, a crate, folded cloth; the pack they came in beside it."""
     box(g, (1.0, 0.7, 0.012), (0, 0, 0), CLOTH, top=mul(CLOTH, 1.1))
-    box(g, (0.96, 0.05, 0.013), (0, -0.3, 0), lin(196, 176, 120))
+    box(g, (0.96, 0.05, 0.013), (0, -0.3, 0), mat("cloth", lin(196, 176, 120)))
     for k in range(4):
         cyl(g, 0.038, 0.1, (-0.36 + 0.11 * k, -0.14, 0.012), TIN if k % 2 else lin(150, 60, 50), metal=0.8, seg=8, caps=TIN)
     for x in (0.2, 0.3):
         cyl(g, 0.03, 0.17, (x, -0.16, 0.012), lin(60, 96, 62), metal=0.3, seg=6)
         cyl(g, 0.012, 0.06, (x, -0.16, 0.18), lin(60, 96, 62), metal=0.3, seg=6)
     box(g, (0.3, 0.22, 0.16), (-0.28, 0.14, 0.012), WOOD, top=WOOD_D)
-    box(g, (0.24, 0.2, 0.05), (0.1, 0.14, 0.012), lin(96, 92, 110))
-    box(g, (0.24, 0.2, 0.05), (0.1, 0.14, 0.062), lin(150, 140, 110), rz=6)
-    box(g, (0.34, 0.24, 0.5), (0.62, 0.3, 0), OLIVE, taper=0.85, top=OLIVE_D)
-    box(g, (0.3, 0.06, 0.2), (0.62, 0.16, 0.08), OLIVE_D)
+    box(g, (0.24, 0.2, 0.05), (0.1, 0.14, 0.012), mat("cloth", lin(96, 92, 110)))
+    box(g, (0.24, 0.2, 0.05), (0.1, 0.14, 0.062), mat("cloth", lin(150, 140, 110)), rz=6)
+    box(g, (0.34, 0.24, 0.5), (0.62, 0.3, 0), mat("cloth", OLIVE), taper=0.85, top=mat("cloth", OLIVE_D))
+    box(g, (0.3, 0.06, 0.2), (0.62, 0.16, 0.08), mat("cloth", OLIVE_D))
     cyl(g, 0.07, 0.36, (0.62, 0.3, 0.57), TARP, seg=8, axis="x")
 
 

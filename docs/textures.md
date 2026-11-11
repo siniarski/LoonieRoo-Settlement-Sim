@@ -60,3 +60,33 @@ back on 0.5. All layers share one size and sit in one texture array (20 layers, 
 
 **The world's use of it** (godot/World3D/WorldLook.cs: which colour and layer each face gets) is in that file's
 header and in log/2026-11-11-12-textures-surfaces.md.
+
+**The models** (furniture, items and the hand, the cars and the driver's cabins, crops, sites, the helicopter, the
+wagon and stall; 2026-11-11, log/2026-11-11-14-textures-models.md). **A model picks its layer by its colour's
+material**, in the Blender script (`art/scripts/lowpoly.py`, which every model script imports for this):
+
+```python
+from lowpoly import mat, plain
+WOOD = mat("wood", lin(140, 100, 62))     # a colour made of wood: its faces wear planks, boards ~7 cm
+GLASS = plain(lin(70, 90, 100))           # no detail, whatever its metalness
+box(g, size, loc, mat("cloth", lin(92, 84, 96)))   # or inline; mul(c, k) keeps the material
+```
+
+- `MATERIALS` (lowpoly.py) names each material's layer and fineness: wood (planks 1.2 a metre), boards
+  (floorboards 0.9), rough (planks 0.7: crates, pallets, lumber), bark, metal (1.5), body (a vehicle's paint, metal
+  0.8), painted (painted wood: metal 1.2, chips without boards), sheet (corrugated), rubber (3), plastic (plaster 3:
+  a faint mottle), cloth (1.2), fine (cloth 3: rope, a sleeve), leather (cloth 1.5), earth, straw (fur), concrete,
+  brick, paper (grime). A new material is a line there; a new model gets a layer by naming one.
+- A colour without a material wears **painted metal if its face has metalness** (the alpha), else nothing: the paint
+  on a label, a lamp's lens, food, leaves. Glass, chrome, mirrors, screens and displays are `plain`.
+- `write_surfaces` (called by each script's `to_object`) writes the layer into the UV map as
+  `(-(layer + 1), 1 - repeats)` and each face's own coordinates **in metres** into a second UV map (`UV2` in Godot):
+  laid by the mesh's coordinates, so the detail stays on a car that drives, an item in the hand, a piece turned to a
+  wall, at the instance's scale. Each face's axes: up the picture is up a face that stands; for planks and
+  floorboards the boards run along the face's **longest side** (a leg's boards run up it, a shelf's along it), and
+  the picture is drawn 2.5 times longer along the grain (`ALONG`), so butt joints fall ~70 cm apart, not across
+  every rail; bark, fur and corrugated sheet run their strands and ribs along the longest side.
+- The shaders (`ModelSet.cs`, `Furniture.cs`, `Items.cs`; Cars, Cockpit, Held, Fields, Sites, Aircraft and Others
+  draw through them) are the old ones with `SURFACE_BY_OBJECT` and `ALBEDO = COLOR.rgb * SURFACE_DETAIL`, made with
+  `Surfaces.Shader`; metalness and roughness from the alpha as before.
+- Rebuild a file and re-import: `experiments/textures/models/rebuild.sh [furniture items world cabins]`.
