@@ -42,6 +42,9 @@ public sealed class View
     public bool showKeys;
     /// <summary>Under direct control, the Colony tab of the M screen: the colony's management in the 2D top-down view. Off, you're in first person.</summary>
     public bool colonyMode;
+    /// <summary>With the top-down view up: the colony's controls are out (the Manage tab). Off (the Map tab, what M
+    /// opens since 2026-11-12), the same view is only looked at: no build bar, priorities, overview or panels.</summary>
+    public bool manage;
     /// <summary>Set by the game each frame: you're seeing through your survivor's eyes (no menu, map or colony tab).</summary>
     public bool firstPerson;
     /// <summary>Tab in first person (or in the Colony tab): the bag, what's beside you, and your card, with the mouse let go.</summary>
@@ -63,16 +66,19 @@ public sealed class View
     }
 
     /// <summary>Playing one survivor with the colony's management put away (its tab under M brings it out).</summary>
-    public bool survivorMode(bool controlling) => controlling && !colonyMode;
+    public bool survivorMode(bool controlling) => controlling && !(colonyMode && manage);
 
     /// <summary>The M screen is up: the map, or (playing someone) the colony tab.</summary>
     public bool mScreen(bool controlling) => showMap || (controlling && colonyMode);
 
-    /// <summary>The M screen's tabs: "map" or "colony".</summary>
+    /// <summary>The M screen's tabs: "map" (the top-down view round you, to look at), "colony" (the same with the
+    /// colony's controls: Manage) or "world" (the whole world as far as you've seen it).</summary>
     public void openTab(string tab)
     {
-        showMap = tab == "map";
-        colonyMode = tab == "colony";
+        showMap = tab == "world";
+        colonyMode = tab is "colony" or "map";
+        manage = tab == "colony";
+        if (!manage) { buildOpen = false; tool = null; showOverview = false; }
         showInventory = false;
     }
 
@@ -81,6 +87,7 @@ public sealed class View
     {
         showMap = false;
         colonyMode = false;
+        manage = false;
         buildOpen = false;
         tool = null;
         showOverview = false;

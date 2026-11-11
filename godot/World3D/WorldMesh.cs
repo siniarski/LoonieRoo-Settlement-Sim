@@ -216,10 +216,24 @@ public static class WorldMesh
         int across = north + south + 1;
         if (across is >= 4 and <= 8 && across % 2 == 0 && north == across / 2 && west >= 5 && east >= 5 && ((x % 4 + 4) % 4) < 2)
             Quad(st, new(x, H(x, y), y - HALF), new(x + 1, H(x + 1, y), y - HALF), new(x + 1, H(x + 1, y), y + HALF), new(x, H(x, y), y + HALF), LANE, Vector3.Up);
+        // And a solid line a third of a metre in from each kerb, along the outer rows.
+        const float IN = 0.3f, THIN = 0.04f;
+        if (across is >= 4 and <= 8 && west >= 5 && east >= 5 && (north == 0 || south == 0))
+        {
+            float z = north == 0 ? y + IN : y + 1 - IN;
+            float h0 = H(x, north == 0 ? y : y + 1), h1 = H(x + 1, north == 0 ? y : y + 1);
+            Quad(st, new(x, h0, z - THIN), new(x + 1, h1, z - THIN), new(x + 1, h1, z + THIN), new(x, h0, z + THIN), LANE, Vector3.Up);
+        }
         // Running north-south: its west side.
         across = west + east + 1;
         if (across is >= 4 and <= 8 && across % 2 == 0 && west == across / 2 && north >= 5 && south >= 5 && ((y % 4 + 4) % 4) < 2)
             Quad(st, new(x - HALF, H(x, y), y), new(x + HALF, H(x, y), y), new(x + HALF, H(x, y + 1), y + 1), new(x - HALF, H(x, y + 1), y + 1), LANE, Vector3.Up);
+        if (across is >= 4 and <= 8 && north >= 5 && south >= 5 && (west == 0 || east == 0))
+        {
+            float xx = west == 0 ? x + IN : x + 1 - IN;
+            float h0 = H(west == 0 ? x : x + 1, y), h1 = H(west == 0 ? x : x + 1, y + 1);
+            Quad(st, new(xx - THIN, h0, y), new(xx + THIN, h0, y), new(xx + THIN, h1, y + 1), new(xx - THIN, h1, y + 1), LANE, Vector3.Up);
+        }
     }
 
     static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)

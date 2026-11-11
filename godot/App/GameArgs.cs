@@ -228,7 +228,7 @@ public partial class Game
         view.showDebug = args.ContainsKey("debug");
         view.showMap = args.ContainsKey("map");
         view.showOverview = args.ContainsKey("overview");
-        view.colonyMode = args.ContainsKey("colony");
+        view.colonyMode = view.manage = args.ContainsKey("colony");
         // The graphics options (Ui/Graphics.cs): the player's file, then the command line's for this run. A self-test or a shot sees the defaults.
         Graphics.Transient = selftest || shotPath != null;
         if (args.TryGetValue("view", out var vw)) Graphics.ViewOverride = (int)float.Parse(vw, CultureInfo.InvariantCulture);

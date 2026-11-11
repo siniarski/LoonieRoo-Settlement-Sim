@@ -11,7 +11,7 @@ namespace LoonieRoo.Game.Ui;
 public sealed partial class ScreenTabs : PanelContainer
 {
     readonly View view = null!;
-    readonly Button map = null!, colony = null!, back = null!;
+    readonly Button map = null!, colony = null!, world = null!, back = null!;
 
     public ScreenTabs() { }
 
@@ -22,11 +22,13 @@ public sealed partial class ScreenTabs : PanelContainer
         MouseFilter = MouseFilterEnum.Stop;
         var row = new HBoxContainer();
         AddChild(row);
-        map = Kit.Button("Map", () => view.openTab("map"), tip: "The world as far as you've seen it");
-        colony = Kit.Button("Colony", () => view.openTab("colony"), tip: "Build, priorities, the overview, neighbours and visitors");
+        map = Kit.Button("Map", () => view.openTab("map"), tip: "The ground round you from above, to look at");
+        colony = Kit.Button("Manage", () => view.openTab("colony"), tip: "The same view with the colony's controls: build, priorities, the overview, neighbours and visitors");
+        world = Kit.Button("World", () => view.openTab("world"), tip: "The whole world as far as you've seen it");
         back = Kit.Button("Back (M)", () => view.closeMScreen(), tip: "Back to first person (M or Esc)");
         row.AddChild(map);
         row.AddChild(colony);
+        row.AddChild(world);
         row.AddChild(back);
         AnchorLeft = AnchorRight = 1;
         OffsetLeft = OffsetRight = -12;
@@ -40,7 +42,8 @@ public sealed partial class ScreenTabs : PanelContainer
         Visible = view.inGame && view.menu == null && !view.firstPerson;
         if (!Visible) return;
         back.Visible = controlling;
-        Kit.SetActive(map, view.showMap);
-        Kit.SetActive(colony, !view.showMap);
+        Kit.SetActive(map, !view.showMap && !view.manage);
+        Kit.SetActive(colony, !view.showMap && view.manage);
+        Kit.SetActive(world, view.showMap);
     }
 }

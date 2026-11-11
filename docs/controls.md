@@ -23,7 +23,7 @@ cost more endurance than a vault, and winded you can do none of them. **On top**
 eye is higher: 1.28 m more on a sedan's roof, 1.75 m on a pickup's cab); walking off an edge steps you down where
 there is room below, else you stop at the edge; Space jumps down on your way, or where you stand if there is no room
 below. You can get into the car from its roof. The dead reach you up there as on the ground: from beside the car. Tab opens the inventory (bag, what's
-beside you, your card; the mouse is let go). M opens the map screen (tabs: Map, Colony, Back); B, P or O open the
+beside you, your card; the mouse is let go). M opens the map screen (tabs since 2026-11-12: Map, the ground round you from above with no controls; Manage, the same with the colony's controls; World, the whole world; Back); B, P or O open the
 Colony tab. Esc opens the menu. The map and the menu pause; the Colony tab plays on. There is no pause key.
 
 **Water** (2026-11-11, Swim.cs). You walk into rivers and lakes. A tile of water beside the bank is **shallow**: you

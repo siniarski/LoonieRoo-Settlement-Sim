@@ -278,12 +278,16 @@ public partial class Game
         // M opens the map; its Colony tab switches over; M goes back to first person.
         await Tap(Godot.Key.M);
         await Frames(1);
-        Check("M opens the map", view.showMap && worldMap.Visible && tabs.Visible);
-        await StopsTicks("The map pauses the game");
-        var colonyTab = FindButton(tabs, "Colony");
+        Check("M opens the map: the ground round you from above, without the colony's controls", view.colonyMode && !view.manage && !view.showMap && !view.firstPerson && tabs.Visible && !worldMap.Visible);
+        var worldTab = FindButton(tabs, "World");
+        if (worldTab != null) await Click(worldTab.GetGlobalRect().GetCenter());
+        await Frames(1);
+        Check("The World tab shows the whole world", view.showMap && worldMap.Visible);
+        await StopsTicks("The world map pauses the game");
+        var colonyTab = FindButton(tabs, "Manage");
         if (colonyTab != null) await Click(colonyTab.GetGlobalRect().GetCenter());
         await Frames(1);
-        Check("The Colony tab shows the colony", !view.showMap && view.colonyMode && !view.firstPerson && !worldMap.Visible);
+        Check("The Manage tab shows the colony with its controls", !view.showMap && view.colonyMode && view.manage && !view.firstPerson && !worldMap.Visible);
         await Tap(Godot.Key.M);
         await Frames(1);
         Check("M goes back to first person", view.firstPerson && !view.showMap && !view.colonyMode);
