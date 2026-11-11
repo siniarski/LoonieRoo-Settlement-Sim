@@ -2,8 +2,8 @@
 // on foot (VehicleParking.cs); an animal or a dog that wants to be on the far side crosses it instead, in one short
 // straight move it can't steer out of, as your leaps are (Leaps.cs).
 //
-//   who, how   by the animal's size against the two cars (art/scripts/build_furniture.py: the sedan's underside is
-//              0.28 m up, its roof 1.28 m; the pickup's underside 0.45 m, its bed 1.0 m, its cab 1.75 m):
+//   who, how   by the animal's size against the two cars (VehicleHeights.cs: the sedan's underside is 0.28 m up,
+//              its roof 1.28 m; the pickup's underside 0.45 m, its bed 1.0 m, its cab 1.75 m):
 //                        sedan               truck
 //              rabbit    under (8 ticks)     under (7)       0.35 m tall: room under either
 //              dog       over (9)            under (14)      0.67 m: a crawl under the pickup, a jump on the sedan
@@ -140,17 +140,6 @@ public static class AnimalCars
         return true;
     }
 
-    /// <summary>The parked car whose body is over a tile's centre, or null.</summary>
-    public static Vehicle? carOver(SimState state, int x, int y)
-    {
-        var c = Motion.centre(new Point(x, y));
-        foreach (var v in Vehicles.vehiclesOf(state))
-        {
-            if (Vehicles.isParked(v) && Vehicles.gap(v, c) <= 0) return v;
-        }
-        return null;
-    }
-
     /// <summary>Is the straight way from a to b open to this mover, but for tiles under parked cars (they are open
     /// here)? As Zombies.walkLine (the tiles the line passes, and the edges between; no broken window), cars or not.</summary>
     public static bool lineOver(Grid grid, Point a, Point b, string mover)
@@ -210,7 +199,7 @@ public static class AnimalCars
         while (k < path.length && k <= MAX_RUN && Grids.isParked(grid, path[k].x, path[k].y)) k++;
         if (k == 0) return false;
         if (planCost(state, w) <= 0 || k >= path.length || k > MAX_RUN) return refuse(state, w);
-        var car = carOver(state, path[0].x, path[0].y);
+        var car = Vehicles.parkedOver(state, path[0].x, path[0].y);
         var land = car == null ? null : clear(state, Motion.centre(path[k]), mover);
         if (land == null || Motion.distance2(land, w.at) > (double)MAX_SPAN * MAX_SPAN || !lineOver(grid, w.at, land, mover)) return refuse(state, w);
         begin(state, w, car, land);
@@ -286,7 +275,7 @@ public static class AnimalCars
         double dist = JsMath.sqrt(Motion.distance2(w.at, land));
         double ticks = JsMath.max(2, JsMath.round(way.ticks * dist / USUAL));
         var mid = new Point(Js.I(JsMath.floor((w.at.x + (double)land.x) / 2)), Js.I(JsMath.floor((w.at.y + (double)land.y) / 2)));
-        w.cross = new CarCrossing { how = way.how, from = w.at.Copy(), to = land.Copy(), ticks = ticks, done = 0, top = way.how == UNDER ? underside(car) : topAt(car, mid), held = 0 };
+        w.cross = new CarCrossing { how = way.how, from = w.at.Copy(), to = land.Copy(), ticks = ticks, done = 0, top = way.how == UNDER ? Vehicles.undersideCm(car) : Vehicles.partTopCm(car, Vehicles.alongOf(car, mid)), held = 0 };
         step(state, w);
     }
 
@@ -343,20 +332,6 @@ public static class AnimalCars
         var to = Space.nearestTile(grid, w.pos, (x, y) => Pathfinding.isPassable(grid, x, y, mover) && !Vehicles.overlapsParked(grid, Motion.centre(new Point(x, y))), 60);
         if (to != null) Motion.place(w, to);
     }
-
-    /// <summary>How high a car is (cm) over a point of the ground under it, from its model: the sedan's roof over its
-    /// cabin, its bonnet and boot lower; the pickup's cab, its bonnet, and the floor of its bed.</summary>
-    public static double topAt(Vehicle v, Point p)
-    {
-        var d = Js.NN(Js.Get(Vehicles.HEADING_DIRS, Js.I(v.heading)));
-        // Along the car from its centre, metres (a tile is a metre; HEADING_DIRS are 256 long).
-        double along = ((p.x - (double)v.at.x) * d[0] + (p.y - (double)v.at.y) * d[1]) / 256 / Motion.SUB;
-        if (v.kind == "truck") return along > 1.4 ? 125 : along > -0.1 ? 175 : 100;
-        return along > -1.3 && along < 0.8 ? 128 : 78;
-    }
-
-    /// <summary>The room under a car (cm): its underside over the ground (the sedan 0.28 m, the pickup 0.45 m).</summary>
-    public static double underside(Vehicle v) => v.kind == "truck" ? 45 : 28;
 
     /// <summary>The room it has under the car (metres), or null when it isn't under one: the renderer crouches it to fit.</summary>
     public static double? room(CarCrossing? c) => c?.how == UNDER ? c.top / 100 : null;

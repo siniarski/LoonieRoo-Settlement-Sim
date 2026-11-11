@@ -1,0 +1,12 @@
+- **2026-11-11, a quality pass over the whole project (in progress).** The player wants to read the project themself: a pass so a first-time reader can follow it, fixing what is safe (moves, renames, dead code, one helper in place of copies, comments, docs, tests) and listing what isn't. Behaviour, saves, command names and the RNG stream are not to change. Budget: stop at 74% "Weekly, all models" or 69% "Weekly, Fable" (49% and 39% at the start).
+  - **How.** Cheaper models read an area each and bring back findings with file and line; the findings are judged and the changes made in this session, one concern a commit, each on a green check. Baseline taken first: solo balance on seeds 1 to 6 and the bench, both at 7585949 (kept outside the repo; the solo lines are compared after every sim change).
+  - **Areas done.**
+    - *The three car crossings* (`Crossings.cs`, `CarLeaps.cs`, `AnimalCars.cs`): see "Changed".
+  - **Areas next, in order.** The sim: Movement, Grid, Dead, World, You, Combat, Colony, Survivors, Items, Others, Worldgen, Core, State, Save, Debug, Js. Then godot/ (App, World3D, Characters, Ui, Render, Audio, SelfTest, Labs), then cs/Sim.Tests and cs/Harness, then art/scripts and the docs.
+  - **Changed.**
+    - **A car's heights are in one place** (`cs/Sim/Movement/VehicleHeights.cs`, part of Vehicles). The sedan's and the pickup's tops and undersides were written three times: a table in CarLeaps, a step function in Crossings, another in AnimalCars (in metres, its steps 0.4 SUB from Crossings'). Now `Vehicles.alongOf`, `topCm`/`topAt` (sloped across the glass: what you stand on), `partTopCm` (flat by part: what the dead and animals are drawn on), `undersideCm`, `cabin`. The two readings of the top are kept as they were, so nothing drawn moves; the animals' steps are now the dead's (a crossing whose middle is within half a SUB of the glass line reads the other part's height: drawn only).
+    - **"Which parked car is over this tile" is one function** (`Vehicles.parkedOver`, VehicleParking.cs). Crossings and AnimalCars each had a `carOver`, one by the car's tiles and one by its body over the tile's centre: the same answer (a car's tiles are those whose centre is in its body).
+  - **For the player** (not done: each would change behaviour, a save or the design).
+    - (none yet)
+  - **Not verified.**
+    - (filled in at the end)

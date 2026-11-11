@@ -6,7 +6,7 @@
 //   what        who                       how long (a leg: one tile to the next)
 //   parked car  walker, screamer, raider  climbs over, CLIMB_TICKS (2 s)
 //               runner                    climbs over, 14 ticks; brute, 27 (CLIMB_TICKS by its pace)
-//               crawler                   under a pickup (0.45 m clear in the model), UNDER_TICKS (1 s);
+//               crawler                   under a pickup (0.45 m clear: VehicleHeights.cs), UNDER_TICKS (1 s);
 //                                         over a sedan (0.28 m clear: too low), hauled by its arms, HAUL_TICKS (4 s)
 //   barricade   runner                    vaults it (the edge, or the tile), VAULT_TICKS (0.8 s)
 //               crawler                   under, as it always went (a plain step: Pathfinding's "crawler")
@@ -117,23 +117,6 @@ public static class Crossings
         return vaulter(z) && Grids.getTile(grid, x, y) == Grids.BARRICADE;
     }
 
-    /// <summary>The parked car over a tile, or null.</summary>
-    public static Vehicle? carOver(SimState state, int x, int y)
-    {
-        var grid = state.grid;
-        if (!Grids.isParked(grid, x, y)) return null;
-        var centre = Motion.centre(new Point(x, y));
-        int i = Grids.tileIndex(grid, x, y);
-        foreach (var v in Vehicles.vehiclesOf(state))
-        {
-            if (!Vehicles.isParked(v)) continue;
-            double far = Vehicles.shapeOf(v).halfLength + Motion.SUB;
-            if (Motion.distance2(v.at, centre) > far * far) continue;
-            if (Vehicles.tilesUnder(grid, v).Contains(i)) return v;
-        }
-        return null;
-    }
-
     /// <summary>How this zombie gets from tile a to its neighbour b where that is a crossing (climb, under, vault);
     /// null where it is an ordinary step, or no step at all: something else in the way, or no room for a body on
     /// the ground it would come down on.</summary>
@@ -153,7 +136,7 @@ public static class Crossings
         if (!onA && !onB && !overEdge) return null;
         var car = Grids.isParked(grid, b.x, b.y) ? b : Grids.isParked(grid, a.x, a.y) ? a : null;
         if (car == null) return VAULT;
-        return z.variant == "crawler" && carOver(state, car.x, car.y)?.kind == "truck" ? UNDER : CLIMB;
+        return z.variant == "crawler" && Vehicles.parkedOver(state, car.x, car.y)?.kind == "truck" ? UNDER : CLIMB;
     }
 
     /// <summary>How many ticks a leg takes this zombie.</summary>
@@ -321,18 +304,14 @@ public static class Crossings
 
     // --- for the renderer ---
 
-    /// <summary>How high (metres) the top of what is under a point is, for this zombie: a car's bonnet, roof or
-    /// bed (the models': art/scripts/build_furniture.py car and truck), a barricade's top, else the ground.</summary>
+    /// <summary>How high (metres) the top of what is under a point is, for this zombie: the part of a car it is on
+    /// (its bonnet, roof or bed: VehicleHeights.cs), a barricade's top, else the ground.</summary>
     static double top(SimState state, Zombie z, Point at)
     {
         var t = Motion.tileOf(at);
-        var v = carOver(state, t.x, t.y);
+        var v = Vehicles.parkedOver(state, t.x, t.y);
         if (v == null) return obstacle(state.grid, t.x, t.y, z) ? BARRICADE_HEIGHT : 0;
-        var d = Js.NN(Js.Get(Vehicles.HEADING_DIRS, Js.I(v.heading)));
-        // How far ahead of the car's middle the point is (SUB), along its heading.
-        double along = ((double)(at.x - v.at.x) * d[0] + (double)(at.y - v.at.y) * d[1]) / 256;
-        if (v.kind == "truck") return along > 358 ? 1.25 : along >= -26 ? 1.75 : 1.0; // bonnet, cab, bed
-        return along >= -333 && along <= 205 ? 1.28 : 0.78;                            // cabin, else bonnet and boot
+        return Vehicles.partTopCm(v, Vehicles.alongOf(v, at)) / 100;
     }
 
     /// <summary>A crossing zombie's feet over the ground (metres) at a moment of the tick (`alpha`: the renderer's

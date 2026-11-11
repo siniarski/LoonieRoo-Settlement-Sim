@@ -20,9 +20,9 @@
 //            its roof) or off its body, and you are put where a body fits (the ground under you, else the nearest
 //            tile clear of everything). Letting go of control does the same (letGo). A loaded save is on the roof
 //            it was saved on: onCar and your position are in it.
-//   heights  height() is your feet over the ground, for the view: a car's top where you are on it (the tops below,
-//            from the models' sizes: art/scripts/build_furniture.py car, truck), and a car leap's arc between
-//            the heights it was given at take-off. Nothing in the sim reads it.
+//   heights  height() is your feet over the ground, for the view: a car's top where you are on it (Vehicles.topAt:
+//            VehicleHeights.cs), and a car leap's arc between the heights it was given at take-off. Nothing in
+//            the sim reads it.
 //   the dead reach you by distance as ever (Motion.REACH, centre to centre; height doesn't count): from beside a car
 //            they reach you on its roof. A roof is a lookout, not a refuge.
 // A car leap's busy.targetId is "x,y,car,fromCm,toCm,peakCm": the landing (SUB), the car, and the view's heights,
@@ -54,15 +54,6 @@ public static partial class Leaps
     /// <summary>A car leap's targetId has this many parts.</summary>
     const int CAR_PARTS = 6;
 
-    /// <summary>A car's top along its length: (SUB ahead of its centre, cm over the ground), tail to nose, straight between.
-    /// The sedan: the boot and bonnet at 0.78 m, the roof at 1.28 m. The pickup: the bed's floor at 1 m, the cab's roof at
-    /// 1.75 m, the bonnet at 1.25 m.</summary>
-    static readonly int[][] SEDAN_TOP = [[-538, 78], [-346, 78], [-282, 128], [166, 128], [230, 78], [538, 78]];
-    static readonly int[][] TRUCK_TOP = [[-640, 100], [-40, 100], [-10, 175], [343, 175], [378, 125], [640, 125]];
-
-    /// <summary>The cabin's span along the car (SUB, its glass included): a way over that crosses any of it is over the roof.</summary>
-    static (int from, int to) cabin(Vehicle v) => v.kind == "truck" ? (-40, 378) : (-346, 230);
-
     /// <summary>The car you are standing on, if any (it may have gone: settle() sorts that out).</summary>
     public static Vehicle? carOf(SimState state, Control? c) => c?.onCar == null ? null : Vehicles.vehiclesOf(state).find((v) => v.id == c.onCar);
 
@@ -73,41 +64,6 @@ public static partial class Leaps
     {
         var o = Motion.toward(d.x, d.y, k);
         return new Point { x = Js.I(from.x + o.x), y = Js.I(from.y + o.y) };
-    }
-
-    /// <summary>How far ahead of a car's centre a point is, along its heading (SUB).</summary>
-    static double alongOf(Vehicle v, Point p)
-    {
-        var d = Js.NN(Js.Get(Vehicles.HEADING_DIRS, Js.I(v.heading)));
-        return ((double)(p.x - v.at.x) * d[0] + (double)(p.y - v.at.y) * d[1]) / 256;
-    }
-
-    /// <summary>The car's top (cm over the ground) this far along it.</summary>
-    static double topCm(Vehicle v, double along)
-    {
-        var top = v.kind == "truck" ? TRUCK_TOP : SEDAN_TOP;
-        if (along <= top[0][0]) return top[0][1];
-        for (int i = 1; i < top.Length; i++)
-        {
-            if (along > top[i][0]) continue;
-            double t = (along - top[i - 1][0]) / (top[i][0] - top[i - 1][0]);
-            return top[i - 1][1] + (top[i][1] - top[i - 1][1]) * t;
-        }
-        return top[^1][1];
-    }
-
-    /// <summary>The car's top under a point (m over the ground): what you stand on there.</summary>
-    public static double topAt(Vehicle v, Point p) => topCm(v, alongOf(v, p)) / 100;
-
-    /// <summary>The highest of the car's top between two points along it (cm).</summary>
-    static double highest(Vehicle v, double lo, double hi)
-    {
-        double best = JsMath.max(topCm(v, lo), topCm(v, hi));
-        foreach (var p in v.kind == "truck" ? TRUCK_TOP : SEDAN_TOP)
-        {
-            if (p[0] > lo && p[0] < hi) best = JsMath.max(best, p[1]);
-        }
-        return best;
     }
 
     /// <summary>Does a body fit on the ground here: no wall, edge or water (as you walk), and clear of every parked car's body and every trunk?</summary>
@@ -222,14 +178,14 @@ public static partial class Leaps
     {
         var land = groundPast(state, s.at, d, leave);
         if (land == null) return false;
-        double a0 = alongOf(v, step(s.at, d, enter)), a1 = alongOf(v, step(s.at, d, leave));
+        double a0 = Vehicles.alongOf(v, step(s.at, d, enter)), a1 = Vehicles.alongOf(v, step(s.at, d, leave));
         double lo = JsMath.min(a0, a1), hi = JsMath.max(a0, a1);
-        var (cab0, cab1) = cabin(v);
+        var (cab0, cab1) = Vehicles.cabin(v);
         string part = (hi >= cab0 && lo <= cab1) ? "roof" : (v.kind == "truck" && hi < cab0) ? "bed" : (lo > cab1 ? "bonnet" : "boot");
         int ticks = part == "roof" ? ROOF_TICKS : part == "bed" ? BED_TICKS : SLIDE_TICKS;
         ticks = Js.I(JsMath.max(ticks, JsMath.ceil(JsMath.sqrt(Motion.distance2(s.at, land)) / OVER_PACE)));
         BodyMod.exert(s, part == "roof" ? ROOF_COST : part == "bed" ? BED_COST : SLIDE_COST);
-        start(c, "over", land, v, 0, 0, highest(v, lo, hi) + 10, ticks);
+        start(c, "over", land, v, 0, 0, Vehicles.highestCm(v, lo, hi) + 10, ticks);
         s.note = part == "roof" ? "scrambled over the roof" : part == "bed" ? "climbed over the bed" : $"slid over the {part}";
         return true;
     }
@@ -244,7 +200,7 @@ public static partial class Leaps
             at = step(s.at, d, mid);
             if (!onTopFits(state, v, at)) return false;
         }
-        double to = topAt(v, at) * 100;
+        double to = Vehicles.topAt(v, at) * 100;
         BodyMod.exert(s, CLIMB_COST);
         start(c, "climb", at, v, 0, to, to + 15, CLIMB_TICKS);
         s.note = v.kind == "truck" ? "climbed onto the truck" : "climbed onto the car";
@@ -254,7 +210,7 @@ public static partial class Leaps
     /// <summary>Space on top of a car: down on your way where a body fits, else a jump where you stand.</summary>
     static void offCar(SimState state, Survivor s, Control c, Vehicle v, Point? d)
     {
-        double from = topAt(v, s.at) * 100;
+        double from = Vehicles.topAt(v, s.at) * 100;
         BodyMod.exert(s, JUMP_COST);
         var land = d == null ? null : groundPast(state, s.at, d, exitAlong(v, s.at, d));
         if (land != null)
@@ -280,7 +236,7 @@ public static partial class Leaps
                 var land = groundPast(state, s.at, by, exitAlong(v, s.at, by));
                 if (land != null)
                 {
-                    double from = topAt(v, s.at) * 100;
+                    double from = Vehicles.topAt(v, s.at) * 100;
                     start(c, "down", land, v, from, 0, from + 5, DOWN_STEP_TICKS);
                     s.note = "stepped down";
                     return;
@@ -377,10 +333,10 @@ public static partial class Leaps
             double line = from + (to - from) * t;
             double h = line + (peak - line) * JsMath.sqrt(JsMath.max(0, JsMath.sin(JsMath.PI * t)));
             var v = carById(state, parts[2]);
-            if (v != null && Vehicles.gap(v, here) == 0) h = JsMath.max(h, topAt(v, here));
+            if (v != null && Vehicles.gap(v, here) == 0) h = JsMath.max(h, Vehicles.topAt(v, here));
             return h;
         }
         var on = carOf(state, c);
-        return on != null && Vehicles.gap(on, here) == 0 ? topAt(on, here) : 0;
+        return on != null && Vehicles.gap(on, here) == 0 ? Vehicles.topAt(on, here) : 0;
     }
 }

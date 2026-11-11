@@ -599,7 +599,7 @@ public sealed partial class People
         var g = GroundAt(at);
         if (roofUnder == null) return g;
         var p = new Point { x = (int)Math.Round(at.X * Motion.SUB), y = (int)Math.Round(at.Z * Motion.SUB) };
-        return Vehicles.gap(roofUnder, p) == 0 ? (g.y + (float)Leaps.topAt(roofUnder, p), Vector3.Up) : g;
+        return Vehicles.gap(roofUnder, p) == 0 ? (g.y + (float)Vehicles.topAt(roofUnder, p), Vector3.Up) : g;
     }
 
     /// <summary>The turn rate, smoothed (rad/s).</summary>

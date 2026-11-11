@@ -21,7 +21,7 @@ public partial class Game
         var car = Staging.car(state, you.pos.x + 3, you.pos.y, 0);
         bool on = Leaps.standOn(state, you, car);
         await Frames(4);
-        double top = Leaps.topAt(car, you.at);
+        double top = Vehicles.topAt(car, you.at);
         float eye = World3D.FirstPerson.Eye(state, you, 1).eye.Y;
         float groundThere = World3D.Terrain.Height(you.at.x / (float)Motion.SUB, you.at.y / (float)Motion.SUB);
         var ppl = firstPerson.People;
@@ -39,7 +39,7 @@ public partial class Game
         float after = World3D.FirstPerson.Eye(state, you, 1).eye.Y - World3D.Terrain.Height(you.at.x / (float)Motion.SUB, you.at.y / (float)Motion.SUB);
         bool off = state.control!.onCar == null;
         Check("Space on the roof jumps down (or, no room below, jumps on it), and the eye ends where you do",
-            (leap == "down" && off && Math.Abs(after - World3D.FirstPerson.EYE) < 0.05f) || (leap == "jump" && !off && Math.Abs(after - World3D.FirstPerson.EYE - Leaps.topAt(car, you.at)) < 0.05f),
+            (leap == "down" && off && Math.Abs(after - World3D.FirstPerson.EYE) < 0.05f) || (leap == "jump" && !off && Math.Abs(after - World3D.FirstPerson.EYE - Vehicles.topAt(car, you.at)) < 0.05f),
             $"{leap}, {(off ? "on the ground" : "still on the car")}, eye {after:0.00} m over the ground");
 
         state.control!.onCar = null;

@@ -84,8 +84,10 @@ git tag `ts-final`.
 - **Vehicles**: cars, fuel, the boot. **VehicleBody** (part of Vehicles): the room a car takes up, as long and wide as
   the car drawn (a row of circles), what is solid to it, turning about the rear axle, how near a point is to it.
   **VehicleParking** (part of Vehicles): the tiles under a parked car can't be walked on (a layer of the grid, not
-  saved, laid in again when a state is read); park, unpark, who is moved off. **VehicleActions** (part of Vehicles):
-  timed car actions and anchors (get in, out, boot, bonnet).
+  saved, laid in again when a state is read); park, unpark, who is moved off, which parked car is over a tile.
+  **VehicleHeights** (part of Vehicles): how high a car's top is along its length and the room under it, for whoever
+  climbs on or goes under one (you, the dead, animals). **VehicleActions** (part of Vehicles): timed car actions and
+  anchors (get in, out, boot, bonnet).
 
 ### `Worldgen/`: making the world from a seed
 

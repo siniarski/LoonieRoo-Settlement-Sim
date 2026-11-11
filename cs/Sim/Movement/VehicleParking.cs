@@ -55,6 +55,21 @@ public static partial class Vehicles
         return tiles;
     }
 
+    /// <summary>The parked car over a tile (its body over the tile's centre: one of its tilesUnder), or null.</summary>
+    public static Vehicle? parkedOver(SimState state, int x, int y)
+    {
+        if (!Grids.isParked(state.grid, x, y)) return null;
+        var centre = Motion.centre(new Point(x, y));
+        foreach (var v in vehiclesOf(state))
+        {
+            if (!isParked(v)) continue;
+            double far = shapeOf(v).halfLength + Motion.SUB;
+            if (Motion.distance2(v.at, centre) > far * far) continue;
+            if (gap(v, centre) == 0) return v;
+        }
+        return null;
+    }
+
     /// <summary>Mark the tiles under a parked car. True if any changed. No version bump, nobody moved: for a car
     /// taken into the world with its chunk, or laid in again from a state just read.</summary>
     public static bool mark(Grid grid, Vehicle v)
