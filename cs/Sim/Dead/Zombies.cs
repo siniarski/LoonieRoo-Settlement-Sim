@@ -18,6 +18,7 @@
 // walls. Otherwise it follows its tile path smoothed: straight at the furthest of the next
 // LOOKAHEAD waypoints it can walk to (aimAhead), and tile by tile only where the next step
 // needs it (stepTile: battering, a raider opening a door, climbing through a broken window).
+// Parked cars and barricades can be crossed, slowly (Crossings.cs: begun from stepBlocked, ticked first thing).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -438,6 +439,11 @@ public static partial class Zombies
     {
         z.cooldown = JsMath.max(0, z.cooldown - 1);
         z.move = null;
+        // On its way over a car or a barricade (Crossings.cs): no biting, no steering; a blow holds it where it is.
+        if ((z.crossing != null) && ((state.tick < z.staggerUntil) || Crossings.tick(state, z)))
+        {
+            return;
+        }
         Motion.followTile(z, 1);
         if (state.tick < z.stuckUntil)
         {
@@ -720,6 +726,10 @@ public static partial class Zombies
     {
         if (!Pathfinding.crossable(state.grid, z.pos.x, z.pos.y, next.x, next.y, moverOf(z)))
         {
+            if (Crossings.begin(state, z, next))
+            {
+                return true; // a runner vaults a barricade
+            }
             var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
             if ((e >= 0) && (z.cooldown == 0))
             {
@@ -730,6 +740,10 @@ public static partial class Zombies
         }
         if (!Pathfinding.isPassable(state.grid, next.x, next.y, moverOf(z)))
         {
+            if (Crossings.begin(state, z, next))
+            {
+                return true; // over a parked car (a crawler under a pickup), a runner over a barricade
+            }
             if (Breach.isStructure(Grids.getTile(state.grid, next.x, next.y)))
             {
                 if (z.cooldown == 0)
@@ -875,6 +889,10 @@ public static partial class Zombies
         List<PushApartOthers> near = []; // one list, emptied for each zombie
         foreach (var z in Js.Iter(state.zombies))
         {
+            if (z.crossing != null)
+            {
+                continue; // on a car or over a barricade (Crossings.cs): the crowd doesn't move it
+            }
             for (var dy = -1; dy <= 1; dy++)
             {
                 for (var dx = -1; dx <= 1; dx++)
@@ -888,7 +906,7 @@ public static partial class Zombies
                     for (var i = buckets.first(((double)(ny) * (width)) + nx); i >= 0; i = buckets.next[i])
                     {
                         var o = buckets.zs[i];
-                        if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0))
+                        if ((o == z) || (string.CompareOrdinal(o.id, z.id) < 0) || (o.crossing != null))
                         {
                             continue;
                         }
@@ -965,7 +983,9 @@ public static partial class Zombies
             return [s.pos, .. Grids.neighbours4(grid, s.pos.x, s.pos.y)];
         }
         var noticed = (z.kind == "night") ? state.survivors : state.survivors.filter((s) => notices(state, z, s));
-        var target = noticed.slice().sort((a, b) => Space.manhattan(z.pos, a.pos) - Space.manhattan(z.pos, b.pos)).find((s) => Pathfinding.canReach(grid, v, z.pos, goalsFor(s), moverOf(z)));
+        // Its paths go over what its body can't walk through (a parked car; a runner, barricades): Crossings.cs.
+        var mover = Crossings.planner(z);
+        var target = noticed.slice().sort((a, b) => Space.manhattan(z.pos, a.pos) - Space.manhattan(z.pos, b.pos)).find((s) => Pathfinding.canReach(grid, v, z.pos, goalsFor(s), mover));
         z.targetId = target?.id ?? null;
         if ((Js.T(target) && (z.variant == "screamer")) && !z.screamed)
         {
@@ -975,7 +995,7 @@ public static partial class Zombies
         }
         if (Js.T(target))
         {
-            z.path = Pathfinding.findPathToAny(grid, z.pos, goalsFor(target), moverOf(z)) ?? [];
+            z.path = Pathfinding.findPathToAny(grid, z.pos, goalsFor(target), mover) ?? [];
             return;
         }
         var victim = Js.Get(noticed.slice().sort((a, b) => Space.manhattan(z.pos, a.pos) - Space.manhattan(z.pos, b.pos)), 0);
@@ -1056,6 +1076,10 @@ public static partial class Zombies
     {
         z.staggerUntil = state.tick + STAGGER_TICKS;
         z.windup = 0;
+        if (z.crossing != null)
+        {
+            return; // on a car or over a barricade: it reels where it is (Crossings.cs)
+        }
         var v = Motion.toward(z.at.x - from.x, z.at.y - from.y, (z.variant == "brute") ? ((double)(SHOVE) / (2)) : SHOVE);
         z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));
         var tile = Motion.tileOf(z.at);

@@ -1353,4 +1353,19 @@ public partial class Zombie : Body, IHasId, IHasAt, IHasPos, IBody
     public double staggerUntil { get; set; }
     public double hurtTick { get; set; }
     public string? hordeId { get; set; }
+    /// <summary>On its way over or under something a body can't walk through (Crossings.cs); null when on the ground.</summary>
+    public Crossing? crossing { get; set; }
+}
+
+/// <summary>One leg of a zombie's way over a parked car or a barricade, or under a pickup (Crossings.cs): a straight
+/// line between two points a tile apart, taking `of` ticks, `ticks` of them left.</summary>
+public partial class Crossing
+{
+    /// <summary>climb (over a car), under (a crawler under a pickup) or vault (a runner over a barricade).</summary>
+    public string what { get; set; } = "";
+    /// <summary>Where the leg began and where it ends (SUB units).</summary>
+    public Point from { get; set; } = new();
+    public Point to { get; set; } = new();
+    public int ticks { get; set; }
+    public int of { get; set; }
 }

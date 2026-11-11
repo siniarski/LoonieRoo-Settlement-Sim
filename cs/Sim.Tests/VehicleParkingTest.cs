@@ -100,7 +100,9 @@ public class VehicleParkingTest
     {
         var (state, s, car) = field();
         var g = state.grid;
-        // You north of the car's middle, it south of it: the straight line between is through the car.
+        // You north of the car's middle, it south of it: the straight line between is through the car. Round its
+        // end is nine steps, and over it would cost a path fourteen (Crossings.cs, 2026-11-11: the dead climb a car
+        // they have no near way round; CrossingsTest), so it goes round, and no body is ever in the car's tiles.
         s.pos = new Point { x = 3, y = 1 };
         s.at = Motion.centre(s.pos);
         var z = Zombies.addZombie(state, 3, 5, 200, "static");

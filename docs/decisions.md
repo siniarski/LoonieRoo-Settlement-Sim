@@ -332,6 +332,29 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 - **Zombie kinds.** `variant` on zombies, by a hash of the id once their night comes: runners (night 3+, quick, frail), screamers (4+, a scream is a noise), brutes (5+, double
   health, batter walls 3x), crawlers (6+, a `crawler` mover passes barricades). Raiders stay walkers
   *Why:* Each counters a defence
+- **The dead cross low things (2026-11-11, `Crossings.cs`).** What each kind does at what stops it:
+  - *A parked car:* every kind gets over it, a leg (one tile to the next) at a time: walkers, screamers and raiders 2 s a leg, runners 1.4 s, brutes 2.7 s (the walker's
+    20 ticks by each one's pace), so a car's width is two legs (4 s for a walker) and a sedan lengthways in a gate six. A crawler goes under a pickup (0.45 m clear in
+    the model; 1 s a leg) and hauls itself over a sedan (0.28 m clear, too low for its shoulders; 4 s a leg, the slowest of all). On the car none of them bites; they
+    can be hit, a blow holds them where they are (no shove), and the crowd doesn't push them.
+  - *A barricade (edge or tile):* runners vault it (0.8 s a leg); crawlers go under as before; walkers, screamers, brutes and raiders batter it as before.
+  - *Walls, doors, windows, boards:* battered as before (a broken window is still climbed at half speed). *Water:* never. *Pits and traps:* catch whoever steps on them
+    (a pit is covered: nothing to vault). *Furniture:* never stopped the dead.
+  - *Paths, not bodies.* `isPassable` and `crossable` still say no at a car for every body on foot, so nothing walks, slides or is pushed through one. The dead's paths
+    (A*, reachability, the horde's field) may go onto what they cross at a cost in steps: 12 to climb onto each tile of a car, 3 to vault a barricade. Round a car's end
+    (8 or so steps more) is taken; over is for when the way round is a dozen steps longer, or there is none. A runner's paths are planned for a mover of their own
+    (`runner`); the breacher's still prefer a wall (1 step) to a car (12), which only matters when nothing can be reached anyway.
+  - *One leg at a time.* The crossing on the zombie is one straight leg between points a tile apart (what, from, to, ticks left, of); at its end on the car the next leg
+    follows the path. Before the first leg the whole way over is followed (the path; a horde member's field) to ground where a body fits, or it isn't begun. If the way
+    on goes while it is up there it gets down wherever a body fits, else waits a second and looks again. Anything else that moves it ends the crossing where it was put.
+  - *No queue.* Several may be on one car at once.
+  *Why:* The player asked for zombies that vault or crawl over what they couldn't pass, and a parked car across a gate sealed it against everything (log 06's leftover).
+  Every kind crosses a car so that nothing is sealed by one and no kind is left pressing at it; the paces keep the kinds' characters. Runners alone vault barricades:
+  with crawlers that is two kinds of five (about a fifth of a late night's dead) a barricade doesn't hold, and it still holds the walkers, screamers and brutes that
+  are most of them; brutes keep battering because walls are what they are for. Bodies stay stopped by cars so that every place that moves a body (chasing, the crowd's
+  push, a shove) needed no new rule, and a missed case fails safe (no path) rather than putting a zombie inside a car. The path cost is more than the time is worth
+  (two legs take the time of seven steps and cost thirteen) so the dead keep to the ground when round is near. Stuck-state invariants unchanged (they are the
+  survivors'); for the dead the tests hold that none south of a blocked gap or on the car stands still 100 ticks.
 - **Sieges.** From night 14, every 7th night has 1.25x the zombies, warned two days ahead (balance pass 5: night 7 at 2x wiped out every colony)
   *Why:* Preparation pays
 - **Storyteller.** `threatScale`: 1 + 0.1 per 100 goods (not wood, food or bodies) - 0.15 per death in the last day and a half, within 0.5-1.6; scales the night's zombies and the

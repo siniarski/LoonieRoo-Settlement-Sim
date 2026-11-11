@@ -206,7 +206,8 @@ public partial class Game
                 else if (scene == "sites") Staging.sites(state, you);
                 else if (scene == "visitors") Staging.visitors(state, you);
                 else if (scene == "heli") Staging.helicopter(state, you.pos.x + 14, you.pos.y);
-                else GD.Print($"--stage: no scene called {scene} (farm, sites, visitors, heli)");
+                else if (scene == "climb") Staging.climb(state, you);
+                else GD.Print($"--stage: no scene called {scene} (farm, sites, visitors, heli, climb)");
             }
         if (args.TryGetValue("arm", out var arm) && you != null)
         {

@@ -165,6 +165,7 @@ public sealed partial class People
             bool raider = z.kind == "raider";
             string action = state.tick < z.staggerUntil ? "hit" : z.windup > 0 ? "attack" : "";
             var zp = PoseIntents.ofZombie(state, z);
+            zp.lift = Crossings.lift(state, z, alpha); // over a car or a barricade: at this frame, not the tick's end (People.Climb.cs)
             Add(z.id, (raider ? "survivor/jacket" : DeadLook(z.id)) + Lost(zp), raider ? RAIDER : Looks.DeadOutfit(z.id), z, zp, !raider && z.targetId != null, action);
         }
         var dormantNow = new Dictionary<string, Point>();
@@ -257,7 +258,9 @@ public sealed partial class People
             }
             if (w.body is Zombie zb && !dormantNow.ContainsKey(w.id)) { m.wasZombie = true; m.lastHurt = zb.hurtTick; }
             else m.wasZombie = false;
+            CrossPre(m, w, alpha);
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
+            CrossPost(m, w);
             Footfall(m, w.id, false, w.look.StartsWith("zombie"), delta);
             drawn.Add(w.id);
         }

@@ -3,6 +3,8 @@
 // Movers: "survivor" (colonists: any door), "free" (you: doors open), "zombie", "breacher" (batters
 // through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
 // "animal" (wild animals: open floor only; through open doors and broken windows, never onto a door's tile).
+// The dead's paths (not their bodies) also go over parked cars, and a "runner"'s over barricades, at a cost:
+// Crossings.cs (the hooks here: A*'s step, reachability's rules, the open doors' joins).
 using System.Runtime.CompilerServices;
 using static LoonieRoo.Sim.Grids;
 
@@ -61,6 +63,7 @@ public static partial class Pathfinding
         var sc = ScratchFor(grid);
         uint gen = sc.gen;
         var open = new MinHeap();
+        bool crosses = Crossings.plans(mover);
 
         double H(int idx)
         {
@@ -87,12 +90,19 @@ public static partial class Pathfinding
             if (here.closed == gen) continue;
             here.closed = gen;
             if (--maxExpand < 0) return null;
-            double g = (here.seen == gen ? here.g : double.PositiveInfinity) + 1;
+            double g0 = here.seen == gen ? here.g : double.PositiveInfinity;
             foreach (var dir in DIRS)
             {
                 int nx = cx + dir.x;
                 int ny = cy + dir.y;
-                if (!isPassable(grid, nx, ny, mover) || !crossable(grid, cx, cy, nx, ny, mover)) continue;
+                double g = g0 + 1;
+                if (!isPassable(grid, nx, ny, mover) || !crossable(grid, cx, cy, nx, ny, mover))
+                {
+                    // The dead get over some of what stops a body, at a cost in steps (Crossings.cs).
+                    double over = crosses ? Crossings.pathCost(grid, cx, cy, nx, ny, mover) : 0;
+                    if (over <= 0) continue;
+                    g = g0 + over;
+                }
                 int next = ny * width + nx;
                 ref var there = ref sc.At(nx, ny);
                 if (there.closed == gen || g >= (there.seen == gen ? there.g : double.PositiveInfinity)) continue;
@@ -128,7 +138,7 @@ public static partial class Pathfinding
     }
 
     static readonly ConditionalWeakTable<Grid, Dictionary<string, Reach>> componentCache = new();
-    static readonly string[] DOOR_MOVERS = { ZOMBIE, FREE, CRAWLER };
+    static readonly string[] DOOR_MOVERS = { ZOMBIE, FREE, CRAWLER, Crossings.RUNNER };
 
     static string OpenDoors(Grid grid, string mover)
     {
@@ -164,9 +174,18 @@ public static partial class Pathfinding
         public required Func<int, int, int, int, int, bool> across;
     }
 
+    /// <summary>A tile this mover's paths may be on: one its body can stand on, or one it crosses (Crossings.cs).</summary>
+    static bool Stands(Grid grid, int x, int y, string mover) => isPassable(grid, x, y, mover) || Crossings.standsOn(grid, x, y, mover);
+
     static Rules MakeRules(Grid grid, string mover)
     {
         bool shut = DOOR_MOVERS.Contains(mover);
+        // The dead's paths go over what their bodies can't walk through (Crossings.cs): reachable all the same.
+        if (Crossings.plans(mover)) return new Rules
+        {
+            pass = (x, y) => Stands(grid, x, y, mover) && !(shut && getTile(grid, x, y) == DOOR),
+            across = (kind, ax, ay, bx, by) => !(shut && kind == EDGE_DOOR) && (crossable(grid, ax, ay, bx, by, mover) || Crossings.vaults(kind, mover)),
+        };
         return new Rules
         {
             pass = (x, y) => isPassable(grid, x, y, mover) && !(shut && getTile(grid, x, y) == DOOR),
@@ -367,7 +386,7 @@ public static partial class Pathfinding
             foreach (var d in DIRS)
             {
                 int nx = x + d.x, ny = y + d.y;
-                if (!inBounds(grid, nx, ny) || !isPassable(grid, nx, ny, mover) || !crossable(grid, x, y, nx, ny, mover)) continue;
+                if (!inBounds(grid, nx, ny) || !Stands(grid, nx, ny, mover) || !crossable(grid, x, y, nx, ny, mover)) continue;
                 Unite(r.doorIds[i], LabelAt(ny * width + nx));
             }
         }
@@ -378,7 +397,7 @@ public static partial class Pathfinding
             int x = i % width, y = i / width;
             int ox = e % 2 == 0 ? x : x - 1;
             int oy = e % 2 == 0 ? y - 1 : y;
-            if (!inBounds(grid, ox, oy) || !isPassable(grid, x, y, mover) || !isPassable(grid, ox, oy, mover)) continue;
+            if (!inBounds(grid, ox, oy) || !Stands(grid, x, y, mover) || !Stands(grid, ox, oy, mover)) continue;
             Unite(LabelAt(i), LabelAt(oy * width + ox));
         }
         for (int k = 0; k < root.Length; k++) root[k] = Find(k);
@@ -448,7 +467,7 @@ public static partial class Pathfinding
         };
     }
 
-    static readonly string[] MOVERS = { SURVIVOR, FREE, ZOMBIE, BREACHER, RAIDER, CRAWLER };
+    static readonly string[] MOVERS = { SURVIVOR, FREE, ZOMBIE, BREACHER, RAIDER, CRAWLER, Crossings.RUNNER };
 
     /// <summary>Builds every mover's reachability now (derived data only), so the first question in play doesn't pay for it.</summary>
     public static void warmReach(Grid grid, int version)
