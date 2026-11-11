@@ -44,7 +44,7 @@ public sealed partial class Fires : Node3D
     readonly Dictionary<string, (int x, int y)> parsed = new();
     Vector3 builtAt = new(float.NaN, 0, 0);
     long builtSig = -1;
-    double sinceBuild = 1;
+    double sinceBuild = 1, clock;
 
     /// <summary>What was drawn last frame (the self-test and the debug panel).</summary>
     public int FlameCount { get; private set; }
@@ -92,6 +92,9 @@ public sealed partial class Fires : Node3D
         var timer = System.Diagnostics.Stopwatch.StartNew();
         Terrain.Use(state);
         sinceBuild += delta;
+        // The shaders' clock is the world's, not TIME: it stops while the world is held (delta 0), as everything does.
+        clock = (clock + delta) % 3600;
+        foreach (var mat in new[] { flameMat, smokeMat, emberMat }) mat.SetShaderParameter("clock", (float)clock);
         float day = 1f - (float)LoonieRoo.Sim.Time.darkness(state.tick);
         flameMat.SetShaderParameter("night", 1f - day);
         smokeMat.SetShaderParameter("day", day);
@@ -436,13 +439,14 @@ float vnoise(vec2 p) {
     const string FLAME_SHADER = @"shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
 uniform float night = 0.0;
+uniform float clock = 0.0;
 varying vec4 inst;
 varying float near;
 " + NOISE + @"
 void vertex() {
     inst = INSTANCE_CUSTOM;
     near = smoothstep(1.2, 4.0, length(MODEL_MATRIX[3].xyz - INV_VIEW_MATRIX[3].xyz));
-    float t = TIME * (2.4 + inst.x * 1.6) + inst.x * 40.0;
+    float t = clock * (2.4 + inst.x * 1.6) + inst.x * 40.0;
     float h = 1.0 - UV.y;
     float sway = sin(t * 1.3) * 0.5 + sin(t * 2.3 + 1.7) * 0.5;
     VERTEX.x += sway * 0.16 * h * h * (1.0 + inst.y * 0.3);
@@ -452,7 +456,7 @@ void fragment() {
     float h = 1.0 - UV.y;
     float w = abs(UV.x - 0.5) * 2.0;
     float seed = inst.x * 31.0;
-    vec2 q = vec2(UV.x * 2.6 + seed, h * 2.4 - TIME * (1.7 + inst.x));
+    vec2 q = vec2(UV.x * 2.6 + seed, h * 2.4 - clock * (1.7 + inst.x));
     float n = vnoise(q) * 0.62 + vnoise(q * 2.3 + 7.0) * 0.38;
     float width = mix(0.6, 0.04, pow(h, 0.7));
     float body = smoothstep(width + 0.1, width - 0.28, w + (n - 0.5) * 0.95);
@@ -475,6 +479,7 @@ void fragment() {
     const string SMOKE_SHADER = @"shader_type spatial;
 render_mode unshaded, blend_mix, cull_disabled, depth_draw_never;
 uniform float day = 1.0;
+uniform float clock = 0.0;
 uniform vec2 wind = vec2(0.9, 0.35);
 varying vec4 inst;
 varying float age;
@@ -482,7 +487,7 @@ varying float near;
 " + NOISE + @"
 void vertex() {
     inst = INSTANCE_CUSTOM;
-    age = fract(TIME * (0.085 + inst.x * 0.03) + COLOR.r + inst.x);
+    age = fract(clock * (0.085 + inst.x * 0.03) + COLOR.r + inst.x);
     float height = MODEL_MATRIX[1].y;
     vec3 base = MODEL_MATRIX[3].xyz;
     vec3 centre = base + vec3(0.0, height * age, 0.0);
@@ -517,18 +522,19 @@ void fragment() {
     const string EMBER_SHADER = @"shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
 uniform float night = 0.0;
+uniform float clock = 0.0;
 uniform vec2 wind = vec2(0.9, 0.35);
 varying float fade;
 varying vec2 uvv;
 void vertex() {
     float rnd = COLOR.g;
-    float age = fract(TIME * (0.3 + rnd * 0.35) + COLOR.r + INSTANCE_CUSTOM.x);
+    float age = fract(clock * (0.3 + rnd * 0.35) + COLOR.r + INSTANCE_CUSTOM.x);
     float height = MODEL_MATRIX[1].y;
     float spread = length(MODEL_MATRIX[0].xyz);
     vec3 base = MODEL_MATRIX[3].xyz;
     vec3 p = base + vec3((rnd - 0.5) * spread * 2.0, height * (0.35 + rnd * 0.65) * age, (fract(rnd * 7.0) - 0.5) * spread * 2.0);
-    p.xz += wind * age * age * height * 0.4 + vec2(sin(TIME * 3.0 + rnd * 20.0), cos(TIME * 2.4 + rnd * 17.0)) * 0.25 * age;
-    float flick = 0.5 + 0.5 * sin(TIME * (20.0 + rnd * 20.0) + rnd * 50.0);
+    p.xz += wind * age * age * height * 0.4 + vec2(sin(clock * 3.0 + rnd * 20.0), cos(clock * 2.4 + rnd * 17.0)) * 0.25 * age;
+    float flick = 0.5 + 0.5 * sin(clock * (20.0 + rnd * 20.0) + rnd * 50.0);
     fade = (1.0 - age) * (0.4 + 0.6 * flick) * smoothstep(0.0, 0.05, age) * clamp(INSTANCE_CUSTOM.z, 0.0, 1.0);
     float size = 0.05 * (1.0 - age * 0.6);
     vec2 c = UV - 0.5;

@@ -212,6 +212,7 @@ public partial class Game
             $"body up {bodyTop:0.00} m, most apart from the eye {apart:0.000} m, feet up {feetTop:0.00} m (standing {feet0:0.00}), after {ppl.YourLift:0.00} / feet {ppl.YourFeetUp - feet0:0.00}");
         Check("A jump is heard going up and landing, on the ground under you", yours.Pushes > pushes && yours.Landings > landings && yours.LandSurface.StartsWith("step_"),
             $"push-offs {pushes} -> {yours.Pushes}, landings {landings} -> {yours.Landings}, on {yours.LandSurface}");
+        await BodySteps();
         await HeldSteps();
         await LightSteps();
         await FireSteps();

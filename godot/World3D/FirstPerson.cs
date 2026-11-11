@@ -155,8 +155,11 @@ public sealed partial class FirstPerson : Node3D
     public static Vector3 LookDir(double yaw, double pitch) =>
         new((float)(Math.Cos(yaw) * Math.Cos(pitch)), (float)Math.Sin(pitch), (float)(Math.Sin(yaw) * Math.Cos(pitch)));
 
-    public void Update(SimState state, double alpha, double yaw, double pitch, double delta)
+    /// <summary>A frame: `delta` the frame's time (the light's and the weather's eases), `world` the world's (0 while it is
+    /// held: the menu, the map, --paused; the frame's if not given), which everything that moves runs on.</summary>
+    public void Update(SimState state, double alpha, double yaw, double pitch, double delta, double? worldDelta = null)
     {
+        double world = worldDelta ?? delta;
         var you = ControlMod.controlled(state);
         if (you == null) return;
         Terrain.Use(state);
@@ -182,22 +185,23 @@ public sealed partial class FirstPerson : Node3D
         far.Update(state, eye, new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK));
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
+        weather.Held = world <= 0;
         weather.Update(state, eye, delta, roofs.Indoor, sun, env); // after the lighting and the fog: overcast and fog on bad days, rain, snow (Weather.cs)
-        others.Update(state, eye, delta); // wanderers, traders, prisoners, caravans, runs: stand-ins for People and Bodies
-        var modelled = people.Update(state, alpha, eye, you.id, delta, GetViewport().GetVisibleRect().Size.Y, others.Shown);
+        others.Update(state, eye, world); // wanderers, traders, prisoners, caravans, runs: stand-ins for People and Bodies
+        var modelled = people.Update(state, alpha, eye, you.id, world, GetViewport().GetVisibleRect().Size.Y, others.Shown);
         Modelled = modelled.Count;
-        people.UpdateYou(state, you, alpha, yaw, delta, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
-        bodies.Update(state, alpha, eye, you.id, modelled, others.Shown);
+        people.UpdateYou(state, you, alpha, yaw, world, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
+        bodies.Update(state, alpha, eye, you.id, modelled, others.Shown, world);
         // The car you sit in is the cockpit round you; seen from outside (--eye) it is a car like the others.
         bool inside = car != null && EyeAt == null;
         cars.Update(state, alpha, eye, inside ? car : null);
-        cockpit.Update(state, car, camera.Position, alpha, delta, inside);
+        cockpit.Update(state, car, camera.Position, alpha, delta, inside); // its needles ease to the car as it is (held still, it stays)
         fields.Update(state, eye);
         sites.Update(state, eye);
-        aircraft.Update(state, delta);
+        aircraft.Update(state, world);
         items.Update(state, eye);
-        held.Update(state, you, alpha, delta, inCar || EyeAt != null);
-        lights.Update(state, eye, alpha, delta, inCar);
+        held.Update(state, you, alpha, world, inCar || EyeAt != null);
+        lights.Update(state, eye, alpha, world, inCar);
         sounds.Update(state, alpha, you, people.Steps);
     }
 
