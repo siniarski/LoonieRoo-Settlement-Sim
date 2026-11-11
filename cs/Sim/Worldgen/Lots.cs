@@ -365,6 +365,22 @@ public static partial class Lots
                 var l = mapToLot(lot, x, y);
                 Worldgen.ground(state, x, y, layout.yard(l.u, l.v));
             }
+        // A crossover: where concrete runs to a street lot's front (a driveway, a works yard), the sidewalk before it
+        // is concrete too, so a car goes in and out without crawling over paving (Vehicles.topSpeed).
+        if (lot.park > 0)
+        {
+            int paving = Grids.GROUNDS.indexOf("paving");
+            for (int u = 0; u < frame(lot).F; u++)
+            {
+                if (layout.yard(u, 0) != "concrete") continue;
+                for (int v = 1; v <= Towns.SIDEWALK; v++)
+                {
+                    var m = lotToMap(lot, u, -v);
+                    if (inside(m.x, m.y) && Grids.inBounds(state.grid, m.x, m.y) && Grids.groundAt(state.grid, Grids.tileIndex(state.grid, m.x, m.y)) == paving)
+                        Worldgen.ground(state, m.x, m.y, "concrete");
+                }
+            }
+        }
         var covered = new JsSet<string>();
         layout.buildings.forEach((b, bi) => drawBuilding(state, ctx, lot, b, bi, inside, covered));
         foreach (var e in layout.fences)
