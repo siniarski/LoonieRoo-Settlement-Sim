@@ -1,5 +1,7 @@
 // Ported from src/sim/invariants.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Consistency checks across survivors, jobs, items, and blueprints.
+// Consistency checks across the whole state: survivors, jobs, items and blueprints first, then furniture and beds,
+// the dead (active, dormant, herds), animals, dogs, prisoners, farm plots, fires, the grid's lists (dirt, damage,
+// locks, reinforcement), explore areas and room designations.
 // Returns human-readable problems; empty means healthy. Used by tests after
 // every tick and available to the debug panel. Read-only.
 #nullable disable warnings

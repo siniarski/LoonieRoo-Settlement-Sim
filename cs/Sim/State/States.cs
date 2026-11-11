@@ -1,14 +1,15 @@
 // Ported from src/sim/state.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Sim state types and constructors. Everything here must stay plain
-// JSON-compatible data (architecture rule 7).
+// The state's constructors and the schema version (its types are StateTypes.cs). Everything in a state must stay
+// plain JSON-compatible data (architecture rule 7).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
 public static partial class States
 {
 
-    /// <summary>Bump when the shape of SimState changes. Hot reload and (later) save loading discard state with a different version instead of crashing on it.</summary>
-    /// 78 (2026-11-10): WorldInfo.made, each generated chunk's hash as made. Schema 77 saves still load (Savefile.OLDEST_SCHEMA).
+    /// <summary>Bump when the shape of SimState changes: loading refuses a file of another schema (Savefile.loadFile),
+    /// but for the oldest it still knows how to bring up to date (Savefile.OLDEST_SCHEMA).
+    /// 78 (2026-11-10): WorldInfo.made, each generated chunk's hash as made. Schema 77 saves still load.</summary>
     public const int SCHEMA_VERSION = 78;
 
     public static SimState createState(NewStateOptions __o0)

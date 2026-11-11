@@ -72,7 +72,6 @@ public partial class Blueprint : IHasId
     public string target { get; set; } = "";
     public bool needsMaterial { get; set; }
     public bool delivered { get; set; }
-    /// <summary>Food for a settlement's stores (a number); goods for you (items).</summary>
     public double workDone { get; set; }
     public double workRequired { get; set; }
     /// <summary>An edge wall or door (grid.ts): on this tile's north or west side, not on the tile.</summary>
@@ -86,16 +85,6 @@ public partial class Budget
     public Func<Point, List<Survivor>> near { get; set; } = null!;
 }
 
-public partial class BugReport
-{
-    public string format { get; set; } = "";
-    public double schemaVersion { get; set; }
-    public string note { get; set; } = "";
-    public SimState initial { get; set; } = new();
-    public List<LoggedCommand> commands { get; set; } = new();
-    public double tick { get; set; }
-}
-
 public partial class BuildingsPlan
 {
     public int w { get; set; }
@@ -103,7 +92,6 @@ public partial class BuildingsPlan
     public List<double> cells { get; set; } = new();
     public List<string> ground { get; set; } = new();
     public List<PlanFurniture> furniture { get; set; } = new();
-    /// <summary>Food for a settlement's stores (a number); goods for you (items).</summary>
     public string kind { get; set; } = "";
     public double sleepers { get; set; }
     public List<PlanEdge> edges { get; set; } = new();
@@ -153,7 +141,6 @@ public partial class Command
     public int? x { get; set; }
     public int? y { get; set; }
     public string? side { get; set; }
-    /// <summary>No bite before this tick.</summary>
     public string? kind { get; set; }
     public double? count { get; set; }
     public string? bedId { get; set; }
@@ -215,7 +202,7 @@ public partial class Control
     public string survivorId { get; set; } = "";
     public double dx { get; set; }
     public double dy { get; set; }
-    /// <summary>With a side: an edge wall or door on that tile's north or west side (grid.ts).</summary>
+    /// <summary>The way you face: where an unaimed swing goes (ControlMod.swingDir).</summary>
     public Point facing { get; set; } = new();
     public Point? aim { get; set; }
     public double nextSwing { get; set; }
@@ -339,7 +326,6 @@ public partial class FarmPlot : IHasId
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
-    /// <summary>The end of the road.</summary>
     public string crop { get; set; } = "";
     public bool planted { get; set; }
     public double growth { get; set; }
@@ -371,12 +357,11 @@ public partial class Furniture : IHasId
     public int y { get; set; }
     public string? occupant { get; set; }
     public string? owner { get; set; }
-    /// <summary>Rabbits, wolves, bears: health left (deer go down to a lucky blow: HUNT_CHANCE).</summary>
+    /// <summary>A count whose meaning the kind gives: searches left in a crate, spikes left in a trap, water in a collector.</summary>
     public double loot { get; set; }
     public bool scavenge { get; set; }
     public double stored { get; set; }
     public string? storedKind { get; set; }
-    /// <summary>After a warning bite it keeps away from people until this tick.</summary>
     public string? look { get; set; }
     public string? table { get; set; }
 }
@@ -405,7 +390,6 @@ public partial class Horde : IHasId
     public string id { get; set; } = "";
     public List<string> members { get; set; } = new();
     public string mode { get; set; } = "";
-    /// <summary>Give a bed to a survivor (their only one), or take it back with null.</summary>
     public List<Point> goals { get; set; } = new();
     public List<string> goalIds { get; set; } = new();
     public Point? heading { get; set; }
@@ -529,7 +513,6 @@ public partial class Lot
 /// <summary>What drawing a lot needs to know about the world.</summary>
 public partial class LotContext
 {
-    /// <summary>Deer leave after a while; the rest leave when nobody of yours is near (WILD_RADIUS).</summary>
     public double seed { get; set; }
     public Func<double, double, double> lootAt { get; set; } = null!;
     public Func<double, double, double> distance { get; set; } = null!;
@@ -586,7 +569,6 @@ public partial class Movement
 public partial class Nature
 {
     public double seed { get; set; }
-    /// <summary>Where it's going: a settlement id, or 'you'.</summary>
     public double size { get; set; }
     public string map { get; set; } = "";
     public Point start { get; set; } = new();
@@ -664,7 +646,6 @@ public partial class PointOfInterest : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
     public static implicit operator Point(PointOfInterest v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
-    /// <summary>The end of the road.</summary>
     public string id { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
@@ -675,7 +656,6 @@ public partial class Prisoner : IHasId
 {
     /// <summary>Anything with x and y stands for a point, as it does in the TypeScript (structural typing).</summary>
     public static implicit operator Point(Prisoner v) => v is null ? null! : new(v.x, v.y); // (nothing stays nothing)
-    /// <summary>Where to look, if anywhere.</summary>
     public string id { get; set; } = "";
     public string name { get; set; } = "";
     public int x { get; set; }
@@ -689,7 +669,6 @@ public partial class Profession
     /// <summary>Starting skill levels.</summary>
     public JsRecord<double> skills { get; set; } = new();
     public List<string> kit { get; set; } = new();
-    /// <summary>Containers: what's in them. Decor: null.</summary>
     public double points { get; set; }
     public string about { get; set; } = "";
 }
@@ -717,10 +696,8 @@ public partial class Recipe
 {
     public string station { get; set; } = "";
     public string input { get; set; } = "";
-    /// <summary>Containers: what's in them. Decor: null.</summary>
     public double count { get; set; }
     public string label { get; set; } = "";
-    /// <summary>Where it's going: a settlement id, or 'you'.</summary>
     public bool? workshopOnly { get; set; }
     public string? needs { get; set; }
 }
@@ -774,7 +751,6 @@ public partial class Room
     public double minX { get; set; }
     public double minY { get; set; }
     public double maxX { get; set; }
-    /// <summary>Glass in an outer wall (grid.ts EDGE_WINDOW).</summary>
     public double maxY { get; set; }
 }
 
@@ -803,13 +779,6 @@ public partial class RoomStatus
     public double beds { get; set; }
     public double tables { get; set; }
     public double size { get; set; }
-}
-
-public partial class SaveFile
-{
-    public string format { get; set; } = "";
-    public double schemaVersion { get; set; }
-    public SimState state { get; set; } = new();
 }
 
 public partial class ScavRun : IHasId
@@ -869,7 +838,6 @@ public partial class Settings
     public double dayScale { get; set; }
     /// <summary>Wildfire: 0 vegetation never catches fire (only buildings burn), 1 the default, 2 twice the chances (FireMod). Older saves read 1.</summary>
     public double wildfire { get; set; } = 1;
-    /// <summary>The end of the road.</summary>
     public string map { get; set; } = "";
 }
 
@@ -905,7 +873,6 @@ public partial class SimState
     public double? zombiesTonight { get; set; }
     public List<ExploreArea> exploreAreas { get; set; } = new();
     public List<DormantZombie> dormant { get; set; } = new();
-    /// <summary>Wolves and bears: how hungry, 0 just fed.</summary>
     public List<Herd> herds { get; set; } = new();
     public List<PointOfInterest> pointsOfInterest { get; set; } = new();
     public WorldInfo? world { get; set; }
@@ -937,7 +904,6 @@ public partial class SimState
     public Control? control { get; set; }
     public Succession? succession { get; set; }
     public List<Task> tasks { get; set; } = new();
-    /// <summary>A prisoner: talk them round to join, or let them go home (prisoners.ts).</summary>
     public JsRecord<double> foraged { get; set; } = new();
     /// <summary>Tiles whose growth was reset (Growth.clear): tile index -> the tick it was cleared; from then it regrows. Sparse; entries go once regrown (Growth.expire). Absent in older saves: none.</summary>
     public JsRecord<double> cleared { get; set; } = new();
@@ -1078,7 +1044,7 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public double nextSeekTick { get; set; }
     public double rest { get; set; }
     public Sleep? sleep { get; set; }
-    /// <summary>No bite before this tick.</summary>
+    /// <summary>How fed: 0 is starving (Food.cs).</summary>
     public double satiety { get; set; }
     public Meal? meal { get; set; }
     public double nextMealTick { get; set; }
@@ -1102,7 +1068,6 @@ public partial class Survivor : Body, IHasId, IHasAt, IHasPos, IBody
     public double? infection { get; set; }
     public JsRecord<double> opinions { get; set; } = new();
     public string? body { get; set; }
-    /// <summary>Send survivors off the map to a point of interest (expeditions.ts).</summary>
     public string? feet { get; set; }
     public string? dressing { get; set; }
     public double nextDressTick { get; set; }
@@ -1168,7 +1133,6 @@ public partial class SurvivorLeisure
 
 public partial class SurvivorReading
 {
-    /// <summary>A prisoner: talk them round to join, or let them go home (prisoners.ts).</summary>
     public string itemId { get; set; } = "";
     public double progress { get; set; }
 }
@@ -1248,7 +1212,6 @@ public partial class Trader : IHasId
     public double leavesTick { get; set; }
     public List<Offer> offers { get; set; } = new();
     public string? @from { get; set; }
-    /// <summary>An edge wall or door (grid.ts): on this tile's north or west side, not on the tile.</summary>
     public bool traded { get; set; }
 }
 
@@ -1321,7 +1284,6 @@ public partial class WorldPlan
     public Nature nature { get; set; } = new();
     public List<Town> towns { get; set; } = new();
     public List<Street> streets { get; set; } = new();
-    /// <summary>Containers: what's in them. Decor: null.</summary>
     public List<List<PointD>> roads { get; set; } = new();
     public Uint8Array roadMask { get; set; } = null!;
     public List<Lot> lots { get; set; } = new();

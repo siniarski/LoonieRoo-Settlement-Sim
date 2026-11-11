@@ -1,4 +1,4 @@
-// JavaScript's library, as the translated sim (cs/tools/ts2cs.mjs) uses it: array and string methods on
+// JavaScript's library, as the sim translated from TypeScript uses it: array and string methods on
 // List<T> and string (C# 14 extension members, so the code reads as the TypeScript did), Math, Number,
 // truthiness, String(x), Map and Set that keep insertion order, a Record that answers a missing key with
 // the default, and a stable sort. Behaviour matches JavaScript where the sim depends on it.

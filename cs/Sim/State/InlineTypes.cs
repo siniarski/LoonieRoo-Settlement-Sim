@@ -2,12 +2,6 @@
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
-public partial class HousePlanRest
-{
-    public int x0 { get; set; }
-    public int x1 { get; set; }
-}
-
 public partial class PaneInFrontResult
 {
     public double edge { get; set; }
@@ -122,13 +116,6 @@ public partial class SiteTownsBest
     public int x { get; set; }
     public int y { get; set; }
     public double score { get; set; }
-}
-
-public partial class IsTankF
-{
-    public string kind { get; set; }
-    public string? look { get; set; }
-    public double loot { get; set; }
 }
 
 public partial class CandidatesResult

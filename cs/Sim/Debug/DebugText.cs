@@ -1,6 +1,6 @@
 // Ported from src/debug/text.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
 // ASCII renderers. Read state only. Used in tests so failing maps are
-// readable in the terminal, and by window.game.dumpText().
+// readable in the terminal, and by the game's text output (godot/App/GameText.cs).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -9,7 +9,7 @@ public static partial class DebugText
 
     public static readonly JsRecord<string> BLUEPRINT_CHARS = new() { ["wall"] = ScenarioMod.ENTITY_CHARS["wallBlueprint"], ["door"] = ScenarioMod.ENTITY_CHARS["doorBlueprint"], ["bed"] = ScenarioMod.ENTITY_CHARS["bedBlueprint"], ["table"] = ScenarioMod.ENTITY_CHARS["tableBlueprint"], ["workbench"] = ScenarioMod.ENTITY_CHARS["workbenchBlueprint"], ["barricade"] = ScenarioMod.ENTITY_CHARS["barricadeBlueprint"], ["trap"] = ScenarioMod.ENTITY_CHARS["trapBlueprint"], ["stove"] = ScenarioMod.ENTITY_CHARS["stoveBlueprint"], ["tower"] = ScenarioMod.ENTITY_CHARS["towerBlueprint"], ["well"] = ScenarioMod.ENTITY_CHARS["wellBlueprint"], ["collector"] = ScenarioMod.ENTITY_CHARS["collectorBlueprint"], ["generator"] = ScenarioMod.ENTITY_CHARS["generatorBlueprint"], ["lamp"] = ScenarioMod.ENTITY_CHARS["lampBlueprint"], ["fridge"] = ScenarioMod.ENTITY_CHARS["fridgeBlueprint"], ["heater"] = ScenarioMod.ENTITY_CHARS["heaterBlueprint"], ["coop"] = ScenarioMod.ENTITY_CHARS["coopBlueprint"], ["radio"] = ScenarioMod.ENTITY_CHARS["radioBlueprint"], ["lab"] = ScenarioMod.ENTITY_CHARS["labBlueprint"], ["beacon"] = ScenarioMod.ENTITY_CHARS["beaconBlueprint"], ["turret"] = ScenarioMod.ENTITY_CHARS["turretBlueprint"], ["lure"] = ScenarioMod.ENTITY_CHARS["lureBlueprint"], ["pit"] = ScenarioMod.ENTITY_CHARS["pitBlueprint"], ["reinforce"] = ScenarioMod.ENTITY_CHARS["reinforceBlueprint"], ["floor"] = ScenarioMod.ENTITY_CHARS["removeBlueprint"] };
 
-    /// <summary>The map. Layers, top wins: survivor, zombie, wanderer, item, blueprint, furniture, farm plot, dirt, tile.</summary>
+    /// <summary>The map. Layers, top wins: survivor, zombie, dog, animal, wanderer, item, blueprint, furniture, farm plot, dirt, tile.</summary>
     public static string dumpText(SimState state)
     {
         var __d0 = state.grid;

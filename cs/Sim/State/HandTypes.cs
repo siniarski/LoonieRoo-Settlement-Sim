@@ -1,5 +1,5 @@
 // Types the TypeScript wrote inline in a union (a value or a reason string, say), which the translator can't
-// name: written here, and used by the hand fixes (cs/tools/fixups.mjs).
+// name: written here by hand.
 namespace LoonieRoo.Sim;
 
 /// <summary>What working a tile would do (handiwork.ts plan): repair it, or build a wall, barricade or reinforcement.</summary>

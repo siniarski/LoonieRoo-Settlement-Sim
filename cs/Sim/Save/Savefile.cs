@@ -1,8 +1,10 @@
-// Save files and bug reports (savefile.ts), ported by hand: the TypeScript reshapes plain JSON objects. The files are
-// the same as the TypeScript writes.
+// Save files and bug reports.
 //
 // A save is the whole state but its command log; a bug report is a starting state plus the commands applied since,
-// so loading it replays the game to the moment it was filed. Files from a different schema version are refused.
+// so loading it replays the game to the moment it was filed. A file is { format, schemaVersion, preview (a small
+// picture of the world for the Load screen: WorldPreview.cs), state }. Files from another schema version are refused,
+// but for OLDEST_SCHEMA, which loading brings up to date. A generated world's grid is written by chunk, only where
+// it differs from what generation makes (SavefileChunks.cs); a hand-made map's is written whole, as below.
 // The grid's per-tile layers are run-length encoded ([value, count, ...], `rle: true`), and furniture goes out as rows
 // of values in FURNITURE_FIELDS order with trailing defaults dropped. Files without either encoding still load.
 // Files are written straight to text (SaveWriter, 2026-11-10); reading still goes through JSON nodes.

@@ -1,5 +1,5 @@
-// JavaScript's number semantics where the port needs them exactly (the TypeScript sim is the reference:
-// same seed and inputs must give the same state in both). JS numbers are doubles; bitwise operators
+// JavaScript's number semantics where the port needs them exactly (the TypeScript sim was the reference until
+// 2026-11-08: saves, tests and balance still depend on its arithmetic). JS numbers are doubles; bitwise operators
 // convert to 32-bit integers (ToInt32 / ToUint32) first; Math.imul multiplies as 32-bit integers.
 namespace LoonieRoo.Sim;
 
