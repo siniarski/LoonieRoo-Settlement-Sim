@@ -13,7 +13,7 @@ stops you walking** (since 2026-11-11): up against it, Space vaults it (the dead
 windows; colonists step over barricades). **E at a parked car** gets you in from any side you can walk up to (W may
 stay held: pushing against the car doesn't stop it; walking off does). **The boot** (U, from behind the car) opens
 with the inventory screen on what's in it; with it open, E or Tab behind the car shows it again. **The bonnet** is I,
-from in front.
+from in front. **R with wood at a door in a wall** boards it up (2026-11-12): you and yours still get by, the dead and raiders batter the boards off first.
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
 (W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof

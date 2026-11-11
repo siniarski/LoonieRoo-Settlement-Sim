@@ -43,6 +43,14 @@ public static partial class Handiwork
         return null;
     }
 
+    /// <summary>The edge door between two tiles side by side, or -1.</summary>
+    public static int doorBetween(Grid grid, Point a, Point b)
+    {
+        if (JsMath.abs(a.x - b.x) + JsMath.abs(a.y - b.y) != 1) return -1;
+        int e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
+        return (e >= 0 && Grids.edgeKind(grid, e) == Grids.EDGE_DOOR) ? e : -1;
+    }
+
     /// <summary>What working this tile would do, or why not.</summary>
     public static object plan(SimState state, Survivor s, Point p)
     {
@@ -52,6 +60,13 @@ public static partial class Handiwork
             return new WorkPlan { what = "repair" };
         }
         var wood = carryingWood(state, s);
+        // A door in the wall between you and that tile (an edge door: every generated building's): board it up.
+        int e = doorBetween(state.grid, s.pos, p);
+        if (e >= 0)
+        {
+            if (state.grid.edgeBoarded.includes(e)) return "already boarded up";
+            return Js.T(wood) ? (object)new WorkPlan { what = "build", target = "boards" } : "you need wood to board up a door";
+        }
         if (tile == "door")
         {
             return Js.T(wood) ? (object)new WorkPlan { what = "build", target = "barricade" } : "you need wood to barricade a door";
@@ -100,7 +115,7 @@ public static partial class Handiwork
         {
             return new WorkStart { what = "repair", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)}", duration = JsMath.ceil(((double)(Breach.structureDamage(state, p.x, p.y)) / (Breach.REPAIR_PER_TICK))) };
         }
-        return new WorkStart { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Js.Get(Designations.BUILD_WORK, job.target) };
+        return new WorkStart { what = "build", targetId = $"{Js.Str(p.x)},{Js.Str(p.y)},{Js.Str(job.target)}", duration = Js.Get(Designations.BUILD_WORK, job.target == "boards" ? "barricade" : job.target) };
     }
 
     /// <summary>A tick of repairing. Returns true when done (or no longer needed).</summary>
@@ -136,6 +151,18 @@ public static partial class Handiwork
         }
         Inventory.unpack(s, wood.id);
         Items.removeItem(state, wood);
+        if (target == "boards")
+        {
+            // Boards across an edge door: shut, and nobody but you and yours gets past until they are battered off
+            // (Pathfinding.crossable; Breach.edgeHealth: the boards first, then the door).
+            int e = doorBetween(state.grid, s.pos, p);
+            if (e < 0) return "it changed while you worked";
+            state.grid.edgeOpen.Remove(e);
+            if (!state.grid.edgeBoarded.includes(e)) state.grid.edgeBoarded.push(e);
+            Grids.noteEdgeChange(state.grid, e);
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+            return "boarded up the door";
+        }
         Blueprint bp = new Blueprint { id = $"h{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y), target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
         Designations.completeBlueprint(state, bp);
         return (target == "wall") ? "put up a wall" : ((target == "barricade") ? "barricaded the door" : "reinforced it");

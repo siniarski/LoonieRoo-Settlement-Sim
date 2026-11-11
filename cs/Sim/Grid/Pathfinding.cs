@@ -45,6 +45,9 @@ public static partial class Pathfinding
         if (mover == SWIMMER) mover = FREE;
         if (kind == EDGE_NONE || mover == BREACHER) return true;
         if (kind == EDGE_WALL || mover == VEHICLE) return false;
+        // A boarded door (Handiwork.cs: boards nailed across it by hand) lets only you and yours by, as a barricaded
+        // tile door does; the dead and raiders batter the boards off first (Breach.edgeHealth).
+        if (kind == EDGE_DOOR && grid.edgeBoarded.Contains(e)) return mover == SURVIVOR || mover == FREE;
         if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
         // A barricade or a yard fence (planks), and a broken window: you (FREE) don't walk through, you vault them
         // with Space (Leaps.cs); colonists step over barricades and use doors, the dead and animals climb through windows.
