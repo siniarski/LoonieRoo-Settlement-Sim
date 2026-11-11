@@ -130,10 +130,11 @@ public static class WorldMesh
                 bool ribbon = Ribboned && tile == "floor" && ground == "road" && !Terrain.Sunk(x, y);
                 // The water's edge is drawn smooth (Banks, below): a tile the bank runs through is part land, part
                 // water; one wholly on the far side of it is drawn as that side, whatever the sim's tile says.
-                int bank = Terrain.Flat || ground == "bridge" || tile is not ("floor" or "water") ? BANK_AS_IS : Banks(gs, ws, g, x, y, tile, ground);
+                int bank = Terrain.Flat || ground == "bridge" || tile is not ("floor" or "water") ? BANK_AS_IS : Banks(gs, ws, g, x, y, tile, ribbon ? Verge(g, x, y) : ground);
                 if (bank == BANK_DRAWN) { }
                 else if (bank == BANK_WATER) Ground(gs, ws, x, y, "water", ground);
                 else if (bank == BANK_LAND && tile == "water") Ground(gs, ws, x, y, "floor", Shore(g, x, y));
+                else if (bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground)) { }
                 else if (ribbon) Ground(gs, ws, x, y, tile, Verge(g, x, y));
                 else
                 {
@@ -228,6 +229,92 @@ public static class WorldMesh
                 if (kind is "grass" or "dirt" or "forest" or "field") return kind;
             }
         return "grass";
+    }
+
+    // --- where one kind of open ground meets another, smooth (2026-11-12) ---
+    // Grass, forest floor, bare earth and fields change kind tile by tile in the sim; drawn that way their edges are
+    // staircases. As for the water's edge (below): each tile corner counts the kinds of the sixteen tiles about it,
+    // and the edge between two kinds runs where their counts are equal. A tile it crosses is drawn in two parts; one
+    // wholly on the other side of it is drawn as that side. Only these four kinds: paving, floors and roads have
+    // edges that are meant to be square. Drawn only.
+    static readonly string[] SOFT = { "grass", "forest", "dirt", "field" };
+
+    static int Soft(string ground) => Array.IndexOf(SOFT, ground);
+
+    static int SoftAt(Grid g, int x, int y)
+    {
+        if (x < 0 || y < 0 || x >= g.width || y >= g.height) return -1;
+        int i = y * g.width + x, k = Grids.groundAt(g, i);
+        if (Grids.tileAt(g, i) != "floor" || k < 0 || k >= Grids.GROUNDS.Length) return -1;
+        return Soft(Grids.GROUNDS[k]);
+    }
+
+    /// <summary>A tile of open ground where two kinds meet: draws it (in two parts along the edge, or whole as the
+    /// kind round it) and returns true; false where it is its own kind all round, or three kinds meet.</summary>
+    static bool Edges(SurfaceTool st, Grid g, int x, int y, string ground)
+    {
+        var at = new[] { (x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1) };
+        var counts = new int[4, 4];
+        var top = new int[4];
+        int a = -1, b = -1;
+        for (int c = 0; c < 4; c++)
+        {
+            for (int ty = at[c].Item2 - 2; ty <= at[c].Item2 + 1; ty++)
+                for (int tx = at[c].Item1 - 2; tx <= at[c].Item1 + 1; tx++)
+                {
+                    int k = SoftAt(g, tx, ty);
+                    if (k >= 0) counts[c, k]++;
+                }
+            int best = 0;
+            for (int k = 1; k < 4; k++) if (counts[c, k] > counts[c, best]) best = k;
+            top[c] = best;
+            if (a < 0 || best == a) a = best;
+            else if (b < 0 || best == b) b = best;
+            else return false; // three kinds meet here: as the tiles are
+        }
+        int own = Soft(ground);
+        float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
+        Look Of(int kind) => new(WorldLook.GroundColour(SOFT[kind]).Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.Ground(SOFT[kind]));
+        if (b < 0)
+        {
+            if (a == own) return false;
+            GroundQuad(st, x, y, Of(a)); // an odd tile out in the other kind's ground: drawn as that
+            return true;
+        }
+        // Which side of the edge each corner is on: more of a than of b round it, or the other way.
+        var f = new float[4];
+        for (int c = 0; c < 4; c++) f[c] = counts[c, a] - counts[c, b] + (a < b ? 0.01f : -0.01f);
+        void Side(bool first)
+        {
+            var poly = new List<(Vector3 p, Vector3 normal)>();
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4;
+                bool ia = f[i] >= 0, ja = f[j] >= 0;
+                var (ax, ay) = at[i];
+                var (bx, by) = at[j];
+                if (ia == first) poly.Add((new Vector3(ax, Terrain.Corner(ax, ay), ay), Terrain.Normal(ax, ay)));
+                if (ia != ja)
+                {
+                    float t = f[i] / (f[i] - f[j]);
+                    float h = Terrain.Corner(ax, ay) + (Terrain.Corner(bx, by) - Terrain.Corner(ax, ay)) * t;
+                    poly.Add((new Vector3(ax + (bx - ax) * t, h, ay + (by - ay) * t), (Terrain.Normal(ax, ay) + Terrain.Normal(bx, by)).Normalized()));
+                }
+            }
+            if (poly.Count < 3) return;
+            var look = Of(first ? a : b);
+            st.SetColor(look.colour);
+            st.SetUV(look.what);
+            for (int k = 1; k < poly.Count - 1; k++)
+            {
+                var (p0, p1, p2) = (poly[0], poly[k], poly[k + 1]);
+                if ((p1.p - p0.p).Cross(p2.p - p0.p).Y > 0) (p1, p2) = (p2, p1); // clockwise from above, as the ground's
+                foreach (var v in new[] { p0, p1, p2 }) { st.SetNormal(v.normal); st.AddVertex(v.p); }
+            }
+        }
+        Side(true);
+        Side(false);
+        return true;
     }
 
     // --- the water's edge, smooth (2026-11-12) ---

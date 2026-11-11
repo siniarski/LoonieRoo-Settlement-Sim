@@ -1,0 +1,6 @@
+- **2026-11-12, open ground's edges drawn smooth.** After the roads (log 03) and the water's edge (log 04), the player asked for the other ground edges too.
+  - **Built** (`WorldMesh.Edges`; drawn only). Grass, forest floor, bare earth and fields: each tile corner counts the kinds of the sixteen tiles about it, and the edge between two kinds runs where their counts are equal. A tile it crosses is drawn in two parts along it, one wholly across it as the other kind; where three kinds meet the tile is drawn as it is. The same cut as the water's edge, on the ground's heights.
+  - **Not paving, floors or roads**: their edges are meant to be square (a sidewalk, a yard's path, a street), and they are straight in the plan.
+  - **Also**: a country road's tile at a river bank is drawn as verge on its dry part, not as asphalt (a saw-tooth of road colour showed beside the ribbon there).
+  - **Looked at**: the same view from above as log 04: the earth patches and the grass meet in curves.
+  - **Left.** A lone tile of one kind inside another disappears from view (it is still that kind to the sim: a foraging or farming rule that reads the ground reads the tile). The far view still draws ground by tile. The edge is a hard line between two textures, not a blend. Not looked at from eye level.
