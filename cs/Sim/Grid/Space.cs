@@ -53,8 +53,9 @@ public static partial class Space
     }
 
     /// <summary>
-    /// Nearest tile to `from` (by walking distance, BFS in N, E, S, W order) that `accept` likes. Searches
-    /// through walkable tiles; `from` itself may be unwalkable. Null if none in the first `limit` tiles searched.
+    /// Nearest tile to `from` (by steps over walkable tiles, BFS in N, E, S, W order) that `accept` likes. The
+    /// search knows tiles only: edge walls and parked cars don't stop it (the caller's `accept` says what will do).
+    /// `from` itself may be unwalkable. Null if none in the first `limit` tiles searched.
     /// </summary>
     public static Point? nearestTile(Grid grid, Point from, Func<int, int, bool> accept, double limit = double.PositiveInfinity)
     {

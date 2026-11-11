@@ -53,7 +53,7 @@ public sealed class Grid : IJsonOnDeserialized
     /// is generated into (Worldgen.makeChunk), so generation writes in map coordinates. Grids' helpers (tileIndex,
     /// inBounds, edgeIndex) take it into account; nothing else meets such a grid. Not saved.</summary>
     [JsonIgnore] public int ox, oy;
-    // The six per-tile layers, each in 32 x 32 chunks allocated where something differs from the layer's fill
+    // The per-tile layers (the six that are saved; parkedLayer below is derived), each in 32 x 32 chunks allocated where something differs from the layer's fill
     // (GridLayers.cs; docs/worldplan-regions.md "The second job"). Not public: Grids' accessors are the way in
     // (getTile, tileAt, groundAt, setTile...). In JSON they are the flat row-major arrays they always were.
     /// <summary>"floor", "wall", "door", "water" or "barricade" (as codes into Grids.tileNames).</summary>
@@ -112,7 +112,8 @@ public static partial class Grids
     public const int EDGE_NONE = 0;
     public const int EDGE_WALL = 1;
     public const int EDGE_DOOR = 2;
-    /// <summary>Planks across a border: you and colonists climb over; the dead and raiders can't.</summary>
+    /// <summary>Planks across a border: you and colonists climb over and a crawler goes under; the dead and raiders
+    /// can't (a runner vaults it: Crossings.cs).</summary>
     public const int EDGE_BARRICADE = 3;
     /// <summary>Glass: blocks walking and bites, not sight.</summary>
     public const int EDGE_WINDOW = 4;
@@ -290,9 +291,6 @@ public static partial class Grids
         edgeBetween(grid, ax, ay, bx, by, out int kind);
         return kind;
     }
-
-    /// <summary>What stands on a tile's north (side 0) or west (side 1) edge; EDGE_NONE off the grid.</summary>
-    public static int edgeAt(Grid grid, int x, int y, int side) => inBounds(grid, x, y) ? grid.edgeLayer.Get2(x - grid.ox, y - grid.oy, side) : EDGE_NONE;
 
     /// <summary>What stands on an edge (EDGE_NONE for -1).</summary>
     public static int edgeKind(Grid grid, int e) => (uint)e < (uint)(2 * grid.edgeLayer.count) ? grid.edgeLayer.At2(e) : EDGE_NONE;
@@ -562,9 +560,6 @@ public static partial class Grids
         if (at >= 0) list.RemoveAt(at);
     }
 
-    /// <summary>Doors and barricades are walkable (for colonists).</summary>
-    public static bool isWalkableTile(string tile) => tile == FLOOR || tile == DOOR || tile == BARRICADE;
-
     public static bool isLocked(Grid grid, int x, int y) => inBounds(grid, x, y) && grid.locked.Contains(tileIndex(grid, x, y));
 
     /// <summary>A door standing open.</summary>
@@ -573,7 +568,7 @@ public static partial class Grids
     public static bool isWalkable(Grid grid, int x, int y)
     {
         if (!inBounds(grid, x, y)) return false;
-        // isWalkableTile, by the tile's code.
+        // Floor, and doors and barricades too (walkable for colonists), by the tile's code.
         int code = grid.tileLayer.Get(x - grid.ox, y - grid.oy);
         return code == TILE_FLOOR || code == TILE_DOOR || code == TILE_BARRICADE;
     }

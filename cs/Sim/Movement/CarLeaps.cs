@@ -22,7 +22,7 @@
 //            it was saved on: onCar and your position are in it.
 //   heights  height() is your feet over the ground, for the view: a car's top where you are on it (Vehicles.topAt:
 //            VehicleHeights.cs), and a car leap's arc between the heights it was given at take-off. Nothing in
-//            the sim reads it.
+//            the sim decides anything by it (PoseIntents hands it to the renderer).
 //   the dead reach you by distance as ever (Motion.REACH, centre to centre; height doesn't count): from beside a car
 //            they reach you on its roof. A roof is a lookout, not a refuge.
 // A car leap's busy.targetId is "x,y,car,fromCm,toCm,peakCm": the landing (SUB), the car, and the view's heights,

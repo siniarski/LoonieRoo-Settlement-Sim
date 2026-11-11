@@ -43,16 +43,15 @@ public static partial class Doors
     public static void closeBehind(SimState state)
     {
         closeEdgesBehind(state);
-        var __d0 = state;
-        var grid = __d0.grid;
+        var grid = state.grid;
         if (grid.passing.length == 0)
         {
             return;
         }
         var occupied = new JsSet<double>();
-        /*TODO return type*/object mark(double x, double y)
+        void mark(double x, double y)
         {
-            return occupied.add(((double)(y) * (grid.width)) + x);
+            occupied.add(((double)(y) * (grid.width)) + x);
         }
         foreach (var s in Js.Iter(state.survivors))
         {
@@ -92,8 +91,7 @@ public static partial class Doors
     /// <summary>Edge doors held open for someone passing shut once nobody is crossing: nobody mid-step across it (a colonist's step, a zombie's next tile) and nobody's body touching the doorway.</summary>
     public static void closeEdgesBehind(SimState state)
     {
-        var __d1 = state;
-        var grid = __d1.grid;
+        var grid = state.grid;
         if (grid.edgePassing.length == 0)
         {
             return;
@@ -132,14 +130,10 @@ public static partial class Doors
             var tile = JsMath.floor(((double)(e) / (2)));
             var x = ((double)((tile % grid.width)) * (Motion.SUB));
             var y = ((double)(JsMath.floor(((double)(tile) / (grid.width)))) * (Motion.SUB));
-            var __c2 = (e % 2) == 0; var x1 = __c2 ? (x + Motion.SUB) : x; var y1 = __c2 ? y : (y + Motion.SUB);
+            // The doorway's line: a north edge runs east from the tile's corner, a west edge south.
+            var north = (e % 2) == 0; var x1 = north ? (x + Motion.SUB) : x; var y1 = north ? y : (y + Motion.SUB);
             var r = Motion.BODY_RADIUS + ((double)(Motion.SUB) / (8));
-            var inDoorway = bodies.some((c) =>
-        {
-            var px = JsMath.max(x, JsMath.min(x1, c.x));
-            var py = JsMath.max(y, JsMath.min(y1, c.y));
-            return ((JsMath.pow((c.x - px), 2)) + (JsMath.pow((c.y - py), 2))) < ((double)(r) * (r));
-        });
+            var inDoorway = bodies.some((c) => Motion.touches(c, r, x, y, x1, y1));
             if (Js.T(inDoorway))
             {
                 continue;
@@ -156,8 +150,7 @@ public static partial class Doors
     /// <summary>Opens or shuts the edge door between two tiles side by side. Returns what happened, or why not (null: no door there).</summary>
     public static string? toggleEdgeDoor(SimState state, Point a, Point b)
     {
-        var __d3 = state;
-        var grid = __d3.grid;
+        var grid = state.grid;
         var e = Grids.edgeBetween(grid, a.x, a.y, b.x, b.y);
         if ((e < 0) || (Grids.edgeKind(grid, e) != Grids.EDGE_DOOR))
         {

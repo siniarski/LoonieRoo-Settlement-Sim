@@ -20,7 +20,7 @@
 // A*, reachability and the horde's flow field let them onto a tile they can cross at a cost in steps (CAR_COST
 // to climb onto each tile of a car, VAULT_COST over a barricade: pathCost, standsOn, vaults), so they go round
 // when round is short and over when it is much shorter or the only way. A runner's paths are planned for the
-// mover RUNNER (a zombie that vaults barricades); its body is a zombie's.
+// mover RUNNER (Pathfinding.cs: a zombie that vaults barricades); its body is a zombie's.
 //
 // A crossing is plain state on the zombie (Zombie.crossing: what, from, to, ticks left, of), one leg at a time,
 // each a straight line between two points a tile apart moved by whole SUB units, so it saves and replays exactly.
@@ -39,10 +39,6 @@ namespace LoonieRoo.Sim;
 public static class Crossings
 {
     public const string CLIMB = "climb", UNDER = "under", VAULT = "vault";
-
-    /// <summary>The mover a runner's paths are planned for: a zombie that vaults barricades. (Its body is moved
-    /// as a zombie: an unknown mover is one to Pathfinding.isPassable and crossable.)</summary>
-    public const string RUNNER = "runner";
 
     /// <summary>Ticks a leg (one tile to the next): a walker over a car (others by their pace), a crawler hauling
     /// itself over a sedan, a crawler under a pickup, a runner over a barricade.</summary>
@@ -66,10 +62,10 @@ public static class Crossings
 
     /// <summary>Do this mover's paths cross things? The dead's movers, and the breacher they fall back on.</summary>
     public static bool plans(string mover) =>
-        mover == Pathfinding.ZOMBIE || mover == RUNNER || mover == Pathfinding.CRAWLER || mover == Pathfinding.RAIDER || mover == Pathfinding.BREACHER;
+        mover == Pathfinding.ZOMBIE || mover == Pathfinding.RUNNER || mover == Pathfinding.CRAWLER || mover == Pathfinding.RAIDER || mover == Pathfinding.BREACHER;
 
     /// <summary>The mover a zombie's paths are planned for (its body moves as Zombies.moverOf).</summary>
-    public static string planner(Zombie z) => vaulter(z) ? RUNNER : Zombies.moverOf(z);
+    public static string planner(Zombie z) => vaulter(z) ? Pathfinding.RUNNER : Zombies.moverOf(z);
 
     /// <summary>Runners vault barricades.</summary>
     public static bool vaulter(Zombie z) => z.variant == "runner" && z.kind != "raider";
@@ -80,18 +76,18 @@ public static class Crossings
     {
         // (Asked of every wall a search or a flood meets: the cheap looks first.)
         if (Grids.isParked(grid, x, y)) return plans(mover) && Grids.getTile(grid, x, y) == Grids.FLOOR;
-        return mover == RUNNER && Grids.getTile(grid, x, y) == Grids.BARRICADE;
+        return mover == Pathfinding.RUNNER && Grids.getTile(grid, x, y) == Grids.BARRICADE;
     }
 
     /// <summary>An edge that stops this mover's body but not its paths: a barricade, to a runner.</summary>
-    public static bool vaults(int edgeKind, string mover) => edgeKind == Grids.EDGE_BARRICADE && mover == RUNNER;
+    public static bool vaults(int edgeKind, string mover) => edgeKind == Grids.EDGE_BARRICADE && mover == Pathfinding.RUNNER;
 
     /// <summary>What a path pays (in steps, in place of the one) to go from tile a into its neighbour b where a
     /// body of this mover can't simply walk; 0 where it can't be crossed either.</summary>
     public static double pathCost(Grid grid, int ax, int ay, int bx, int by, string mover)
     {
         // (Asked at every wall a search meets: nothing but a car is crossed by any mover but a runner.)
-        if (mover != RUNNER && !Grids.isParked(grid, bx, by)) return 0;
+        if (mover != Pathfinding.RUNNER && !Grids.isParked(grid, bx, by)) return 0;
         if (!plans(mover)) return 0;
         double cost = 0;
         if (!Pathfinding.crossable(grid, ax, ay, bx, by, mover))
@@ -110,12 +106,8 @@ public static class Crossings
     // --- bodies (Zombies.cs) ---
 
     /// <summary>Is this tile something this zombie crosses and can't stand on: under a parked car, or (a runner)
-    /// a barricade?</summary>
-    public static bool obstacle(Grid grid, int x, int y, Zombie z)
-    {
-        if (Grids.isParked(grid, x, y)) return Grids.getTile(grid, x, y) == Grids.FLOOR;
-        return vaulter(z) && Grids.getTile(grid, x, y) == Grids.BARRICADE;
-    }
+    /// a barricade? standsOn, for the mover its paths are planned for.</summary>
+    public static bool obstacle(Grid grid, int x, int y, Zombie z) => standsOn(grid, x, y, planner(z));
 
     /// <summary>How this zombie gets from tile a to its neighbour b where that is a crossing (climb, under, vault);
     /// null where it is an ordinary step, or no step at all: something else in the way, or no room for a body on
@@ -186,7 +178,7 @@ public static class Crossings
     {
         var grid = state.grid;
         var horde = Hordes.getHorde(state, z.hordeId);
-        bool onPath = z.path.Count > 0 && same(z.path[0], next);
+        bool onPath = z.path.Count > 0 && Space.samePoint(z.path[0], next);
         used = onPath ? 1 : 0;
         var route = new List<Point> { next };
         Point prev = z.pos, cur = next;
@@ -205,7 +197,7 @@ public static class Crossings
                 onPath = false;
                 var down = horde != null ? Hordes.hordeStepFrom(state, cur, horde) : null;
                 var straight = new Point(cur.x + (cur.x - prev.x), cur.y + (cur.y - prev.y));
-                if (down != null && !same(down, prev) && way(state, z, cur, down) != null) on = down;
+                if (down != null && !Space.samePoint(down, prev) && way(state, z, cur, down) != null) on = down;
                 else if (way(state, z, cur, straight) != null) on = straight;
                 else return null;
             }
@@ -215,8 +207,6 @@ public static class Crossings
         }
         return null;
     }
-
-    static bool same(Point a, Point b) => a.x == b.x && a.y == b.y;
 
     static void startLeg(Zombie z, Point to, string what)
     {
@@ -261,7 +251,7 @@ public static class Crossings
             if (!Motion.fits(grid, z.at, Zombies.moverOf(z))) abandon(state, z);
             return;
         }
-        while (z.path.Count > 0 && same(z.path[0], here)) z.path.shift();
+        while (z.path.Count > 0 && Space.samePoint(z.path[0], here)) z.path.shift();
         var next = Js.Get(z.path, 0);
         var what = next != null ? way(state, z, here, next) : null;
         if (what == null)
@@ -273,7 +263,7 @@ public static class Crossings
             next = null;
             foreach (var p in new List<Point> { ahead, new(here.x, here.y - 1), new(here.x + 1, here.y), new(here.x, here.y + 1), new(here.x - 1, here.y) })
             {
-                if (same(p, here) || !Grids.inBounds(grid, p.x, p.y) || obstacle(grid, p.x, p.y, z)) continue;
+                if (Space.samePoint(p, here) || !Grids.inBounds(grid, p.x, p.y) || obstacle(grid, p.x, p.y, z)) continue;
                 what = way(state, z, here, p);
                 if (what == null) continue;
                 next = p;

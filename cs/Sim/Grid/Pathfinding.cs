@@ -14,6 +14,10 @@ public static partial class Pathfinding
 {
     public const string SURVIVOR = "survivor", FREE = "free", ZOMBIE = "zombie", BREACHER = "breacher", RAIDER = "raider", CRAWLER = "crawler", VEHICLE = "vehicle", ANIMAL = "animal";
 
+    /// <summary>The mover a runner's paths are planned for: a zombie that vaults barricades (Crossings.cs). Its body
+    /// is moved as a zombie: isPassable and crossable know no "runner", so it gets the last line of each, the dead's.</summary>
+    public const string RUNNER = "runner";
+
     public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
         // A parked car is in everyone's way but another car's (cars meet body to body: VehicleBody.cs).
@@ -26,7 +30,7 @@ public static partial class Pathfinding
         if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
         if (mover == SURVIVOR) return isWalkable(grid, x, y);
         if (mover == FREE) return tile == FLOOR || tile == BARRICADE || openDoor;
-        return tile == FLOOR || openDoor;
+        return tile == FLOOR || openDoor; // the dead ("zombie", and a "runner"'s body)
     }
 
     /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>
@@ -141,7 +145,7 @@ public static partial class Pathfinding
     }
 
     static readonly ConditionalWeakTable<Grid, Dictionary<string, Reach>> componentCache = new();
-    static readonly string[] DOOR_MOVERS = { ZOMBIE, FREE, CRAWLER, Crossings.RUNNER };
+    static readonly string[] DOOR_MOVERS = { ZOMBIE, FREE, CRAWLER, RUNNER };
 
     static string OpenDoors(Grid grid, string mover)
     {
@@ -470,7 +474,7 @@ public static partial class Pathfinding
         };
     }
 
-    static readonly string[] MOVERS = { SURVIVOR, FREE, ZOMBIE, BREACHER, RAIDER, CRAWLER, Crossings.RUNNER };
+    static readonly string[] MOVERS = { SURVIVOR, FREE, ZOMBIE, BREACHER, RAIDER, CRAWLER, RUNNER };
 
     /// <summary>Builds every mover's reachability now (derived data only), so the first question in play doesn't pay for it.</summary>
     public static void warmReach(Grid grid, int version)
@@ -619,34 +623,6 @@ public static partial class Pathfinding
 
     const int STRAIGHTEN_LOOKAHEAD = 24;
 
-    /// <summary>A four-way path straightened for walking (eight-way lines over open floor). Same ends as the path.</summary>
-    public static List<Point> straighten(Grid grid, Point start, IReadOnlyList<Point> path)
-    {
-        if (path.Count < 2) return path.ToList();
-        var pts = new List<Point> { start };
-        pts.AddRange(path);
-        var out_ = new List<Point>();
-        int i = 0;
-        while (i < pts.Count - 1)
-        {
-            int best = i + 1;
-            var bestLine = new List<Point> { pts[i + 1] };
-            for (int j = Math.Min(pts.Count - 1, i + STRAIGHTEN_LOOKAHEAD); j > i + 1; j--)
-            {
-                var line = StraightLine(grid, pts[i], pts[j]);
-                if (line != null)
-                {
-                    best = j;
-                    bestLine = line;
-                    break;
-                }
-            }
-            out_.AddRange(bestLine);
-            i = best;
-        }
-        return out_;
-    }
-
     static List<Point>? StraightLine(Grid grid, Point a, Point b)
     {
         var tiles = new List<Point>();
@@ -675,7 +651,7 @@ public static partial class Pathfinding
                 if (!Bare(x, y, nx, y) || !Bare(x, y, x, ny) || !Bare(nx, y, nx, ny) || !Bare(x, ny, nx, ny)) return null;
             }
             else if (!isPassable(grid, nx, ny, SURVIVOR) || !crossable(grid, x, y, nx, ny, SURVIVOR)) return null;
-            if (!diagonal && (EdgeKindOf(grid, x, y, nx, ny) == EDGE_DOOR || EdgeKindOf(grid, x, y, nx, ny) == EDGE_BARRICADE) && (nx != b.x || ny != b.y)) return null;
+            if (!diagonal && (edgeKindBetween(grid, x, y, nx, ny) == EDGE_DOOR || edgeKindBetween(grid, x, y, nx, ny) == EDGE_BARRICADE) && (nx != b.x || ny != b.y)) return null;
             if (!diagonal && Door(nx, ny) && (nx != b.x || ny != b.y)) return null;
             tiles.Add(new Point(nx, ny));
             x = nx;
@@ -684,7 +660,8 @@ public static partial class Pathfinding
         return tiles;
     }
 
-    /// <summary>Just the first straight line of Straighten, then the rest of the path as it was.</summary>
+    /// <summary>A four-way path with its start straightened for walking: the longest first stretch (up to
+    /// STRAIGHTEN_LOOKAHEAD tiles) that is one eight-way line over open floor, then the rest of the path as it was.</summary>
     public static List<Point> straightenAhead(Grid grid, Point start, IReadOnlyList<Point> path)
     {
         if (path.Count < 2) return path.ToList();
@@ -698,12 +675,6 @@ public static partial class Pathfinding
             }
         }
         return path.ToList();
-    }
-
-    static int EdgeKindOf(Grid grid, int ax, int ay, int bx, int by)
-    {
-        edgeBetween(grid, ax, ay, bx, by, out int kind);
-        return kind;
     }
 
     /// <summary>Nothing solid between two tiles at most a step apart (for blows and bites).</summary>

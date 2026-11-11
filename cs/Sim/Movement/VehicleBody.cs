@@ -8,7 +8,7 @@
 //   solid to it   walls and edge walls, doors, windows, barricades (Motion.fits, mover "vehicle"); furniture, as its
 //                 whole tile (all but traps and pits); a tree, as its trunk (Trunks.cs); other cars' bodies.
 //                 Not people or the dead: it runs those down (Vehicles.move).
-//   moving        Vehicles.move tries the whole step, then each axis on its own (it slides along a wall), then as
+//   moving        advance() (for Vehicles.move) tries the whole step, then each axis on its own (it slides along a wall), then as
 //                 much of the step as fits (its bumper ends up at the wall)
 //   turning       about the rear axle, as a car does: the nose swings, the tail stays, so a car alongside a wall can
 //                 steer away from it. A turn that would put the body into something isn't made.

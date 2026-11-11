@@ -36,7 +36,8 @@ public class GridLayer<T> where T : unmanaged
         this.fill = fill;
     }
 
-    /// <summary>The same value to the bit (so -0 and 0 are two values, and NaN is itself).</summary>
+    /// <summary>The same value to the bit (so -0 and 0 are two values, and NaN is itself). For the two kinds of layer
+    /// there are, byte and double: any other T would be compared by its first byte.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static bool Same(T a, T b) => typeof(T) == typeof(double)
         ? BitConverter.DoubleToInt64Bits(Unsafe.As<T, double>(ref a)) == BitConverter.DoubleToInt64Bits(Unsafe.As<T, double>(ref b))

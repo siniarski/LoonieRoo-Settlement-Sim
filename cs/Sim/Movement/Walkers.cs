@@ -159,8 +159,9 @@ public static class Walkers
         }
     }
 
-    /// <summary>A point `len` SUB units off in direction k of DIRS (any of 12), if it can walk straight there and stand there.</summary>
-    /// `overCars`: or across a parked car (to the first place past it, half a tile at a time, where it can stand).
+    /// <summary>A point `len` SUB units off in the direction (dx, dy) (one of DIRS, or any other), if it can walk
+    /// straight there and stand there. `overCars`: or across a parked car (to the first place past it, half a tile at
+    /// a time, where it can stand).</summary>
     static Point? legTo(SimState state, Point at, int dx, int dy, double len, string mover, bool overCars = false)
     {
         for (var extra = 0; extra <= (overCars ? 4 : 0); extra++)

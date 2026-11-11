@@ -11,7 +11,7 @@
 //   action      what (control's busy action: getIn, openBoot, forage, build, eat...), progress 0..1
 //               (the renderer plays its clip at this normalised time), anchor (where it happens:
 //               driverDoor, boot, hood) and the target's id; approach (normal for now); lift (metres
-//               your feet are off the ground in a jump, vault or hop: leaps.cs, at the tick's end)
+//               your feet are off the ground in a jump, vault or hop: Leaps.height, at the tick's end)
 //   carry       right hand (the weapon's kind), left hand (a tool), both (something carried), back
 //               (a pack), cart
 //   condition   0..1 weights: limp left/right (a wounded or lost leg), arm left/right (a wounded or
@@ -46,7 +46,7 @@ public sealed class PoseIntent
 public static class PoseIntents
 {
     /// <summary>The sim's rate at 1x (CLAUDE.md rule 6): for speeds in metres a second.</summary>
-    public const double TICKS_PER_SECOND = 10;
+    public const double TICKS_PER_SECOND = Tick.TICKS_PER_SECOND;
 
     /// <summary>One at their job counts as working at it within this of its tile's centre (tiles), standing.</summary>
     public const double WORK_REACH = 1.6;

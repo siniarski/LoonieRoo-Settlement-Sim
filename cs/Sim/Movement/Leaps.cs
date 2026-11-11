@@ -13,7 +13,7 @@
 // Leaps are movement, so they count ticks (seconds whatever the day length), not slow ticks.
 // In the air: steering waits for the landing; swinging, using and work are refused. Your tile
 // (pos) follows you only onto ground you could stand on (not the water under a hop).
-// Each costs endurance; winded, you can't. The sim has no heights that block, so a step up is
+// Each costs endurance; winded, you can't. The ground has no heights that block, so a step up is
 // just a jump (the renderer's ground eases the view up a kerb or a rise).
 // A parked car is the one thing you get over or onto (2026-11-11): over it, onto it, standing on it
 // and down off it are CarLeaps.cs (part of Leaps), tried before the vault and the hop.

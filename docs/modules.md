@@ -75,7 +75,7 @@ git tag `ts-final`.
 ### `Movement/`
 
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
-- **Survivors**: tile-to-tile movement along cached A* paths. **Doors**: doors held open by whoever passes.
+- **Survivors**: tile-to-tile movement along cached A* paths (making and finding one: Survivors/SurvivorRoster.cs). **Doors**: doors held open by whoever passes.
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
 - **Leaps**: Space in first person: jump, vault or hop. **CarLeaps** (part of Leaps): over a parked car, onto it,
   walking on its roof and down off it (`control.onCar`), your height for the view. **Trunks**: a tree's trunk, solid to free movers, tile
@@ -154,6 +154,8 @@ git tag `ts-final`.
 - **Needs**, **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
   (social, comfort), **Mood** (thoughts), **Moodlets**, **Resolve**, **Wishes**, **Skills** (skills, traits),
   **Relationships**, **Leisure**, **Books**, **Clothing**, **Family**, **Dogs**.
+- **SurvivorRoster** (part of Survivors, whose walking is Movement/Survivors.cs): a new survivor, the names handed
+  out, finding one by id or tile.
 - **CharacterMod**: character creation. **CharacterSheet**: who a survivor is and what state they are in, as data and
   as text (pure, read-only; the Tab screen draws it).
 

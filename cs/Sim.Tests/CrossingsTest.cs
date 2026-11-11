@@ -102,7 +102,7 @@ public class CrossingsTest
             expect(Pathfinding.canReach(g, state.walkabilityVersion, south, north, mover), mover).toBe(false);
             expect(Pathfinding.findPathToAny(g, south, north, mover) == null, mover).toBe(true);
         }
-        foreach (var mover in new[] { Pathfinding.ZOMBIE, Pathfinding.CRAWLER, Pathfinding.RAIDER, Crossings.RUNNER })
+        foreach (var mover in new[] { Pathfinding.ZOMBIE, Pathfinding.CRAWLER, Pathfinding.RAIDER, Pathfinding.RUNNER })
         {
             expect(Pathfinding.canReach(g, state.walkabilityVersion, south, north, mover), mover).toBe(true);
             var path = Pathfinding.findPathToAny(g, south, north, mover);
@@ -367,7 +367,7 @@ public class CrossingsTest
         }
         state.walkabilityVersion++;
         int asked = 0, reachable = 0, over = 0;
-        foreach (var mover in new[] { Pathfinding.ZOMBIE, Pathfinding.CRAWLER, Pathfinding.RAIDER, Crossings.RUNNER, Pathfinding.SURVIVOR })
+        foreach (var mover in new[] { Pathfinding.ZOMBIE, Pathfinding.CRAWLER, Pathfinding.RAIDER, Pathfinding.RUNNER, Pathfinding.SURVIVOR })
         {
             for (int k = 0; k < 80; k++)
             {
