@@ -102,6 +102,20 @@ public static partial class Commands
             Js.NN(state.control).sneaking = command.on;
             return changed();
         }
+        if (command.type == "push")
+        {
+            // The push key held (on) or let go: walking into a parked car rolls it (VehiclePush.cs).
+            if (!Js.T(ControlMod.controlled(state)))
+            {
+                return reject("nobody is under control");
+            }
+            if ((Js.NN(state.control).pushing == true) == (command.on == true))
+            {
+                return unchanged();
+            }
+            Js.NN(state.control).pushing = (command.on == true) ? true : null;
+            return changed();
+        }
         if (command.type == "sights")
         {
             // Aiming down the sights (on: right mouse held): counts with a gun in hand (ControlMod.sightsUp).

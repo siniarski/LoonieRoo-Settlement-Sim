@@ -192,6 +192,11 @@ public static partial class ControlMod
                 Leaps.walkOnTop(state, s, c, car, v);  // on a car's roof: within its body, or a step down (CarLeaps.cs)
                 return;
             }
+            // The push key held, walking into a parked car: it rolls, and you follow it at its pace (VehiclePush.cs).
+            if ((c.pushing == true) && (Vehicles.push(state, s, Js.I(c.dx), Js.I(c.dy)) is { } rolled))
+            {
+                v = rolled;
+            }
             var stood = s.at;
             s.at = Motion.slide(state, s.at, v.x, v.y, walkMover(state.grid, s.at));
             // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body

@@ -144,9 +144,9 @@ public partial class Game
         Input.UseAccumulatedInput = false;
         await Frames(5);
         // SELFTEST_ONLY=interact: only the interaction steps (SelfTestInteract.cs), for working on them.
-        if (OS.GetEnvironment("SELFTEST_ONLY") == "interact")
+        if (OS.GetEnvironment("SELFTEST_ONLY") is "interact" or "cars")
         {
-            await InteractSteps();
+            if (OS.GetEnvironment("SELFTEST_ONLY") == "cars") await CarTrickSteps(); else await InteractSteps();
             GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
             GetTree().Quit(failures.Count);
             return;
@@ -334,6 +334,7 @@ public partial class Game
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
         await BigNewGame();
+        await CarTrickSteps();  // last: the steps before keep their tick counts (SelfTestCarTricks.cs)
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);

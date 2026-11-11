@@ -167,7 +167,9 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   it. Left of the cars: the car you sit in
   is solid to the dead, animals and dogs and they batter it, not you, till it's a wreck (VehicleCabin.cs,
   log/2026-11-12-07-cars.md), but their paths still go through it (they press against its side; a crowd behind
-  pushes the front ones along it); the dead and animals stop at
+  pushes the front ones along it). Pushing a car (J, VehiclePush.cs): no pushing pose or hands on it; you walk up
+  to half a metre behind its boot (its end tiles stop you short of the body); it rolls only along its length, never
+  turns; slope isn't felt (Heights.cs is read by nothing in the tick: the player's call); the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
   left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
   reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;

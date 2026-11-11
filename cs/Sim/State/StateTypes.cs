@@ -217,6 +217,8 @@ public partial class Control
     public bool? sneaking { get; set; }
     /// <summary>Aiming down the sights (the `sights` command; it counts only with a gun in hand: ControlMod.sightsUp).</summary>
     public bool? sights { get; set; }
+    /// <summary>The push key held (the `push` command): walking into a parked car pushes it (VehiclePush.cs).</summary>
+    public bool? pushing { get; set; }
     public ControlBusy? busy { get; set; }
     /// <summary>The id of the parked car you are standing on (CarLeaps.cs), or null on the ground.</summary>
     public string? onCar { get; set; }
