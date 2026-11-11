@@ -151,6 +151,14 @@ public partial class Game
             GetTree().Quit(failures.Count);
             return;
         }
+        // SELFTEST_ONLY=anim: only the last steps (SelfTestAnim.cs), for working on them.
+        if (OS.GetEnvironment("SELFTEST_ONLY") == "anim")
+        {
+            await AnimSteps();
+            GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
+            GetTree().Quit(failures.Count);
+            return;
+        }
         // First person: the 3D view is up, with the world built round you.
         Check("Playing someone is first person", view.firstPerson && firstPerson.Visible && firstPerson.ChunkCount > 0, $"chunks {firstPerson.ChunkCount}");
         // The detail textures (World3D/Surfaces.cs): every layer of layers.json in the one array, the last one where its name says.

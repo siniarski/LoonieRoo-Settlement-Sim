@@ -199,6 +199,15 @@ public sealed partial class People
         l.hands.Grip[hand] = l.grip;
     }
 
+    /// <summary>A leap's hands forgotten with the model they were on (its skeleton freed: your body made again).</summary>
+    static void ForgetHands(Leap l)
+    {
+        l.grip?.QueueFree();
+        l.hands = null;
+        l.lean = null;
+        l.grip = null!;
+    }
+
     /// <summary>A vault or a hop faces the way over (the legs; the chest still turns to the look): the model's yaw, or null.</summary>
     float? LeapYaw() => ownLeap.busy != null && ownLeap.dir != Vector3.Zero ? (float)Math.Atan2(ownLeap.dir.X, ownLeap.dir.Z) : null;
 

@@ -65,6 +65,9 @@ public sealed partial class People
         /// <summary>A clip that overrides the stance's (a leap's: People.Leap.cs), and where in it (s; below 0: played on).</summary>
         public string? forced;
         public double forcedAt;
+        /// <summary>Swimming: the swim clip it plays instead of the stance's (People.Swim.cs), and at what rate.</summary>
+        public string? swim;
+        public float swimRate = 1;
         public Skeleton3D? skel;
         /// <summary>What it holds, drawn in its hand (People.Hold.cs).</summary>
         public string heldKind = "";
@@ -297,12 +300,17 @@ public sealed partial class People
         var pose = PoseIntents.ofSurvivor(state, you);
         roofUnder = Leaps.carOf(state, state.control);
         show &= pose.stance is "stand" or "sneak";
+        // Swimming, the body is seen only from outside (first person has the stroke's hands: SwimHands.cs).
+        bool swim = Swim.swimming(state, you);
+        show &= !swim || fromOutside;
         var hair = Looks.LivingOutfit(you.id);
         string look = LivingLook(you.id) + Lost(pose);
         if (show && look + "#" + hair != ownLook)
         {
             own?.root.QueueFree();
             ownShadow?.root.QueueFree();
+            ForgetHands(ownLeap);  // a vault's hand IK was on the old skeletons
+            ForgetHands(shadowLeap);
             own = Make(look);
             ownShadow = Make(look);
             own.own = ownShadow.own = true;
@@ -324,10 +332,12 @@ public sealed partial class People
         // the look once it's turned far enough. The chest makes up the rest, up to OWN_TWIST.
         float lookYaw = (float)Math.Atan2(Math.Cos(camYaw), Math.Sin(camYaw));
         var w = new Wanted(you.id, look, hair, you, pose, 0, false, "");
-        Hold(own, w, fromOutside);  // in first person your hands are Held.cs's
+        Hold(own, w, fromOutside && !swim);  // in first person your hands are Held.cs's; swimming, it is put away
         // A leap: the jump clips, and lifted with the eye (People.Leap.cs).
         double lift = LeapPre(own, ownLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
         LeapPre(ownShadow, shadowLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
+        SwimPre(own, swim, pose, delta);
+        SwimPre(ownShadow, swim, pose, delta);
         Pose(own, w, alpha, delta, 0.5, 720);
         Pose(ownShadow, w, alpha, delta, 0.5, 720);
         bool moving = own.speed > 0.3;
@@ -346,12 +356,13 @@ public sealed partial class People
         }
         else want = float.IsNaN(ownYaw) || Math.Abs(Mathf.AngleDifference(ownYaw, lookYaw)) > OWN_TURN_AT ? lookYaw : ownYaw;
         if (LeapYaw() is float over) { want = over; back = false; }
+        if (swim && moving) { want = (float)Math.Atan2(Math.Cos(ownHeading), Math.Sin(ownHeading)); back = false; }
         float before = ownYaw;
         ownYaw = float.IsNaN(ownYaw) ? want : Mathf.LerpAngle(ownYaw, want, (float)Math.Min(1, delta * (LeapYaw() != null ? 16 : 8)));
         if (!float.IsNaN(before) && delta > 0)
             foreach (var m in new[] { own, ownShadow }) Turning(m, Mathf.AngleDifference(before, ownYaw) / delta, delta);
         float twist = Math.Clamp(Mathf.AngleDifference(ownYaw, lookYaw), -OWN_TWIST, OWN_TWIST);
-        ownMod.Twist = twist;
+        ownMod.Twist = swim ? 0 : twist;
         ownMod.HideHead = !fromOutside;
         ownMod.HideRightArm = rightHeld && !fromOutside;
         ownMod.HideLeftArm = leftHeld && !fromOutside;
@@ -361,6 +372,7 @@ public sealed partial class People
             m.yaw = ownYaw;
             m.root.Rotation = new Vector3(0, ownYaw, 0);
             m.root.Position += behind + Vector3.Up * YourSink;  // swimming, in the water to the chin (FirstPerson)
+            SwimPost(m);
             if (back && m.forced == null) m.player.SpeedScale = -Math.Abs(m.player.SpeedScale);
             LeapPost(m, lift, m == own);
             m.player.Advance(delta);
@@ -557,10 +569,11 @@ public sealed partial class People
 
         string stance = w.pose.stance;
         if (m.forced != null) ForcedPlay(m);
+        else if (m.swim != null) Play(m, m.swim, m.swimRate, 0.3);
         else Clip(m, w, stance, dead, delta);
         int lod = Lod(m, dist, vpHeight, w, dead, delta);
         if (dead) Look(m, w, lod == 0 && dist < LOOK_RANGE && m.rise == null, delta);
-        FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && stance is "stand" or "sneak" && OneLeg(w.pose) == ' ');
+        FeetOnGround(m, (m.own || (lod == 0 && dist < IK_RANGE && iks < IK_MAX)) && m.forced == null && m.swim == null && stance is "stand" or "sneak" && OneLeg(w.pose) == ' ');
     }
 
     /// <summary>Model m's skeleton and the bones its footfalls are read from, found once; false if it has no skeleton.</summary>
