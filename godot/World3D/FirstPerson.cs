@@ -107,7 +107,7 @@ public sealed partial class FirstPerson : Node3D
         items = new ItemModels(this);
         furniture = new FurnitureModels(this);
         held = new Held(camera, items);
-        people = new People(this);
+        people = new People(this) { Items = items };
         trees = new Trees(this);
         far = new FarField(this, trees);
         roofs = new Roofs(this);

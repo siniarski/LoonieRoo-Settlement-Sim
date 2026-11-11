@@ -66,6 +66,9 @@ public sealed partial class People
         public string? forced;
         public double forcedAt;
         public Skeleton3D? skel;
+        /// <summary>What it holds, drawn in its hand (People.Hold.cs).</summary>
+        public string heldKind = "";
+        public MeshInstance3D? holdMesh;
         /// <summary>How fast it turns (rad/s, smoothed): standing, a quick turn steps round.</summary>
         public double turn, since, riseAt;
         /// <summary>The get-up clip of one of the dead that woke where it lay, while it plays.</summary>
@@ -229,6 +232,7 @@ public sealed partial class People
 
         var drawn = new HashSet<string>();
         int made = 0, redressed = 0;
+        Holding = 0;
         foreach (var w in wanted)
         {
             if (!byBody.TryGetValue(w.id, out var m))
@@ -260,6 +264,7 @@ public sealed partial class People
             else m.wasZombie = false;
             CrossPre(m, w, alpha);
             Pose(m, w, alpha, delta, Math.Sqrt(w.dist2), vpHeight);
+            Hold(m, w);
             CrossPost(m, w);
             m.player.Advance(delta);
             Footfall(m, w.id, false, w.look.StartsWith("zombie"), delta);
@@ -318,6 +323,7 @@ public sealed partial class People
         // the look once it's turned far enough. The chest makes up the rest, up to OWN_TWIST.
         float lookYaw = (float)Math.Atan2(Math.Cos(camYaw), Math.Sin(camYaw));
         var w = new Wanted(you.id, look, hair, you, pose, 0, false, "");
+        Hold(own, w, fromOutside);  // in first person your hands are Held.cs's
         // A leap: the jump clips, and lifted with the eye (People.Leap.cs).
         double lift = LeapPre(own, ownLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
         LeapPre(ownShadow, shadowLeap, state, you, alpha, delta, !leftHeld, !rightHeld);
