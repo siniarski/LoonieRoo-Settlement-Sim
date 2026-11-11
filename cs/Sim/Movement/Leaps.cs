@@ -44,6 +44,7 @@ public static partial class Leaps
     {
         var c = Js.NN(state.control);
         if (Js.T(Vehicles.vehicleOf(state, s))) return "not in a car";
+        if (Js.T(Vehicles.underOf(state, s))) return "not under a car";
         if (airborne(c)) return "already in the air";
         if (Swim.swimming(state, s)) return Swim.stroke(state, s, c);  // out of your depth, Space is a stroke (Swim.cs)
         if (BodyMod.isWinded(s)) return "too winded to jump";

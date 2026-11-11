@@ -146,9 +146,9 @@ public partial class Game
         Input.UseAccumulatedInput = false;
         await Frames(5);
         // SELFTEST_ONLY=interact: only the interaction steps (SelfTestInteract.cs), for working on them.
-        if (OS.GetEnvironment("SELFTEST_ONLY") == "interact")
+        if (OS.GetEnvironment("SELFTEST_ONLY") is "interact" or "cars")
         {
-            await InteractSteps();
+            if (OS.GetEnvironment("SELFTEST_ONLY") == "cars") await CarTrickSteps(); else await InteractSteps();
             GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
             GetTree().Quit(failures.Count);
             return;
@@ -347,6 +347,9 @@ public partial class Game
         await SoundTest();
 
         await DeathSteps();
+        // After the death steps, on the new survivor: the steps before keep their tick counts, and the new games
+        // after start worlds of their own (SelfTestCarTricks.cs).
+        await CarTrickSteps();
 
         // New game from the menu, from the Colony tab of this one: a group start (the default
         // preset), then a solo one. Each lands in first person on your survivor, playing at once.

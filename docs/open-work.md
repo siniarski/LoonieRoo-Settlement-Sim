@@ -168,8 +168,17 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   lies in the crawl pose; the animation session may add one, action "down", and "pile" for climbing a pile-up); a
   barricade's 600 health falls to six walkers in about 2.5 s, so a pile-up mostly shows where the fence is mended or
   strong: whether barricades should hold longer is open; the thump has no sound of its own in the game yet; tall
-  fences are not offered to your own hands (Handiwork), only to colonists; the solo and colony bots don't build them. Left of the cars: the car you are
-  sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
+  fences are not offered to your own hands (Handiwork), only to colonists; the solo and colony bots don't build them. Left of the cars: the car you sit in
+  is solid to the dead, animals and dogs and they batter it, not you, till it's a wreck (VehicleCabin.cs,
+  log/2026-11-12-07-cars.md), but their paths still go through it (they press against its side; a crowd behind
+  pushes the front ones along it). Pushing a car (J, VehiclePush.cs): no pushing pose or hands on it; you walk up
+  to half a metre behind its boot (its end tiles stop you short of the body); it rolls only along its length, never
+  turns; slope isn't felt (Heights.cs is read by nothing in the tick: the player's call). Car alarms (VehicleAlarm.cs): the sound is the
+  house alarm's bell pitched up, not a siren or horn; no lights flash; nothing turns one off but time (no fob, no
+  fuse to pull); your own car's alarm goes off when the dead batter it with you inside. Under a pickup (VehicleHide.cs): no
+  crawling clip in or out (you are put under its middle and out beside it); only the dead are fooled (a wolf after
+  you still knows where you are and waits by it, unable to bite); your body is
+  drawn lying, not on its back looking up; the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
   left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
   reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;

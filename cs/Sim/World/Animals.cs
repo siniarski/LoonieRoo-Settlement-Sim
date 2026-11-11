@@ -367,7 +367,7 @@ public static partial class Animals
             return;
         }
         a.goal = null;
-        if (Motion.inReach(a, target, Motion.REACH, state.grid))
+        if (Motion.inReach(a, target, Motion.REACH, state.grid) || besideCar(state, a, target))
         {
             attack(state, a, target);
             return;
@@ -375,10 +375,16 @@ public static partial class Animals
         // Run it down: straight at it (A* round what's in the way), stopping just inside reach, and
         // bite as it gets there (else a fleeing rabbit is always a step out of reach by its next turn).
         Walkers.walkTo(state, a, target.at, (a.kind == "wolf") ? Walkers.speedOf(WOLF_SPRINT) : speedOf(a), Pathfinding.ANIMAL, budget, Motion.REACH - 16);
-        if (Motion.inReach(a, target, Motion.REACH, state.grid))
+        if (Motion.inReach(a, target, Motion.REACH, state.grid) || besideCar(state, a, target))
         {
             attack(state, a, target);
         }
+    }
+
+    /// <summary>Is its target sitting in a car whose side is within a bite of it (VehicleCabin.cs)?</summary>
+    static bool besideCar(SimState state, Animal a, IBody target)
+    {
+        return target is Survivor s && Vehicles.vehicleOf(state, s) is { } v && Vehicles.occupied(v) && Vehicles.gap(v, a.at) <= Vehicles.CABIN_REACH;
     }
 
     public static Survivor? closestSurvivor(SimState state, Point p)
@@ -451,6 +457,14 @@ public static partial class Animals
             return;
         }
         var s = (Survivor)target;
+        if (Js.T(Vehicles.underOf(state, s)))
+        {
+            return;  // under a pickup: out of its reach (VehicleHide.cs)
+        }
+        if (Vehicles.batterVehicle(state, s))
+        {
+            return;  // in a car that isn't a wreck: the car takes it (VehicleCabin.cs)
+        }
         s.health = JsMath.max(0, s.health - (bear ? BEAR_DAMAGE : WOLF_DAMAGE));
         a.bitTick = state.tick;
         s.lastHurtBy = bear ? "a bear" : "wolves";

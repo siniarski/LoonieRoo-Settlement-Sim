@@ -9,7 +9,7 @@
 //                 is laid in again whenever a state is read (SimState.OnDeserialized), so a loaded game and one
 //                 that ran on agree.
 //   kept right    park() when a car is put down or its driver gets out; unpark() before one is driven off or
-//                 taken on an expedition. Both bump walkabilityVersion (paths made before are stale) and note
+//                 taken on an expedition; pushing one (VehiclePush.cs) unmarks, rolls and marks it. Both bump walkabilityVersion (paths made before are stale) and note
 //                 the change for reachability. Anything that moves a parked car any other way must unpark it
 //                 first and park it after, or call remask().
 //   you           on foot you stop at the car's body, not only at its tiles (pushOut, from ControlMod's walking):
@@ -91,8 +91,14 @@ public static partial class Vehicles
     /// <summary>A car is about to be driven or taken away: its tiles are free again (but for any another parked car is over).</summary>
     public static void unpark(SimState state, Vehicle v)
     {
+        if (unmark(state, v)) state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+    }
+
+    /// <summary>Clear the marks under a car (but those another parked car is over). True if any changed. No bump.</summary>
+    static bool unmark(SimState state, Vehicle v)
+    {
         var mine = tilesUnder(state.grid, v);
-        if (mine.Count == 0) return;
+        if (mine.Count == 0) return false;
         // What other parked cars near enough to share a tile still cover.
         var kept = new HashSet<int>();
         double far = shapeOf(v).halfLength + TRUCK.halfLength + Motion.SUB;
@@ -106,7 +112,7 @@ public static partial class Vehicles
         {
             if (!kept.Contains(i)) changed |= Grids.setParked(state.grid, i, false);
         }
-        if (changed) state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+        return changed;
     }
 
     /// <summary>The whole layer again from the cars as they are: after a state is read (no bump: nothing was planned
@@ -188,7 +194,7 @@ public static partial class Vehicles
 
     /// <summary>Whoever is where a car has come to rest goes to the nearest tile they can stand on clear of it: a
     /// tile walker whose tile it is over, a free mover whose body overlaps a tile it is over.</summary>
-    static void evict(SimState state, Vehicle v)
+    static void evict(SimState state, Vehicle v, Survivor? skip = null)
     {
         var grid = state.grid;
         double near = shapeOf(v).halfLength + 2 * Motion.SUB;
@@ -203,7 +209,7 @@ public static partial class Vehicles
         var you = ControlMod.controlled(state);
         foreach (var s in state.survivors)
         {
-            if (vehicleOf(state, s) == null) move(s, s == you);
+            if (s != skip && vehicleOf(state, s) == null) move(s, s == you);
         }
         foreach (var z in state.zombies) move(z, true);
         foreach (var d in state.dogs) move(d, true);

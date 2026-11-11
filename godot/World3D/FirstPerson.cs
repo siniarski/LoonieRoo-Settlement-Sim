@@ -149,7 +149,7 @@ public sealed partial class FirstPerson : Node3D
             return (new Vector3((float)(c.x + fx * ahead + fy * left), Terrain.Height((float)c.x, (float)c.y) + up, (float)(c.y + fy * ahead - fx * left)), true, a);
         }
         var p = worldPos(you, alpha);
-        float h = you.sleep?.asleep == true ? EYE_ASLEEP : state.control?.sneaking == true ? EYE_SNEAK : EYE;
+        float h = you.sleep?.asleep == true || state.control?.underCar != null ? EYE_ASLEEP : state.control?.sneaking == true ? EYE_SNEAK : EYE;  // under a pickup: lying (VehicleHide.cs)
         h += (float)Leaps.height(state, you, alpha); // a leap up and down over its ticks, or the top of the car you stand on
         return (new Vector3((float)p.x, Terrain.Height((float)p.x, (float)p.y) + h, (float)p.y), false, 0);
     }
@@ -220,7 +220,7 @@ public sealed partial class FirstPerson : Node3D
         sites.Update(state, eye);
         aircraft.Update(state, world);
         items.Update(state, eye);
-        held.Update(state, you, alpha, world, inCar || EyeAt != null);
+        held.Update(state, you, alpha, world, inCar || EyeAt != null || state.control?.underCar != null);  // nothing in hand under a pickup
         swimHands.Update(state, you, world, inCar || EyeAt != null);
         lights.Update(state, eye, alpha, world, inCar);
         sounds.Update(state, alpha, you, people.Steps);

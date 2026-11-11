@@ -13,7 +13,13 @@ stops you walking** (since 2026-11-11): up against it, Space vaults it (the dead
 windows; colonists step over barricades). **E at a parked car** gets you in from any side you can walk up to (W may
 stay held: pushing against the car doesn't stop it; walking off does). **The boot** (U, from behind the car) opens
 with the inventory screen on what's in it; with it open, E or Tab behind the car shows it again. **The bonnet** is I,
-from in front. **R with wood at a door in a wall** boards it up (2026-11-12): you and yours still get by, the dead and raiders batter the boards off first.
+from in front. **J held** while you walk into a parked car nobody is in, from behind or in front, **pushes it**
+(2026-11-12, VehiclePush.cs): it rolls along its length about a metre a second with you behind it, for endurance as a
+run; walls, doors, furniture, trees and other cars stop it; from its side it doesn't move. **A click at a parked car** (empty hands or a blade: a gun fires) is a blow
+that dents it; about three sedans in ten have an **alarm** (VehicleAlarm.cs), which a blow, getting in the first
+time, any dent or one of the dead climbing it sets off: a minute of noise the dead come to, a lure. **Crouched (C), E at a parked pickup** gets you **under it**
+(VehicleHide.cs; the sedan is too low): the dead that didn't see you go lose you after a moment, crawlers still reach
+you; no swinging, shooting, jumping or using there; any move key crawls you out on that side of it. **R with wood at a door in a wall** boards it up (2026-11-12): you and yours still get by, the dead and raiders batter the boards off first.
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
 (W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof

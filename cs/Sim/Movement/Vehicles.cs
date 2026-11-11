@@ -25,8 +25,8 @@
 //   the truck   a generated world leaves one out past the camp; expeditions take it
 //               (Outposts.cs). It drives like a car, slower, with a big boot.
 //   the dead    run one down at RAM_SPEED or more and it takes RAM_DAMAGE per unit of speed and
-//               is knocked aside; the car slows by a quarter and takes RAM_WEAR. The dead can't
-//               bite you through it: they batter the car instead (BATTER_DAMAGE a bite).
+//               is knocked aside; the car slows by a quarter and takes RAM_WEAR. The car you sit in is
+//               solid to them and they batter it, not you, till it's a wreck (VehicleCabin.cs).
 // Positions are fixed point (Motion.cs SUB), headings index HEADING_DIRS (integers, |v| = 256).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -171,6 +171,7 @@ public static partial class Vehicles
             return "someone is driving it";
         }
         unpark(state, v);
+        if (v.alarmUntil == null) setOffAlarm(state, v);  // breaking in: its alarm, if it has one (VehicleAlarm.cs)
         v.driverId = s.id;
         s.move = null;
         s.at = Js.CopyAs<Point>(v.at);
@@ -336,30 +337,28 @@ public static partial class Vehicles
     {
         var was = v.health;
         v.health = JsMath.max(0, v.health - amount);
+        setOffAlarm(state, v);  // hitting it sets off its alarm, if it has one (VehicleAlarm.cs)
         if ((was > 0) && (v.health == 0))
         {
             Events.logEvent(state, $"The car at ({Js.Str(v.pos.x)}, {Js.Str(v.pos.y)}) is wrecked");
         }
     }
 
-    /// <summary>A zombie's bite at someone in a car lands on the car. True if they were in one.</summary>
+    /// <summary>A zombie's bite at someone in a car lands on the car. True if they were in one and it isn't a wreck.</summary>
     public static bool batterVehicle(SimState state, Survivor s)
     {
         var v = vehicleOf(state, s);
-        if (!Js.T(v))
-        {
-            return false;
-        }
-        dent(state, v, BATTER_DAMAGE);
-        return true;
+        return Js.T(v) && strikeCabin(state, v);
     }
 
     /// <summary>Every tick: blending positions, and drivers who are gone (dead, or no longer yours) get out.</summary>
     public static void updateVehicles(SimState state)
     {
+        keepOutOfCabins(state);
         foreach (var v in Js.Iter(vehiclesOf(state)))
         {
             v.was = Js.CopyAs<Point>(v.at);
+            soundAlarm(state, v);
             if (!Js.T(v.driverId) || v.driverId.startsWith("x:"))
             {
                 continue;

@@ -87,7 +87,11 @@ git tag `ts-final`.
   saved, laid in again when a state is read); park, unpark, who is moved off, which parked car is over a tile.
   **VehicleHeights** (part of Vehicles): how high a car's top is along its length and the room under it, for whoever
   climbs on or goes under one (you, the dead, animals). **VehicleActions** (part of Vehicles): timed car actions and
-  anchors (get in, out, boot, bonnet).
+  anchors (get in, out, boot, bonnet). **VehicleCabin** (part of Vehicles): the car you sit in is solid to the dead, animals and dogs
+  (moved out of its body once a tick), and they batter it, not you, till it is a wreck. **VehiclePush** (part of Vehicles):
+  pushing a parked car along its length (the push key held), its tiles moving with it. **VehicleAlarm** (part of Vehicles): some sedans have an alarm (by hash); getting in, a dent,
+  the dead climbing over it or your blow sets it off, a noise the dead come to. **VehicleHide** (part of Vehicles): crouched,
+  E gets you under a parked pickup: out of sight of the dead that didn't see you go, crawlers still reach you.
 
 ### `Worldgen/`: making the world from a seed
 

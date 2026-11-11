@@ -85,6 +85,10 @@ public partial class Budget
 {
     public double plans { get; set; }
     public Func<Point, List<Survivor>> near { get; set; } = null!;
+    /// <summary>The cars with someone in them this tick (Vehicles.cabins).</summary>
+    public List<Vehicle>? cabins { get; set; }
+    /// <summary>A box round them, a blow wider (Vehicles.boxOf).</summary>
+    public (int x0, int y0, int x1, int y1) cabinBox { get; set; }
 }
 
 public partial class BuildingsPlan
@@ -215,9 +219,15 @@ public partial class Control
     public bool? sneaking { get; set; }
     /// <summary>Aiming down the sights (the `sights` command; it counts only with a gun in hand: ControlMod.sightsUp).</summary>
     public bool? sights { get; set; }
+    /// <summary>The push key held (the `push` command): walking into a parked car pushes it (VehiclePush.cs).</summary>
+    public bool? pushing { get; set; }
     public ControlBusy? busy { get; set; }
     /// <summary>The id of the parked car you are standing on (CarLeaps.cs), or null on the ground.</summary>
     public string? onCar { get; set; }
+    /// <summary>The id of the pickup you lie under (VehicleHide.cs), the tick you went under, and the dead that saw you go.</summary>
+    public string? underCar { get; set; }
+    public double? underTick { get; set; }
+    public List<string>? sawUnder { get; set; }
 }
 
 public partial class ControlBusy
@@ -1250,6 +1260,8 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public bool? lights { get; set; }
     /// <summary>The tick one of the dead last thumped onto, across or off it (Crossings.carClimbed); null if never.</summary>
     public double? climbed { get; set; }
+    /// <summary>The tick its alarm stops ringing (VehicleAlarm.cs); null if it never rang.</summary>
+    public double? alarmUntil { get; set; }
 }
 
 public partial class Wanderer : IHasId

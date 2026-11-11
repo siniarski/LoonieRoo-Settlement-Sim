@@ -1,5 +1,5 @@
 // Sounds that go on while something does (2026-11-09), each from where it is, muffled as the rest:
-//   alarm       each ringing alarm (state.timeline.alarms), a bell
+//   alarm       each ringing alarm (state.timeline.alarms), a bell; a car's (VehicleAlarm.cs) the same, higher
 //   engine      each car with someone at the wheel and fuel in it; faster as it goes faster
 //   generator   each generator burning fuel (its `loot` counter moved in the last RUN_TICKS ticks)
 //   helicopter  the helicopter (state.timeline.heli), high up
@@ -75,6 +75,8 @@ public sealed class Loops
             foreach (var a in t.alarms) Add($"alarm {a.x},{a.y}", "alarm", new P(a.x + 0.5, a.y + 0.5), 2.6f);
             if (t.heli is { } heli) Add("helicopter", "helicopter", new P(heli.x + 0.5, heli.y + 0.5), 45);
         }
+        foreach (var v in state.vehicles ?? new())
+            if (Vehicles.ringing(state, v)) Add($"car alarm {v.id}", "alarm", worldPos(v.at, v.was, alpha), 1.0f, 1.25f);  // VehicleAlarm.cs: the house bell, higher
         foreach (var v in state.vehicles ?? new())
             if (v.driverId != null && v.fuel > 0 && v.health > 0)
                 Add($"car {v.id}", "engine", worldPos(v.at, v.was, alpha), 0.6f, 0.85f + 1.3f * (float)Math.Min(1, Math.Abs(v.speed) / Vehicles.MAX_SPEED));

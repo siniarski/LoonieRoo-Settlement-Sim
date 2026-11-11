@@ -62,7 +62,7 @@ public static class PoseIntents
         bool controlled = c != null && c.survivorId == s.id;
         if (s.health <= 0) p.stance = "dead";
         else if (Js.T(Vehicles.vehicleOf(state, s))) p.stance = "sit";
-        else if (Js.T(s.sleep) || (controlled && c.busy?.what == "sleep")) p.stance = "lie";
+        else if (Js.T(s.sleep) || (controlled && c.busy?.what == "sleep") || (controlled && c.underCar != null)) p.stance = "lie";  // under a pickup too (VehicleHide.cs)
         else if (controlled && c.sneaking == true) p.stance = "sneak";
         if (controlled)
         {

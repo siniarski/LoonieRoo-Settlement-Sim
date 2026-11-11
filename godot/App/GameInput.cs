@@ -87,6 +87,7 @@ public partial class Game
             if (holdKeys.Contains("space") && c != null && !Leaps.airborne(c) && Vehicles.vehicleOf(state, ControlMod.controlled(state)!) == null) Command(new Command { type = "jump" });
             FirstPersonInput(c!, dx, -dy, shift);
             Sights(c);
+            if (c != null && (c.pushing == true) != (Input.IsPhysicalKeyPressed(Key.J) || holdKeys.Contains("j"))) Command(new Command { type = "push", on = c.pushing != true });  // J held: push a parked car (VehiclePush.cs)
             return;
         }
         // Playing someone, in the Colony tab: they stand still, and the keys move the view.
