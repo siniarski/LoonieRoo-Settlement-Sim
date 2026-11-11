@@ -126,6 +126,7 @@ public static class WorldMesh
                 string tile = Grids.tileAt(g, i);
                 string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
                 Ground(gs, ws, x, y, tile, ground, RoadCorner(g, x, y, tile, ground));
+                LaneMark(gs, g, x, y, tile, ground);
                 anyWater |= tile == "water";
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
@@ -187,6 +188,30 @@ public static class WorldMesh
         if (s && w && !n && !e) return 2;
         if (w && n && !e && !s) return 3;
         return -1;
+    }
+
+    static readonly Look LANE = new(new Color(0.62f, 0.6f, 0.5f), Surfaces.None);
+
+    /// <summary>The broken line down the middle of a two-lane road (2026-11-12; drawn only, the sim has no lanes):
+    /// a road tile on the line between the two lanes carries a dash along that side, two metres in every four,
+    /// just over the asphalt. A road is read off the tiles: an even number across (four to eight) and a straight
+    /// run of at least five tiles each way along it, so junctions, yards and one-tile lanes have none.</summary>
+    static void LaneMark(SurfaceTool st, Grid g, int x, int y, string tile, string ground)
+    {
+        if (tile != "floor" || ground != "road") return;
+        bool Road(int ax, int ay) => ax >= 0 && ay >= 0 && ax < g.width && ay < g.height && Grids.groundAt(g, ay * g.width + ax) == ROAD && Grids.tileAt(g, ay * g.width + ax) == "floor";
+        int Run(int dx, int dy) { int n = 0; while (n < 12 && Road(x + dx * (n + 1), y + dy * (n + 1))) n++; return n; }
+        int north = Run(0, -1), south = Run(0, 1), west = Run(-1, 0), east = Run(1, 0);
+        float H(int cx, int cy) => Terrain.Corner(cx, cy) - (Terrain.Sunk(x, y) ? Terrain.Kerb(cx, cy) : 0f) + 0.012f;
+        const float HALF = 0.06f;
+        // Running east-west: the line is this tile's north side when as many tiles lie north of that side as south of it.
+        int across = north + south + 1;
+        if (across is >= 4 and <= 8 && across % 2 == 0 && north == across / 2 && west >= 5 && east >= 5 && ((x % 4 + 4) % 4) < 2)
+            Quad(st, new(x, H(x, y), y - HALF), new(x + 1, H(x + 1, y), y - HALF), new(x + 1, H(x + 1, y), y + HALF), new(x, H(x, y), y + HALF), LANE, Vector3.Up);
+        // Running north-south: its west side.
+        across = west + east + 1;
+        if (across is >= 4 and <= 8 && across % 2 == 0 && west == across / 2 && north >= 5 && south >= 5 && ((y % 4 + 4) % 4) < 2)
+            Quad(st, new(x - HALF, H(x, y), y), new(x + HALF, H(x, y), y), new(x + HALF, H(x, y + 1), y + 1), new(x - HALF, H(x, y + 1), y + 1), LANE, Vector3.Up);
     }
 
     static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)
