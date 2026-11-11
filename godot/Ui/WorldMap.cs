@@ -139,20 +139,40 @@ public sealed partial class WorldMap : Control
         AcceptEvent();
     }
 
-    void Rebuild(SimState s)
+    /// <summary>The ground picture's pixels (RGBA), kept between rebuilds: one upload, not a SetPixel call a tile.</summary>
+    byte[]? pixels;
+    static readonly Dictionary<string, (byte r, byte g, byte b)> BYTES = RGB.ToDictionary((kv) => kv.Key, (kv) => ((byte)Math.Round(kv.Value.R * 255), (byte)Math.Round(kv.Value.G * 255), (byte)Math.Round(kv.Value.B * 255)));
+
+    /// <summary>Tiles painted per frame: a pass over a big world takes some frames instead of one long one.</summary>
+    const int TILES_PER_FRAME = 90_000;
+    /// <summary>The next tile of the pass under way, or -1 when no pass is under way.</summary>
+    int passAt = -1;
+    bool hasPicture;
+
+    /// <summary>Paint a slice of the ground picture; at the end of a pass, upload it. A pass is started by the caller.</summary>
+    void Slice(SimState s)
     {
         var grid = s.grid;
-        if (image == null || image.GetWidth() != grid.width || image.GetHeight() != grid.height) image = Image.CreateEmpty(grid.width, grid.height, false, Image.Format.Rgba8);
-        for (int i = 0; i < grid.width * grid.height; i++)
+        int n = grid.width * grid.height;
+        if (pixels == null || pixels.Length != n * 4) { pixels = new byte[n * 4]; passAt = 0; hasPicture = false; }
+        var buf = pixels;
+        int end = Math.Min(n, passAt + TILES_PER_FRAME);
+        for (int i = passAt; i < end; i++)
         {
             int edge = Grids.edgeKind(grid, i * 2) != 0 ? Grids.edgeKind(grid, i * 2) : Grids.edgeKind(grid, i * 2 + 1);
             var tile = Grids.tileAt(grid, i);
-            var c = Grids.exploredAt(grid, i) != 1 ? RGB["fog"]
-                : edge != 0 ? (edge == Grids.EDGE_DOOR ? RGB["door"] : RGB["wall"])
-                : tile == "floor" ? RGB[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
-                : RGB.TryGetValue(tile, out var t) ? t : RGB["wall"];
-            image.SetPixel(i % grid.width, i / grid.width, c);
+            var c = Grids.exploredAt(grid, i) != 1 ? BYTES["fog"]
+                : edge != 0 ? (edge == Grids.EDGE_DOOR ? BYTES["door"] : BYTES["wall"])
+                : tile == "floor" ? BYTES[Grids.groundAt(grid, i) >= 0 && Grids.groundAt(grid, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(grid, i)] : "grass"]
+                : BYTES.TryGetValue(tile, out var t) ? t : BYTES["wall"];
+            buf[i * 4] = c.r; buf[i * 4 + 1] = c.g; buf[i * 4 + 2] = c.b; buf[i * 4 + 3] = 255;
         }
+        passAt = end;
+        if (passAt < n) return;
+        passAt = -1;
+        hasPicture = true;
+        if (image == null || image.GetWidth() != grid.width || image.GetHeight() != grid.height) image = Image.CreateFromData(grid.width, grid.height, false, Image.Format.Rgba8, buf);
+        else image.SetData(grid.width, grid.height, false, Image.Format.Rgba8, buf);
         if (ground == null || ground.GetWidth() != grid.width || ground.GetHeight() != grid.height) ground = ImageTexture.CreateFromImage(image);
         else ground.Update(image);
     }
@@ -166,11 +186,14 @@ public sealed partial class WorldMap : Control
             frame = 0;
             cam = null;
             CloseNote();
+            // The first picture is made while you play (a slice a frame), so the map opens on it; later opens reuse the last one.
+            if (!hasPicture) { if (passAt < 0) passAt = 0; Slice(s); }
             return;
         }
         // Opened: centred on what the game is looking at, the whole map in view.
         cam ??= (view.camera.x, view.camera.y, Math.Max(0.5, Math.Min(Area.X / s.grid.width, Area.Y / s.grid.height) * 0.95));
-        if (frame++ % REBUILD_EVERY == 0) Rebuild(s);
+        if (passAt >= 0) Slice(s);
+        else if (frame++ % REBUILD_EVERY == 0) { passAt = 0; Slice(s); }
         QueueRedraw();
     }
 

@@ -1,6 +1,6 @@
 // The HUD (src/ui/hud.ts, card.ts, bag.ts, overview.ts): the top bar, the status line, alerts, the
 // toast, the colony's panels (wanderers, traders, crafting, expeditions, neighbours, prisoners, a
-// survivor's story, succession, the helicopter), the survivor table, the character card and its
+// survivor's story, the helicopter), the survivor table, the character card and its
 // conditions, the overview, the debug panel and the paused banner. Reads state;
 // changes go out as sim commands or view-state changes.
 // The colony's panels and the survivor table are HudColony.cs (Hud is partial).
@@ -53,7 +53,6 @@ public sealed partial class Hud : Control
     readonly UiPanel ammoReadout = new("#f0c850", "rgba(20, 23, 21, 0.85)", 14);
     readonly UiPanel alerts = new("#5a4a3a", "rgba(20, 23, 21, 0.85)");
     readonly UiPanel toast = new("rgba(140, 240, 164, 0.95)", "rgba(140, 240, 164, 0.95)", 13);
-    readonly UiPanel succession = new("#c9b88a");
     readonly UiPanel helicopter = new("#c9b88a");
     readonly UiPanel story = new("#c9b88a");
     readonly UiPanel room = new("#333a35", "rgba(20, 23, 21, 0.92)");
@@ -100,7 +99,7 @@ public sealed partial class Hud : Control
         var statusBox = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         statusBox.AddThemeStyleboxOverride("panel", Kit.Box("rgba(20, 23, 21, 0.85)", "rgba(20, 23, 21, 0.85)", 4, 3));
         statusBox.AddChild(status);
-        foreach (var c in new Control[] { statusBox, succession, helicopter, controlLine, alerts, toast, story, room, wanderers, traders, crafting, expeditions, neighbours, prisoners, feed })
+        foreach (var c in new Control[] { statusBox, helicopter, controlLine, alerts, toast, story, room, wanderers, traders, crafting, expeditions, neighbours, prisoners, feed })
         {
             // Each panel as wide as what it says, like the browser's.
             c.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -272,7 +271,6 @@ public sealed partial class Hud : Control
         UpdateNeighbours(state, solo);
         UpdatePrisoners(state, solo);
         UpdateStory(state);
-        UpdateSuccession(state);
         UpdateHelicopter(state);
 
         if (view.showDebug)

@@ -63,6 +63,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     InventoryScreen inventory = null!;
     Menu menu = null!;
     WorldMap worldMap = null!;
+    DeathScreen deathScreen = null!;
     ScreenTabs tabs = null!;
     World3D.FirstPerson firstPerson = null!;
     World3D.Fires fires = null!;
@@ -127,6 +128,8 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         layer.AddChild(worldMap);
         tabs = new ScreenTabs(view);
         layer.AddChild(tabs);
+        deathScreen = new DeathScreen(view, Command, ToggleMenu);
+        layer.AddChild(deathScreen);
         menu = new Menu(view, this);
         layer.AddChild(menu);
     }
@@ -184,7 +187,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         alpha = shotAt != null ? 1 : Math.Min(1, accumulatorMs / MS_PER_TICK); // a --shot-at picture shows the tick itself, not a blend
         var you = ControlMod.controlled(state);
         // First person unless the M screen is up (the menu goes over it).
-        bool fpScene = you != null && !view.mScreen(true);
+        bool fpScene = you != null && !view.mScreen(true) && !DeathUp;
         view.firstPerson = fpScene && view.menu == null;
         if (!view.inventoryAllowed(you != null)) view.showInventory = false;
         bool lookSet = false;
@@ -211,7 +214,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
             var w = worldPos(you!, alpha);
             view.camera = new Cam(w.x, w.y, view.camera.zoom);
         }
-        bool capture = view.firstPerson && !view.showInventory && (selftest || GetWindow().HasFocus());
+        bool capture = view.firstPerson && !view.showInventory && !DeathUp && (selftest || GetWindow().HasFocus());
         var mode = capture ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
         if (Input.MouseMode != mode) Input.MouseMode = mode;
         QueueRedraw();
@@ -221,6 +224,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         inventory.Update(state);
         worldMap.Update(state);
         tabs.Update(state);
+        deathScreen.Update(state);
 
         frame++;
     }

@@ -73,8 +73,9 @@ public partial class Game
 
     public void OpenMenu() => ToggleMenu();
 
-    /// <summary>The one you played died and someone could carry on: the world waits for the choice (the HUD's succession panel).</summary>
-    bool AwaitingHeir() => state.succession != null && SuccessionMod.heirs(state).Count > 0;
+    /// <summary>The one you played died: the death screen is up (Ui/DeathScreen.cs), first person is off and the world is held until you choose.</summary>
+    bool DeathUp => DeathScreen.Wanted(state, view);
+    bool AwaitingHeir() => state.succession != null;
 
     public void NewGamePlus()
     {
