@@ -154,6 +154,7 @@ public static partial class Leaps
             // A parked car stops a jump at its body, as it stops walking (VehicleParking.cs pushOut).
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
             if (off.x != s.at.x || off.y != s.at.y) s.at = Motion.fits(state.grid, off, Pathfinding.SWIMMER) ? off : was;
+            s.at = FurnitureBody.stop(state, was, s.at, Motion.BODY_RADIUS);  // furniture stops a jump as it stops a walk
         }
         else
         {

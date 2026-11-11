@@ -201,6 +201,7 @@ public static partial class ControlMod
             {
                 s.at = Motion.fits(state.grid, off, Pathfinding.SWIMMER) ? off : stood;
             }
+            s.at = FurnitureBody.stop(state, stood, s.at, Motion.BODY_RADIUS);  // and furniture stops you (FurnitureBody.cs)
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))
             {

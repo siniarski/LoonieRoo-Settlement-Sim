@@ -118,6 +118,10 @@ public partial class Game
         // Your steps: from your own body's footfalls (Footfalls.cs), walking, running and backing off. A step is
         // on a foot that's down: the clip's ankle within 5 cm of its lowest, the drawn one no higher than the other.
         view.paused = false;
+        // Room to walk: the steps before left a stove, a heater and the like round you, and furniture stops you now.
+        var here = ControlMod.controlled(state)!.pos;
+        foreach (var f in state.furniture.Where((f) => FurnitureBody.solid(f) && Math.Abs(f.x - here.x) <= 10 && Math.Abs(f.y - here.y) <= 10).ToList())
+            FurnitureMod.removeFurniture(state, f);
         var people = firstPerson.People;
         int steps0 = sounds.yours.Steps, swings0 = sounds.yours.Swings;
         static bool Down(World3D.People.YourStep s) => s.clipH <= 0.05f && s.drawnH <= s.otherH + 0.01f;
