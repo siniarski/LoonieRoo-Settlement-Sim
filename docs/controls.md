@@ -6,7 +6,7 @@ the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 ## First person (playing a survivor, since 2026-11-08)
 
 You see through your survivor's eyes. The mouse looks; WASD walks the way you face (strafing with A and D); Shift
-runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings; right-click
+runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water; a stroke out of your depth: **Water** below); click swings; right-click
 or E uses what you look at on the ground beside you (else what's in front).
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
@@ -19,6 +19,15 @@ there is room below, else you stop at the edge; Space jumps down on your way, or
 below. You can get into the car from its roof. The dead reach you up there as on the ground: from beside the car. Tab opens the inventory (bag, what's
 beside you, your card; the mouse is let go). M opens the map screen (tabs: Map, Colony, Back); B, P or O open the
 Colony tab. Esc opens the menu. The map and the menu pause; the Colony tab plays on. There is no pause key.
+
+**Water** (2026-11-11, Swim.cs). You walk into rivers and lakes. A tile of water beside the bank is **shallow**: you
+wade at 60% of your pace, soaked to the waist, and can still run, swing, use and work. Further out you **swim**: 40% of
+your pace, no running, your hands busy (swinging, shooting, reloading, using and working are refused), endurance
+draining as a run's, none coming back. **Space while swimming is a stroke**: a push of a tile and a quarter the way you
+steer (else the way you look) for 2 endurance, faster and far cheaper than paddling with WASD; hold Space to keep
+stroking. Winded out of your depth you struggle at 20% and the water does you harm until you reach the shallows. In
+shallows and on the bank Space is still a jump, and over a single tile of water still a hop (dry, and quicker than
+wading). The dead, animals and your colonists keep to the land: they wait at the bank.
 
 **The character sheet** is the left column of the Tab screen: who you are, your health (a bar and a word: fine, hurt,
 badly hurt, dying), the body by part (an outline tinted by each part's state; hover it for the details), what is wrong

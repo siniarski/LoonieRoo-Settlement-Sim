@@ -53,6 +53,10 @@ public static partial class Commands
             {
                 return reject("in the air");
             }
+            if (Swim.swimming(state, s))
+            {
+                return reject("swimming");
+            }
             if (!JsNumber.isInteger(command.x) || !JsNumber.isInteger(command.y))
             {
                 return reject("not a tile");
@@ -109,6 +113,10 @@ public static partial class Commands
             if (Leaps.airborne(Js.NN(state.control)))
             {
                 return reject("in the air");
+            }
+            if (Swim.swimming(state, s))
+            {
+                return reject("swimming");
             }
             if (command.type == "reload")
             {
@@ -179,6 +187,10 @@ public static partial class Commands
             if (Leaps.airborne(Js.NN(state.control)))
             {
                 return reject("in the air");
+            }
+            if (Swim.swimming(state, s))
+            {
+                return reject("swimming");
             }
             var faced = Js.NN(state.control).facing;
             var done = (command.type == "swing") ? ControlMod.swing(state, s, command) : ControlMod.use(state, s, command);
@@ -1221,6 +1233,7 @@ public static partial class Commands
             }
             var was = ControlMod.controlled(state);
             Leaps.letGo(state);  // off any car's roof, out of any leap
+            Swim.ashore(state);  // and out of the water (Swim.cs)
             state.control = null;
             if (Js.T(was))
             {
@@ -1248,6 +1261,7 @@ public static partial class Commands
             return reject($"{Js.Str(survivor.name)} is a child");
         }
         Leaps.letGo(state);  // whoever you were, off any car's roof
+        Swim.ashore(state);  // and out of the water (Swim.cs)
         dropEverything(state, survivor, "you");
         survivor.goal = null;
         survivor.path = [];

@@ -30,6 +30,8 @@ public static class WorldMesh
     internal static readonly Color WALL = new(0.62f, 0.6f, 0.56f);
     static Look TileWall => new(WALL, Surfaces.What("concrete"));
     static readonly Color WATER = Ctx.Css(COLOURS.tiles["water"]);
+    /// <summary>How much of the bed the water hides, looking straight down into it (WorldLook.Water).</summary>
+    const float WATER_ALPHA = 0.58f;
     /// <summary>An edge wall stops this short of its corner's far side, so its end is inside the wall it meets, not level with that wall's face.</summary>
     const float TUCK = 0.002f;
     /// <summary>A wall's footing goes this far under the lowest ground along it.</summary>
@@ -112,6 +114,9 @@ public static class WorldMesh
         gs.Begin(Mesh.PrimitiveType.Triangles);
         var gl = new SurfaceTool();
         gl.Begin(Mesh.PrimitiveType.Triangles);
+        var ws = new SurfaceTool();  // the water's surface: see-through (WorldLook.Water), over the bed
+        ws.Begin(Mesh.PrimitiveType.Triangles);
+        bool anyWater = false;
         bool anyGlass = false;
         int x0 = cx * CHUNK, y0 = cy * CHUNK;
         for (int y = y0; y < Math.Min(g.height, y0 + CHUNK); y++)
@@ -120,7 +125,8 @@ public static class WorldMesh
                 int i = y * g.width + x;
                 string tile = Grids.tileAt(g, i);
                 string ground = Grids.groundAt(g, i) >= 0 && Grids.groundAt(g, i) < Grids.GROUNDS.Length ? Grids.GROUNDS[Grids.groundAt(g, i)] : "grass";
-                Ground(gs, x, y, tile, ground);
+                Ground(gs, ws, x, y, tile, ground);
+                anyWater |= tile == "water";
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
                 else if (tile == "barricade") Box(st, new(x + 0.05f, low, y + 0.05f), new(x + 0.95f, floor + 1.0f, y + 0.95f), WorldLook.Plank);
@@ -149,6 +155,11 @@ public static class WorldMesh
         }
         var groundMesh = gs.Commit();
         if (groundMesh.GetSurfaceCount() > 0) groundMesh.SurfaceSetMaterial(0, solid);
+        if (anyWater)
+        {
+            ws.Commit(groundMesh);
+            groundMesh.SurfaceSetMaterial(groundMesh.GetSurfaceCount() - 1, WorldLook.Water);
+        }
         return (mesh, groundMesh);
     }
 
@@ -159,13 +170,13 @@ public static class WorldMesh
         Quad(st, new(x, h, y), new(x + 1, h, y), new(x + 1, h, y + 1), new(x, h, y + 1), look, Vector3.Down);
     }
 
-    static void Ground(SurfaceTool st, int x, int y, string tile, string ground)
+    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground)
     {
         bool water = tile == "water";
         // A little variation per tile, so the ground reads as ground and not as a sheet.
         float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
         // Water has no detail: it is flat colour until it gets a surface of its own.
-        var w = new Look(WATER.Lightened(0.06f + Math.Abs(n) * 0.035f), Surfaces.None);
+        var w = new Look(WATER.Lightened(0.06f + Math.Abs(n) * 0.035f) with { A = WATER_ALPHA }, Surfaces.None);
         if (water && Terrain.Flat)
         {
             float h = -0.25f;
@@ -177,9 +188,11 @@ public static class WorldMesh
         // Less from tile to tile than the water's and the far view's (0.06 to 0.095), about the same middle: the
         // detail says "ground" now, and squares a metre across under it said "tiles".
         c = c.Lightened(0.07f + Math.Abs(n) * 0.015f);
+        // Under water the bed darkens with depth (the light doesn't get down): a shelf by the bank, dark further out.
+        if (water) c = c.Darkened(Math.Clamp((Terrain.Water(x + 0.5f, y + 0.5f) - Terrain.Height(x + 0.5f, y + 0.5f)) * 0.45f, 0, 0.6f));
         GroundQuad(st, x, y, new Look(c, water ? WorldLook.RiverBed.what : WorldLook.Ground(ground)));
         // The surface, on its own heights (it stands where the water level is, over the bed).
-        if (water) Quad(st, new(x, Terrain.Water(x, y), y), new(x + 1, Terrain.Water(x + 1, y), y), new(x + 1, Terrain.Water(x + 1, y + 1), y + 1), new(x, Terrain.Water(x, y + 1), y + 1), w, Vector3.Up);
+        if (water) Quad(ws, new(x, Terrain.Water(x, y), y), new(x + 1, Terrain.Water(x + 1, y), y), new(x + 1, Terrain.Water(x + 1, y + 1), y + 1), new(x, Terrain.Water(x, y + 1), y + 1), w, Vector3.Up);
     }
 
     /// <summary>A tile of ground on its four corner heights, each corner with its own (shared) normal.</summary>

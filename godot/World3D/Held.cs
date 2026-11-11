@@ -228,7 +228,7 @@ public sealed class Held
     public void Update(SimState state, Survivor you, double alpha, double delta, bool hidden)
     {
         var c = state.control;
-        root.Visible = !hidden && you.sleep?.asleep != true && (c?.busy == null || Leaps.airborne(c) || c.busy.what == "reload"); // busy hands put it away; a jump keeps it in hand, a reload is drawn
+        root.Visible = !hidden && you.sleep?.asleep != true && (c?.busy == null || Leaps.airborne(c) || c.busy.what == "reload") && !Swim.swimming(state, you); // busy hands put it away; a jump keeps it in hand, a reload is drawn; swimming, both hands swim
         if (!root.Visible)
         {
             right.since = left.since = both.since = 0; // taken out again, it's raised

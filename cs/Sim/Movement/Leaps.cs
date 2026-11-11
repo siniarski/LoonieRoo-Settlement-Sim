@@ -12,7 +12,8 @@
 // tick moves you the rest of the way over the ticks left: integers, so it replays exactly.
 // Leaps are movement, so they count ticks (seconds whatever the day length), not slow ticks.
 // In the air: steering waits for the landing; swinging, using and work are refused. Your tile
-// (pos) follows you only onto ground you could stand on (not the water under a hop).
+// (pos) follows you only onto ground you could stand on, or into water you could wade (not the water under a hop).
+// In deep water Space is a stroke instead (Swim.cs: busy "stroke", carried like a jump, at the water's level).
 // Each costs endurance; winded, you can't. The ground has no heights that block, so a step up is
 // just a jump (the renderer's ground eases the view up a kerb or a rise).
 // A parked car is the one thing you get over or onto (2026-11-11): over it, onto it, standing on it
@@ -34,7 +35,7 @@ public static partial class Leaps
     /// <summary>Highest point of each (metres over the ground, for the renderer's arc).</summary>
     public const double JUMP_HEIGHT = 0.35, VAULT_HEIGHT = 0.55, HOP_HEIGHT = 0.45;
 
-    public static bool isLeap(string? what) => what is "jump" or "vault" or "hop" or "over" or "climb" or "down";
+    public static bool isLeap(string? what) => what is "jump" or "vault" or "hop" or "over" or "climb" or "down" or "stroke";
 
     public static bool airborne(Control c) => isLeap(c?.busy?.what);
 
@@ -44,6 +45,7 @@ public static partial class Leaps
         var c = Js.NN(state.control);
         if (Js.T(Vehicles.vehicleOf(state, s))) return "not in a car";
         if (airborne(c)) return "already in the air";
+        if (Swim.swimming(state, s)) return Swim.stroke(state, s, c);  // out of your depth, Space is a stroke (Swim.cs)
         if (BodyMod.isWinded(s)) return "too winded to jump";
         bool steering = c.dx != 0 || c.dy != 0;
         var ahead = side(steering ? new Point { x = Js.I(c.dx), y = Js.I(c.dy) } : ControlMod.swingDir(c));
@@ -145,13 +147,13 @@ public static partial class Leaps
         double left = JsMath.max(1, b.duration - b.progress + 1);
         var dx = JsMath.trunc((tx - s.at.x) / left);
         var dy = JsMath.trunc((ty - s.at.y) / left);
-        if (b.what == "jump" && !car)
+        if ((b.what == "jump" || b.what == "stroke") && !car)
         {
             var was = s.at;
-            s.at = Motion.slide(state.grid, s.at, dx, dy, Motion.fits(state.grid, s.at, Pathfinding.FREE) ? Pathfinding.FREE : Pathfinding.SURVIVOR);
+            s.at = Motion.slide(state.grid, s.at, dx, dy, Motion.fits(state.grid, s.at, Pathfinding.SWIMMER) ? Pathfinding.SWIMMER : Pathfinding.SURVIVOR);
             // A parked car stops a jump at its body, as it stops walking (VehicleParking.cs pushOut).
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
-            if (off.x != s.at.x || off.y != s.at.y) s.at = Motion.fits(state.grid, off, Pathfinding.FREE) ? off : was;
+            if (off.x != s.at.x || off.y != s.at.y) s.at = Motion.fits(state.grid, off, Pathfinding.SWIMMER) ? off : was;
         }
         else
         {
@@ -159,7 +161,7 @@ public static partial class Leaps
             s.at = new Point { x = Js.I(s.at.x + dx), y = Js.I(s.at.y + dy) };
         }
         var tile = Motion.tileOf(s.at);
-        if ((tile.x != s.pos.x || tile.y != s.pos.y) && Pathfinding.isPassable(state.grid, tile.x, tile.y, Pathfinding.FREE))
+        if ((tile.x != s.pos.x || tile.y != s.pos.y) && Pathfinding.isPassable(state.grid, tile.x, tile.y, b.what == "hop" ? Pathfinding.FREE : Pathfinding.SWIMMER))
         {
             s.pos = tile;
             Survivors.enterTile(state, s);
@@ -174,7 +176,7 @@ public static partial class Leaps
     /// <summary>Your feet over the ground (metres) at a moment of the leap: an arc, up and down over the ticks the renderer sees it (busy is gone on the landing tick). `alpha` is the renderer's blend into the tick, 0..1.</summary>
     public static double lift(ControlBusy? b, double alpha)
     {
-        if (b == null || !isLeap(b.what) || b.duration < 2) return 0;
+        if (b == null || !isLeap(b.what) || b.what == "stroke" || b.duration < 2) return 0;
         double t = (b.progress - 1 + alpha) / (b.duration - 1);
         if (t <= 0 || t >= 1) return 0;
         double h = b.what == "vault" ? VAULT_HEIGHT : b.what == "hop" ? HOP_HEIGHT : JUMP_HEIGHT;

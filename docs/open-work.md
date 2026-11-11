@@ -101,6 +101,10 @@ packed state. Left:
   thinner bands of towns along region borders; still three settlements at any world size.
 - Water: rivers and lakes are the same water as ponds (thirst, sickness). The thirst worry was checked and is noise
   (log balance-check); two solo thirst deaths in 40 seeds remain, both mid-fight.
+- Swimming (2026-11-11, Swim.cs): you wade and swim; left: a swimming pose (your body treads water upright, the walk
+  clip under it), the dead and animals into the shallows (their reachability and hordes assume water is a wall), what
+  you carry getting wet, a current, diving (no depth in the sim), ripples and a water shader with depth fade (the
+  surface is a flat translucent sheet), the far field's water still opaque. Not played by a human yet.
 - Small worlds (128): the start's rise covers most of the map, so lakes are rare; forest varies more by seed at 256
   (12-28%).
 - The preview draws lots whole (yards and all), not their buildings; big worlds (over 2 x 2 regions) show towns only,

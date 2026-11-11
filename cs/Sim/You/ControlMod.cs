@@ -111,6 +111,11 @@ public static partial class ControlMod
         {
             pct = ((double)(pct) * snow) / 100;  // deep snow where you stand (Snow.cs): smooth, not a whole tick a tile
         }
+        var swim = Swim.pacePct(state, s);
+        if (swim != 100)
+        {
+            pct = ((double)(pct) * swim) / 100;  // wading, swimming (Swim.cs)
+        }
         return JsMath.round(((double)(((double)(walk) * (pct))) / (10000)));
     }
 
@@ -133,6 +138,7 @@ public static partial class ControlMod
             return;
         }
         s.move = null;
+        Swim.tick(state, s, c);  // in deep water: paddling costs, winded you struggle (Swim.cs)
         if (Leaps.airborne(c))
         {
             Leaps.tick(state, s, c);  // in the air: steering waits for the landing
@@ -146,7 +152,7 @@ public static partial class ControlMod
             {
                 c.facing = eightWay(c.dx, c.dy);
             }
-            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s);
+            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s) && !Swim.swimming(state, s);
             if (Js.T(run))
             {
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
@@ -158,13 +164,13 @@ public static partial class ControlMod
                 return;
             }
             var stood = s.at;
-            s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, "free") ? "free" : "survivor");
+            s.at = Motion.slide(state, s.at, v.x, v.y, Motion.fits(state.grid, s.at, Pathfinding.SWIMMER) ? Pathfinding.SWIMMER : "survivor");
             // A parked car's tiles stopped that; its body is wider than they are, and you stop at the body
             // (VehicleParking.cs pushOut). Where that would put you in a wall, you stay where you stood.
             var off = Vehicles.pushOut(state, s.at, Motion.BODY_RADIUS);
             if ((off.x != s.at.x) || (off.y != s.at.y))
             {
-                s.at = Motion.fits(state.grid, off, "free") ? off : stood;
+                s.at = Motion.fits(state.grid, off, Pathfinding.SWIMMER) ? off : stood;
             }
             var tile = Motion.tileOf(s.at);
             if ((tile.x != s.pos.x) || (tile.y != s.pos.y))

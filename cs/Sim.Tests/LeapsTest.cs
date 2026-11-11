@@ -153,7 +153,7 @@ public class LeapsTest
         Commands.applyCommand(st2, new Command { type = "steer", dx = 1, dy = 0 });
         Commands.applyCommand(st2, new Command { type = "jump" });
         expect(st2.control.busy.what).toBe("jump");
-        for (int i = 0; i < 20; i++) Tick.tick(st2);
-        expect(s2.pos.x).toBe(3);   // the water's edge stops you
+        for (int i = 0; i < Leaps.JUMP_TICKS; i++) Tick.tick(st2);
+        expect(Grids.getTile(st2.grid, s2.pos.x, s2.pos.y)).toBe(Grids.WATER);   // two tiles of water are no hop: you jump in and wade (Swim.cs)
     }
 }

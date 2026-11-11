@@ -12,7 +12,8 @@
 //              no coat, no warmth; or soaked through outdoors at night), recovers otherwise.
 //              Under COLD: the "cold" thought; under FREEZING: health goes too (the damage and the coat's
 //              wear are dealt in Seasons.updateWeather, which reads FREEZING).
-//   wetness    builds out in rain or snow (slowly under a coat), dries indoors or by warmth.
+//   wetness    builds out in rain or snow (slowly under a coat), dries indoors or by warmth. The water (Swim.cs)
+//              soaks you through at once out of your depth, part way wading, and chills you.
 //              Over SOAKED: the "soaked" thought.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -82,7 +83,8 @@ public static partial class BodyMod
         {
             return;
         }
-        if ((s.endurance < BODY_MAX) && ((state.tick % 4) == 0))
+        var water = Swim.soak(state, s);  // in the water: soaked and chilled, no drying or warming (Swim.cs)
+        if ((s.endurance < BODY_MAX) && ((state.tick % 4) == 0) && !Swim.swimming(state, s))
         {
             s.endurance = clamp(s.endurance + (Js.T(s.sleep?.asleep) ? 2 : 1));
         }
@@ -95,7 +97,7 @@ public static partial class BodyMod
                 s.wetness = clamp(s.wetness + 1);
             }
         }
-        else if ((s.wetness > 0) && ((state.tick % (Power.isWarmed(state, s.pos) ? 2 : 5)) == 0))
+        else if (!water && (s.wetness > 0) && ((state.tick % (Power.isWarmed(state, s.pos) ? 2 : 5)) == 0))
         {
             s.wetness = clamp(s.wetness - 1);
         }
@@ -103,7 +105,7 @@ public static partial class BodyMod
         {
             s.bodyHeat = clamp(s.bodyHeat - 1);
         }
-        else if ((s.bodyHeat < 70) && ((state.tick % 2) == 0))
+        else if ((s.bodyHeat < 70) && ((state.tick % 2) == 0) && !water)
         {
             s.bodyHeat = clamp(s.bodyHeat + 1);
         }

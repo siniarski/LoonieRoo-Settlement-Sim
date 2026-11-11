@@ -7,6 +7,8 @@
 //   leaps  a jump, vault or hop (Leaps.cs): the push-off as you go up, a light scuff of the ground you leave; the
 //          landing as the leap ends, both feet on the ground you land on, heavier and lower than a step (the second
 //          foot a moment after the first). The steps' own sounds for that surface, pitched and levelled.
+//   water  a stroke (Swim.cs) is one splash as it starts, louder and lower than a step; going out of your depth,
+//          or jumping into water, one more.
 // Your gunshots are WorldNoises' (a gun's wear going down), from where you stand.
 
 using System;
@@ -48,6 +50,10 @@ public sealed class Yours
     /// <summary>Leaps heard (the self-test reads them): push-offs and landings, and the landing's surface.</summary>
     public int Pushes { get; private set; }
     public int Landings { get; private set; }
+    /// <summary>Splashes heard: strokes, and going into deep water.</summary>
+    public int Splashes { get; private set; }
+    int lastDepth;
+    const float SPLASH_DB = -4, SPLASH_PITCH = 0.78f;
     public string LandSurface { get; private set; } = "";
 
     /// <summary>Steps and swings heard (the self-test reads them), and the surface of the last step.</summary>
@@ -128,6 +134,15 @@ public sealed class Yours
         var b = c?.busy;
         bool leaping = b != null && Leaps.isLeap(b.what);
         var at = (x: you.at.x / (double)Motion.SUB, y: you.at.y / (double)Motion.SUB);
+        int depth = Swim.depth(state.grid, you.pos);
+        if (!fresh && depth > lastDepth && (depth == Swim.DEEP || leapBusy != null)) { Play(push, "step_water", Splashes, SPLASH_DB, SPLASH_PITCH); Splashes++; }
+        lastDepth = depth;
+        if (b?.what == "stroke" || leapBusy?.what == "stroke")
+        {
+            if (!fresh && b?.what == "stroke" && !ReferenceEquals(b, leapBusy)) { Play(push, "step_water", Splashes, SPLASH_DB, SPLASH_PITCH); Splashes++; }
+            leapBusy = leaping ? b : null;
+            return;
+        }
         if (!fresh && leapBusy != null && !ReferenceEquals(b, leapBusy))
         {
             LandSurface = Surface(state.grid, at.x, at.y);

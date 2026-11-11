@@ -168,7 +168,7 @@ git tag `ts-final`.
 
 - **ControlMod**: direct control (steer, swing, use, work). **Handiwork**: build, repair, forage, hunt.
 - **Orders**: follow, hold, loot. **Talk** and **StoryMod**: backstories, talks, tasks.
-- **SuccessionMod**: the death rule.
+- **SuccessionMod**: the death rule. **Swim**: you in the water (wading, swimming, the stroke, soaking).
 
 ### `Others/`: everyone else
 
