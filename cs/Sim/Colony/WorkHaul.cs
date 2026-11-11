@@ -61,7 +61,7 @@ public static partial class Work
         }
         Items.removeItem(state, item);
         s.carrying = null;
-        bp.delivered = true;
+        Designations.deliver(bp);
         finishJob(state, s, job, $"delivered {Js.Str(item.kind)} to ({Js.Str(bp.x)}, {Js.Str(bp.y)})");
     }
 

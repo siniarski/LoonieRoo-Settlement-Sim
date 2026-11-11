@@ -179,7 +179,7 @@ void fragment() {
             _ => (y * g.width + nx) * 2 + 1,
         };
         int kind = Grids.edgeKind(g, e);
-        if (kind is Grids.EDGE_WALL or Grids.EDGE_WINDOW or Grids.EDGE_WINDOW_BROKEN or Grids.EDGE_BARRICADE) return true;
+        if (kind is Grids.EDGE_WALL or Grids.EDGE_WINDOW or Grids.EDGE_WINDOW_BROKEN or Grids.EDGE_BARRICADE or Grids.EDGE_FENCE) return true;
         return Grids.tileAt(g, ny * g.width + nx) == "wall";
     }
 

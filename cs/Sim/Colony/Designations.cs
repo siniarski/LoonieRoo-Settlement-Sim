@@ -17,12 +17,24 @@ public static partial class Designations
     }
 
     /// <summary>Ticks of work (10 ticks = 1s at 1x).</summary>
-    public static readonly JsRecord<double> BUILD_WORK = new() { ["wall"] = 30, ["door"] = 20, ["barricade"] = 15, ["bed"] = 25, ["table"] = 25, ["workbench"] = 40, ["stove"] = 40, ["trap"] = 20, ["tower"] = 60, ["well"] = 120, ["collector"] = 40, ["generator"] = 80, ["lamp"] = 20, ["fridge"] = 60, ["heater"] = 30, ["coop"] = 60, ["radio"] = 60, ["lab"] = 100, ["beacon"] = 200, ["turret"] = 80, ["lure"] = 30, ["pit"] = 50, ["reinforce"] = 40, ["floor"] = 20 };
+    public static readonly JsRecord<double> BUILD_WORK = new() { ["wall"] = 30, ["door"] = 20, ["barricade"] = 15, ["fence"] = 30, ["bed"] = 25, ["table"] = 25, ["workbench"] = 40, ["stove"] = 40, ["trap"] = 20, ["tower"] = 60, ["well"] = 120, ["collector"] = 40, ["generator"] = 80, ["lamp"] = 20, ["fridge"] = 60, ["heater"] = 30, ["coop"] = 60, ["radio"] = 60, ["lab"] = 100, ["beacon"] = 200, ["turret"] = 80, ["lure"] = 30, ["pit"] = 50, ["reinforce"] = 40, ["floor"] = 20 };
 
     /// <summary>What a blueprint needs delivered: scrap to reinforce, wood for everything else.</summary>
     public static string materialFor(string target)
     {
         return (target == "reinforce") ? "scrap" : "wood";
+    }
+
+    /// <summary>How many of it (materialFor) a blueprint needs: two wood for a tall fence, one for everything else.
+    /// Blueprint.got counts the loads in while more than one is needed.</summary>
+    public static int materialCount(string target) => target == "fence" ? 2 : 1;
+
+    /// <summary>A load delivered to a blueprint: delivered once all of them are in.</summary>
+    public static void deliver(Blueprint bp)
+    {
+        int n = materialCount(bp.target);
+        if (n > 1) bp.got = (bp.got ?? 0) + 1;
+        bp.delivered = n <= 1 || bp.got >= n;
     }
 
     public static Blueprint? getBlueprint(SimState state, string id)
@@ -87,7 +99,8 @@ public static partial class Designations
         {
             state.blueprints.splice(i, 1);
         }
-        if (bp.delivered)
+        var back = bp.delivered ? materialCount(bp.target) : (bp.got ?? 0);
+        for (int k = 0; k < back; k++)
         {
             Items.spawnItem(state, materialFor(bp.target), bp.x, bp.y);
         }
@@ -112,9 +125,9 @@ public static partial class Designations
             state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             return;
         }
-        if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade")))
+        if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade") || (bp.target == "fence")))
         {
-            if (Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : Grids.EDGE_BARRICADE)))
+            if (Grids.setEdge(state.grid, bp.x, bp.y, bp.side, (bp.target == "wall") ? Grids.EDGE_WALL : ((bp.target == "door") ? Grids.EDGE_DOOR : ((bp.target == "fence") ? Grids.EDGE_FENCE : Grids.EDGE_BARRICADE))))
             {
                 state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             }

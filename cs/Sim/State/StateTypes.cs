@@ -72,6 +72,8 @@ public partial class Blueprint : IHasId
     public string target { get; set; } = "";
     public bool needsMaterial { get; set; }
     public bool delivered { get; set; }
+    /// <summary>Loads delivered so far, for one needing more than one (Designations.materialCount); else null.</summary>
+    public double? got { get; set; }
     public double workDone { get; set; }
     public double workRequired { get; set; }
     /// <summary>An edge wall or door (Grid.cs): on this tile's north or west side, not on the tile.</summary>

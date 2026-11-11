@@ -278,7 +278,7 @@ public static class Staging
     }
 
     /// <summary>The dead getting over things (Crossings.cs), four tiles east of someone looking east: a sedan and a
-    /// pickup side on (noses south), a barricade on the border between them, and the dead coming over from the far
+    /// pickup side on (noses south), a barricade on the border between them (a tall fence running on from it, east), and the dead coming over from the far
     /// side, each put part-way through its crossing: on the sedan a walker coming down off the bonnet, a screamer
     /// on the roof and a crawler hauled onto the boot; a runner in the air over the barricade; on the pickup a
     /// brute on the cab and a walker on the bed, and a crawler going in under its nose. They go on from there
@@ -291,6 +291,7 @@ public static class Staging
         car(state, x, y - 3, 8).lights = null;
         car(state, x, y + 3, 8, "truck").lights = null;
         Grids.setEdge(grid, x + 1, y, "w", Grids.EDGE_BARRICADE);
+        for (int k = 2; k <= 4; k++) Grids.setEdge(grid, x + k, y, "n", Grids.EDGE_FENCE); // a tall fence on, beside the low
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         void one(string variant, int row, int ticks)
         {

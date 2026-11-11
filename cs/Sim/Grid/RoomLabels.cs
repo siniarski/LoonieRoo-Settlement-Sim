@@ -195,7 +195,7 @@ public static partial class Rooms
                     if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
                     int n = ny * width + nx;
                     Grids.edgeBetween(grid, x, y, nx, ny, out int edge);
-                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || Grids.isWindow(edge)) continue;
+                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || edge == Grids.EDGE_FENCE || Grids.isWindow(edge)) continue;
                     if (edge == Grids.EDGE_DOOR)
                     {
                         doorSet.Add(n);
@@ -281,7 +281,7 @@ public static partial class Rooms
                     if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
                     int n = ny * width + nx;
                     Grids.edgeBetween(grid, x, y, nx, ny, out int edge);
-                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || Grids.isWindow(edge)) continue;
+                    if (edge == Grids.EDGE_WALL || edge == Grids.EDGE_BARRICADE || edge == Grids.EDGE_FENCE || Grids.isWindow(edge)) continue;
                     if (edge == Grids.EDGE_DOOR)
                     {
                         doorSet.Add(n);

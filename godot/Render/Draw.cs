@@ -542,6 +542,13 @@ public sealed partial class Painter
                         }
                         continue;
                     }
+                    if (kind == Grids.EDGE_FENCE)
+                    {
+                        // A tall fence: boards close along the border, a line darker than a wall.
+                        ctx.fillStyle = COLOURS.tools["fence"];
+                        ctx.fillRect(bx, by, bw, bh);
+                        continue;
+                    }
                     if (kind == Grids.EDGE_WALL)
                     {
                         ctx.fillStyle = COLOURS.tiles["wall"];

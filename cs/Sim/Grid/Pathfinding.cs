@@ -48,7 +48,7 @@ public static partial class Pathfinding
         if (e < 0) return true;
         if (mover == SWIMMER) mover = FREE;
         if (kind == EDGE_NONE || mover == BREACHER) return true;
-        if (kind == EDGE_WALL || mover == VEHICLE) return false;
+        if (kind == EDGE_WALL || kind == EDGE_FENCE || mover == VEHICLE) return false;
         // A boarded door (Handiwork.cs: boards nailed across it by hand) lets only you and yours by, as a barricaded
         // tile door does; the dead and raiders batter the boards off first (Breach.edgeHealth).
         if (kind == EDGE_DOOR && grid.edgeBoarded.Contains(e)) return mover == SURVIVOR || mover == FREE;

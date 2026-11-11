@@ -233,7 +233,7 @@ public static partial class ScenarioMod
             Grids.setTile(state.grid, x, y, tile);
         });
         });
-        JsRecord<double> EDGE_KINDS = new() { ["wall"] = Grids.EDGE_WALL, ["door"] = Grids.EDGE_DOOR, ["barricade"] = 3, ["window"] = 4, ["brokenWindow"] = 5 };
+        JsRecord<double> EDGE_KINDS = new() { ["wall"] = Grids.EDGE_WALL, ["door"] = Grids.EDGE_DOOR, ["barricade"] = 3, ["window"] = 4, ["brokenWindow"] = 5, ["fence"] = Grids.EDGE_FENCE };
         foreach (var e in Js.Iter(scenario.edges ?? []))
         {
             Grids.setEdge(state.grid, e.x, e.y, e.side, Js.Get(EDGE_KINDS, e.kind));

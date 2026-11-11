@@ -118,6 +118,11 @@ public static partial class Grids
     /// <summary>Glass: blocks walking and bites, not sight.</summary>
     public const int EDGE_WINDOW = 4;
     public const int EDGE_WINDOW_BROKEN = 5;
+    /// <summary>A tall fence (2026-11-12): planks to above head height, built from the build menu ("fence", two wood).
+    /// Nobody vaults or climbs it (not you, not runners, not a pile-up), colonists go round by a door, a crawler can't
+    /// get under; the dead and raiders batter it (Breach: "fence"). Sight passes between its planks; blows don't.
+    /// (A barricade, EDGE_BARRICADE, is the low fence: generated yards keep it.)</summary>
+    public const int EDGE_FENCE = 6;
 
     /// <summary>Side of a reachability chunk, in tiles.</summary>
     public const int REACH_CHUNK = 32;

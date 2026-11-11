@@ -29,7 +29,7 @@ public static class COLOURS
         ["wall"] = "#9fd3ff", ["door"] = "#ffc27a", ["remove"] = "#ff7a7a", ["cancel"] = "#c9c9c9", ["scavenge"] = "#ffd166", ["explore"] = "#9fc3ff",
         ["lock"] = "#c9a227", ["well"] = "#5a8cc8", ["collector"] = "#5a8cc8", ["generator"] = "#c8b450", ["lamp"] = "#ffe678", ["fridge"] = "#c8dcf0",
         ["farm"] = "#9ed36a", ["furnish"] = "#c7a6ff", ["bed"] = "#c7a6ff", ["housing"] = "#6ea8ff", ["storage"] = "#e6be6e", ["armory"] = "#d98c6a",
-        ["table"] = "#d6aa78", ["workbench"] = "#be9664", ["stove"] = "#8a8f96", ["barricade"] = "#aa7846", ["trap"] = "#b8bec6", ["tower"] = "#96704a",
+        ["table"] = "#d6aa78", ["workbench"] = "#be9664", ["stove"] = "#8a8f96", ["barricade"] = "#aa7846", ["fence"] = "#8a5a32", ["trap"] = "#b8bec6", ["tower"] = "#96704a",
         ["messhall"] = "#9ee0c0", ["recroom"] = "#ec9fdc", ["infirmary"] = "#f4f1ea", ["barracks"] = "#c3d48c", ["workshop"] = "#d6b47c", ["graveyard"] = "#b4b4c8",
         ["burn"] = "#ff7a2e", ["coop"] = "#c8aa6e", ["greenhouse"] = "#9ee09e", ["heater"] = "#e6783c", ["herb"] = "#7ad7a0", ["wheat"] = "#e8c860",
         ["hunt"] = "#ff8a7a", ["cell"] = "#e0a080", ["radio"] = "#a0c8a0", ["perimeter"] = "#6eb4ff", ["lab"] = "#c8dcff", ["beacon"] = "#ff5a5a",
@@ -71,7 +71,7 @@ public static class COLOURS
     public const string woodGrain = "#7a4f24";
     public static readonly Dictionary<string, string> blueprint = new()
     {
-        ["wall"] = "rgba(110, 180, 255, 0.35)", ["door"] = "rgba(255, 190, 110, 0.35)", ["bed"] = "rgba(199, 166, 255, 0.30)", ["barricade"] = "rgba(170, 120, 70, 0.30)",
+        ["wall"] = "rgba(110, 180, 255, 0.35)", ["door"] = "rgba(255, 190, 110, 0.35)", ["bed"] = "rgba(199, 166, 255, 0.30)", ["barricade"] = "rgba(170, 120, 70, 0.30)", ["fence"] = "rgba(138, 90, 50, 0.35)",
         ["trap"] = "rgba(184, 190, 198, 0.30)", ["table"] = "rgba(214, 170, 120, 0.30)", ["stove"] = "rgba(120, 124, 130, 0.30)", ["workbench"] = "rgba(190, 150, 100, 0.30)",
         ["tower"] = "rgba(150, 110, 70, 0.30)", ["well"] = "rgba(90, 140, 200, 0.30)", ["collector"] = "rgba(90, 140, 200, 0.30)", ["generator"] = "rgba(200, 180, 80, 0.30)",
         ["lamp"] = "rgba(255, 230, 120, 0.30)", ["fridge"] = "rgba(200, 220, 240, 0.30)", ["heater"] = "rgba(230, 120, 60, 0.30)", ["coop"] = "rgba(200, 170, 110, 0.30)",
@@ -81,7 +81,7 @@ public static class COLOURS
     public static readonly Dictionary<string, string> blueprintEdge = new()
     {
         ["wall"] = "#6eb4ff", ["door"] = "#ffbe6e", ["bed"] = "#c7a6ff", ["table"] = "#d6aa78", ["workbench"] = "#be9664", ["stove"] = "#8a8f96",
-        ["barricade"] = "#aa7846", ["trap"] = "#b8bec6", ["tower"] = "#96704a", ["well"] = "#5a8cc8", ["collector"] = "#5a8cc8", ["generator"] = "#c8b450",
+        ["barricade"] = "#aa7846", ["fence"] = "#8a5a32", ["trap"] = "#b8bec6", ["tower"] = "#96704a", ["well"] = "#5a8cc8", ["collector"] = "#5a8cc8", ["generator"] = "#c8b450",
         ["lamp"] = "#ffe678", ["fridge"] = "#c8dcf0", ["heater"] = "#e6783c", ["coop"] = "#c8aa6e", ["radio"] = "#a0c8a0", ["lab"] = "#c8dcff",
         ["beacon"] = "#ff5a5a", ["turret"] = "#78828c", ["lure"] = "#dcc850", ["pit"] = "#3c3228", ["reinforce"] = "#a0aab4", ["floor"] = "#ff6e6e",
     };

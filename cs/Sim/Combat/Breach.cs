@@ -12,7 +12,7 @@ public static partial class Breach
 {
 
     /// <summary>Damage a structure takes before it breaks. Zombies hit for 40, every 10 ticks.</summary>
-    public static readonly JsRecord<double> STRUCTURE_HEALTH = new() { ["door"] = 400, ["wall"] = 1200, ["barricade"] = 600 };
+    public static readonly JsRecord<double> STRUCTURE_HEALTH = new() { ["door"] = 400, ["wall"] = 1200, ["barricade"] = 600, ["fence"] = 900 };
 
     /// <summary>Damage a repairer removes per tick of work: half a zombie's rate, so repairs slow a breach but can't stop it alone.</summary>
     public const int REPAIR_PER_TICK = 2;
@@ -92,7 +92,7 @@ public static partial class Breach
         {
             return GLASS_HEALTH;
         }
-        return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : ((kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : 0));
+        return (kind == Grids.EDGE_WALL) ? STRUCTURE_HEALTH["wall"] : ((kind == Grids.EDGE_DOOR) ? STRUCTURE_HEALTH["door"] : ((kind == Grids.EDGE_BARRICADE) ? STRUCTURE_HEALTH["barricade"] : ((kind == Grids.EDGE_FENCE) ? STRUCTURE_HEALTH["fence"] : 0)));
     }
     public static double edgeHealth(Grid grid, double e) => edgeHealth(grid, Js.I(e));
 
@@ -109,7 +109,7 @@ public static partial class Breach
         var grid = __d0.grid;
         var kind = Grids.edgeKind(grid, e);
         var boarded = grid.edgeBoarded.includes(e);
-        if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && !boarded)
+        if (((((kind != Grids.EDGE_WALL) && (kind != Grids.EDGE_DOOR)) && (kind != Grids.EDGE_BARRICADE)) && (kind != Grids.EDGE_WINDOW)) && (kind != Grids.EDGE_FENCE) && !boarded)
         {
             return false;
         }
@@ -153,7 +153,7 @@ public static partial class Breach
         }
         state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
         var tile = JsMath.floor(((double)(e) / (2)));
-        Events.logEvent(state, ((((("Zombies broke through the " + ((kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : "barricade"))) + " at (") + (tile % grid.width)) + ", ") + JsMath.floor(((double)(tile) / (grid.width)))) + ")");
+        Events.logEvent(state, ((((("Zombies broke through the " + ((kind == Grids.EDGE_WALL) ? "wall" : ((kind == Grids.EDGE_DOOR) ? "door" : ((kind == Grids.EDGE_FENCE) ? "fence" : "barricade")))) + " at (") + (tile % grid.width)) + ", ") + JsMath.floor(((double)(tile) / (grid.width)))) + ")");
         return true;
     }
     public static bool damageEdge(SimState state, double e, double amount) => damageEdge(state, Js.I(e), amount);

@@ -81,6 +81,7 @@ public static class Muffle
             case Grids.EDGE_WINDOW: return grid.edgeBoarded.Contains(e) ? PLANKS + GLASS : GLASS;
             case Grids.EDGE_WINDOW_BROKEN: return grid.edgeBoarded.Contains(e) ? PLANKS : 0;
             case Grids.EDGE_BARRICADE: return PLANKS;
+            case Grids.EDGE_FENCE: return 2 * PLANKS;
             default: return 0;
         }
     }
