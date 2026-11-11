@@ -127,11 +127,15 @@ public static partial class Power
         return FurnitureMod.ofKind(state, "heater").some((f) => (f.stored > 0) && (Space.manhattan(f, p) <= HEAT_RADIUS));
     }
 
-    /// <summary>Heaters burn on cold nights (winter, or a blizzard).</summary>
+    /// <summary>Is this a night heaters burn: a winter's, or a blizzard's? (Not Seasons.coldOutside, which also counts
+    /// a nuclear winter's nights and a blizzard by day.)</summary>
+    public static bool heaterNight(SimState state) =>
+        Time.isNight(state.tick) && ((Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard"));
+
+    /// <summary>Heaters burn on cold nights (heaterNight).</summary>
     public static void updateHeaters(SimState state)
     {
-        var cold = Time.isNight(state.tick) && ((Seasons.seasonOf(state.tick) == "winter") || (state.weather == "blizzard"));
-        if (!Js.T(cold))
+        if (!heaterNight(state))
         {
             return;
         }

@@ -100,7 +100,8 @@ public static partial class Animals
     /// <summary>Chance an hour (at night and in winter: twice each) that a pack comes in near your people with none about.</summary>
     public const double WOLF_CHANCE = 0.01;
 
-    /// <summary>Hunger (slowTick ticks) at which wolves hunt prey, and at which they'll come for people.</summary>
+    /// <summary>Hunger (slowTick ticks) at which wolves hunt prey, and at which they'll come for people. (A bear hunts
+    /// at WOLF_STARVING: chooseTarget.)</summary>
     public static double WOLF_HUNGRY = ((double)(Time.DAY_LENGTH) / (2));
 
     public static double WOLF_STARVING = ((double)(2) * (Time.DAY_LENGTH));

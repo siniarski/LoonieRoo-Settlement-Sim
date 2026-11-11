@@ -19,7 +19,7 @@ public static partial class Farming
 
     public static readonly JsRecord<CROPS> CROPS = new() { ["potato"] = new() { grow = 2400, yield = 1, item = "food", label = "Potatoes" }, ["wheat"] = new() { grow = 4800, yield = 3, item = "food", label = "Wheat" }, ["herb"] = new() { grow = 4800, yield = 1, item = "medicine", label = "Herbs" } };
 
-    /// <summary>Ticks from sowing to ripe for potatoes: half a day (12 in-game hours, 2 min at 1x).</summary>
+    /// <summary>Slow ticks from sowing to ripe for potatoes: half a day (12 in-game hours, 4 min at 1x).</summary>
     public static readonly double GROW_TICKS = CROPS["potato"].grow;
 
     /// <summary>Ticks of work to sow or to harvest a plot.</summary>
@@ -101,7 +101,7 @@ public static partial class Farming
         Growth.clear(state, plot.x, plot.y);
     }
 
-    /// <summary>Crops grow every tick (as the season allows, or always in a greenhouse); plots whose tile stopped being floor are lost. Coops lay.</summary>
+    /// <summary>Crops grow every slow tick (as the season allows, or always in a greenhouse); plots whose tile stopped being floor are lost. Coops lay.</summary>
     public static void updateFarm(SimState state)
     {
         if (!Time.slowTick(state.tick))

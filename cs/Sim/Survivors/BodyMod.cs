@@ -10,7 +10,8 @@
 //              while calm (under CALM), is a startle (startledAt: the renderer's flinch).
 //   body heat  falls fast while exposed (seasons.ts isCold: a winter night or blizzard outdoors,
 //              no coat, no warmth; or soaked through outdoors at night), recovers otherwise.
-//              Under COLD: the "cold" thought; under FREEZING: health goes too.
+//              Under COLD: the "cold" thought; under FREEZING: health goes too (the damage and the coat's
+//              wear are dealt in Seasons.updateWeather, which reads FREEZING).
 //   wetness    builds out in rain or snow (slowly under a coat), dries indoors or by warmth.
 //              Over SOAKED: the "soaked" thought.
 #nullable disable warnings

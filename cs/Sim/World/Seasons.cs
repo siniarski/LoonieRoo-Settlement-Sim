@@ -33,16 +33,13 @@ public static partial class Seasons
         return (((w == "rain") || (w == "snow")) || (w == "storm")) || (w == "blizzard");
     }
 
-    /// <summary>Out on a winter night, a survivor loses 1 health this often, and doesn't heal (about 160 over a night).</summary>
-    public const int COLD_DAMAGE_EVERY = 10;
-
     public static string seasonOf(int tick)
     {
         return Js.NN(Js.Get(SEASONS, JsMath.floor(((double)((Time.dayOf(tick) - 1)) / (SEASON_DAYS))) % SEASONS.length));
     }
     public static string seasonOf(double tick) => seasonOf(Js.I(tick));
 
-    /// <summary>Does a planted crop grow this tick? (Called once per plot per tick.)</summary>
+    /// <summary>How much a planted crop outdoors grows this tick: 0, 1 or 2 (Farming.updateFarm asks once, on a slow tick).</summary>
     public static double cropGrows(SimState state)
     {
         var season = seasonOf(state.tick);

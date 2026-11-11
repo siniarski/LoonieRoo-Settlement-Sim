@@ -58,10 +58,10 @@ public static partial class Mapnotes
         return null;
     }
 
-    /// <summary>Each town's centre and name (generated worlds; none on hand-made maps).</summary>
     /// <summary>Worldgen's chunk (a literal: CLAUDE.md rule 12).</summary>
     const int CHUNK_TILES = 32;
 
+    /// <summary>Each town's centre and name (generated worlds; none on hand-made maps).</summary>
     public static List<TownName> townNames(SimState state)
     {
         if (!Js.T(state.world))

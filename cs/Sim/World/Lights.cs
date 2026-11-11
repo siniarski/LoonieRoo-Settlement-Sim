@@ -247,9 +247,6 @@ public static partial class Lights
     public static bool roomPowered(SimState state, RoomLight r) =>
         TimelineMod.powerOn(state) || Power.isPowered(state, new Point { x = r.ax, y = r.ay });
 
-    public static bool roomLitNow(SimState state, RoomLight r) =>
-        Time.isNight(state.tick) && switchedOn(state, r) && roomPowered(state, r);
-
     /// <summary>At night, is the point in a room whose light is on (what the mains' light used to be: Sight)?</summary>
     public static bool roomLit(SimState state, Point p)
     {
@@ -459,9 +456,8 @@ public static partial class Lights
     public static bool stoveLit(SimState state, Furniture s) =>
         state.jobs.some((j) => j.type == "cook" && j.furnitureId == s.id && j.reservedBy != null && j.progress > 0);
 
-    /// <summary>A heater (brazier) is lit while it burns: fuel in it on a cold night (Power.updateHeaters).</summary>
-    public static bool heaterLit(SimState state, Furniture h) =>
-        h.stored > 0 && Time.isNight(state.tick) && (Seasons.seasonOf(state.tick) == "winter" || state.weather == "blizzard");
+    /// <summary>A heater (brazier) is lit while it burns: fuel in it on a night heaters burn (Power.heaterNight).</summary>
+    public static bool heaterLit(SimState state, Furniture h) => h.stored > 0 && Power.heaterNight(state);
 
     public static bool headlightsLit(Vehicle v) => v.lights == true && v.fuel > 0 && v.health > 0;
 

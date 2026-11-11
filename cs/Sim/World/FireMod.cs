@@ -202,7 +202,7 @@ public static partial class FireMod
         else if (ground == "forest") fuel = Fuel.Undergrowth;
         else return Fuel.None;
         if (scarred(state, x, y) || Rooms.isIndoors(state, x, y)) return Fuel.None;
-        foreach (var plot in state.farm) if ((plot.x == x) && (plot.y == y)) return Fuel.None;
+        if (Farming.plotAt(state, x, y) != null) return Fuel.None;
         return fuel;
     }
     public static Fuel fuelAt(SimState state, double x, double y) => fuelAt(state, Js.I(x), Js.I(y));
@@ -216,9 +216,6 @@ public static partial class FireMod
         return (f == Fuel.Structure) || (f == Fuel.Tree);
     }
     public static bool burnable(SimState state, double x, double y) => burnable(state, Js.I(x), Js.I(y));
-
-    /// <summary>Can a fire here burn at all: any fuel, vegetation included?</summary>
-    public static bool flammable(SimState state, int x, int y) => fuelAt(state, x, y) != Fuel.None;
 
     public static int burnTicks(Fuel f) => f switch
     {
@@ -519,14 +516,6 @@ public static partial class FireMod
     }
 
     // ---- the end of a fire ----
-
-    /// <summary>A fire on this tile has burnt itself out: what it was on is gone.</summary>
-    public static void burnOut(SimState state, Fire f)
-    {
-        var fuel = fuelAt(state, f.x, f.y);
-        remove(state, f);
-        consume(state, f, fuel);
-    }
 
     /// <summary>What burning out does to the tile (the fire itself leaves the list by the caller). `fuel` is what the tile was.</summary>
     static void consume(SimState state, Fire f, Fuel fuel)

@@ -82,9 +82,9 @@ public static partial class Water
         {
             return;
         }
-        foreach (var f in Js.Iter(state.furniture))
+        foreach (var f in FurnitureMod.ofKind(state, "collector"))
         {
-            if ((f.kind == "collector") && (f.loot < COLLECTOR_MAX))
+            if (f.loot < COLLECTOR_MAX)
             {
                 f.loot += 1;
             }

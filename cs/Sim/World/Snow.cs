@@ -351,11 +351,4 @@ public static class Snow
         var pct = walkPct(state, next.x, next.y);
         return (pct == 100) ? pace : Math.Max(pace, JsMath.round(((double)pace * 100) / pct));
     }
-
-    /// <summary>One line for debugging: the depths, the tracks.</summary>
-    public static string describe(SimState state)
-    {
-        var sn = state.snow;
-        return (sn == null) ? "no snow" : $"snow cm cold {sn.depth[0]:0.0} mild {sn.depth[1]:0.0} hot {sn.depth[2]:0.0}, {sn.tracks.Count} tracks";
-    }
 }

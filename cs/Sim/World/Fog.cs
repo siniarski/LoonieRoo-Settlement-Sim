@@ -175,9 +175,22 @@ public static partial class Fog
         return targets.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
     }
 
-    /// <summary>Drops areas with nothing left to see.</summary>
+    /// <summary>Is any walkable tile of the area still unexplored? (unexploredIn's first, without the list.)</summary>
+    static bool anyUnexploredIn(SimState state, ExploreArea a)
+    {
+        for (var y = a.y0; y <= a.y1; y++)
+        {
+            for (var x = a.x0; x <= a.x1; x++)
+            {
+                if (!isExplored(state, x, y) && Grids.isWalkable(state.grid, x, y)) return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Drops areas with nothing left to see. Every tick: it stops at an area's first unexplored tile.</summary>
     public static void reconcileExploreAreas(SimState state)
     {
-        state.exploreAreas = state.exploreAreas.filter((a) => unexploredIn(state, a).length > 0);
+        state.exploreAreas = state.exploreAreas.filter((a) => anyUnexploredIn(state, a));
     }
 }
