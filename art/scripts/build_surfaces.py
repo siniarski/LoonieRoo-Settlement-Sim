@@ -213,7 +213,8 @@ def concrete(r):
 
 
 def plaster(r):
-    lum = fbm(r, 3, 3, 4) * 0.10 + grain(r, 0.7) * 0.045 + fbm(r, 20, 5, 2) * 0.03
+    # (2026-11-12: a stronger grain, a coarse stucco speckle and bolder trowel sweeps: render read as flat grey)
+    lum = fbm(r, 3, 3, 4) * 0.14 + grain(r, 0.7) * 0.10 + grain(r, 1.6) * 0.12 + fbm(r, 20, 5, 2) * 0.06
     stain = smoothstep(0.08, 0.3, fbm(r, 2, 2, 3))               # a few damp patches
     lum -= 0.05 * stain
     return colour(lum, lum * 0.10 + 0.012 * stain, 0.0)
