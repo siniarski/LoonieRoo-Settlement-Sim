@@ -130,7 +130,10 @@ git tag `ts-final`.
 
 ### `Dead/`
 
-- **Zombies**: the dead's behaviour. **ZombieKinds**: runners, screamers, brutes, crawlers.
+- **Zombies**: the dead's behaviour: the tick, moving, planning, noticing, hitting and being hurt. **ZombieSpawn**
+  (part of Zombies): how many arrive each night, when and where. **ZombieCrowd** (part of Zombies): who is near whom
+  (the dead by tile, survivors within a bite, bodies pushed apart). **ZombieKinds**: runners, screamers, brutes,
+  crawlers.
 - **Herds**: the dead out in the world (dormant and migrating). **Dormant**: dormant dead bucketed by place.
 - **Hordes**: the dead moving together on one flow field.
 - **Crossings**: the dead over parked cars (a crawler under a pickup) and runners over barricades: who, how long, what paths pay.
