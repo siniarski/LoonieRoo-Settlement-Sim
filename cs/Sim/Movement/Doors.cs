@@ -162,13 +162,51 @@ public static partial class Doors
             grid.edgePassing.splice(passing, 1);
             return "opened the door";
         }
-        var at = grid.edgeOpen.indexOf(e);
-        if (at >= 0)
+        // Doors side by side in one wall are one wide door (a garage's, a shopfront's pair): they open and shut together.
+        var run = wideDoor(grid, e);
+        bool wide = run.Count > 1;
+        if (grid.edgeOpen.includes(e))
         {
-            grid.edgeOpen.splice(at, 1);
-            return "closed the door";
+            foreach (var d in run) grid.edgeOpen.Remove(d);
+            return wide ? "pulled the wide door down" : "closed the door";
         }
-        grid.edgeOpen.push(e);
-        return "opened the door";
+        foreach (var d in run)
+        {
+            if (!grid.edgeOpen.includes(d)) grid.edgeOpen.push(d);
+        }
+        return wide ? "rolled the wide door up" : "opened the door";
+    }
+
+    /// <summary>The run of edge doors side by side along one wall that edge `e` is part of (itself alone, for an
+    /// ordinary door): one wide door, a garage's. An edge's index is its tile's times two, plus one for the west side.</summary>
+    public static List<int> wideDoor(Grid grid, int e)
+    {
+        List<int> run = [e];
+        int tile = e / 2, side = e % 2, x = tile % grid.width, y = tile / grid.width;
+        int dx = side == 0 ? 1 : 0, dy = side == 0 ? 0 : 1;
+        foreach (var dir in new[] { -1, 1 })
+        {
+            int px = x, py = y;
+            for (int k = 1; k < 8; k++)
+            {
+                int nx = x + dx * dir * k, ny = y + dy * dir * k;
+                if (!Grids.inBounds(grid, nx, ny) || !sameDoor(grid, px, py, nx, ny, side)) break;
+                run.push((ny * grid.width + nx) * 2 + side);
+                px = nx; py = ny;
+            }
+        }
+        return run;
+    }
+
+    /// <summary>Are the doors on the same side (0 north, 1 west) of two tiles side by side one door? Both doors, and
+    /// nothing standing between the two tiles or between the two beyond the doors: two rooms' doors that happen to
+    /// be neighbours have the wall between the rooms there, a garage's door has one room behind it.</summary>
+    public static bool sameDoor(Grid grid, int ax, int ay, int bx, int by, int side)
+    {
+        if (Grids.edgeKind(grid, (ay * grid.width + ax) * 2 + side) != Grids.EDGE_DOOR || Grids.edgeKind(grid, (by * grid.width + bx) * 2 + side) != Grids.EDGE_DOOR) return false;
+        int ox = side == 0 ? 0 : -1, oy = side == 0 ? -1 : 0; // the tiles beyond the doors
+        if (!Grids.inBounds(grid, ax + ox, ay + oy) || !Grids.inBounds(grid, bx + ox, by + oy)) return false;
+        return Grids.edgeKind(grid, Grids.edgeBetween(grid, ax, ay, bx, by)) == Grids.EDGE_NONE
+            && Grids.edgeKind(grid, Grids.edgeBetween(grid, ax + ox, ay + oy, bx + ox, by + oy)) == Grids.EDGE_NONE;
     }
 }

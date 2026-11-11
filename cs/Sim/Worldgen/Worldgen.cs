@@ -137,6 +137,13 @@ public static partial class Worldgen
         }
         foreach (var i in s.open) g.open.push(Map(i));
         foreach (var e in s.edgeOpen) g.edgeOpen.push(MapEdge(e));
+        // A wide door (a garage's: Doors.wideDoor) starts shut, all of it, whichever chunks it lies in: its tiles
+        // were rolled open or shut one by one (Lots.cs), and a chunk sees only its own part.
+        foreach (var e in s.edgeOpen)
+        {
+            var run = Doors.wideDoor(g, MapEdge(e));
+            if (run.Count > 1) foreach (var d in run) g.edgeOpen.Remove(d);
+        }
         foreach (var e in s.edgeBoarded) g.edgeBoarded.push(MapEdge(e));
         foreach (var f in c.furniture) FurnitureMod.adopt(state, f);
         foreach (var d in c.dormant) Dormant.add(state, d);

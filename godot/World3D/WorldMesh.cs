@@ -142,7 +142,15 @@ public static class WorldMesh
                     // The building on each side of it: the tile's own, and the one north or west of it.
                     var here = look.styles.GetValueOrDefault(i);
                     var there = (side == 0 ? y > 0 : x > 0) ? look.styles.GetValueOrDefault(side == 0 ? i - g.width : i - 1) : null;
-                    anyGlass |= Edge(st, gl, x, y, side == 0, kind, look.edgeOpen.Contains(e), look.edgeLocked.Contains(e), look.edgeBoarded.Contains(e), there, here);
+                    // A door with a door beside it in the same wall is part of one wide door (a garage's): which ends of it are open.
+                    int wide = 0;
+                    if (kind == Grids.EDGE_DOOR)
+                    {
+                        int ax = side == 0 ? 1 : 0, ay = side == 0 ? 0 : 1; // along the wall
+                        if (Grids.inBounds(g, x - ax, y - ay) && Doors.sameDoor(g, x - ax, y - ay, x, y, side)) wide |= 1;
+                        if (Grids.inBounds(g, x + ax, y + ay) && Doors.sameDoor(g, x, y, x + ax, y + ay, side)) wide |= 2;
+                    }
+                    anyGlass |= Edge(st, gl, x, y, side == 0, kind, look.edgeOpen.Contains(e), look.edgeLocked.Contains(e), look.edgeBoarded.Contains(e), there, here, wide);
                 }
             }
         if (look.furniture.TryGetValue((cx, cy), out var list))
@@ -299,7 +307,7 @@ public static class WorldMesh
     /// <summary>An edge: a wall, door, barricade or window on the north or west side of tile (x, y). `before` is the
     /// building of the tile north or west of it and `after` the tile's own (null: none): a face looks like the inside of
     /// the building it faces into, or the outside of the one behind it. Returns whether it put glass in.</summary>
-    static bool Edge(SurfaceTool st, SurfaceTool gl, int x, int y, bool north, int kind, bool open, bool locked, bool boarded, WorldLook.Style? before, WorldLook.Style? after)
+    static bool Edge(SurfaceTool st, SurfaceTool gl, int x, int y, bool north, int kind, bool open, bool locked, bool boarded, WorldLook.Style? before, WorldLook.Style? after, int wide = 0)
     {
         // Along the edge from a to a + 1, thickness across it. Heights are over the edge's floor (its higher
         // end); what starts at the ground goes down to a footing under its lower end.
@@ -333,6 +341,19 @@ public static class WorldMesh
             case Grids.EDGE_WALL:
                 Wall(-end, 1 + end, 0, WALL_H);
                 return false;
+            case Grids.EDGE_DOOR when wide != 0:
+            {
+                // Part of a wide door (a garage's): a jamb only at the run's ends, a lintel across, and a sheet-metal
+                // leaf from side to side; open, it is rolled up under the lintel.
+                float a0 = (wide & 1) != 0 ? 0 : 0.05f, a1 = (wide & 2) != 0 ? 1 : 0.95f;
+                if ((wide & 1) == 0) Wall(-end, 0.05f, 0, WALL_H, true);
+                if ((wide & 2) == 0) Wall(0.95f, 1 + end, 0, WALL_H, true);
+                Wall(a0, a1, DOOR_H + 0.15f, WALL_H);
+                var sheet = new Look(new Color(0.55f, 0.56f, 0.55f), Surfaces.What("sheetmetal"));
+                if (!open) Piece(a0, a1, 0.01f, DOOR_H + 0.15f, 0.03f, sheet);
+                else Piece(a0, a1, DOOR_H - 0.1f, DOOR_H + 0.15f, 0.09f, sheet);
+                return false;
+            }
             case Grids.EDGE_DOOR:
                 Wall(-end, 0.05f, 0, WALL_H, true);
                 Wall(0.95f, 1 + end, 0, WALL_H, true);
