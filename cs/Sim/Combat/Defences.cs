@@ -95,7 +95,7 @@ public static partial class Defences
             {
                 continue;
             }
-            var z = Js.Get(state.zombies.filter((q) => ((Space.manhattan(q.pos, t) <= TURRET_RANGE) && seen(state, q.pos)) && Work.clearShot(state.grid, t, q.pos)).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t)), 0);
+            var z = Js.Get(state.zombies.filter((q) => ((Space.manhattan(q.pos, t) <= TURRET_RANGE) && seen(state, q.pos)) && Sight.clearShot(state.grid, t, q.pos)).sort((a, b) => Space.manhattan(a.pos, t) - Space.manhattan(b.pos, t)), 0);
             if (!Js.T(z))
             {
                 continue;

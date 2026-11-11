@@ -1,6 +1,7 @@
 // Ported from src/sim/work.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Doing jobs: what a survivor does each tick while holding one (jobs.ts has the
+// Doing jobs: what a survivor does each tick while holding one (Jobs.cs has the
 // queue). Each work function ends with finishJob or releaseSurvivor; nobody gets stuck.
+// Carrying things (to storage, fuel to what burns it, loading a cart) is WorkHaul.cs, a part of this class.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -574,16 +575,6 @@ public static partial class Work
         finishJob(state, s, job, (item.kind == "medicine") ? $"cured {Js.Str(patient.name)}'s infection" : $"treated {Js.Str(patient.name)}'s wounds");
     }
 
-    /// <summary>Nearest free item of a kind that the survivor can reach and carry on to the site.</summary>
-    public static Item? freeItemFor(SimState state, string kind, Point from, List<Point> site)
-    {
-        var __d0 = state;
-        var grid = __d0.grid;
-        var v = __d0.walkabilityVersion;
-        var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == kind)).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
-        return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Pathfinding.canReach(grid, v, from, [i.pos]) && Pathfinding.canReach(grid, v, i.pos, site));
-    }
-
     public static void workClean(SimState state, Survivor s, Job job)
     {
         Point target = new Point { x = Js.I(job.x), y = Js.I(job.y) };
@@ -685,198 +676,9 @@ public static partial class Work
             return;
         }
         Noise.makeNoise(state, job, "building");
-        finishJob(state, s, job, ((((("repaired the " + ((Grids.edgeKind(state.grid, e) == 1) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
+        finishJob(state, s, job, ((((("repaired the " + ((Grids.edgeKind(state.grid, e) == Grids.EDGE_WALL) ? "wall" : "door")) + " at (") + job.x) + ", ") + job.y) + ")");
     }
     public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, Js.I(e));
-
-    public static void workHaul(SimState state, Survivor s, Job job)
-    {
-        if (Jobs.isFuelJob(job))
-        {
-            { workFuel(state, s, job); return; }
-        }
-        var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
-        if (!Js.T(item))
-        {
-            { Jobs.releaseSurvivor(state, s, "item gone"); return; }
-        }
-        if (s.carrying != item.id)
-        {
-            if (!Js.T(item.pos))
-            {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
-            }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
-            s.note = $"picked up {Js.Str(item.kind)}";
-            if (Js.T(Jobs.isStoreJob(job) && Js.T(s.cart)))
-            {
-                loadCart(state, s, item);
-            }
-        }
-        if (Jobs.isStoreJob(job))
-        {
-            { carryToStorage(state, s, job, item); return; }
-        }
-        var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
-        if (!Js.T(bp))
-        {
-            { Jobs.releaseSurvivor(state, s, "designation cancelled"); return; }
-        }
-        if (Space.manhattan(s.pos, bp) != 1)
-        {
-            { goTo(state, s, job, Grids.neighbours4(state.grid, bp.x, bp.y)); return; }
-        }
-        Items.removeItem(state, item);
-        s.carrying = null;
-        bp.delivered = true;
-        finishJob(state, s, job, $"delivered {Js.Str(item.kind)} to ({Js.Str(bp.x)}, {Js.Str(bp.y)})");
-    }
-
-    /// <summary>Carry a piece of wood to a generator and feed it in.</summary>
-    public static void workFuel(SimState state, Survivor s, Job job)
-    {
-        var g = Js.T(job.furnitureId) ? FurnitureMod.getFurniture(state, job.furnitureId) : null;
-        if (!Js.T(g) || !(/*TODO in*/Js.In(g.kind, Jobs.FUEL)))
-        {
-            { Jobs.releaseSurvivor(state, s, $"{Js.Str(g?.kind ?? "generator")} gone"); return; }
-        }
-        var fuel = Js.Get(Jobs.FUEL, g.kind);
-        var site = Grids.neighbours4(state.grid, g.x, g.y);
-        var item = Js.T(job.itemId) ? Items.getItem(state, job.itemId) : null;
-        if (!Js.T(item))
-        {
-            item = freeItemFor(state, fuel, s.pos, site);
-            if (!Js.T(item))
-            {
-                { Jobs.releaseSurvivor(state, s, $"no {Js.Str(fuel)} for the {Js.Str(g.kind)}"); return; }
-            }
-            job.itemId = item.id;
-            item.reservedBy = s.id;
-        }
-        if (s.carrying != item.id)
-        {
-            if (!Js.T(item.pos))
-            {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
-            }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
-        }
-        if (Space.manhattan(s.pos, g) != 1)
-        {
-            { goTo(state, s, job, site); return; }
-        }
-        Items.removeItem(state, item);
-        s.carrying = null;
-        g.stored += 1;
-        g.storedKind = fuel;
-        finishJob(state, s, job, $"{Js.Str((fuel == "ammo") ? Js.Str("loaded") : Js.Str("fuelled"))} the {Js.Str(g.kind)} at ({Js.Str(g.x)}, {Js.Str(g.y)})");
-    }
-
-    public static void carryToStorage(SimState state, Survivor s, Job job, Item item)
-    {
-        var home = Rooms.homeFor(Rooms.completeStoreRooms(state), item.kind);
-        if (!Js.T(job.dest) || !storageTileFree(state, job, job.dest, home))
-        {
-            job.dest = pickStorageTile(state, s.pos, job, home);
-            if (!Js.T(job.dest))
-            {
-                { Jobs.releaseSurvivor(state, s, "no free storage tile"); return; }
-            }
-        }
-        if (!Space.samePoint(s.pos, job.dest))
-        {
-            { goTo(state, s, job, [job.dest]); return; }
-        }
-        item.pos = Js.CopyAs<Point>(job.dest);
-        item.carriedBy = null;
-        item.reservedBy = null;
-        s.carrying = null;
-        var extra = s.cartLoad.length;
-        foreach (var id in Js.Iter(s.cartLoad))
-        {
-            var load = Items.getItem(state, id);
-            if (!Js.T(load))
-            {
-                continue;
-            }
-            var spot = pickStorageTile(state, s.pos, job, Rooms.homeFor(Rooms.completeStoreRooms(state), load.kind));
-            load.carriedBy = null;
-            load.reservedBy = null;
-            if (Js.T(spot))
-            {
-                load.pos = spot;
-            }
-            else
-            {
-                Items.dropItem(state, load, s.pos);
-            }
-        }
-        s.cartLoad = [];
-        finishJob(state, s, job, $"stored {Js.Str(item.kind)}{Js.Str(Js.T(extra) ? Js.Str($" and {Js.Str(extra)} more from the cart") : Js.Str(""))} at ({Js.Str(job.dest.x)}, {Js.Str(job.dest.y)})");
-    }
-
-    /// <summary>With a cart: take up to CART_LOAD - 1 more loose things from round here that belong in some store room.</summary>
-    public static void loadCart(SimState state, Survivor s, Item first)
-    {
-        var stores = Rooms.completeStoreRooms(state);
-        bool astray(Item i)
-        {
-            var home = Rooms.homeFor(stores, i.kind);
-            return (home.size > 0) && !home.has(Rooms.labelAt(state, i.pos.x, i.pos.y));
-        }
-        var extra = state.items.filter((i) => (((i.pos != null) && (i.reservedBy == null)) && (Space.manhattan(i.pos, s.pos) <= Jobs.CART_REACH)) && astray(i)).sort((a, b) => Space.manhattan(a.pos, s.pos) - Space.manhattan(b.pos, s.pos)).slice(0, Jobs.CART_LOAD - 1);
-        foreach (var i in Js.Iter(extra))
-        {
-            i.pos = null;
-            i.carriedBy = s.id;
-            s.cartLoad.push(i.id);
-        }
-        if (extra.length > 0)
-        {
-            s.note = $"loaded {Js.Str(first.kind)} and {Js.Str(extra.length)} more into the cart";
-        }
-    }
-
-    /// <summary>A storage tile is free if it can hold an item and no other active store job has reserved it.</summary>
-    public static bool storageTileFree(SimState state, Job job, Point p, JsSet<double> storage)
-    {
-        return (storage.has(Rooms.labelAt(state, p.x, p.y)) && Items.canHoldItem(state, p.x, p.y)) && !state.jobs.some((j) => (((j != job) && (j.reservedBy != null)) && (j.dest != null)) && Space.samePoint(j.dest, p));
-    }
-
-    /// <summary>Nearest free, reachable tile in any of the given complete rooms.</summary>
-    public static Point? pickStorageTile(SimState state, Point from, Job job, JsSet<double> storage)
-    {
-        var __d1 = Rooms.getRoomMap(state);
-        var rooms = __d1.rooms;
-        var __d2 = state.grid;
-        var width = __d2.width;
-        List<Point> candidates = [];
-        foreach (var index in Js.Iter(Js.ListOf(storage).sort((a, b) => a - b)))
-        {
-            foreach (var i in Js.Iter(Js.NN(Js.Get(rooms, index)).tiles))
-            {
-                Point p = new Point { x = Js.I(i % width), y = Js.I(JsMath.floor(((double)(i) / (width)))) };
-                if (storageTileFree(state, job, p, storage))
-                {
-                    candidates.push(p);
-                }
-            }
-        }
-        candidates.sort((a, b) => Space.manhattan(from, a) - Space.manhattan(from, b));
-        return candidates.find((p) => Pathfinding.canReach(state.grid, state.walkabilityVersion, from, [p])) ?? null;
-    }
 
     /// <summary>Walk towards the goals (only the first `steps` tiles, to look again sooner).</summary>
     public static void goTo(SimState state, Survivor s, Job job, List<Point> goals, double? steps = default)
@@ -890,47 +692,6 @@ public static partial class Work
         Survivors.walk(s, Js.T(steps) ? path.slice(0, steps) : path, state.walkabilityVersion);
     }
 
-    /// <summary>No wall, door or barricade on the line between two tiles (Bresenham, ends excluded).</summary>
-    public static bool clearShot(Grid grid, Point a, Point b)
-    {
-        double x = a.x;
-        double y = a.y;
-        var dx = JsMath.abs(b.x - a.x);
-        var dy = -JsMath.abs(b.y - a.y);
-        var sx = (a.x < b.x) ? 1 : -1;
-        var sy = (a.y < b.y) ? 1 : -1;
-        double err = dx + dy;
-        for (; ; )
-        {
-            var e2 = ((double)(2) * (err));
-            var px = x;
-            var py = y;
-            if (e2 >= dy)
-            {
-                err += dy;
-                x += sx;
-            }
-            if (e2 <= dx)
-            {
-                err += dx;
-                y += sy;
-            }
-            if (!seesAcross(grid, px, py, x, y))
-            {
-                return false;
-            }
-            if ((x == b.x) && (y == b.y))
-            {
-                return true;
-            }
-            var t = Grids.getTile(grid, x, y);
-            if (((t == "wall") || (t == "door")) || (t == "barricade"))
-            {
-                return false;
-            }
-        }
-    }
-
     public static void finishJob(SimState state, Survivor s, Job job, string note)
     {
         var i = state.jobs.indexOf(job);
@@ -941,19 +702,4 @@ public static partial class Work
         s.jobId = null;
         s.note = note;
     }
-
-    /// <summary>A step of a line from one tile to the next (side by side or diagonal) isn't blocked by an edge wall or door: for a diagonal, either way round the corner will do.</summary>
-    public static bool seesAcross(Grid grid, int ax, int ay, int bx, int by)
-    {
-        bool clear(double px, double py, double qx, double qy)
-        {
-            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
-        }
-        if ((ax == bx) || (ay == by))
-        {
-            return clear(ax, ay, bx, by);
-        }
-        return (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) || (clear(ax, ay, ax, by) && clear(ax, by, bx, by));
-    }
-    public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 }

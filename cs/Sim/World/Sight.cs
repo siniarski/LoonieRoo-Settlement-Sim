@@ -40,7 +40,7 @@ public static partial class Sight
 
     public const int SNEAK_HEARD = 1;
 
-    /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either, work.ts clearShot). Water doesn't.</summary>
+    /// <summary>Does this tile stop sight passing through it? A wall, a shut door, and a barricade (planks nailed across a doorway: shots never passed them either: clearShot). Water doesn't.</summary>
     public static bool opaque(Grid grid, int x, int y)
     {
         // By tile (off the grid: by the index, as it always read).
@@ -200,4 +200,60 @@ public static partial class Sight
         seen.AddOrUpdate(state, new() { tick = state.tick, who = who, mask = mask, set = set });
         return mask;
     }
+
+    /// <summary>No wall, door or barricade on the line between two tiles (Bresenham, ends excluded).</summary>
+    public static bool clearShot(Grid grid, Point a, Point b)
+    {
+        double x = a.x;
+        double y = a.y;
+        var dx = JsMath.abs(b.x - a.x);
+        var dy = -JsMath.abs(b.y - a.y);
+        var sx = (a.x < b.x) ? 1 : -1;
+        var sy = (a.y < b.y) ? 1 : -1;
+        double err = dx + dy;
+        for (; ; )
+        {
+            var e2 = ((double)(2) * (err));
+            var px = x;
+            var py = y;
+            if (e2 >= dy)
+            {
+                err += dy;
+                x += sx;
+            }
+            if (e2 <= dx)
+            {
+                err += dx;
+                y += sy;
+            }
+            if (!seesAcross(grid, px, py, x, y))
+            {
+                return false;
+            }
+            if ((x == b.x) && (y == b.y))
+            {
+                return true;
+            }
+            var t = Grids.getTile(grid, x, y);
+            if (((t == "wall") || (t == "door")) || (t == "barricade"))
+            {
+                return false;
+            }
+        }
+    }
+
+    /// <summary>A step of a line from one tile to the next (side by side or diagonal) isn't blocked by an edge wall or door: for a diagonal, either way round the corner will do.</summary>
+    public static bool seesAcross(Grid grid, int ax, int ay, int bx, int by)
+    {
+        bool clear(double px, double py, double qx, double qy)
+        {
+            return Pathfinding.seesThrough(grid, Grids.edgeBetween(grid, px, py, qx, qy));
+        }
+        if ((ax == bx) || (ay == by))
+        {
+            return clear(ax, ay, bx, by);
+        }
+        return (clear(ax, ay, bx, ay) && clear(bx, ay, bx, by)) || (clear(ax, ay, ax, by) && clear(ax, by, bx, by));
+    }
+    public static bool seesAcross(Grid grid, double ax, double ay, double bx, double by) => seesAcross(grid, Js.I(ax), Js.I(ay), Js.I(bx), Js.I(by));
 }

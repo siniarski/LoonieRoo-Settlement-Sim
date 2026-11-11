@@ -581,7 +581,7 @@ public partial class SoloHarness
     public static void goSwing(SimState state, Survivor s, Bot bot, Animal a)
     {
         var c = Js.NN(state.control);
-        var shot = (Js.T(Weapons.loadedGun(state, s)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Work.clearShot(state.grid, s.pos, a.pos);
+        var shot = (Js.T(Weapons.loadedGun(state, s)) && ((JsMath.abs(a.pos.x - s.pos.x) + JsMath.abs(a.pos.y - s.pos.y)) <= Weapons.GUN_RANGE)) && Sight.clearShot(state.grid, s.pos, a.pos);
         // Animals move freely (Walkers.cs): swing once it's within real reach, aimed at where it is (as at the dead).
         var reach = Motion.inReach(s, a, Motion.SWING_REACH, state.grid);
         if (Js.T(Js.T(shot) || reach))

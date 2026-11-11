@@ -116,8 +116,8 @@ public partial class EdgesTest
         public void T007_nothing_shoots_through_an_edge_wall()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = box(1, 1, 3, 3) });
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(2) }, new Point { x = Js.I(5), y = Js.I(2) })).toBe(false);
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(5) }, new Point { x = Js.I(5), y = Js.I(5) })).toBe(true);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(2) }, new Point { x = Js.I(5), y = Js.I(2) })).toBe(false);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(5) }, new Point { x = Js.I(5), y = Js.I(5) })).toBe(true);
         }
 
         [Fact(DisplayName = "walls on tile edges > edges survive a save and load")]

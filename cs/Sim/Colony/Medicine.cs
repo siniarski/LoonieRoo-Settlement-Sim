@@ -2,9 +2,10 @@
 // Doctors and the infirmary.
 //
 // A patient is a hurt survivor asleep in a bed (resting, see needs.ts). Each
-// patient gets one doctor job: the doctor fetches the nearest free bandage,
-// carries it to the bedside, and treats them (BANDAGE_HEAL, same as treating
-// yourself). The job itself lives in jobs.ts; this file says who is a patient.
+// patient gets one doctor job: the doctor fetches the nearest free remedy (a
+// bandage for wounds, medicine for infection or sickness: remediesFor), carries
+// it to the bedside, and treats them (as treating yourself does). The job itself
+// lives in Jobs.cs and Work.cs; this file says who is a patient.
 //
 // The infirmary is a room with beds. Hurt survivors pick its beds first and
 // heal INFIRMARY_HEAL_FACTOR times as fast in them; others only use them when

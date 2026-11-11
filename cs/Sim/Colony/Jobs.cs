@@ -4,8 +4,11 @@
 // The job queue is derived from the world: reconcileJobs (start of every
 // tick) drops jobs whose target is gone and creates missing ones: one per
 // blueprint (haul while it needs material, then build), one per indoor dirty
-// tile (clean), one per loose item outside storage (haul to storage), and
-// one per marked crate with loot left (scavenge). Survivors reserve a job when they claim it, so two survivors
+// tile (clean), one per loose item outside storage (haul to storage), one
+// per marked crate with loot left (scavenge), and so on down reconcileJobs for
+// fuel, repairs, scouting, doctoring, crafting and cooking, farming, fires,
+// research, hunting, and a guard job for each of the dead and each animal that
+// is a menace. Survivors reserve a job when they claim it, so two survivors
 // never share one. Every way a job can go wrong ends the same way:
 // releaseSurvivor() frees the reservation, drops anything carried, and the
 // survivor goes back to looking for work. Nobody gets stuck.

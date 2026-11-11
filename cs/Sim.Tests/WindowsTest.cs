@@ -66,8 +66,8 @@ public partial class WindowsTest
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = MAP, edges = room() });
             var pane = Grids.edgeBetween(state.grid, 3, 2, 4, 2);
             expect(Pathfinding.seesThrough(state.grid, pane)).toBe(true);
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(2), y = Js.I(2) }, new Point { x = Js.I(6), y = Js.I(2) })).toBe(true);
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(2), y = Js.I(1) }, new Point { x = Js.I(6), y = Js.I(1) })).toBe(false);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(2), y = Js.I(2) }, new Point { x = Js.I(6), y = Js.I(2) })).toBe(true);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(2), y = Js.I(1) }, new Point { x = Js.I(6), y = Js.I(1) })).toBe(false);
             expect(Pathfinding.openBetween(state.grid, new Point { x = Js.I(3), y = Js.I(2) }, new Point { x = Js.I(4), y = Js.I(2) })).toBe(false);
             state.grid.edgeBoarded.push(pane);
             expect(Pathfinding.seesThrough(state.grid, pane)).toBe(false);

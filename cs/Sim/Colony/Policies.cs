@@ -2,7 +2,7 @@
 // Colony policies and the leader.
 //
 // Policies are switches with a price:
-//   rationing   food goes a quarter further (satiety drains 3 ticks in 4), but everyone minds (-5)
+//   rationing   food goes a third further (satiety drains 3 ticks in 4), but everyone minds (-5)
 //   curfew      at night nobody but guards, firefighters and doctors takes work outdoors
 //   quarantine  the infected and the sick keep to their beds (so doctors come to them) and stop spreading it
 //

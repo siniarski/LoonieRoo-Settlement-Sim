@@ -74,8 +74,8 @@ public partial class GunsTest
         public void T004_walls_block_a_shot()
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.#.z"] });
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(4), y = Js.I(0) })).toBe(false);
-            expect(Work.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(1), y = Js.I(0) })).toBe(true);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(4), y = Js.I(0) })).toBe(false);
+            expect(Sight.clearShot(state.grid, new Point { x = Js.I(0), y = Js.I(0) }, new Point { x = Js.I(1), y = Js.I(0) })).toBe(true);
         }
     }
 

@@ -44,7 +44,6 @@ public static partial class Settlements
         return Js.T(id) ? state.settlements.find((s) => s.id == id) : null;
     }
 
-    /// <summary>Three neighbours far from the start, at hashed spots (worldgen).</summary>
     /// <summary>Settlements keep this far (tiles) from the map's edge.</summary>
     public const int EDGE_MARGIN = 8;
 

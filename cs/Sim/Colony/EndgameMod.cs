@@ -54,7 +54,8 @@ public static partial class EndgameMod
         }
     }
 
-    /// <summary>Is this night (by number) the evacuation night, or a siege night?</summary>
+    /// <summary>How many times the usual dead this night (by number) brings: more on the evacuation night and on a
+    /// siege night, else 1.</summary>
     public static double siegeFactor(SimState state, double night)
     {
         var evac = state.endgame.evacuation;

@@ -24,7 +24,7 @@ public static partial class JobChoice
     {
         foreach (var type in Js.Iter(typesByPriority(s)))
         {
-            // openJobsByDistance's order (distance, then place in the list), taken lazily nearest first off a heap: the
+            // By distance, then place in the list, taken lazily nearest first off a heap (NearestFirst): the
             // first MAX_CANDIDATES that pass the (pure) filter are the ones a full sort and filter would give.
             var open = state.jobs.filter((j) => (j.type == type) && (j.reservedBy == null));
             var curfew = (((Policies.policyOn(state, "curfew") && Time.isNight(state.tick)) && (type != "guard")) && (type != "firefight")) && (type != "doctor");
@@ -56,19 +56,7 @@ public static partial class JobChoice
         return JobTypes.JOB_TYPES.filter((t) => (Js.Get(s.priorities, t) > 0) && (!Js.T(s.order) || Orders.ORDER_JOBS.includes(t))).sort((a, b) => ((Js.Get(s.priorities, a) - Js.Get(s.priorities, b)) is var __or0 && Js.T(__or0) ? __or0 : (JobTypes.JOB_TYPES.indexOf(a) - JobTypes.JOB_TYPES.indexOf(b))));
     }
 
-    public static List<Job> openJobsByDistance(SimState state, string type, Point from)
-    {
-        var open = state.jobs.filter((j) => (j.type == type) && (j.reservedBy == null));
-        var keys = new Float64Array(open.length);
-        for (var i = 0; i < open.length; i++)
-        {
-            keys[Js.Idx(i)] = ((double)(Space.manhattan(from, Js.NN(Js.Get(open, i)))) * (1048576)) + i;
-        }
-        keys.sort();
-        return Js.ArrayFromMap(keys, (k) => Js.NN(Js.Get(open, k % 1048576)));
-    }
-
-    /// <summary>Jobs nearest first, by openJobsByDistance's keys (manhattan * 2^20 + place in the list: distinct), off a
+    /// <summary>Open jobs of a type nearest first, by the key manhattan * 2^20 + place in the list (distinct), off a
     /// binary min-heap: popping all gives the full sort's order, and stopping early skips the rest of the sort.</summary>
     sealed class NearestFirst
     {
