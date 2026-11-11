@@ -209,7 +209,7 @@ public static class WorldMesh
         c = c.Lightened(0.07f + Math.Abs(n) * 0.015f);
         var own = new Look(c, water ? WorldLook.RiverBed.what : WorldLook.Ground(ground));
         if (roadCorner >= 0) GroundHalves(st, x, y, own, new Look(WorldLook.GroundColour("road").Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.Ground("road")), roadCorner);
-    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)
+        else GroundQuad(st, x, y, own);
         // The surface, on its own heights (it stands where the water level is, over the bed).
         if (water) Quad(ws, new(x, Terrain.Water(x, y), y), new(x + 1, Terrain.Water(x + 1, y), y), new(x + 1, Terrain.Water(x + 1, y + 1), y + 1), new(x, Terrain.Water(x, y + 1), y + 1), w, Vector3.Up);
     }
