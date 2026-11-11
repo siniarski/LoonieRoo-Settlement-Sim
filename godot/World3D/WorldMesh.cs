@@ -108,6 +108,7 @@ public static class WorldMesh
     public static (ArrayMesh world, ArrayMesh ground) Build(SimState state, int cx, int cy, Lookups look, Material solid, Material glass)
     {
         var g = state.grid;
+        deckGrid = g;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
         var gs = new SurfaceTool();
@@ -135,13 +136,14 @@ public static class WorldMesh
                 else if (bank == BANK_WATER) Ground(gs, ws, x, y, "water", ground);
                 else if (bank == BANK_LAND && tile == "water") Ground(gs, ws, x, y, "floor", Shore(g, x, y));
                 else if (bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground)) { }
+                else if (Ribboned && tile == "floor" && ground == "bridge") UnderBridge(gs, ws, x, y);
                 else if (ribbon) Ground(gs, ws, x, y, tile, Verge(g, x, y));
                 else
                 {
                     Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));
                     LaneMark(gs, g, x, y, tile, ground);
                 }
-                anyWater |= bank is BANK_DRAWN or BANK_WATER || (bank == BANK_AS_IS && tile == "water");
+                anyWater |= bank is BANK_DRAWN or BANK_WATER || (bank == BANK_AS_IS && (tile == "water" || (Ribboned && ground == "bridge")));
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
                 else if (tile == "barricade") Box(st, new(x + 0.05f, low, y + 0.05f), new(x + 0.95f, floor + 1.0f, y + 0.95f), WorldLook.Plank);
@@ -210,6 +212,43 @@ public static class WorldMesh
         if (s && w && !n && !e) return 2;
         if (w && n && !e && !s) return 3;
         return -1;
+    }
+
+    static Grid? deckGrid;
+
+    /// <summary>A ground corner's height, but for one out in the water by a bridge while roads are ribbons: the
+    /// bridge's corners stand at its deck (Heights.DECK over the surface), and with the deck drawn as the ribbon's
+    /// the river bed round it would rise out of the water to them. Such a corner (a bridge's tile on one side, no
+    /// land on any) is put under the surface; one at the bank keeps its height.</summary>
+    static float Cor(int cx, int cy)
+    {
+        float h = Terrain.Corner(cx, cy);
+        var g = deckGrid;
+        if (!Ribboned || g == null) return h;
+        bool bridge = false;
+        for (int dy = -1; dy <= 0; dy++)
+            for (int dx = -1; dx <= 0; dx++)
+            {
+                int x = Math.Clamp(cx + dx, 0, g.width - 1), y = Math.Clamp(cy + dy, 0, g.height - 1), i = y * g.width + x;
+                if (Grids.groundAt(g, i) == BRIDGE_GROUND) bridge = true;
+                else if (Grids.tileAt(g, i) != "water") return h;
+            }
+        return bridge ? Math.Min(h, Terrain.Water(cx, cy) - 0.3f) : h;
+    }
+
+    static readonly int BRIDGE_GROUND = Array.IndexOf(Grids.GROUNDS, "bridge");
+
+    /// <summary>A bridge's tile while roads are ribbons: the water running on under it (river bed and surface), the
+    /// deck being the ribbon's (RoadRibbons.Deck), so a bridge on the slant is not a staircase of planks.</summary>
+    static void UnderBridge(SurfaceTool st, SurfaceTool ws, int x, int y)
+    {
+        float W(int cx, int cy) => Terrain.Water(cx, cy);
+        const float BED = 0.6f;
+        float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
+        var bed = new Look(WorldLook.RiverBed.colour.Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.RiverBed.what);
+        Quad(st, new(x, W(x, y) - BED, y), new(x + 1, W(x + 1, y) - BED, y), new(x + 1, W(x + 1, y + 1) - BED, y + 1), new(x, W(x, y + 1) - BED, y + 1), bed, Vector3.Up);
+        var w = new Look(WATER.Lightened(0.06f + Math.Abs(n) * 0.035f) with { A = WATER_ALPHA }, Surfaces.None);
+        Quad(ws, new(x, W(x, y), y), new(x + 1, W(x + 1, y), y), new(x + 1, W(x + 1, y + 1), y + 1), new(x, W(x, y + 1), y + 1), w, Vector3.Up);
     }
 
     /// <summary>Country roads are drawn as ribbons (RoadRibbons.cs sets this each frame: a world with a plan).</summary>
@@ -395,14 +434,14 @@ public static class WorldMesh
                 var (bx, by) = at[j];
                 if (a == water)
                 {
-                    ground3.Add((new Vector3(ax, Terrain.Corner(ax, ay), ay), Terrain.Normal(ax, ay)));
+                    ground3.Add((new Vector3(ax, Cor(ax, ay), ay), Terrain.Normal(ax, ay)));
                     top.Add(new Vector3(ax, Terrain.Water(ax, ay), ay));
                 }
                 if (a != b)
                 {
                     float t = (0.5f - wet[i]) / (wet[j] - wet[i]);
                     float px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
-                    float h = Terrain.Corner(ax, ay) + (Terrain.Corner(bx, by) - Terrain.Corner(ax, ay)) * t;
+                    float h = Cor(ax, ay) + (Cor(bx, by) - Cor(ax, ay)) * t;
                     ground3.Add((new Vector3(px, h, py), (Terrain.Normal(ax, ay) + Terrain.Normal(bx, by)).Normalized()));
                     top.Add(new Vector3(px, Terrain.Water(ax, ay) + (Terrain.Water(bx, by) - Terrain.Water(ax, ay)) * t, py));
                 }
@@ -502,10 +541,10 @@ public static class WorldMesh
         // A street's asphalt lies a kerb's height under its corners (Terrain.Sunk), the kerb's face along each side
         // that isn't asphalt too.
         bool sunk = Terrain.Sunk(x, y);
-        Vector3 P((int x, int y) k) => new(k.x, Terrain.Corner(k.x, k.y) - (sunk ? Terrain.Kerb(k.x, k.y) : 0f), k.y);
+        Vector3 P((int x, int y) k) => new(k.x, Cor(k.x, k.y) - (sunk ? Terrain.Kerb(k.x, k.y) : 0f), k.y);
         if (sunk) Kerbs(st, x, y);
         // Split along the diagonal whose ends are closer in height, so a ridge or a crease runs the way the ground does.
-        bool alt = Math.Abs(Terrain.Corner(x, y) - Terrain.Corner(x + 1, y + 1)) > Math.Abs(Terrain.Corner(x + 1, y) - Terrain.Corner(x, y + 1));
+        bool alt = Math.Abs(Cor(x, y) - Cor(x + 1, y + 1)) > Math.Abs(Cor(x + 1, y) - Cor(x, y + 1));
         var (a, b, cc, d) = alt ? ((x + 1, y), (x + 1, y + 1), (x, y + 1), (x, y)) : ((x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1));
         void V((int x, int y) k) { st.SetNormal(Terrain.Normal(k.x, k.y)); st.AddVertex(P(k)); }
         st.SetColor(look.colour);

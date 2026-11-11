@@ -194,13 +194,15 @@ public sealed partial class FirstPerson : Node3D
         sun.ShadowEnabled = ShadowDistance > 0;
         if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
         Light(state, eye, delta);
-        ribbons.Update(state, eye);  // before the chunks: it says whether country roads are ribbons (WorldMesh.Ribboned)
+        // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
+        int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
+        var hole = new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK);
+        // Before the chunks: it says whether country roads are ribbons (WorldMesh.Ribboned). In the hole only while the far field draws past it.
+        ribbons.Update(state, eye, FarField.Range > 0 ? hole : null);
         Chunks(state, eye);
         trees.Update(state, eye, look);
         furniture.Update(state, eye, look);
-        // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
-        int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
-        far.Update(state, eye, new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK));
+        far.Update(state, eye, hole);
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
         weather.Held = world <= 0;
