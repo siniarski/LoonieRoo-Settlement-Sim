@@ -30,15 +30,12 @@ public sealed partial class Hud
         });
     }
 
-    string lastSuccession = "";
-
     /// <summary>When the one you controlled dies: who carries on? The game waits for the choice (Game.AwaitingHeir).</summary>
     void UpdateSuccession(SimState state)
     {
         var s = state.succession;
         var ready = s != null ? SuccessionMod.heirs(state) : new List<Survivor>();
         string key = s != null ? J(new object[] { s.name, s.cause, ready.Select((h) => $"{h.id}:{h.resolve}") }) : "";
-        lastSuccession = key;
         succession.Show(s != null, key, (r) =>
         {
             r.Text($"{s!.name} died of {s.cause}. Who carries on?", Kit.Title);

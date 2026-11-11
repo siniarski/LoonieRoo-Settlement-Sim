@@ -40,8 +40,6 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     const int MAX_TICKS_PER_FRAME = 40;
     /// <summary>Screen pixels per second for keyboard panning.</summary>
     const double KEY_PAN_PX_PER_SEC = 600;
-    /// <summary>Directions the mouse aim snaps to (keeps the command log small).</summary>
-    const int AIM_STEPS = 32;
     /// <summary>First person: directions the aim snaps to (1.4 degrees), and the walk (5.6 degrees).</summary>
     const int FP_AIM_STEPS = 256, FP_STEER_STEPS = 64;
     /// <summary>First person: radians of look per pixel of mouse travel.</summary>

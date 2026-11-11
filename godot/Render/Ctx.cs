@@ -20,7 +20,6 @@ public sealed class Ctx
     public double globalAlpha = 1;
     public string textAlign = "left";
     public string textBaseline = "alphabetic";
-    public string lineCap = "butt";
     double[]? dash;
     int fontPx = 12;
     bool fontBold;

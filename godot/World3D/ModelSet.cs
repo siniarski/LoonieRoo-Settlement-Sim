@@ -32,9 +32,6 @@ void fragment() {
     /// <summary>Things drawn by the last End (the debug panel, the self-test).</summary>
     public int Count { get; private set; }
 
-    /// <summary>How many of one model the last End drew.</summary>
-    public int CountOf(string model) => nodes.TryGetValue(model, out var n) ? n.Multimesh.VisibleInstanceCount : 0;
-
     public ModelSet(Node3D parent, string path, bool shadows = true)
     {
         this.parent = parent;

@@ -117,8 +117,8 @@ public sealed partial class InventoryScreen : Control
         var columns = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         columns.AddThemeConstantOverride("separation", 10);
         outer.AddChild(columns);
-        // CHARACTER SHEET COLUMN: about 320 px kept free on the left for the character sheet (godot/Ui/CharacterSheet.cs,
-        // its own Control): add it with SheetColumn.AddChild(...). Worn and wielded slots stay in this screen's own column.
+        // About 320 px kept free on the left for the character sheet (godot/Ui/CharacterSheet.cs, its own Control, laid
+        // over this spacer). Worn and wielded slots stay in this screen's own column.
         sheetColumn = new VBoxContainer { CustomMinimumSize = new Vector2(320, 0), MouseFilter = MouseFilterEnum.Ignore };
         columns.AddChild(sheetColumn);
         columns.AddChild(Panel(youCol));
@@ -136,8 +136,6 @@ public sealed partial class InventoryScreen : Control
         quickMenu.IdPressed += (id) => OnMenu((int)id);
     }
 
-    /// <summary>The column kept for the character sheet (about 320 px wide, left of yours).</summary>
-    public Control SheetColumn => sheetColumn;
 
     PanelContainer Panel(Control content)
     {

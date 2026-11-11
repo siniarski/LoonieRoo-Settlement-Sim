@@ -99,9 +99,6 @@ void fragment() {
     /// <summary>A model's mesh by name ("hand" is the gloved hand), or null.</summary>
     public Mesh? MeshFor(string name) => meshes.GetValueOrDefault(name);
 
-    /// <summary>How many models a kind has (1 with no variants, 0 with none).</summary>
-    public int VariantCount(string kind) => variants.TryGetValue(kind, out var l) ? l.Count : meshes.ContainsKey(kind) ? 1 : 0;
-
     public void Update(SimState state, Vector3 eye)
     {
         bool moved = float.IsNaN(lastEye.X) || (eye - lastEye).LengthSquared() > 1;

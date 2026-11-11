@@ -74,7 +74,6 @@ public sealed class Roofs
     public readonly HashSet<int> Indoor = new();
     /// <summary>Bumped whenever Indoor changes, so chunks look again.</summary>
     public int Version { get; private set; }
-    public int RoofCount { get; private set; }
 
     public Roofs(Node3D parent) => this.parent = parent;
 
@@ -231,7 +230,6 @@ public sealed class Roofs
             built = new MeshInstance3D { Mesh = End(st), CastShadow = GeometryInstance3D.ShadowCastingSetting.DoubleSided };
             parent.AddChild(built);
         }
-        RoofCount = count + mine.Count;
         if (!was.SetEquals(Indoor)) Version++;
     }
 

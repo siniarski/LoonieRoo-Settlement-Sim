@@ -186,9 +186,6 @@ public static class Looks
         return new Vector3(l.R, l.G, l.B);
     }
 
-    /// <summary>How many recolour materials exist (the bench reports it).</summary>
-    public static int RecolourMaterials => recoloured.Count;
-
     // --- the hash (stable between runs and machines: FNV-1a of the id's chars, then a salt) ---
 
     public static double Hash01(string id, int salt)

@@ -23,8 +23,6 @@ public sealed partial class FirstPerson : Node3D
     public static float ShadowDistance = 40;
     /// <summary>Chunk meshes built per frame at most.</summary>
     const int BUILDS_PER_FRAME = 4;
-    /// <summary>Bodies further than this (m) aren't drawn.</summary>
-    const float BODY_RANGE = 48;
     public const float EYE = 1.65f, EYE_SNEAK = 1.1f, EYE_ASLEEP = 0.35f;
     /// <summary>Vertical field of view (degrees), as the look lab's.</summary>
     const float FOV = 60;
@@ -71,7 +69,6 @@ public sealed partial class FirstPerson : Node3D
     public int TreeCount => trees.Count;
     public FarField Far => far;
     public int ItemCount => items.Count;
-    public int FurnitureCount => furniture.Count;
     /// <summary>What the newer renderers drew (the self-test): farm plots, building-site pieces, cars, others' props and people, the helicopter.</summary>
     public int PlotCount => fields.Count;
     public int SiteCount => sites.Count;

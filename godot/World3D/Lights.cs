@@ -61,10 +61,9 @@ public sealed class WorldLights
     double farAge = FAR_EVERY;
     Vector3 farAt;
     double clock;
-    /// <summary>Real lights lit this frame, and how many with shadows (the debug panel, the bench).</summary>
+    /// <summary>Real lights lit this frame, and how many with shadows (the bench at the end of this file).</summary>
     public int Lit { get; private set; }
     public int Shadows { get; private set; }
-    public int Glows { get; private set; }
     /// <summary>Your flashlight's beam is on (the self-test).</summary>
     public bool TorchOn => torch.Visible;
 
@@ -333,7 +332,6 @@ public sealed class WorldLights
         foreach (var s in farList) glow(s);
         mm.VisibleInstanceCount = n;
         pm.VisibleInstanceCount = p;
-        Glows = n + p;
     }
 
     static void Put(MultiMesh mm, int i, Vector3 at, float size, Color c)

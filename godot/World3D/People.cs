@@ -103,7 +103,6 @@ public sealed partial class People
     /// ankle over its lowest there (m), and the drawn ankles over your feet's ground, this foot and the other (m).</summary>
     public readonly List<YourStep> YourSteps = new();
     public readonly record struct YourStep(ulong ms, string clip, double at, int foot, float clipH, float drawnH, float otherH);
-    public Footfalls.Marks? MarksOf(string clip) => marks.GetValueOrDefault(clip);
 
     public People(Node3D parent)
     {

@@ -15,7 +15,7 @@ cs/Sim.Tests/ (xUnit), cs/Harness/ (balance, bench, stress)
 ```
 
 **The sim is one namespace** (`LoonieRoo.Sim`) in a folder per area: the folders are for finding things, not for
-access control. A system is a static class of functions over the state (`Zombies.update(state)`); the state is plain
+access control. A system is a static class of functions over the state (`Zombies.updateZombies(state)`); the state is plain
 data (`State/StateTypes.cs`). `Core/Tick.cs` is the order everything runs in each tick: start there.
 
 **From the port.** A file that came from the TypeScript says so on its first line (`Ported from src/sim/x.ts`): `x.ts`
