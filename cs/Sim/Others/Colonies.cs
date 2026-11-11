@@ -361,12 +361,21 @@ public static partial class Colonies
                 }
                 state.items = state.items.filter((i) => (!Js.T(i.pos) || (i.pos.x != x)) || (i.pos.y != y));
                 Grids.setGround(grid, Grids.tileIndex(grid, x, y), Grids.GROUNDS.indexOf("dirt"));
+                // Edge walls round the inside, like every other building (2026-11-12; a ring of wall tiles before):
+                // the ring is open ground, and each tile of it that touches the inside carries the wall on that side
+                // (a fallen one's gaps by the same roll as before; the door in the middle of the south side).
                 var edge = (((x == box.x0) || (x == box.x1)) || (y == box.y0)) || (y == box.y1);
                 var broken = fallen && (Hash.hashRoll(Hash.idNumber(n.id), x, y) < 0.25);
-                Grids.setTile(grid, x, y, (Js.T(edge) && !Js.T(broken)) ? (((x == door.x) && (y == door.y)) ? "door" : "wall") : "floor");
+                Grids.setTile(grid, x, y, "floor");
                 if (Js.T(edge))
                 {
                     Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
+                    bool inX = (x > box.x0) && (x < box.x1), inY = (y > box.y0) && (y < box.y1);
+                    int kind = Js.T(broken) ? Grids.EDGE_NONE : (((x == door.x) && (y == door.y)) ? Grids.EDGE_DOOR : Grids.EDGE_WALL);
+                    if (inX && (y == box.y0)) Grids.setEdge(grid, x, y + 1, "n", kind);
+                    if (inX && (y == box.y1)) Grids.setEdge(grid, x, y, "n", kind);
+                    if (inY && (x == box.x0)) Grids.setEdge(grid, x + 1, y, "w", kind);
+                    if (inY && (x == box.x1)) Grids.setEdge(grid, x, y, "w", kind);
                 }
             }
         }

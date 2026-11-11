@@ -79,8 +79,12 @@ public partial class ColoniesTest
             Colonies.updateColonies(state);
             expect(n.unfolded).toBe(true);
             var box = Colonies.compound(n);
-            expect(Grids.getTile(state.grid, box.x0, box.y0)).toBe("wall");
-            expect(Grids.getTile(state.grid, n.x, box.y1)).toBe("door");
+            // Edge walls round the inside (no wall tiles), and a door in the middle of the south side.
+            expect(Grids.getTile(state.grid, box.x0, box.y0)).toBe("floor");
+            expect(Grids.edgeKind(state.grid, Grids.edgeBetween(state.grid, box.x0 + 1, box.y0 + 1, box.x0 + 1, box.y0))).toBe(Grids.EDGE_WALL);
+            expect(Grids.edgeKind(state.grid, Grids.edgeBetween(state.grid, box.x0 + 1, box.y0 + 1, box.x0, box.y0 + 1))).toBe(Grids.EDGE_WALL);
+            expect(Grids.edgeKind(state.grid, Grids.edgeBetween(state.grid, n.x, box.y1 - 1, n.x, box.y1))).toBe(Grids.EDGE_DOOR);
+            for (var y = box.y0; y <= box.y1; y++) for (var x = box.x0; x <= box.x1; x++) expect(Grids.getTile(state.grid, x, y)).toBe("floor");
             expect(state.furniture.filter((f) => f.kind == "bed")).toHaveLength(6);
             expect(state.furniture.some((f) => f.kind == "table")).toBe(true);
             expect(Residents.residentsOf(state, n)).toHaveLength(6);

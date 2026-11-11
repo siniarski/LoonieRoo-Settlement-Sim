@@ -160,7 +160,7 @@ public sealed partial class InventoryScreen : Control
             for (int dx = -1; dx <= 1; dx++)
             {
                 var f = FurnitureMod.furnitureAt(state, s.pos.x + dx, s.pos.y + dy);
-                if (f?.kind != "crate") continue;
+                if (!FurnitureMod.holds(f)) continue;
                 if (state.items.Any((i) => i.inside == f.id)) return (f.id, Inventory.gridName(state, f.id), Inventory.CRATE_HOLD);
                 if (f.loot <= 0) searched ??= f;
             }
@@ -175,7 +175,7 @@ public sealed partial class InventoryScreen : Control
         var s = ControlMod.controlled(state);
         if (s == null) return false;
         var f = FurnitureMod.furnitureAt(state, tile.x, tile.y);
-        if (f?.kind != "crate" || f.loot > 0 || !Commands.besideYou(s, new Point(f.x, f.y))) return false;
+        if (!FurnitureMod.holds(f) || (f!.kind == "crate" && f.loot > 0) || !Commands.besideYou(s, new Point(f.x, f.y))) return false;
         Open(f.id);
         return true;
     }
@@ -231,7 +231,7 @@ public sealed partial class InventoryScreen : Control
         opening = null;
         var f = FurnitureMod.getFurniture(state, id);
         var car = f == null ? Vehicles.vehiclesOf(state).FirstOrDefault((v) => v.id == id) : null;
-        bool done = f != null ? f.kind == "crate" && f.loot <= 0 : car?.bootOpen == true;
+        bool done = f != null ? FurnitureMod.holds(f) && (f.kind != "crate" || f.loot <= 0) : car?.bootOpen == true;
         if (done && Inventory.containerOf(state, id) is { } c && Commands.besideYou(s, c.at)) Open(id);
     }
 

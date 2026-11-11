@@ -168,7 +168,7 @@ public static partial class Inventory
         var f = FurnitureMod.getFurniture(state, gridRef);
         if (Js.T(f))
         {
-            return (f.kind == "crate") ? CRATE_GRID : null;
+            return FurnitureMod.holds(f) ? CRATE_GRID : null;
         }
         var v = Vehicles.vehiclesOf(state).find((x) => x.id == gridRef);
         return Js.T(v) ? ((v.kind == "truck") ? TRUCK_GRID : BOOT_GRID) : null;

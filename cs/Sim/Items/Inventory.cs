@@ -203,7 +203,7 @@ public static partial class Inventory
         var f = FurnitureMod.getFurniture(state, id);
         if (Js.T(f))
         {
-            return (f.kind == "crate") ? new() { at = new Point { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
+            return FurnitureMod.holds(f) ? new() { at = new Point { x = Js.I(f.x), y = Js.I(f.y) }, max = CRATE_HOLD } : null;
         }
         var v = Vehicles.vehiclesOf(state).find((x) => x.id == id);
         return Js.T(v) ? new() { at = Vehicles.bootTile(v), max = Vehicles.bootMax(v) } : null;

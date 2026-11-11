@@ -95,7 +95,7 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
   back), O overview, M map (full screen: wheel zoom, drag pan, click to pin a note, right-click a pin to remove,
   double-click to look there), N minimap, Home recentres the view, 1x/2x/4x buttons (or + and -), `` ` `` debug panel (with tick/sim/draw
   ms), Esc cancels then opens the menu.
-- **Direct control** (F on the selected survivor, F again to let go) starts in survivor mode, with the colony's
+- **Direct control** (F on the selected survivor; F never lets go of the one you play: only dying does, since 2026-11-12) starts in survivor mode, with the colony's
   management put away; B, P or O bring it out (build, priorities, overview, neighbour and visitor panels).
 - WASD/arrows walk (8 ways), Shift run, Space jump (vault a broken window, a barricade or a fence, which stop you walking; hop; over or onto a parked car), C sneak, the mouse aims, click swing or shoot (a
   swing at glass in front breaks it).

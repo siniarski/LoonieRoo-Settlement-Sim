@@ -470,7 +470,9 @@ public static partial class Lots
                 Grids.setEdge(state.grid, ox, oy, side, Grids.EDGE_DOOR);
                 if (fall > 0.8 && !boarded) state.grid.edgeOpen.push(Grids.edgeIndex(state.grid, ox, oy, side));
             }
-            else if (fall > (outer ? 0.08 : 0.04) + decay)
+            // A wall fallen in: one in sixty outside and one in a hundred inside, more as the years go (2026-11-12;
+            // it was one in twelve and one in twenty-five plus the whole decay: three or four holes a house).
+            else if (fall > (outer ? 0.017 : 0.01) + decay / 3)
                 Grids.setEdge(state.grid, ox, oy, side, Grids.EDGE_WALL);
         }
         plan.furniture.forEach((f, i) =>

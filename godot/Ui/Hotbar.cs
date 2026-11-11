@@ -27,7 +27,7 @@ public sealed partial class Hotbar : Control
     {
         MouseFilter = MouseFilterEnum.Ignore;
         Array.Fill(slots, ("", "", false));
-        CustomMinimumSize = new Vector2((Inventory.QUICK_SLOTS + 1) * (SLOT_W + GAP) - GAP, SLOT_H);
+        CustomMinimumSize = new Vector2(Inventory.QUICK_SLOTS * (SLOT_W + GAP) - GAP, SLOT_H);
     }
 
     public void Update(SimState state, Survivor? you, bool show)
@@ -52,7 +52,8 @@ public sealed partial class Hotbar : Control
 
     public override void _Draw()
     {
-        for (int n = 0; n <= Inventory.QUICK_SLOTS; n++)
+        // Three slots and no more: the slot in your hand pressed again puts it away, and your hands are empty (0 too).
+        for (int n = 0; n < Inventory.QUICK_SLOTS; n++)
         {
             var r = new Rect2(n * (SLOT_W + GAP), 0, SLOT_W, SLOT_H);
             bool hands = n == Inventory.QUICK_SLOTS;

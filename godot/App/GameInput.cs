@@ -381,10 +381,10 @@ public partial class Game
             case Key.Minus or Key.KpSubtract: view.speed = view.speed == 4 ? 2 : 1; return;
             case Key.Home: view.camera = centredOn(state.grid.width, state.grid.height, view.camera.zoom); return;
             case Key.F:
-                // In the Colony tab, F on someone else plays them instead; otherwise it lets go (or takes the selected).
+                // In the Colony tab, F on someone else plays them instead; with nobody played, it takes the selected.
+                // It never lets go of the one you play (2026-11-12): only dying does that.
                 if (c != null && !view.firstPerson && view.selectedId != null && view.selectedId != c.survivorId) Command(new Command { type = "takeControl", survivorId = view.selectedId });
-                else if (c != null) Command(new Command { type = "takeControl", survivorId = null });
-                else if (view.selectedId != null) Command(new Command { type = "takeControl", survivorId = view.selectedId });
+                else if (c == null && view.selectedId != null) Command(new Command { type = "takeControl", survivorId = view.selectedId });
                 return;
         }
         var you = ControlMod.controlled(state);

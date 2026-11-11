@@ -42,6 +42,14 @@ public static partial class FurnitureMod
 
     public static readonly List<string> DECOR_LOOKS = ["sofa", "bed", "toilet", "bath", "table", "oven", "tv", "car", "pew", "altar", "hay", "tractor", "pump", "bench", "cot", "register", "machine", "silo", "shower", "armchair", "washer"];
 
+    /// <summary>Furniture that isn't a searchable container but plainly holds things (2026-11-12: the player found
+    /// washers, tables and tills with no inventory; an oven cooks and a bath is got into): generated as decor with nothing in it, opened like an
+    /// emptied cupboard, yours to put things in.</summary>
+    public static readonly List<string> HOLDING_LOOKS = ["washer", "table", "register", "altar", "hay", "machine"];
+
+    /// <summary>Can things be put in and taken out of this piece? A crate (any container look), or decor that holds.</summary>
+    public static bool holds(Furniture? f) => f != null && (f.kind == "crate" || (f.kind == "decor" && f.look != null && HOLDING_LOOKS.includes(f.look)));
+
     /// <summary>What each look is called (an icebox is a house's fridge; the fridge you build is furniture kind 'fridge').</summary>
     public static readonly JsRecord<string> LOOK_NAMES = new() { ["counter"] = "counter", ["icebox"] = "fridge", ["shelf"] = "shelf", ["wardrobe"] = "wardrobe", ["dresser"] = "dresser", ["cabinet"] = "cabinet", ["toolbox"] = "toolbox", ["locker"] = "locker", ["desk"] = "desk", ["pallet"] = "pallet", ["sack"] = "sacks", ["crate"] = "crate", ["sink"] = "sink", ["bin"] = "bin", ["nightstand"] = "nightstand", ["bookcase"] = "bookcase", ["sofa"] = "sofa", ["bed"] = "bed", ["toilet"] = "toilet", ["bath"] = "bath", ["table"] = "table", ["oven"] = "oven", ["tv"] = "television", ["car"] = "car", ["pew"] = "pew", ["altar"] = "altar", ["hay"] = "hay bales", ["tractor"] = "tractor", ["pump"] = "fuel pump", ["bench"] = "bench", ["cot"] = "cot", ["register"] = "till", ["machine"] = "machine", ["silo"] = "silo", ["shower"] = "shower", ["armchair"] = "armchair", ["washer"] = "washing machine" };
 
