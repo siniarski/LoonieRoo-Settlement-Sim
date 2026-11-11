@@ -154,7 +154,8 @@ public static partial class Zombies
     public static void updateAll(SimState state)
     {
         Hordes.updateHordes(state);
-        Budget budget = new Budget { plans = PLANS_PER_TICK, near = survivorsNear(state) };
+        Budget budget = new Budget { plans = PLANS_PER_TICK, near = survivorsNear(state), cabins = Vehicles.cabins(state) };
+        if (budget.cabins.Count > 0) budget.cabinBox = Vehicles.boxOf(budget.cabins, Vehicles.CABIN_REACH);
         foreach (var z in Js.Iter(state.zombies))
         {
             updateZombie(state, z, budget);
@@ -198,8 +199,15 @@ public static partial class Zombies
         {
             // The target if in reach, else the first in reach (no list made: most zombies have nobody in reach).
             Survivor? victim = null, first = null;
+            var cabins = budget.cabins;
+            // A car with someone in it (VehicleCabin.cs): its side is what's in reach, not the driver inside.
+            var car = (cabins != null && cabins.Count > 0) ? Vehicles.cabinBeside(cabins, z.at, budget.cabinBox) : null;
             foreach (var s in Js.Iter(budget.near(z.at)))
             {
+                if (cabins != null && cabins.Count > 0 && Vehicles.inCabin(cabins, s))
+                {
+                    continue;
+                }
                 if ((JsMath.abs(s.at.x - z.at.x) > Motion.REACH) || (JsMath.abs(s.at.y - z.at.y) > Motion.REACH))
                 {
                     continue;
@@ -211,6 +219,29 @@ public static partial class Zombies
                 }
             }
             victim ??= first;
+            if (!Js.T(victim) && car != null)
+            {
+                if (z.windup > 0)
+                {
+                    z.windup -= 1;
+                    if (z.windup == 0)
+                    {
+                        if (Vehicles.strikeCabin(state, car))
+                        {
+                            z.cooldown = ZOMBIE_ATTACK_EVERY - WINDUP_TICKS;
+                        }
+                        else if (Vehicles.driverOf(state, car) is { } inside)
+                        {
+                            hit(state, z, inside);
+                        }
+                    }
+                }
+                else if (z.cooldown == 0)
+                {
+                    z.windup = WINDUP_TICKS;
+                }
+                return;
+            }
             if (Js.T(victim))
             {
                 if (z.windup > 0)

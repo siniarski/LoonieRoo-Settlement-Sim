@@ -83,6 +83,10 @@ public partial class Budget
 {
     public double plans { get; set; }
     public Func<Point, List<Survivor>> near { get; set; } = null!;
+    /// <summary>The cars with someone in them this tick (Vehicles.cabins).</summary>
+    public List<Vehicle>? cabins { get; set; }
+    /// <summary>A box round them, a blow wider (Vehicles.boxOf).</summary>
+    public (int x0, int y0, int x1, int y1) cabinBox { get; set; }
 }
 
 public partial class BuildingsPlan

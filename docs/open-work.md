@@ -164,8 +164,10 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   for a car is the same whoever plans it (a crawler pays for a pickup as for a sedan, though under is quick); the
   body slides up the car's flank lying down (no clip of hauling up, no hands on it), and a paused or just-placed
   climber faces any way; a horde's field costs a barricade as battering even for its runners; nobody has played
-  it. Left of the cars: the car you are
-  sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
+  it. Left of the cars: the car you sit in
+  is solid to the dead, animals and dogs and they batter it, not you, till it's a wreck (VehicleCabin.cs,
+  log/2026-11-12-07-cars.md), but their paths still go through it (they press against its side; a crowd behind
+  pushes the front ones along it); the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
   left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
   reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;
