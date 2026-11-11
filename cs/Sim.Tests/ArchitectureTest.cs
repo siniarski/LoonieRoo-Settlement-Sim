@@ -2,6 +2,7 @@
 // fails the check instead of waiting for a reviewer:
 //   - the sim has no Godot, no wall clock and no unseeded randomness (rules 1 to 3);
 //   - every sim file sits in one area folder, opens with a comment, and is on the map (docs/modules.md);
+//   - what is saved is declared in State/ (rule 7): no system's file adds a property to a state type;
 //   - the game changes the sim only through commands, ticks and Staging (rule 5).
 // These read text, not the compiler's model: they are tripwires for the common slips, not proofs. Comments are
 // stripped first (a file may say "no Godot here").
@@ -77,6 +78,27 @@ public class ArchitectureTest
         }
         foreach (var area in AREAS)
             if (!map.Contains($"### `{area}/`")) found.Add($"docs/modules.md has no section for {area}/");
+        expect(string.Join("\n", found)).toBe("");
+    }
+
+    [Fact(DisplayName = "architecture > what is saved is declared in State/, not added to a state type from a system's file")]
+    public void Saved_state_is_declared_in_State()
+    {
+        // A state type is a partial class, so any file can add a saved property to it, where nobody reading
+        // StateTypes.cs would see it (and where its place in the JSON hangs on the order files are compiled in).
+        var found = new List<string>();
+        foreach (var f in Sources("cs/Sim").Where((f) => !f.StartsWith("cs/Sim/State/")))
+        {
+            var code = Code(f);
+            foreach (Match m in Regex.Matches(code, @"(?<!static )\bpartial class (\w+)[^{;]*\{"))
+            {
+                int depth = 1, i = m.Index + m.Length;
+                while (i < code.Length && depth > 0) { if (code[i] == '{') depth++; else if (code[i] == '}') depth--; i++; }
+                var body = code[(m.Index + m.Length)..i];
+                var saved = Regex.Match(body, @"^(?!.*\[JsonIgnore\]).*\bpublic\b[^(\n]*\{ get; set; \}", RegexOptions.Multiline);
+                if (saved.Success) found.Add($"{f}: {m.Groups[1].Value} gains a saved property outside State/ ({saved.Value.Trim()})");
+            }
+        }
         expect(string.Join("\n", found)).toBe("");
     }
 

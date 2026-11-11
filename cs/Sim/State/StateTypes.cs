@@ -56,6 +56,10 @@ public partial class Animal : Body, IHasId, IHasAt, IHasPos, IBody
     public double nextPlan { get; set; }
     /// <summary>Grazing (or wandering): it stands until this tick before the next walk.</summary>
     public double restUntil { get; set; }
+    /// <summary>Going under or over a parked car (AnimalCars.cs), or nothing.</summary>
+    public CarCrossing? cross { get; set; }
+    /// <summary>A crossing was refused: no plans over cars before this tick.</summary>
+    public double? noCrossUntil { get; set; }
 }
 
 public partial class Blueprint : IHasId
@@ -248,6 +252,10 @@ public partial class Dog : Body, IHasId, IHasAt, IHasPos, IBody
     public bool waiting { get; set; }
     /// <summary>Following someone: where they were (SUB units: a free mover, Walkers.cs), until it's caught up.</summary>
     public Point? goal { get; set; }
+    /// <summary>Going under or over a parked car (AnimalCars.cs), or nothing.</summary>
+    public CarCrossing? cross { get; set; }
+    /// <summary>A crossing was refused: no plans over cars before this tick.</summary>
+    public double? noCrossUntil { get; set; }
 }
 
 public partial class DormantZombie : IHasId
@@ -1357,6 +1365,23 @@ public partial class Zombie : Body, IHasId, IHasAt, IHasPos, IBody
     public string? hordeId { get; set; }
     /// <summary>On its way over or under something a body can't walk through (Crossings.cs); null when on the ground.</summary>
     public Crossing? crossing { get; set; }
+}
+
+/// <summary>An animal or a dog going under or over a parked car (AnimalCars.cs): straight from `from` to `to` (SUB)
+/// over `ticks` ticks. (The dead's is Crossing, below: a leg at a time.)</summary>
+public sealed class CarCrossing
+{
+    /// <summary>"under", "over" (a climb or scramble) or "leap".</summary>
+    public string how { get; set; } = "";
+    public Point from { get; set; } = new();
+    public Point to { get; set; } = new();
+    public double ticks { get; set; }
+    public double done { get; set; }
+    /// <summary>How high the car is where it crosses (cm): over, the top of its climb or the bar its leap clears;
+    /// under, the room beneath it.</summary>
+    public double top { get; set; }
+    /// <summary>Ticks a rabbit has stayed under the car, hiding.</summary>
+    public double held { get; set; }
 }
 
 /// <summary>One leg of a zombie's way over a parked car or a barricade, or under a pickup (Crossings.cs): a straight

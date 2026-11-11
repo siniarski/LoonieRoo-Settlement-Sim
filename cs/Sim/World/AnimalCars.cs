@@ -22,7 +22,7 @@
 //              tick (a car parked there, a wall built): if not, it stops and is put on the nearest tile it can stand.
 //              One that can't cross (no far side) is refused, and plans without cars for REFUSED ticks: it goes
 //              round, or stands where it is; it never presses against the car for ever.
-//   crossing   plain state on the animal (`cross`, saved): from, to, ticks, done. Each tick moves it a share of
+//   crossing   plain state on the animal (`cross`, a CarCrossing: StateTypes.cs; saved): from, to, ticks, done. Each tick moves it a share of
 //              what is left (integers, as Leaps.tick), so a save in the middle reads back and plays on the same.
 //              It does nothing else meanwhile: no biting, no turning back. Its tile (pos) is the tile under it.
 //   under      an animal under a car is out of reach: no blow, bite or shot finds it (hidden: Shooting, Work's
@@ -36,38 +36,6 @@
 // the few animals crossing; planning is A*'s own, a little more where cars are.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
-
-/// <summary>An animal going under or over a parked car: straight from `from` to `to` (SUB) over `ticks` ticks.</summary>
-public sealed class CarCrossing
-{
-    /// <summary>"under", "over" (a climb or scramble) or "leap".</summary>
-    public string how { get; set; } = "";
-    public Point from { get; set; } = new();
-    public Point to { get; set; } = new();
-    public double ticks { get; set; }
-    public double done { get; set; }
-    /// <summary>How high the car is where it crosses (cm): over, the top of its climb or the bar its leap clears;
-    /// under, the room beneath it.</summary>
-    public double top { get; set; }
-    /// <summary>Ticks a rabbit has stayed under the car, hiding.</summary>
-    public double held { get; set; }
-}
-
-public partial class Animal
-{
-    /// <summary>Going under or over a parked car (AnimalCars.cs), or nothing.</summary>
-    public CarCrossing? cross { get; set; }
-    /// <summary>A crossing was refused: no plans over cars before this tick.</summary>
-    public double? noCrossUntil { get; set; }
-}
-
-public partial class Dog
-{
-    /// <summary>Going under or over a parked car (AnimalCars.cs), or nothing.</summary>
-    public CarCrossing? cross { get; set; }
-    /// <summary>A crossing was refused: no plans over cars before this tick.</summary>
-    public double? noCrossUntil { get; set; }
-}
 
 public static class AnimalCars
 {
