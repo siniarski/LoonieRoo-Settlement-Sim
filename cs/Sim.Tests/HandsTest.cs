@@ -93,9 +93,9 @@ public class HandsTest
         expect(quick(state, 0).ok).toBe(true);
         expect(s.weapon).toBe(bat.id);
         expect(s.pack.includes(pistol.id)).toBe(true);
-        var empty = quick(state, 5);
+        var empty = quick(state, 2);
         expect(empty.ok).toBe(false);
-        expect(empty.reason).toBe("quick slot 6 is empty");
+        expect(empty.reason).toBe("quick slot 3 is empty");
         expect(quick(state, 9).ok).toBe(false);
     }
 

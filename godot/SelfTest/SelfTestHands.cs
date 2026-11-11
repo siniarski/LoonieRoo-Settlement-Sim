@@ -42,6 +42,8 @@ public partial class Game
         await Tap(Key.Key0);
         await Frames(2);
         Check("0 puts the weapon in your hand away: your hands are empty", you.weapon == null, $"wielding {you.weapon ?? "nothing"}");
+        // The three quick slots emptied first (the bag from the steps before fills them): the knife and the pistol take two.
+        for (int q = 0; q < Inventory.QUICK_SLOTS; q++) Commands.applyCommand(state, new Command { type = "setQuick", slot = q });
         var knife = Give("knife");
         var pistol = Give("pistol");
         var box = Give("ammo");

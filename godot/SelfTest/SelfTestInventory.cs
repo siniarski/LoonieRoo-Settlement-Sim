@@ -72,9 +72,9 @@ public partial class Game
         if (inventory.ItemCentre(hammer) is { } h0 && inventory.CellCentre(Inventory.BAG, 4, 5) is { } h1) await Drag(h0, h1, turnHalfway: true);
         Check("R while dragging turns the hammer, and it lands across", It(hammer).turned == true && It(hammer).gx == 3 && It(hammer).gy == 5, $"at {It(hammer).gx},{It(hammer).gy} turned {It(hammer).turned}");
 
-        // A drag onto a quick slot sets it (the hotbar's key 4 then takes the hammer up).
-        if (inventory.ItemCentre(hammer) is { } h2) await Drag(h2, inventory.QuickCentre(3));
-        Check("A drag onto quick slot 4 puts the hammer there", you.quick != null && you.quick[3] == hammer && you.pack.Contains(hammer), $"slot 4 {(you.quick != null ? you.quick[3] : "none")}");
+        // A drag onto a quick slot sets it (the hotbar's key 3 then takes the hammer up).
+        if (inventory.ItemCentre(hammer) is { } h2) await Drag(h2, inventory.QuickCentre(2));
+        Check("A drag onto quick slot 3 puts the hammer there", you.quick != null && you.quick[2] == hammer && you.pack.Contains(hammer), $"slot 3 {(you.quick != null ? you.quick[2] : "none")}");
 
         var takeAll = FindButton(inventory, "← Take everything");
         if (takeAll != null) await Click(takeAll.GetGlobalRect().GetCenter());

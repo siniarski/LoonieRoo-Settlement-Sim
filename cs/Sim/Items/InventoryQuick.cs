@@ -15,7 +15,20 @@ public static partial class Inventory
     /// <summary>Whether a quick slot takes this kind on its own: the list above, and every weapon you can wield (WeaponTable.cs).</summary>
     public static bool isQuickKind(string kind) => QUICK_KINDS.includes(kind) || Weapons.isWieldKind(kind);
 
-    public const int QUICK_SLOTS = 9;
+    /// <summary>Three (2026-11-12: the player's hotbar; nine before). A save's longer list keeps its first three in use.</summary>
+    public const int QUICK_SLOTS = 3;
+
+    /// <summary>Taking someone under control: what is in their hand has a quick slot (the first empty one), so the
+    /// hotbar shows it and its key puts it away and takes it up again.</summary>
+    public static void readyQuick(SimState state, Survivor s)
+    {
+        ensureQuick(state, s);
+        if (!Js.T(s.weapon) || s.quick.includes(s.weapon)) return;
+        for (var n = 0; n < QUICK_SLOTS && n < s.quick.length; n++)
+        {
+            if (s.quick[n] == "") { s.quick[n] = s.weapon; return; }
+        }
+    }
 
     /// <summary>What key `n` (0 for 1) uses: the slot's thing if it's in your bag, else another of its kind there. Old
     /// saves (no slots yet): the bag's n-th.</summary>

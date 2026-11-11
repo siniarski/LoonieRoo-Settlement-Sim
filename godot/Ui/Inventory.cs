@@ -590,7 +590,7 @@ public sealed partial class InventoryScreen : Control
                 if (focus != null && !focus.ground) Do(new Command { type = "arrange", containerId = focus.gridRef });
                 return true;
             case >= Key.Key1 and <= Key.Key9:
-                if (item == null || you == null || !Inventory.yours(you, item)) return false;
+                if (item == null || you == null || !Inventory.yours(you, item) || key - Key.Key1 >= Inventory.QUICK_SLOTS) return false;
                 Do(new Command { type = "setQuick", slot = (int)(key - Key.Key1), itemId = item.id });
                 return true;
         }

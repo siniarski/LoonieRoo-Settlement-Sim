@@ -1293,6 +1293,7 @@ public static partial class Commands
         survivor.pathVersion = -1;
         survivor.note = "under your control";
         state.control = new Control { survivorId = id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
+        Inventory.readyQuick(state, survivor);  // what's in your hand is on the hotbar
         return changed();
     }
 

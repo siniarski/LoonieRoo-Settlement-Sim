@@ -396,6 +396,7 @@ public partial class Game
             {
                 // Quick slots: survivor.quick, assigned on the inventory screen (InventoryGrid.cs quickItem).
                 int slot = (int)(key - Key.Key1);
+                if (slot >= Inventory.QUICK_SLOTS) break;
                 // The `quick` command: that slot's thing in hand (what you held into the bag) or used; again, put away.
                 if (Command(new Command { type = "quick", slot = slot }) && you.note?.Contains("bag is full") == true) view.Toast(you.note, 3500);
                 break;

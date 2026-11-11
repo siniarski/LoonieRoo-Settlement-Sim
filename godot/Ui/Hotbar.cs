@@ -1,4 +1,4 @@
-// The hotbar (2026-11-11): the nine quick slots along the bottom of the screen in first person, what each holds
+// The hotbar (2026-11-11; three slots since 2026-11-12, faint until something is in one): the quick slots along the bottom of the screen in first person, what each holds
 // (InventoryQuick.cs: survivor.quick, set on the inventory screen by a drag or 1-9 over a thing), the one in your
 // hand lit gold, and 0 for empty hands. Keys 1-9 send the `quick` command (that slot's thing in hand, or used; again,
 // put away), 0 `holster` (App/GameInput.cs). Reads state only.
@@ -57,10 +57,13 @@ public sealed partial class Hotbar : Control
             var r = new Rect2(n * (SLOT_W + GAP), 0, SLOT_W, SLOT_H);
             bool hands = n == Inventory.QUICK_SLOTS;
             var (name, kind, inHand) = hands ? ("hands", "", empty) : slots[n];
-            DrawRect(r, name != "" && !hands ? InventoryScreen.KindColour(kind) with { A = 0.85f } : new Color(0.08f, 0.09f, 0.085f, 0.75f));
-            DrawRect(r, inHand ? Kit.Gold : Ctx.Css("#3a423c"), false, inHand ? 2 : 1);
-            DrawString(Kit.Font, r.Position + new Vector2(4, 12), hands ? "0" : $"{n + 1}", HorizontalAlignment.Left, -1, 11, inHand ? Kit.Gold : Kit.Dim);
-            if (name != "") DrawString(Kit.Font, r.Position + new Vector2(4, 31), name, HorizontalAlignment.Left, SLOT_W - 6, 10, hands && !inHand ? Kit.Dim : Kit.Text);
+            // An empty slot is barely there; one with something in it (or the hands' slot when your hands are empty) shows.
+            bool filled = hands ? inHand : name != "";
+            float a = filled ? 0.7f : 0.12f;
+            DrawRect(r, filled && !hands ? InventoryScreen.KindColour(kind) with { A = a } : new Color(0.08f, 0.09f, 0.085f, a));
+            DrawRect(r, inHand ? Kit.Gold : Ctx.Css("#3a423c") with { A = filled ? 0.9f : 0.25f }, false, inHand ? 2 : 1);
+            DrawString(Kit.Font, r.Position + new Vector2(4, 12), hands ? "0" : $"{n + 1}", HorizontalAlignment.Left, -1, 11, inHand ? Kit.Gold : Kit.Dim with { A = filled ? 1f : 0.35f });
+            if (name != "" && filled) DrawString(Kit.Font, r.Position + new Vector2(4, 31), name, HorizontalAlignment.Left, SLOT_W - 6, 10, Kit.Text);
         }
     }
 }

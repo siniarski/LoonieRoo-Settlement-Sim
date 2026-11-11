@@ -340,7 +340,7 @@ public class InventoryGridTest
             expect(cmd(state, new Command { type = "useItem", itemId = state.items.First((i) => i.kind == "food" && i.carriedBy != null).id }).ok).toBe(true);
             InventoryTest.run(state, 40);
             expect(cmd(state, new Command { type = "arrange", containerId = crate.id }).ok).toBe(true);
-            expect(cmd(state, new Command { type = "setQuick", slot = 4, itemId = hammer.id }).ok).toBe(true);
+            expect(cmd(state, new Command { type = "setQuick", slot = 2, itemId = hammer.id }).ok).toBe(true);
             expect(cmd(state, new Command { type = "moveItem", itemId = bandage.id, containerId = "ground" }).ok).toBe(true);
             cmd(state, new Command { type = "swapItems", itemId = hammer.id, id = state.items.First((i) => i.kind == "bandage" && i.carriedBy != null).id });
             InventoryTest.run(state, 5);
@@ -354,21 +354,21 @@ public class InventoryGridTest
         public void T012_quick()
         {
             var (state, s, crate, items) = start("food", "food", "wood", "hammer");
-            expect(s.quick).toEqual(new List<string> { items[0].id, "", "", "", "", "", "", "", "" }.Select((x, i) => i == 1 ? items[3].id : x).ToList());
+            expect(s.quick).toEqual(new List<string> { items[0].id, "", "" }.Select((x, i) => i == 1 ? items[3].id : x).ToList());
             expect(Inventory.quickItem(state, s, 0)).toBe(items[0]);
-            expect(cmd(state, new Command { type = "setQuick", slot = 8, itemId = items[2].id }).ok).toBe(true);
-            expect(Inventory.quickItem(state, s, 8)).toBe(items[2]);
-            expect(cmd(state, new Command { type = "setQuick", slot = 9, itemId = items[2].id }).reason).toBe("no such quick slot");
+            expect(cmd(state, new Command { type = "setQuick", slot = 2, itemId = items[2].id }).ok).toBe(true);
+            expect(Inventory.quickItem(state, s, 2)).toBe(items[2]);
+            expect(cmd(state, new Command { type = "setQuick", slot = 3, itemId = items[2].id }).reason).toBe("no such quick slot");
             // Eat the first tin: the slot passes to the other.
             s.satiety = 100;
             expect(cmd(state, new Command { type = "useItem", itemId = Inventory.quickItem(state, s, 0).id }).ok).toBe(true);
             InventoryTest.run(state, 40);
             expect(Inventory.quickItem(state, s, 0)).toBe(items[1]);
-            // An old save's survivor (no slots) keeps the bag's first nine.
+            // An old save's survivor (no slots) keeps the bag's first three.
             s.quick = null;
             expect(Inventory.quickItem(state, s, 1)).toBe(Items.getItem(state, s.pack[1]));
-            expect(cmd(state, new Command { type = "setQuick", slot = 3 }).ok).toBe(true);
-            expect(s.quick).toHaveLength(9);
+            expect(cmd(state, new Command { type = "setQuick", slot = 2 }).ok).toBe(true);
+            expect(s.quick).toHaveLength(3);
         }
     }
 }
