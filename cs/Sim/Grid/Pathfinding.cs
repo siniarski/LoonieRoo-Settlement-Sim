@@ -30,11 +30,15 @@ public static partial class Pathfinding
         var tile = getTile(grid, x, y);
         bool openDoor = tile == DOOR && isOpen(grid, x, y);
         if (mover == CRAWLER) return tile == FLOOR || tile == BARRICADE || openDoor;
-        if (mover == VEHICLE || mover == ANIMAL) return tile == FLOOR;
+        if (mover == VEHICLE) return tile == FLOOR;
+        // The shallows (water with land beside it: Swim.depth) are waded by animals and the dead, at half pace
+        // (Swim.WADERS_PCT); deep water is still nobody's but yours.
+        bool shallows = tile == WATER && Swim.depth(grid, x, y) == Swim.SHALLOW;
+        if (mover == ANIMAL) return tile == FLOOR || shallows;
         if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
         if (mover == SURVIVOR) return isWalkable(grid, x, y);
         if (mover == FREE) return tile == FLOOR || tile == BARRICADE || openDoor;
-        return tile == FLOOR || openDoor; // the dead ("zombie", and a "runner"'s body)
+        return tile == FLOOR || openDoor || shallows; // the dead ("zombie", and a "runner"'s body)
     }
 
     /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>

@@ -81,7 +81,7 @@ public static class Walkers
             w.path = [];
             return true;
         }
-        var step = JsMath.min(speed, JsMath.floor(left));
+        var step = JsMath.min(Swim.waded(grid, w.pos, speed), JsMath.floor(left)); // half pace in the shallows
         if (step < 1)
         {
             w.path = [];

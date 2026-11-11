@@ -28,6 +28,13 @@ public static class Swim
     /// <summary>Your pace (percent of walking) wading, swimming, and swimming winded.</summary>
     public const int WADE_PCT = 60, SWIM_PCT = 40, STRUGGLE_PCT = 20;
 
+    /// <summary>The dead and animals wade the shallows (2026-11-12; Pathfinding.isPassable lets them) at this percent
+    /// of their pace. Deep water stops them as before, so a river of three tiles or more is still a barrier.</summary>
+    public const int WADERS_PCT = 50;
+
+    /// <summary>A mover's pace on the tile it is on: cut to WADERS_PCT in the shallows.</summary>
+    public static double waded(Grid grid, Point pos, double speed) => depth(grid, pos) == SHALLOW ? JsMath.max(1, JsMath.floor(speed * WADERS_PCT / 100)) : speed;
+
     /// <summary>Endurance paddling, a tick (running's cost); treading water, a point every TREAD_EVERY ticks.</summary>
     public const int SWIM_COST = 1, TREAD_EVERY = 4;
 

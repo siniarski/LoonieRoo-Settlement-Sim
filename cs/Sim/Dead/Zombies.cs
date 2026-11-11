@@ -251,7 +251,7 @@ public static partial class Zombies
                 return;
             }
         }
-        var speed = JsMath.ceil(((double)(Motion.SUB) / (Js.Get(ZombieKinds.VARIANTS, z.variant).ticksPerTile)));
+        var speed = Swim.waded(state.grid, z.pos, JsMath.ceil(((double)(Motion.SUB) / (Js.Get(ZombieKinds.VARIANTS, z.variant).ticksPerTile))));
         if (enter(state, z))
         {
             return;
