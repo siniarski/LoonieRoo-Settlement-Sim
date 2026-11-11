@@ -65,7 +65,7 @@ public sealed class Sheet
 
     public SheetSection Section(string id) => sections.First((s) => s.id == id);
     public SheetPart Part(string id) => parts.First((p) => p.id == id);
-    /// <summary>Worst first; empty for a survivor with nothing wrong.</summary>
+    /// <summary>Worst first, the good ones (Steeled, a mood boost) last at Fine; empty for a survivor with nothing of note.</summary>
     public List<SheetRow> Conditions => Section("conditions").rows;
 
     public override string ToString() => CharacterSheet.text(this);
@@ -298,6 +298,25 @@ public static class CharacterSheet
         int legs = Math.Max(gone.Count((l) => l.limb == "leg"), Skills.hasTrait(s, "lostLeg") ? 1 : 0);
         if (arms > 0) Add(Sev.Warn, 23, arms > 1 ? "Missing both arms" : "Missing an arm", $"{Skills.TRAIT_INFO["lostArm"].about}; mood {Signed(Skills.TRAIT_INFO["lostArm"].mood)}");
         if (legs > 0) Add(Sev.Warn, 24, legs > 1 ? "Missing both legs" : "Missing a leg", $"{Skills.TRAIT_INFO["lostLeg"].about}; mood {Signed(Skills.TRAIT_INFO["lostLeg"].mood)}");
+        // Once only on the HUD's card (godot/Ui/Card.cs, 2026-11-12): the card now reads this list.
+        double clutching = ControlMod.clutchedBy(state, s);
+        if (clutching > 0)
+            Add(clutching > 1 ? Sev.Bad : Sev.Warn, 25, clutching > 1 ? $"Grabbed ({clutching})" : "Grabbed",
+                $"the dead within reach drag at you: {Math.Min(100 - ControlMod.CLUTCHED_MIN, ControlMod.CLUTCH_PCT * clutching)}% slower", "hit them to break free");
+        if (s.thoughts.Any((t) => t.kind == "irradiated")) Add(Sev.Bad, 26, "Irradiated", Mood.THOUGHTS["irradiated"].label);
+        if (s.social < Wellbeing.LOW) Add(Sev.Warn, 27, "Lonely", $"company {Math.Round(s.social)} of {Wellbeing.NEED_MAX}", "company and someone to talk to");
+        if (s.comfort < Wellbeing.LOW) Add(Sev.Warn, 28, "Uncomfortable", $"comfort {Math.Round(s.comfort)} of {Wellbeing.NEED_MAX}", "somewhere decent to sleep and sit");
+        // The good ones last, severity fine (a mood boost that hurts is a note).
+        if (Resolve.isSteeled(s)) Add(Sev.Fine, 29, "Steeled", "hard to shake: panic comes slower");
+        foreach (var t in s.thoughts)
+        {
+            if (!Moodlets.BOOSTS.ContainsKey(t.kind)) continue;
+            var info = Mood.THOUGHTS[t.kind];
+            var name = System.Text.RegularExpressions.Regex.Replace(info.label, @" \(.*\)$", "");
+            name = char.ToUpperInvariant(name[0]) + name[1..];
+            if (list.Any((c) => c.row.label == name)) continue;
+            Add(info.effect > 0 ? Sev.Fine : Sev.Note, 30, name, info.label);
+        }
 
         var sec = new SheetSection { id = "conditions", title = "Conditions, worst first" };
         sec.rows.AddRange(list.OrderByDescending((c) => (int)c.sev).ThenBy((c) => c.order).Select((c) => c.row));
@@ -438,5 +457,40 @@ public static class CharacterSheet
         if (s.carrying != null && Items.getItem(state, s.carrying) is { } held) sec.rows.Add(new SheetRow { label = "Carrying", text = Items.nameOf(held) });
         if (s.cart != null) sec.rows.Add(new SheetRow { label = "Cart", text = "pulling one" });
         return sec;
+    }
+
+    // ---------------------------------------------------------------- doing
+
+    static readonly Dictionary<string, string> BUSY = new()
+    {
+        ["eat"] = "eating", ["search"] = "searching", ["drink"] = "drinking", ["sleep"] = "asleep", ["treat"] = "treating", ["build"] = "building",
+        ["repair"] = "repairing", ["forage"] = "foraging", ["cook"] = "cooking",
+    };
+
+    /// <summary>What they're doing, in a few words (the HUD's card and the colony's roster; was godot/Ui/Card.cs).</summary>
+    public static string activity(SimState state, Survivor s)
+    {
+        if (state.control?.survivorId == s.id)
+        {
+            var busy = state.control.busy;
+            if (busy != null) return $"{(BUSY.TryGetValue(busy.what, out var w) ? w : busy.what)}…";
+            if (state.control.running == true && (state.control.dx != 0 || state.control.dy != 0)) return BodyMod.isWinded(s) ? "too winded to run" : "running";
+            return s.note ?? "";
+        }
+        if (s.meal != null) return s.meal.progress > 0 ? (s.meal.seat != null ? "eating at a table" : "eating") : s.carrying != null ? "taking food to a table" : "going to eat";
+        if (s.treatment != null) return s.treatment.progress > 0 ? "treating themselves" : "going for a remedy";
+        if (s.arming != null) return "going for a weapon";
+        if (s.dressing != null) return "going for clothing";
+        if (s.drink != null) return s.drink.progress > 0 ? "drinking" : "going for a drink";
+        if (s.reading != null) return s.reading.progress > 0 ? "reading" : "going to read";
+        if (s.childUntil != null && s.sleep == null && s.meal == null) return "playing (a child)";
+        if (s.breakdown != null) return "having a breakdown";
+        if (s.leisure != null) return s.leisure.progress > 0 ? "relaxing" : "going to relax";
+        if (s.sleep != null && Health.isHurt(s.health)) return s.sleep.asleep ? "resting (hurt)" : "going to rest (hurt)";
+        if (s.sleep != null) return s.sleep.asleep ? $"asleep ({(s.sleep.bedId != null ? "bed" : "floor")})" : "going to bed";
+        var job = s.jobId != null ? Jobs.getJob(state, s.jobId) : null;
+        if (job != null) return $"{job.type} ({job.x}, {job.y})";
+        if (s.goal != null) return s.order?.kind == "follow" ? "following" : s.order?.kind == "loot" ? "going to loot" : s.order != null ? "going back to their post" : "walking (ordered)";
+        return s.order != null ? Orders.describeOrder(s.order) : "idle";
     }
 }

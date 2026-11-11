@@ -64,7 +64,7 @@ public static partial class Skills
 
     public static double toolBonus(SimState state, Survivor s, string type)
     {
-        if (!Js.T(s.tool) || ((state.tick % TOOL_EVERY) != 0))
+        if (!Js.T(s.tool) || ((Time.slowCount(state.tick) % TOOL_EVERY) != 0))
         {
             return 0;
         }
@@ -80,7 +80,7 @@ public static partial class Skills
             return 0;
         }
         s.xp[Js.Idx(type)] = (Js.Q(Js.Get(s.xp, type), 0)) + 1;
-        return ((1 + (((state.tick % 20) < skillLevel(s, type)) ? 1 : 0)) + toolBonus(state, s, type)) + ((Moodlets.boosted(s, "faster") && ((state.tick % 4) == 0)) ? 1 : 0);
+        return ((1 + (((Time.slowCount(state.tick) % 20) < skillLevel(s, type)) ? 1 : 0)) + toolBonus(state, s, type)) + ((Moodlets.boosted(s, "faster") && ((Time.slowCount(state.tick) % 4) == 0)) ? 1 : 0);
     }
 
     /// <summary>A trait for a new arrival, from their id: three in four get one.</summary>

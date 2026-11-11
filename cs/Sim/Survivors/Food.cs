@@ -21,7 +21,7 @@ public static partial class Food
     /// <summary>A hot meal (cooked at a stove) fills more.</summary>
     public const int HOT_MEAL_VALUE = 2600;
 
-    /// <summary>Ticks it takes to eat.</summary>
+    /// <summary>Ticks it takes to eat at day scale 1 (a survivor: Time.scaled; you eat in real time).</summary>
     public const int EAT_TICKS = 30;
 
     /// <summary>A hungry survivor who found no food looks again after this many ticks.</summary>

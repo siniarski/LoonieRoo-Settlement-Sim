@@ -273,4 +273,19 @@ public class CharacterSheetTest
         expect(hurt.Contains("HEALTH: dying")).toBe(true);
         expect(hurt.Contains("[critical] Infected")).toBe(true);
     }
+
+    [Fact(DisplayName = "character sheet > what only the HUD's card listed is on the sheet: lonely, uncomfortable, steeled last")]
+    public void WhatTheCardHad()
+    {
+        var (state, s) = start();
+        s.social = 0;
+        s.comfort = 0;
+        s.resolve = Resolve.STEELED;
+        var sheet = CharacterSheet.build(state, s);
+        expect(has(sheet, "Lonely")).toBe(true);
+        expect(has(sheet, "Uncomfortable")).toBe(true);
+        expect(labels(sheet)[^1]).toBe("Steeled");
+        expect(sheet.Conditions[^1].severity).toBe(Sev.Fine);
+        expect(CharacterSheet.activity(state, s)).toBe(s.note ?? "");
+    }
 }

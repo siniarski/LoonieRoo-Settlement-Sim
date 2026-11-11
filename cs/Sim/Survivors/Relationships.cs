@@ -43,7 +43,7 @@ public static partial class Relationships
     /// <summary>Every BOND_EVERY ticks: survivors near each other, both awake, warm to each other.</summary>
     public static void updateRelationships(SimState state)
     {
-        if ((state.tick % BOND_EVERY) != 0)
+        if (!Time.slowEvery(state.tick, BOND_EVERY))
         {
             return;
         }

@@ -61,7 +61,7 @@ public static partial class Dogs
         {
             updateDog(state, dog, budget);
         }
-        if (((state.tick % PET_EVERY) == 0) && (state.dogs.length > 0))
+        if (Time.slowEvery(state.tick, PET_EVERY) && (state.dogs.length > 0))
         {
             foreach (var s in Js.Iter(state.survivors))
             {

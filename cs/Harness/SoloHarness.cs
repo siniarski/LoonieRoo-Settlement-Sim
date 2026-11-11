@@ -34,6 +34,42 @@ public partial class SoloHarness
         return JsMath.max(JsMath.abs(a.x - b.x), JsMath.abs(a.y - b.y));
     }
 
+    /// <summary>A colonist's path, around solid furniture and trees: furniture stops you on foot (FurnitureBody.cs) but not a
+    /// colonist, so their path can run through a shelf you then push against all day (seed 4 starved so, 2026-11-12).
+    /// Breadth first over the four sides; null past maxExpand tiles (then the colonist path is the fallback).</summary>
+    public static List<Point>? youPath(SimState state, Point start, IReadOnlyList<Point> goals, int maxExpand = 60000)
+    {
+        var g = state.grid;
+        var goal = new HashSet<double>(goals.Select((p) => ((double)p.y * g.width) + p.x));
+        var from = new Dictionary<double, double> { [((double)start.y * g.width) + start.x] = -1 };
+        var queue = new Queue<Point>();
+        queue.Enqueue(start);
+        while (queue.Count > 0 && from.Count <= maxExpand)
+        {
+            var p = queue.Dequeue();
+            var k = ((double)p.y * g.width) + p.x;
+            if (goal.Contains(k))
+            {
+                var path = new List<Point>();
+                for (var at = k; from[at] >= 0; at = from[at]) path.Add(new Point { x = (int)(at % g.width), y = (int)Math.Floor(at / g.width) });
+                path.Reverse();
+                return path;
+            }
+            foreach (var d in Pathfinding.DIRS)
+            {
+                int nx = p.x + d.x, ny = p.y + d.y;
+                var nk = ((double)ny * g.width) + nx;
+                if (!Grids.inBounds(g, nx, ny) || from.ContainsKey(nk)) continue;
+                if (!Pathfinding.isPassable(g, nx, ny) || !Pathfinding.crossable(g, p.x, p.y, nx, ny)) continue;
+                var f = FurnitureMod.furnitureAt(state, nx, ny);
+                if (FurnitureBody.solid(f) || (f?.kind == "tree" && !goal.Contains(nk))) continue;  // a trunk met head-on stops you too (Trunks.pushOut)
+                from[nk] = k;
+                queue.Enqueue(new Point { x = nx, y = ny });
+            }
+        }
+        return null;
+    }
+
     /// <summary>Walk a path to a tile next to (or onto) a target, and use it on arrival. You move freely (Motion.cs): steer toward the centre of the next tile on the path, opening a closed door that's next in the way (a colonist's path goes through doors; you have to open them).</summary>
     public static void goUse(SimState state, Survivor s, Bot bot, string key, Point target, bool onto = false, string act = "use", bool run = false)
     {
@@ -59,7 +95,7 @@ public partial class SoloHarness
         }
         if (((bot.pathFor != key) || (bot.path.length == 0)) || ((state.tick % 40) == 0))
         {
-            bot.path = Pathfinding.findPathToAny(state.grid, at, Js.T(onto) ? [target] : Grids.neighbours4(state.grid, target.x, target.y)) ?? [];
+            { IReadOnlyList<Point> goals = Js.T(onto) ? [target] : Grids.neighbours4(state.grid, target.x, target.y); bot.path = youPath(state, at, goals) ?? Pathfinding.findPathToAny(state.grid, at, goals) ?? []; }
             bot.pathFor = key;
         }
         var i = bot.path.findIndex((p) => (p.x == at.x) && (p.y == at.y));
@@ -136,7 +172,7 @@ public partial class SoloHarness
         options.Sort((a, b) => (a.score != b.score) ? b.score.CompareTo(a.score) : ((a.t.y != b.t.y) ? a.t.y.CompareTo(b.t.y) : a.t.x.CompareTo(b.t.x)));
         foreach (var (_, t, d) in options.Take(8))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [t]);
+            var path = youPath(state, s.pos, [t], 4000);
             if (path == null || path.length == 0 || path.length > (2 * d) + 6)
             {
                 continue;
@@ -503,14 +539,20 @@ public partial class SoloHarness
                 { goUse(state, s, bot, $"w{Js.Str(w.id)}", Js.NN(w.pos)); return; }
             }
         }
-        if ((Js.T((!Js.T(process.env.NO_BARRICADE) && !Time.isNight(state.tick)) && Js.T(bot.door))) && (Grids.getTile(state.grid, bot.door.x, bot.door.y) == "door"))
+        // The shelter's door: a tile door to barricade, or an edge door (every generated building's and the start's,
+        // 2026-11-12) to board up from inside (Handiwork.plan: work the tile across it, wood in hand or bag).
+        var edgeDoor = Js.T(bot.doorOut) ? Handiwork.doorBetween(state.grid, Js.NN(bot.door), Js.NN(bot.doorOut)) : -1;
+        var unbarred = Js.T(bot.door) && (Js.T(bot.doorOut) ? ((edgeDoor >= 0) && !state.grid.edgeBoarded.includes(edgeDoor)) : (Grids.getTile(state.grid, bot.door.x, bot.door.y) == "door"));
+        if (!Js.T(process.env.NO_BARRICADE) && !Time.isNight(state.tick) && unbarred)
         {
-            var door = bot.door;
+            var door = Js.NN(bot.doorOut ?? bot.door);
+            var stand = bot.doorOut != null ? bot.door : null;
             var wood = inBag(["wood"]) ?? (Js.T(s.carrying) ? state.items.find((i) => (i.id == s.carrying) && (i.kind == "wood")) : null);
             if (Js.T(wood))
             {
                 bot.goal = "barricade";
-                if (((JsMath.abs(s.pos.x - door.x) + JsMath.abs(s.pos.y - door.y)) == 1) && !Js.T(c.busy))
+                var there = (stand != null) ? ((s.pos.x == stand.x) && (s.pos.y == stand.y)) : ((JsMath.abs(s.pos.x - door.x) + JsMath.abs(s.pos.y - door.y)) == 1);
+                if (there && !Js.T(c.busy))
                 {
                     if (Js.T(Js.T(c.dx) || Js.T(c.dy)))
                     {
@@ -522,6 +564,7 @@ public partial class SoloHarness
                     }
                     return;
                 }
+                if (stand != null) { goUse(state, s, bot, "door", stand, true, null); return; }
                 { goUse(state, s, bot, "door", door, false, "work"); return; }
             }
             var lying = Js.Get(items("wood"), 0);
@@ -662,7 +705,15 @@ public partial class SoloHarness
         var home = Js.Clone(s0.pos);
         var probe = Probe.begin(state, seed, home);
         var door = Space.nearestTile(state.grid, bed, (x, y) => Grids.getTile(state.grid, x, y) == "door", 400);
-        Bot bot = new Bot { door = door, hunted = 0, barricaded = 0, goal = "", path = [], pathFor = "", searched = 0, ate = 0, drank = 0, slept = 0, fled = 0, foraged = 0, sneaked = 0, drove = 0, driveTo = null, stuck = 0, treated = 0, amputated = 0 };
+        Point? doorOut = null;
+        if (door == null)
+        {
+            // No tile door: the indoor tile beside the nearest edge door (bot.door), and the tile across it (bot.doorOut).
+            Point? across(int x, int y) => Pathfinding.DIRS.Select((d) => new Point { x = x + d.x, y = y + d.y }).FirstOrDefault((o) => Handiwork.doorBetween(state.grid, new Point { x = x, y = y }, o) >= 0 && !Rooms.isIndoors(state, o.x, o.y));
+            door = Space.nearestTile(state.grid, bed, (x, y) => Rooms.isIndoors(state, x, y) && across(x, y) != null, 400);
+            if (door != null) doorOut = across(door.x, door.y);
+        }
+        Bot bot = new Bot { door = door, doorOut = doorOut, hunted = 0, barricaded = 0, goal = "", path = [], pathFor = "", searched = 0, ate = 0, drank = 0, slept = 0, fled = 0, foraged = 0, sneaked = 0, drove = 0, driveTo = null, stuck = 0, treated = 0, amputated = 0 };
         void log(string why)
         {
             var s = ControlMod.controlled(state);
@@ -725,6 +776,8 @@ public partial class Bot
 {
     public string goal { get; set; } = "";
     public Point? door { get; set; }
+    /// <summary>For an edge door: the tile across it, outside (door is then the indoor tile you work it from).</summary>
+    public Point? doorOut { get; set; }
     public double hunted { get; set; }
     public double barricaded { get; set; }
     public List<Point> path { get; set; } = new();

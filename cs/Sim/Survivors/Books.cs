@@ -109,7 +109,7 @@ public static partial class Books
         {
             s.note = $"reading {Js.Str(describeBook(book))}";
         }
-        if (s.reading.progress < READ_TICKS)
+        if (s.reading.progress < Time.scaled(READ_TICKS))
         {
             return true;
         }

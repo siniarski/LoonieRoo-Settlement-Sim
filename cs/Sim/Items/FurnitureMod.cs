@@ -35,7 +35,8 @@ public static partial class FurnitureMod
     /// <summary>Wood on a grown tree. A chopped tree grows one back every TREE_REGROW_TICKS (three days), up to this. Was 3 every 2 days: generated forests flooded the map with wood.</summary>
     public const int TREE_WOOD = 2;
 
-    public static readonly double TREE_REGROW_TICKS = ((double)(3) * (4800));
+    /// <summary>In slow ticks (Time.slowEvery): three days at any day length.</summary>
+    public static readonly double TREE_REGROW_TICKS = ((double)(3) * (Time.BASE_TICKS_PER_HOUR * Time.HOURS_PER_DAY));
 
     /// <summary>Containers (crates) and decor in generated buildings (Buildings.cs).</summary>
     public static readonly List<string> CONTAINER_LOOKS = ["counter", "icebox", "shelf", "wardrobe", "dresser", "cabinet", "toolbox", "locker", "desk", "pallet", "sack", "crate", "sink", "bin", "nightstand", "bookcase"];
