@@ -184,6 +184,7 @@ public class Profile
         S("ControlMod.reconcileControl", state, ControlMod.reconcileControl);
         S("Doors.closeBehind", state, Doors.closeBehind);
         S("movers.syncStep", state, (st) => { foreach (var e in Js.Iter(Tick.movers(st))) if (!Tick.isFree(st, e)) Motion.syncStep(e); });
+        S("Snow.tick", state, Snow.tick);
         S("Fog.updateFog", state, Fog.updateFog);
         state.tick = Js.I(state.tick + 1);
     }

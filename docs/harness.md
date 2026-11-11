@@ -33,8 +33,29 @@ vars below for each.
   edge reads, room labels, sight, paths, reachability, and each after a wall change), the best of several rounds in
   nanoseconds an operation. For comparing two builds when whole ticks are too noisy to call a few percent: build it
   against each and read the two reports side by side.
-- **save compat** (SaveCompat.cs): DUMP=dir writes saves, bug reports and states of a few played worlds; CHECK=dir
+- **save compat** (SaveCompat.cs; written for the move from schema 77 to 78 and only meaningful for it): DUMP=dir writes saves, bug reports and states of a few played worlds; CHECK=dir
   loads another build's and compares (a file of this schema must also be written again byte for byte).
+
+- **dormant** (Bench.cs): what waking the dormant dead costs as their number grows (a 1024 world, 3 or 200 survivors).
+- **save speed** (SaveSpeed.cs; REPS, SAVES=size:start|all,..., WHOLE_MAX): how long saving and loading take, chunked
+  and whole, and where the time goes.
+- **gen profile**, **gen profile create**, **gen profile big**, **gen profile saves**, **gen profile roads**, **gen plan
+  hashes** (GenProfile.cs; SIZES or SIZE, WORLD_SIZES, SAVES, PLAN=0, STATE=0, ALL=1, WHOLE=0, DIAG=x,y): world
+  generation by phase, at size, and the plans' hashes to compare two builds.
+- **building loot**, **building sites** (BuildingLoot.cs; SEEDS, SIZE, SEED): what generated buildings hold; where
+  they stand (for pictures).
+- **census**, **census noise** (Census.cs; SEEDS, PRESET): the dead in a fresh world (how many, how near the start);
+  how many sleepers each weapon's noise would wake.
+- **jobs probe** (Profile.cs; SCENES, PROBE_REPS): the cost of `reconcileJobs` on one scene.
+- **harness >** (HarnessTest.cs): tests of the balance players themselves.
+
+More env vars: **OUT**=path overrides where a report is written (every fact); world balance also reads WILDFIRE and
+SNOW_SLOW; profile reads DEEP=zombies (the dead's update, step by step); tick dumps read DUMP_AT=ticks and SEEDS.
+
+**One at a time.** The harness runs one test class at a time (as the sim's tests do: the sim has process-wide
+state), but always name the fact you want with `--filter`: a bare `dotnet test cs/Harness` runs everything, for hours.
+The harness is not in the solution or the check, so a change to the sim can break its build unseen: `dotnet build
+cs/Harness` after changing a sim function it calls.
 
 **PROBE=path** (both players, Probe.cs): a read-only observer that writes path.txt (a summary line per run: deaths by
 cause from every event, prey caught and meat, drinks by source, how thirst met the other needs; each death with the

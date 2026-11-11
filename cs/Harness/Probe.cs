@@ -1,6 +1,6 @@
 // A read-only observer for the balance players (2026-11-10, balance check): every event (the state keeps only
 // the last 50), each death with the dying one's last moments, drinks by source, prey caught and meat it gave.
-// Set PROBE=path to write it (path.txt the summary and deaths, path.events.txt every event). It never changes
+// Set PROBE=path to write it (path.txt the summary and deaths, path.events-s<seed>.txt every event). It never changes
 // the state, so a run with it is the same run as without.
 #nullable disable warnings
 using LoonieRoo.Sim;

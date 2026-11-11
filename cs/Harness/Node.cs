@@ -1,8 +1,13 @@
-// The bits of Node the translated harness files use (fs, performance, process.env, the inspector), in C#.
-// Paths are relative to the repo root, as when `npm run harness` runs from there.
+// The bits of Node the harness files translated from TypeScript use (fs, performance, process.env), in C#, and what
+// every harness file shares: the repo's root (paths are relative to it) and the reports' folder, made on first use
+// (cs/Harness/out is not in git, so a fresh checkout has none).
 
 using System.Diagnostics;
 using LoonieRoo.Sim;
+
+// One at a time, as the sim's tests are: the sim has process-wide state (the clock's scale, caches), and timings
+// taken beside another run mean nothing. (A bare `dotnet test cs/Harness` would otherwise run its classes together.)
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace LoonieRoo.Harness;
 
@@ -10,6 +15,8 @@ public static class Node
 {
     /// <summary>The repo root: the nearest folder up from the build output with a CLAUDE.md.</summary>
     public static readonly string Root = FindRoot();
+
+    static Node() => Directory.CreateDirectory(Path.Combine(Root, "cs/Harness/out"));
 
     static string FindRoot()
     {
@@ -52,9 +59,6 @@ public static class Node
         public string? TRACE => Get("TRACE");
         public string? TRACE_EVERY => Get("TRACE_EVERY");
         public string? NO_BARRICADE => Get("NO_BARRICADE");
-        public string? PROFILE_DAY => Get("PROFILE_DAY");
-        public string? ONLY => Get("ONLY");
-        public string? TICKS => Get("TICKS");
         public string? LOG => Get("LOG");
         public string? LOG_AT => Get("LOG_AT");
         public string? WILDFIRE => Get("WILDFIRE");

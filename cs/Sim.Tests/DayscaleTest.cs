@@ -54,7 +54,6 @@ public partial class DayscaleTest
             Tick.tick(state);
             expect(Time.DAY_LENGTH).toBe(((double)(Time.BASE_TICKS_PER_HOUR) * (Time.HOURS_PER_DAY)));
             expect(Mood.THOUGHTS["sawDeath"].duration).toBe(((double)(2) * (Time.DAY_LENGTH)));
-            expect((Func<SimState, Survivor, string, double>)((__f0, __f1, __f2) => Skills.workStep(__f0, __f1, __f2))).toBeTypeOf("function");
         }
 
         public void Dispose()

@@ -122,7 +122,7 @@ public partial class PeopleTest
             runUntil(state, (_) => Js.NN(Js.Get(state.survivors, 0)).thoughts.some((t) => t.kind == "dog"), 400);
         }
 
-        [Fact(DisplayName = "dogs > strays turn up some days, and expeditions sometimes bring one home")]
+        [Fact(DisplayName = "dogs > a dog can be added (strays and expeditions' finds are not tested)")]
         public void T009_strays_turn_up_some_days_and_expeditions_sometimes_bring_one()
         {
             var state = setup(["s...."]);

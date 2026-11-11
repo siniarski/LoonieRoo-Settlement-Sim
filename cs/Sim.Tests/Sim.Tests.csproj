@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The sim's tests (xUnit; Vitest.cs keeps the ported tests' expect()). Run: dotnet test cs/LoonieRoo.slnx -->
+  <!-- The sim's tests (xUnit; Vitest.cs keeps the ported tests' expect()). Run: ./check.sh (it shards them), or dotnet test cs/Sim.Tests with a filter. -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

@@ -1,4 +1,4 @@
-// vitest's expect, for the tests translated from tests/*.test.ts (cs/tools/ts2cs.mjs writes cs/Sim.Tests/Generated).
+// vitest's expect, for the tests translated from the TypeScript's tests/*.test.ts and those written since.
 // Same names and meanings: toBe is JS's Object.is (numbers by value, whatever their C# type; objects by reference);
 // toEqual compares as JSON (as the TypeScript's state would serialise: a missing field and null the same);
 // toMatchObject checks a subset. A failure throws with vitest's message plus the test's own (expect(x, msg)).
