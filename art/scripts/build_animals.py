@@ -299,6 +299,39 @@ def paint_obj(obj, spec, eye_verts=0, antler=False):
         attr.data[v.index].color_srgb = (*c, 1.0)
 
 
+# The coat's detail (docs/textures.md): the kit's fur layer, laid by the body's own coordinates so it moves with the
+# skin (a texture laid by position would swim on a body that bends). Metres a repeat of the fur covers, by kind.
+FUR_METRES = {"rabbit": 0.18, "dog": 0.32, "wolf": 0.38, "deer": 0.4, "bear": 0.5}
+
+
+def detail_uvs(obj, spec, eye_verts=0, antler=False):
+    """Two UV maps for the kit (godot/assets/shaders/surface_detail.gdshaderinc): "detail", which layer and how many
+    repeats a metre per face (the fur on the coat, none on the eyes and antlers), and "coat", the rest position in
+    metres projected along the face's main axis (strands run down the flanks and chest and back along the spine).
+    glTF flips V (Godot reads 1 - v): the first map is written (layer + 1, 1 - repeats), the second's v negated."""
+    from build_surfaces import LAYERS
+    fur = [name for name, *_ in LAYERS].index("fur")
+    me = obj.data
+    what = me.uv_layers.new(name="detail")
+    coat = me.uv_layers.new(name="coat")
+    me.uv_layers.active = what
+    first = len(me.vertices) - eye_verts
+    reps = 1.0 / FUR_METRES[spec["kind"]]
+    for poly in me.polygons:
+        plain = antler or any(v >= first for v in poly.vertices)
+        n = poly.normal
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            if abs(n.z) >= max(abs(n.x), abs(n.y)):
+                u, v = co.x, co.y            # the back and belly: along the spine, tailward (+y)
+            elif abs(n.x) >= abs(n.y):
+                u, v = co.y, -co.z           # the flanks: down
+            else:
+                u, v = co.x, -co.z           # the chest and the rump: down
+            what.data[li].uv = (0.0, 1.0) if plain else (-(fur + 1.0), 1.0 - reps)
+            coat.data[li].uv = (u, -v)
+
+
 def eye_spots(spec, hi):
     """Each eye's centre: on the head's surface nearest the spec's point, sunk 60% of its radius."""
     from mathutils.bvhtree import BVHTree
@@ -331,6 +364,7 @@ def make_lods(spec, hi, arm, t0):
         fill_unweighted(obj, arm)
         tidy_weights(obj)
         paint_obj(obj, spec, eye_verts)
+        detail_uvs(obj, spec, eye_verts)
         obj.data.materials.clear()
         obj.data.materials.append(mat)
         for p in obj.data.polygons:
@@ -341,6 +375,7 @@ def make_lods(spec, hi, arm, t0):
             a = antler_obj(f"{spec['kind']}_antlers_lod{i}", spec, 1.0 if i == 0 else 0.4)
             bind(a, arm)
             paint_obj(a, spec, antler=True)
+            detail_uvs(a, spec, antler=True)
             a.data.materials.append(mat)
             out.append(a)
     return out

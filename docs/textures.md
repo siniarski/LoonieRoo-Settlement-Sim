@@ -90,3 +90,16 @@ box(g, size, loc, mat("cloth", lin(92, 84, 96)))   # or inline; mul(c, k) keeps 
   draw through them) are the old ones with `SURFACE_BY_OBJECT` and `ALBEDO = COLOR.rgb * SURFACE_DETAIL`, made with
   `Surfaces.Shader`; metalness and roughness from the alpha as before.
 - Rebuild a file and re-import: `experiments/textures/models/rebuild.sh [furniture items world cabins]`.
+
+**Living things and plants** (log/2026-11-11-15-textures-living.md; how a body picks its layer: docs/characters.md
+"Detail on bodies"):
+- **People and the dead**: cloth on their clothes, rubber on shoes and boots, by the look model's own atlas UV and a
+  detail map beside each file (`<file>_detail.png`, red cloth, green shoe; art/scripts/build_detail_maps.py), cloth
+  repeated every 0.4 m, faded out from 2 to 5 m. Skin, hair, eyes plain. Shader: Characters/recolour.gdshaderinc
+  (calls `surface_sample` itself; made after `Surfaces.Ensure()`).
+- **Animals**: fur on the coat by UV2 in metres (build_animals.py `detail_uvs`), the kit's own fade; eyes and antlers none.
+- **Trees** (and the saplings and bushes that wear the trees' bark material): bark laid by the tree's unswayed object
+  position, 1.5 repeats a metre, in place of the two 3D noise furrows the shader had (cheaper: one sample for sixteen
+  hashes), times 0.9 so a trunk's tone is unchanged near and far. Leaves keep their own texture.
+- **Left plain**: grass tufts and weeds (blades a few pixels wide: no layer helps), the foliage masses, the burnt
+  stumps (Fires.cs: near black, a multiplier shows nothing). The world has no felled stumps or logs to texture.
