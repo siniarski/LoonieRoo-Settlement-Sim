@@ -76,6 +76,8 @@ public sealed partial class Hud : Control
     int frames;
     /// <summary>First person: the dot in the middle of the screen.</summary>
     readonly Crosshair crosshair = new();
+    /// <summary>First person: the quick slots along the bottom (Hotbar.cs).</summary>
+    public readonly Hotbar hotbar = new();
     int overviewFrame;
 
     public Hud(View view, IGameFiles files)
@@ -146,6 +148,8 @@ public sealed partial class Hud : Control
         crosshair.SetAnchorsPreset(LayoutPreset.Center);
         AddChild(ammoReadout);
         Pin(ammoReadout, 0.5f, 1, 0, -64, GrowDirection.Both, GrowDirection.Begin);
+        AddChild(hotbar);
+        Pin(hotbar, 0.5f, 1, 0, -12, GrowDirection.Both, GrowDirection.Begin);
     }
 
     /// <summary>The gun in your hand: its rounds of its magazine, the bag's, and what to do about an empty one.</summary>
@@ -231,7 +235,7 @@ public sealed partial class Hud : Control
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
-                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing or shoot · X reload · Q next weapon · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · G flashlight (in a car: headlights) · Z light switch · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing or shoot (bare hands punch) · right mouse held: aim down the sights (with a gun; else use) · X reload · Q next weapon · E use · R work · V follow me · H hold · L loot (where you look) · T talk · G flashlight (in a car: headlights) · Z light switch · Tab inventory · 1-9 quick slot: take in hand or use (again: put away) · 0 empty hands · M map and colony · F let go · K hide"
                     : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
                 : "K: keys" + LightPrompt(state, you)
             : view.selectedId != null ? "F: take control of the selected survivor" : "";
@@ -261,6 +265,7 @@ public sealed partial class Hud : Control
         UpdateConditions(state);
         UpdateCard(state);
         UpdateAmmo(state);
+        hotbar.Update(state, ControlMod.controlled(state), view.firstPerson && !view.showInventory && view.menu == null);
         bool stowed = view.firstPerson && !view.showInventory;
         if (stowed) card.Visible = false;
         crosshair.Visible = view.firstPerson && !view.showInventory && view.menu == null;

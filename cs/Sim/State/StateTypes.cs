@@ -207,8 +207,12 @@ public partial class Control
     public Point? aim { get; set; }
     public double nextSwing { get; set; }
     public double? swungTick { get; set; }
+    /// <summary>The tick of your last shot (a swing that fired: swungTick too); a swing on another tick was a blow, a dry gun's too.</summary>
+    public double? shotTick { get; set; }
     public bool? running { get; set; }
     public bool? sneaking { get; set; }
+    /// <summary>Aiming down the sights (the `sights` command; it counts only with a gun in hand: ControlMod.sightsUp).</summary>
+    public bool? sights { get; set; }
     public ControlBusy? busy { get; set; }
     /// <summary>The id of the parked car you are standing on (CarLeaps.cs), or null on the ground.</summary>
     public string? onCar { get; set; }

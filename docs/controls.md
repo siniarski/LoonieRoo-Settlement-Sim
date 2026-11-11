@@ -6,8 +6,9 @@ the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 ## First person (playing a survivor, since 2026-11-08)
 
 You see through your survivor's eyes. The mouse looks; WASD walks the way you face (strafing with A and D); Shift
-runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings; right-click
-or E uses what you look at on the ground beside you (else what's in front).
+runs; Space jumps (vaults a broken window or a barricade just ahead, hops a tile of water); click swings (bare hands
+punch); E uses what you look at on the ground beside you (else what's in front), and so does a right-click unless a gun
+is in your hand (then the right mouse held aims down the sights: Weapons below).
 
 **Space at a parked car** (within a swing's reach ahead, on the nearest of the four sides of your way). Walking into it
 (W held), Space goes **over** it to the far side: a slide over the bonnet or the boot, a longer scramble over the roof
@@ -31,7 +32,18 @@ behind it, what you wear and wield, skills and your story. It only reads: nothin
 Click swings what is in your hand, or, with a loaded gun, fires it exactly where you look (the `fire` command: a
 direction). **X** reloads the gun in hand from your bag (the whole magazine for a pistol, a round at a time for a
 revolver, shotgun or rifle; shooting or walking off stops it). **Q** takes up the next weapon from the bag, the one
-in hand going into the bag in its place (or put a weapon in hand from the Tab screen as before). With a gun in hand
+in hand going into the bag in its place (or put a weapon in hand from the Tab screen as before). The empty gun is a
+club, and is drawn as one: an empty pistol's click is a pistol-whip, a long gun's a butt stroke (a swing's whoosh, no
+kick, no flash). **The right mouse held** with a gun in hand aims down the sights (2026-11-11, the `sights` command):
+the gun comes up to the eye line, the view narrows, the gun's own spread and the moving part of it are halved
+(Shooting.SIGHTS_SPREAD_PCT), you walk at 60% (ControlMod.SIGHTS_PCT) and can't run. Without a gun, a right-click is
+still "use" (E always is).
+
+**The hotbar** (2026-11-11): the nine quick slots along the bottom of the screen, the one in your hand lit gold, and
+0 for empty hands. **1-9** take that slot's thing in hand (a weapon, a tool), what you held going into the bag (onto the
+ground, with a note on screen, if the bag can't take it), or use it (eat, treat, the flashlight); **the same number
+again** puts it away into the bag; **0** empties your hand. A full bag keeps it in hand and says so. Set the slots on
+the inventory screen: drag a thing onto a quick slot, or press 1-9 over it. With a gun in hand
 the bottom of the screen reads its rounds, the bag's rounds and what to do ("X: reload", "out of ammunition"); the
 empty gun is a club. Two-handed weapons (sledgehammer, spear, axe, shotgun, rifle, crossbow) need free hands: not
 while you carry something in them or push a cart. An axe or a hammer in the tool slot is what you hit with when your
@@ -80,7 +92,7 @@ truck's 12 x 10, a coat or body on the floor), the pockets of what's in it, and 
   mouse looks round the cabin and out of it. Look down for the dashboard: the speedometer (km/h), the fuel gauge,
   the temperature (it climbs as the car is damaged), and the lamps (FUEL under 15%, ENGINE under half health, OIL
   and BATT when the engine has stopped, LIGHTS for the headlights).
-- 1-9 use the quick slots (assigned on the inventory screen; see below). R works the tile in front (repair;
+- 1-9 use the quick slots, 0 empties your hand (the hotbar: Weapons above; assigned on the inventory screen, below). R works the tile in front (repair;
   with wood: barricade a door or board a window, reinforce, build a wall). X reloads, Q switches weapon (see
   Weapons above); in the Colony tab a click on a tile fires a loaded gun at it.
 - T talk (neighbours' people may ask you for an errand), V "follow me", H "hold here", L "loot that room" (under the

@@ -484,6 +484,9 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
 
 ## Controls and UI (the browser's, mostly carried into the Colony tab)
 
+- **Hands in first person (2026-11-11, the first hand-played pass).** The quick slots are a hotbar: 1-9 send `quick` (that slot's thing in hand or used; the same key again puts it away), 0 sends `holster`; a full bag keeps the weapon in hand and says so. The right mouse held with a gun in hand aims down the sights (`sights`: the gun's own and moving spread halved, 60% pace, no running); without a gun a right-click is still "use", and E always is. An empty gun's click stays the sim's blow (Weapons.BUTT) and is drawn as one, a pistol-whip, not a dry click: `control.shotTick` tells a shot from a blow
+  *Why:* The player could not put a weapon away, saw a shot that never happened, and could not aim a pistol; E keeps "use" whatever is in hand
+
 - **Controls.** **Select mode** (default): left-click selects a survivor (empty ground deselects), right-click moves the selected survivor. **Build mode** (B): bottom bar with
   categories Structure / Furniture / Rooms / Orders; 1-9 arm a tool in the open category, Tab/E and Shift+Tab/Q switch category, left-drag paints (Bresenham fills gaps), Shift =
   instant, right-click puts the tool down, Esc steps back (tool → build mode → selection). Always: right/middle-drag pans (a right press that moves < 4px is a click), wheel zooms

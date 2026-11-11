@@ -67,7 +67,7 @@ public static class PoseIntents
         if (controlled)
         {
             p.facing = c.aim ?? c.facing;
-            p.running = c.running == true && c.sneaking != true && !BodyMod.isWinded(s) && p.stance == "stand";
+            p.running = c.running == true && c.sneaking != true && !BodyMod.isWinded(s) && !ControlMod.sightsUp(state, s) && p.stance == "stand";
             if (Js.T(c.busy))
             {
                 var b = c.busy;

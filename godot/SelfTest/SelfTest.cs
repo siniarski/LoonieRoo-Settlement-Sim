@@ -214,6 +214,7 @@ public partial class Game
             $"push-offs {pushes} -> {yours.Pushes}, landings {landings} -> {yours.Landings}, on {yours.LandSurface}");
         await BodySteps();
         await HeldSteps();
+        await HandsSteps();
         await LightSteps();
         await FireSteps();
         await WorldSteps();

@@ -57,9 +57,16 @@ public static class Staging
     }
 
     /// <summary>A weapon in their hand: a gun with `rounds` in it (else 60% of its magazine) and a box of its
-    /// ammunition in their bag. Null when the kind is no weapon to wield.</summary>
+    /// ammunition in their bag. Null when the kind is no weapon to wield; "none" empties their hand.</summary>
     public static Item? arm(SimState state, Survivor s, string kind, double? rounds = null)
     {
+        if (kind == "none")
+        {
+            // Bare hands: what was in hand into the bag (or at their feet).
+            var held = Js.T(s.weapon) ? Items.getItem(state, s.weapon) : null;
+            if (held != null && Inventory.unequip(state, s, held) != null) Inventory.dropWorn(state, s, held);
+            return null;
+        }
         var weapon = Items.spawnItem(state, kind, s.pos.x, s.pos.y);
         if (Weapons.specOf(weapon) is not { } spec || !Weapons.isWieldKind(weapon.kind)) return null;
         weapon.pos = null;

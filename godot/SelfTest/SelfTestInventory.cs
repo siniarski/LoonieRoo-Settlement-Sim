@@ -2,7 +2,7 @@
 // E on it opens the inventory with the shelf beside your bag; shift-click moves a stack across, ctrl-click one;
 // a drag from the shelf's grid to a cell of the bag puts it on that cell; R while dragging turns the hammer;
 // "Take everything"; drag the coat onto the Body slot and from the slot to a bag cell; drag a tin out onto the
-// world; F on the cursor's thing moves it across; Esc closes; Tab in the Colony tab opens it there.
+// world; a drag onto a quick slot sets it; F on the cursor's thing moves it across; Esc closes; Tab in the Colony tab opens it there.
 // `--invshot=x.png` saves a picture of the open screen with a full bag and the shelf stocked (and x-colony.png,
 // the screen in the Colony tab).
 
@@ -71,6 +71,10 @@ public partial class Game
         // R while dragging: the hammer (1x3, held by its middle) turns to lie across, and lands with its middle on the pointer.
         if (inventory.ItemCentre(hammer) is { } h0 && inventory.CellCentre(Inventory.BAG, 4, 5) is { } h1) await Drag(h0, h1, turnHalfway: true);
         Check("R while dragging turns the hammer, and it lands across", It(hammer).turned == true && It(hammer).gx == 3 && It(hammer).gy == 5, $"at {It(hammer).gx},{It(hammer).gy} turned {It(hammer).turned}");
+
+        // A drag onto a quick slot sets it (the hotbar's key 4 then takes the hammer up).
+        if (inventory.ItemCentre(hammer) is { } h2) await Drag(h2, inventory.QuickCentre(3));
+        Check("A drag onto quick slot 4 puts the hammer there", you.quick != null && you.quick[3] == hammer && you.pack.Contains(hammer), $"slot 4 {(you.quick != null ? you.quick[3] : "none")}");
 
         var takeAll = FindButton(inventory, "← Take everything");
         if (takeAll != null) await Click(takeAll.GetGlobalRect().GetCenter());

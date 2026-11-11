@@ -32,11 +32,15 @@ public static class Shooting
     /// <summary>The longest aim vector a fire command takes (a component, either way).</summary>
     public const int AIM_VECTOR_MAX = 4096;
 
-    /// <summary>Spread (as a ratio of sideways error to distance) for this shooter now: the weapon's own, and more moving, panicking or winded.</summary>
-    public static double spreadOf(Survivor s, WeaponSpec w, bool moving)
+    /// <summary>Down the sights, the weapon's own spread and the moving part of it are this much (percent).</summary>
+    public const int SIGHTS_SPREAD_PCT = 50;
+
+    /// <summary>Spread (as a ratio of sideways error to distance) for this shooter now: the weapon's own, and more moving, panicking or winded; down the sights (`sights`) the weapon's own and the moving part are halved.</summary>
+    public static double spreadOf(Survivor s, WeaponSpec w, bool moving, bool sights = false)
     {
         double thousandths = w.spread;
         if (moving) thousandths += w.spreadMove;
+        if (sights) thousandths = thousandths * SIGHTS_SPREAD_PCT / 100;
         if (BodyMod.isPanicking(s)) thousandths += w.spreadPanic;
         if (BodyMod.isWinded(s)) thousandths += w.spreadWinded;
         return thousandths / 1000;
@@ -151,7 +155,7 @@ public static class Shooting
     }
 
     /// <summary>One shot, the ammunition already checked: the round used, the noise made, the pellets flown. The caller sets the cooldown.</summary>
-    public static ShotOutcome fire(SimState state, Survivor s, Item gun, double aimX, double aimY, bool moving)
+    public static ShotOutcome fire(SimState state, Survivor s, Item gun, double aimX, double aimY, bool moving, bool sights = false)
     {
         var o = new ShotOutcome();
         var w = Weapons.specOf(gun);
@@ -160,7 +164,7 @@ public static class Shooting
         o.pellets = w.pellets;
         gun.wear -= 1;
         Noise.makeNoise(state, s.pos, "gunfire", w.noise);
-        var spread = spreadOf(s, w, moving);
+        var spread = spreadOf(s, w, moving, sights);
         var maxT = (double)w.range * Motion.SUB;
         // The most a bolt or a pellet could do: the skill and trait bonuses split between the pellets.
         var total = Moodlets.boostDamage(s, (w.damage * w.pellets + (double)Skills.GUARD_DAMAGE_PER_LEVEL * Skills.skillLevel(s, "guard")) + (Skills.hasTrait(s, "hardened") ? Skills.HARDENED_DAMAGE : 0));
