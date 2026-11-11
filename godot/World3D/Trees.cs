@@ -132,7 +132,9 @@ public sealed class Trees
 
     static ShaderMaterial Material(bool cards, bool textured, bool bark, float flutter, Texture2D tex)
     {
-        var sh = new Shader { Code = SHADER.Replace("CULL", cards ? "cull_disabled" : "cull_back").Replace("TEXTURED", textured ? "1" : "0").Replace("BARKED", bark ? "1" : "0") };
+        var sh = Surfaces.Shader(SHADER.Replace("CULL", cards ? "cull_disabled" : "cull_back").Replace("TEXTURED", textured ? "1" : "0").Replace("BARKED", bark ? "1" : "0")
+            .Replace("BARK_LAYER", Surfaces.Layer("bark").ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))
+            .Replace("BARK_REPEATS", BARK_REPEATS.ToString("0.0##", System.Globalization.CultureInfo.InvariantCulture)));
         var m = new ShaderMaterial { Shader = sh };
         m.SetShaderParameter("leaves", tex);
         m.SetShaderParameter("flutter", flutter);
@@ -313,31 +315,29 @@ public sealed class Trees
         return (c.x / (float)Motion.SUB, c.y / (float)Motion.SUB);
     }
 
-    // The trees' shader: vertex colours (the model's) times the instance's tint, the leaf atlas on cards
+    /// <summary>The bark layer's repeats a metre of the model (the layer's own is 1: plates finer on these thin trunks).</summary>
+    const float BARK_REPEATS = 1.5f;
+
+    // The trees' shader: vertex colours (the model's) times the instance's tint, the bark layer on the wood, the leaf atlas on cards
     // (alpha scissor), normals as the model has them (out of the crown, so a crown lights as a mass; on
     // cards both sides keep the outward normal), and sway: the whole tree bends with the height above its
     // foot, slow and gentle, leaves and crown masses flutter a little on top.
     const string SHADER = @"
 shader_type spatial;
 render_mode CULL, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
+" + Surfaces.INCLUDE + @"
 uniform sampler2D leaves : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform float flutter = 0.0;
 uniform vec3 wind = vec3(0.8, 0.0, 0.6);
 varying vec3 v_nrm;
 varying vec3 v_tint;
 varying vec3 v_obj;
-
-float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
-float noise3(vec3 p) {
-    vec3 i = floor(p), f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
-               mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y), f.z);
-}
+varying vec3 v_onrm;
 
 void vertex() {
     v_tint = INSTANCE_CUSTOM.rgb;
     v_obj = VERTEX;
+    v_onrm = NORMAL;
     float phase = INSTANCE_CUSTOM.a * 6.2831;
     float h = max(VERTEX.y, 0.0) / 10.0;
     float b = h * h;
@@ -360,9 +360,10 @@ void fragment() {
     ALPHA_SCISSOR_THRESHOLD = 0.5;
 #endif
 #if BARKED
-    // Furrows: noise stretched up the trunk, darker in the cracks.
-    float n = noise3(v_obj * vec3(14.0, 1.6, 14.0)) * 0.65 + noise3(v_obj * vec3(40.0, 5.0, 40.0)) * 0.35;
-    c *= 0.62 + 0.55 * smoothstep(0.2, 0.75, n);
+    // The kit's bark (docs/textures.md), laid by the tree's own unswayed position (it sways with the tree), furrows
+    // down the trunk and along the branches; one sample, faded out with distance as the kit's detail is. 0.9: the
+    // mean of the noise furrows it replaced, so a trunk keeps its tone near and far.
+    c *= 0.9 * surface_detail(v_obj, v_onrm, vec2(BARK_LAYER + 1.0, BARK_REPEATS), vec2(0.0), length(VERTEX));
 #endif
     ALBEDO = c;
     NORMAL = normalize(v_nrm);

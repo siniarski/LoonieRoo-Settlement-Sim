@@ -17,6 +17,8 @@
 // recolouring the model's own painted map through its recolour mask (recolour.gdshaderinc: the palette colour
 // times each texel's brightness against the cloth's mean, so the shading and wear stay): one material per
 // file, surface and colour pair, shared by everyone in it (10 x 7 pairs at most per file; no instance values).
+// The living wear the same shader in their file's own colours (one material per file and surface), for the detail
+// kit's cloth and rubber on clothes and shoes, by the file's detail map (docs/characters.md "Detail on bodies").
 
 using System;
 using System.Collections.Generic;
@@ -147,34 +149,73 @@ public static class Looks
         return info;
     }
 
-    /// <summary>Puts the clothes' colours on a look model's pieces (its own surfaces, the ones painted from its map):
-    /// a shared recolour material per surface material and colour pair; top &lt; 0 takes them back to the file's own.</summary>
+    /// <summary>The kit's detail on a body (docs/characters.md "Detail on bodies"): metres a repeat of the cloth and
+    /// shoe layers covers on clothes (finer than the layers' own, which are sized for upholstery and soles).</summary>
+    public const float CLOTH_METRES = 0.4f, SHOE_METRES = 0.5f;
+
+    sealed class DetailInfo
+    {
+        public Texture2D? map;
+        public float metresPerUv;
+    }
+
+    static readonly Dictionary<string, DetailInfo?> details = new();
+
+    /// <summary>A model file's detail map (look_..._detail.png and .json beside the .glb, art/scripts/build_detail_maps.py), or null.</summary>
+    static DetailInfo? Detail(string modelPath)
+    {
+        if (details.TryGetValue(modelPath, out var info)) return info;
+        string bas = modelPath[..^4];
+        info = null;
+        if (ResourceLoader.Exists(bas + "_detail.png") && FileAccess.FileExists(bas + "_detail.json"))
+        {
+            var json = Json.ParseString(FileAccess.GetFileAsString(bas + "_detail.json")).AsGodotDictionary();
+            info = new DetailInfo { map = GD.Load<Texture2D>(bas + "_detail.png"), metresPerUv = (float)json["metres_per_uv"].AsDouble() };
+        }
+        details[modelPath] = info;
+        return info;
+    }
+
+    /// <summary>Puts the clothes' colours and the kit's detail on a look model's pieces (its own surfaces, the ones
+    /// painted from its map): a shared material per surface material and colour pair; top &lt; 0 for the file's own
+    /// colours (the living). A file with neither a mask nor a detail map keeps its own material.</summary>
     public static void Recolour(IEnumerable<MeshInstance3D> pieces, string modelPath, int top, int bottom)
     {
         var info = top >= 0 ? Mask(modelPath) : null;
+        var detail = Detail(modelPath);
         foreach (var mi in pieces)
             for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
             {
                 if (mi.Mesh.SurfaceGetMaterial(s) is not BaseMaterial3D src || src.AlbedoTexture == null) { continue; }
-                mi.SetSurfaceOverrideMaterial(s, info == null ? null : Recoloured(src, info, top, bottom));
+                mi.SetSurfaceOverrideMaterial(s, info == null && detail == null ? null : Recoloured(src, info, detail, top, bottom));
             }
     }
 
-    static ShaderMaterial Recoloured(BaseMaterial3D src, MaskInfo info, int top, int bottom)
+    static ShaderMaterial Recoloured(BaseMaterial3D src, MaskInfo? info, DetailInfo? detail, int top, int bottom)
     {
-        string key = $"{src.GetInstanceId()}/{top}/{bottom}";
+        string key = info == null ? $"{src.GetInstanceId()}/own" : $"{src.GetInstanceId()}/{top}/{bottom}";
         if (recoloured.TryGetValue(key, out var mat)) return mat;
         bool cloth = src.CullMode == BaseMaterial3D.CullModeEnum.Disabled;
+        World3D.Surfaces.Ensure();  // the detail's texture array is a global: declared before the shaders compile
         recolourShader ??= GD.Load<Shader>("res://Characters/recolour.gdshader");
         recolourCloth ??= GD.Load<Shader>("res://Characters/recolour_cloth.gdshader");
         mat = new ShaderMaterial { Shader = cloth ? recolourCloth : recolourShader };
         mat.SetShaderParameter("albedo_tex", src.AlbedoTexture);
-        mat.SetShaderParameter("mask_tex", info.mask);
-        mat.SetShaderParameter("top_colour", Linear(DEAD_TOPS[top].c));
-        mat.SetShaderParameter("bottom_colour", Linear(DEAD_BOTTOMS[bottom].c));
-        mat.SetShaderParameter("top_lum", Math.Max(info.topLum, 1e-3f));
-        mat.SetShaderParameter("bottom_lum", Math.Max(info.bottomLum, 1e-3f));
         mat.SetShaderParameter("roughness", src.Roughness);
+        if (info != null)
+        {
+            mat.SetShaderParameter("mask_tex", info.mask);
+            mat.SetShaderParameter("top_colour", Linear(DEAD_TOPS[top].c));
+            mat.SetShaderParameter("bottom_colour", Linear(DEAD_BOTTOMS[bottom].c));
+            mat.SetShaderParameter("top_lum", Math.Max(info.topLum, 1e-3f));
+            mat.SetShaderParameter("bottom_lum", Math.Max(info.bottomLum, 1e-3f));
+        }
+        if (detail != null)
+        {
+            mat.SetShaderParameter("detail_tex", detail.map);
+            mat.SetShaderParameter("detail", new Vector4(detail.metresPerUv / CLOTH_METRES, detail.metresPerUv / SHOE_METRES,
+                World3D.Surfaces.Layer("cloth"), World3D.Surfaces.Layer("rubber")));
+        }
         recoloured[key] = mat;
         return mat;
     }

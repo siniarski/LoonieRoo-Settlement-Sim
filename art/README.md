@@ -44,7 +44,10 @@ outfits, worn dirty and bloodied (`--outfit longsleeve`: a painted work shirt an
 `<file>_mask.json` (the colours painted, the cloth's mean luminance): the game recolours the dead's clothes from them
 (godot/Characters/Looks.cs). After a rebuild, Godot must re-extract each file's colour map (`<file>_albedo_pz.jpg`):
 delete that .jpg and its .import with the file's entries in `godot/.godot/imported`, import, then restore the
-committed .jpg.import (it keeps the texture's uid) and import again.
+committed .jpg.import (it keeps the texture's uid) and import again. Then rerun `scripts/build_detail_maps.py` for it
+(`"$B" --background --factory-startup --python art/scripts/build_detail_maps.py -- [--only look_pz_zombie]`, seconds):
+`<file>_detail.png` (red the cloth, green the shoes) and `<file>_detail.json` (metres a UV unit), where the game lays
+the detail kit's cloth and rubber (docs/characters.md "Detail on bodies").
 
 ```bash
 for v in "" "--face slack" "--face gaunt" "--face bloated" "--face torn" "--outfit longsleeve" "--clothes jacket" "--face slack --clothes hoodie"; do
@@ -88,7 +91,8 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
 - `scripts/edit_skin.py`: scripted edits to the stored skin (`blender art/models/base_skin.blend --background
   --python art/scripts/edit_skin.py -- --edits cheeks,lips`), recorded on the object so they apply once.
 - `scripts/animals.py`, `scripts/build_animals.py`: the wild animals and dogs (deer, rabbit, wolf, bear, dog) for
-  first person: a quadruped rig, metaball bodies, a 3-step LOD ladder, vertex colours, idle / walk / run clips and an
+  first person: a quadruped rig, metaball bodies, a 3-step LOD ladder, vertex colours, two UV maps for the detail
+  kit's fur (the layer and the coat's own coordinates in metres: `detail_uvs`), idle / walk / run clips and an
   attack for the biters; `<kind>.glb` and `<kind>.json` (clip lengths and ground speeds) into
   `godot/assets/characters/animals/` (all five in ~8 s: `"$B" --background --factory-startup --python
   art/scripts/build_animals.py -- --out godot/assets/characters/animals [--kinds wolf] [--preview DIR]`).

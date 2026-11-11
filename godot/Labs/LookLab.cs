@@ -251,7 +251,9 @@ public partial class LookLab : Node3D
             a.Lods = a.Lods.Select((g, i) => g.Concat(groups[i]).ToArray()).ToArray();
             a.Tris = a.Lods.Select(g => g.Sum(Tris)).ToArray();
             a.HairTris = groups.Select(g => g.Sum(Tris)).ToArray();
+            // The clothes' colours (the dead) and the detail on cloth and shoes, as the game puts them on.
             if (outfit is { } oc) Looks.Recolour(a.Lods.SelectMany(g => g), path, oc.top, oc.bottom);
+            else if (which == "pz") Looks.Recolour(a.Lods.SelectMany(g => g), path, -1, -1);
             if (OS.GetCmdlineUserArgs().Contains("--tracehair")) GD.Print($"hair {which} {h}: {string.Join(" / ", a.HairTris)} tris by body LOD; body {string.Join(" / ", a.Tris.Zip(a.HairTris, (t, x) => t - x))}");
         }
         (a.TexBytes, a.TexDesc) = Textures(a.Lods[0]);

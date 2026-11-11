@@ -175,11 +175,41 @@ public sealed class AnimalModels
         parent.AddChild(root);
         var m = new Model { root = root, kind = kind };
         m.lods = FindAll<MeshInstance3D>(root).GroupBy((mi) => LodIndex(mi.Name)).OrderBy((g) => g.Key).Select((g) => g.ToArray()).ToArray();
+        foreach (var mi in m.lods.SelectMany((g) => g)) mi.MaterialOverride = Coat(mi.Mesh.SurfaceGetMaterial(0) as BaseMaterial3D);
         m.player = FindAll<AnimationPlayer>(root).First();
         foreach (var n in new[] { "idle", "walk", "run" })
             if (m.player.HasAnimation(n)) m.player.GetAnimation(n).LoopMode = Animation.LoopModeEnum.Linear;
         return m;
     }
+
+    static ShaderMaterial? coat;
+
+    /// <summary>The coats' material, one for every animal: the file's vertex colours times the kit's fur layer
+    /// (docs/textures.md), laid by the body's own coordinates in UV2 (build_animals.py detail_uvs: it moves with
+    /// the skin, so it never swims); the eyes and antlers say no layer.</summary>
+    static ShaderMaterial Coat(BaseMaterial3D? src)
+    {
+        if (coat != null) return coat;
+        bool srgb = src?.VertexColorIsSrgb ?? false;
+        coat = new ShaderMaterial { Shader = Surfaces.Shader(COAT.Replace("SRGB", srgb ? "1" : "0")) };
+        coat.SetShaderParameter("roughness", src?.Roughness ?? 0.92f);
+        return coat;
+    }
+
+    const string COAT = @"
+shader_type spatial;
+" + Surfaces.INCLUDE + @"
+uniform float roughness = 0.92;
+void vertex() { SURFACE_BY_OBJECT }
+void fragment() {
+    vec3 c = COLOR.rgb;
+#if SRGB
+    c = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+#endif
+    ALBEDO = c * SURFACE_DETAIL;
+    ROUGHNESS = roughness;
+}
+";
 
     void Pose(Model m, Wanted w, SimState state, double alpha, double delta, double dist, float vpHeight)
     {

@@ -199,6 +199,31 @@ things (a T-shirt, socks); anything with a hem, a collar or looseness is a mesh.
 - **The mid tier dressed (2026-11-08)**: godot/Characters/OutfitMerge.cs merges what an outfit shows (Dresser.Plan, the same rules as near: bare regions, pieces on view, cut limbs) into one skinned mesh with one surface and one material (character_merged.gdshader, the condition patterns shared with near through character.gdshaderinc). Bone indices are remapped by bind name onto the body's skin; sources are decoded once (~30 ms), a merge then takes ~0.3 ms. Colours aren't baked: each vertex carries its garment's slot and pattern seed (CUSTOM0, floats), the character's seven slot colours (8-bit sRGB packed in floats), its seed and its dirt / blood / torn / wet are three instance vec4s; so meshes are cached by the pieces shown alone (1,000 randomly dressed people share 134). Near and mid side by side (the lab's mid twin) look the same: colours, patterns, tears. Measured (Crowd tab, mid at 20 fps): 1,000 mid 9.5 ms dressed against 11.4 bare (2.8 draw calls each against 5.5: the bare mesh's face is a second surface), 2,000 19.7 against 24.0. Traps: an instance uniform's name is substituted everywhere in the shader, function parameters included (name them differently); vertex COLOR is 8-bit and gamma-converted (use a float CUSTOM); a Color given as an instance value arrives sRGB-to-linear converted.
 - **Draw calls**: a dressed character is ~10 meshes. At near range that's fine. For mid and far range, the outfit is **merged once into a single mesh** whenever it changes (same skeleton, atlas textures), see LOD below.
 
+### Detail on bodies (2026-11-11)
+
+The detail kit (docs/textures.md) on what the game draws of the living and the dead. A body bends, so a layer laid by
+position would swim over it; each body lays it by coordinates that move with its skin:
+
+- **People and the dead (the pz look models): by their own atlas UV.** Every look file has a **detail map** beside it,
+  `<file>_detail.png` (the atlas's 512, red where the painted map is cloth, green where it is shoe) and
+  `<file>_detail.json` (`metres_per_uv`: how many metres of body one UV unit covers, ~2-2.8), made by
+  `art/scripts/build_detail_maps.py` in seconds, no rebuild: it lays the near LOD's triangles into the atlas by their
+  UV with their rest positions and asks the paint's own regions (paint.regions: the painted shirt and trousers are
+  cloth, less the dead's holes; the painted shoes and boots are shoe; a jacket, hoodie or jeans piece is all cloth).
+  The material (Characters/recolour.gdshaderinc, the dead's recolour shader, now worn by the living too: no mask, the
+  file's own colours) multiplies in the kit's **cloth** layer under red and **rubber** under green, repeated
+  `metres_per_uv / 0.4` (cloth) and `/ 0.5` (shoe) times a UV unit (Looks.cs CLOTH_METRES, SHOE_METRES), faded out
+  between 2 and 5 m from the eye (past that the 512 painted map is all a body needs). Skin, hair, eyes, teeth, the
+  hair meshes and the stump caps take none: a weave on a low-poly face does more harm than good. Smart-UV islands lie
+  at any angle, so the weave turns from island to island; at a thread's scale the seam does not show.
+  A rebuilt look file needs `build_detail_maps.py` run again (`--only <file>`).
+- **Animals: by UV2 in metres** (the kit's mapped route). build_animals.py writes two UV maps per face: which layer
+  (fur, at FUR_METRES by kind: rabbit 0.18, dog 0.32, wolf 0.38, deer 0.4, bear 0.5; none on eyes and antlers) and
+  the rest position projected along the face's main axis (strands down the flanks and chest, back along the spine).
+  Animals.cs draws every coat with one shader (vertex colour times SURFACE_DETAIL).
+- **Not used by the game, so untouched:** the mannequin's character.gdshader, the mid tier's character_merged.gdshader
+  and the crowd's vat.gdshader (labs only; the game's crowd is People's 40 models and capsules past them).
+
 ### Missing limbs (survivors after amputation, zombies falling apart)
 
 The sim already has them: `Wounds.amputate` gives a survivor `lostArm` or `lostLeg` for good, and `crawler` zombies exist. The rules for the visual side:
