@@ -181,7 +181,7 @@ public static partial class Zombies
     {
         z.cooldown = JsMath.max(0, z.cooldown - 1);
         z.move = null;
-        // On its way over a car or a barricade (Crossings.cs): no biting, no steering; a blow holds it where it is.
+        // On its way over a car or a barricade (Crossings.cs), or down where a blow knocked it off: no biting, no steering.
         if ((z.crossing != null) && ((state.tick < z.staggerUntil) || Crossings.tick(state, z)))
         {
             return;
@@ -473,6 +473,10 @@ public static partial class Zombies
                 return true; // a runner vaults a barricade
             }
             var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
+            if ((e >= 0) && (z.cooldown == 0) && Crossings.pileOver(state, z, next))
+            {
+                return true; // enough of them at a barricade: over the ones in front
+            }
             if ((e >= 0) && (z.cooldown == 0))
             {
                 Breach.damageEdge(state, e, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
@@ -615,7 +619,8 @@ public static partial class Zombies
         z.windup = 0;
         if (z.crossing != null)
         {
-            return; // on a car or over a barricade: it reels where it is (Crossings.cs)
+            Crossings.knockOff(state, z); // off the car or the barricade, back the way it came, and down a moment
+            return;
         }
         var v = Motion.toward(z.at.x - from.x, z.at.y - from.y, (z.variant == "brute") ? ((double)(SHOVE) / (2)) : SHOVE);
         z.at = Motion.slide(state, z.at, v.x, v.y, moverOf(z));

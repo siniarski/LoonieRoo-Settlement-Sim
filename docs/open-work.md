@@ -164,7 +164,11 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
   for a car is the same whoever plans it (a crawler pays for a pickup as for a sedan, though under is quick); the
   body slides up the car's flank lying down (no clip of hauling up, no hands on it), and a paused or just-placed
   climber faces any way; a horde's field costs a barricade as battering even for its runners; nobody has played
-  it. Left of the cars: the car you are
+  it. Left of the climbers (log/2026-11-12-08-climbers.md): no clip for falling off or lying down (a knocked-off one
+  lies in the crawl pose; the animation session may add one, action "down", and "pile" for climbing a pile-up); a
+  barricade's 600 health falls to six walkers in about 2.5 s, so a pile-up mostly shows where the fence is mended or
+  strong: whether barricades should hold longer is open; the thump has no sound of its own in the game yet; tall
+  fences are not offered to your own hands (Handiwork), only to colonists; the solo and colony bots don't build them. Left of the cars: the car you are
   sitting in is in nobody's way (the dead walk into it to get at you, as before); the dead and animals stop at
   the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
   left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's

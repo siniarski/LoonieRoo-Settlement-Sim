@@ -620,6 +620,13 @@ public static class WorldMesh
             case Grids.EDGE_BARRICADE:
                 foreach (var h in new[] { 0.25f, 0.65f, 1.05f }) Piece(-0.05f, 1.05f, h, h + 0.22f, 0.05f, WorldLook.Plank);
                 return false;
+            case Grids.EDGE_FENCE:
+                // A tall fence: two posts and rails, boards close side by side to above head height.
+                Piece(-0.05f, 0.05f, 0, 2.05f, 0.07f, WorldLook.Plank);
+                Piece(0.95f, 1.05f, 0, 2.05f, 0.07f, WorldLook.Plank);
+                foreach (var h in new[] { 0.3f, 1.7f }) Piece(-0.05f, 1.05f, h, h + 0.1f, 0.06f, WorldLook.Plank);
+                for (int k = 0; k < 6; k++) Piece(0.06f + k * 0.148f, 0.06f + k * 0.148f + 0.13f, 0.05f, 1.95f, 0.035f, WorldLook.Plank);
+                return false;
             case Grids.EDGE_WINDOW:
             case Grids.EDGE_WINDOW_BROKEN:
                 Wall(-end, 1 + end, 0, SILL_H);

@@ -376,7 +376,7 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   - *A parked car:* every kind gets over it, a leg (one tile to the next) at a time: walkers, screamers and raiders 2 s a leg, runners 1.4 s, brutes 2.7 s (the walker's
     20 ticks by each one's pace), so a car's width is two legs (4 s for a walker) and a sedan lengthways in a gate six. A crawler goes under a pickup (0.45 m clear in
     the model; 1 s a leg) and hauls itself over a sedan (0.28 m clear, too low for its shoulders; 4 s a leg, the slowest of all). On the car none of them bites; they
-    can be hit, a blow holds them where they are (no shove), and the crowd doesn't push them.
+    can be hit, a blow knocks them off (2026-11-12, below), and the crowd doesn't push them.
   - *A barricade (edge or tile):* runners vault it (0.8 s a leg); crawlers go under as before; walkers, screamers, brutes and raiders batter it as before.
   - *Walls, doors, windows, boards:* battered as before (a broken window is still climbed at half speed). *Water:* never. *Pits and traps:* catch whoever steps on them
     (a pit is covered: nothing to vault). *Furniture:* never stopped the dead.
@@ -395,6 +395,30 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   push, a shove) needed no new rule, and a missed case fails safe (no path) rather than putting a zombie inside a car. The path cost is more than the time is worth
   (two legs take the time of seven steps and cost thirteen) so the dead keep to the ground when round is near. Stuck-state invariants unchanged (they are the
   survivors'); for the dead the tests hold that none south of a blocked gap or on the car stands still 100 ticks.
+- **Climbers, pile-ups and tall fences (2026-11-12, `Crossings.cs`, log/2026-11-12-08-climbers.md).**
+  - *Knocked off.* One of the dead part-way over a car or a barricade that is struck, shoved or rammed (`Zombies.knockBack`)
+    falls back the way it came, to the first ground a body fits behind its leg (else the nearest), and lies there 3 s
+    (`DOWN_TICKS`): no biting or moving, and your blow on it lands as on one unaware of you (the sneak multiplier). A blow on
+    one already down leaves it lying where it is; only the blow's stagger (0.6 s) holds the count, so it gets up in the end. Up, it plans afresh and climbs again. The down
+    spell is a crossing of its own (`what = "down"`), so the save, the crowd, the invariants and the pose needed nothing new.
+    *Why:* a roof or a wall should be a place you can hold by working at it; holding it where it was only delayed it.
+  - *Climbing is loud.* Each leg onto, across or off a parked car starts with a thump (noise "thump", 10 tiles: you walking are
+    4, a fight 6, a shot 22 and up), at most one a car every 5 ticks (`THUMP_GAP`: a crowd going over is one din, and the
+    noise's pass over the dead stays bounded per car). `Vehicle.climbed` keeps the tick of the last (null if never: old saves
+    are as they were); `Crossings.carClimbed` is the one place a climbed car reacts (car alarms go there).
+  - *Pile-ups.* At a barricade edge it can't vault, one of the dead about to strike counts the dead within a tile of it from
+    the crowd's buckets (`zombiesWithin`, itself counted); at six (`PILE_UP`) or more it climbs over, one 2 s leg ground to
+    ground. Six: two rows of three at a stretch three edges long, so a pair or a handful batter and a crowd comes over. Only
+    walkers, screamers and brutes (raiders are people; runners vault; crawlers go under), only on edges (a tile barricade is a
+    boarded doorway). Paths, reachability and the horde's field are unchanged on purpose: the dead already plan through a
+    barricade (battering it: the breacher, the field's batter cost), and a pile-up only crosses where that path goes, sooner.
+    Asked only when it would strike (once a second), so a crowd at a fence costs a few dozen bucket lookups each, no scan.
+  - *Tall fences: a new edge kind (`EDGE_FENCE`, 6), not a height on the barricade.* The smaller change: edges are already
+    saved as kinds (no new layer, no schema bump), every existing test of `EDGE_BARRICADE` keeps meaning the low fence
+    (vaults, pile-ups, colonists stepping over, crawlers under), and `crossable` stops everyone but the breacher with one
+    word. Battered like a wall at 900 health (barricade 600, wall 1200); sight passes between its boards, blows don't; it
+    bounds a room. Two wood (`materialCount`; `Blueprint.got`, null for one-load blueprints), 30 ticks of work, edges only.
+    Generated yards keep low fences.
 - **Sieges.** From night 14, every 7th night has 1.25x the zombies, warned two days ahead (balance pass 5: night 7 at 2x wiped out every colony)
   *Why:* Preparation pays
 - **Storyteller.** `threatScale`: 1 + 0.1 per 100 goods (not wood, food or bodies) - 0.15 per death in the last day and a half, within 0.5-1.6; scales the night's zombies and the

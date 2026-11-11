@@ -422,21 +422,130 @@ public class CrossingsTest
         }
     }
 
-    [Fact(DisplayName = "crossings > a blow holds a climber where it is: no shove off the car, and the leg goes on after")]
+    [Fact(DisplayName = "crossings > a blow knocks a climber off the car back the way it came, down a moment, and it tries again")]
     public void A_blow_on_the_car()
     {
         var (state, s) = yard();
         plug(state);
         var z = dead(state, s);
         for (int t = 0; t < 400 && !(z.crossing != null && Grids.isParked(state.grid, z.pos.x, z.pos.y)); t++) Tick.tick(state);
+        expect(z.crossing.what).toBe(Crossings.CLIMB);
+        Zombies.knockBack(state, z, s.at);
+        string where = DebugText.dumpText(state);
+        expect(Crossings.isDown(z), where).toBe(true);
+        expect(Grids.isParked(state.grid, z.pos.x, z.pos.y), where).toBe(false);
+        expect(z.pos.y, where).toBeGreaterThan(6); // the side it came from
+        expect(Motion.fits(state.grid, z.at, Zombies.moverOf(z)), where).toBe(true);
+        expect(Invariants.checkInvariants(state), where).toEqual(Js.Arr([]));
+        expect(Crossings.lift(state, z, 0.5)).toBe(0);
+        // Down: it lies there, a blow leaves it lying, and it neither moves nor bites.
         var at = z.at.Copy();
-        int left = z.crossing.ticks;
         Zombies.knockBack(state, z, s.at);
         expect(z.at.x).toBe(at.x);
         expect(z.at.y).toBe(at.y);
-        for (int t = 0; t < Zombies.STAGGER_TICKS - 1; t++) Tick.tick(state);
-        expect(z.crossing.ticks).toBe(left);
-        expect(z.at.y).toBe(at.y);
+        for (int t = 0; t < Crossings.DOWN_TICKS; t++)
+        {
+            expect(z.at.y).toBe(at.y);
+            Tick.tick(state);
+        }
+        for (int t = 0; t < Zombies.STAGGER_TICKS + 2 && Crossings.isDown(z); t++) Tick.tick(state);
+        expect(Crossings.isDown(z)).toBe(false);
+        // Up again: over the car once more.
+        var seen = chase(state, s, z);
+        expect(seen.reached).toBe(true);
+        expect(seen.what).toBe(Crossings.CLIMB);
+    }
+
+    [Fact(DisplayName = "crossings > a runner struck in the middle of a vault falls back on its own side of the barricade")]
+    public void A_blow_on_a_vault()
+    {
+        var (state, s) = yard("#######.########");
+        Grids.setEdge(state.grid, 7, 6, "n", Grids.EDGE_BARRICADE);
+        state.walkabilityVersion++;
+        var z = dead(state, s, "runner");
+        for (int t = 0; t < 400 && z.crossing == null; t++) Tick.tick(state);
+        expect(z.crossing.what).toBe(Crossings.VAULT);
+        Tick.tick(state);
+        Zombies.knockBack(state, z, s.at);
+        expect(Crossings.isDown(z)).toBe(true);
+        expect(z.pos.y).toBe(6);
         expect(chase(state, s, z).reached).toBe(true);
+    }
+
+    [Fact(DisplayName = "crossings > a body coming over a car thumps: the idle dead near it come to look, those further off don't, once a car per THUMP_GAP")]
+    public void Climbing_is_loud()
+    {
+        var (state, s) = yard();
+        var car = plug(state);
+        expect(car.climbed).toBe(null);
+        var z = dead(state, s);
+        bool thumped = false;
+        for (int t = 0; t < 400 && !thumped; t++) { Tick.tick(state); thumped = car.climbed != null; }
+        expect(thumped).toBe(true);
+        expect(z.crossing?.what).toBe(Crossings.CLIMB);
+
+        // The noise itself, called as a crossing calls it: near and idle comes, far doesn't; and not twice at once.
+        var near = Zombies.addZombie(state, 13, 10, 100, "static");
+        var far = Zombies.addZombie(state, 15, 0, 100, "static");
+        near.targetId = null; far.targetId = null; near.heading = null; far.heading = null;
+        var t0 = state.tick + 100;
+        state.tick = t0;
+        Crossings.carClimbed(state, car, z);
+        expect(car.climbed).toBe(t0);
+        expect(near.heading?.x).toBe(car.pos.x);
+        expect(near.heading?.y).toBe(car.pos.y);
+        expect(far.heading).toBe(null);
+        near.heading = null;
+        state.tick = t0 + Crossings.THUMP_GAP - 1;
+        Crossings.carClimbed(state, car, z);
+        expect(near.heading).toBe(null);
+        expect(car.climbed).toBe(t0);
+        state.tick = t0 + Crossings.THUMP_GAP;
+        Crossings.carClimbed(state, car, z);
+        expect(near.heading).not.toBe(null);
+        expect(Noise.NOISE["thump"]).toBeGreaterThan(Sight.WALK_HEARD);
+        expect(Noise.NOISE["thump"]).toBeLessThan(Noise.NOISE["gunfire"]);
+    }
+
+    /// <summary>A yard fenced across row 6 (a barricade on every tile's north edge), `n` walkers south of it after
+    /// you, the fence mended every tick (someone holding it). Ticks `max`; returns how many came over and whether
+    /// any crossing was a pile-up.</summary>
+    static (int over, bool piled, int most) fenced(int n, int max)
+    {
+        var (state, s) = yard("................");
+        for (int x = 0; x < 16; x++) Grids.setEdge(state.grid, x, 6, "n", Grids.EDGE_BARRICADE);
+        state.walkabilityVersion++;
+        var dead = new List<Zombie>();
+        for (int i = 0; i < n; i++) dead.Add(CrossingsTest.dead(state, s, "walker", 4 + i % 8, 9 + i / 8));
+        bool piled = false;
+        int most = 0;
+        for (int t = 0; t < max; t++)
+        {
+            Tick.tick(state);
+            for (int x = 0; x < 16; x++) Breach.repairEdge(state, Grids.edgeIndex(state.grid, x, 6, "n"), 1000);
+            foreach (var z in dead)
+            {
+                if (z.crossing?.what == Crossings.PILE)
+                {
+                    piled = true;
+                    most = Math.Max(most, Js.I(Zombies.zombiesWithin(state, Motion.tileOf(z.crossing.from), 1)));
+                }
+            }
+            expect(Invariants.checkInvariants(state), $"tick {t}\n{DebugText.dumpText(state)}").toEqual(Js.Arr([]));
+        }
+        for (int x = 0; x < 16; x++) expect(Grids.edgeKindBetween(state.grid, x, 6, x, 5)).toBe(Grids.EDGE_BARRICADE);
+        return (dead.Count((z) => state.zombies.includes(z) && z.pos.y < 6), piled, most);
+    }
+
+    [Fact(DisplayName = "crossings > pile-ups: a few of the dead at a held barricade only batter it; a crowd climbs over the ones in front")]
+    public void Pile_ups()
+    {
+        var few = fenced(Crossings.PILE_UP - 3, 300);
+        expect(few.over).toBe(0);
+        expect(few.piled).toBe(false);
+        var many = fenced(16, 300);
+        expect(many.piled).toBe(true);
+        expect(many.over).toBeGreaterThan(0);
+        expect(many.most).toBeGreaterThanOrEqual(Crossings.PILE_UP);
     }
 }

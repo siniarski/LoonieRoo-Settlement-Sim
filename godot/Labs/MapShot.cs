@@ -68,7 +68,7 @@ public partial class MapShot : Node
                 c = c.Lightened(Math.Abs(n) * 0.05f);
                 int north = Grids.edgeKind(g, 2 * i), west = Grids.edgeKind(g, 2 * i + 1);
                 int e = north != 0 ? north : west;
-                if (e == Grids.EDGE_WALL || e == Grids.EDGE_BARRICADE) c = wall;
+                if (e == Grids.EDGE_WALL || e == Grids.EDGE_BARRICADE || e == Grids.EDGE_FENCE) c = wall;
                 else if (e == Grids.EDGE_DOOR) c = door;
                 else if (Grids.isWindow(e)) c = window;
                 img.SetPixel(x, y, c);

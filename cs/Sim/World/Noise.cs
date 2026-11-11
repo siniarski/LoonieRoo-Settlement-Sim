@@ -13,7 +13,7 @@ public static partial class Noise
 {
 
     /// <summary>How far each kind of noise carries.</summary>
-    public static readonly JsRecord<double> NOISE = new() { ["building"] = 10, ["fighting"] = 6, ["gunfire"] = 30, ["generator"] = 12, ["scream"] = 30, ["lure"] = 25, ["glass"] = 15, ["alarm"] = 25, ["helicopter"] = 35, ["engine"] = 18 };
+    public static readonly JsRecord<double> NOISE = new() { ["building"] = 10, ["fighting"] = 6, ["gunfire"] = 30, ["generator"] = 12, ["scream"] = 30, ["lure"] = 25, ["glass"] = 15, ["alarm"] = 25, ["helicopter"] = 35, ["engine"] = 18, ["thump"] = 10 };
 
     /// <summary>Herds hear from this many times further than a noise's radius.</summary>
     public const int HERD_HEARING = 2;

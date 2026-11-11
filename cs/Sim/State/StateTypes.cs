@@ -72,6 +72,8 @@ public partial class Blueprint : IHasId
     public string target { get; set; } = "";
     public bool needsMaterial { get; set; }
     public bool delivered { get; set; }
+    /// <summary>Loads delivered so far, for one needing more than one (Designations.materialCount); else null.</summary>
+    public double? got { get; set; }
     public double workDone { get; set; }
     public double workRequired { get; set; }
     /// <summary>An edge wall or door (Grid.cs): on this tile's north or west side, not on the tile.</summary>
@@ -1246,6 +1248,8 @@ public partial class Vehicle : IHasId, IHasAt, IHasPos, IBody
     public bool hoodOpen { get; set; }
     /// <summary>Headlights switched on (Lights.cs); null when off.</summary>
     public bool? lights { get; set; }
+    /// <summary>The tick one of the dead last thumped onto, across or off it (Crossings.carClimbed); null if never.</summary>
+    public double? climbed { get; set; }
 }
 
 public partial class Wanderer : IHasId

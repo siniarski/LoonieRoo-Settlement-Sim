@@ -941,9 +941,9 @@ public static partial class Commands
     /// <summary>A blueprint for an edge wall or door.</summary>
     public static CommandResult designateEdge(SimState state, int x, int y, string side, string structure)
     {
-        if (((structure != "wall") && (structure != "door")) && (structure != "barricade"))
+        if (((structure != "wall") && (structure != "door")) && (structure != "barricade") && (structure != "fence"))
         {
-            return reject("only walls, doors and barricades go on edges");
+            return reject("only walls, doors, barricades and fences go on edges");
         }
         var why = edgeProblem(state, x, y, side);
         if (Js.T(why))
@@ -984,6 +984,10 @@ public static partial class Commands
 
     public static CommandResult designateBuild(SimState state, int x, int y, string structure)
     {
+        if (structure == "fence")
+        {
+            return reject("a tall fence goes on a border between tiles");
+        }
         var existing = Designations.blueprintAt(state, x, y);
         if (existing?.target == structure)
         {

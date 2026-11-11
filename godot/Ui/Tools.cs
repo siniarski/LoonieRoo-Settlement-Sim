@@ -53,6 +53,7 @@ public static class Tools
         new() { id = "door", label = "Door", category = "structure", paints = true, hasInstant = true, edge = true,
             command = (x, y, instant, side) => instant ? new Command { type = "placeDoor", x = x, y = y, side = side } : Build(x, y, "door", side) },
         new() { id = "barricade", label = "Barricade", category = "structure", paints = true, edge = true, command = (x, y, _, side) => Build(x, y, "barricade", side) },
+        new() { id = "fence", label = "Tall fence", category = "structure", paints = true, edge = true, command = (x, y, _, side) => Build(x, y, "fence", side) },
         Simple("trap", "Spike trap", "structure", paints: true),
         Simple("tower", "Watchtower", "structure"),
         Simple("reinforce", "Reinforce (scrap)", "structure", paints: true),
