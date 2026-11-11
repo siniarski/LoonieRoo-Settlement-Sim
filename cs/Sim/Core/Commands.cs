@@ -98,6 +98,31 @@ public static partial class Commands
             Js.NN(state.control).sneaking = command.on;
             return changed();
         }
+        if (command.type == "sights")
+        {
+            // Aiming down the sights (on: right mouse held): counts with a gun in hand (ControlMod.sightsUp).
+            if (!Js.T(ControlMod.controlled(state)))
+            {
+                return reject("nobody is under control");
+            }
+            if ((Js.NN(state.control).sights == true) == (command.on == true))
+            {
+                return unchanged();
+            }
+            Js.NN(state.control).sights = (command.on == true) ? true : null;
+            return changed();
+        }
+        if ((command.type == "quick") || (command.type == "holster"))
+        {
+            // Quick slots in play (InventoryQuick.cs): quick (slot 0-8) takes that slot's thing in hand or puts it away; holster empties your hand.
+            var s = ControlMod.controlled(state);
+            if (!Js.T(s))
+            {
+                return reject("nobody is under control");
+            }
+            var why = (command.type == "quick") ? Inventory.useQuick(state, s, command.slot ?? -1) : Inventory.holster(state, s);
+            return (why == null) ? changed() : reject(why);
+        }
         if ((command.type == "fire") || (command.type == "reload") || (command.type == "switchWeapon"))
         {
             // Guns (WeaponTable.cs): fire along an aim (x, y: a direction, whole numbers up to Shooting.AIM_VECTOR_MAX), reload the gun in hand from the bag, take up the next weapon in the bag (or the one named by itemId).

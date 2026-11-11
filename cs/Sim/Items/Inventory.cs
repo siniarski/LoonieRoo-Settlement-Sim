@@ -287,6 +287,7 @@ public static partial class Inventory
         var old = Js.T(Js.GetProp<string?>(s, slot)) ? Items.getItem(state, Js.NN(Js.GetProp<string?>(s, slot))) : null;
         Js.SetProp(s, slot, item.id);
         follow(state, s, item);
+        var fell = "";
         if (Js.T(old))
         {
             Js.SetProp(s, slot, item.id);
@@ -295,9 +296,10 @@ public static partial class Inventory
                 unplace(old);
                 Items.dropItem(state, old, where);
                 follow(state, s, old);
+                fell = $"; your bag is full: the {Items.nameOf(old)} is on the ground";
             }
         }
-        return Clothing.isGarment(item.kind) ? $"put on the {Items.nameOf(item)}" : ((slot == "tool") ? $"took the {Items.nameOf(item)} in hand" : $"took up the {Items.nameOf(item)}");
+        return (Clothing.isGarment(item.kind) ? $"put on the {Items.nameOf(item)}" : ((slot == "tool") ? $"took the {Items.nameOf(item)} in hand" : $"took up the {Items.nameOf(item)}")) + fell;
     }
 
     /// <summary>Everything someone wears and carries leaves the world with them (lost far from home, where nothing

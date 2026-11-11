@@ -86,6 +86,7 @@ public partial class Game
             // --hold=space: jump again on each landing (to catch a leap in a --shot).
             if (holdKeys.Contains("space") && c != null && !Leaps.airborne(c) && Vehicles.vehicleOf(state, ControlMod.controlled(state)!) == null) Command(new Command { type = "jump" });
             FirstPersonInput(c!, dx, -dy, shift);
+            Sights(c);
             return;
         }
         // Playing someone, in the Colony tab: they stand still, and the keys move the view.
@@ -119,6 +120,17 @@ public partial class Game
         double step = Math.Round(view.yaw / (2 * Math.PI) * FP_AIM_STEPS) * 2 * Math.PI / FP_AIM_STEPS;
         int x = (int)Math.Round(Math.Cos(step) * ControlMod.AIM_MAX), y = (int)Math.Round(Math.Sin(step) * ControlMod.AIM_MAX);
         if (c.aim == null || c.aim.x != x || c.aim.y != y) Command(new Command { type = "aim", x = x, y = y });
+    }
+
+    /// <summary>First person: the right mouse button held with a gun in hand aims down the sights (the `sights` command,
+    /// sent when it changes; --hold=aim holds it for a picture). Without a gun a right-click is still "use".</summary>
+    void Sights(Sim.Control? c)
+    {
+        var you = ControlMod.controlled(state);
+        if (c == null || you == null) return;
+        bool want = Weapons.heldGun(state, you) != null && !view.showInventory && Vehicles.vehicleOf(state, you) == null
+            && (holdKeys.Contains("aim") || (Input.MouseMode == Input.MouseModeEnum.Captured && Input.IsMouseButtonPressed(MouseButton.Right)));
+        if ((c.sights == true) != want) Command(new Command { type = "sights", on = want });
     }
 
     /// <summary>First person: the tile just in front of you, the way you look.</summary>
@@ -184,7 +196,7 @@ public partial class Game
                     Command(new Command { type = "swing", x = t.x, y = t.y });
                 }
             }
-            else if (mb.ButtonIndex == MouseButton.Right) UseAhead();
+            else if (mb.ButtonIndex == MouseButton.Right && (you == null || Weapons.heldGun(state, you) == null)) UseAhead(); // with a gun, the right button aims (Sights)
             GetViewport().SetInputAsHandled();
         }
     }
@@ -397,9 +409,11 @@ public partial class Game
             {
                 // Quick slots: survivor.quick, assigned on the inventory screen (InventoryGrid.cs quickItem).
                 int slot = (int)(key - Key.Key1);
-                if (Inventory.quickItem(state, you, slot) is { } quick) Command(new Command { type = "useItem", itemId = quick.id });
+                // The `quick` command: that slot's thing in hand (what you held into the bag) or used; again, put away.
+                if (Command(new Command { type = "quick", slot = slot }) && you.note?.Contains("bag is full") == true) view.Toast(you.note, 3500);
                 break;
             }
+            case Key.Key0: Command(new Command { type = "holster" }); break; // empty hands: the weapon into the bag
             case Key.R: Command(new Command { type = "work", x = at.x + c.facing.x, y = at.y + c.facing.y }); break;
             case Key.X: Command(new Command { type = "reload" }); break;          // the gun in hand, from your bag (a round at a time for a revolver, shotgun, rifle)
             case Key.Q: Command(new Command { type = "switchWeapon" }); break;    // the next weapon in your bag

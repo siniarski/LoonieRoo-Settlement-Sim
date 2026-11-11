@@ -5,7 +5,11 @@
 // the fore-end or up the handle (Support), following the item through a swing or a kick; the tool is put away
 // meanwhile. Reads state only (rule 5): the weapon, the tool and what you carry; a swing from
 // control.swungTick (a melee blow over SWING_TICKS: wound up, struck, carried through, back; a gun kicks back);
-// running from control.running. Hidden in a car, asleep, looking from --eye, or in a timed action (eating,
+// running from control.running. Bare hands punch: a fist (the hand model alone) comes up and through on the
+// swing's timing. A gun whose swing did not fire (control.shotTick isn't the swing's tick: it was empty) is
+// swung as the sim swings it, a pistol-whip (a rifle's butt driven forward), with no kick and no flash. Down
+// the sights (ControlMod.sightsUp: the right mouse held) the gun comes up to the eye line and the view narrows.
+// Hidden in a car, asleep, looking from --eye, or in a timed action (eating,
 // searching...).
 //
 // Motion, all render-side: a walking bob (the distance walked, a dip each step), a slow breath standing
@@ -18,7 +22,7 @@
 //
 // Debug (after `--`): --held=weapon_v1|axe|gun|... draws that model in your right hand whatever you hold,
 // --heldtool=hammer|medkit|... in your left;
-// --swingat=P holds a swing (or a gun's kick) at P (0..1) for a screenshot; --raiseat=P holds the raise.
+// --swingat=P holds a swing (or a gun's kick; an empty gun's whip) at P (0..1) for a screenshot; --raiseat=P holds the raise.
 
 using System;
 using Godot;
@@ -35,6 +39,9 @@ public sealed class Held
     const double FLASH_TICKS = 1.4;
     /// <summary>How long a raise takes (s): an item coming into a hand.</summary>
     const double RAISE_S = 0.35;
+    /// <summary>How long (s) the gun takes to come up to the sights, and how much the view narrows there.</summary>
+    const double SIGHTS_S = 0.18;
+    const float SIGHTS_FOV = 0.78f;
     /// <summary>Where the left shoulder is (camera space, before SCALE): a support hand's forearm reaches back towards it.</summary>
     static readonly Vector3 LEFT_SHOULDER = new(-0.22f, -0.42f, 0.05f);
 
@@ -159,6 +166,24 @@ public sealed class Held
     // (its top edge in view, the hand on the handle below the view's edge: not drawn, its forearm would stand up).
     static readonly Pose TOOL = new(new(-0.38f, -0.3f, -0.55f), new(0.1f, 0.5f, -0.85f), new(-0.3f, -0.7f, 0.6f), new(0.2f, 0, -1));
     static readonly Pose CASE = new(new(-0.4f, -0.42f, -0.5f), new(0.25f, 0, -1), new(0, 1, 0), Vector3.Zero);
+    // A punch with the right fist (bare hands): up from below the view, drawn back by the cheek, driven ahead
+    // to the middle of the view with the knuckles forward, and pulled back down out of sight.
+    static readonly Pose PUNCH_REST = new(new(0.34f, -0.62f, -0.3f), new(-0.3f, 1f, 0.1f), new(0.3f, -0.6f, 0.75f), Vector3.Zero);
+    static readonly Pose PUNCH_WIND = new(new(0.26f, -0.19f, -0.4f), new(-0.35f, 0.95f, 0.1f), new(0.35f, -0.45f, 0.8f), Vector3.Zero);
+    static readonly Pose PUNCH_STRIKE = new(new(0.04f, -0.08f, -0.7f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.2f, 1f), Vector3.Zero);
+    static readonly Pose PUNCH_FOLLOW = new(new(0.03f, -0.09f, -0.74f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.22f, 1f), Vector3.Zero);
+    // An empty pistol swung as a club: raised and tipped back, brought down hard ahead and to the left
+    // (the butt and the slide lead), carried on low.
+    static readonly Pose WHIP_WIND = new(new(0.32f, -0.08f, -0.4f), new(0.05f, 0.8f, -0.55f), new(0.45f, -0.7f, 0.5f), new(0, 0.6f, 0.8f));
+    static readonly Pose WHIP_STRIKE = new(new(0.04f, -0.24f, -0.62f), new(-0.35f, -0.55f, -0.75f), new(0.5f, -0.4f, 0.75f), new(-0.3f, 0.75f, -0.6f));
+    static readonly Pose WHIP_FOLLOW = new(new(-0.04f, -0.3f, -0.58f), new(-0.45f, -0.75f, -0.45f), new(0.5f, -0.3f, 0.8f), new(-0.3f, 0.5f, -0.8f));
+    // A rifle's butt driven forward: the gun pulled back and turned, the stock thrust ahead.
+    static readonly Pose BUTT_WIND = new(new(0.2f, -0.2f, -0.3f), new(-0.4f, 0.05f, -0.9f), new(0.35f, -0.75f, 0.45f), new(0, 1, 0));
+    static readonly Pose BUTT_STRIKE = new(new(0.1f, -0.16f, -0.62f), new(-0.85f, -0.1f, -0.5f), new(0.4f, -0.6f, 0.6f), new(0, 1, 0));
+    static readonly Pose BUTT_FOLLOW = new(new(0.08f, -0.17f, -0.65f), new(-0.85f, -0.12f, -0.5f), new(0.4f, -0.6f, 0.6f), new(0, 1, 0));
+    // Down the sights: the gun straight ahead in the middle, its sights on the eye line.
+    static readonly Pose HANDGUN_SIGHTS = new(new(0f, -0.09f, -0.46f), new(0, 0, -1), new(0.25f, -0.75f, 0.6f), new(0, 1, 0));
+    static readonly Pose RIFLE_SIGHTS = new(new(0f, -0.085f, -0.3f), new(0, 0, -1), new(0.3f, -0.8f, 0.5f), new(0, 1, 0));
 
     sealed class Slot
     {
@@ -176,6 +201,11 @@ public sealed class Held
     readonly Slot right = new(), left = new(), both = new();
     /// <summary>The left hand on a two-handed item (a hand only, no item).</summary>
     readonly MeshInstance3D support = new() { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+    /// <summary>The right fist of a punch (the hand model alone), shown only through the blow.</summary>
+    readonly MeshInstance3D fist = new() { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+    readonly float baseFov;
+    /// <summary>0..1: how far the gun is up at the sights (eased; render-side).</summary>
+    double sights;
     /// <summary>The muzzle flash: two crossed quads with a soft star on them, unshaded and additive (it glows: a sibling's lighting session may add a real light), shown a tick or so after a shot.</summary>
     readonly Node3D flash = new() { Visible = false };
     readonly string? forceModel, forceTool;
@@ -187,7 +217,13 @@ public sealed class Held
 
     /// <summary>Whether a hand (the glove round a grip) is drawn on the right, or on the left: your own body (OwnBody)
     /// hides its arm on that side, so there aren't two.</summary>
-    public bool RightHand => root.Visible && right.grip.Visible && right.hand.Visible;
+    public bool RightHand => root.Visible && (right.grip.Visible && right.hand.Visible || fist.Visible);
+    /// <summary>A punch is being drawn (the self-test); where the fist is (camera space, before SCALE).</summary>
+    public bool Punching => root.Visible && fist.Visible;
+    public Vector3 FistAt => fist.Position;
+    /// <summary>0..1: the gun up at the sights (the self-test); the empty gun's swing drawn as a blow (not a kick).</summary>
+    public double Sights => sights;
+    public bool Whipping { get; private set; }
     public bool LeftHand => root.Visible && (support.Visible || left.grip.Visible && left.hand.Visible);
 
     /// <summary>What's drawn in your right hand, or "" (the self-test and the debug panel).</summary>
@@ -212,6 +248,9 @@ public sealed class Held
         }
         root.AddChild(support);
         support.Mesh = models.MeshFor("hand");
+        root.AddChild(fist);
+        fist.Mesh = models.MeshFor("hand");
+        baseFov = camera.Fov;
         BuildFlash();
         both.hand.Visible = false;
         foreach (var a in OS.GetCmdlineUserArgs())
@@ -232,6 +271,8 @@ public sealed class Held
         if (!root.Visible)
         {
             right.since = left.since = both.since = 0; // taken out again, it's raised
+            sights = 0;
+            camera.Fov = baseFov;
             return;
         }
         var weapon = Js.T(you.weapon) ? Sim.Items.getItem(state, you.weapon) : null;
@@ -280,13 +321,26 @@ public sealed class Held
         string family = Family(rightKind);
         bool gun = IsGun(rightKind);
         double swingTicks = SwingTicksOf(rightKind);
-        double age = swingAt >= 0 ? swingAt * (gun ? KICK_TICKS : swingTicks) : state.tick + alpha - (c?.swungTick ?? -99);
+        // A gun's swing fired if the shot was on the swing's tick; else it was a blow (an empty gun, swung as a club).
+        // Held for a picture (--swingat), an empty gun whips and a loaded one kicks.
+        bool fired = swingAt >= 0 ? weapon != null && weapon.wear > 0 : c?.swungTick != null && c.shotTick == c.swungTick;
+        double whipTicks = Math.Clamp(Weapons.BUTT.swing * 0.6, 4, 14);
+        double age = swingAt >= 0 ? swingAt * (gun ? (fired ? KICK_TICKS : whipTicks) : swingTicks) : state.tick + alpha - (c?.swungTick ?? -99);
         bool swinging = !gun && age >= 0 && age < swingTicks;
+        Whipping = gun && !fired && age >= 0 && age < whipTicks;
+        // Down the sights: eased up and down; the view narrows with it.
+        bool aimed = gun && ControlMod.sightsUp(state, you) && !Whipping && c?.busy == null;
+        sights = Math.Clamp(sights + (aimed ? 1 : -1) * delta / SIGHTS_S, 0, 1);
+        float ads = (float)(sights * sights * (3 - 2 * sights));
+        camera.Fov = Mathf.Lerp(baseFov, baseFov * SIGHTS_FOV, ads);
         (Transform3D hand, Basis item) r;
         if (family == "rifle" || family == "handgun")
         {
-            r = (family == "rifle" ? GUN : HANDGUN).Frames(rightKind);
-            if (age >= 0 && age < KICK_TICKS)
+            var hold = family == "rifle" ? GUN : HANDGUN;
+            r = ads > 0 ? Blend(hold, family == "rifle" ? RIFLE_SIGHTS : HANDGUN_SIGHTS, ads, rightKind) : hold.Frames(rightKind);
+            if (Whipping)
+                r = family == "rifle" ? Swing(age / whipTicks, rightKind, GUN, BUTT_WIND, BUTT_STRIKE, BUTT_FOLLOW) : Swing(age / whipTicks, rightKind, HANDGUN, WHIP_WIND, WHIP_STRIKE, WHIP_FOLLOW);
+            else if (fired && age >= 0 && age < KICK_TICKS)
             {
                 float k = (float)Math.Sin(Math.PI * Math.Pow(age / KICK_TICKS, 0.6));
                 var up = new Basis(new Vector3(1, 0, 0), 0.18f * k);
@@ -308,9 +362,18 @@ public sealed class Held
         else if (family == "stab")
             r = swinging ? Swing(age / swingTicks, rightKind, STAB_REST, STAB_WIND, STAB_STRIKE, STAB_FOLLOW) : STAB_REST.Frames(rightKind);
         else r = swinging ? Swing(age / swingTicks, rightKind, REST, WIND, STRIKE, FOLLOW) : REST.Frames(rightKind);
-        Show(right, rightModel, r, sway, delta, tilt: !gun);
+        Show(right, rightModel, r, sway * (1 - 0.8f * ads), delta, tilt: !gun);
         PlaceSupport(twoHands ? rightKind : null);
-        UpdateFlash(rightKind, age, state.tick);
+        UpdateFlash(rightKind, fired ? age : -1, state.tick);
+
+        // Bare hands: a punch, the fist only through the blow (nothing in your right hand, nothing carried).
+        bool punching = rightModel == "" && carried == null && age >= 0 && age < SWING_TICKS && models.MeshFor("hand") != null;
+        fist.Visible = punching;
+        if (punching)
+        {
+            var (fh, _) = Swing(age / SWING_TICKS, "", PUNCH_REST, PUNCH_WIND, PUNCH_STRIKE, PUNCH_FOLLOW);
+            fist.Transform = new Transform3D(fh.Basis, fh.Origin + sway);
+        }
 
         // The left hand: a tool, lowered (put away while both hands are on a rifle or an axe; ducked out of
         // the way during a swing).
@@ -407,21 +470,23 @@ public sealed class Held
     /// carried through past the strike (slowing), then back to rest.</summary>
     static (Transform3D, Basis) Swing(double t, string kind, Pose rest, Pose wind, Pose strike, Pose follow)
     {
-        (Transform3D, Basis) Blend(Pose a, Pose b, double u)
-        {
-            float w = (float)u;
-            var (ha, ia) = a.Frames(kind);
-            var (hb, ib) = b.Frames(kind);
-            var q = ha.Basis.GetRotationQuaternion().Slerp(hb.Basis.GetRotationQuaternion(), w);
-            var qi = ia.GetRotationQuaternion().Slerp(ib.GetRotationQuaternion(), w);
-            return (new Transform3D(new Basis(q), ha.Origin.Lerp(hb.Origin, w)), new Basis(qi));
-        }
+        (Transform3D, Basis) Blend(Pose a, Pose b, double u) => Held.Blend(a, b, (float)u, kind);
         static double Smooth(double u) => u * u * (3 - 2 * u);
         if (t < 0.2) return Blend(rest, wind, 1 - Math.Pow(1 - t / 0.2, 2.5));
         if (t < 0.26) return Blend(wind, wind, 0);
         if (t < 0.4) return Blend(wind, strike, Math.Pow((t - 0.26) / 0.14, 1.6));
         if (t < 0.52) return Blend(strike, follow, 1 - Math.Pow(1 - (t - 0.4) / 0.12, 2));
         return Blend(follow, rest, Smooth((t - 0.52) / 0.48));
+    }
+
+    /// <summary>Two holds blended (w 0..1): the hand's turn and place, and the item's turn.</summary>
+    static (Transform3D, Basis) Blend(Pose a, Pose b, float w, string kind)
+    {
+        var (ha, ia) = a.Frames(kind);
+        var (hb, ib) = b.Frames(kind);
+        var q = ha.Basis.GetRotationQuaternion().Slerp(hb.Basis.GetRotationQuaternion(), w);
+        var qi = ia.GetRotationQuaternion().Slerp(ib.GetRotationQuaternion(), w);
+        return (new Transform3D(new Basis(q), ha.Origin.Lerp(hb.Origin, w)), new Basis(qi));
     }
 
     static string Kind(string model)

@@ -329,7 +329,7 @@ public sealed partial class InventoryScreen : Control
         }
         foreach (var q in quicks)
         {
-            q.item = Inventory.quickItem(state, s, q.n);
+            q.item = Inventory.quickInHand(state, s, q.n) ?? Inventory.quickItem(state, s, q.n); // the one in hand too
             q.QueueRedraw();
         }
         if (held != null && held.keyboard) AimCell(focus, cx - held.grabX, cy - held.grabY);
@@ -804,6 +804,9 @@ public sealed partial class InventoryScreen : Control
                 return g.GetGlobalRect().Position + new Vector2((p.x + p.w / 2f) * CELL, (p.y + p.h / 2f) * CELL);
         return slots.FirstOrDefault((t) => t.item?.id == itemId)?.GetGlobalRect().GetCenter();
     }
+
+    /// <summary>The middle of quick slot n's tile (0 for key 1), on screen.</summary>
+    public Vector2 QuickCentre(int n) => quicks[n].GetGlobalRect().GetCenter();
 
     /// <summary>The middle of a slot's tile ("body"), on screen.</summary>
     public Vector2 SlotCentre(string slot) => slots.First((t) => t.slot == slot).GetGlobalRect().GetCenter();

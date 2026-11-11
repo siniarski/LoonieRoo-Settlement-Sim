@@ -35,6 +35,15 @@ public static partial class ControlMod
     /// <summary>Sneaking: this much of your pace (percent).</summary>
     public const int SNEAK_PCT = 50;
 
+    /// <summary>Down the sights: this much of your pace (percent), and no running.</summary>
+    public const int SIGHTS_PCT = 60;
+
+    /// <summary>Aiming down the sights: asked for (the `sights` command) with a gun in hand, on foot.</summary>
+    public static bool sightsUp(SimState state, Survivor s)
+    {
+        return (state.control?.sights == true) && (state.control.survivorId == s.id) && (Weapons.heldGun(state, s) != null) && !Js.T(Vehicles.vehicleOf(state, s));
+    }
+
     /// <summary>A blow to one of the dead that isn't after you (sneaking up, or it's busy with someone else) does this much (percent).</summary>
     public const int SNEAK_ATTACK_PCT = 300;
 
@@ -105,6 +114,10 @@ public static partial class ControlMod
     {
         var climb = Motion.inWindowFrame(state.grid, s.at);
         var pct = ((double)(((double)(((double)(((double)(((double)(JsMath.max(CLUTCHED_MIN, 100 - ((double)(CLUTCH_PCT) * (clutchedBy(state, s))))) * (((run && !climb) ? BodyMod.RUN_PCT : 100)))) * ((climb ? 2 : 5)))) / (5))) * ((Js.T(c.sneaking) ? SNEAK_PCT : 100)))) / (100));
+        if (sightsUp(state, s))
+        {
+            pct = ((double)(pct) * SIGHTS_PCT) / 100;
+        }
         var walk = JsMath.round(((double)(Motion.SUB) / (Survivors.stepPaceDry(state, s, s.pos))));
         var snow = Snow.walkPct(state, s.pos.x, s.pos.y);
         if (snow != 100)
@@ -146,7 +159,7 @@ public static partial class ControlMod
             {
                 c.facing = eightWay(c.dx, c.dy);
             }
-            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s);
+            var run = ((c.running == true) && !Js.T(c.sneaking)) && !BodyMod.isWinded(s) && !sightsUp(state, s);
             if (Js.T(run))
             {
                 BodyMod.exert(s, BodyMod.RUN_TICK_COST);
@@ -413,8 +426,9 @@ public static partial class ControlMod
         }
         c.nextSwing = state.tick + Moodlets.swingWait(s, w.swing);
         c.swungTick = state.tick;
+        c.shotTick = state.tick;
         var moving = ((c.dx != 0) || (c.dy != 0));
-        var o = Shooting.fire(state, s, gun, ax, ay, moving);
+        var o = Shooting.fire(state, s, gun, ax, ay, moving, sightsUp(state, s));
         c.facing = eightWay(ax, ay);  // the facing follows the shot (the arc of a later swing)
         return o.note;
     }
