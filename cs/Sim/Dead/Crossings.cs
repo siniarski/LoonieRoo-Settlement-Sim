@@ -11,6 +11,9 @@
 //   barricade   runner                    vaults it (the edge, or the tile), VAULT_TICKS (0.8 s)
 //               crawler                   under, as it always went (a plain step: Pathfinding's "crawler")
 //               the rest                  batter it, as before (Breach.cs)
+//               the rest, in a crowd      PILE_UP or more pressed at one stretch (within a tile of it, counted from the
+//                                         crowd's buckets: ZombieCrowd.cs): the ones behind climb over the ones in front,
+//                                         one leg over the edge, PILE_TICKS (2 s); fewer than that only batter (pileOver)
 //   wall, door, window, boards            battered, as before; a broken window is climbed through (Zombies.climbing)
 //   water                                 never; pits and traps catch whoever steps on them; furniture never stopped them
 // So over a car's width is two legs (onto it, off it: 4 s for a walker), and along a sedan parked in a gate six.
@@ -38,7 +41,17 @@ namespace LoonieRoo.Sim;
 
 public static class Crossings
 {
-    public const string CLIMB = "climb", UNDER = "under", VAULT = "vault", DOWN = "down";
+    public const string CLIMB = "climb", UNDER = "under", VAULT = "vault", DOWN = "down", PILE = "pile";
+
+    /// <summary>A barricade edge is climbed (over the bodies pressed at it) once this many of the dead stand within a
+    /// tile of the one at it, itself counted: a stretch three edges long with two rows of them at it. Fewer batter.</summary>
+    public const int PILE_UP = 6;
+
+    /// <summary>Ticks to climb over the pile and the barricade's edge (one leg, ground to ground).</summary>
+    public const int PILE_TICKS = 20;
+
+    /// <summary>For the renderer (metres): the top of a pile-up's climb, on the backs of the ones at the barricade.</summary>
+    public const double PILE_HEIGHT = 1.1;
 
     /// <summary>Knocked off a car or a barricade by a blow (knockOff), it lies where it fell this long before it
     /// gets up and tries again: no biting, no moving, and a blow lands as on one unaware of you (ControlMod).</summary>
@@ -306,6 +319,27 @@ public static class Crossings
         if (to != null) Motion.place(z, to);
     }
 
+    // --- pile-ups at a barricade (Zombies.stepBlocked, when it would strike it) ---
+
+    /// <summary>The zombie at a barricade's edge it can't vault, on its way across it (its path, a horde's member's
+    /// field: the way it would batter through), with enough of the dead pressed round it: over it, on the ones in
+    /// front. Asked only when it would strike (once in ZOMBIE_ATTACK_EVERY), and the count is the crowd's buckets'
+    /// (zombiesWithin: a few dozen cells), so a crowd at a fence costs no scan. Paths, reachability and the horde's
+    /// field are unchanged: a pile-up only crosses where the path already goes (through the barricade, battering),
+    /// faster than battering would. True if it began.</summary>
+    public static bool pileOver(SimState state, Zombie z, Point next)
+    {
+        if (z.crossing != null || z.kind == "raider" || vaulter(z) || z.variant == "crawler") return false;
+        var grid = state.grid;
+        var a = z.pos;
+        if (Space.manhattan(a, next) != 1 || Grids.edgeKindBetween(grid, a.x, a.y, next.x, next.y) != Grids.EDGE_BARRICADE) return false;
+        string body = Zombies.moverOf(z);
+        if (!Pathfinding.isPassable(grid, next.x, next.y, body) || !Motion.fits(grid, Motion.centre(next), body)) return false;
+        if (Zombies.zombiesWithin(state, a, 1) < PILE_UP) return false;
+        z.crossing = new Crossing { what = PILE, from = z.at.Copy(), to = Motion.centre(next), ticks = PILE_TICKS, of = PILE_TICKS };
+        return true;
+    }
+
     // --- the noise of it ---
 
     /// <summary>One of the dead starts a leg onto, across or off a parked car: a thump ("thump", 10 tiles: louder than
@@ -373,6 +407,7 @@ public static class Crossings
         var c = z.crossing;
         if (c == null || c.what == UNDER || c.what == DOWN || c.of <= 0) return 0;
         double t = JsMath.max(0, JsMath.min(1, (c.of - c.ticks - 1 + alpha) / c.of));
+        if (c.what == PILE) return 4 * PILE_HEIGHT * t * (1 - t);
         double h0 = top(state, z, c.from), h1 = top(state, z, c.to);
         if (h0 == 0 && h1 == 0) return 4 * VAULT_HEIGHT * t * (1 - t);
         if (h1 > h0) return h0 + (h1 - h0) * JsMath.min(1, t / RISE);

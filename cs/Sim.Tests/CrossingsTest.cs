@@ -506,4 +506,46 @@ public class CrossingsTest
         expect(Noise.NOISE["thump"]).toBeGreaterThan(Sight.WALK_HEARD);
         expect(Noise.NOISE["thump"]).toBeLessThan(Noise.NOISE["gunfire"]);
     }
+
+    /// <summary>A yard fenced across row 6 (a barricade on every tile's north edge), `n` walkers south of it after
+    /// you, the fence mended every tick (someone holding it). Ticks `max`; returns how many came over and whether
+    /// any crossing was a pile-up.</summary>
+    static (int over, bool piled, int most) fenced(int n, int max)
+    {
+        var (state, s) = yard("................");
+        for (int x = 0; x < 16; x++) Grids.setEdge(state.grid, x, 6, "n", Grids.EDGE_BARRICADE);
+        state.walkabilityVersion++;
+        var dead = new List<Zombie>();
+        for (int i = 0; i < n; i++) dead.Add(CrossingsTest.dead(state, s, "walker", 4 + i % 8, 9 + i / 8));
+        bool piled = false;
+        int most = 0;
+        for (int t = 0; t < max; t++)
+        {
+            Tick.tick(state);
+            for (int x = 0; x < 16; x++) Breach.repairEdge(state, Grids.edgeIndex(state.grid, x, 6, "n"), 1000);
+            foreach (var z in dead)
+            {
+                if (z.crossing?.what == Crossings.PILE)
+                {
+                    piled = true;
+                    most = Math.Max(most, Js.I(Zombies.zombiesWithin(state, Motion.tileOf(z.crossing.from), 1)));
+                }
+            }
+            expect(Invariants.checkInvariants(state), $"tick {t}\n{DebugText.dumpText(state)}").toEqual(Js.Arr([]));
+        }
+        for (int x = 0; x < 16; x++) expect(Grids.edgeKindBetween(state.grid, x, 6, x, 5)).toBe(Grids.EDGE_BARRICADE);
+        return (dead.Count((z) => state.zombies.includes(z) && z.pos.y < 6), piled, most);
+    }
+
+    [Fact(DisplayName = "crossings > pile-ups: a few of the dead at a held barricade only batter it; a crowd climbs over the ones in front")]
+    public void Pile_ups()
+    {
+        var few = fenced(Crossings.PILE_UP - 3, 300);
+        expect(few.over).toBe(0);
+        expect(few.piled).toBe(false);
+        var many = fenced(16, 300);
+        expect(many.piled).toBe(true);
+        expect(many.over).toBeGreaterThan(0);
+        expect(many.most).toBeGreaterThanOrEqual(Crossings.PILE_UP);
+    }
 }

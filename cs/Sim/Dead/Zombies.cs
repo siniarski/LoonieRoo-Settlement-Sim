@@ -473,6 +473,10 @@ public static partial class Zombies
                 return true; // a runner vaults a barricade
             }
             var e = Grids.edgeBetween(state.grid, z.pos.x, z.pos.y, next.x, next.y);
+            if ((e >= 0) && (z.cooldown == 0) && Crossings.pileOver(state, z, next))
+            {
+                return true; // enough of them at a barricade: over the ones in front
+            }
             if ((e >= 0) && (z.cooldown == 0))
             {
                 Breach.damageEdge(state, e, ((double)(ZOMBIE_DAMAGE) * (Js.Get(ZombieKinds.VARIANTS, z.variant).battering)));
