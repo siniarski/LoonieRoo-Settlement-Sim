@@ -69,6 +69,7 @@ public sealed partial class People
         /// <summary>What it holds, drawn in its hand (People.Hold.cs).</summary>
         public string heldKind = "";
         public MeshInstance3D? holdMesh;
+        public bool holdLoad;
         /// <summary>How fast it turns (rad/s, smoothed): standing, a quick turn steps round.</summary>
         public double turn, since, riseAt;
         /// <summary>The get-up clip of one of the dead that woke where it lay, while it plays.</summary>

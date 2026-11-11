@@ -334,6 +334,7 @@ public partial class Game
         await NewGameFromMenu("Survivor", "group");
         await NewGameFromMenu("Apocalypse", "solo");
         await BigNewGame();
+        await AnimSteps();
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);
