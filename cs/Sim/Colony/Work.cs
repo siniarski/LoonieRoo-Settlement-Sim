@@ -254,6 +254,10 @@ public static partial class Work
         {
             { goTo(state, s, job, Grids.neighbours4(state.grid, a.pos.x, a.pos.y), 3); return; }
         }
+        if (AnimalCars.hidden(a))
+        {
+            return; // under a car (AnimalCars.cs): out of reach until it comes out
+        }
         if ((a.kind == "wolf") || (a.kind == "bear"))
         {
             if ((state.tick % Jobs.GUARD_ATTACK_EVERY) != 0)

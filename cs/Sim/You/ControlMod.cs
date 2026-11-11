@@ -465,7 +465,7 @@ public static partial class ControlMod
             var blow = Weapons.blowDamage(state, s, Jobs.GUARD_DAMAGE) + ((double)(Skills.GUARD_DAMAGE_PER_LEVEL) * (Skills.skillLevel(s, "guard")));
             return Residents.hitResident(state, person, blow, s) ? $"killed {Js.Str(person.name)}" : $"hit {Js.Str(person.name)}";
         }
-        var deer = Motion.nearestInArc(state.animals, s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
+        var deer = Motion.nearestInArc(AnimalCars.inTheOpen(state.animals), s.at, swingDir(c), spec.reach, state.grid, spec.arcCos2);
         if (Js.T(deer))
         {
             c.nextSwing = state.tick + Moodlets.swingWait(s, spec.swing);

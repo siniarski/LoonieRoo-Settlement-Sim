@@ -8,6 +8,9 @@
 //           only where the straight way is open, so they never need A*.
 // Budget (rule 14): A* plans are bounded (PLAN_EXPAND tiles) and capped per tick (a WalkBudget each
 // for animals and dogs), and a walker that planned waits REPLAN ticks before planning again.
+// Parked cars (AnimalCars.cs): plans may cross one at a cost by kind, the crossing starts where the
+// path's next waypoint is under it, and a flee leg may be picked across one (a rabbit's cover, a
+// deer cornered).
 // Integer maths (in doubles) throughout; directions from a fixed table, rolls from Hash (no RNG).
 #nullable disable warnings
 namespace LoonieRoo.Sim;
@@ -18,6 +21,10 @@ public interface IWalker : Body, IHasId
     List<Point> path { get; set; }
     /// <summary>No A* plan before this tick.</summary>
     double nextPlan { get; set; }
+    /// <summary>Going under or over a parked car (AnimalCars.cs).</summary>
+    CarCrossing? cross { get; set; }
+    /// <summary>No plans over cars before this tick (a crossing was refused).</summary>
+    double? noCrossUntil { get; set; }
 }
 
 public partial class Animal : IWalker { }
@@ -64,7 +71,8 @@ public static class Walkers
     }
 
     /// <summary>Walk towards `goal` (SUB units) by up to `speed`, stopping `stop` short of it (centre to centre). True once it's there.</summary>
-    public static bool walkTo(SimState state, IWalker w, Point goal, double speed, string mover, WalkBudget budget, double stop = 0)
+    /// `overCars`: a goal straight across a parked car (a leg picked over one) is walked to straight, over or under it.
+    public static bool walkTo(SimState state, IWalker w, Point goal, double speed, string mover, WalkBudget budget, double stop = 0, bool overCars = false)
     {
         var grid = state.grid;
         var left = JsMath.sqrt(Motion.distance2(goal, w.at)) - stop;
@@ -83,13 +91,20 @@ public static class Walkers
         {
             var v = Motion.toward(goal.x - w.at.x, goal.y - w.at.y, step);
             var to = Motion.slide(grid, w.at, v.x, v.y, mover);
-            if ((to.x != w.at.x) || (to.y != w.at.y))
+            // Straight on only if it gets on: the line is open but the body is wider than it, and one caught on a
+            // corner (a wall's, a car's) slides sideways into it for ever. Then it's the path's way round.
+            var gained = JsMath.sqrt(Motion.distance2(goal, w.at)) - JsMath.sqrt(Motion.distance2(goal, to));
+            if (((to.x != w.at.x) || (to.y != w.at.y)) && ((gained * 4) >= step))
             {
                 w.at = to;
                 w.pos = Motion.tileOf(to);
                 w.path = [];
                 return (left - step) <= ((stop > 0) ? 0 : ARRIVED);
             }
+        }
+        else if (overCars && AnimalCars.straightOver(state, w, goal, step, mover))
+        {
+            return false;
         }
         followPath(state, w, Motion.tileOf(goal), speed, mover, budget);
         return false;
@@ -105,7 +120,7 @@ public static class Walkers
             budget.plans--;
             w.nextPlan = state.tick + REPLAN;
             List<Point> goals = [goalTile, .. Grids.neighbours4(grid, goalTile.x, goalTile.y)];
-            w.path = Pathfinding.findPathToAny(grid, w.pos, goals, mover, PLAN_EXPAND) ?? [];
+            w.path = Pathfinding.findPathToAny(grid, w.pos, goals, mover, PLAN_EXPAND, AnimalCars.planCost(state, w)) ?? [];
         }
         while ((w.path.length > 0) && Space.samePoint(Js.NN(Js.Get(w.path, 0)), w.pos) && (Motion.distance2(w.at, Motion.centre(w.pos)) <= ((double)(ARRIVED) * (ARRIVED))))
         {
@@ -120,6 +135,10 @@ public static class Walkers
             }
         }
         if (w.path.length == 0)
+        {
+            return;
+        }
+        if (AnimalCars.start(state, w, mover))
         {
             return;
         }
@@ -141,16 +160,28 @@ public static class Walkers
     }
 
     /// <summary>A point `len` SUB units off in direction k of DIRS (any of 12), if it can walk straight there and stand there.</summary>
-    static Point? legTo(SimState state, Point at, int dx, int dy, double len, string mover)
+    /// `overCars`: or across a parked car (to the first place past it, half a tile at a time, where it can stand).
+    static Point? legTo(SimState state, Point at, int dx, int dy, double len, string mover, bool overCars = false)
     {
-        var v = Motion.toward(dx, dy, len);
-        var goal = new Point { x = Js.I(at.x + v.x), y = Js.I(at.y + v.y) };
-        var tile = Motion.tileOf(goal);
-        if (!Grids.inBounds(state.grid, tile.x, tile.y) || !Motion.fits(state.grid, goal, mover))
+        for (var extra = 0; extra <= (overCars ? 4 : 0); extra++)
         {
-            return null;
+            var v = Motion.toward(dx, dy, len + extra * Motion.HALF);
+            var goal = new Point { x = Js.I(at.x + v.x), y = Js.I(at.y + v.y) };
+            var tile = Motion.tileOf(goal);
+            if (!Grids.inBounds(state.grid, tile.x, tile.y) || !Motion.fits(state.grid, goal, mover))
+            {
+                continue;
+            }
+            if (Zombies.walkLine(state.grid, at, goal, mover, false))
+            {
+                return goal;
+            }
+            if (overCars && AnimalCars.lineOver(state.grid, at, goal, mover))
+            {
+                return goal;
+            }
         }
-        return Zombies.walkLine(state.grid, at, goal, mover, false) ? goal : null;
+        return null;
     }
 
     /// <summary>A wander point 1 to 3 tiles off at an angle from the hash (a roll of the id and tick), trying a quarter turn round if that way is blocked; or null.</summary>
@@ -172,7 +203,16 @@ public static class Walkers
     }
 
     /// <summary>A point `tiles` away from `from` (SUB units): straight away if it can walk there, else up to 90 degrees off either side; half as far if none; or null.</summary>
+    /// Across a parked car too (AnimalCars.cs): at once for a rabbit (cover) or a deer (a bound), else only when
+    /// no other way is open.
     public static Point? fleeLeg(SimState state, IWalker w, Point from, double tiles, string mover)
+    {
+        bool cars = AnimalCars.planCost(state, w) > 0;
+        bool cover = cars && AnimalCars.fleesAcross(w);
+        return fleeLeg(state, w, from, tiles, mover, cover) ?? ((cars && !cover) ? fleeLeg(state, w, from, tiles, mover, true) : null);
+    }
+
+    static Point? fleeLeg(SimState state, IWalker w, Point from, double tiles, string mover, bool overCars)
     {
         double ax = w.at.x - from.x;
         double ay = w.at.y - from.y;
@@ -191,7 +231,7 @@ public static class Walkers
                 var rx = ((double)(ax) * r[0]) - ((double)(ay) * r[1]);
                 var ry = ((double)(ax) * r[1]) + ((double)(ay) * r[0]);
                 var d = JsMath.sqrt((rx * rx) + (ry * ry));
-                var goal = legTo(state, w.at, Js.I(JsMath.round((rx * 1024) / d)), Js.I(JsMath.round((ry * 1024) / d)), len, mover);
+                var goal = legTo(state, w.at, Js.I(JsMath.round((rx * 1024) / d)), Js.I(JsMath.round((ry * 1024) / d)), len, mover, overCars);
                 if (Js.T(goal))
                 {
                     return goal;

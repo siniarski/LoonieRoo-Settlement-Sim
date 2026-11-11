@@ -100,7 +100,7 @@ public static class Shooting
             target = what;
         }
         foreach (var z in state.zombies) test(z, z);
-        foreach (var a in state.animals) test(a, a);
+        foreach (var a in state.animals) if (!AnimalCars.hidden(a)) test(a, a); // under a car: the car takes it
         foreach (var r in state.residents) test(r, r);
         if (alsoFriends != null)
         {

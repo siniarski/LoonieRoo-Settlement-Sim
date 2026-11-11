@@ -116,6 +116,7 @@ git tag `ts-final`.
 - **Sight**: lines of sight, what the dead notice, sneaking. **Noise**: noises that wake and draw the dead.
 - **Fog**: exploring. **Mapnotes**: map notes; town names.
 - **Farming**: plots and crops. **Forage**: foraging. **Animals**: deer, rabbits, wolf packs, bears.
+  **AnimalCars**: animals and dogs at parked cars: under (rabbits; a dog under the pickup) or over, by kind and car.
 
 ### `Combat/`
 
