@@ -43,7 +43,7 @@ public static partial class Wellbeing
 
     public static void updateSocial(SimState state)
     {
-        if ((state.tick % SOCIAL_EVERY) != 0)
+        if (!Time.slowEvery(state.tick, SOCIAL_EVERY))
         {
             return;
         }

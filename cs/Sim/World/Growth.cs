@@ -392,7 +392,7 @@ public static class Growth
             scan(state, ix);
         }
         plant(state, ix);
-        if (state.tick % FurnitureMod.TREE_REGROW_TICKS == 0) regrowWood(state);
+        if (Time.slowEvery(state.tick, FurnitureMod.TREE_REGROW_TICKS)) regrowWood(state);
         if (state.tick > 0 && state.tick % Time.DAY_LENGTH == 0) expire(state);
     }
 

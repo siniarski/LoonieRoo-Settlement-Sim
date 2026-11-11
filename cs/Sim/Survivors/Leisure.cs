@@ -99,7 +99,7 @@ public static partial class Leisure
         {
             s.note = mourning ? $"paying respects at ({Js.Str(spot.x)}, {Js.Str(spot.y)})" : $"relaxing at ({Js.Str(spot.x)}, {Js.Str(spot.y)})";
         }
-        if (s.leisure.progress < RELAX_TICKS)
+        if (s.leisure.progress < Time.scaled(RELAX_TICKS))
         {
             return true;
         }
@@ -157,7 +157,7 @@ public static partial class Leisure
             s.note = "pulled themselves together";
             return;
         }
-        if (Js.T(((((state.tick % BREAKDOWN_CHECK_EVERY) != 0) || !Mood.isMiserable(state, s)) || Resolve.isSteeled(s)) || Js.T(s.sleep)))
+        if (Js.T((((!Time.slowEvery(state.tick, BREAKDOWN_CHECK_EVERY)) || !Mood.isMiserable(state, s)) || Resolve.isSteeled(s)) || Js.T(s.sleep)))
         {
             return;
         }
@@ -171,7 +171,7 @@ public static partial class Leisure
         }
         s.leisure = null;
         Books.stopReading(state, s, "having a breakdown");
-        s.breakdown = new SurvivorBreakdown { until = state.tick + BREAKDOWN_TICKS };
+        s.breakdown = new SurvivorBreakdown { until = state.tick + Time.scaled(BREAKDOWN_TICKS) };
         s.note = "having a breakdown";
         Events.logEvent(state, $"{Js.Str(s.name)} is having a breakdown");
         Relationships.lashOut(state, s);

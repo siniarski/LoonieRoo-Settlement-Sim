@@ -26,6 +26,17 @@ public class HarnessTest
         Assert.Empty(Probe.newEvents(state, ref last));
     }
 
+    [Fact(DisplayName = "harness > the solo bot's path goes round furniture and trees, which stop you on foot")]
+    public void SoloPathAroundFurniture()
+    {
+        var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.cY.", "....."] });
+        var path = SoloHarness.youPath(state, new Point { x = 0, y = 0 }, [new Point { x = 4, y = 0 }]);
+        Assert.NotNull(path);
+        Assert.DoesNotContain(path, (p) => p.y == 0 && (p.x == 2 || p.x == 3));
+        Assert.Equal((4, 0), (path[^1].x, path[^1].y));
+        Assert.Equal(6, path.Count);
+    }
+
     [Fact(DisplayName = "harness > the solo bot drinks from a pond when there's no well, collector or tap")]
     public void SoloBotDrinksFromAPond()
     {

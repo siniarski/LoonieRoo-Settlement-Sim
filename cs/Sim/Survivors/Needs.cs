@@ -205,7 +205,7 @@ public static partial class Needs
         {
             s.note = $"eating {Js.Str(Js.T(meal.seat) ? Js.Str("at a table") : Js.Str("standing"))} at ({Js.Str(s.pos.x)}, {Js.Str(s.pos.y)})";
         }
-        if (meal.progress < Food.EAT_TICKS)
+        if (meal.progress < Time.scaled(Food.EAT_TICKS))
         {
             return true;
         }
@@ -321,7 +321,7 @@ public static partial class Needs
         {
             s.note = $"bandaging wounds at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})";
         }
-        if (treatment.progress < Health.TREAT_TICKS)
+        if (treatment.progress < Time.scaled(Health.TREAT_TICKS))
         {
             return true;
         }

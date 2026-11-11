@@ -47,6 +47,17 @@ public static partial class Time
     /// <summary>Things that run at a rate per tick (needs, crops, work) run on one tick in every `scale`.</summary>
     public static bool slowTick(int tick) => tick % scale == 0;
 
+    /// <summary>Slow ticks so far: what a rate counts in place of the tick, so "every n" and "n ticks long" follow the
+    /// day's length (at scale 1 it is the tick).</summary>
+    public static double slowCount(int tick) => Math.Floor((double)tick / scale);
+
+    /// <summary>A slow tick that is also every n-th slow tick: `tick % n == 0` at scale 1, every n x scale ticks at scale
+    /// scale.</summary>
+    public static bool slowEvery(int tick, double n) => slowTick(tick) && slowCount(tick) % n == 0;
+
+    /// <summary>A duration given in ticks at scale 1, in ticks at the current scale.</summary>
+    public static int scaled(int ticks) => ticks * scale;
+
     static int ClockTicks(int tick) => tick + START_HOUR * TICKS_PER_HOUR;
 
     /// <summary>Ticks since midnight, 0 &lt;= t &lt; DAY_LENGTH.</summary>

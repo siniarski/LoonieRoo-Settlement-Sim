@@ -528,7 +528,7 @@ public sealed partial class Hud : Control
                 top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
                 top.AddChild(Kit.Label($"{b.pct}", Kit.Text, 12));
                 cell.AddChild(top);
-                string colour = b.pct < b.crit ? "#ff6a5c" : b.pct < b.low ? "#ffb347" : BAR_COLOURS[b.kind];
+                string colour = b.severity >= Sev.Bad ? "#ff6a5c" : b.severity >= Sev.Warn ? "#ffb347" : BAR_COLOURS[b.kind];
                 cell.AddChild(new BarFill(b.pct / 100.0, Ctx.Css(colour)));
                 grid.AddChild(cell);
             }

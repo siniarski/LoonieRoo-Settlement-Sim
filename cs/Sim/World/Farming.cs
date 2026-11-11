@@ -25,7 +25,7 @@ public static partial class Farming
     /// <summary>Ticks of work to sow or to harvest a plot.</summary>
     public const int FARM_WORK = 20;
 
-    /// <summary>A coop lays a food this often (twice as long in winter).</summary>
+    /// <summary>A coop lays a food every this many slow ticks (Time.slowEvery; twice as long in winter).</summary>
     public const int EGG_EVERY = 1200;
 
     public static FarmPlot? plotAt(SimState state, int x, int y)
@@ -125,7 +125,7 @@ public static partial class Farming
             }
         }
         var every = (Seasons.seasonOf(state.tick) == "winter") ? ((double)(2) * (EGG_EVERY)) : EGG_EVERY;
-        if ((state.tick > 0) && ((state.tick % every) == 0))
+        if ((state.tick > 0) && (Time.slowEvery(state.tick, every)))
         {
             foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "coop")))
             {
