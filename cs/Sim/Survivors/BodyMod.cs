@@ -37,8 +37,6 @@ public static partial class BodyMod
 
     public const int SWING_COST = 10;
 
-    public const int GUARD_BLOW_COST = 5;
-
     /// <summary>Running: this many percent of walking speed, for this much endurance a tick (about 10 s from full to winded).</summary>
     public const int RUN_PCT = 175;
 

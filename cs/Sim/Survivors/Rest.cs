@@ -1,6 +1,5 @@
 // Ported from src/sim/rest.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Rest constants and types. Kept separate from needs.ts so survivors.ts can
-// use them without an import cycle (same pattern as jobTypes.ts).
+// Rest constants (Needs sleeps by them).
 // All values are integers so the sim stays exactly deterministic.
 #nullable disable warnings
 namespace LoonieRoo.Sim;

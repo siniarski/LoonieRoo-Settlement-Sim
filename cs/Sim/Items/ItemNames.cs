@@ -2,7 +2,7 @@
 // its name is what you see: a "weapon" is a kitchen knife or a crowbar, a "gun" a pistol or a revolver.
 // The name is a variant of the kind, picked by a stateless hash of the item's id (Hash.hashRoll), so it
 // needs no state: it never changes, it costs the RNG stream nothing, and items in old saves get names too.
-// Books are named by their subject (item.tag), bodies by whose they were (Corpses.describe).
+// Books are named by their subject (item.tag), bodies by whose they were (nameOf).
 // A name is flavour only: every variant of a kind weighs and works the same. (The weapons' kinds are specific, one per
 // weapon: WeaponTable.cs. The old generic "weapon" is read as a crowbar.)
 #nullable disable warnings

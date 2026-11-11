@@ -389,7 +389,7 @@ public static partial class Needs
         s.note = note;
     }
 
-    /// <summary>Satiety drains every tick, awake or asleep.</summary>
+    /// <summary>Satiety drains every slow tick (Time.slowTick), awake or asleep.</summary>
     public static void updateSatiety(SimState state, Survivor s)
     {
         if (Policies.satietyDrains(state) && Time.slowTick(state.tick))
@@ -407,6 +407,7 @@ public static partial class Needs
         }
         else if (Seasons.isCold(state, s))
         {
+            // Out in the cold: nothing heals, asleep or awake.
         }
         else if (Js.T((s.health > 0) && Js.T(s.sleep?.asleep)))
         {
@@ -555,7 +556,7 @@ public static partial class Needs
         return FurnitureMod.ofKind(state, "bed").filter((f) => (f.occupant == null) && ((f.owner == null) || (f.owner == s.id))).sort((a, b) => ((rank(a) - rank(b)) is var __or0 && Js.T(__or0) ? __or0 : (Space.manhattan(s.pos, a) - Space.manhattan(s.pos, b)))).find((f) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [f]));
     }
 
-    /// <summary>Drains or restores rest; wakes the survivor when full. Runs every tick, after movement and work.</summary>
+    /// <summary>Drains or restores rest; wakes the survivor when full. Called every tick, after movement and work; rest itself moves on slow ticks.</summary>
     public static void updateRest(SimState state, Survivor s)
     {
         if (!Time.slowTick(state.tick))

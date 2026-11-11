@@ -1,6 +1,7 @@
 // Ported from src/sim/items.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Items: one per tile, one carried at a time, no stacks (hauling v1).
-// An item is either on the ground (`pos`) or carried (`carriedBy`), never both.
+// Items: the things of the world, one list in state. An item is on the ground (`pos`), carried (`carriedBy`: in a
+// hand, worn, or in someone's bag) or `inside` a container (a crate, a car's boot, a coat's pockets), never two of
+// these; where it lies in a container's grid, and stacks, are InventoryGrid.cs.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 

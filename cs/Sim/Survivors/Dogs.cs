@@ -30,7 +30,7 @@ public static partial class Dogs
 
     public const int PET_EVERY = 200;
 
-    /// <summary>Each day at noon, the chance a stray turns up.</summary>
+    /// <summary>Each day at 06:00, the chance a stray turns up.</summary>
     public const double STRAY_CHANCE = 0.12;
 
     /// <summary>The chance an expedition comes home with a dog.</summary>

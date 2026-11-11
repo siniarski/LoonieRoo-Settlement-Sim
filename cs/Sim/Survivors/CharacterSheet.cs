@@ -114,13 +114,6 @@ public static class CharacterSheet
         return sb.ToString().TrimEnd();
     }
 
-    /// <summary>The sheet for the survivor you control, as text; null when nobody is controlled.</summary>
-    public static string? textOfControlled(SimState state)
-    {
-        var s = ControlMod.controlled(state);
-        return s == null ? null : text(build(state, s));
-    }
-
     public static string SevWord(Sev s) => s switch { Sev.Critical => "critical", Sev.Bad => "bad", Sev.Warn => "warning", Sev.Note => "note", _ => "fine" };
 
     static double Clamp01(double v) => Math.Max(0, Math.Min(1, v));

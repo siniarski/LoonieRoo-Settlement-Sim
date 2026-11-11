@@ -141,7 +141,8 @@ git tag `ts-final`.
 ### `Items/`
 
 - **Items**: items (**ItemNames**: what things are called). **Inventory**: your bag and containers
-  (**InventoryGrid**: every container a grid of cells, footprints, stacks, pockets, first-fit, quick slots).
+  (**InventoryGrid**: every container a grid of cells, footprints, stacks, pockets, first-fit; **InventoryQuick**:
+  the nine quick slots).
 - **FurnitureMod**: furniture. **Crafting**: stations and recipes.
 
 ### `Colony/`

@@ -93,11 +93,6 @@ public static partial class Inventory
         return s.pack.reduce((sum, id) => sum + Js.Get(ITEM_WEIGHT, Items.getItem(state, id)?.kind ?? "sample"), 0.0);
     }
 
-    public static bool fitsInPack(SimState state, Survivor s, Item item)
-    {
-        return (packWeight(state, s) + Js.Get(ITEM_WEIGHT, item.kind)) <= PACK_MAX;
-    }
-
     /// <summary>Whether stow would take it: light enough, and room for it in one of your grids.</summary>
     public static bool canStow(SimState state, Survivor s, Item item)
     {
