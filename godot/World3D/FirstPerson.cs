@@ -39,6 +39,9 @@ public sealed partial class FirstPerson : Node3D
     readonly ItemModels items;
     readonly FurnitureModels furniture;
     readonly Held held;
+    readonly SwimHands swimHands;
+    /// <summary>Your arms while swimming (the self-test).</summary>
+    public SwimHands SwimHands => swimHands;
     /// <summary>What you hold (the self-test).</summary>
     public Held Held => held;
     readonly People people;
@@ -107,6 +110,7 @@ public sealed partial class FirstPerson : Node3D
         items = new ItemModels(this);
         furniture = new FurnitureModels(this);
         held = new Held(camera, items);
+        swimHands = new SwimHands(camera, items);
         people = new People(this) { Items = items };
         trees = new Trees(this);
         far = new FarField(this, trees);
@@ -210,6 +214,7 @@ public sealed partial class FirstPerson : Node3D
         aircraft.Update(state, world);
         items.Update(state, eye);
         held.Update(state, you, alpha, world, inCar || EyeAt != null);
+        swimHands.Update(state, you, world, inCar || EyeAt != null);
         lights.Update(state, eye, alpha, world, inCar);
         sounds.Update(state, alpha, you, people.Steps);
     }
