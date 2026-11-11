@@ -232,7 +232,7 @@ public sealed partial class Hud : Control
         string controlText = you != null
             ? view.showKeys
                 ? view.firstPerson
-                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault, hop · C sneak · E get in or out of a car · U boot · I bonnet · click swing or shoot · X reload · Q next weapon · right-click/E use · R work · V follow me · H hold · L loot (where you look) · T talk · G flashlight (in a car: headlights) · Z light switch · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
+                    ? "mouse look · WASD walk (in a car: W go, S brake, A/D steer) · Shift run · Space jump, vault (a broken window, a fence), hop · C sneak · E get in or out of a car (any side) · U boot (behind the car; open, E or Tab shows what's in it) · I bonnet (in front) · click swing or shoot · X reload · Q next weapon · right-click/E use what you look at, in reach · R work · V follow me · H hold · L loot (where you look) · T talk · G flashlight (in a car: headlights) · Z light switch · Tab inventory · 1-9 use from bag · M map and colony · F let go · K hide"
                     : "M or Esc: back to first person · Tab your bag · F on someone selected: play them instead · K hide"
                 : "K: keys" + LightPrompt(state, you)
             : view.selectedId != null ? "F: take control of the selected survivor" : "";

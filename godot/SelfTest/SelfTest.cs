@@ -143,6 +143,14 @@ public partial class Game
         // a real movement could ride in on the test's event past DropForeignMouse. One event each, then.
         Input.UseAccumulatedInput = false;
         await Frames(5);
+        // SELFTEST_ONLY=interact: only the interaction steps (SelfTestInteract.cs), for working on them.
+        if (OS.GetEnvironment("SELFTEST_ONLY") == "interact")
+        {
+            await InteractSteps();
+            GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
+            GetTree().Quit(failures.Count);
+            return;
+        }
         // First person: the 3D view is up, with the world built round you.
         Check("Playing someone is first person", view.firstPerson && firstPerson.Visible && firstPerson.ChunkCount > 0, $"chunks {firstPerson.ChunkCount}");
         // The detail textures (World3D/Surfaces.cs): every layer of layers.json in the one array, the last one where its name says.
@@ -218,6 +226,7 @@ public partial class Game
         await WorldSteps();
         await CarSteps();
         await RoofSteps();
+        await InteractSteps();
 
         // B (in first person, opens the Colony tab) opens the build bar; 1 arms the wall; a shift-click builds it at once.
         await Tap(Godot.Key.B);
