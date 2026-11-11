@@ -125,6 +125,13 @@ Then in Godot: `--headless --path godot --import` (re-import), and the lab:
   `Cars.cs`. **The car's and the pickup's sizes are also numbers in the sim**, which must be changed with the models:
   their length and width (`cs/Sim/Movement/VehicleBody.cs`: `CAR`, `TRUCK`), and their heights (the underside, the
   boot, roof, bonnet and bed, and where the cabin begins and ends: `cs/Sim/Movement/VehicleHeights.cs`).
+- `scripts/build_surfaces.py` (2026-11-11): the world's detail textures, twenty tileable 256 px pictures (grass,
+  earth, asphalt, brick, planks, shingles, metal, cloth, bark, fur...) and their index, made with numpy alone and
+  seeded by name (~3 s): `"$B" --background --factory-startup --python art/scripts/build_surfaces.py --
+  [--sheet experiments/textures/kit.png] [--renormalise]`, then re-import in Godot. They are multipliers that average
+  to no change, laid over the flat colours by `godot/assets/shaders/surface_detail.gdshaderinc`; a model picks a
+  layer per face in its UV map. docs/textures.md is the page: the layers, the UV convention (glTF flips V), adding
+  or replacing one.
 - `scripts/lowpoly.py`: the kit build_world.py is made with (boxes, cylinders and cones as coloured faces, one mesh
   per model, the glTF export, a preview). build_items.py and build_furniture.py carry older copies of the same
   helpers: fold them in when either is next rebuilt.

@@ -17,6 +17,10 @@
 // walls change. Only lots near you are known (lotsByChunk), a few roofs are built a frame, and
 // the standing test and rooms rerun only when walkabilityVersion changes or you move a chunk (rule 14).
 // From inside, the ceiling (WorldMesh, at WALL_H over Indoor tiles) hides the roof above it.
+// What each building is made of is here too (Styles: WorldLook.Of by the plan's kind and style and the lot's roll),
+// for the chunks' walls and ceilings and for the gables and parapets here. Roofs are textured as the chunks are
+// (docs/textures.md): shingles and sheet by the roof's own coordinates (along the eave, down the slope), the rest
+// by position; snow settles on them (WorldLook.Roof).
 
 using System;
 using System.Collections.Generic;
@@ -42,19 +46,25 @@ public sealed class Roofs
     // Muted, weathered colours, given in sRGB (the vertex colours are linear).
     static Color C(float r, float g, float b) => new Color(r, g, b).SrgbToLinear();
     static readonly Color[] SHINGLES = { C(0.27f, 0.26f, 0.25f), C(0.33f, 0.27f, 0.22f), C(0.26f, 0.29f, 0.28f), C(0.37f, 0.24f, 0.2f), C(0.4f, 0.39f, 0.37f) };
-    static readonly Color TIN = C(0.42f, 0.27f, 0.2f);
-    static readonly Color TAR = C(0.2f, 0.2f, 0.21f);
-    static readonly Color COPING = C(0.52f, 0.5f, 0.47f);
-    static readonly Color SOFFIT = C(0.3f, 0.29f, 0.27f);
-    static readonly Color FASCIA = C(0.44f, 0.41f, 0.37f);
-    static readonly Color BUILT = C(0.36f, 0.33f, 0.29f);
+    static readonly Look TIN = new(C(0.42f, 0.27f, 0.2f), Surfaces.Mapped("sheetmetal"));
+    static readonly Look TAR = new(C(0.2f, 0.2f, 0.21f), Surfaces.What("gravel"));
+    static readonly Look COPING = new(C(0.52f, 0.5f, 0.47f), Surfaces.What("concrete"));
+    static readonly Look SOFFIT = new(C(0.3f, 0.29f, 0.27f), Surfaces.What("planks"));
+    static readonly Look FASCIA = new(C(0.44f, 0.41f, 0.37f), Surfaces.None);
+    static readonly Look BUILT = new(C(0.36f, 0.33f, 0.29f), Surfaces.What("planks"));
 
     static readonly HashSet<string> PITCHED = new() { "house", "barn", "shed", "church" };
+
+    /// <summary>A building's roof, by its kind ("trailer" for a house of that style) and its lot's roll: shingles in a
+    /// few colours, a barn's sheet, tar and gravel on a flat one. The far view's blocks wear the colour.</summary>
+    public static Look RoofOf(string kind, double roll) =>
+        !PITCHED.Contains(kind) ? TAR : kind == "barn" ? TIN : new Look(SHINGLES[(int)(roll * SHINGLES.Length) % SHINGLES.Length], Surfaces.Mapped("shingles"));
 
     sealed class Building
     {
         public string kind = "";
         public double roll;
+        public WorldLook.Style style = WorldLook.Built;
         public readonly HashSet<int> tiles = new();
         /// <summary>Each outer edge: its edge index (-1 at the map's edge) and the tile outside it.</summary>
         public readonly List<(int edge, int outside)> perimeter = new();
@@ -63,7 +73,7 @@ public sealed class Roofs
     }
 
     readonly Node3D parent;
-    readonly StandardMaterial3D material = new() { VertexColorUseAsAlbedo = true, Roughness = 1 };
+    readonly ShaderMaterial material = WorldLook.Roof;
     readonly Dictionary<int, List<Building>> lots = new();
     MeshInstance3D? built;
     object? grid;
@@ -72,7 +82,9 @@ public sealed class Roofs
 
     /// <summary>Tiles under a roof: generated buildings that stand, and rooms you walled in. WorldMesh puts a ceiling over them.</summary>
     public readonly HashSet<int> Indoor = new();
-    /// <summary>Bumped whenever Indoor changes, so chunks look again.</summary>
+    /// <summary>What each generated building near you is made of, by the tiles of its footprint, standing or not.</summary>
+    public readonly Dictionary<int, WorldLook.Style> Styles = new();
+    /// <summary>Bumped whenever Indoor or Styles changes, so chunks look again.</summary>
     public int Version { get; private set; }
 
     public Roofs(Node3D parent) => this.parent = parent;
@@ -117,6 +129,7 @@ public sealed class Roofs
         grid = g;
         foreach (var list in lots.Values) foreach (var b in list) b.node?.QueueFree();
         lots.Clear();
+        Styles.Clear();
         built?.QueueFree();
         built = null;
         at = (int.MinValue, 0);
@@ -139,11 +152,22 @@ public sealed class Roofs
         foreach (var id in lots.Keys) if (!want.Contains(id)) drop.Add(id);
         foreach (var id in drop)
         {
-            foreach (var b in lots[id]) b.node?.QueueFree();
+            foreach (var b in lots[id])
+            {
+                b.node?.QueueFree();
+                foreach (int t in b.tiles) Styles.Remove(t);
+            }
             lots.Remove(id);
         }
+        bool learnt = false;
         foreach (var id in want)
-            if (!lots.ContainsKey(id)) lots[id] = Footprints(state, regions.Lot(id));
+        {
+            if (lots.ContainsKey(id)) continue;
+            var list = lots[id] = Footprints(state, regions.Lot(id));
+            foreach (var b in list) foreach (int t in b.tiles) Styles[t] = b.style;
+            learnt = true;
+        }
+        if (learnt || drop.Count > 0) Version++;
     }
 
     static List<Building> Footprints(SimState state, Lot lot)
@@ -156,7 +180,8 @@ public sealed class Roofs
             var p = layout.buildings[bi];
             var plan = p.plan;
             // A trailer's roof is flat (drawn as the flat kinds are); a workshop's or diner's flat too (not in PITCHED).
-            var b = new Building { kind = plan.style == "trailer" ? "trailer" : plan.kind, roll = Hash.hashRoll(state.world.seed, lot.x, lot.y, 0x7200 + bi) };
+            var b = new Building { kind = plan.style == "trailer" ? "trailer" : plan.kind, roll = Roll(state.world.seed, lot, bi) };
+            b.style = WorldLook.Of(plan.kind, plan.style, b.roll);
             for (int y = 0; y < plan.h; y++)
                 for (int x = 0; x < plan.w; x++)
                 {
@@ -182,6 +207,9 @@ public sealed class Roofs
     }
 
     static readonly (int, int)[] DIR4 = { (0, -1), (1, 0), (0, 1), (-1, 0) };
+
+    /// <summary>The roll (0..1) that picks the looks of a lot's bi-th building: its roof here, its walls in WorldLook.Of.</summary>
+    public static double Roll(double seed, Lot lot, int bi) => Hash.hashRoll(seed, lot.x, lot.y, 0x7200 + bi);
 
     static bool Stands(Grid g, Building b)
     {
@@ -239,6 +267,7 @@ public sealed class Roofs
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
+        st.SetUV2(Vector2.Zero); // every roof vertex has one: a slope's own coordinates, where its layer is laid by them
         return st;
     }
 
@@ -260,13 +289,13 @@ public sealed class Roofs
         if (PITCHED.Contains(b.kind))
         {
             bool steep = b.kind is "barn" or "church";
-            var colour = b.kind == "barn" ? TIN : SHINGLES[(int)(b.roll * SHINGLES.Length) % SHINGLES.Length];
+            var colour = RoofOf(b.kind, b.roll);
             bool hip = b.kind == "house" && b.roll > 0.55;
             // The biggest part first: the rest butt into it.
             rects.Sort((p, q) => (q.w * q.h).CompareTo(p.w * p.h));
-            foreach (var r in rects) Pitched(st, r, top, steep ? PITCH_STEEP : PITCH, colour, hip && r.w > 2 && r.h > 2);
+            foreach (var r in rects) Pitched(st, r, top, steep ? PITCH_STEEP : PITCH, colour, hip && r.w > 2 && r.h > 2, b.style.outside);
         }
-        else Flat(st, g, b.tiles, rects, top);
+        else Flat(st, g, b.tiles, rects, top, b.style.outside);
         return End(st);
     }
 
@@ -300,7 +329,7 @@ public sealed class Roofs
     }
 
     /// <summary>A gable or hip roof over a rectangle, its ridge along the longer side; eaves overhang the walls.</summary>
-    static void Pitched(SurfaceTool st, Rect r, float top, float pitch, Color colour, bool hip)
+    static void Pitched(SurfaceTool st, Rect r, float top, float pitch, Look colour, bool hip, Look wall)
     {
         bool alongX = r.w >= r.h;
         float L = alongX ? r.w : r.h, D = alongX ? r.h : r.w;
@@ -333,9 +362,9 @@ public sealed class Roofs
             foreach (var (u, out_) in new[] { (-t, -1f), (L + t, 1f) })
             {
                 var n = P(out_, 0, 0) - P(0, 0, 0);
-                Tri(st, P(u, top, -t), P(u, top, D + t), P(u, base0 + rise, D / 2), WorldMesh.WALL, n);
+                Tri(st, P(u, top, -t), P(u, top, D + t), P(u, base0 + rise, D / 2), wall, n);
                 // ...and its inner face, should you see it from under a broken ceiling.
-                Tri(st, P(u + out_ * -0.02f, top, -t), P(u + out_ * -0.02f, top, D + t), P(u + out_ * -0.02f, base0 + rise, D / 2), WorldMesh.WALL, -n);
+                Tri(st, P(u + out_ * -0.02f, top, -t), P(u + out_ * -0.02f, top, D + t), P(u + out_ * -0.02f, base0 + rise, D / 2), wall, -n);
             }
             return;
         }
@@ -363,7 +392,7 @@ public sealed class Roofs
     }
 
     /// <summary>A flat roof: a tarred deck at the walls' top, a parapet round the footprint's edge with a coping on it.</summary>
-    static void Flat(SurfaceTool st, Grid g, HashSet<int> tiles, List<Rect> rects, float top)
+    static void Flat(SurfaceTool st, Grid g, HashSet<int> tiles, List<Rect> rects, float top, Look wall)
     {
         foreach (var r in rects) WorldMesh.Box(st, new(r.x, top + 0.01f, r.y), new(r.x + r.w, top + SLAB, r.y + r.h), TAR);
         const float outT = 0.1f, inT = 0.12f, capT = 0.04f;
@@ -402,7 +431,7 @@ public sealed class Roofs
                 float x0 = dx < 0 ? xx - outT : xx - inT, x1 = dx < 0 ? xx + inT : xx + outT;
                 lo = new(x0, 0, from - outT); hi = new(x1, 0, to + 1 + outT);
             }
-            WorldMesh.Box(st, new(lo.X, top, lo.Z), new(hi.X, top + PARAPET, hi.Z), WorldMesh.WALL);
+            WorldMesh.Box(st, new(lo.X, top, lo.Z), new(hi.X, top + PARAPET, hi.Z), wall);
             WorldMesh.Box(st, new(lo.X - capT, top + PARAPET, lo.Z - capT), new(hi.X + capT, top + PARAPET + CAP, hi.Z + capT), COPING);
         }
     }
@@ -432,17 +461,28 @@ public sealed class Roofs
 
     // --- primitives (front faces wind clockwise seen from the front, as WorldMesh's) ---
 
-    static void Tri(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Color colour, Vector3 hint)
+    static void Tri(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Look look, Vector3 hint)
     {
         var n = (b - a).Cross(c - a).Normalized();
         if (n.Dot(hint) > 0) (b, c) = (c, b);
         else n = -n;
-        st.SetColor(colour);
+        st.SetColor(look.colour);
+        st.SetUV(look.what);
         st.SetNormal(n);
-        st.AddVertex(a); st.AddVertex(b); st.AddVertex(c);
+        // A slope's own coordinates (metres): along the eave and down the slope, so courses run level whichever way
+        // the ridge runs, are not stretched by the pitch, and their butt edges face downhill.
+        var eave = n.Cross(Vector3.Up);
+        eave = eave.LengthSquared() < 1e-6f ? Vector3.Right : eave.Normalized();
+        var down = eave.Cross(n);
+        if (down.Y > 0) down = -down;
+        foreach (var p in new[] { a, b, c })
+        {
+            st.SetUV2(new Vector2(p.Dot(eave), p.Dot(down)));
+            st.AddVertex(p);
+        }
     }
 
-    static void Quad(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color colour, Vector3 hint)
+    static void Quad(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Look colour, Vector3 hint)
     {
         Tri(st, a, b, c, colour, hint);
         Tri(st, a, c, d, colour, hint);

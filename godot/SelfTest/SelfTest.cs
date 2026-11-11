@@ -145,6 +145,10 @@ public partial class Game
         await Frames(5);
         // First person: the 3D view is up, with the world built round you.
         Check("Playing someone is first person", view.firstPerson && firstPerson.Visible && firstPerson.ChunkCount > 0, $"chunks {firstPerson.ChunkCount}");
+        // The detail textures (World3D/Surfaces.cs): every layer of layers.json in the one array, the last one where its name says.
+        var layers = World3D.Surfaces.Names;
+        Check("The detail textures are loaded, one layer each", World3D.Surfaces.Array?.GetLayers() == layers.Count && layers.Count >= 20 && World3D.Surfaces.Layer(layers[^1]) == layers.Count - 1,
+            $"{World3D.Surfaces.Array?.GetLayers()} layers of {layers.Count}");
         // Walking: looking north, W held moves you north.
         view.paused = false;
         view.yaw = -Math.PI / 2;
