@@ -422,21 +422,53 @@ public class CrossingsTest
         }
     }
 
-    [Fact(DisplayName = "crossings > a blow holds a climber where it is: no shove off the car, and the leg goes on after")]
+    [Fact(DisplayName = "crossings > a blow knocks a climber off the car back the way it came, down a moment, and it tries again")]
     public void A_blow_on_the_car()
     {
         var (state, s) = yard();
         plug(state);
         var z = dead(state, s);
         for (int t = 0; t < 400 && !(z.crossing != null && Grids.isParked(state.grid, z.pos.x, z.pos.y)); t++) Tick.tick(state);
+        expect(z.crossing.what).toBe(Crossings.CLIMB);
+        Zombies.knockBack(state, z, s.at);
+        string where = DebugText.dumpText(state);
+        expect(Crossings.isDown(z), where).toBe(true);
+        expect(Grids.isParked(state.grid, z.pos.x, z.pos.y), where).toBe(false);
+        expect(z.pos.y, where).toBeGreaterThan(6); // the side it came from
+        expect(Motion.fits(state.grid, z.at, Zombies.moverOf(z)), where).toBe(true);
+        expect(Invariants.checkInvariants(state), where).toEqual(Js.Arr([]));
+        expect(Crossings.lift(state, z, 0.5)).toBe(0);
+        // Down: it lies there, a blow leaves it lying, and it neither moves nor bites.
         var at = z.at.Copy();
-        int left = z.crossing.ticks;
         Zombies.knockBack(state, z, s.at);
         expect(z.at.x).toBe(at.x);
         expect(z.at.y).toBe(at.y);
-        for (int t = 0; t < Zombies.STAGGER_TICKS - 1; t++) Tick.tick(state);
-        expect(z.crossing.ticks).toBe(left);
-        expect(z.at.y).toBe(at.y);
+        for (int t = 0; t < Crossings.DOWN_TICKS; t++)
+        {
+            expect(z.at.y).toBe(at.y);
+            Tick.tick(state);
+        }
+        for (int t = 0; t < Zombies.STAGGER_TICKS + 2 && Crossings.isDown(z); t++) Tick.tick(state);
+        expect(Crossings.isDown(z)).toBe(false);
+        // Up again: over the car once more.
+        var seen = chase(state, s, z);
+        expect(seen.reached).toBe(true);
+        expect(seen.what).toBe(Crossings.CLIMB);
+    }
+
+    [Fact(DisplayName = "crossings > a runner struck in the middle of a vault falls back on its own side of the barricade")]
+    public void A_blow_on_a_vault()
+    {
+        var (state, s) = yard("#######.########");
+        Grids.setEdge(state.grid, 7, 6, "n", Grids.EDGE_BARRICADE);
+        state.walkabilityVersion++;
+        var z = dead(state, s, "runner");
+        for (int t = 0; t < 400 && z.crossing == null; t++) Tick.tick(state);
+        expect(z.crossing.what).toBe(Crossings.VAULT);
+        Tick.tick(state);
+        Zombies.knockBack(state, z, s.at);
+        expect(Crossings.isDown(z)).toBe(true);
+        expect(z.pos.y).toBe(6);
         expect(chase(state, s, z).reached).toBe(true);
     }
 }

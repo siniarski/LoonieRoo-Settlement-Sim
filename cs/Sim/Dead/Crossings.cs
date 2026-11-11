@@ -38,7 +38,11 @@ namespace LoonieRoo.Sim;
 
 public static class Crossings
 {
-    public const string CLIMB = "climb", UNDER = "under", VAULT = "vault";
+    public const string CLIMB = "climb", UNDER = "under", VAULT = "vault", DOWN = "down";
+
+    /// <summary>Knocked off a car or a barricade by a blow (knockOff), it lies where it fell this long before it
+    /// gets up and tries again: no biting, no moving, and a blow lands as on one unaware of you (ControlMod).</summary>
+    public const int DOWN_TICKS = 30;
 
     /// <summary>Ticks a leg (one tile to the next): a walker over a car (others by their pace), a crawler hauling
     /// itself over a sedan, a crawler under a pickup, a runner over a barricade.</summary>
@@ -244,6 +248,7 @@ public static class Crossings
         var grid = state.grid;
         var c = z.crossing;
         var here = z.pos;
+        if (c.what == DOWN) { z.crossing = null; z.nextThinkTick = state.tick; return; } // up again, and it thinks
         if (!obstacle(grid, here.x, here.y, z))
         {
             z.crossing = null;
@@ -292,6 +297,40 @@ public static class Crossings
         if (to != null) Motion.place(z, to);
     }
 
+    // --- knocked off (Zombies.knockBack) ---
+
+    /// <summary>On the ground where it was knocked off something, not yet up.</summary>
+    public static bool isDown(Zombie z) => z.crossing?.what == DOWN;
+
+    /// <summary>A blow (or a shove, or a car) on one of the dead part-way over: it falls back the way it came, to the
+    /// first ground a body fits behind the leg it was on (else the nearest), and lies there DOWN_TICKS. Already
+    /// down, a blow leaves it lying as it is. Its path is dropped: up again, it plans (and climbs) afresh.</summary>
+    public static void knockOff(SimState state, Zombie z)
+    {
+        var c = z.crossing;
+        if (c == null || c.what == DOWN) return;
+        var grid = state.grid;
+        string body = Zombies.moverOf(z);
+        var from = Motion.tileOf(c.from);
+        var to = Motion.tileOf(c.to);
+        int dx = Js.I(JsMath.sign(from.x - to.x)), dy = Js.I(JsMath.sign(from.y - to.y));
+        bool ground(int x, int y) => Grids.inBounds(grid, x, y) && !obstacle(grid, x, y, z) && Pathfinding.isPassable(grid, x, y, body)
+            && Motion.fits(grid, Motion.centre(new Point(x, y)), body);
+        Point? land = null;
+        var t = from;
+        for (int n = 0; n < 4 && land == null && (n == 0 || dx != 0 || dy != 0); n++)
+        {
+            if (ground(t.x, t.y)) land = t;
+            else t = new Point(t.x + dx, t.y + dy);
+        }
+        land ??= Space.nearestTile(grid, z.pos, ground, 400);
+        z.crossing = null;
+        z.path = [];
+        if (land == null) return;
+        Motion.place(z, land);
+        z.crossing = new Crossing { what = DOWN, from = z.at.Copy(), to = z.at.Copy(), ticks = DOWN_TICKS, of = DOWN_TICKS };
+    }
+
     // --- for the renderer ---
 
     /// <summary>How high (metres) the top of what is under a point is, for this zombie: the part of a car it is on
@@ -310,7 +349,7 @@ public static class Crossings
     public static double lift(SimState state, Zombie z, double alpha)
     {
         var c = z.crossing;
-        if (c == null || c.what == UNDER || c.of <= 0) return 0;
+        if (c == null || c.what == UNDER || c.what == DOWN || c.of <= 0) return 0;
         double t = JsMath.max(0, JsMath.min(1, (c.of - c.ticks - 1 + alpha) / c.of));
         double h0 = top(state, z, c.from), h1 = top(state, z, c.to);
         if (h0 == 0 && h1 == 0) return 4 * VAULT_HEIGHT * t * (1 - t);

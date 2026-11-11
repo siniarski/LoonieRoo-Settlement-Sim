@@ -487,7 +487,8 @@ public static partial class ControlMod
             Noise.makeNoise(state, s.pos, "fighting", spec.noise);
             var full = Weapons.meleeBlowAtDead(state, s);
             var winded = BodyMod.isWinded(s) ? JsMath.round(((double)(((double)(full) * (BodyMod.WINDED_DAMAGE_PCT))) / (100))) : full;
-            var unaware = (near.kind != "raider") && (near.targetId != s.id);
+            // One of the dead knocked down off a car or a barricade (Crossings.knockOff) is hit as one unaware of you.
+            var unaware = (near.kind != "raider") && ((near.targetId != s.id) || Crossings.isDown(near));
             var blow = Js.T(unaware) ? JsMath.round(((double)(((double)(winded) * (spec.sneak))) / (100))) : winded;
             var killed = Zombies.damageZombie(state, near, Power.inLight(state, s.pos) ? JsMath.round(((double)(((double)(blow) * (Power.LIGHT_DAMAGE_PCT))) / (100))) : blow, s);
             if (killed)
