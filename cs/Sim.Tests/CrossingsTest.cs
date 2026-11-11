@@ -395,13 +395,13 @@ public class CrossingsTest
         var state = Worldgen.createWorld(42, 256);
         var you = state.survivors[0];
         Commands.applyCommand(state, new Command { type = "takeControl", survivorId = you.id });
-        Staging.place(you, 150, 90);
+        Staging.place(you, 136, 89); // open ground west of the village (150,90 until its street was widened over it)
         Staging.climb(state, you);
         var mine = state.zombies.Where((z) => z.nextThinkTick > 1000).ToList();
         expect(mine.Count).toBe(7);
-        string all = string.Join("; ", mine.Select((z) => $"{z.variant} row {z.pos.y - 90}: {z.crossing?.what} {z.crossing?.ticks}/{z.crossing?.of} lift {Crossings.lift(state, z, 1):0.00} stance {PoseIntents.ofZombie(state, z).stance}"));
+        string all = string.Join("; ", mine.Select((z) => $"{z.variant} row {z.pos.y - 89}: {z.crossing?.what} {z.crossing?.ticks}/{z.crossing?.of} lift {Crossings.lift(state, z, 1):0.00} stance {PoseIntents.ofZombie(state, z).stance}"));
         foreach (var z in mine) expect(z.crossing != null, all).toBe(true);
-        var by = mine.ToDictionary((z) => $"{z.variant}{z.pos.y - 90}", (z) => z);
+        var by = mine.ToDictionary((z) => $"{z.variant}{z.pos.y - 89}", (z) => z);
         expect(Crossings.lift(state, by["walker-2"], 1), all).toBe(0.78);   // the sedan's bonnet
         expect(Crossings.lift(state, by["screamer-4"], 1), all).toBe(1.28); // its roof
         expect(Crossings.lift(state, by["brute3"], 1), all).toBe(1.75);     // the pickup's cab

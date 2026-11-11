@@ -328,8 +328,14 @@ public static partial class Lots
             int bu = leftHouse ? F - 1 - barn.w : 1;
             @out.buildings.push(hp = setIn(lot, house, hu, 1, r(13) < 0.5));
             @out.buildings.push(setIn(lot, barn, bu, 1, r(14) < 0.5));
+            shutSides(lot, hp, hu, F);
         }
-        else @out.buildings.push(hp = setIn(lot, house, Math.Max(1, (F - house.w) / 2), 1, r(13) < 0.5));
+        else
+        {
+            int hu = Math.Max(1, (F - house.w) / 2);
+            @out.buildings.push(hp = setIn(lot, house, hu, 1, r(13) < 0.5));
+            shutSides(lot, hp, hu, F);
+        }
         approach(lot, hp, marks, F, D, true, @out);
         var mid = F / 2;
         foreach (var (du, dv) in new (int, int)[] { (0, 0), (1, 0), (0, 1), (1, 1) })
@@ -395,10 +401,12 @@ public static partial class Lots
         }
         else
         {
+            // In the street's parking strip, at the kerb (a lot on a street: Lot.park); else on the verge by the road.
             var w = frame(lot).F;
             var u = 1 + Math.Floor(r(1) * Math.Max(1, w - 2));
-            p = lotToMap(lot, u, -2);
-            next = lotToMap(lot, u + 1, -2);
+            var v = lot.park > 0 ? -lot.park : -2;
+            p = lotToMap(lot, u, v);
+            next = lotToMap(lot, u + 1, v);
         }
         // Along the street or the drive, either way round; only where the whole car fits (its body, not its tile).
         var heading = Vehicles.headingOf(next.x - p.x, next.y - p.y) + (r(2) < 0.5 ? 0 : 16);

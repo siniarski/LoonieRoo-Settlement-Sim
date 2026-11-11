@@ -508,6 +508,9 @@ public partial class Lot
     public string facing { get; set; } = "";
     public string zone { get; set; } = "";
     public double? town { get; set; }
+    /// <summary>A lot on a street: how far in front of it (tiles, in its frame: v = -park) its car is parked, in the
+    /// street's parking strip (Towns.PARKING). 0: not on a street (a car without a drive stands on the verge).</summary>
+    public int park { get; set; }
 }
 
 /// <summary>What drawing a lot needs to know about the world.</summary>

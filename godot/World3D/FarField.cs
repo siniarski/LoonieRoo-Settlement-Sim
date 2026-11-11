@@ -525,6 +525,7 @@ void fragment() {
         bool water = NatureMod.isWater(l, x, y);
         if (road) return (false, Array.IndexOf(Grids.GROUNDS, water ? "bridge" : "road"), NONE);
         if (water) return (true, grass, NONE);
+        if (planned && l.regions.IsSidewalk(x, y)) return (false, Array.IndexOf(Grids.GROUNDS, "paving"), NONE);
         if (planned && Worldgen.onLot(l, x, y))
         {
             var lot = l.regions.LotAt(x, y);

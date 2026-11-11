@@ -17,6 +17,14 @@ public static partial class Worldplan
     /// <summary>A chunk's size, for the per-chunk index (a literal, not worldgen's CHUNK: see CLAUDE.md rule 12; a test checks they match).</summary>
     public const int PLAN_CHUNK = 32;
 
+    /// <summary>The road mask's values: a country road, a street's asphalt, a street's sidewalk (not a road: paved
+    /// ground the lots face, a kerb's height over the asphalt).</summary>
+    public const int ROAD = 1, STREET = 2, SIDEWALK = 3;
+
+    /// <summary>A lot along a country road starts this far from the road's centre line: the road's half width (three
+    /// tiles at most: Roads.ROAD_REACH) and a verge of two.</summary>
+    public const int ROADSIDE = 5;
+
     /// <summary>Each world's regions (WorldRegions), by seed, size and map: the plan is derived, never saved.</summary>
     public static readonly JsMap<string, WorldRegions> cache = new JsMap<string, WorldRegions>();
 
@@ -86,15 +94,24 @@ public static partial class Worldplan
         double W = w.W, H = w.H;
         var roadMask = new Uint8Array(((double)(W) * (H)));
         var streets = towns.flatMap((t, i) => Towns.growStreets(n, t, i));
-        foreach (var s in Js.Iter(streets))
+        // Streets: every street's sidewalks first (3: Towns.SIDEWALK tiles round it, its ends too: a dead end is closed
+        // by a kerb), then every street's asphalt over them (2), so a junction is open asphalt and the sidewalks turn
+        // its corners. (A country road leaving a street's end takes the sidewalk across it: Roads.drawLine.)
+        foreach (var pass in new[] { SIDEWALK, STREET })
         {
-            for (var y = s.y0; y <= (s.y1 + (Js.T(s.eastWest) ? (Towns.STREET - 1) : 0)); y++)
+            int grow = pass == SIDEWALK ? Towns.SIDEWALK : 0;
+            foreach (var s in Js.Iter(streets))
             {
-                for (var x = s.x0; x <= (s.x1 + (Js.T(s.eastWest) ? 0 : (Towns.STREET - 1))); x++)
+                int ax = grow, ay = grow;
+                for (var y = s.y0 - ay; y <= (s.y1 + (Js.T(s.eastWest) ? (Towns.STREET - 1) : 0) + ay); y++)
                 {
-                    if ((((x >= w.x0) && (y >= w.y0)) && (x < w.x1)) && (y < w.y1))
+                    for (var x = s.x0 - ax; x <= (s.x1 + (Js.T(s.eastWest) ? 0 : (Towns.STREET - 1)) + ax); x++)
                     {
-                        roadMask[Js.Idx(((double)(y - w.y0) * (W)) + (x - w.x0))] = 2;
+                        // (No sidewalk in the water a street's end stops at.)
+                        if (((((x >= w.x0) && (y >= w.y0)) && (x < w.x1)) && (y < w.y1)) && !((pass == SIDEWALK) && NatureMod.isWater(n, x, y)))
+                        {
+                            roadMask[Js.Idx(((double)(y - w.y0) * (W)) + (x - w.x0))] = pass;
+                        }
                     }
                 }
             }
@@ -104,7 +121,7 @@ public static partial class Worldplan
         {
             foreach (var line in links)
             {
-                Roads.drawLine(roadMask, w, line, 1);
+                Roads.drawLine(roadMask, w, line, ROAD);
                 roads.push(line);
             }
         }
@@ -171,18 +188,17 @@ public static partial class Worldplan
     public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask) => layRoads(n, towns, streets, mask, Win.Whole(n.size));
 
     /// <summary>The main-street ends of town `ti` (its index in `towns`), where country roads leave it.</summary>
+    /// Each is on the middle of the carriageway (Towns.LANE_CENTRE across from the street's line), so the road's lanes run
+    /// on into the street's.
     public static List<Point> streetEnds(List<Street> streets, double ti) =>
-        streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
+        streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0 + Towns.LANE_CENTRE) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0 + Towns.LANE_CENTRE) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0 + Towns.LANE_CENTRE), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0 + Towns.LANE_CENTRE), y = Js.I(s.y1) } }));
 
     /// <summary>The same inside a window: the start's node only if the start is in it; roads to the map's edge only on
     /// the sides of it that are the map's edge.</summary>
     public static List<List<PointD>> layRoads(Nature n, List<Town> towns, List<Street> streets, Uint8Array mask, Win w)
     {
         var size = n.size;
-        List<Point> ends(double ti)
-        {
-            return streets.filter((s) => (s.town == ti) && s.main).flatMap((s) => s.eastWest ? ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x1), y = Js.I(s.y0) } }) : ((List<Point>)new List<Point> { new Point { x = Js.I(s.x0), y = Js.I(s.y0) }, new Point { x = Js.I(s.x0), y = Js.I(s.y1) } }));
-        }
+        List<Point> ends(double ti) => streetEnds(streets, ti);
         List<Point> nodes = [.. towns.map((t) => new Point { x = Js.I(t.x), y = Js.I(t.y) })];
         if (w.Holds(n.start.x, n.start.y + 8)) nodes.push(new Point { x = Js.I(n.start.x), y = Js.I(n.start.y + 8) });
         Point nearestEnd(double node, Point toward)
@@ -229,7 +245,7 @@ public static partial class Worldplan
             }
             roads.push(line);
             Roads.reuse(cost, w, line);
-            Roads.drawLine(mask, w, line, 1);
+            Roads.drawLine(mask, w, line, ROAD);
         }
         return roads;
     }
@@ -282,9 +298,13 @@ public static partial class Worldplan
                     }
                     TownLotsResult lotAt(double w, double d)
                     {
-                        return s.eastWest ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - 1) - d) : ((s.y0 + Towns.STREET) + 1)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - 1) - d) : ((s.x0 + Towns.STREET) + 1)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
+                        // Behind the sidewalk on its side of the street.
+                        return s.eastWest ? new() { x = Js.I(p), y = Js.I((side < 0) ? ((s.y0 - Towns.SIDEWALK) - d) : ((s.y0 + Towns.STREET) + Towns.SIDEWALK)), w = Js.I(w), h = Js.I(d), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((s.x0 - Towns.SIDEWALK) - d) : ((s.x0 + Towns.STREET) + Towns.SIDEWALK)), y = Js.I(p), w = Js.I(d), h = Js.I(w), facing = (side < 0) ? "east" : "west" };
                     }
-                    var placed = add(Js.With(Js.CopyAs<Lot>(lotAt(front2, deep)), __s3 => { __s3.zone = zone; __s3.town = s.town; })) ? front2 : ((((zone != "civic") && (zone != "industrial")) && add(Js.With(Js.CopyAs<Lot>(lotAt(12, 12)), __s4 => { __s4.zone = zone; __s4.town = s.town; }))) ? 12 : 0);
+                    // Where its car parks in the street: the parking strip's outer row (the strip is on the street's low side:
+                    // just past the sidewalk for the lots there, across the carriageway for the lots opposite).
+                    var park = (side < 0) ? (Towns.SIDEWALK + Towns.PARKING) : ((Towns.SIDEWALK + Towns.STREET) - (Towns.PARKING - 1));
+                    var placed = add(Js.With(Js.CopyAs<Lot>(lotAt(front2, deep)), __s3 => { __s3.zone = zone; __s3.town = s.town; __s3.park = park; })) ? front2 : ((((zone != "civic") && (zone != "industrial")) && add(Js.With(Js.CopyAs<Lot>(lotAt(12, 12)), __s4 => { __s4.zone = zone; __s4.town = s.town; __s4.park = park; }))) ? 12 : 0);
                     if (placed > 0)
                     {
                         if ((zone == "civic") && (placed == front2))
@@ -340,7 +360,7 @@ public static partial class Worldplan
                         }
                         var front_6 = 12 + JsMath.floor(((double)(r_1(5 + side_5)) * (3)));
                         var deep_7 = 13 + JsMath.floor(((double)(r_1(8 + side_5)) * (3)));
-                        FarmLotsLot lot_8 = along_2 ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - 3) - deep_7) : (cy_4 + 3)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - 3) - deep_7) : (cx_3 + 3)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
+                        FarmLotsLot lot_8 = along_2 ? new() { x = Js.I(cx_3 - JsMath.floor(((double)(front_6) / (2)))), y = Js.I((side_5 < 0) ? ((cy_4 - ROADSIDE) - deep_7) : (cy_4 + ROADSIDE)), w = Js.I(front_6), h = Js.I(deep_7), facing = (side_5 < 0) ? "south" : "north" } : new() { x = Js.I((side_5 < 0) ? ((cx_3 - ROADSIDE) - deep_7) : (cx_3 + ROADSIDE)), y = Js.I(cy_4 - JsMath.floor(((double)(front_6) / (2)))), w = Js.I(deep_7), h = Js.I(front_6), facing = (side_5 < 0) ? "east" : "west" };
                         if (add(Js.With(Js.CopyAs<Lot>(lot_8), __s5 => { __s5.zone = "residential"; __s5.town = towns.indexOf(edge); })))
                         {
                             since = 0;
@@ -376,7 +396,7 @@ public static partial class Worldplan
                 string zone = (r(4) < 0.6) ? "farm" : "field";
                 var cx = JsMath.round(b.x);
                 var cy = JsMath.round(b.y);
-                FarmLotsLotShape22 lot = along ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - 3) - deep) : (cy + 3)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - 3) - deep) : (cx + 3)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
+                FarmLotsLotShape22 lot = along ? new() { x = Js.I(cx - JsMath.floor(((double)(front) / (2)))), y = Js.I((side < 0) ? ((cy - ROADSIDE) - deep) : (cy + ROADSIDE)), w = Js.I(front), h = Js.I(deep), facing = (side < 0) ? "south" : "north" } : new() { x = Js.I((side < 0) ? ((cx - ROADSIDE) - deep) : (cx + ROADSIDE)), y = Js.I(cy - JsMath.floor(((double)(front) / (2)))), w = Js.I(deep), h = Js.I(front), facing = (side < 0) ? "east" : "west" };
                 if (add(Js.With(Js.CopyAs<Lot>(lot), __s6 => { __s6.zone = zone; __s6.town = null; })))
                 {
                     since = 0;
@@ -390,7 +410,8 @@ public static partial class Worldplan
     {
         towns.forEach((t, ti) =>
         {
-            var tries = JsMath.round(((double)(t.radius) / (2)));
+            // (A half of the radius while roads were narrow: more tries now that wider roads turn more of them away.)
+            var tries = JsMath.round(((double)(t.radius) * (0.6)));
             for (var i = 0; i < tries; i++)
             {
                 double r(double j)
