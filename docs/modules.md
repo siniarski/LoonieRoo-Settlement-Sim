@@ -124,7 +124,7 @@ git tag `ts-final`.
 
 - **Weapons**: wielding, swings, reloads. **WeaponTable**: every weapon as data (damage, reach, magazine, noise).
   **Shooting**: how a shot flies (a line with spread from a stateless hash).
-- **Wounds**, **Infection**, **Corpses**.
+- **Wounds**, **Infection**, **Corpses** (the dead lying about, the stench, and sickness: catching it, the winter flu).
 - **Breach**: battering doors and walls. **Defences**: traps, barricades, turrets, lures, pits. **Towers**:
   watchtowers.
 
