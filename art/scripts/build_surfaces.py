@@ -121,7 +121,7 @@ def colour(lum, warm=0.0, green=0.0):
 # --- the layers ----------------------------------------------------------------------------------------------------
 
 def grass(r):
-    lum = fbm(r, 4, 4, 4) * 0.22 - 0.10          # the thatch between the blades
+    lum = fbm(r, 4, 4, 4) * 0.30 - 0.17          # the thatch between the blades
     warm = np.zeros((N, N))
     g, per = 18, 15                               # tufts on a jittered grid, blades fanning out of each
     cx = ((np.arange(g)[None, :] + r.random((g, g))) * N / g).ravel()
@@ -131,8 +131,8 @@ def grass(r):
     y = np.repeat(cy, per) + r.normal(0, 2.2, n)
     order = r.permutation(n)
     x, y = x[order], y[order]
-    tone = (r.random(n) - 0.5) * 0.26
-    strokes(r, lum, x, y, r.random(n) * TAU, 5 + r.random(n) * 9, tone, 0.44, warm, (r.random(n) - 0.35) * 0.09)
+    tone = (r.random(n) - 0.5) * 0.40
+    strokes(r, lum, x, y, r.random(n) * TAU, 5 + r.random(n) * 9, tone, 0.62, warm, (r.random(n) - 0.35) * 0.12)
     lum, warm = blur(lum, 0.55), blur(warm, 0.55)
     return colour(lum, warm + lum * 0.08, lum * 0.10 + warm * 0.4)
 
@@ -160,9 +160,9 @@ def litter(r):
 
 
 def earth(r):
-    lum = fbm(r, 3, 3, 5) * 0.34 + grain(r, 0.7) * 0.14
+    lum = fbm(r, 3, 3, 5) * 0.42 + grain(r, 0.7) * 0.22
     f1, f2, _ = voronoi(r, 20)
-    lum -= 0.11 * (1 - smoothstep(0.0, 0.14, f2 - f1))          # the edges of clods
+    lum -= 0.17 * (1 - smoothstep(0.0, 0.14, f2 - f1))          # the edges of clods
     p1, _, ident = voronoi(r, 13, 0.9)                           # pebbles in a third of the cells
     g = 13 * 13
     radius = np.where(r.random(g) < 0.34, 0.07 + r.random(g) * 0.13, 0)[ident]

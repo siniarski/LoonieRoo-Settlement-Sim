@@ -31,8 +31,8 @@ public sealed partial class FirstPerson : Node3D
     readonly DirectionalLight3D sun = new() { ShadowEnabled = true, DirectionalShadowMaxDistance = 40 };
     readonly OmniLight3D near = new() { OmniRange = 7, LightEnergy = 0, ShadowEnabled = false };
     readonly Godot.Environment env = new();
-    readonly StandardMaterial3D solid = new() { VertexColorUseAsAlbedo = true, Roughness = 0.95f };
-    readonly StandardMaterial3D glass = new() { VertexColorUseAsAlbedo = true, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, CullMode = BaseMaterial3D.CullModeEnum.Disabled, Roughness = 0.1f, Metallic = 0.3f };
+    /// <summary>The chunks' two materials: vertex colours with a detail layer per face (WorldLook.cs).</summary>
+    readonly ShaderMaterial solid = WorldLook.Solid, glass = WorldLook.Glass;
     readonly WorldMesh.Lookups look = new();
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
     readonly Bodies bodies;
@@ -121,6 +121,7 @@ public sealed partial class FirstPerson : Node3D
         AddChild(sounds);
         AddChild(weather);
         look.indoor = roofs.Indoor;
+        look.styles = roofs.Styles;
     }
 
     /// <summary>Where the eye is (m: on the ground under you, as it is there) and which way it looks, from the controlled

@@ -253,6 +253,38 @@ void fragment() {
                 tris += 2;
             }
 
+        // What the buildings here are made of, as the near view has them (WorldLook.Of, Roofs.RoofOf): each plan's
+        // rectangle with its walls' and its roof's colour. A floor that is no plan's is the old grey.
+        var made = new List<(int x, int y, int w, int h, Color wall, Color roof)>();
+        var lay = Ready(state, x0, y0) ? Plan(state) : null;
+        if (lay != null)
+        {
+            var seen = new HashSet<double>();
+            for (int cy = y0 / Worldplan.PLAN_CHUNK; cy <= (y1 - 1) / Worldplan.PLAN_CHUNK; cy++)
+                for (int cx = x0 / Worldplan.PLAN_CHUNK; cx <= (x1 - 1) / Worldplan.PLAN_CHUNK; cx++)
+                    foreach (var id in lay.regions.LotsInChunk(cx, cy))
+                    {
+                        if (!seen.Add(id)) continue;
+                        var lot = lay.regions.Lot(id);
+                        var placed = Lots.layoutLot(lay.seed, lot).buildings;
+                        for (int bi = 0; bi < placed.Count; bi++)
+                        {
+                            var p = placed[bi];
+                            bool turned = p.facing == "east" || p.facing == "west";
+                            double roll = Roofs.Roll(lay.seed, lot, bi);
+                            made.Add((p.ox, p.oy, turned ? p.plan.h : p.plan.w, turned ? p.plan.w : p.plan.h,
+                                WorldLook.Of(p.plan.kind, p.plan.style, roll).outside.colour, Roofs.RoofOf(p.plan.style == "trailer" ? "trailer" : p.plan.kind, roll).colour));
+                        }
+                    }
+        }
+        (Color wall, Color roof) Made(int x, int y)
+        {
+            foreach (var m in made) if (x >= m.x && y >= m.y && x < m.x + m.w && y < m.y + m.h) return (m.wall, m.roof);
+            uint hh = unchecked((uint)x * 0x9E3779B1u ^ (uint)y * 0x85EBCA77u);
+            hh ^= hh >> 15;
+            return (WorldMesh.WALL, ROOFS[hh % ROOFS.Length]);
+        }
+
         // Buildings: floor tiles merged into rectangles (greedy), each a block to the eaves with a flat roof.
         int w = x1 - x0, hgt = y1 - y0;
         var taken = new bool[w * hgt];
@@ -280,35 +312,19 @@ void fragment() {
                 for (int yy = y; yy <= ey; yy++)
                     for (int xx = x; xx <= ex; xx++) taken[yy * w + xx] = true;
                 float foot = Terrain.Coarse(x0 + x, y0 + y, false);
-                uint hh = unchecked((uint)(x0 + x) * 0x9E3779B1u ^ (uint)(y0 + y) * 0x85EBCA77u);
-                hh ^= hh >> 15;
-                Block(st, new Vector3(x0 + x, foot - 0.3f, y0 + y), new Vector3(x0 + ex + 1, foot + WorldMesh.WALL_H + 0.25f, y0 + ey + 1), WorldMesh.WALL, ROOFS[hh % ROOFS.Length]);
+                var (wall, roof) = Made(x0 + x, y0 + y);
+                Block(st, new Vector3(x0 + x, foot - 0.3f, y0 + y), new Vector3(x0 + ex + 1, foot + WorldMesh.WALL_H + 0.25f, y0 + ey + 1), wall, roof);
                 tris += 10;
             }
         // Buildings on land not generated yet: the lots' footprints (Lots.layoutLot), each once, those whose middle is
         // in this region and in a chunk not generated (the generated ones are in the grid's floors above).
-        if (Plan(state) is { } lay && Ready(state, x0, y0))
+        foreach (var m in made)
         {
-            var seen = new HashSet<double>();
-            for (int cy = y0 / Worldplan.PLAN_CHUNK; cy <= (y1 - 1) / Worldplan.PLAN_CHUNK; cy++)
-                for (int cx = x0 / Worldplan.PLAN_CHUNK; cx <= (x1 - 1) / Worldplan.PLAN_CHUNK; cx++)
-                    foreach (var id in lay.regions.LotsInChunk(cx, cy))
-                    {
-                        if (!seen.Add(id)) continue;
-                        var lot = lay.regions.Lot(id);
-                        foreach (var p in Lots.layoutLot(lay.seed, lot).buildings)
-                        {
-                            bool turned = p.facing == "east" || p.facing == "west";
-                            int bw = turned ? p.plan.h : p.plan.w, bh = turned ? p.plan.w : p.plan.h;
-                            int mx = p.ox + bw / 2, my = p.oy + bh / 2;
-                            if (mx < x0 || my < y0 || mx >= x1 || my >= y1 || Generated(state, mx, my)) continue;
-                            float foot = Terrain.Coarse(p.ox, p.oy, false);
-                            uint hh = unchecked((uint)p.ox * 0x9E3779B1u ^ (uint)p.oy * 0x85EBCA77u);
-                            hh ^= hh >> 15;
-                            Block(st, new Vector3(p.ox, foot - 0.3f, p.oy), new Vector3(p.ox + bw, foot + WorldMesh.WALL_H + 0.25f, p.oy + bh), WorldMesh.WALL, ROOFS[hh % ROOFS.Length]);
-                            tris += 10;
-                        }
-                    }
+            int mx = m.x + m.w / 2, my = m.y + m.h / 2;
+            if (mx < x0 || my < y0 || mx >= x1 || my >= y1 || Generated(state, mx, my)) continue;
+            float foot = Terrain.Coarse(m.x, m.y, false);
+            Block(st, new Vector3(m.x, foot - 0.3f, m.y), new Vector3(m.x + m.w, foot + WorldMesh.WALL_H + 0.25f, m.y + m.h), m.wall, m.roof);
+            tris += 10;
         }
         var mesh = st.Commit();
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, groundMat);
@@ -531,7 +547,7 @@ void fragment() {
 
     static Color GroundColour(int gi)
     {
-        groundColours ??= Array.ConvertAll(Grids.GROUNDS, (gr) => Ctx.Css(COLOURS.ground.GetValueOrDefault(gr, COLOURS.ground["grass"])));
+        groundColours ??= Array.ConvertAll(Grids.GROUNDS, WorldLook.GroundColour);
         return gi >= 0 && gi < groundColours.Length ? groundColours[gi] : groundColours[0];
     }
 
