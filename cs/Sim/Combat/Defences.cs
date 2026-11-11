@@ -24,6 +24,9 @@ namespace LoonieRoo.Sim;
 public static partial class Defences
 {
 
+    /// <summary>What a spike trap does to the zombie that steps on it.</summary>
+    public const int TRAP_DAMAGE = 100;
+
     public const double REINFORCE_FACTOR = 2.5;
 
     public const int TURRET_RANGE = 7;
@@ -118,6 +121,32 @@ public static partial class Defences
             EndgameMod.maybeSample(state, z.id, z.pos);
             Events.logEvent(state, $"The turret at ({Js.Str(t.x)}, {Js.Str(t.y)}) brought down a zombie");
         }
+    }
+
+    /// <summary>Spikes: TRAP_DAMAGE to a zombie stepping on a trap. A spent trap goes, leaving a plan to rebuild it. Returns true if the zombie died.</summary>
+    public static bool springTrap(SimState state, Zombie z)
+    {
+        var trap = FurnitureMod.furnitureAt(state, z.pos.x, z.pos.y);
+        if ((trap?.kind != "trap") || (trap.loot <= 0))
+        {
+            return false;
+        }
+        trap.loot -= 1;
+        z.health = JsMath.max(0, z.health - TRAP_DAMAGE);
+        if (trap.loot == 0)
+        {
+            FurnitureMod.removeFurniture(state, trap);
+            Designations.addBlueprint(state, trap.x, trap.y, "trap");
+            Events.logEvent(state, $"A spike trap at ({Js.Str(trap.x)}, {Js.Str(trap.y)}) is spent");
+        }
+        if (z.health > 0)
+        {
+            return false;
+        }
+        Zombies.removeZombie(state, z);
+        Corpses.leaveCorpse(state, z.pos, null);
+        Events.logEvent(state, "A spike trap killed a zombie");
+        return true;
     }
 
     /// <summary>A zombie that just stepped onto a tile: a pit holds it.</summary>

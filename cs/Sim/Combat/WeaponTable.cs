@@ -88,7 +88,8 @@ public static partial class Weapons
             reach = 288, arcDeg = 50, arcCos2 = 0.413, stamina = 8,
         };
 
-    /// <summary>Every weapon, best first for a guard choosing (guns, then melee). Iterate this, never the lookup.</summary>
+    /// <summary>Every weapon, guns then melee. Iterate this, never the lookup. (What a guard reaches for first is not
+    /// this order: Weapons.GUN_PREFERENCE and MELEE_PREFERENCE.)</summary>
     public static readonly List<WeaponSpec> SPECS =
     [
         //  kind        name          class    ammo      dmg pel mag rel  perRnd every range eff fall spr mv  pn  wd noise 2H   role

@@ -38,7 +38,7 @@ public static partial class Infection
         {
             return;
         }
-        if (roll(Js.Num(zombieId.replace(new JsRegExp("\\D", "g"), "")), state.tick) >= chance)
+        if (roll(Hash.idNumber(zombieId), state.tick) >= chance)
         {
             return;
         }

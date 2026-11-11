@@ -43,7 +43,7 @@ public partial class DefencesTest
             var state = setup(["z..^..s"]);
             var trap = Js.NN(Js.Get(state.furniture, 0));
             runUntil(state, (_) => trap.loot < FurnitureMod.TRAP_CHARGES);
-            expect(Js.NN(Js.Get(state.zombies, 0)).health).toBe(200 - Zombies.TRAP_DAMAGE);
+            expect(Js.NN(Js.Get(state.zombies, 0)).health).toBe(200 - Defences.TRAP_DAMAGE);
             expect(Js.NN(Js.Get(state.survivors, 0)).health).toBe(1000);
         }
 

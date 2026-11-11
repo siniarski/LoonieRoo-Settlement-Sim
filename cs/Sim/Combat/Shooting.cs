@@ -80,14 +80,14 @@ public static class Shooting
         }
     }
 
-    /// <summary>The first thing a line hits: how far along, and what (a Zombie, Animal or Resident), or null. `bodies` are those within `maxT` + HIT_RADIUS of the start only.</summary>
+    /// <summary>The first thing a line hits: how far along, and what (a Zombie, Animal or Resident), or null. Only bodies within `maxT` + HIT_RADIUS of the start are looked at.</summary>
     static (double along, object? target) firstHit(SimState state, Point at, double ux, double uy, double maxT, Survivor? alsoFriends, out Survivor? friend)
     {
         double best = maxT + 1;
         object? target = null;
         friend = null;
         var reach2 = (maxT + HIT_RADIUS) * (maxT + HIT_RADIUS);
-        void test(IHasAt t, object what, bool isFriend = false)
+        void test(IHasAt t, object what)
         {
             double dx = t.at.x - at.x, dy = t.at.y - at.y;
             if (dx * dx + dy * dy > reach2) return;

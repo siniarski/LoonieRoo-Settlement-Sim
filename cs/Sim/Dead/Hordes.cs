@@ -32,6 +32,8 @@
 //   far off  a roaming horde with nobody of yours within DEMOTE_RADIUS becomes a herd marker again
 //            (herds.ts), its zombies counted into it, until it comes near someone and breaks up again.
 #nullable disable warnings
+using System.Runtime.CompilerServices;
+
 namespace LoonieRoo.Sim;
 
 public static partial class Hordes
@@ -233,7 +235,9 @@ public static partial class Hordes
         }
     }
 
-    public static readonly JsMap<Horde, Field> fields = new JsMap<Horde, Field>();
+    /// <summary>Each horde's flow field as last made (flowField): a derived cache, never saved, held weakly by the
+    /// horde, so a horde that has disbanded or merged takes its field with it.</summary>
+    static readonly ConditionalWeakTable<Horde, Field> fields = new();
 
     public const int UNREACHED = 0x7fffffff;
 
@@ -260,7 +264,7 @@ public static partial class Hordes
             return double.PositiveInfinity;
         }
         var i = ((double)(by) * (grid.width)) + bx;
-        return STEP + JsMath.ceil(((double)(((double)(((double)(Js.Get(Breach.STRUCTURE_HEALTH, tile)) * ((grid.reinforced.includes(i) ? 2.5 : 1)))) * (STEP))) / (batterRate())));
+        return STEP + JsMath.ceil(((double)(((double)(((double)(Js.Get(Breach.STRUCTURE_HEALTH, tile)) * ((grid.reinforced.includes(i) ? Defences.REINFORCE_FACTOR : 1)))) * (STEP))) / (batterRate())));
     }
     public static double enterCost(SimState state, double bx, double by, bool asShut = false) => enterCost(state, Js.I(bx), Js.I(by), asShut);
 
@@ -295,8 +299,7 @@ public static partial class Hordes
     {
         var b = h.box;
         var key = $"{Js.Str(h.goals.map((g) => $"{Js.Str(g.x)},{Js.Str(g.y)}").join(";"))}|{Js.Str(b.x0)},{Js.Str(b.y0)},{Js.Str(b.x1)},{Js.Str(b.y1)}|{Js.Str(state.walkabilityVersion)}";
-        var hit = fields.get(h);
-        if (Js.T(hit) && (hit.key == key))
+        if (fields.TryGetValue(h, out var hit) && (hit.key == key))
         {
             return hit;
         }
@@ -462,7 +465,7 @@ public static partial class Hordes
             }
         }
         Field field = new Field { key = key, dist = dist, box = h.box };
-        fields.set(h, field);
+        fields.AddOrUpdate(h, field);
         return field;
     }
 

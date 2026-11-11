@@ -20,18 +20,12 @@ public static partial class Weapons
     /// <summary>Damage per blow of the old generic weapon (the crowbar's; each weapon has its own now: WeaponTable.cs).</summary>
     public const int ARMED_DAMAGE = 100;
 
-    /// <summary>Kills before the old generic weapon broke (a weapon's own durability now).</summary>
-    public const int WEAPON_KILLS = 5;
-
     /// <summary>When no weapon was found, don't look again for this many ticks.</summary>
     public const int ARM_RETRY_TICKS = 50;
 
+    /// <summary>How near (tiles) the harness's scripted player lets an animal come before it shoots (SoloHarness.cs).
+    /// Not a gun's range: each gun has its own (WeaponTable.cs).</summary>
     public const int GUN_RANGE = 6;
-
-    public const int GUN_DAMAGE = 150;
-
-    /// <summary>Ticks between shots.</summary>
-    public const int GUN_EVERY = 15;
 
     /// <summary>A turret's load per box, and the rounds in a box from before boxes had a count.</summary>
     public const int AMMO_ROUNDS = 6;

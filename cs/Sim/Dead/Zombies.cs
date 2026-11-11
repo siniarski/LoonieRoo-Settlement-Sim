@@ -3,8 +3,9 @@
 //
 // Each night brings one more zombie than the last (2 on the first night, plus
 // one per SURVIVORS_PER_EXTRA_ZOMBIE survivors), each a little tougher,
-// spread evenly through the night (in groups from night 4), each on an outdoor map-edge tile (sim
-// RNG). Each shambles toward the nearest
+// spread evenly through the night (in groups from night 4), each in the dark past explored ground a
+// little way from someone, or at the map's edge once all is explored (spawnPoint; sim RNG). Each
+// shambles toward the nearest
 // survivor it can reach, and hits an adjacent survivor every ATTACK_EVERY
 // ticks. Zombies only walk on floor: walls and doors stop them. With nobody
 // reachable, a zombie heads for the nearest survivor anyway, through doors
@@ -20,6 +21,8 @@
 // needs it (stepTile: battering, a raider opening a door, climbing through a broken window).
 // Parked cars and barricades can be crossed, slowly (Crossings.cs: begun from stepBlocked, ticked first thing).
 #nullable disable warnings
+using System.Runtime.CompilerServices;
+
 namespace LoonieRoo.Sim;
 
 public static partial class Zombies
@@ -37,9 +40,6 @@ public static partial class Zombies
     public const int ZOMBIE_TICKS_PER_TILE = 6;
 
     public const int ZOMBIE_DAMAGE = 40;
-
-    /// <summary>What a spike trap does to the zombie that steps on it.</summary>
-    public const int TRAP_DAMAGE = 100;
 
     public const int ZOMBIE_ATTACK_EVERY = 10;
 
@@ -91,15 +91,18 @@ public static partial class Zombies
     }
     public static Zombie addZombie(SimState state, double x, double y, double health = ZOMBIE_HEALTH, string kind = "night") => addZombie(state, Js.I(x), Js.I(y), health, kind);
 
-    /// <summary>How many times each zombie list has been added to or taken from in place (for zombiesWithin's buckets).</summary>
-    public static readonly JsMap<List<Zombie>, double> edits = new JsMap<List<Zombie>, double>();
-
-    public static void edited(List<Zombie> list)
+    /// <summary>What zombiesWithin keeps for a list of zombies: how many times it has been added to or taken from in
+    /// place, and its buckets. A derived cache, never saved, held weakly by the list: the dead are a new list each
+    /// dawn and whenever one arrives from a herd, and a list the state has dropped takes its notes with it.</summary>
+    sealed class ListNotes
     {
-        edits.set(list, (Js.Q(edits.get(list), 0)) + 1);
+        public double edits;
+        public BucketsEntry? buckets;
     }
 
-    public static readonly JsMap<List<Zombie>, BucketsEntry> buckets = new JsMap<List<Zombie>, BucketsEntry>();
+    static readonly ConditionalWeakTable<List<Zombie>, ListNotes> listNotes = new();
+
+    public static void edited(List<Zombie> list) => listNotes.GetOrCreateValue(list).edits += 1;
 
     /// <summary>How many zombies stand within `r` tiles (each way) of a point. The dead are bucketed by tile once a tick (and again if any are added or removed), and every one found is checked where it stands now, searching two tiles further than asked: a zombie knocked back since the buckets were made (it can't move further within the tick) is still counted exactly. (Every survivor counting every zombie for panic was hundreds of thousands of checks a tick with a big horde.)</summary>
     public static double zombiesWithin(SimState state, Point p, double r)
@@ -107,12 +110,13 @@ public static partial class Zombies
         var list = state.zombies;
         var __d0 = state.grid;
         var width = __d0.width;
-        var edit = Js.Q(edits.get(list), 0);
-        var b = buckets.get(list);
-        if ((!Js.T(b) || (b.tick != state.tick)) || (b.edit != edit))
+        var notes = listNotes.GetOrCreateValue(list);
+        var edit = notes.edits;
+        var b = notes.buckets;
+        if ((b == null) || (b.tick != state.tick) || (b.edit != edit))
         {
             b = new BucketsEntry { tick = state.tick, edit = edit, cells = new ZombieBuckets(list, width) };
-            buckets.set(list, b);
+            notes.buckets = b;
         }
         double n = 0;
         var reach = r + 2;
@@ -583,7 +587,7 @@ public static partial class Zombies
             return false;
         }
         z.pos = new Point { x = tx, y = ty };
-        if (springTrap(state, z))
+        if (Defences.springTrap(state, z))
         {
             return true;
         }
@@ -773,7 +777,6 @@ public static partial class Zombies
         var __d4 = state.grid;
         var width = __d4.width;
         var height = __d4.height;
-        // Plain dictionaries: only looked up, never iterated.
         var buckets = new ZombieBuckets(state.zombies, width);
         // The others by tile, and (othersAround) each listed under every in-grid tile within 1 of the tile its key names:
         // the ones a zombie on an in-grid tile meets, in one lookup instead of nine (sorted by order after, as before).
@@ -1032,32 +1035,6 @@ public static partial class Zombies
             z.path = [];
             z.nextThinkTick = state.tick;
         }
-    }
-
-    /// <summary>Spikes: TRAP_DAMAGE to a zombie stepping on a trap. A spent trap goes, leaving a plan to rebuild it. Returns true if the zombie died.</summary>
-    public static bool springTrap(SimState state, Zombie z)
-    {
-        var trap = FurnitureMod.furnitureAt(state, z.pos.x, z.pos.y);
-        if ((trap?.kind != "trap") || (trap.loot <= 0))
-        {
-            return false;
-        }
-        trap.loot -= 1;
-        z.health = JsMath.max(0, z.health - TRAP_DAMAGE);
-        if (trap.loot == 0)
-        {
-            FurnitureMod.removeFurniture(state, trap);
-            Designations.addBlueprint(state, trap.x, trap.y, "trap");
-            Events.logEvent(state, $"A spike trap at ({Js.Str(trap.x)}, {Js.Str(trap.y)}) is spent");
-        }
-        if (z.health > 0)
-        {
-            return false;
-        }
-        removeZombie(state, z);
-        Corpses.leaveCorpse(state, z.pos, null);
-        Events.logEvent(state, "A spike trap killed a zombie");
-        return true;
     }
 
     /// <summary>A guard's blow. Returns true if the zombie died (and was removed).</summary>
