@@ -51,6 +51,34 @@ public partial class SuccessionTest
             expect(fresh.weapon).not.toBeNull();
         }
 
+        [Fact(DisplayName = "the death rule > the death says when it was, and what they had killed (the death screen)")]
+        public void T006_the_death_says_when_and_what_they_had_killed()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.s"] });
+            var (you, _) = state.survivors;
+            you.kills = 3;
+            Commands.applyCommand(state, new Command { type = "takeControl", survivorId = you.id });
+            state.tick = 777;
+            dies(state);
+            expect(state.succession.tick).toBeGreaterThan(776);
+            expect(state.succession.kills).toBe(3);
+        }
+
+        [Fact(DisplayName = "alerts > the time to night is hours and minutes, not a raw double")]
+        public void T007_the_time_to_night_is_hours_and_minutes()
+        {
+            expect(Alerts.untilText(2.25)).toBe("2h 15m");
+            expect(Alerts.untilText(3)).toBe("3h 00m");
+            expect(Alerts.untilText(0.5)).toBe("30m");
+            expect(Alerts.untilText(2.9999999999999996)).toBe("3h 00m");
+            expect(Alerts.untilText(1.0 / 3)).toBe("20m");
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s"] });
+            state.tick = Time.TICKS_PER_HOUR * 12 + 37; // 18:02 on day 1 (the clock starts at 06:00)
+            var text = Alerts.alerts(state).map((a) => a.text).find((t) => t.StartsWith("Night in"));
+            expect(text).not.toBeNull();
+            expect(System.Text.RegularExpressions.Regex.IsMatch(text, @"^Night in (\d+h \d\dm|\d+m): about")).toBe(true);
+        }
+
         [Fact(DisplayName = "the death rule > or just watch the colony")]
         public void T004_or_just_watch_the_colony()
         {

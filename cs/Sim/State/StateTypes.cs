@@ -1010,6 +1010,9 @@ public partial class Succession
     public string cause { get; set; } = "";
     public int x { get; set; }
     public int y { get; set; }
+    /// <summary>When they died (the day on the death screen), and what they had killed.</summary>
+    public int tick { get; set; }
+    public double kills { get; set; }
 }
 
 public partial class SupplyRequest : IHasId

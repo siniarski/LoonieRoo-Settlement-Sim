@@ -18,6 +18,13 @@ public static partial class Alerts
     public const int NEAR = 25;
 
     /// <summary>Days the colony's food (raw and hot) would last at the current headcount.</summary>
+    /// <summary>Hours as "2h 15m" (rounded up to the minute), "40m" under an hour.</summary>
+    public static string untilText(double hours)
+    {
+        int minutes = (int)Math.Ceiling(Math.Max(0, hours) * 60 - 1e-9);
+        return minutes >= 60 ? $"{minutes / 60}h {minutes % 60:00}m" : $"{minutes}m";
+    }
+
     public static double foodDays(SimState state)
     {
         var people = Expeditions.everyone(state).length;
@@ -71,7 +78,7 @@ public static partial class Alerts
         if (!Time.isNight(state.tick) && (hour >= (Time.NIGHT_START - 3)))
         {
             var night = Time.dayOf(state.tick);
-            add("info", $"Night in {Js.Str(Time.NIGHT_START - hour)}h: about {Js.Str(Zombies.zombiesForNight(night, people.length))} zombies expected");
+            add("info", $"Night in {untilText(Time.NIGHT_START - hour)}: about {Js.Str(Zombies.zombiesForNight(night, people.length))} zombies expected");
         }
         var eg = state.endgame;
         if (Js.T(eg.won))

@@ -312,6 +312,8 @@ public partial class Game
 
         await SoundTest();
 
+        await DeathSteps();
+
         // New game from the menu, from the Colony tab of this one: a group start (the default
         // preset), then a solo one. Each lands in first person on your survivor, playing at once.
         await NewGameFromMenu("Survivor", "group");

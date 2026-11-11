@@ -67,7 +67,7 @@ public partial class Game
 
     void UpdateInput(double frameMs)
     {
-        if (view.menu != null || view.showMap) return;
+        if (view.menu != null || view.showMap || DeathUp) return;
         int dx = 0, dy = 0;
         if (Input.IsPhysicalKeyPressed(Key.W) || Input.IsPhysicalKeyPressed(Key.Up)) dy -= 1;
         if (Input.IsPhysicalKeyPressed(Key.S) || Input.IsPhysicalKeyPressed(Key.Down)) dy += 1;
@@ -159,7 +159,7 @@ public partial class Game
     /// <summary>First person takes the mouse before the HUD does: it looks, swings and uses.</summary>
     public override void _Input(InputEvent e)
     {
-        if (DropForeignMouse(e)) return;
+        if (DropForeignMouse(e) || DeathUp) return;
         if (!view.firstPerson || view.showInventory || Input.MouseMode != Input.MouseModeEnum.Captured) return;
         if (e is InputEventMouseMotion mm)
         {
@@ -193,9 +193,11 @@ public partial class Game
     {
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
-            OnKey(k);
+            if (DeathUp) deathScreen.OnKey(k.PhysicalKeycode); // the death screen takes every key: the world is held
+            else OnKey(k);
             return;
         }
+        if (DeathUp) return;
         if (view.menu != null || view.showMap || view.firstPerson) return;
         if (e is InputEventMouseMotion mm) OnMouseMove(mm.Position);
         else if (e is InputEventMouseButton mb)

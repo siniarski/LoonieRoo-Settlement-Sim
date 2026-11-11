@@ -1,5 +1,5 @@
 // The HUD's colony panels (part of Hud; Hud.cs has the rest): what you are asked or offered as the colony's
-// leader, each a panel that shows only while there is something to decide: the helicopter (who goes), succession,
+// leader, each a panel that shows only while there is something to decide: the helicopter (who goes),
 // a survivor's story, prisoners, neighbours (gifts, requests), traders, expeditions, crafting, wanderers, and the
 // survivor table with everyone's job priorities. Each reads state and sends commands; none decides a rule.
 
@@ -27,27 +27,6 @@ public sealed partial class Hud
             r.Button("Everyone (a new start elsewhere)", () => files.NewGamePlus(), tip: "A new game+: a fresh world with the same settings, and you in it alone, with what you carry, your skills and your story.");
             if (state.control != null && state.survivors.Count > 1) r.Button("The others; I stay", () => Command(new Command { type = "escape", who = "others" }), tip: "Everyone but you flies out. You stay, and can call again for anyone else you find.");
             r.Button("Wave it off", () => Command(new Command { type = "escape", who = "none" }), tip: "Nobody goes. You can call again.");
-        });
-    }
-
-    /// <summary>When the one you controlled dies: who carries on? The game waits for the choice (Game.AwaitingHeir).</summary>
-    void UpdateSuccession(SimState state)
-    {
-        var s = state.succession;
-        var ready = s != null ? SuccessionMod.heirs(state) : new List<Survivor>();
-        string key = s != null ? J(new object[] { s.name, s.cause, ready.Select((h) => $"{h.id}:{h.resolve}") }) : "";
-        succession.Show(s != null, key, (r) =>
-        {
-            r.Text($"{s!.name} died of {s.cause}. Who carries on?", Kit.Title);
-            void choose(string label, string choice, string about) => r.Button(label, () =>
-            {
-                Command(new Command { type = "succeed", choice = choice });
-                view.selectedId = state.control?.survivorId ?? view.selectedId;
-            }, tip: about);
-            foreach (var h in ready) choose($"{h.name} (resolve {h.resolve})", h.id, $"{h.name} takes over: you play as them from here.");
-            if (ready.Count == 0 && state.survivors.Count > 0) r.Text($"Nobody left has the resolve to step up ({SuccessionMod.STEP_UP}+).", Ctx.Css("#dddddd"));
-            choose("Start anew, far from here", "anew", "A new survivor, alone, somewhere else in this world, with a weapon and a bandage.");
-            if (state.survivors.Count > 0) choose("Just watch the colony", "none", "Nobody under your control; the colony runs itself.");
         });
     }
 
