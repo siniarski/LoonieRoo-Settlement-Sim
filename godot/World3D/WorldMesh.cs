@@ -128,13 +128,19 @@ public static class WorldMesh
                 // A country road's tiles are drawn as the verge beside them while the road itself is a ribbon along
                 // its planned line (RoadRibbons.cs); a street between kerbs keeps its tiles and its lines.
                 bool ribbon = Ribboned && tile == "floor" && ground == "road" && !Terrain.Sunk(x, y);
-                if (ribbon) Ground(gs, ws, x, y, tile, Verge(g, x, y));
+                // The water's edge is drawn smooth (Banks, below): a tile the bank runs through is part land, part
+                // water; one wholly on the far side of it is drawn as that side, whatever the sim's tile says.
+                int bank = Terrain.Flat || ground == "bridge" || tile is not ("floor" or "water") ? BANK_AS_IS : Banks(gs, ws, g, x, y, tile, ground);
+                if (bank == BANK_DRAWN) { }
+                else if (bank == BANK_WATER) Ground(gs, ws, x, y, "water", ground);
+                else if (bank == BANK_LAND && tile == "water") Ground(gs, ws, x, y, "floor", Shore(g, x, y));
+                else if (ribbon) Ground(gs, ws, x, y, tile, Verge(g, x, y));
                 else
                 {
                     Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));
                     LaneMark(gs, g, x, y, tile, ground);
                 }
-                anyWater |= tile == "water";
+                anyWater |= bank is BANK_DRAWN or BANK_WATER || (bank == BANK_AS_IS && tile == "water");
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
                 else if (tile == "barricade") Box(st, new(x + 0.05f, low, y + 0.05f), new(x + 0.95f, floor + 1.0f, y + 0.95f), WorldLook.Plank);
@@ -222,6 +228,122 @@ public static class WorldMesh
                 if (kind is "grass" or "dirt" or "forest" or "field") return kind;
             }
         return "grass";
+    }
+
+    // --- the water's edge, smooth (2026-11-12) ---
+    // The sim's water is tiles, and a bank drawn tile by tile is a staircase. Each tile corner is given how much of
+    // the ground round it is water (the sixteen tiles about it: 0 to 1), and the bank is where that is a half: a
+    // line through each tile it crosses, straight along a straight bank and slanting or curving where the tiles
+    // step. Drawn only: wading and swimming go by the tiles, which the line is never more than about half a tile from.
+    const int BANK_AS_IS = 0, BANK_DRAWN = 1, BANK_WATER = 2, BANK_LAND = 3;
+
+    static bool Wet(Grid g, int x, int y)
+    {
+        x = Math.Clamp(x, 0, g.width - 1);
+        y = Math.Clamp(y, 0, g.height - 1);
+        int i = y * g.width + x;
+        if (Grids.tileAt(g, i) == "water") return true;
+        int k = Grids.groundAt(g, i);
+        return k >= 0 && k < Grids.GROUNDS.Length && Grids.GROUNDS[k] == "bridge"; // the water runs on under a bridge
+    }
+
+    /// <summary>How much of the ground round tile corner (cx, cy) is water: the sixteen tiles about it.</summary>
+    static float WaterAt(Grid g, int cx, int cy)
+    {
+        int n = 0;
+        for (int y = cy - 2; y <= cy + 1; y++)
+            for (int x = cx - 2; x <= cx + 1; x++)
+                if (Wet(g, x, y)) n++;
+        return n / 16f;
+    }
+
+    /// <summary>The land beside a water tile: the nearest ground that is not water, looking out the four ways.</summary>
+    static string Shore(Grid g, int x, int y)
+    {
+        for (int d = 1; d <= 4; d++)
+            foreach (var (dx, dy) in new[] { (0, -1), (1, 0), (0, 1), (-1, 0) })
+            {
+                int ax = x + dx * d, ay = y + dy * d;
+                if (ax < 0 || ay < 0 || ax >= g.width || ay >= g.height) continue;
+                int i = ay * g.width + ax, k = Grids.groundAt(g, i);
+                if (Grids.tileAt(g, i) != "floor" || k < 0 || k >= Grids.GROUNDS.Length) continue;
+                string kind = Grids.GROUNDS[k];
+                if (kind is "grass" or "dirt" or "forest" or "field") return kind;
+            }
+        return "grass";
+    }
+
+    /// <summary>A tile at the water's edge: draws it in two parts along the bank and says so (BANK_DRAWN), or says
+    /// which side of the bank the whole tile is on, or that no water is near (BANK_AS_IS).</summary>
+    static int Banks(SurfaceTool st, SurfaceTool ws, Grid g, int x, int y, string tile, string ground)
+    {
+        var at = new[] { (x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1) };
+        var wet = new float[4];
+        int inside = 0;
+        bool none = true;
+        for (int i = 0; i < 4; i++)
+        {
+            wet[i] = WaterAt(g, at[i].Item1, at[i].Item2);
+            if (wet[i] >= 0.5f) inside++;
+            if (wet[i] > 0) none = false;
+        }
+        if (none) return BANK_AS_IS;
+        if (inside == 4) return BANK_WATER;
+        if (inside == 0) return tile == "water" ? BANK_LAND : BANK_AS_IS;
+        float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
+        string dry = tile == "water" ? Shore(g, x, y) : ground;
+        var land = new Look(WorldLook.GroundColour(dry).Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.Ground(dry));
+        var bed = new Look(WorldLook.RiverBed.colour.Lightened(0.07f + Math.Abs(n) * 0.015f), WorldLook.RiverBed.what);
+        var sheet = new Look(WATER.Lightened(0.06f + Math.Abs(n) * 0.035f) with { A = WATER_ALPHA }, Surfaces.None);
+        // Each side of the bank as a polygon: the corners on that side, and the points where the bank crosses the tile's edges.
+        void Side(bool water)
+        {
+            var ground3 = new List<(Vector3 p, Vector3 normal)>();
+            var top = new List<Vector3>();
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4;
+                bool a = wet[i] >= 0.5f, b = wet[j] >= 0.5f;
+                var (ax, ay) = at[i];
+                var (bx, by) = at[j];
+                if (a == water)
+                {
+                    ground3.Add((new Vector3(ax, Terrain.Corner(ax, ay), ay), Terrain.Normal(ax, ay)));
+                    top.Add(new Vector3(ax, Terrain.Water(ax, ay), ay));
+                }
+                if (a != b)
+                {
+                    float t = (0.5f - wet[i]) / (wet[j] - wet[i]);
+                    float px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
+                    float h = Terrain.Corner(ax, ay) + (Terrain.Corner(bx, by) - Terrain.Corner(ax, ay)) * t;
+                    ground3.Add((new Vector3(px, h, py), (Terrain.Normal(ax, ay) + Terrain.Normal(bx, by)).Normalized()));
+                    top.Add(new Vector3(px, Terrain.Water(ax, ay) + (Terrain.Water(bx, by) - Terrain.Water(ax, ay)) * t, py));
+                }
+            }
+            if (ground3.Count < 3) return;
+            var look = water ? bed : land;
+            st.SetColor(look.colour);
+            st.SetUV(look.what);
+            for (int k = 1; k < ground3.Count - 1; k++)
+            {
+                var (a, b, c) = (ground3[0], ground3[k], ground3[k + 1]);
+                if ((b.p - a.p).Cross(c.p - a.p).Y > 0) (b, c) = (c, b); // clockwise from above, as the ground's
+                foreach (var v in new[] { a, b, c }) { st.SetNormal(v.normal); st.AddVertex(v.p); }
+            }
+            if (!water) return;
+            ws.SetColor(sheet.colour);
+            ws.SetUV(sheet.what);
+            ws.SetNormal(Vector3.Up);
+            for (int k = 1; k < top.Count - 1; k++)
+            {
+                var (a, b, c) = (top[0], top[k], top[k + 1]);
+                if ((b - a).Cross(c - a).Y > 0) (b, c) = (c, b);
+                ws.AddVertex(a); ws.AddVertex(b); ws.AddVertex(c);
+            }
+        }
+        Side(false);
+        Side(true);
+        return BANK_DRAWN;
     }
 
     static readonly Look LANE = new(new Color(0.62f, 0.6f, 0.5f), Surfaces.None);
