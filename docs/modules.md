@@ -155,7 +155,8 @@ git tag `ts-final`.
 ### `Colony/`
 
 - **Designations** -> **Jobs** (the queue, `reconcileJobs`) -> **JobChoice** (who takes what) -> **Work** (doing it;
-  **WorkHaul**, part of Work: carrying to storage, fuel, the cart).
+  **WorkHaul**, part of Work: carrying to storage, fuel, the cart). **RoomStorage** (part of Grid/Rooms): which store
+  category an item is in and which complete rooms take it (`categoryOf`, `completeStoreRooms`, `homeFor`).
   **JobTypes**: job types and priorities. The model: docs/sim-model.md.
 - **Mess**: mess halls. **Medicine**. **Planner** (the auto-planner: ordinary commands). **Policies**.
 - **Director** (storyteller). **EndgameMod** (cure, evacuation, sieges). **Escape** (the helicopter, new game+).
