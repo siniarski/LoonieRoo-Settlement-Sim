@@ -1,8 +1,10 @@
 // A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening.
 // Deterministic: ties broken by lower h, then insertion order; neighbours expanded N, E, S, W.
-// Movers: "survivor" (colonists: any door), "free" (you: doors open; a broken window or a barricade only with a vault, Leaps.cs), "zombie", "breacher" (batters
-// through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
-// "animal" (wild animals: open floor only; through open doors and broken windows, never onto a door's tile).
+// Movers: "survivor" (colonists: any door), "free" (you: doors open; a broken window or a barricade only with a vault,
+// Leaps.cs), "swimmer" (you in the water: the free mover's rules, and water), "zombie" (open doors, the shallows),
+// "breacher" (batters through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
+// "animal" (wild animals: open floor and the shallows; through open doors and broken windows, never onto a door's
+// tile). Each mover's rule for a tile and for an edge: isPassable and crossable, one line each.
 // The dead's paths (not their bodies) also go over parked cars, and a "runner"'s over barricades, at a cost:
 // Crossings.cs (the hooks here: A*'s step, reachability's rules, the open doors' joins).
 using System.Runtime.CompilerServices;
