@@ -2,24 +2,13 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class StorageTest
 {
 
-    public static void runUntil(SimState state, Func<SimState, bool> done, double max = 800)
-    {
-        for (var t = 0; t < max; t++)
-        {
-            if (Js.T(done(state)))
-            {
-                return;
-            }
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
-    }
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 800) => TestKit.runUntil(state, done, max);
 
     public static readonly List<string> MAP = ["................", ".######.######..", ".#....#.#....#..", ".#....#.#....#..", ".##D###.###D##..", "................", "..s....www......", "................"];
 
@@ -139,7 +128,7 @@ public partial class StorageTest
             expect(state.items).toHaveLength(4);
         }
 
-        [Fact(DisplayName = "beds and housing > beds only go on empty floor, and items are never dropped on them")]
+        [Fact(DisplayName = "beds and housing > a wall cannot be built where a bed stands, a bed cannot go on a wall, and the bed's room stays a room")]
         public void T010_beds_only_go_on_empty_floor_and_items_are_never_dropped_on_t()
         {
             var map = MAP.map((row, y) => (y == 2) ? ".#....#.#.b..#.." : row);

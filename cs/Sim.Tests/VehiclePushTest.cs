@@ -2,14 +2,12 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehiclePushTest
 {
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     /// <summary>A sedan facing east with its middle on (10, 3), you just behind its boot. `wallAt`: a wall column there.</summary>
     static (SimState state, Survivor s, Vehicle car) behind(int wallAt = -1)

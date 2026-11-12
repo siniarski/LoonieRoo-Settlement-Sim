@@ -2,6 +2,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class ZombiesTest
@@ -10,19 +11,7 @@ public partial class ZombiesTest
     /// <summary>23:00 on day 1: night, and the first spawn time.</summary>
     public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR));
 
-    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500)
-    {
-        for (var t = 0; t < max; t++)
-        {
-            if (Js.T(done(state)))
-            {
-                return t;
-            }
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
-    }
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 1500) => TestKit.runUntil(state, done, max);
 
     /// <summary>A scenario at night, survivors doing nothing unless asked.</summary>
     public static SimState night(List<string> map, JsRecord<double>? jobs = null)
@@ -30,10 +19,7 @@ public partial class ZombiesTest
         jobs ??= new() {  };
         var state = ScenarioMod.loadScenario(new Scenario { seed = 3, map = map });
         state.tick = Js.I(NIGHT + 1);
-        foreach (var s in Js.Iter(state.survivors))
-        {
-            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
-        }
+        TestKit.setJobs(state, jobs);
         return state;
     }
 

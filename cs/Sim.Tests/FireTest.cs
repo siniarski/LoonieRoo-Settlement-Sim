@@ -2,34 +2,19 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class FireTest
 {
 
-    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
-    {
-        for (var t = 0; t < max; t++)
-        {
-            if (Js.T(done(state)))
-            {
-                return t;
-            }
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
-    }
 
     public static SimState setup(List<string> map, JsRecord<double>? jobs = null, List<ScenarioRoomsItem>? rooms = null)
     {
         jobs ??= new() {  };
         rooms ??= new();
         var state = ScenarioMod.loadScenario(new Scenario { seed = 9, map = map, rooms = rooms });
-        foreach (var s in Js.Iter(state.survivors))
-        {
-            s.priorities = Js.RecordFrom(JobTypes.NO_JOBS, __r0 => { Js.MergeInto(__r0, jobs); });
-        }
+        TestKit.setJobs(state, jobs);
         return state;
     }
 
@@ -123,6 +108,12 @@ public partial class FireTest
             var state = setup(map, new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(2), purpose = "graveyard" }]);
             state.harsh = true;
             runUntil(state, (_) => (Js.NN(Js.Get(state.items, 0)).pos != null) && (Js.NN(Js.Get(state.items, 0)).pos.y >= 2), 1500);
+            // In the graveyard it does not rot, however long it has lain; anywhere else it would.
+            var corpse = Js.NN(Js.Get(state.items, 0));
+            expect(Rooms.labelAt(state, corpse.pos.x, corpse.pos.y)).toBe(Rooms.labelAt(state, 1, 2));
+            corpse.wear = state.tick - ((double)(2) * (Corpses.CORPSE_ROT));
+            expect(Corpses.isRotting(state, corpse, Rooms.completeRooms(state, "graveyard"))).toBe(false);
+            expect(Corpses.isRotting(state, corpse, new JsSet<double>())).toBe(true);
         }
     }
 }

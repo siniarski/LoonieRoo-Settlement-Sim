@@ -2,24 +2,12 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class Defences2Test
 {
 
-    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 2000)
-    {
-        for (var t = 0; t < max; t++)
-        {
-            if (Js.T(done(state)))
-            {
-                return t;
-            }
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}");
-    }
 
     public static readonly double NIGHT = ((double)(17) * (Time.TICKS_PER_HOUR)) + 1;
 

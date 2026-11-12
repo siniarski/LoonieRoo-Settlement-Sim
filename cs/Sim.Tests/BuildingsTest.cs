@@ -265,7 +265,7 @@ public class BuildingsTest
     }
 
     /// <summary>PLANS=path writes one plan of each kind and style as text (for the session log and docs).</summary>
-    [Fact(DisplayName = "buildings > print plans")]
+    [Fact(DisplayName = "buildings > PLANS=path writes one plan of each kind and style (a no-op without it)")]
     public void Print()
     {
         var path = System.Environment.GetEnvironmentVariable("PLANS");

@@ -32,7 +32,7 @@ The map is cut into **regions of R x R tiles (R = 1024)**. Each region's plan is
 
 ### What reads the plan, and how it changes
 
-`WorldPlan` (lots, lotMask, roadMask, towns, streets, roads, lotsByChunk) becomes a small API over the region cache: `isRoad(x, y)`, `lotAt(x, y)`, `lotsNear(chunk)`, `townsNear(x, y, reach)`, `townsOf(region)`, `roadsOf(region)`. Readers: Worldgen.generateChunk (isRoad, onLot, lotsByChunk), Heights (lots, roadMask, towns for townness), Settlements (nature), Mapnotes (town names: today every town on the map; becomes the towns of regions planned so far, names from a stable index), and in the game Roofs, FarField, MapShot. TownIndex and Heights' townness ask townsNear.
+`WorldPlan` (lots, lotMask, roadMask, towns, streets, roads, lotsByChunk) becomes a small API over the region cache: `isRoad(x, y)`, `lotAt(x, y)`, `LotsInChunk(chunk)`, `TownsNear(x, y, reach)`, `TownsOf(region)` (as built; the design called them lotsNear, townsNear, townsOf and roadsOf). Readers: Worldgen.generateChunk (isRoad, onLot, lotsByChunk), Heights (lots, roadMask, towns for townness), Settlements (nature), Mapnotes (town names: today every town on the map; becomes the towns of regions planned so far, names from a stable index), and in the game Roofs, FarField, MapShot. TownIndex and Heights' townness ask townsNear.
 
 ### Order and determinism
 
@@ -63,7 +63,7 @@ The sketch of 2026-11-09: the grid's per-tile layers kept per 32 x 32 chunk, all
 
 **The API.** The layers are not public: `Grids` is the only way in (the fields are internal to the sim, and inside it only Grid.cs and the save code's layer helpers touch them).
 - by tile: `getTile` / `setTile` (as before), `tileAt(grid, i)`, `groundAt(grid, x, y | i)` / `setGround`, `isExplored` / `exploredAt` / `setExplored`, `isDirty` / `setDirty` (as before) / `dirtAt`, `damageAt` / `setDamage` (as before), `edgeKind(grid, e)` (as before) / `setEdge` (as before);
-- edges by their tiles, with no index to split (the forms for hot loops): `edgeBetween(grid, ax, ay, bx, by, out kind)`, `edgeKindBetween`, `edgeAt(grid, x, y, side)`;
+- edges by their tiles, with no index to split (the forms for hot loops): `edgeBetween(grid, ax, ay, bx, by, out kind)`, `edgeKindBetween`, `edgeOf(grid, x, y, side)` (designed as edgeAt);
 - raw writes that note nothing (generation, loading, tests): `putTile`, `putEdge`, `putDirt`;
 - whole layers: `fillExplored`, `fillGround`, `anyUnexplored`, `anyEdges`, `tileCount`, `dirtyTiles`, `damagedTiles`, `memory` (slots allocated), and flat copies for tests, dumps and the text map (`Grids.allTiles(grid)`, `allGround`, `allExplored`, `allDirt`, `allDamage`, `allEdges`: O(map), never in a tick);
 - inside the sim only (the save code, rooms, reachability): a chunk's rows (`GridLayer.ReadRow` / `WriteRow`), `structureTiles` (the tiles with something on them), `bareChunk`, `tileCodeAt`.

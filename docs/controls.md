@@ -1,6 +1,6 @@
 # Controls
 
-The keys as of 2026-11-11 (moved from NOTES.md "Start here" on 2026-11-10). The game's own key list is K in play;
+The keys as of 2026-11-12, checked against godot/App/GameInput.cs (moved from NOTES.md "Start here" on 2026-11-10). The game's own key list is K in play;
 the self-test (godot/SelfTest/SelfTest.cs) drives most of these with real input.
 
 ## First person (playing a survivor, since 2026-11-08)

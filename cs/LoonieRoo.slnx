@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Sim/Sim.csproj" />
   <Project Path="Sim.Tests/Sim.Tests.csproj" />
+  <Project Path="Harness/Harness.csproj" />
   <Project Path="../godot/LoonieRoo.csproj" />
 </Solution>

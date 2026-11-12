@@ -3,14 +3,12 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehicleCabinTest
 {
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     /// <summary>You in the car at (3, 3) in the open (facing east), a walker at (4, 7) already after you.</summary>
     static (SimState state, Survivor s, Vehicle car, Zombie z) seated()

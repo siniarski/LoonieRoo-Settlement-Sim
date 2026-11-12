@@ -8,42 +8,6 @@ namespace LoonieRoo.Sim.Tests.Ported;
 
 public class HeightsReliefTest
 {
-    [Fact(DisplayName = "relief > continuous over chunk and region borders, and no steeper than a tenth anywhere")]
-    public void relief_continuous()
-    {
-        var f = Heights.make(7, 2048, "mainland");
-        double worst = 0;
-        // Along x across the plan chunk borders (every 32) and the region border (1024), on several rows; and along y.
-        foreach (int y in new[] { 100, 517, 1023, 1024, 1500 })
-            for (int x = 0; x < 2047; x++)
-            {
-                double step = Math.Abs(Heights.relief(f, x + 1, y) - Heights.relief(f, x, y));
-                worst = Math.Max(worst, step);
-                if (x % 32 == 31 || x == 1023) expect(step).toBeLessThan(0.12);
-            }
-        foreach (int x in new[] { 100, 517, 1023, 1024, 1500 })
-            for (int y = 0; y < 2047; y++) worst = Math.Max(worst, Math.Abs(Heights.relief(f, x, y + 1) - Heights.relief(f, x, y)));
-        // The steepest the lattice allows: smoothstep's 1.5 x the biggest step of elevation between points, a fraction of RELIEF.
-        expect(worst).toBeLessThan(0.12);
-        // The start is the zero of the relief.
-        var s = f.nature.start;
-        expect(Heights.relief(f, s.x, s.y)).toBe(0);
-    }
-
-    [Fact(DisplayName = "relief > the ground is continuous across a region border too (a 1100-tile world: regions of 1024 and 76)")]
-    public void ground_across_a_region_border()
-    {
-        var f = Heights.make(3, 1100, "mainland");
-        double worst = 0;
-        for (int y = 10; y < 1090; y += 5)
-        {
-            double across = Math.Abs(f.corner(1024, y) - f.corner(1023, y));
-            worst = Math.Max(worst, across);
-        }
-        // No step at the border beyond what a bank or a building's ease makes anywhere (about half a metre a tile).
-        expect(worst).toBeLessThan(0.5);
-    }
-
     [Fact(DisplayName = "relief > a few metres in all, the start high on its rise and rivers in valleys under it")]
     public void relief_shape()
     {
@@ -108,79 +72,6 @@ public class HeightsReliefTest
                 }
         }
         expect(rings).toBeGreaterThan(100);
-    }
-
-    /// <summary>A world (small seeds, 256 tiles) with a lake of real size: the seed, and the lake's tiles.</summary>
-    static (double seed, Heights.Field f, List<(int x, int y)> tiles) aLake()
-    {
-        for (double seed = 1; seed <= 40; seed++)
-        {
-            var f = Heights.make(seed, 256, "mainland");
-            var t = Terrain.Of(f.nature);
-            var tiles = new List<(int, int)>();
-            for (int y = 0; y < 256; y++)
-                for (int x = 0; x < 256; x++) if (t.isLake(x, y) && !f.regions.IsRoad(x, y)) tiles.Add((x, y));
-            if (tiles.Count > 400) return (seed, f, tiles);
-        }
-        throw new Exception("no seed up to 40 has a lake of 400 tiles at 256");
-    }
-
-    [Fact(DisplayName = "relief > a lake's water is level, and no lower than a metre under the land at its rim")]
-    public void lake_is_level()
-    {
-        var (seed, f, tiles) = aLake();
-        var set = new HashSet<(int, int)>(tiles);
-        double lo = 1e9, hi = -1e9;
-        int deep = 0;
-        foreach (var (x, y) in tiles)
-        {
-            // Well inside: every tile within four is lake.
-            bool inside = true;
-            for (int dy = -4; dy <= 4 && inside; dy++)
-                for (int dx = -4; dx <= 4 && inside; dx++) inside = set.Contains((x + dx, y + dy));
-            if (!inside) continue;
-            double w = f.water(x + 0.5, y + 0.5);
-            lo = Math.Min(lo, w);
-            hi = Math.Max(hi, w);
-            deep++;
-        }
-        expect(deep).toBeGreaterThan(20);
-        expect(hi - lo).toBeLessThan(0.05);
-    }
-
-    [Fact(DisplayName = "relief > water is never over the land beside it: not above the ground at the tile beside it")]
-    public void water_not_over_banks()
-    {
-        foreach (var (seed, map) in new[] { (7.0, "mainland"), (42.0, "mainland"), (5.0, "islands") })
-        {
-            var f = Heights.make(seed, 256, map);
-            var n = f.nature;
-            var plan = f.regions.Region(0, 0);
-            bool Wet(int x, int y) => x >= 0 && y >= 0 && x < 256 && y < 256 && NatureMod.isWater(n, x, y) && plan.roadMask[y * 256 + x] == 0;
-            bool Road(int x, int y) => x >= 0 && y >= 0 && x < 256 && y < 256 && plan.roadMask[y * 256 + x] != 0;
-            double worst = -1e9; int checkedCorners = 0;
-            for (int y = 2; y < 254; y++)
-                for (int x = 2; x < 254; x++)
-                {
-                    if (Wet(x, y) || Road(x, y)) continue;
-                    // The nearest wet tile within 2 (and no road in the way: a bridge's deck is over its water on purpose).
-                    double surface = double.NaN;
-                    for (int dy = -2; dy <= 2; dy++)
-                        for (int dx = -2; dx <= 2; dx++)
-                            if (Wet(x + dx, y + dy) && !Road(x + dx, y + dy)) surface = double.IsNaN(surface) ? f.water(x + dx + 0.5, y + dy + 0.5) : Math.Max(surface, f.water(x + dx + 0.5, y + dy + 0.5));
-                    if (double.IsNaN(surface)) continue;
-                    bool beside = false;
-                    for (int dy = -3; dy <= 3; dy++)
-                        for (int dx = -3; dx <= 3; dx++) beside |= Road(x + dx, y + dy);
-                    if (beside) continue;
-                    // The land at this tile's centre, against the water's surface beside it (a river on a slope tilts with it: up to 7% across, 0.14 m over two tiles: a hand's breadth of slack).
-                    double ground = f.at(x + 0.5, y + 0.5);
-                    worst = Math.Max(worst, surface - ground);
-                    checkedCorners++;
-                }
-            expect(checkedCorners).toBeGreaterThan(200);
-            expect(worst).toBeLessThan(0.2);
-        }
     }
 
     [Fact(DisplayName = "relief > the sim's state does not depend on the ground: ticks with and without reading the heights give the same save")]

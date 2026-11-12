@@ -2,6 +2,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class VehiclesTest
@@ -24,13 +25,7 @@ public partial class VehiclesTest
         return new FieldResultShape37 { state = state, s = s, car = car };
     }
 
-    public static void run(SimState state, double n)
-    {
-        for (var i = 0; i < n; i++)
-        {
-            Tick.tick(state);
-        }
-    }
+    public static void run(SimState state, double n) => TestKit.tickN(state, n);
 
     /// <summary>Use the car at (3, 3) and wait out getting in (VehicleActions.cs). Returns whether "use" was taken.</summary>
     public static bool getIn(SimState state)

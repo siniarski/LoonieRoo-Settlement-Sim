@@ -3,16 +3,14 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehicleAlarmTest
 {
     const int SUB = Motion.SUB;
 
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     /// <summary>An id with an alarm (or without), from `from` up.</summary>
     static string alarmId(bool with, int from = 900000)

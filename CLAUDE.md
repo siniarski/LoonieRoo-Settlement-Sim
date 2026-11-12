@@ -34,7 +34,7 @@ Plain C# in place of a `Js.*` idiom is welcome where tests (and, for balance, th
 
 ## Commands
 
-- `./check.sh`: builds the sim, tests and game (Release and Debug), runs the tests (~10 s). **Before every commit.**
+- `./check.sh`: builds the sim, tests, harness and game (Release and Debug), runs the tests (~10 s). **Before every commit.**
   `--all` adds the Godot self-test (a window opens). Full output in `.check/`: **read it, don't rerun**.
 - `./finish.sh "message"` (or `-F file`, `--all`): the check, then commits all (`git add -A`) only if green. No push.
 - `./shot.sh <game args>`: builds Debug, runs Godot, prints a short result (`.check/shot.log`). Game flags (`--seed=`,
