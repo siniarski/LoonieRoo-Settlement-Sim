@@ -588,58 +588,13 @@ public static partial class Commands
         }
         if (command.type == "toggleDoor")
         {
-            var why = toggleDoor(state, Js.NN(command.x), Js.NN(command.y));
+            var why = Doors.toggleDoor(state, Js.NN(command.x), Js.NN(command.y));
             return Js.T(why) ? reject(why) : changed();
         }
         if (command.type == "toggleLock")
         {
-            var __d3 = command;
-            var x_7 = __d3.x;
-            var y_8 = __d3.y;
-            if (((command.side != null) && Grids.inBounds(state.grid, Js.NN(x_7), Js.NN(y_8))) && (Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side)) == Grids.EDGE_DOOR))
-            {
-                var e = Grids.edgeIndex(state.grid, Js.NN(x_7), Js.NN(y_8), command.side);
-                var open_9 = state.grid.edgeOpen.indexOf(e);
-                if (open_9 >= 0)
-                {
-                    state.grid.edgeOpen.splice(open_9, 1);
-                }
-                var at_10 = state.grid.edgeLocked.indexOf(e);
-                if (at_10 >= 0)
-                {
-                    state.grid.edgeLocked.splice(at_10, 1);
-                }
-                else
-                {
-                    state.grid.edgeLocked.push(e);
-                }
-                Grids.noteEdgeChange(state.grid, e);
-                state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
-                return changed();
-            }
-            if (Grids.getTile(state.grid, Js.NN(x_7), Js.NN(y_8)) != "door")
-            {
-                return reject($"({Js.Str(x_7)}, {Js.Str(y_8)}) is not a door");
-            }
-            var i = ((double)(y_8) * (state.grid.width)) + x_7;
-            var open = state.grid.open.indexOf(i);
-            if (open >= 0)
-            {
-                state.grid.open.splice(open, 1);
-            }
-            var at = state.grid.locked.indexOf(i);
-            if (at >= 0)
-            {
-                state.grid.locked.splice(at, 1);
-            }
-            else
-            {
-                state.grid.locked.push(i);
-                Zombies.evictZombies(state, new Point { x = Js.I(Js.NN(x_7)), y = Js.I(Js.NN(y_8)) });
-            }
-            Grids.noteChange(state.grid, Js.NN(i));
-            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
-            return changed();
+            var why = Doors.toggleLock(state, Js.NN(command.x), Js.NN(command.y), command.side);
+            return Js.T(why) ? reject(why) : changed();
         }
         if (command.type == "sendExpedition")
         {
@@ -1252,42 +1207,6 @@ public static partial class Commands
         return true;
     }
 
-    /// <summary>Open or close a door. Returns why not, or null.</summary>
-    public static string? toggleDoor(SimState state, int x, int y)
-    {
-        if (Grids.getTile(state.grid, x, y) != "door")
-        {
-            return $"({Js.Str(x)}, {Js.Str(y)}) is not a door";
-        }
-        var i = ((double)(y) * (state.grid.width)) + x;
-        var at = state.grid.open.indexOf(i);
-        var passing = state.grid.passing.indexOf(i);
-        if (passing >= 0)
-        {
-            state.grid.passing.splice(passing, 1);
-            return null;
-        }
-        if (at < 0)
-        {
-            if (state.grid.locked.includes(i))
-            {
-                return "it's locked";
-            }
-            state.grid.open.push(i);
-        }
-        else
-        {
-            var inTheWay = Js.ListOf<IBody>(state.survivors, state.zombies, state.residents).some((e) => (e.pos.x == x) && (e.pos.y == y));
-            if (Js.T(inTheWay))
-            {
-                return "someone is in the doorway";
-            }
-            state.grid.open.splice(at, 1);
-        }
-        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
-        return null;
-    }
-    public static string? toggleDoor(SimState state, double x, double y) => toggleDoor(state, Js.I(x), Js.I(y));
 
     public static CommandResult takeControl(SimState state, string? id)
     {

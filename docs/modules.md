@@ -75,7 +75,7 @@ git tag `ts-final`.
 ### `Movement/`
 
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
-- **Survivors**: tile-to-tile movement along cached A* paths (making and finding one: Survivors/SurvivorRoster.cs). **Doors**: doors held open by whoever passes.
+- **Survivors**: tile-to-tile movement along cached A* paths (making and finding one: Survivors/SurvivorRoster.cs). **Doors**: doors held open by whoever passes; opening, shutting and locking a door (the toggleDoor and toggleLock commands, `use`).
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
 - **Leaps**: Space in first person: jump, vault or hop. **CarLeaps** (part of Leaps): over a parked car, onto it,
   walking on its roof and down off it (`control.onCar`), your height for the view. **Trunks**: a tree's trunk, solid to free movers, tile

@@ -702,7 +702,7 @@ public static partial class ControlMod
         if (Grids.getTile(state.grid, target.x, target.y) == "door")
         {
             var was = Grids.isOpen(state.grid, target.x, target.y);
-            return Commands.toggleDoor(state, target.x, target.y) ?? (was ? "closed the door" : "opened the door");
+            return Doors.toggleDoor(state, target.x, target.y) ?? (was ? "closed the door" : "opened the door");
         }
         var item = Items.itemAt(state, target.x, target.y);
         var carriedRemedy = (Js.T(s.carrying) && Space.samePoint(target, s.pos)) ? Items.getItem(state, s.carrying) : null;
