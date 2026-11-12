@@ -158,9 +158,7 @@ public static partial class Handiwork
             int e = doorBetween(state.grid, s.pos, p);
             if (e < 0) return "it changed while you worked";
             state.grid.edgeOpen.Remove(e);
-            if (!state.grid.edgeBoarded.includes(e)) state.grid.edgeBoarded.push(e);
-            Grids.noteEdgeChange(state.grid, e);
-            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+            Breach.board(state, e);
             return "boarded up the door";
         }
         Blueprint bp = new Blueprint { id = $"h{Js.Str(state.nextId++)}", x = Js.I(p.x), y = Js.I(p.y), target = target, needsMaterial = false, delivered = true, workDone = 0, workRequired = 0 };
