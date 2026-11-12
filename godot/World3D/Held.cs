@@ -211,7 +211,7 @@ public sealed class Held
     /// <summary>The muzzle flash: two crossed quads with a soft star on them, unshaded and additive (it glows: a sibling's lighting session may add a real light), shown a tick or so after a shot.</summary>
     readonly Node3D flash = new() { Visible = false };
     readonly string? forceModel, forceTool;
-    readonly double swingAt = -1, raiseAt = -1;
+    readonly double swingAt = -1, raiseAt = -1, reloadAt = -1;
     double bob, breath, run;
     Vector3 lastFwd;
     Basis runTilt = Basis.Identity;
@@ -263,6 +263,7 @@ public sealed class Held
             if (kv[0] == "heldtool") forceTool = kv[1];
             if (kv[0] == "swingat") swingAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
             if (kv[0] == "raiseat") raiseAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
+            if (kv[0] == "reloadat") reloadAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
@@ -348,10 +349,12 @@ public sealed class Held
                 var up = new Basis(new Vector3(1, 0, 0), 0.18f * k);
                 r = (new Transform3D(up * r.hand.Basis, r.hand.Origin + new Vector3(0, 0.02f, 0.07f) * k), up * r.item);
             }
-            if (c?.busy is { what: "reload" } busy)
+            if (reloadAt >= 0 || c?.busy is { what: "reload" })
             {
-                // Reloading: the gun tipped up and in towards you, the muzzle raised, back down at the end.
-                float k = (float)Math.Sin(Math.PI * Math.Clamp(busy.progress / Math.Max(1, busy.duration), 0, 1));
+                // Reloading: the gun tipped up and in towards you, the muzzle raised, back down at the end
+                // (--reloadat=P holds it at P, 0..1, for a picture).
+                double at = reloadAt >= 0 ? reloadAt : c!.busy!.progress / Math.Max(1, c.busy.duration);
+                float k = (float)Math.Sin(Math.PI * Math.Clamp(at, 0, 1));
                 var tipUp = new Basis(new Vector3(1, 0, 0), 0.55f * k) * new Basis(Vector3.Up, -0.25f * k);
                 r = (new Transform3D(tipUp * r.hand.Basis, r.hand.Origin + new Vector3(-0.06f, -0.07f, 0.12f) * k), tipUp * r.item);
             }

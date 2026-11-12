@@ -1,4 +1,4 @@
-- **2026-11-12, a quality pass on the animations.** The player asked for every animation to be looked at as it moves, graded, and the wrong ones fixed, the most-seen first. The gaits, the one-shot clips, first-person swings and shots, the dead over cars and animals over cars were pictured in strips; the feet were measured in AnimTest. One real fault was found in code and fixed: a planted foot jumped ~23 cm in one frame when a body near you set off. Everything else seen was right or is in the clips themselves. Strips: experiments/anim-quality/. Docs: docs/characters.md "The quality pass".
+- **2026-11-12, a quality pass on the animations.** The player asked for every animation to be looked at as it moves, graded, and the wrong ones fixed, the most-seen first. The gaits, the one-shot clips, first-person swings and shots, the dead over cars and animals over cars were pictured in strips; the feet were measured in AnimTest. Two faults were found in code and fixed: a planted foot jumped ~23 cm in one frame when a body near you set off, and the pistol-whip struck below the view's edge. Everything else seen was right or is in the clips themselves. Strips: experiments/anim-quality/. Docs: docs/characters.md "The quality pass".
   - **Why / what was tried.**
     - The lab's slide (a foot within 2.5 cm of the ground) said the walk slid 5 cm a step, the run 6 and the lurch 9. But the jog and the dead's run slid under 1, and those are the two whose `--calibrate` speed matched Gaits.Measure's. So the first guess was the measured speeds. Measure's median was swapped for the mean: every slide got worse (the walk 4.9 -> 7.9, the shamble 4.9 -> 10.3). Reverted.
     - Then a sweep: `--speedof=` scaled the lurch, slow walk and sneak from 0.8 to 1.08. 1.0 (Measure's median) was the least slide for each, so the speeds are right.
@@ -12,8 +12,12 @@
   - **Left.**
     - From the front, the walk sets its feet in one line and the run throws its arms out to the sides at shoulder height. The sneak is a deep squat with the knees wide. The lurch, slow walk and sneak flick a toe back as it lifts (3-7 cm, 1-2 frames). All four are in the clips: a Blender pass on art/scripts/derive_clips.py.
     - Stopping (10 cm with IK) and turning on the spot (7.5) mix FootIK's deliberate settling steps, which are lifted on an arc, with real slide. The lab can't tell them apart: it would need a column that leaves out frames where Foot.Step > 0.
-    - Not pictured, for want of time or a flag: timed actions on others (eat, cook, dig, hammer: only the hammer was stripped), reloads and the pistol-whip in first person (`--swingat` with an empty gun gives the whip), the sights (`--hold=aim`), the raise (`--raiseat=`), swimming hands, sleeping, the car seat, deaths and ragdolls, animals' walk, run and bite, your hand on a car (`LEAP_SHOT` with `--eye`), and the dog under a car (needs a low eye beside the car).
-    - Check green with the self-test (`./check.sh --all`) for commit 4a6c81e.
+    - Not pictured, for want of time or a flag: timed actions on others (eat, cook, dig, hammer: only the hammer was stripped), the rifle's butt stroke, swimming hands, sleeping, the car seat, deaths and ragdolls, animals' walk, run and bite, your hand on a car (`LEAP_SHOT` with `--eye`), and the dog under a car (needs a low eye beside the car).
+    - The whip's new strike was set by eye from the strip (there is no measure for a first-person pose).
+    - Some `./shot.sh` pictures start facing another way (a house close by) though the seed is the same: a one-off in about 1 in 15 runs, retaken; not looked into.
+    - The shotgun's reload: the support hand follows the forend as the gun tips in, so the left forearm crosses the view. A pose for the left hand at the loading port would fix it (Held.PlaceSupport).
+    - New flag: `--reloadat=P` holds a gun's reload at P for a picture (Held.cs, godot/README.md).
+    - Commits 4a6c81e (the foot), a548b42 (the whip), then the reload flag with this log, each on a green `./check.sh --all`.
 
 | motion | driven by | before | after | strip |
 |---|---|---|---|---|
@@ -53,4 +57,8 @@
 | first person: punch | Held.cs | right (a straight jab) | right | fp-punch.png, fp-swings.png row 1 |
 | first person: knife, machete, axe | Held.cs | right (in hand through the swing) | right | fp-swings.png rows 2-4 |
 | first person: pistol, shotgun shot | Held.cs | right (flash at the muzzle, kick) | right | fp-swings.png rows 5-6 |
-| first person: reload, whip, sights, raise, put away, swim hands | Held.cs, SwimHands.cs | not pictured | - | - |
+| first person: raise (axe, pistol, shotgun) | Held.cs raise | right (up from below the view) | right | fp-raise-whip.png rows 1-3 |
+| first person: pistol-whip (an empty gun) | Held.cs WHIP_* | wrong: the strike under the view's edge | fixed: lands under the crosshair | fp-raise-whip.png row 4, fp-whip-before-after.png |
+| first person: down the sights (pistol, shotgun) | Held.cs *_SIGHTS | right (sights on the eye line) | right | fp-sights.png |
+| first person: reload (pistol, shotgun) | Held.cs reload tip, PlaceSupport | no flag | pistol right (tips up and back, no magazine moves); shotgun: the left forearm lies flat across the bottom of the view (looks off, holds) | fp-reload.png (`--reloadat=P`, new) |
+| first person: put away, swim hands, rifle butt | Held.cs, SwimHands.cs | not pictured | - | - |
