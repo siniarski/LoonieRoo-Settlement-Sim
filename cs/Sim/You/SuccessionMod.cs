@@ -85,26 +85,7 @@ public static partial class SuccessionMod
         var dist = ANEW_MIN + ((double)(Hash.hashRoll(state.tick, near.y, near.x)) * (ANEW_SPREAD));
         Point aim = new Point { x = Js.I(JsMath.max(2, JsMath.min(width - 3, JsMath.round(near.x + ((double)(JsMath.cos(angle)) * (dist)))))), y = Js.I(JsMath.max(2, JsMath.min(height - 3, JsMath.round(near.y + ((double)(JsMath.sin(angle)) * (dist)))))) };
         Worldgen.ensureGeneratedAround(state, aim);
-        Point? spot = null;
-        for (var r = 0; (r <= 20) && !Js.T(spot); r++)
-        {
-            for (var dy = -r; (dy <= r) && !Js.T(spot); dy++)
-            {
-                for (var dx = -r; (dx <= r) && !Js.T(spot); dx++)
-                {
-                    if (JsMath.max(JsMath.abs(dx), JsMath.abs(dy)) != r)
-                    {
-                        continue;
-                    }
-                    var x = aim.x + dx;
-                    var y = aim.y + dy;
-                    if ((((((x >= 0) && (y >= 0)) && (x < width)) && (y < height)) && (Grids.getTile(state.grid, x, y) == "floor")) && Grids.isWalkable(state.grid, x, y))
-                    {
-                        spot = new Point { x = Js.I(x), y = Js.I(y) };
-                    }
-                }
-            }
-        }
+        var spot = Space.firstInRings(aim, 0, 20, (x, y) => (((((x >= 0) && (y >= 0)) && (x < width)) && (y < height)) && (Grids.getTile(state.grid, x, y) == "floor")) && Grids.isWalkable(state.grid, x, y));
         if (!Js.T(spot))
         {
             return null;

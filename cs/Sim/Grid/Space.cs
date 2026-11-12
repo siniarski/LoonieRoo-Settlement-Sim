@@ -100,6 +100,18 @@ public static partial class Space
         }
     }
 
+    /// <summary>The first tile `accept` takes in square rings round p, the nearest ring first (`from` to `to` tiles out;
+    /// ring 0 is p), each ring in row order (its top row first, west to east), or null. Bounds are accept's to check.
+    /// (Swim.nearestLand wants the nearest in a ring by straight line instead, and Towns steps three tiles at a time.)</summary>
+    public static Point? firstInRings(Point p, int from, int to, Func<int, int, bool> accept)
+    {
+        for (int r = from; r <= to; r++)
+            for (int y = p.y - r; y <= p.y + r; y++)
+                for (int x = p.x - r; x <= p.x + r; x++)
+                    if (chebyshev(p, x, y) == r && accept(x, y)) return new Point { x = x, y = y };
+        return null;
+    }
+
     public static int manhattan(Point a, Point b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
 
     /// <summary>Tiles apart counting a diagonal step as one: max(|dx|, |dy|). "Within r" of this is a square.</summary>

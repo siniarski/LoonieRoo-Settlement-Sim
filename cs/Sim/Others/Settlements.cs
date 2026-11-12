@@ -94,15 +94,7 @@ public static partial class Settlements
     /// <summary>The nearest spot to p (in growing square rings) where a settlement can stand, or p if there's none.</summary>
     static Point nearestLand(Nature? n, double size, Point p)
     {
-        for (int r = 1; r < size; r++)
-            for (int dy = -r; dy <= r; dy++)
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
-                    int x = p.x + dx, y = p.y + dy;
-                    if (onLand(n, size, x, y)) return new Point { x = x, y = y };
-                }
-        return p;
+        return Space.firstInRings(p, 1, (int)Math.Ceiling(size) - 1, (x, y) => onLand(n, size, x, y)) ?? p;
     }
 
     public static Settlement newSettlement(SimState state, string name, int x, int y, double people, double food, double defence)

@@ -383,19 +383,6 @@ public static partial class Worldgen
     /// <summary>The nearest accepted tile in growing square rings, across anything (nearestTile only spreads over walkable ground).</summary>
     public static Point? nearestAcross(SimState state, Point p, Func<double, double, bool> accept)
     {
-        for (var r = 1; r <= CHUNK; r++)
-        {
-            for (var y = p.y - r; y <= (p.y + r); y++)
-            {
-                for (var x = p.x - r; x <= (p.x + r); x++)
-                {
-                    if (Js.T(((Space.chebyshev(p, x, y) == r) && Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y))))
-                    {
-                        return new Point { x = Js.I(x), y = Js.I(y) };
-                    }
-                }
-            }
-        }
-        return null;
+        return Space.firstInRings(p, 1, CHUNK, (x, y) => Grids.inBounds(state.grid, x, y) && accept(x, y));
     }
 }
