@@ -489,6 +489,8 @@ public partial class JobChoicePlan
     public List<Point> path { get; set; } = new();
     public string? itemId { get; set; }
     public Point? dest { get; set; }
+    /// <summary>Where the job moves to once claimed (a scout's next unseen tile): chooseJob only asks.</summary>
+    public Point? moveTo { get; set; }
 }
 
 /// <summary>A world's natural features and its plan (towns, roads, lots): what a chunk is drawn from.</summary>
