@@ -269,8 +269,7 @@ void fragment() {
                     else { sum += t.c; land++; }
                 }
             var c = land > 0 ? sum / land : GroundColour(0);
-            float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
-            c = c.Lightened(0.06f + Math.Abs(n) * 0.035f);
+            c = c.Lightened(0.06f + WorldMesh.Speckle(x, y) * 0.035f);
             bool water = wet >= 8;
             float h = Terrain.Coarse(x, y, water);
             // (wet + 1, so a corner made is never 0: 0 is "not made yet".)

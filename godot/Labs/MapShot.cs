@@ -64,8 +64,7 @@ public partial class MapShot : Node
                 string t = Grids.tileAt(g, i);
                 Color c = t == "water" ? water : t == "floor" ? grounds[Math.Clamp(Grids.groundAt(g, i), 0, grounds.Length - 1)] : t == "door" ? door : wall;
                 // A touch of noise, so even ground isn't a flat sheet.
-                float n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000f;
-                c = c.Lightened(Math.Abs(n) * 0.05f);
+                c = c.Lightened(WorldMesh.Speckle(x, y) * 0.05f);
                 int north = Grids.edgeKind(g, 2 * i), west = Grids.edgeKind(g, 2 * i + 1);
                 int e = north != 0 ? north : west;
                 if (e == Grids.EDGE_WALL || e == Grids.EDGE_BARRICADE || e == Grids.EDGE_FENCE) c = wall;
