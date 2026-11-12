@@ -176,4 +176,15 @@ public partial class SavefileTest
             expect(Js.ObjectKeys(back)).toEqual(Js.ObjectKeys(r));
         }
     }
+
+    /// <summary>the arena</summary>
+    public class D010_the_arena
+    {
+        [Fact(DisplayName = "the arena > openNear gives the nearest open tile of the ring, not the top-left one")]
+        public void T001_openNear_gives_the_nearest_open_tile_of_the_ring()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = [".##", "##.", "###"] });
+            expect(Arena.openNear(state, new Point { x = 1, y = 1 })).toEqual(new Point { x = 2, y = 1 });
+        }
+    }
 }
