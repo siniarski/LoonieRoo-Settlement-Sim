@@ -153,6 +153,13 @@ public partial class Game
             GetTree().Quit(failures.Count);
             return;
         }
+        if (OS.GetEnvironment("SELFTEST_ONLY") == "play")
+        {
+            await PlaySteps();
+            GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED");
+            GetTree().Quit(failures.Count);
+            return;
+        }
         if (OS.GetEnvironment("SELFTEST_ONLY") is "interact" or "cars")
         {
             if (OS.GetEnvironment("SELFTEST_ONLY") == "cars") await CarTrickSteps(); else await InteractSteps();
@@ -365,6 +372,7 @@ public partial class Game
         await BigNewGame();
         await AnimSteps();
         await PlaceSteps();
+        await PlaySteps();
 
         GD.Print(failures.Count == 0 ? "selftest: all passed" : $"selftest: {failures.Count} FAILED: {string.Join(", ", failures)}");
         GetTree().Quit(failures.Count);
