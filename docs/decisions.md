@@ -6,6 +6,24 @@ finds one entry. Decisions about the vision and the look are in docs/design.md; 
 (`log/`), and NOTES.md "Start here" says what holds now. Entries keep the browser era's names where they were written
 then (`sim/planner.ts` is now `cs/Sim/Colony/Planner.cs`: docs/modules.md).
 
+## The decisions in order
+
+The entries below stay grouped by area (that is how they are looked up); this list is the order they were made in.
+Only entries that carry a date in their heading are placed exactly; the rest were made between 2026-10-24 and
+2026-11-08 in the browser era and have no date of their own (the log entry of that era says more: log/README.md).
+A decision a later one replaced says so on its own line, in italics. Add new decisions to the end of the right area
+with a date in the heading, and a line here.
+
+| Date | Decision | Section |
+| --- | --- | --- |
+| 2026-10-24 | Project context, renderer, tooling, view state | Project context; Platform |
+| 2026-10-24 to 2026-11-08 | The undated rest: movement, jobs, rooms, needs, the dead, the world, the browser's controls | the area sections |
+| 2026-11-08 | Web then Godot; first person, top-down kept as the Colony tab | Platform |
+| 2026-11-09 | The ground's height; no pause key | The sim's foundations; Jobs |
+| 2026-11-10 | The grid in chunks; fast saves (schema 78); the inventory as grids; growth is computed | The sim's foundations; Needs; The world |
+| 2026-11-11 | Over and onto parked cars; a broken window and a fence stop you; car actions go on while you push; swimming; the dead cross low things; textures and ground colours; roads in two lanes, the kerb, bevelled roads; the start shelter; hands in first person; a car's body; a refused command changes nothing; parked cars; animals at cars; the code's structure | Movement; Zombies; The world; Controls |
+| 2026-11-12 | Climbers, pile-ups and tall fences; three quick slots (replaces the nine); the start shelter's door can be boarded | Zombies; Controls |
+
 ## Project context (from initial planning)
 
 - **Goal:** a learning and exploration project, not a shipping product. If it proves fun, port to another engine later
@@ -24,29 +42,29 @@ then (`sim/planner.ts` is now `cs/Sim/Colony/Planner.cs`: docs/modules.md).
 
 Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reasoning.
 
-- **Platform.** Web, then Godot 4.6 .NET (2026-11-08)
+- **Platform.** Web, then Godot 4.6 .NET (2026-11-08). *Browser half replaced 2026-11-08 by Godot (tag ts-final).*
   *Why:* The browser was the fastest loop while the design moved; ported once the sim settled (port steps 1-5 in the session log)
-- **Language / tooling.** TypeScript, Vite, Vitest
+- **Language / tooling.** TypeScript, Vite, Vitest (2026-10-24). *Replaced 2026-11-08 by C# and xUnit.*
   *Why:* Agents are strong in TS; HMR for instant feedback; headless sim tests
-- **Renderer.** Canvas 2D, top-down
+- **Renderer.** Canvas 2D, top-down (2026-10-24). *Replaced 2026-11-08 by first person in 3D; the 2D top-down survives as the Colony tab (godot/Render).*
   *Why:* Readability matters more than prettiness when debugging job queues. PixiJS is a possible later swap
 - **Isometric / 3D.** First person, a top-down map and colony tab; no isometric (2026-11-08)
   *Why:* Projection is purely a renderer concern; sim stays in grid coordinates
 - **Engine (Godot etc.).** Godot, the sim in pure C#
   *Why:* Ported by translating the TypeScript and checking it state for state; the TypeScript retired at git tag ts-final
-- **Hot reload.** `main.ts` self-accepts; on dispose it stashes sim + view state in `import.meta.hot.data` and tears down the app (RAF, listeners, HUD)
+- **Hot reload (2026-10-24; gone with the browser game, 2026-11-08).** `main.ts` self-accepts; on dispose it stashes sim + view state in `import.meta.hot.data` and tears down the app (RAF, listeners, HUD)
   *Why:* Editing any module (sim, render, ui) swaps code without losing the map you're building
-- **Agent hooks.** `window.view.tileToScreen(x, y)` and `getView()` (TypeScript-era names, gone with the browser game) alongside `window.game`
+- **Agent hooks (2026-10-24; gone with the browser game, 2026-11-08).** `window.view.tileToScreen(x, y)` and `getView()` (TypeScript-era names, gone with the browser game) alongside `window.game`
   *Why:* Lets Playwright/agents click a specific tile without camera maths
-- **Frame loop.** Next frame is scheduled before the work; errors are caught and logged once each
+- **Frame loop (2026-10-24; browser era).** Next frame is scheduled before the work; errors are caught and logged once each
   *Why:* One bad frame (often a half-finished edit) used to kill the loop permanently
-- **Rule enforcement.** `tsconfig.sim.json` (no DOM lib) + `tests/architecture.test.ts` (source scan)
+- **Rule enforcement (2026-10-24).** *Now cs/Sim.Tests/ArchitectureTest.cs.* `tsconfig.sim.json` (no DOM lib) + `tests/architecture.test.ts` (source scan)
   *Why:* Rules 2 and 3 fail the build instead of relying on review
-- **Toolchain.** Node 24 LTS, TypeScript 7, Vite 8, Vitest 5
+- **Toolchain (2026-10-24; gone 2026-11-08).** Node 24 LTS, TypeScript 7, Vite 8, Vitest 5
   *Why:* Current versions as of 2026-10-24
-- **Vitest `fsModuleCache`.** Disabled
+- **Vitest `fsModuleCache` (browser era; gone 2026-11-08).** Disabled
   *Why:* It doesn't refresh `import.meta.glob` when files are added, so the architecture scan missed new sim files. Suite runs in ~200ms, so the cache isn't needed
-- **View state.** Camera, tool, hover, speed, pause live in `ui/view.ts`, never in sim state
+- **View state (2026-10-24).** Camera, tool, hover, speed, pause live in `ui/view.ts`, never in sim state
   *Why:* Saves and replays stay free of UI concerns
 
 ## The sim's foundations
@@ -554,13 +572,13 @@ Later rows revise earlier ones (bed ownership, for one); the code is the truth.
   drawn half road (`WorldMesh.RoadCorner`). The sim's ground, the map and the minimap stay tiles
   *Why:* It took one check of four neighbours a ground tile. Straight edges at any angle need the road drawn from its line (a ribbon over the
   ground), which is a renderer of its own
-- **The start shelter is an edge-walled building (2026-11-11).** `Buildings.startPlan`: one room, eight by six, on the footprint the old hut of
+- **The start shelter is an edge-walled building (2026-11-11).** *Its door can be boarded up by hand since 2026-11-12 (R with wood: Handiwork.cs).* `Buildings.startPlan`: one room, eight by six, on the footprint the old hut of
   wall tiles had; a door, windows, a stove, a table, shelves (empty), beds along the back wall. The same for every seed, never decayed
   *Why:* It was the only building in a generated world made of wall tiles a tile thick, beside neighbours on tile edges
 
 ## Controls and UI (the browser's, mostly carried into the Colony tab)
 
-- **Hands in first person (2026-11-11, the first hand-played pass).** The quick slots are a hotbar: 1-9 send `quick` (that slot's thing in hand or used; the same key again puts it away), 0 sends `holster`; a full bag keeps the weapon in hand and says so. The right mouse held with a gun in hand aims down the sights (`sights`: the gun's own and moving spread halved, 60% pace, no running); without a gun a right-click is still "use", and E always is. An empty gun's click stays the sim's blow (Weapons.BUTT) and is drawn as one, a pistol-whip, not a dry click: `control.shotTick` tells a shot from a blow
+- **Hands in first person (2026-11-11, the first hand-played pass).** *Changed 2026-11-12: three quick slots (`Inventory.QUICK_SLOTS` = 3, keys 1-3; the player's hotbar), not nine.* The quick slots are a hotbar: 1-9 send `quick` (that slot's thing in hand or used; the same key again puts it away), 0 sends `holster`; a full bag keeps the weapon in hand and says so. The right mouse held with a gun in hand aims down the sights (`sights`: the gun's own and moving spread halved, 60% pace, no running); without a gun a right-click is still "use", and E always is. An empty gun's click stays the sim's blow (Weapons.BUTT) and is drawn as one, a pistol-whip, not a dry click: `control.shotTick` tells a shot from a blow
   *Why:* The player could not put a weapon away, saw a shot that never happened, and could not aim a pistol; E keeps "use" whatever is in hand
 
 - **Controls.** **Select mode** (default): left-click selects a survivor (empty ground deselects), right-click moves the selected survivor. **Build mode** (B): bottom bar with
