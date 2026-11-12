@@ -333,6 +333,31 @@ Pictures before and after: experiments/anim-next/ (its README has the commands).
   height and a little longer. The models have only idle, walk, run and attack: there is no climbing clip, and the
   legs do not reach for the car.
 
+### The quality pass (2026-11-12)
+
+Every motion graded from picture strips and the lab's numbers: the table is in log/2026-11-12-20-animation-quality.md,
+the strips in experiments/anim-quality/ (its animtest-after.md has the numbers).
+
+- **Measuring a slide.** AnimTest's "slide" counts a foot as down within 2.5 cm of the ground, which also takes in a
+  swinging foot skimming the ground for a frame or two at touch-down and lift-off (the walk's 5 cm a step is almost
+  all that). The "planted" columns count only within 1 cm (FootIK.PlantHeight): read those. On them the walk, brisk
+  walk, jog, run, shamble and the dead's run are planted (0.4-1.6 cm a step). The lurch, slow walk and sneak keep a
+  toe flicking back along the ground as it lifts (3-7 cm, one or two frames): that is in the clips.
+- **The measured speeds are right.** `--speedof=CLIP:SCALE` (Gaits.ScaleSpeed, the lab only) scales a clip's
+  measured speed; a sweep of 0.8 to 1.08 on the lurch, slow walk and sneak found Gaits.Measure's median the least
+  slide for each. `--calibrate`'s mean disagrees by up to 19% (the shamble) because it counts those skims: don't
+  set speeds from it.
+- **Setting off.** FootIK let a planted foot go when the leg stretched 25 cm, then locked it again the next frame at
+  the clip's place: a 20-odd cm jump in one frame. A foot let go for the stretch now waits for the clip to lift it
+  (Foot.Stretched): starting with foot IK, 9.1 -> 4.8 cm a planted step, worst 27.5 -> 10.4.
+- **First person.** The pistol-whip struck below the view's edge (the hand 21 deg under the eye line, the gun hanging
+  from it): its strike and follow-through now land under the crosshair. `--reloadat=P` holds a gun's reload for a
+  picture. The shotgun's reload lays the left forearm across the bottom of the view (the support hand follows the
+  forend as the gun tips in): a left-hand pose at the loading port is still to do.
+- **Left in the clips** (art/scripts/derive_clips.py, a Blender pass): from the front the walk sets its feet in one
+  line and the run throws its arms out to the sides at shoulder height; the sneak is a deep squat with the knees
+  wide.
+
 ### First person
 
 First person is the solo view (2026-11-08). The player's own body: a separate **arms rig** (the same arm bone names, so arm clips can be shared) with its own FOV-friendly clips, timed from the same sim progress as the third-person clips so intent and timing stay identical. The full body stays for shadows and for others. Nothing in the plan above blocks this.

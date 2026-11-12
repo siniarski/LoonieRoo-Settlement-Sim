@@ -174,10 +174,11 @@ public sealed class Held
     static readonly Pose PUNCH_STRIKE = new(new(0.04f, -0.08f, -0.7f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.2f, 1f), Vector3.Zero);
     static readonly Pose PUNCH_FOLLOW = new(new(0.03f, -0.09f, -0.74f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.22f, 1f), Vector3.Zero);
     // An empty pistol swung as a club: raised and tipped back, brought down hard ahead and to the left
-    // (the butt and the slide lead), carried on low.
+    // (the butt and the slide lead), carried on low. The strike lands under the crosshair, in view: it was 21 deg
+    // under the eye line with the gun hanging down from the hand, below the view's edge (2026-11-12, the quality pass).
     static readonly Pose WHIP_WIND = new(new(0.32f, -0.08f, -0.4f), new(0.05f, 0.8f, -0.55f), new(0.45f, -0.7f, 0.5f), new(0, 0.6f, 0.8f));
-    static readonly Pose WHIP_STRIKE = new(new(0.04f, -0.24f, -0.62f), new(-0.35f, -0.55f, -0.75f), new(0.5f, -0.4f, 0.75f), new(-0.3f, 0.75f, -0.6f));
-    static readonly Pose WHIP_FOLLOW = new(new(-0.04f, -0.3f, -0.58f), new(-0.45f, -0.75f, -0.45f), new(0.5f, -0.3f, 0.8f), new(-0.3f, 0.5f, -0.8f));
+    static readonly Pose WHIP_STRIKE = new(new(0.06f, -0.13f, -0.6f), new(-0.4f, -0.3f, -0.85f), new(0.5f, -0.45f, 0.75f), new(-0.3f, 0.8f, -0.5f));
+    static readonly Pose WHIP_FOLLOW = new(new(-0.02f, -0.21f, -0.58f), new(-0.5f, -0.55f, -0.65f), new(0.5f, -0.35f, 0.8f), new(-0.3f, 0.6f, -0.75f));
     // A rifle's butt driven forward: the gun pulled back and turned, the stock thrust ahead.
     static readonly Pose BUTT_WIND = new(new(0.2f, -0.2f, -0.3f), new(-0.4f, 0.05f, -0.9f), new(0.35f, -0.75f, 0.45f), new(0, 1, 0));
     static readonly Pose BUTT_STRIKE = new(new(0.1f, -0.16f, -0.62f), new(-0.85f, -0.1f, -0.5f), new(0.4f, -0.6f, 0.6f), new(0, 1, 0));
@@ -210,7 +211,7 @@ public sealed class Held
     /// <summary>The muzzle flash: two crossed quads with a soft star on them, unshaded and additive (it glows: a sibling's lighting session may add a real light), shown a tick or so after a shot.</summary>
     readonly Node3D flash = new() { Visible = false };
     readonly string? forceModel, forceTool;
-    readonly double swingAt = -1, raiseAt = -1;
+    readonly double swingAt = -1, raiseAt = -1, reloadAt = -1;
     double bob, breath, run;
     Vector3 lastFwd;
     Basis runTilt = Basis.Identity;
@@ -262,6 +263,7 @@ public sealed class Held
             if (kv[0] == "heldtool") forceTool = kv[1];
             if (kv[0] == "swingat") swingAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
             if (kv[0] == "raiseat") raiseAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
+            if (kv[0] == "reloadat") reloadAt = double.Parse(kv[1], System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
@@ -347,10 +349,12 @@ public sealed class Held
                 var up = new Basis(new Vector3(1, 0, 0), 0.18f * k);
                 r = (new Transform3D(up * r.hand.Basis, r.hand.Origin + new Vector3(0, 0.02f, 0.07f) * k), up * r.item);
             }
-            if (c?.busy is { what: "reload" } busy)
+            if (reloadAt >= 0 || c?.busy is { what: "reload" })
             {
-                // Reloading: the gun tipped up and in towards you, the muzzle raised, back down at the end.
-                float k = (float)Math.Sin(Math.PI * Math.Clamp(busy.progress / Math.Max(1, busy.duration), 0, 1));
+                // Reloading: the gun tipped up and in towards you, the muzzle raised, back down at the end
+                // (--reloadat=P holds it at P, 0..1, for a picture).
+                double at = reloadAt >= 0 ? reloadAt : c!.busy!.progress / Math.Max(1, c.busy.duration);
+                float k = (float)Math.Sin(Math.PI * Math.Clamp(at, 0, 1));
                 var tipUp = new Basis(new Vector3(1, 0, 0), 0.55f * k) * new Basis(Vector3.Up, -0.25f * k);
                 r = (new Transform3D(tipUp * r.hand.Basis, r.hand.Origin + new Vector3(-0.06f, -0.07f, 0.12f) * k), tipUp * r.item);
             }
