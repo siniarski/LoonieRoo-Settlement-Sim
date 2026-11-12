@@ -92,6 +92,31 @@ public class SwimTest
         expect(s.wetness).toBeGreaterThan(BodyMod.DRENCHED);
     }
 
+    [Fact(DisplayName = "swim > the water chills you as fast a day at a longer day: by slow ticks, not plain ones")]
+    public void SoakFollowsTheClock()
+    {
+        var (state, s) = start();
+        try
+        {
+            Time.setDayScale(2);
+            foreach (var (x, every) in new[] { (5, Swim.DEEP_CHILL_EVERY), (3, Swim.WADE_CHILL_EVERY) })
+            {
+                put(s, x, 3);
+                s.bodyHeat = 70;
+                for (var slow = 0; slow < 8; slow++)
+                {
+                    state.tick = slow * 2;  // the slow ticks at scale 2
+                    Swim.soak(state, s);
+                }
+                expect(70 - s.bodyHeat).toBe(8 / every);
+            }
+        }
+        finally
+        {
+            Time.setDayScale(1);
+        }
+    }
+
     [Fact(DisplayName = "swim > paddling costs endurance as running does; winded, you struggle and the water does you harm")]
     public void Struggle()
     {

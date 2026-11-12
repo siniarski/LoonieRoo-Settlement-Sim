@@ -124,7 +124,7 @@ public static class Swim
         if (d == DRY) return false;
         if (d == DEEP) s.wetness = BodyMod.BODY_MAX;
         else if (s.wetness < WADE_WET) s.wetness = JsMath.min(WADE_WET, s.wetness + WADE_SOAK);
-        if (state.tick % (d == DEEP ? DEEP_CHILL_EVERY : WADE_CHILL_EVERY) == 0) s.bodyHeat = BodyMod.clamp(s.bodyHeat - 1);
+        if (Time.slowCount(state.tick) % (d == DEEP ? DEEP_CHILL_EVERY : WADE_CHILL_EVERY) == 0) s.bodyHeat = BodyMod.clamp(s.bodyHeat - 1);
         return true;
     }
 
