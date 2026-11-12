@@ -18,7 +18,7 @@ namespace LoonieRoo.Sim;
 public static partial class Worldgen
 {
 
-    public const int CHUNK = 32;
+    public const int CHUNK = GridChunk.SIDE;
 
     /// <summary>The world generation version (saved in WorldInfo.gen; absent is 1). Bump it whenever what a chunk is
     /// made of changes: a save keeps only what differs from making its chunks again, so a save made by another version

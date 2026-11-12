@@ -57,7 +57,7 @@ git tag `ts-final`.
 ### `Grid/`: tiles, paths, rooms
 
 - **Grid.cs** (`Grids`): tiles, walls, doors, edges: the only way to the grid's per-tile layers (`getTile`, `tileAt`,
-  `groundAt`, `edgeKind`, `setTile`...), which **GridLayers.cs** keeps in 32 x 32 chunks allocated where something
+  `groundAt`, `edgeKind`, `setTile`...), which **GridLayers.cs** keeps in 32 x 32 chunks (`GridChunk`, the one chunk size) allocated where something
   differs from bare land (also `TileMask`).
 - **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening (their per-tile data in
   chunks too). **Space.cs**: spatial search helpers (nearestTile).

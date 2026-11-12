@@ -125,7 +125,7 @@ public static partial class Grids
     public const int EDGE_FENCE = 6;
 
     /// <summary>Side of a reachability chunk, in tiles.</summary>
-    public const int REACH_CHUNK = 32;
+    public const int REACH_CHUNK = GridChunk.SIDE;
     const int MAX_REACH_LOG = 100000;
     /// <summary>More changed tiles than this, and rooms are worked out in full (from the tiles with something on them:
     /// Rooms.computeRooms). It was 2048 while a full pass was a flood of the whole map and an update copied it.</summary>
@@ -160,7 +160,7 @@ public static partial class Grids
         var tiles = grid.tileLayer;
         var edges = grid.edgeLayer;
         bool every = tiles.fill != TILE_FLOOR || edges.fill != EDGE_NONE;
-        const int SIDE = GridLayer<byte>.SIDE, SHIFT = GridLayer<byte>.SHIFT;
+        const int SIDE = GridChunk.SIDE, SHIFT = GridChunk.SHIFT;
         for (int ci = 0; ci < tiles.chunks.Length; ci++)
         {
             var t = tiles.chunks[ci];
@@ -203,7 +203,7 @@ public static partial class Grids
         if (grid.parkedCount == 0) return;
         // Only the chunks that ever held a mark (a big world's layer is mostly not there).
         var layer = grid.parkedLayer;
-        const int N = GridLayer<byte>.SIDE;
+        const int N = GridChunk.SIDE;
         for (int c = 0; c < layer.chunks.Length && grid.parkedCount > 0; c++)
         {
             var chunk = layer.chunks[c];
@@ -496,7 +496,7 @@ public static partial class Grids
 
     public static Memory memory(Grid grid)
     {
-        const int n = GridLayer<byte>.SIDE * GridLayer<byte>.SIDE, header = 24;
+        const int n = GridChunk.SIDE * GridChunk.SIDE, header = 24;
         int t = grid.tileLayer.AllocatedCount(), g = grid.groundLayer.AllocatedCount(), x = grid.exploredLayer.AllocatedCount();
         int d = grid.dirtLayer.AllocatedCount(), m = grid.damageLayer.AllocatedCount(), e = grid.edgeLayer.AllocatedCount();
         int slots = grid.tileLayer.chunks.Length;
@@ -511,7 +511,7 @@ public static partial class Grids
     /// anything (every chunk, if the layer's fill isn't 0).</summary>
     static List<int> NonZero<T>(GridLayer<T> layer) where T : unmanaged, IEquatable<T>
     {
-        const int SIDE = GridLayer<byte>.SIDE;
+        const int SIDE = GridChunk.SIDE;
         var out_ = new List<int>();
         bool every = !layer.fill.Equals(default);
         for (int ci = 0; ci < layer.chunks.Length; ci++)

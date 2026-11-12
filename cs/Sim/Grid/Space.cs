@@ -17,9 +17,9 @@ public static partial class Space
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool Mark(int x, int y)
         {
-            int c = (y >> 5) * cw + (x >> 5);
+            int c = (y >> GridChunk.SHIFT) * cw + (x >> GridChunk.SHIFT);
             var a = seen[c] ?? Allocate(c);
-            ref uint stamp = ref a[((y & 31) << 5) | (x & 31)];
+            ref uint stamp = ref a[((y & GridChunk.MASK) << GridChunk.SHIFT) | (x & GridChunk.MASK)];
             if (stamp == gen) return false;
             stamp = gen;
             return true;
@@ -28,7 +28,7 @@ public static partial class Space
         uint[] Allocate(int c)
         {
             allocated++;
-            return seen[c] = new uint[32 * 32];
+            return seen[c] = new uint[GridChunk.SIDE * GridChunk.SIDE];
         }
     }
 
@@ -45,7 +45,7 @@ public static partial class Space
         var sc = pool[d];
         if (sc == null || sc.width != grid.width || sc.height != grid.height || sc.gen >= 0xfffffff0 || sc.allocated > MAX_SCRATCH_CHUNKS)
         {
-            int cw = (grid.width + 31) >> 5, ch = (grid.height + 31) >> 5;
+            int cw = (grid.width + GridChunk.MASK) >> GridChunk.SHIFT, ch = (grid.height + GridChunk.MASK) >> GridChunk.SHIFT;
             sc = new Scratch { width = grid.width, height = grid.height, cw = cw, gen = 0, seen = new uint[]?[cw * ch], queue = sc?.queue ?? new int[1024] };
             pool[d] = sc;
         }

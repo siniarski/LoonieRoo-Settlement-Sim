@@ -20,7 +20,7 @@ namespace LoonieRoo.Sim;
 /// <summary>A room label a tile (a room's index, Rooms.OUTDOORS or Rooms.NOT_FLOOR), by tile index.</summary>
 public sealed class RoomLabels : IEnumerable<double>
 {
-    const int SHIFT = 5, SIDE = 32, MASK = SIDE - 1;
+    const int SHIFT = GridChunk.SHIFT, SIDE = GridChunk.SIDE, MASK = GridChunk.MASK;
     const int OUTDOORS = (int)Rooms.OUTDOORS, NOT_FLOOR = (int)Rooms.NOT_FLOOR;
 
     readonly Grid grid;

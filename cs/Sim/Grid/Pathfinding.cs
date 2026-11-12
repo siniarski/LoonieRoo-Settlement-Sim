@@ -531,9 +531,9 @@ public static partial class Pathfinding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref AStarCell At(int x, int y)
         {
-            int c = (y >> 5) * cw + (x >> 5);
+            int c = (y >> GridChunk.SHIFT) * cw + (x >> GridChunk.SHIFT);
             var cells = chunks[c] ?? Allocate(c);
-            return ref cells[((y & 31) << 5) | (x & 31)];
+            return ref cells[((y & GridChunk.MASK) << GridChunk.SHIFT) | (x & GridChunk.MASK)];
         }
 
         AStarCell[] Allocate(int c)

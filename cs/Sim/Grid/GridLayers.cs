@@ -14,10 +14,18 @@ using System.Text.Json.Serialization;
 
 namespace LoonieRoo.Sim;
 
+/// <summary>The one chunk size: the grid's layers, reachability (Grids.REACH_CHUNK), generation (Worldgen.CHUNK), room
+/// labels and the searches' scratch all cut the map into these squares. A tile's chunk is (x >> SHIFT, y >> SHIFT), its
+/// place in it (x & MASK, y & MASK).</summary>
+public static class GridChunk
+{
+    public const int SIDE = 32, SHIFT = 5, MASK = SIDE - 1;
+}
+
 public class GridLayer<T> where T : unmanaged
 {
-    /// <summary>A chunk's side in tiles (Worldgen.CHUNK and Grids.REACH_CHUNK are the same 32).</summary>
-    public const int SIDE = 32, SHIFT = 5, MASK = SIDE - 1;
+    /// <summary>A chunk's side in tiles: GridChunk's.</summary>
+    public const int SIDE = GridChunk.SIDE, SHIFT = GridChunk.SHIFT, MASK = GridChunk.MASK;
 
     /// <summary>Values a tile: 1, or 2 for edges (north, then west).</summary>
     internal readonly int per;
