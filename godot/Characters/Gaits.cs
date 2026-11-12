@@ -25,6 +25,9 @@ public static class Gaits
     /// <summary>A gait clip's ground speed at rate 1 (m/s), as Measure found it; 0 for one that doesn't move.</summary>
     public static double SpeedOf(string clip) => speeds.TryGetValue(clip, out var v) ? v : 0;
 
+    /// <summary>Scales a clip's measured speed (AnimTest's --speedof, to sweep it against the slide).</summary>
+    internal static void ScaleSpeed(string clip, double by) { if (speeds.TryGetValue(clip, out var v)) speeds[clip] = v * by; }
+
     /// <summary>The rig's ankle and ball (the toes bone's head) over the sole (art/scripts/rig.py), and how near the
     /// ground a sole point counts as down (m): AnimTest.cs measures the drawn feet the same way.</summary>
     public const float HEEL_UP = 0.09f, BALL_UP = 0.02f, DOWN = 0.025f;

@@ -6,7 +6,8 @@
 //
 // For each case, every step: how far the planted foot slides along the ground while it's down (cm; the contact
 // point is the lower of the heel and the ball of the foot, down within 2.5 cm of the ground), and on slopes how far
-// the planted sole is off the ground (+ floating, - sunk; with the foot IK the game gives the near ones, and
+// the planted sole is off the ground (+ floating, - sunk; "planted" counts only while the contact point is within 1 cm,
+// FootIK's plant height: the 2.5 cm figure also takes in a swinging foot skimming the ground at touch-down and lift-off; with the foot IK the game gives the near ones, and
 // without). `before` is People.cs's logic before this pass (the library's walk, jog and sprint at rates
 // against assumed speeds, clamped); `after` is Gaits.cs. Results to DIR/animtest-<logic>.md.
 // --calibrate prints each derived locomotion clip's ground speed as drawn here (the planted foot's travel at
@@ -44,10 +45,14 @@ public partial class AnimTest : Node3D
     string clip = "";
     // Per foot: down last frame, its contact point (0 heel, 1 ball), where, the current step's slide.
     readonly bool[] wasDown = new bool[2];
+    readonly bool[] wasPlanted = new bool[2];
     readonly int[] wasPoint = new int[2];
     readonly Vector3[] last = new Vector3[2];
     readonly double[] stepSlide = new double[2];
     readonly List<double> slides = new();
+    // The same while the contact point is within FootIK.PlantHeight (1 cm): the foot truly on the ground.
+    readonly double[] plantSlide = new double[2];
+    readonly List<double> planted = new();
     double stumpWorst, faceSum; int faceN;
     Vector3 lastHeel, lastBall;
     double soleSum, soleWorstSink; int soleN;
@@ -116,6 +121,10 @@ public partial class AnimTest : Node3D
         bool ik = logic == "after";
         foreach (double v in new[] { 0.8, 1.4, 2.2, 2.5, 3.5, 4.4, 5.0 })
             cases.Add(new Case($"flat {v.ToString("0.0", CultureInfo.InvariantCulture)} m/s", (x) => v, 0, 5, 1.5, 5, false));
+        // The near tier's foot IK (with its lock) on the gaits seen most: what a body close by draws.
+        if (ik)
+            foreach (double v in new[] { 0.8, 1.4, 2.5, 4.4 })
+                cases.Add(new Case($"flat {v.ToString("0.0", CultureInfo.InvariantCulture)} m/s, foot IK", (x) => v, 0, 5, 1.5, 5, true));
         foreach (bool on in ik ? new[] { false, true } : new[] { false })
         {
             string tag = on ? ", foot IK" : "";
@@ -128,6 +137,9 @@ public partial class AnimTest : Node3D
         // h picks the walker's gait as a hash of its id would.
         foreach (var (gait, h) in new[] { ("shamble", 0.1), ("lurch", 0.5), ("dragging left", 0.7), ("dragging right", 0.9) })
             cases.Add(new Case($"dead walker 1.68 ({gait})", (x) => 1.68, 0, 5, 1.5, 5, false, dead: true, h: h));
+        if (ik)
+            foreach (var (gait, h) in new[] { ("shamble", 0.1), ("lurch", 0.5), ("dragging right", 0.9) })
+                cases.Add(new Case($"dead walker 1.68 ({gait}), foot IK", (x) => 1.68, 0, 5, 1.5, 5, true, dead: true, h: h));
         cases.Add(new Case("dead brute 1.25", (x) => 1.25, 0, 5, 1.5, 5, false, dead: true, variant: "brute"));
         cases.Add(new Case("dead runner 2.5", (x) => 2.5, 0, 5, 1.5, 5, false, dead: true, variant: "runner"));
         // Missing limbs: a leg lost at the knee (the sim moves them at 2 m/s: 5 ticks a tile), only the good foot
@@ -159,10 +171,10 @@ public partial class AnimTest : Node3D
         if (args.TryGetValue("held", out var heldKind)) Held(heldKind);
         sheetFile = args.GetValueOrDefault("sheet") ?? "";
         if (args.TryGetValue("cases", out var only)) cases.RemoveAll((c) => !only.Split(',').Any((o) => c.name.Contains(o)));
-        report.AppendLine($"Animation test, logic `{logic}`: a pz survivor model as People.cs plays it, moved along the ground. Slide: how far the planted foot travels along the ground while down, per step (cm). Sole: the planted sole's height over the ground (cm, mean; worst sink).");
+        report.AppendLine($"Animation test, logic `{logic}`: a pz survivor model as People.cs plays it, moved along the ground. Slide: how far the planted foot travels along the ground while down (within 2.5 cm), per step (cm); planted: the same within 1 cm (FootIK.PlantHeight). Sole: the planted sole's height over the ground (cm, mean; worst sink).");
         report.AppendLine();
-        report.AppendLine("| case | clips | steps | slide mean | slide worst | sole mean | worst sink |");
-        report.AppendLine("|---|---|--:|--:|--:|--:|--:|");
+        report.AppendLine("| case | clips | steps | slide mean | slide worst | planted mean | planted worst | sole mean | worst sink |");
+        report.AppendLine("|---|---|--:|--:|--:|--:|--:|--:|--:|");
         NextCase();
     }
 
@@ -181,6 +193,13 @@ public partial class AnimTest : Node3D
             foreach (var name in l.GetAnimationList()) if (lib != "more" || Gaits.Looping(name)) l.GetAnimation(name).LoopMode = Animation.LoopModeEnum.Linear;
             player.AddAnimationLibrary(lib, l);
             if (lib == "more") Gaits.Measure(l, "more/", Find<Skeleton3D>(n)!, Gaits.ToScene(n, Find<Skeleton3D>(n)!));
+            // --speedof=more/dead_lurch:0.85,...: a clip's ground speed at rate 1 scaled, to sweep it against the slide.
+            if (lib == "more" && OS.GetCmdlineUserArgs().FirstOrDefault((x) => x.StartsWith("--speedof=")) is string so)
+                foreach (var kv in so["--speedof=".Length..].Split(','))
+                {
+                    var p = kv.Split(':');
+                    Gaits.ScaleSpeed(p[0], double.Parse(p[1], CultureInfo.InvariantCulture));
+                }
             n.Free();
         }
         footIk = new FootIK(model, skel, this) { GroundAt = (p) => (Ground(p.X, p.Z), GroundNormal()) };
@@ -367,7 +386,7 @@ public partial class AnimTest : Node3D
         t = travelled = eased = yaw = 0;
         clip = "";
         clipsUsed.Clear();
-        slides.Clear();
+        slides.Clear(); planted.Clear();
         soleSum = soleWorstSink = 0; soleN = 0;
         stumpWorst = 0;
         faceSum = 0; faceN = 0;
@@ -387,7 +406,7 @@ public partial class AnimTest : Node3D
             skel.MoveChild(hold, probe.GetIndex());  // before the probe, which reads the pose as drawn
         }
         if (!c.armLost && hold != null) { skel.RemoveChild(hold); hold.QueueFree(); }
-        for (int k = 0; k < 2; k++) { wasDown[k] = false; stepSlide[k] = 0; }
+        for (int k = 0; k < 2; k++) { wasDown[k] = wasPlanted[k] = false; stepSlide[k] = 0; plantSlide[k] = 0; }
         footIk!.Enabled = false;
         footIk.Enabled = c.ik;
         model.Position = new Vector3(0, Ground(0, 0), 0);
@@ -496,11 +515,17 @@ public partial class AnimTest : Node3D
             if (k == 0) { lastHeel = heel; lastBall = ball; }
             if (down)
             {
-                if (wasDown[k] && wasPoint[k] == point) stepSlide[k] += new Vector2(at.X - last[k].X, at.Z - last[k].Z).Length();
+                if (wasDown[k] && wasPoint[k] == point)
+                {
+                    double d = new Vector2(at.X - last[k].X, at.Z - last[k].Z).Length();
+                    stepSlide[k] += d;
+                    if (h < FootIK.PlantHeight && wasPlanted[k]) plantSlide[k] += d;
+                }
                 soleSum += h; soleN++;
                 soleWorstSink = Math.Min(soleWorstSink, h);
             }
-            else if (wasDown[k]) { slides.Add(stepSlide[k]); stepSlide[k] = 0; }
+            else if (wasDown[k]) { slides.Add(stepSlide[k]); stepSlide[k] = 0; planted.Add(plantSlide[k]); plantSlide[k] = 0; }
+            wasPlanted[k] = down && h < FootIK.PlantHeight;
             wasDown[k] = down;
             wasPoint[k] = point;
             last[k] = at;
@@ -509,10 +534,10 @@ public partial class AnimTest : Node3D
 
     void Finish(Case c)
     {
-        for (int k = 0; k < 2; k++) if (wasDown[k] && stepSlide[k] > 0) slides.Add(stepSlide[k]);
+        for (int k = 0; k < 2; k++) if (wasDown[k] && stepSlide[k] > 0) { slides.Add(stepSlide[k]); planted.Add(plantSlide[k]); }
         string F(double x) => (x * 100).ToString("0.0", CultureInfo.InvariantCulture);
         string stump = c.armLost ? $" (the stump strays up to {stumpWorst:0} deg from held)" : c.look ? $" (its face {faceSum / Math.Max(1, faceN):0} deg off it)" : "";
-        string line = $"| {c.name}{stump} | {string.Join(", ", clipsUsed)} | {slides.Count} | {F(slides.Count > 0 ? slides.Average() : 0)} | {F(slides.Count > 0 ? slides.Max() : 0)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(soleWorstSink)} |";
+        string line = $"| {c.name}{stump} | {string.Join(", ", clipsUsed)} | {slides.Count} | {F(slides.Count > 0 ? slides.Average() : 0)} | {F(slides.Count > 0 ? slides.Max() : 0)} | {F(planted.Count > 0 ? planted.Average() : 0)} | {F(planted.Count > 0 ? planted.Max() : 0)} | {F(soleN > 0 ? soleSum / soleN : 0)} | {F(soleWorstSink)} |";
         report.AppendLine(line);
         GD.Print(line);
     }

@@ -122,6 +122,9 @@ public sealed class Foot
     public float ToePitch;                        // this frame's toes-up turn about the ankle (radians)
     public Vector3 ToeAxis = Vector3.Right;       // ...about this axis (world)
     public bool Planted;                          // locked where it touched down
+    public bool Stretched;                        // let go for the stretch while the clip still has it down: not locked
+                                                  // again until the clip lifts it (re-locking at once put it back at the
+                                                  // clip's place in one frame: a 20-odd cm pop as a body set off)
     public float AnimHeight;                      // the clip's ankle over its floor this frame (contact: under PlantHeight)
     public Vector3 LockPos, ReleaseOff;           // where (world), and the offset easing out after lift-off
     public float Step;                            // a step under way: 1 -> 0 over StepTime
@@ -139,7 +142,7 @@ public partial class FootProbe : SkeletonModifier3D
     bool hasRoot;
     int hipsBone = -1;
 
-    public void Reset() { hips = 0; hasRoot = false; foreach (var f in Feet) { f.Lift = 0; f.Normal = Vector3.Up; f.Planted = false; f.ReleaseOff = Vector3.Zero; f.Step = 0; } }
+    public void Reset() { hips = 0; hasRoot = false; foreach (var f in Feet) { f.Lift = 0; f.Normal = Vector3.Up; f.Planted = false; f.Stretched = false; f.ReleaseOff = Vector3.Zero; f.Step = 0; } }
 
     public override void _ProcessModificationWithDelta(double delta)
     {
@@ -179,10 +182,11 @@ public partial class FootProbe : SkeletonModifier3D
                     stepUp = FootIK.StepHeight * 4 * u * (1 - u) * Math.Min(1, f.StepFrom.Length() / 0.15f);
                     if (f.Step == 0 && down) { f.Planted = true; f.LockPos = world.Origin; }
                 }
-                else if (down && !f.Planted) { f.Planted = true; f.LockPos = at; f.ReleaseOff = Vector3.Zero; }
+                else if (down && !f.Planted && !f.Stretched) { f.Planted = true; f.LockPos = at; f.ReleaseOff = Vector3.Zero; }
                 else if (f.Planted && (!down || flat.Length() > FootIK.MaxLockStretch) && (rootSpeed >= FootIK.StepBelow || !Ik.Steps))
                 {
                     f.Planted = false;
+                    f.Stretched = down;
                     f.ReleaseOff = -flat;  // lifted by the clip: from where it was held, easing to the clip's place
                 }
                 else if (f.Planted && !down)
@@ -197,6 +201,7 @@ public partial class FootProbe : SkeletonModifier3D
                     f.StepFrom = -flat;
                     at += f.StepFrom;
                 }
+                if (!down) f.Stretched = false;
                 if (f.Planted) at = new Vector3(f.LockPos.X, at.Y, f.LockPos.Z);
                 else if (f.Step == 0 && f.ReleaseOff.LengthSquared() > 1e-8f)
                 {
@@ -204,7 +209,7 @@ public partial class FootProbe : SkeletonModifier3D
                     f.ReleaseOff *= (float)Math.Exp(-delta / FootIK.ReleaseTime);
                 }
             }
-            else { f.Planted = false; f.Step = 0; }
+            else { f.Planted = false; f.Stretched = false; f.Step = 0; }
             var shift = new Vector3(at.X - world.Origin.X, 0, at.Z - world.Origin.Z);
             var (gy, n) = Ik.GroundUnder(Character, at);
             f.GroundY = gy;
