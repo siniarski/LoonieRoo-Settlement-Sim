@@ -71,7 +71,8 @@ public partial class ItemBench : Node3D
     /// <summary>A world with an item on every open tile near the middle, where the survivor you control stands.</summary>
     static SimState Strewn(out int count)
     {
-        var settings = new Settings { start = "solo", zombies = Difficulty.NORMAL.zombies, weather = Difficulty.NORMAL.weather, progression = Difficulty.NORMAL.progression, winter = Difficulty.NORMAL.winter, dayScale = Difficulty.NORMAL.dayScale, map = Difficulty.NORMAL.map };
+        var settings = Game.CopySettings(Difficulty.NORMAL);
+        settings.start = "solo";
         var s = Worldgen.createWorld(42, 256, settings);
         var g = s.grid;
         var you = ControlMod.controlled(s)!;

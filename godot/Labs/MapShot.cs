@@ -42,7 +42,9 @@ public partial class MapShot : Node
     static void Shoot(string map, double seed, int size, string outDir)
     {
         ulong t0 = Godot.Time.GetTicksMsec();
-        var settings = new Settings { start = "solo", zombies = Difficulty.NORMAL.zombies, weather = Difficulty.NORMAL.weather, progression = Difficulty.NORMAL.progression, winter = Difficulty.NORMAL.winter, dayScale = Difficulty.NORMAL.dayScale, map = map };
+        var settings = Game.CopySettings(Difficulty.NORMAL);
+        settings.start = "solo";
+        settings.map = map;
         var state = Worldgen.createWorld(seed, size, settings);
         ulong t1 = Godot.Time.GetTicksMsec();
         for (int y = 0; y < size; y += Worldgen.CHUNK)

@@ -61,7 +61,8 @@ public partial class DrawBench : Node3D
         DirAccess.MakeDirRecursiveAbsolute(outDir);
 
         ulong t0 = Godot.Time.GetTicksUsec();
-        var settings = new Settings { start = "solo", zombies = Difficulty.NORMAL.zombies, weather = Difficulty.NORMAL.weather, progression = Difficulty.NORMAL.progression, winter = Difficulty.NORMAL.winter, dayScale = Difficulty.NORMAL.dayScale, map = Difficulty.NORMAL.map };
+        var settings = Game.CopySettings(Difficulty.NORMAL);
+        settings.start = "solo";
         state = Worldgen.createWorld(42, size, settings);
         // The sim generates chunks as survivors come near; the bench wants all of it (as the harness's generateAll).
         lazy = args.ContainsKey("lazy");
