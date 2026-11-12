@@ -166,7 +166,7 @@ public sealed class WorldLights
     public void Update(SimState state, Vector3 eye, double alpha, double delta, bool inCar)
     {
         clock += delta;
-        if (benchRuns != null) BenchStep(delta);
+        if (benchRuns != null) { benchState = state; BenchStep(delta); }
         bool off = Budget < 0; // --lights=-1: none of it (before and after pictures)
         glows.Visible = panes.Visible = posts.Visible = !off;
         if (off) { foreach (var l in omnis) l.Visible = false; foreach (var l in spots) l.Visible = false; torch.Visible = false; return; }
@@ -368,6 +368,7 @@ public sealed class WorldLights
     // --- the light bench (--lightbench=0,8,16,32 or N:K for K shadowed): frame times with each budget, then quit ---
 
     static List<(int n, int k)>? benchRuns;
+    SimState? benchState;
     int benchRun = -1, benchFrame;
     double benchFrameMs, benchGpu, benchCpu;
     readonly List<string> benchOut = new();
@@ -418,6 +419,8 @@ public sealed class WorldLights
         if (benchRun >= benchRuns!.Count)
         {
             foreach (var l in benchOut) GD.Print(l);
+            GD.Print(FirstPerson.ChunkStats());
+            if (parent is FirstPerson fp && benchState != null) GD.Print(fp.ChunkBench(benchState));
             benchRuns = null;
             parent.GetTree().Quit();
             return;

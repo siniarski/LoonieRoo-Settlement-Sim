@@ -32,12 +32,18 @@ public static partial class WorldMesh
         bool ribbon = Ribboned && tile == "floor" && ground == "road" && !Terrain.Sunk(x, y);
         // The water's edge is drawn smooth (Banks): a tile the bank runs through is part land, part water; one wholly
         // on the far side of it is drawn as that side, whatever the sim's tile says.
+        long q0 = System.Diagnostics.Stopwatch.GetTimestamp();
         int bank = Terrain.Flat || ground == "bridge" || tile is not ("floor" or "water") ? BANK_AS_IS : Banks(gs, ws, g, x, y, tile, ribbon ? Nearest(g, x, y, VERGE_REACH) : ground);
+        long q1 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PartTicks[4] += q1 - q0;
         if (bank == BANK_DRAWN) return true;
         if (bank == BANK_WATER) { Ground(gs, ws, x, y, "water", ground); return true; }
         if (bank == BANK_LAND && tile == "water") { Ground(gs, ws, x, y, "floor", Nearest(g, x, y, SHORE_REACH)); return false; }
         // Where kinds of open ground meet, smooth too (Edges).
-        if (bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground)) return false;
+        bool edged = bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground);
+        long q2 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PartTicks[5] += q2 - q1;
+        if (edged) return false;
         if (Ribboned && tile == "floor" && ground == "bridge") { UnderBridge(gs, ws, x, y); return true; }
         if (ribbon) { Ground(gs, ws, x, y, tile, Nearest(g, x, y, VERGE_REACH)); return false; }
         Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));

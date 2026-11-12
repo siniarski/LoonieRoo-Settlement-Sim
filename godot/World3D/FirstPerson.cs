@@ -23,6 +23,28 @@ public sealed partial class FirstPerson : Node3D
     public static float ShadowDistance = 40;
     /// <summary>Chunk meshes built per frame at most.</summary>
     const int BUILDS_PER_FRAME = 4;
+    // Chunk build timing (Stopwatch ticks), printed by the light bench: how many built, their total and worst, and the signature checks.
+    public static long BuildTicks, Builds, WorstBuild, SigTicks, Sigs;
+    /// <summary>The chunk bench (after the light bench): every chunk in range built REPS times over, warm, and where the time went.</summary>
+    public string ChunkBench(SimState state)
+    {
+        const int REPS = 3;
+        System.Array.Clear(WorldMesh.PartTicks);
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        int n = 0;
+        for (int r = 0; r < REPS; r++)
+            foreach (var k in chunks.Keys) { var (a, b) = WorldMesh.Build(state, k.Item1, k.Item2, look, solid, glass); a.Dispose(); b.Dispose(); n++; }
+        double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        double all = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * f / n;
+        var p = WorldMesh.PartTicks;
+        return $"chunk bench: {n / REPS} chunks x {REPS}, {all:0.00} ms each: tile loop {p[1] * f / n:0.00} (its ground {p[0] * f / n:0.00}), furniture {p[2] * f / n:0.00}, commits {p[3] * f / n:0.00}; in the ground: banks {p[4] * f / n:0.00}, edges {p[5] * f / n:0.00}";
+    }
+
+    public static string ChunkStats()
+    {
+        double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        return $"chunks: {Builds} built, {(Builds > 0 ? BuildTicks * f / Builds : 0):0.00} ms each, worst {WorstBuild * f:0.00} ms; {Sigs} signatures, {(Sigs > 0 ? SigTicks * f / Sigs : 0):0.000} ms each";
+    }
     public const float EYE = 1.65f, EYE_SNEAK = 1.1f, EYE_ASLEEP = 0.35f;
     /// <summary>Vertical field of view (degrees), as the look lab's.</summary>
     const float FOV = 60;
@@ -315,9 +337,14 @@ public sealed partial class FirstPerson : Node3D
                 if (changed) sinceCheck = 120; // look at the rest next frame
                 break;
             }
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             long sig = WorldMesh.Signature(state, x, y, look);
+            long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+            SigTicks += t1 - t0; Sigs++;
             if (have && c.sig == sig) continue;
             var (mesh, groundMesh) = WorldMesh.Build(state, x, y, look, solid, glass);
+            long took = System.Diagnostics.Stopwatch.GetTimestamp() - t1;
+            BuildTicks += took; Builds++; WorstBuild = Math.Max(WorstBuild, took);
             if (!have)
             {
                 c.node = new MeshInstance3D();
