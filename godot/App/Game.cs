@@ -149,7 +149,7 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
     }
 
     // Where Game's own frame goes (World3D.FirstPerson.FrameTicks, after the 3D's parts): the HUD, the inventory, the map, the tabs and death screen, and the whole of _Process.
-    static readonly int PART_HUD = World3D.FirstPerson.FRAME_PARTS.Length - 5;
+    static readonly int PART_HUD = System.Array.IndexOf(World3D.FirstPerson.FRAME_PARTS, "game: hud");
 
     public override void _Process(double delta)
     {

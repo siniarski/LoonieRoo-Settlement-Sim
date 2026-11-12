@@ -91,6 +91,35 @@ void fragment() {
     readonly ShaderMaterial groundMat = new() { Shader = new Shader { Code = GROUND_SHADER } };
     readonly ShaderMaterial treeMat = new() { Shader = new Shader { Code = TREE_SHADER } };
     readonly Dictionary<(int, int), Built> regions = new();
+
+    // What the plan makes of each tile of a region (and its margin) not generated yet, kept between the region's builds:
+    // it is built again whenever a chunk in it is generated (its signature counts them), and the plan's tiles were
+    // most of a build (~7 of ~12 ms a region on a 2048 world: log/2026-11-12-17-performance.md). Pure functions of the
+    // plan, so kept as they came; a tile asked again with the plan in another state is worked out again. Dropped with its region.
+    struct PlanTile { public byte asked; public bool water; public int ground; public double wooded; } // asked: 0 not yet, 1 unplanned, 2 planned
+    readonly Dictionary<(int, int), PlanTile[]> planTiles = new();
+    Layout? planTilesFor;
+    // Kept only for the regions near you (~25, ~3 MB), where chunks are generated as you go: 111 KB a region.
+    const float KEEP_NEAR = 2 * REGION;
+    Vector3 eyeAt;
+    public static bool KeepPlanTiles = System.Environment.GetEnvironmentVariable("FAR_KEEP") != "0"; // FAR_KEEP=0: never (to compare)
+
+    /// <summary>The far field's rebuild bench (after the light bench): every region near you (KEEP_NEAR) built again,
+    /// as when a chunk in it is generated; the mean ms a region.</summary>
+    public string RebuildBench(SimState state)
+    {
+        var keys = new List<(int, int)>();
+        foreach (var k in regions.Keys) if (Distance(eyeAt, k.Item1, k.Item2) <= KEEP_NEAR) keys.Add(k);
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        foreach (var k in keys)
+        {
+            var c = regions[k];
+            c.node.QueueFree();
+            regions[k] = Build(state, k.Item1, k.Item2) with { sig = c.sig };
+        }
+        double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        return $"far rebuild bench: {keys.Count} regions, {(keys.Count > 0 ? ms / keys.Count : 0):0.00} ms each (plan tiles kept: {KeepPlanTiles})";
+    }
     /// <summary>A region as built: its node, signature, trees, triangles (ground and blocks; its trees as the far LOD, as crowns), and the tree options it was built with.</summary>
     readonly record struct Built(Node3D node, long sig, int trees, int tris, int lodTris, int crownTris, float tier, bool drawTrees);
     readonly Dictionary<(int, int), List<Furniture>> treesByRegion = new();
@@ -114,6 +143,7 @@ void fragment() {
     /// <summary>The hole: first person's chunks (in tiles: x0, z0, x1, z1), where the far field doesn't draw.</summary>
     public void Update(SimState state, Vector3 eye, Vector4 hole)
     {
+        eyeAt = eye;
         groundMat.SetShaderParameter("hole", hole);
         treeMat.SetShaderParameter("hole", hole);
         if (Range <= 0)
@@ -173,6 +203,7 @@ void fragment() {
         {
             regions[k].node.QueueFree();
             regions.Remove(k);
+            planTiles.Remove(k);
         }
         int tc = 0, tt = 0;
         foreach (var (k, c) in regions)
@@ -188,6 +219,7 @@ void fragment() {
     {
         foreach (var c in regions.Values) c.node.QueueFree();
         regions.Clear();
+        planTiles.Clear();
         Pending = TreeCount = Triangles = 0;
     }
 
@@ -245,12 +277,20 @@ void fragment() {
         var tiles = new (bool water, Color c)[tw * (y1 - y0 + 2 * M)];
         // What the plan makes of each tile not generated yet (PlanGround's: the trees below read it too).
         var planned = new (bool water, int ground, double wooded)[tiles.Length];
+        var planNow = Plan(state);
+        if (!ReferenceEquals(planTilesFor, planNow)) { planTiles.Clear(); planTilesFor = planNow; } // another world, or one loaded again
+        PlanTile[]? kept = null;
+        if (KeepPlanTiles && Distance(eyeAt, rx, ry) <= KEEP_NEAR)
+        {
+            if (!planTiles.TryGetValue((rx, ry), out kept) || kept.Length != tiles.Length) planTiles[(rx, ry)] = kept = new PlanTile[tiles.Length];
+        }
+        else planTiles.Remove((rx, ry));
         for (int ty = 0; ty < y1 - y0 + 2 * M; ty++)
             for (int tx = 0; tx < tw; tx++)
             {
                 int ax = x0 - M + tx, ay = y0 - M + ty;
                 bool inside = ax >= x0 && ay >= y0 && ax < x1 && ay < y1;
-                var (water, ground) = FarTile(state, ax, ay, ready && (inside || Ready(state, ax, ay)), out planned[ty * tw + tx]);
+                var (water, ground) = FarTile(state, ax, ay, ready && (inside || Ready(state, ax, ay)), out planned[ty * tw + tx], kept, ty * tw + tx);
                 tiles[ty * tw + tx] = (water, water ? WaterColour : GroundColour(ground));
             }
         int cw = (x1 - x0 + STEP - 1) / STEP + 1;
@@ -494,7 +534,7 @@ void fragment() {
     }
 
     /// <summary>A tile as the far ground draws it: water (a bridge's too) and its ground (a country road's: the ground it runs over).</summary>
-    (bool water, int ground) FarTile(SimState state, int x, int y, bool ready, out (bool water, int ground, double wooded) plan)
+    (bool water, int ground) FarTile(SimState state, int x, int y, bool ready, out (bool water, int ground, double wooded) plan, PlanTile[]? kept = null, int at = 0)
     {
         var g = state.grid;
         int tx = Math.Clamp(x, 0, g.width - 1), ty = Math.Clamp(y, 0, g.height - 1), i = ty * g.width + tx;
@@ -502,7 +542,17 @@ void fragment() {
         int ground;
         plan = (false, 0, double.NaN);
         if (Generated(state, tx, ty)) { water = Grids.tileAt(g, i) == "water"; ground = Grids.groundAt(g, i); }
-        else (water, ground, _) = plan = PlanGround(state, tx, ty, ready);
+        else if (kept != null && kept[at].asked == (ready ? 2 : 1))
+        {
+            ref var k = ref kept[at];
+            (water, ground) = (k.water, k.ground);
+            plan = (k.water, k.ground, k.wooded);
+        }
+        else
+        {
+            (water, ground, _) = plan = PlanGround(state, tx, ty, ready);
+            if (kept != null) kept[at] = new PlanTile { asked = (byte)(ready ? 2 : 1), water = plan.water, ground = plan.ground, wooded = plan.wooded };
+        }
         if (ground == BRIDGE) return (true, 0);
         if (ground == ROAD && !water && Country(state, tx, ty))
         {

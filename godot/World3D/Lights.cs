@@ -424,6 +424,7 @@ public sealed class WorldLights
             foreach (var l in benchOut) GD.Print(l);
             GD.Print(FirstPerson.ChunkStats());
             GD.Print(FirstPerson.FrameStats(benchMeasured));
+            if (parent is FirstPerson fpf && benchState != null && FarField.Range > 0) GD.Print(fpf.Far.RebuildBench(benchState));
             if (parent is FirstPerson fp && benchState != null) GD.Print(fp.ChunkBench(benchState));
             benchRuns = null;
             parent.GetTree().Quit();

@@ -41,7 +41,7 @@ public sealed partial class FirstPerson : Node3D
     }
 
     // The frame by part (Stopwatch ticks, summed; printed by the light bench): each step of Update in its order.
-    public static readonly string[] FRAME_PARTS = { "roofs", "Light", "Land", "weather", "others", "people", "you", "bodies", "cars", "cockpit", "fields", "sites", "aircraft", "items", "held", "swimHands", "lights", "sounds", "game: hud", "game: inventory", "game: map", "game: tabs", "game: _Process all" };
+    public static readonly string[] FRAME_PARTS = { "roofs", "Light", "Land", "weather", "others", "people", "you", "bodies", "cars", "cockpit", "fields", "sites", "aircraft", "items", "held", "swimHands", "lights", "sounds", "game: hud", "game: inventory", "game: map", "game: tabs", "game: _Process all", "land: ribbons", "land: chunks", "land: trees", "land: furniture", "land: far" };
     public static readonly long[] FrameTicks = new long[FRAME_PARTS.Length];
     public static long Lap(int k, long t) { long now = System.Diagnostics.Stopwatch.GetTimestamp(); FrameTicks[k] += now - t; return now; }
     public static string FrameStats(long frames)
@@ -299,11 +299,18 @@ public sealed partial class FirstPerson : Node3D
         int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
         var hole = new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK);
         // Before the chunks: it says whether country roads are ribbons (WorldMesh.Ribboned). In the hole only while the far field draws past it.
+        int at = FRAME_PARTS.Length - 5;
+        long lap = System.Diagnostics.Stopwatch.GetTimestamp();
         ribbons.Update(state, eye, FarField.Range > 0 ? hole : null);
+        lap = Lap(at, lap);
         Chunks(state, eye);
+        lap = Lap(at + 1, lap);
         trees.Update(state, eye, look);
+        lap = Lap(at + 2, lap);
         furniture.Update(state, eye, look);
+        lap = Lap(at + 3, lap);
         far.Update(state, eye, hole);
+        Lap(at + 4, lap);
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
     }
