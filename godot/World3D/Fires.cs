@@ -230,10 +230,8 @@ public sealed partial class Fires : Node3D
             float dx = xy.x + 0.5f - eye.X, dz = xy.y + 0.5f - eye.Z;
             float d2 = dx * dx + dz * dz;
             if (d2 > r2) continue;
-            long v = (long)kv.Value;
-            float age = (state.tick - (int)(v >> 2)) / life;
-            if (age >= 1) continue;
-            tiles.Add((d2, xy.x, xy.y, (int)(v & 3), Math.Max(0, age)));
+            if (!FireMod.scarOf(state, xy.x, xy.y, out int tick, out int kind)) continue; // regrown
+            tiles.Add((d2, xy.x, xy.y, kind, Math.Max(0, (state.tick - tick) / life)));
         }
         if (tiles.Count > SCAR_TILES)
         {
