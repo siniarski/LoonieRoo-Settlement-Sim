@@ -31,7 +31,7 @@ sim can be tested, replayed and benchmarked with no window.
 5. **`godot/App/Game.cs`**: the game's frame (run ticks, then update the views), and its parts beside it.
 6. **`godot/World3D/FirstPerson.cs`**: how the state becomes a picture.
 
-`docs/modules.md` has one line for every module. `docs/sim-model.md` explains the core model (designations, jobs,
+`docs/state-of-the-game.md` says what the game does today and what does not work yet. `docs/modules.md` has one line for every module. `docs/sim-model.md` explains the core model (designations, jobs,
 workers, rooms, paths, doors). `docs/decisions.md` records why things are the way they are.
 
 ## Layout

@@ -48,6 +48,7 @@ cheaper models for mechanical work.
 4. The look and sound: textures, weapon, fire and rain sounds, bloom for lights.
 
 **Where to read what** (read only what your task touches).
+- docs/state-of-the-game.md: what you can do in the game today, and what is known not to work. For a first read.
 - README.md: the shape and a reading order, for a person reviewing the code.
 - docs/modules.md: one line per sim module by folder and per game folder; the TypeScript-name mapping. Before touching code.
 - docs/sim-model.md: designations, jobs, rooms, paths, doors, edges, replays. Before jobs, rooms or pathfinding work.
