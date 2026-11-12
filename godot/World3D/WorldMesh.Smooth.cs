@@ -45,7 +45,7 @@ public static partial class WorldMesh
 
     /// <summary>A convex polygon as a fan of triangles in one look, each wound clockwise from above (as the ground's);
     /// with `flat`, every normal straight up (the water's surface), else each point's own.</summary>
-    static void Fan(SurfaceTool st, List<(Vector3 p, Vector3 normal)> poly, Look look, bool flat = false)
+    static void Fan(MeshBuf st, List<(Vector3 p, Vector3 normal)> poly, Look look, bool flat = false)
     {
         st.SetColor(look.colour);
         st.SetUV(look.what);
@@ -89,7 +89,7 @@ public static partial class WorldMesh
 
     /// <summary>A tile of open ground where two kinds meet: draws it (in two parts along the edge, or whole as the
     /// kind round it) and returns true; false where it is its own kind all round, or three kinds meet.</summary>
-    static bool Edges(SurfaceTool st, Grid g, int x, int y, string ground)
+    static bool Edges(MeshBuf st, Grid g, int x, int y, string ground)
     {
         var at = Corners(x, y);
         var counts = new int[4, 4];
@@ -150,7 +150,7 @@ public static partial class WorldMesh
 
     /// <summary>A tile at the water's edge: draws it in two parts along the bank and says so (BANK_DRAWN), or says
     /// which side of the bank the whole tile is on, or that no water is near (BANK_AS_IS). `ground`: the land's kind.</summary>
-    static int Banks(SurfaceTool st, SurfaceTool ws, Grid g, int x, int y, string tile, string ground)
+    static int Banks(MeshBuf st, MeshBuf ws, Grid g, int x, int y, string tile, string ground)
     {
         var at = Corners(x, y);
         // Each corner's water less a half: the bank is where that is 0, the water where it is 0 or more.
