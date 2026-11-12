@@ -221,8 +221,8 @@ public sealed partial class People
     /// <summary>A vault or a hop faces the way over (the legs; the chest still turns to the look): the model's yaw, or null.</summary>
     float? LeapYaw() => ownLeap.busy != null && ownLeap.dir != Vector3.Zero ? (float)Math.Atan2(ownLeap.dir.X, ownLeap.dir.Z) : null;
 
-    /// <summary>The edge tops a hand goes on (m over the ground): a window's sill, a barricade's top plank (WorldMesh's).</summary>
-    const float SILL_TOP = 0.9f, BARRICADE_TOP = 1.27f;
+    /// <summary>The edge tops a hand goes on (m over the ground): a window's sill, a barricade's top plank, as WorldMesh draws them.</summary>
+    const float SILL_TOP = WorldMesh.SILL_H, BARRICADE_TOP = WorldMesh.BARRICADE_TOP;
     /// <summary>How far the chest leans forward over the edge (radians, over the spine) with the hand on it.</summary>
     const float VAULT_LEAN = 1.0f;
 

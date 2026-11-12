@@ -14,10 +14,15 @@ public static partial class WorldMesh
 {
     const float WALL_T = 0.12f;
     const float DOOR_H = 2.05f;
-    const float SILL_H = 0.9f;
+    /// <summary>A window's sill over the floor (m; a vaulting hand goes on it: People.Leap.cs).</summary>
+    internal const float SILL_H = 0.9f;
     const float LINTEL_H = 2.1f;
     /// <summary>An edge wall stops this short of its corner's far side, so its end is inside the wall it meets, not level with that wall's face.</summary>
     const float TUCK = 0.002f;
+    /// <summary>A barricade's planks: the bottom of each over the floor (m), and their height; its top is the top plank's (a vaulting hand goes on it).</summary>
+    static readonly float[] PLANKS = { 0.25f, 0.65f, 1.05f };
+    const float PLANK_H = 0.22f;
+    internal const float BARRICADE_TOP = 1.05f + PLANK_H;
 
     /// <summary>The walls' grey: the far view's blocks, and a wall that fills its tile (hand-made maps).</summary>
     internal static readonly Color WALL = new(0.62f, 0.6f, 0.56f);
@@ -100,7 +105,7 @@ public static partial class WorldMesh
                 }
                 return false;
             case Grids.EDGE_BARRICADE:
-                foreach (var h in new[] { 0.25f, 0.65f, 1.05f }) Piece(-0.05f, 1.05f, h, h + 0.22f, 0.05f, WorldLook.Plank);
+                foreach (var h in PLANKS) Piece(-0.05f, 1.05f, h, h + PLANK_H, 0.05f, WorldLook.Plank);
                 return false;
             case Grids.EDGE_FENCE:
                 // A tall fence: two posts and rails, boards close side by side to above head height.
