@@ -159,4 +159,21 @@ public partial class SavefileTest
             expect(text.length).toBeLessThan(Js.Json_stringify(state.furniture).length);
         }
     }
+
+    /// <summary>records keep JS order</summary>
+    public class D009_records_keep_js_order
+    {
+        [Fact(DisplayName = "records keep JS order > a key added after a removal comes last, as it will after a save and load")]
+        public void T001_a_key_added_after_a_removal_comes_last()
+        {
+            var r = new JsRecord<double> { ["a"] = 1, ["b"] = 2, ["c"] = 3 };
+            r.Remove("b");
+            r["d"] = 4;
+            expect(Js.ObjectKeys(r)).toEqual(Js.Arr(["a", "c", "d"]));
+            var back = new JsRecord<double>(r);  // what a load builds: the entries in the file's order
+            back["e"] = 5;
+            r["e"] = 5;
+            expect(Js.ObjectKeys(back)).toEqual(Js.ObjectKeys(r));
+        }
+    }
 }

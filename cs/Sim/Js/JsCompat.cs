@@ -518,10 +518,42 @@ public class JsRecord<V> : Dictionary<string, V>
     public new V this[string key]
     {
         get => TryGetValue(key, out var v) ? v : default!;
-        set => base[key] = value;
+        set { if (holes && !ContainsKey(key)) squeeze(); base[key] = value; }
     }
 
     public bool has(string key) => ContainsKey(key);
+
+    // A Dictionary puts the next new key in the slot a removed one left, so it would enumerate in the middle, not
+    // last as in JS, and a save (written without the hole) would play on in another order. A removal marks a hole;
+    // the next new key first squeezes the entries back into order (once per batch of removals).
+    bool holes;
+
+    public new bool Remove(string key)
+    {
+        if (!base.Remove(key)) return false;
+        holes = Count > 0;
+        return true;
+    }
+
+    public new void Add(string key, V value)
+    {
+        if (holes) squeeze();
+        base.Add(key, value);
+    }
+
+    public new void Clear()
+    {
+        base.Clear();
+        holes = false;
+    }
+
+    void squeeze()
+    {
+        var kept = this.ToArray();
+        base.Clear();
+        foreach (var kv in kept) base.Add(kv.Key, kv.Value);
+        holes = false;
+    }
 }
 
 /// <summary>JavaScript's Map: insertion-ordered.</summary>
