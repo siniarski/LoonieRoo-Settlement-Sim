@@ -36,10 +36,10 @@ public static partial class Policies
         return state.policies.includes(p);
     }
 
-    /// <summary>Rationing: satiety drains three ticks in four.</summary>
+    /// <summary>Rationing: satiety drains three slow ticks in four (counted in slow ticks: it is asked on them).</summary>
     public static bool satietyDrains(SimState state)
     {
-        return !policyOn(state, "rationing") || ((state.tick % 4) != 0);
+        return !policyOn(state, "rationing") || ((Time.slowCount(state.tick) % 4) != 0);
     }
 
     /// <summary>Quarantine: the infected and sick stay in bed.</summary>
