@@ -26,6 +26,8 @@ public partial class PoliciesTest
                 Tick.tick(state);
             }
             expect(Food.SATIETY_MAX - s.satiety).toBe(300);
+            // 300 drained in 400 ticks: food lasts 400/300, a third longer, and the policy's text says so
+            expect(Js.Get(Policies.POLICY_INFO, "rationing")).toContain("a third longer");
         }
 
         [Fact(DisplayName = "policies > curfew: no outdoor work at night but guarding")]
