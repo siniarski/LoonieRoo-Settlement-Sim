@@ -350,6 +350,10 @@ the strips in experiments/anim-quality/ (its animtest-after.md has the numbers).
 - **Setting off.** FootIK let a planted foot go when the leg stretched 25 cm, then locked it again the next frame at
   the clip's place: a 20-odd cm jump in one frame. A foot let go for the stretch now waits for the clip to lift it
   (Foot.Stretched): starting with foot IK, 9.1 -> 4.8 cm a planted step, worst 27.5 -> 10.4.
+- **First person.** The pistol-whip struck below the view's edge (the hand 21 deg under the eye line, the gun hanging
+  from it): its strike and follow-through now land under the crosshair. `--reloadat=P` holds a gun's reload for a
+  picture. The shotgun's reload lays the left forearm across the bottom of the view (the support hand follows the
+  forend as the gun tips in): a left-hand pose at the loading port is still to do.
 - **Left in the clips** (art/scripts/derive_clips.py, a Blender pass): from the front the walk sets its feet in one
   line and the run throws its arms out to the sides at shoulder height; the sneak is a deep squat with the knees
   wide.
