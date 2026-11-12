@@ -173,6 +173,29 @@ public partial class InvariantsTest
         [InlineData(5)]
         public void T002_holds_under_random_designations_orders_and_wall_edits_seed(double seed)
         {
+            ensureSeed(seed);
+        }
+
+        public static readonly double[] SEEDS = [1, 2, 3, 4, 5];
+
+        static readonly JsSet<double> seedsRun = new JsSet<double>();
+
+        /// <summary>Runs a seed's whole random run once per process (tests in a file run in order, but each fact
+        /// below must also pass on its own, so each one asks for all the seeds first).</summary>
+        static void ensureSeed(double seed)
+        {
+            if (seedsRun.has(seed)) return;
+            runSeed(seed);
+            seedsRun.add(seed);
+        }
+
+        static void ensureAllSeeds()
+        {
+            foreach (var seed in SEEDS) ensureSeed(seed);
+        }
+
+        static void runSeed(double seed)
+        {
             var initial = ScenarioMod.loadScenario(new Scenario { seed = seed, map = MAP, rooms = [new() { x = Js.I(3), y = Js.I(3), purpose = "housing" }, new() { x = Js.I(14), y = Js.I(3), purpose = "storage" }, new() { x = Js.I(3), y = Js.I(11), purpose = "messhall" }] });
             initial.craftTargets = new() { ["weapon"] = 1, ["bandage"] = 2, ["medicine"] = 0, ["ammo"] = 0, ["gun"] = 0, ["coat"] = 0, ["armour"] = 0, ["boots"] = 0, ["cart"] = 0, ["axe"] = 0, ["hammer"] = 0, ["medkit"] = 0 };
             for (var y = 10; y <= 12; y++)
@@ -260,24 +283,28 @@ public partial class InvariantsTest
         [Fact(DisplayName = "stuck-state invariant > saw survivors die along the way (death handling is exercised)")]
         public void T003_saw_survivors_die_along_the_way_death_handling_is_exercised()
         {
+            ensureAllSeeds();
             expect(deaths).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "stuck-state invariant > saw meals carried to a mess hall table")]
         public void T004_saw_meals_carried_to_a_mess_hall_table()
         {
+            ensureAllSeeds();
             expect(mealsAtTables).toBeGreaterThan(0);
         }
 
         [Fact(DisplayName = "stuck-state invariant > saw wanderers arrive, join, and get turned away")]
         public void T005_saw_wanderers_arrive_join_and_get_turned_away()
         {
+            ensureAllSeeds();
             expect(Js.ListOf(wandererEvents).sort()).toEqual(Vitest.arrayContaining(Js.Arr(["a wanderer", "joined", "turned away"])));
         }
 
         [Fact(DisplayName = "stuck-state invariant > exercised every outcome across the seeds (guards against a vacuous run)")]
         public void T006_exercised_every_outcome_across_the_seeds_guards_against_a_va()
         {
+            ensureAllSeeds();
             List<string> expected = ["took", "picked", "built", "removed", "delivered", "stored", "cleaned", "arrived", "going", "asleep", "no", "woke", "eating", "ate", "scavenged", "attacked", "killed", "sowed", "harvested", "treated", "armed", "repaired", "crafted", "brought", "relaxing", "having"];
             expect(expected.filter((n) => !notesSeen.has(n)), $"seen: {Js.Str(Js.ListOf(notesSeen).join(", "))}").toEqual(Js.Arr([]));
         }

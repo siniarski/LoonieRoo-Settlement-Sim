@@ -128,7 +128,7 @@ public partial class StorageTest
             expect(state.items).toHaveLength(4);
         }
 
-        [Fact(DisplayName = "beds and housing > beds only go on empty floor, and items are never dropped on them")]
+        [Fact(DisplayName = "beds and housing > a wall cannot be built where a bed stands, a bed cannot go on a wall, and the bed's room stays a room")]
         public void T010_beds_only_go_on_empty_floor_and_items_are_never_dropped_on_t()
         {
             var map = MAP.map((row, y) => (y == 2) ? ".#....#.#.b..#.." : row);

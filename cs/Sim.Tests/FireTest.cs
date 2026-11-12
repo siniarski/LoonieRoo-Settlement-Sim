@@ -108,6 +108,12 @@ public partial class FireTest
             var state = setup(map, new() { ["haul"] = 3 }, [new() { x = Js.I(1), y = Js.I(2), purpose = "graveyard" }]);
             state.harsh = true;
             runUntil(state, (_) => (Js.NN(Js.Get(state.items, 0)).pos != null) && (Js.NN(Js.Get(state.items, 0)).pos.y >= 2), 1500);
+            // In the graveyard it does not rot, however long it has lain; anywhere else it would.
+            var corpse = Js.NN(Js.Get(state.items, 0));
+            expect(Rooms.labelAt(state, corpse.pos.x, corpse.pos.y)).toBe(Rooms.labelAt(state, 1, 2));
+            corpse.wear = state.tick - ((double)(2) * (Corpses.CORPSE_ROT));
+            expect(Corpses.isRotting(state, corpse, Rooms.completeRooms(state, "graveyard"))).toBe(false);
+            expect(Corpses.isRotting(state, corpse, new JsSet<double>())).toBe(true);
         }
     }
 }
