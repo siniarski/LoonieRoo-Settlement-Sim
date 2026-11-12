@@ -164,7 +164,7 @@ git tag `ts-final`.
 
 ### `Survivors/`
 
-- **Needs**, **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
+- **Needs** (**NeedsTreatment**, part of Needs: treating yourself; **NeedsDeath**: a survivor's death), **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
   (social, comfort), **Mood** (thoughts), **Moodlets**, **Resolve**, **Wishes**, **Skills** (skills, traits),
   **Relationships**, **Leisure**, **Books**, **Clothing**, **Family**, **Dogs**.
 - **SurvivorRoster** (part of Survivors, whose walking is Movement/Survivors.cs): a new survivor, the names handed
