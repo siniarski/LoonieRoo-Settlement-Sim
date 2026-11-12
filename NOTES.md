@@ -39,10 +39,10 @@ trace flags) to screenshots unless the question is about rendering. Parallel ses
 cheaper models for mechanical work.
 
 **Next, in order** (detail in docs/open-work.md).
-1. The player's playtest in Godot: nothing built since 2026-11-05 has been played by a human, and 2026-11-10's
+1. More playtest in Godot: only two short play lists (2026-11-11, -12) have been played by a human, and 2026-11-10's
    sixteen features least of all (docs/open-work.md "Not played yet").
-2. The player's decisions (docs/open-work.md "For the player to decide": thirst, deer, light and the dead, snow, cars,
-   tracks, weapon options, the bag).
+2. The player's decisions (docs/open-work.md "For the player to decide": thirst, deer, light and the dead, snow tracks, cars,
+   weapon options, the bag).
 3. Big worlds: unloading chunks (furniture per chunk, an active region), loading off the main thread, then the
    very large stress test before storeys or long-path work.
 4. The look and sound: textures, weapon, fire and rain sounds, bloom for lights.
