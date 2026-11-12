@@ -95,7 +95,7 @@ git tag `ts-final`.
 
 ### `Worldgen/`: making the world from a seed
 
-- **Worldgen**: draws chunks lazily from the plan; starting a world (`createWorld`, the camp); `GEN_VERSION`. **Terrain**: the land's large scale from
+- **Worldgen**: draws chunks lazily from the plan; starting a world (**WorldStart**, part of Worldgen: `createWorld`, the camp, the first strays); `GEN_VERSION`. **Terrain**: the land's large scale from
   the seed (elevation, moisture, settlement; rivers by drainage, lakes in hollows; cached, never saved).
 - **NatureMod**: water, forest, trees, dirt per tile (noise, fBm, `treeChanceAt`); the map types' seas and fences.
 - **Worldplan**: the plan (towns, streets, roads, lots; cached, never saved). **WorldRegions**: the plan by region
