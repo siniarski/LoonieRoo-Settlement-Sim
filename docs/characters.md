@@ -55,7 +55,7 @@ Use the bone names and hierarchy of **Godot's `SkeletonProfileHumanoid`** direct
 
 Rules: one armature named `Armature`, `Root` at the floor between the feet, `Hips` its child; T-pose rest (the profile's reference) or A-pose with the import rest fixed in Godot; no scale on bones; no extra deforming bones. Fingers: full chains on the base rig, but most clips only key a fist/open/grip pose (stylised).
 
-**Attachment points are not bones.** Back (backpack), belt left/right/back (holsters, pouches), hand grips right/left, head (hats), face (masks) are named transforms *relative to a bone*, stored in one data file (`sockets.json`) and realised in Godot as `BoneAttachment3D` + offset. Extra socket bones would pollute retargeting and the ragdoll.
+**Attachment points are not bones.** Back (backpack), belt left/right/back (holsters, pouches), hand grips right/left, head (hats), face (masks) are named transforms *relative to a bone*, stored in one data file (`sockets.json`, not made yet: the attachment points are still in the character code) and realised in Godot as `BoneAttachment3D` + offset. Extra socket bones would pollute retargeting and the ragdoll.
 
 ### The base body
 

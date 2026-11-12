@@ -3,9 +3,9 @@
 The project's index: read "Start here" at the start of each session, then only the file your task touches.
 Non-trivial work gets a session-log entry (`log/`), not an edit here; "Session log" at the end says how.
 
-## Start here (state as of 2026-11-11)
+## Start here (state as of 2026-11-12)
 
-**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~940 xUnit tests, schema 78, world generation version 3), the game in
+**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~1,010 xUnit tests (a shared TestKit.cs in cs/Sim.Tests), schema 78, world generation version 3), the game in
 Godot 4.6 .NET (`godot/`). It began as a RimWorld-style colony sim and is now **Project Zomboid-style survival in
 first person** (3D, `godot/World3D`), with an optional colony sim run from the map screen's Colony tab (M; 2D
 top-down, `godot/Render`), neighbouring settlements living their own lives, and survivors with stories and requests.
@@ -17,7 +17,7 @@ clothes and hair on everyone, and new walks and zombie animation. Until 2026-11-
 `ts-final`.
 
 **Run and check.**
-- `./check.sh`: builds the sim, its tests and the game (Release, and the Debug build the game runs), runs the tests
+- `./check.sh`: builds the sim, its tests, the harness and the game (Release, and the Debug build the game runs), runs the tests
   (about 10 s). `./check.sh --all` adds the Godot self-test. Output is in `.check/`: read it, don't rerun.
 - `./finish.sh "message"` (or `-F file`; `--all` for the self-test too): runs the check and, only if it is green,
   commits everything (`git add -A`). It never pushes.

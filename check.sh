@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The check: run it before every commit (a red check means stop and fix).
-#   ./check.sh         build everything (the sim, its tests, the Godot game) and run the sim's tests
+#   ./check.sh         build everything (the sim, its tests, the harness, the Godot game) and run the sim's tests
 #   ./check.sh --all   and the Godot self-test: real input through the running game (a window opens for a few seconds),
 #                      run while the sim's tests run
 # Godot runs the game's DEBUG build (godot/.godot/mono/temp/bin/Debug), so every check builds that too (build-debug.log,

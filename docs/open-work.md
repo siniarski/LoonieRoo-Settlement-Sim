@@ -3,7 +3,7 @@
 What is left, by area. Gathered on 2026-11-10 from NOTES.md and the session log, and rewritten on 2026-11-11 at the
 merge of that day's sessions (log/2026-11-11-01-the-big-merge.md lists them; each has its own entry in `log/` with
 the details behind a line here). Read the section your task touches. When you finish or find something, add a
-session-log entry (`log/`) and update the line here.
+session-log entry (`log/`) and update the line here. The cars section was put in order by subject on 2026-11-12.
 
 ## For the player to decide
 
@@ -157,47 +157,53 @@ the sim's is yaw only; ovens don't glow while you cook; colonists never touch sw
 
 - Left from the first-person start (2026-11-08): the world's look (textures); what line of sight and fog of war mean
   in first person.
-- Cars (log/2026-11-11-04-car-body.md): a car's body in the sim is the size of the car drawn (VehicleBody.cs).
-  A parked car is in the way of everyone on foot (VehicleParking.cs, log/2026-11-11-06-parked-cars.md), and the dead
-  get over it (a crawler under a pickup) and runners over barricades (Crossings.cs, log/2026-11-11-07-dead-climb.md).
-  Left of the crossings: no queue (a crowd goes over one car all at once, overlapping on top of it); a path's cost
-  for a car is the same whoever plans it (a crawler pays for a pickup as for a sedan, though under is quick); the
-  body slides up the car's flank lying down (no clip of hauling up, no hands on it), and a paused or just-placed
-  climber faces any way; a horde's field costs a barricade as battering even for its runners; nobody has played
-  it. Left of the climbers (log/2026-11-12-08-climbers.md): no clip for falling off or lying down (a knocked-off one
-  lies in the crawl pose; the animation session may add one, action "down", and "pile" for climbing a pile-up); a
-  barricade's 600 health falls to six walkers in about 2.5 s, so a pile-up mostly shows where the fence is mended or
-  strong: whether barricades should hold longer is open; the thump has no sound of its own in the game yet; tall
-  fences are not offered to your own hands (Handiwork), only to colonists; the solo and colony bots don't build them. Left of the cars: the car you sit in
-  is solid to the dead, animals and dogs and they batter it, not you, till it's a wreck (VehicleCabin.cs,
-  log/2026-11-12-07-cars.md), but their paths still go through it (they press against its side; a crowd behind
-  pushes the front ones along it). Pushing a car (J, VehiclePush.cs): no pushing pose or hands on it; you walk up
-  to half a metre behind its boot (its end tiles stop you short of the body); it rolls only along its length, never
-  turns; slope isn't felt (Heights.cs is read by nothing in the tick: the player's call). Car alarms (VehicleAlarm.cs): the sound is the
-  house alarm's bell pitched up, not a siren or horn; no lights flash; nothing turns one off but time (no fob, no
-  fuse to pull); your own car's alarm goes off when the dead batter it with you inside. Under a pickup (VehicleHide.cs): no
-  crawling clip in or out (you are put under its middle and out beside it); only the dead are fooled (a wolf after
-  you still knows where you are and waits by it, unable to bite); your body is
-  drawn lying, not on its back looking up; the dead and animals stop at
-  the tiles under a car, so one can stand a third of a metre into its flank (you stop at the body); animals go under or over one by kind (AnimalCars.cs, log/2026-11-11-09-animals-cars.md;
-  left there: meat from an animal killed mid-crossing drops on a car's tile, out of a colonist's
-  reach; a crossing is a straight line, so a car on the slant is crossed square to the path, not to the car;
-  animals have no climbing or crouching clips: they are lifted, and squashed to fit under; the corner fix in
-  `Walkers.walkTo` makes a body caught on a corner inch round it, a few ticks slow); a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't
-  turn a car sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's
-  call whether cars should be faster now that they are car-sized).
-  You go over and onto parked cars (CarLeaps.cs, log/2026-11-11-08-your-leaps.md). Left: **on a roof the dead reach
-  you by distance as on the ground** (from beside the car, height not counted) and now climb up after you too
-  (merged, log/2026-11-11-10-crossings-merged.md): a roof is a lookout, not a refuge; whether height should count is
-  the player's call once it has been played. Also left: no
-  hand on the car as you climb or slide (People.Leap.cs puts a hand only on sills and barricades); the landing sound
-  is the ground's, on a roof too; the truck's bed has no sides to walk into; a car's top is a profile along its length
-  only (its sides as high as its middle); dropping something on a roof puts it on the ground under the car; you can't
-  step from one car's roof onto another's.
-- The driver's seat (log/2026-11-11-05-drivers-seat.md): Left: no hands on the wheel and no body in the seat; the
-  mirrors are grey glass (nothing reflects); no windscreen glass, rain on it or wipers working; doors don't open
-  as you get in; the tachometer and odometer are the view's (a trip is forgotten on a reload); the speedometer's
-  dial goes to 60 and the car to 22; passengers aren't a thing; the cabin doesn't pitch or roll on a slope.
+- Cars, by what is left of each (nobody has played any of it). The sim's car is the size of the car drawn
+  (VehicleBody.cs, log/2026-11-11-04-car-body.md); a parked one is in the way of everyone on foot (VehicleParking.cs,
+  log/2026-11-11-06-parked-cars.md).
+  - **Crossings** (Crossings.cs, log/2026-11-11-07-dead-climb.md, log/2026-11-11-10-crossings-merged.md): the dead
+    get over a car (a crawler under a pickup) and runners over barricades. No queue: a crowd goes over one car all
+    at once, overlapping on top of it. A path's cost for a car is the same whoever plans it (a crawler pays for a
+    pickup as for a sedan, though under is quick); a horde's field costs a barricade as battering even for its
+    runners.
+  - **Climbers** (log/2026-11-12-08-climbers.md): the body slides up the car's flank lying down (no clip of hauling
+    up, no hands on it), and a paused or just-placed climber faces any way. No clip for falling off or lying down
+    (a knocked-off one lies in the crawl pose; the animation session may add one, action "down", and "pile" for a
+    pile-up). A barricade's 600 health falls to six walkers in about 2.5 s, so a pile-up mostly shows where the
+    fence is mended or strong: whether barricades should hold longer is open. The thump has no sound of its own in
+    the game yet. Tall fences are not offered to your own hands (Handiwork), only to colonists; the solo and colony
+    bots don't build them.
+  - **Your leaps** (CarLeaps.cs, log/2026-11-11-08-your-leaps.md): **on a roof the dead reach you by distance as on
+    the ground** (from beside the car, height not counted) and climb up after you: a roof is a lookout, not a
+    refuge; whether height should count is the player's call once it has been played. No hand on the car as you
+    climb or slide (People.Leap.cs puts a hand only on sills and barricades); the landing sound is the ground's, on a
+    roof too; the truck's bed has no sides to walk into; a car's top is a profile along its length only; dropping
+    something on a roof puts it on the ground under the car; you can't step from one car's roof onto another's.
+  - **The car you sit in** (VehicleCabin.cs, log/2026-11-12-07-cars.md): solid to the dead, animals and dogs, and
+    they batter it, not you, till it's a wreck; their paths still go through it (they press against its side; a
+    crowd behind pushes the front ones along it).
+  - **Pushing** (J, VehiclePush.cs): no pushing pose or hands on it; you walk up to half a metre behind its boot (its
+    end tiles stop you short of the body); it rolls only along its length, never turns; slope isn't felt
+    (Heights.cs is read by nothing in the tick: the player's call).
+  - **Alarms** (VehicleAlarm.cs): the sound is the house alarm's bell pitched up, not a siren or horn; no lights
+    flash; nothing turns one off but time (no fob, no fuse to pull); your own car's alarm goes off when the dead
+    batter it with you inside.
+  - **Hiding under a pickup** (VehicleHide.cs): no crawling clip in or out (you are put under its middle and out
+    beside it); only the dead are fooled (a wolf after you still knows where you are and waits by it, unable to
+    bite); your body is drawn lying, not on its back looking up; the dead and animals stop at the tiles under a
+    car, so one can stand a third of a metre into its flank (you stop at the body).
+  - **Animals** (AnimalCars.cs, log/2026-11-11-09-animals-cars.md): they go under or over one by kind. Meat from an
+    animal killed mid-crossing drops on a car's tile, out of a colonist's reach; a crossing is a straight line, so a
+    car on the slant is crossed square to the path, not to the car; they have no climbing or crouching clips (they
+    are lifted, and squashed to fit under); the corner fix in `Walkers.walkTo` makes a body caught on a corner inch
+    round it, a few ticks slow.
+  - **Driving**: a wanderer, a trader or a dropped thing can still turn up on a car's tile; a wall doesn't turn a car
+    sliding along it; the top speed is 22 km/h on a road, 11 off it (160 and 80 SUB a tick: the player's call
+    whether cars should be faster now that they are car-sized).
+  - **The driver's seat** (log/2026-11-11-05-drivers-seat.md): no hands on the wheel and no body in the seat; the
+    mirrors are grey glass (nothing reflects); no windscreen glass, rain on it or wipers working; doors don't open
+    as you get in; the tachometer and odometer are the view's (a trip is forgotten on a reload); the
+    speedometer's dial goes to 60 and the car to 22; passengers aren't a thing; the cabin doesn't pitch or roll on a
+    slope.
 - Models added 2026-11-11 (log/2026-11-11-03-models.md): farm plots and crops, building sites, cars, the
   helicopter, the flashlight, and the people the sim keeps as a tile (wanderers, traders, prisoners, caravans,
   scavenging parties: `Others.cs`'s stand-ins). Left: a

@@ -36,7 +36,7 @@ Mostly history: the TypeScript build is at git tag `ts-final`. Kept for the reas
   *Why:* Ported by translating the TypeScript and checking it state for state; the TypeScript retired at git tag ts-final
 - **Hot reload.** `main.ts` self-accepts; on dispose it stashes sim + view state in `import.meta.hot.data` and tears down the app (RAF, listeners, HUD)
   *Why:* Editing any module (sim, render, ui) swaps code without losing the map you're building
-- **Agent hooks.** `window.view.tileToScreen(x, y)` and `getView()` alongside `window.game`
+- **Agent hooks.** `window.view.tileToScreen(x, y)` and `getView()` (TypeScript-era names, gone with the browser game) alongside `window.game`
   *Why:* Lets Playwright/agents click a specific tile without camera maths
 - **Frame loop.** Next frame is scheduled before the work; errors are caught and logged once each
   *Why:* One bad frame (often a half-finished edit) used to kill the loop permanently
