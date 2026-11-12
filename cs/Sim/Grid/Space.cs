@@ -102,5 +102,11 @@ public static partial class Space
 
     public static int manhattan(Point a, Point b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
 
+    /// <summary>Tiles apart counting a diagonal step as one: max(|dx|, |dy|). "Within r" of this is a square.</summary>
+    public static int chebyshev(Point a, Point b) => Math.Max(Math.Abs(a.x - b.x), Math.Abs(a.y - b.y));
+
+    /// <summary><see cref="chebyshev(Point, Point)"/> to the tile (x, y).</summary>
+    public static int chebyshev(Point a, int x, int y) => Math.Max(Math.Abs(a.x - x), Math.Abs(a.y - y));
+
     public static bool samePoint(Point a, Point b) => a.x == b.x && a.y == b.y;
 }

@@ -486,7 +486,7 @@ public static partial class Worldgen
             {
                 for (var x = p.x - r; x <= (p.x + r); x++)
                 {
-                    if (Js.T(((JsMath.max(JsMath.abs(x - p.x), JsMath.abs(y - p.y)) == r) && Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y))))
+                    if (Js.T(((Space.chebyshev(p, x, y) == r) && Grids.inBounds(state.grid, x, y)) && Js.T(accept(x, y))))
                     {
                         return new Point { x = Js.I(x), y = Js.I(y) };
                     }

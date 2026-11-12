@@ -403,7 +403,7 @@ public static partial class ControlMod
     /// <summary>Within one tile, diagonals included.</summary>
     public static bool nextTo(Point a, Point b)
     {
-        return JsMath.max(JsMath.abs(a.x - b.x), JsMath.abs(a.y - b.y)) <= 1;
+        return Space.chebyshev(a, b) <= 1;
     }
 
     /// <summary>The facing direction (a step of -1..1 each way) from a tile towards another.</summary>

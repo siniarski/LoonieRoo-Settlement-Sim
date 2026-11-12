@@ -44,7 +44,7 @@ public static partial class Wishes
 
     public static bool near(Survivor a, Survivor b)
     {
-        return JsMath.max(JsMath.abs(a.pos.x - b.pos.x), JsMath.abs(a.pos.y - b.pos.y)) <= SEE_RANGE;
+        return Space.chebyshev(a.pos, b.pos) <= SEE_RANGE;
     }
 
     /// <summary>The wishes that fit this survivor right now, in a fixed order.</summary>

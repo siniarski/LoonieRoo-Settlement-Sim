@@ -54,7 +54,7 @@ public static partial class Wellbeing
             {
                 continue;
             }
-            var company = awake.some((o) => (o != s) && (JsMath.max(JsMath.abs(o.pos.x - s.pos.x), JsMath.abs(o.pos.y - s.pos.y)) <= COMPANY));
+            var company = awake.some((o) => (o != s) && (Space.chebyshev(o.pos, s.pos) <= COMPANY));
             s.social = clamp(s.social + (company ? 1 : -1));
         }
     }

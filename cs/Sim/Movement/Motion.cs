@@ -125,7 +125,7 @@ public static partial class Motion
     public static void followTile(Body e, double slack = 0)
     {
         var t = tileOf(e.at);
-        if (JsMath.max(JsMath.abs(t.x - e.pos.x), JsMath.abs(t.y - e.pos.y)) > slack)
+        if (Space.chebyshev(t, e.pos) > slack)
         {
             e.at = centre(e.pos);
         }

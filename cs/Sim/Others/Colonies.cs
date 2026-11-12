@@ -326,7 +326,7 @@ public static partial class Colonies
 
     public static bool someoneNear(SimState state, Settlement n)
     {
-        return state.survivors.some((s) => JsMath.max(JsMath.abs(s.pos.x - n.x), JsMath.abs(s.pos.y - n.y)) <= UNFOLD_RADIUS);
+        return state.survivors.some((s) => Space.chebyshev(s.pos, n.x, n.y) <= UNFOLD_RADIUS);
     }
 
     /// <summary>The compound's box: wider for more people.</summary>

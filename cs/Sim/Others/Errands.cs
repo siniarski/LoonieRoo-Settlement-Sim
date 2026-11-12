@@ -126,7 +126,7 @@ public static partial class Errands
         {
             return (e.zombieIds.length > 0) && !state.zombies.some((z) => e.zombieIds.includes(z.id));
         }
-        return state.survivors.some((s) => JsMath.max(JsMath.abs(s.pos.x - e.x), JsMath.abs(s.pos.y - e.y)) <= FOUND_REACH);
+        return state.survivors.some((s) => Space.chebyshev(s.pos, e.x, e.y) <= FOUND_REACH);
     }
 
     public static void reward(SimState state, Errand e, Settlement n)

@@ -81,7 +81,7 @@ public static partial class Orders
             return false;
         }
         var gap = (s.order.kind == "follow") ? FOLLOW_GAP : 0;
-        var far = JsMath.max(JsMath.abs(at.x - s.pos.x), JsMath.abs(at.y - s.pos.y));
+        var far = Space.chebyshev(at, s.pos);
         if (far <= gap)
         {
             return (s.order.kind == "follow") && stepAside(state, s);
@@ -110,7 +110,7 @@ public static partial class Orders
             return false;
         }
         var leader = ControlMod.controlled(state);
-        return ((leader != null) && (leader != s)) && (JsMath.max(JsMath.abs(leader.pos.x - s.pos.x), JsMath.abs(leader.pos.y - s.pos.y)) > HURRY_GAP);
+        return ((leader != null) && (leader != s)) && (Space.chebyshev(leader.pos, s.pos) > HURRY_GAP);
     }
 
     /// <summary>Standing in your line of fire: step to a free tile beside it. Returns true if they moved.</summary>
@@ -151,7 +151,7 @@ public static partial class Orders
     public static List<Furniture> crates(SimState state, Point o)
     {
         var room = Rooms.roomAt(state, o.x, o.y);
-        return FurnitureMod.ofKind(state, "crate").filter((f) => Js.T((f.loot > 0) && (Js.T(Js.T(room) ? (Rooms.roomAt(state, f.x, f.y)?.index == room.index) : (JsMath.max(JsMath.abs(f.x - o.x), JsMath.abs(f.y - o.y)) <= LOOT_RADIUS)))));
+        return FurnitureMod.ofKind(state, "crate").filter((f) => Js.T((f.loot > 0) && (Js.T(Js.T(room) ? (Rooms.roomAt(state, f.x, f.y)?.index == room.index) : (Space.chebyshev(o, f.x, f.y) <= LOOT_RADIUS)))));
     }
 
     /// <summary>One tick of a loot order: walk to the next crate and search it; with none left, follow again.</summary>

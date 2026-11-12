@@ -327,7 +327,7 @@ public static partial class Commands
             var you = ControlMod.controlled(state);
             if (Js.T(you) && !Js.T(command.survivorId))
             {
-                var r = state.residents.find((x_1) => JsMath.max(JsMath.abs(x_1.pos.x - you.pos.x), JsMath.abs(x_1.pos.y - you.pos.y)) <= Talk.TALK_RANGE);
+                var r = state.residents.find((x_1) => Space.chebyshev(x_1.pos, you.pos) <= Talk.TALK_RANGE);
                 if (Js.T(r))
                 {
                     var why_2 = Residents.meetResident(state, you, r);

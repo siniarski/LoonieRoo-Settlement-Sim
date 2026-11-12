@@ -150,7 +150,7 @@ public static class Swim
             for (int y = from.y - r; y <= from.y + r; y++)
                 for (int x = from.x - r; x <= from.x + r; x++)
                 {
-                    if (JsMath.max(JsMath.abs(x - from.x), JsMath.abs(y - from.y)) != r || !Grids.isWalkable(grid, x, y)) continue;
+                    if (Space.chebyshev(from, x, y) != r || !Grids.isWalkable(grid, x, y)) continue;
                     double d2 = (double)(x - from.x) * (x - from.x) + (double)(y - from.y) * (y - from.y);
                     if (d2 < bestD2) { bestD2 = d2; best = new Point { x = x, y = y }; }
                 }
