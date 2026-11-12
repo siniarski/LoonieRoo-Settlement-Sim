@@ -116,5 +116,21 @@ public partial class ResidentsTest
             expect(you.health).toBeLessThan(health);
             expect(Residents.HOSTILE_SIGHT).toBeGreaterThan(0);
         }
+
+        [Fact(DisplayName = "residents > a hostile one's blow frightens and shakes you, as a zombie's does")]
+        public void T007_a_hostile_ones_blow_frightens_and_shakes_you()
+        {
+            var __d4 = town();
+            var state = __d4.state;
+            var you = __d4.you;
+            var n = __d4.n;
+            var r = Js.NN(Js.Get(Residents.residentsOf(state, n), 0));
+            var health = you.health;
+            Residents.hitSurvivor(state, r, n, you);
+            expect(you.health).toBeLessThan(health);
+            expect(you.panic).toBeGreaterThan(0);
+            expect(you.thoughts.some((t) => t.kind == "attacked")).toBe(true);
+            expect(you.thoughts.some((t) => t.kind == "shaken")).toBe(true);
+        }
     }
 }

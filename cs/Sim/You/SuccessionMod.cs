@@ -67,6 +67,7 @@ public static partial class SuccessionMod
 
     public static void take(SimState state, Survivor s)
     {
+        Commands.dropEverything(state, s, "taking over");  // their job, sleep, meal and the rest, as takeControl does
         state.control = new Control { survivorId = s.id, dx = 0, dy = 0, facing = new Point { x = Js.I(0), y = Js.I(1) }, nextSwing = 0, busy = null };
         Inventory.readyQuick(state, s);  // what your heir holds is on the hotbar
         s.order = null;

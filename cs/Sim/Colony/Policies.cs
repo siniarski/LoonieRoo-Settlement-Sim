@@ -18,7 +18,7 @@ public static partial class Policies
 
     public static readonly List<string> POLICIES = ["rationing", "curfew", "quarantine"];
 
-    public static readonly JsRecord<string> POLICY_INFO = new() { ["rationing"] = "food lasts a quarter longer; everyone minds (-5 mood)", ["curfew"] = "no work outdoors at night but guarding, firefighting and doctoring", ["quarantine"] = "the infected and sick keep to bed (doctors come) and stop spreading it" };
+    public static readonly JsRecord<string> POLICY_INFO = new() { ["rationing"] = "food lasts a third longer; everyone minds (-5 mood)", ["curfew"] = "no work outdoors at night but guarding, firefighting and doctoring", ["quarantine"] = "the infected and sick keep to bed (doctors come) and stop spreading it" };
 
     public const double RATIONED_MOOD = -5;
 
@@ -36,10 +36,10 @@ public static partial class Policies
         return state.policies.includes(p);
     }
 
-    /// <summary>Rationing: satiety drains three ticks in four.</summary>
+    /// <summary>Rationing: satiety drains three slow ticks in four (counted in slow ticks: it is asked on them).</summary>
     public static bool satietyDrains(SimState state)
     {
-        return !policyOn(state, "rationing") || ((state.tick % 4) != 0);
+        return !policyOn(state, "rationing") || ((Time.slowCount(state.tick) % 4) != 0);
     }
 
     /// <summary>Quarantine: the infected and sick stay in bed.</summary>

@@ -93,7 +93,7 @@ public partial class ThreatsTest
             expect(Director.threatScale(state)).toBeCloseTo(1.1);
             for (var i = 0; i < 5; i++)
             {
-                Events.logEvent(state, $"Bea died of testing");
+                Director.noteDeath(state);
             }
             expect(Director.threatScale(state)).toBe(Director.MIN_THREAT);
         }
@@ -103,10 +103,24 @@ public partial class ThreatsTest
         {
             var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s....."] });
             state.tick = Js.I(((double)(2) * (Time.DAY_LENGTH)));
-            Events.logEvent(state, "Bea died of testing");
-            Events.logEvent(state, "Cal died of testing");
+            Director.noteDeath(state);
+            Director.noteDeath(state);
             Director.updateDirector(state);
             expect(state.items.filter((i) => i.kind == "food").length).toBeGreaterThan(0);
+        }
+
+        [Fact(DisplayName = "the storyteller > counts a death after the event log has moved on")]
+        public void T009b_counts_a_death_after_the_event_log_has_moved_on()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["ss...."] });
+            Needs.killSurvivor(state, state.survivors[0], "testing");
+            for (var i = 0; i < Events.MAX_EVENTS + 5; i++)
+            {
+                Events.logEvent(state, "the wind");
+            }
+            expect(Director.recentDeaths(state)).toBe(1);
+            Events.logEvent(state, "Nobody died of a name");
+            expect(Director.recentDeaths(state)).toBe(1);
         }
     }
 }

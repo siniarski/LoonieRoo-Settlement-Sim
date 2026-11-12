@@ -37,6 +37,22 @@ public partial class SuccessionTest
             expect(state.succession).toBeNull();
         }
 
+        [Fact(DisplayName = "the death rule > the heir puts down their job, as anyone you take over does")]
+        public void T002b_the_heir_puts_down_their_job()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s.s.."] });
+            var (you, heir) = state.survivors;
+            heir.resolve = 70;
+            Commands.applyCommand(state, new Command { type = "takeControl", survivorId = you.id });
+            dies(state);
+            var job = new Job { id = "j-test", type = "build", x = 4, y = 0, reservedBy = heir.id };
+            state.jobs.push(job);
+            heir.jobId = job.id;
+            expect(Commands.applyCommand(state, new Command { type = "succeed", choice = heir.id }).ok).toBe(true);
+            expect(heir.jobId).toBeNull();
+            expect(job.reservedBy).toBeNull();
+        }
+
         [Fact(DisplayName = "the death rule > or start anew, far off, alone and kitted out")]
         public void T003_or_start_anew_far_off_alone_and_kitted_out()
         {

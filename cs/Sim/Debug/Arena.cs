@@ -36,22 +36,33 @@ public static partial class Arena
         return state;
     }
 
-    /// <summary>The nearest open floor tile to a point, looking outward a few rings.</summary>
+    /// <summary>An open floor tile near a point: in the first square ring out (up to 4) that has one, the nearest in a straight line (ties: the first in reading order).</summary>
     public static Point? openNear(SimState state, Point p)
     {
         for (var r = 0; r <= 4; r++)
         {
+            Point? best = null;
+            var bestD = double.PositiveInfinity;
             for (var dy = -r; dy <= r; dy++)
             {
                 for (var dx = -r; dx <= r; dx++)
                 {
+                    if ((JsMath.max(JsMath.abs(dx), JsMath.abs(dy)) != r) || (((double)dx * dx) + ((double)dy * dy) >= bestD))
+                    {
+                        continue;  // only this ring (the inner ones were looked at), and only nearer than the best so far
+                    }
                     var x = p.x + dx;
                     var y = p.y + dy;
                     if ((Grids.getTile(state.grid, x, y) == "floor") && Grids.isWalkable(state.grid, x, y))
                     {
-                        return new Point { x = Js.I(x), y = Js.I(y) };
+                        best = new Point { x = Js.I(x), y = Js.I(y) };
+                        bestD = ((double)dx * dx) + ((double)dy * dy);
                     }
                 }
+            }
+            if (best != null)
+            {
+                return best;
             }
         }
         return null;

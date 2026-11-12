@@ -159,4 +159,32 @@ public partial class SavefileTest
             expect(text.length).toBeLessThan(Js.Json_stringify(state.furniture).length);
         }
     }
+
+    /// <summary>records keep JS order</summary>
+    public class D009_records_keep_js_order
+    {
+        [Fact(DisplayName = "records keep JS order > a key added after a removal comes last, as it will after a save and load")]
+        public void T001_a_key_added_after_a_removal_comes_last()
+        {
+            var r = new JsRecord<double> { ["a"] = 1, ["b"] = 2, ["c"] = 3 };
+            r.Remove("b");
+            r["d"] = 4;
+            expect(Js.ObjectKeys(r)).toEqual(Js.Arr(["a", "c", "d"]));
+            var back = new JsRecord<double>(r);  // what a load builds: the entries in the file's order
+            back["e"] = 5;
+            r["e"] = 5;
+            expect(Js.ObjectKeys(back)).toEqual(Js.ObjectKeys(r));
+        }
+    }
+
+    /// <summary>the arena</summary>
+    public class D010_the_arena
+    {
+        [Fact(DisplayName = "the arena > openNear gives the nearest open tile of the ring, not the top-left one")]
+        public void T001_openNear_gives_the_nearest_open_tile_of_the_ring()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = [".##", "##.", "###"] });
+            expect(Arena.openNear(state, new Point { x = 1, y = 1 })).toEqual(new Point { x = 2, y = 1 });
+        }
+    }
 }

@@ -124,6 +124,25 @@ public static partial class Residents
     }
 
     /// <summary>An enemy's resident goes for the nearest of your people in sight. Returns true if it took the tick.</summary>
+    /// <summary>A hostile resident's blow: hurt as a zombie's or a wolf's is (a wound maybe, a thought, a fright), and
+    /// as they are, kept off by a car you sit in or hide under.</summary>
+    public static void hitSurvivor(SimState state, Resident r, Settlement n, Survivor target)
+    {
+        if (Js.T(Vehicles.underOf(state, target)) || Vehicles.batterVehicle(state, target))
+        {
+            return;
+        }
+        Wounds.maybeWound(state, target, r.id);
+        target.health = JsMath.max(0, target.health - Clothing.armourDamage(state, target, RESIDENT_DAMAGE));
+        target.lastHurtBy = $"someone from {Js.Str(n.name)}";
+        target.hurtTick = state.tick;
+        target.note = $"attacked by someone from {Js.Str(n.name)} at ({Js.Str(r.pos.x)}, {Js.Str(r.pos.y)})";
+        Mood.addThought(state, target, "attacked");
+        Mood.addThought(state, target, "shaken");
+        BodyMod.frighten(target, BodyMod.HIT_PANIC);
+        BodyMod.startle(state, target);
+    }
+
     public static bool attack(SimState state, Resident r, Settlement n)
     {
         double near(Survivor s)
@@ -142,9 +161,7 @@ public static partial class Residents
                 return true;
             }
             r.cooldown = RESIDENT_HIT_EVERY;
-            target.health = JsMath.max(0, target.health - Clothing.armourDamage(state, target, RESIDENT_DAMAGE));
-            target.lastHurtBy = $"someone from {Js.Str(n.name)}";
-            target.hurtTick = state.tick;
+            hitSurvivor(state, r, n, target);
             return true;
         }
         if ((state.tick >= r.nextThinkTick) || (r.path.length == 0))

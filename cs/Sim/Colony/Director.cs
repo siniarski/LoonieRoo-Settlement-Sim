@@ -39,7 +39,14 @@ public static partial class Director
 
     public static double recentDeaths(SimState state)
     {
-        return state.events.filter((e) => (e.tick >= (state.tick - RECENT)) && e.message.includes(" died of ")).length;
+        return state.deathTicks.filter((t) => t >= (state.tick - RECENT)).length;
+    }
+
+    /// <summary>A death for the storyteller to count; ticks older than its window go.</summary>
+    public static void noteDeath(SimState state)
+    {
+        state.deathTicks = state.deathTicks.filter((t) => t >= (state.tick - RECENT));
+        state.deathTicks.push(state.tick);
     }
 
     public static double threatScale(SimState state)

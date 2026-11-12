@@ -288,12 +288,18 @@ public static partial class Leaps
         if (!inCar && !airborne(c)) drop(state, s);
     }
 
-    /// <summary>Control is about to end or pass to someone else: whoever you were is put on the ground, off any car
-    /// and out of any leap.</summary>
+    /// <summary>Control is about to end or pass to someone else: whoever you were is put on the ground, off any car,
+    /// out from under one and out of any leap.</summary>
     public static void letGo(SimState state)
     {
         var c = state.control;
         var s = ControlMod.controlled(state);
+        if (c != null && s != null && c.underCar != null)
+        {
+            Vehicles.outFromUnder(c);  // from under a pickup too: a colonist can't lie in a car's tiles
+            drop(state, s);
+            return;
+        }
         if (c == null || s == null || (c.onCar == null && !airborne(c))) return;
         c.onCar = null;
         if (airborne(c)) c.busy = null;

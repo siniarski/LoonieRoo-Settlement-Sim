@@ -26,6 +26,30 @@ public partial class PoliciesTest
                 Tick.tick(state);
             }
             expect(Food.SATIETY_MAX - s.satiety).toBe(300);
+            // 300 drained in 400 ticks: food lasts 400/300, a third longer, and the policy's text says so
+            expect(Js.Get(Policies.POLICY_INFO, "rationing")).toContain("a third longer");
+        }
+
+        [Fact(DisplayName = "policies > rationing saves a quarter of the drain at a longer day too")]
+        public void T002b_rationing_saves_a_quarter_at_a_longer_day_too()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s."] });
+            expect(Commands.applyCommand(state, new Command { type = "setPolicy", policy = "rationing", on = true }).ok).toBe(true);
+            try
+            {
+                Time.setDayScale(2);
+                var drains = 0;
+                for (var slow = 0; slow < 400; slow++)
+                {
+                    state.tick = slow * 2;  // the slow ticks at scale 2, where satiety is drained
+                    if (Policies.satietyDrains(state)) drains++;
+                }
+                expect(drains).toBe(300);
+            }
+            finally
+            {
+                Time.setDayScale(1);
+            }
         }
 
         [Fact(DisplayName = "policies > curfew: no outdoor work at night but guarding")]

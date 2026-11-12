@@ -156,9 +156,12 @@ public static partial class JobChoice
                     {
                         return null;
                     }
-                    job.x = Js.I(target.x);
-                    job.y = Js.I(target.y);
-                    return pathPlan(state, s.pos, [target], null);
+                    var plan = pathPlan(state, s.pos, [target], null);
+                    if (Js.T(plan))
+                    {
+                        plan.moveTo = new Point { x = Js.I(target.x), y = Js.I(target.y) };
+                    }
+                    return plan;
                 }
                 }
             case "doctor":
@@ -268,6 +271,11 @@ public static partial class JobChoice
         job.reservedBy = s.id;
         s.jobId = job.id;
         job.dest = plan.dest;
+        if (Js.T(plan.moveTo))
+        {
+            job.x = Js.I(plan.moveTo.x);
+            job.y = Js.I(plan.moveTo.y);
+        }
         if (Js.T(plan.itemId))
         {
             job.itemId = plan.itemId;

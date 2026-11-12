@@ -52,6 +52,28 @@ public partial class FogTest
     public class D004_exploring
     {
 
+        [Fact(DisplayName = "exploring > asking which job a scout would take moves no job; taking it does")]
+        public void T004b_asking_which_job_a_scout_would_take_moves_no_job()
+        {
+            var state = dark(STRIP, new() { ["scout"] = 3 });
+            expect(Commands.applyCommand(state, new Command { type = "designateExplore", x0 = Js.I(59), y0 = Js.I(2), x1 = Js.I(40), y1 = Js.I(0) }).ok).toBe(true);
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            runUntil(state, (_) => state.jobs.some((j) => j.type == "scout"), 10);
+            var job = Js.NN(state.jobs.find((j) => j.type == "scout"));
+            if (Js.T(s.jobId))
+            {
+                Jobs.releaseSurvivor(state, s, "a question");
+            }
+            job.x = 58;
+            job.y = 2;
+            var (x, y) = (job.x, job.y);
+            var choice = Js.NN(JobChoice.chooseJob(state, s));
+            expect(choice.job).toBe(job);
+            expect((job.x, job.y)).toEqual((x, y));
+            JobChoice.claim(state, s, choice.job, choice.plan, choice.why);
+            expect((job.x, job.y)).toEqual((choice.plan.moveTo.x, choice.plan.moveTo.y));
+        }
+
         [Fact(DisplayName = "exploring > a scout sweeps a dark box until nothing in it is left unseen, then the order is done")]
         public void T005_a_scout_sweeps_a_dark_box_until_nothing_in_it_is_left_unseen()
         {

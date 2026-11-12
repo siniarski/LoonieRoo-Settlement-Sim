@@ -92,6 +92,21 @@ public static partial class Needs
         }
     }
 
+    /// <summary>Is there a remedy to stop work for? When one is wanted and none is free, ask again in
+    /// TREAT_RETRY_TICKS (as startTreatment does), not every tick.</summary>
+    public static bool remedyToGoFor(SimState state, Survivor s)
+    {
+        if (Js.T(nearestRemedy(state, s)))
+        {
+            return true;
+        }
+        if (Medicine.remediesFor(s).length > 0)
+        {
+            s.nextTreatTick = state.tick + Health.TREAT_RETRY_TICKS;
+        }
+        return false;
+    }
+
     /// <summary>Interrupts work for a need before movement, so a tired or hungry hauler doesn't finish a long walk first. Hunger only interrupts if there is food to go to.</summary>
     public static void interruptForNeeds(SimState state, Survivor s)
     {
@@ -118,7 +133,7 @@ public static partial class Needs
                 s.nextDrinkTick = state.tick + Water.DRINK_RETRY_TICKS;
             }
         }
-        else if (Js.T((state.tick >= s.nextTreatTick) && Js.T(nearestRemedy(state, s))))
+        else if ((state.tick >= s.nextTreatTick) && remedyToGoFor(state, s))
         {
             Jobs.releaseSurvivor(state, s, "going to treat wounds");
         }
