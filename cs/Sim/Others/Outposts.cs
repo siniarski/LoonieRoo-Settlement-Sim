@@ -68,7 +68,7 @@ public static partial class Outposts
             v.fuel -= TRIP_FUEL;
             return true;
         }
-        var fuel = state.items.filter((i) => ((i.kind == "fuel") && (i.pos != null)) && (i.reservedBy == null));
+        var fuel = Items.freeOfKind(state, "fuel");
         if (fuel.length < TRUCK_FUEL)
         {
             return false;

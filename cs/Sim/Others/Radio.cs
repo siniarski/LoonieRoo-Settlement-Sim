@@ -67,7 +67,7 @@ public static partial class Radio
         {
             return "no such request";
         }
-        var free = state.items.filter((i) => ((i.kind == r.kind) && (i.pos != null)) && (i.reservedBy == null));
+        var free = Items.freeOfKind(state, r.kind);
         if (free.length < r.count)
         {
             return $"need {Js.Str(r.count)} free {Js.Str(r.kind)}";

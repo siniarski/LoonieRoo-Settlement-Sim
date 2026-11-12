@@ -211,7 +211,7 @@ public static partial class Settlements
         {
             return "no such settlement";
         }
-        var food = state.items.filter((i) => ((i.kind == "food") && (i.pos != null)) && (i.reservedBy == null));
+        var food = Items.freeOfKind(state, "food");
         if (food.length < GIFT_FOOD)
         {
             return $"need {Js.Str(GIFT_FOOD)} free food";

@@ -12,7 +12,7 @@ public static partial class Work
         var __d0 = state;
         var grid = __d0.grid;
         var v = __d0.walkabilityVersion;
-        var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == kind)).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
+        var free = Items.freeOfKind(state, kind).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
         return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Pathfinding.canReach(grid, v, from, [i.pos]) && Pathfinding.canReach(grid, v, i.pos, site));
     }
 

@@ -241,7 +241,7 @@ public static partial class JobChoice
                     }
                     var bp = Js.T(job.blueprintId) ? Designations.getBlueprint(state, job.blueprintId) : null;
                     var material = Js.T(bp) ? Designations.materialFor(bp.target) : "wood";
-                    var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == material)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos));
+                    var free = Items.freeOfKind(state, material).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos));
                     foreach (var item in Js.Iter(free.slice(0, Jobs.MAX_CANDIDATES)))
                     {
                         if (!Pathfinding.canReach(grid, v, s.pos, [item.pos]) || !Pathfinding.canReach(grid, v, item.pos, site))

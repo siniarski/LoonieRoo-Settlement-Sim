@@ -98,7 +98,7 @@ public static partial class Visitors
         {
             return "no such offer";
         }
-        var free = state.items.filter((i) => ((i.kind == o.want) && (i.pos != null)) && (i.reservedBy == null));
+        var free = Items.freeOfKind(state, o.want);
         if (free.length < o.wantCount)
         {
             return $"not enough {Js.Str(o.want)} (need {Js.Str(o.wantCount)}, have {Js.Str(free.length)} free)";

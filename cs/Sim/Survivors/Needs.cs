@@ -255,7 +255,7 @@ public static partial class Needs
     /// <summary>Nearest unreserved item of a kind, on the ground, that this survivor can reach.</summary>
     public static Item? nearestFreeItem(SimState state, Survivor s, string kind)
     {
-        return state.items.filter((i) => ((i.kind == kind) && (i.pos != null)) && (i.reservedBy == null)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
+        return Items.freeOfKind(state, kind).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
     }
 
     /// <summary>Gives up the reserved food (if any). Safe to call when not eating.</summary>
