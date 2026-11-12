@@ -12,7 +12,7 @@ godot/         the game: draws the world, plays sounds, takes input          (Go
    v
 cs/Sim/        the simulation: plain data and static functions               (pure C#, no Godot)
    ^              deterministic: the same seed and commands give the same world
-cs/Sim.Tests/  ~1,010 xUnit tests of the sim
+cs/Sim.Tests/  ~1,020 xUnit tests of the sim
 cs/Harness/    balance runs, benchmarks and stress tests of the sim
 art/           Blender scripts that build every model, run headless
 ```
