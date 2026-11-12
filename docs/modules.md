@@ -142,7 +142,7 @@ git tag `ts-final`.
   (the dead by tile, survivors within a bite, bodies pushed apart). **ZombieKinds**: runners, screamers, brutes,
   crawlers.
 - **Herds**: the dead out in the world (dormant and migrating). **Dormant**: dormant dead bucketed by place.
-- **Hordes**: the dead moving together on one flow field.
+- **Hordes**: the dead moving together on one flow field (**HordeField**, part of Hordes: the costs, the field, a member's next step).
 - **Crossings**: the dead over parked cars (a crawler under a pickup) and runners over barricades: who, how long, what paths pay.
 
 ### `Items/`
