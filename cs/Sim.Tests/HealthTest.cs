@@ -71,6 +71,19 @@ public partial class HealthTest
             expect(state.events.at(-1)?.message).toBe("Ash died of starvation");
         }
 
+        [Fact(DisplayName = "health and death > a hurt worker with no bandage about asks again later, not every tick")]
+        public void T004b_a_hurt_worker_with_no_bandage_asks_again_later()
+        {
+            var state = ScenarioMod.loadScenario(new Scenario { seed = 1, map = ["s....", "....."] });
+            var s = Js.NN(Js.Get(state.survivors, 0));
+            s.health = Health.HEALTH_MAX / 2;
+            s.jobId = "no-such-job";
+            expect(Medicine.remediesFor(s).length).toBeGreaterThan(0);
+            Needs.interruptForNeeds(state, s);
+            expect(s.nextTreatTick).toBe(state.tick + Health.TREAT_RETRY_TICKS);
+            expect(s.jobId).toBe("no-such-job");
+        }
+
         [Fact(DisplayName = "health and death > health 0 from anything else counts as injuries")]
         public void T005_health_0_from_anything_else_counts_as_injuries()
         {
