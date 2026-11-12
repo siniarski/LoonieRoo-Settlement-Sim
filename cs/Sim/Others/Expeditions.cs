@@ -69,7 +69,7 @@ public static partial class Expeditions
         var truckId = Outposts.truckVehicleId(state);
         var inTruck = Outposts.takeTruck(state);
         var id = $"x{Js.Str(state.nextId)}";
-        var v = (Js.T(inTruck && Js.T(truckId))) ? Vehicles.vehiclesOf(state).find((q) => q.id == truckId) : null;
+        var v = (Js.T(inTruck && Js.T(truckId))) ? Vehicles.getVehicle(state, truckId) : null;
         if (Js.T(v))
         {
             Vehicles.unpark(state, v); // off with the expedition: it's no longer standing in anyone's way
@@ -99,7 +99,7 @@ public static partial class Expeditions
     /// <summary>The truck on its way: where it is along the road (out, waiting at the ruin, back), and the dead on the way. Returns true if the expedition ended on the road.</summary>
     public static bool onTheRoad(SimState state, Expedition x)
     {
-        var v = Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId);
+        var v = Vehicles.getVehicle(state, x.truckId);
         if (!Js.T(v) || (x.leftTick == null))
         {
             return false;
@@ -150,7 +150,7 @@ public static partial class Expeditions
     public static void returnHome(SimState state, Expedition x)
     {
         state.expeditions.splice(state.expeditions.indexOf(x), 1);
-        var v = Js.T(x.truckId) ? Vehicles.vehiclesOf(state).find((q) => q.id == x.truckId) : null;
+        var v = Js.T(x.truckId) ? Vehicles.getVehicle(state, x.truckId) : null;
         if (Js.T(v))
         {
             var spot = Vehicles.parkable(state, x.home, v.heading, v.kind, v) ? x.home : (Space.nearestTile(state.grid, x.home, (px, py) => Vehicles.parkable(state, new Point { x = Js.I(px), y = Js.I(py) }, v.heading, v.kind, v), 400) ?? x.home);

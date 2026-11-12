@@ -30,7 +30,7 @@ public static partial class Vehicles
     {
         var c = state.control;
         if (c?.underCar == null || c.survivorId != s.id) return null;
-        return vehiclesOf(state).find((v) => v.id == c.underCar);
+        return getVehicle(state, c.underCar);
     }
 
     /// <summary>Under it: you lie under its middle, and the dead after you that see you now saw you go.</summary>

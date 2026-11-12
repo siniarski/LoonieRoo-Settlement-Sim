@@ -102,6 +102,9 @@ public static partial class Vehicles
         return state.vehicles ?? [];
     }
 
+    /// <summary>The car with this id, or null.</summary>
+    public static Vehicle? getVehicle(SimState state, string id) => vehiclesOf(state).find((v) => v.id == id);
+
     public static Vehicle addVehicle(SimState state, int x, int y, double heading = 0, double fuel = FUEL_MAX, double health = VEHICLE_HEALTH, string kind = "car")
     {
         state.vehicles ??= [];

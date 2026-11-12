@@ -85,7 +85,7 @@ public static partial class Vehicles
             return null;
         }
         c.busy = null;
-        var v = vehiclesOf(state).find((x) => x.id == busy.targetId);
+        var v = getVehicle(state, busy.targetId);
         if (!Js.T(v))
         {
             return "the car is gone";
