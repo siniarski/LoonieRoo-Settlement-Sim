@@ -294,49 +294,56 @@ public static partial class Zombies
 }
 
 /// <summary>The dead by tile (key y * width + x, where each stood when made), in list order within a tile: a copy of
-/// the list, and for each a link to the next in its tile (-1 at the end), so no list per tile. A bitmask of hashed keys
-/// (64K bits) answers most empty tiles without the dictionary: a clear bit means nobody there.</summary>
+/// the list, and for each a link to the next in its tile (-1 at the end), so no list per tile. The tiles' first links
+/// are in one open-addressed table on the whole-number keys (ints) (at most a quarter full, probed in turn): a dictionary of
+/// doubles cost three times as much to make and twice as much to ask (2026-11-12, crowd probe).</summary>
 public sealed class ZombieBuckets
 {
     public readonly Zombie[] zs;
     public readonly int[] next;
-    readonly Dictionary<double, int> head;
-    readonly ulong[] occ = new ulong[1024];
+    readonly int[] keys; // y * width + x fits an int up to a 46,000-tile square world
+    readonly int[] heads; // the first in the slot's tile, -1 for an empty slot
+    readonly int mask;
 
     public ZombieBuckets(List<Zombie> list, int width)
     {
         zs = list.ToArray();
         next = new int[zs.Length];
-        head = new Dictionary<double, int>(zs.Length);
+        var cap = 16;
+        while (cap < zs.Length * 4)
+        {
+            cap <<= 1;
+        }
+        keys = new int[cap];
+        heads = new int[cap];
+        Array.Fill(heads, -1);
+        mask = cap - 1;
         // Backwards, each put in front of its tile's chain: the chains run in list order.
         for (var i = zs.Length - 1; i >= 0; i--)
         {
             var z = zs[i];
-            var k = ((double)(z.pos.y) * (width)) + z.pos.x;
-            if (head.TryGetValue(k, out var h))
+            var k = (z.pos.y * width) + z.pos.x;
+            var s = slot(k);
+            if (heads[s] < 0)
             {
-                next[i] = h;
+                keys[s] = k;
             }
-            else
-            {
-                next[i] = -1;
-                var b = bit(k);
-                occ[b >> 6] |= 1UL << (b & 63);
-            }
-            head[k] = i;
+            next[i] = heads[s];
+            heads[s] = i;
         }
     }
 
-    static int bit(double k) => (int)(unchecked((ulong)(long)k * 0x9E3779B97F4A7C15UL) >> 48);
+    /// <summary>The key's slot: where it is, or the empty slot where it would go.</summary>
+    int slot(int k)
+    {
+        var s = (int)(unchecked((uint)k * 0x9E3779B1u) >> 8) & mask;
+        while ((heads[s] >= 0) && (keys[s] != k))
+        {
+            s = (s + 1) & mask;
+        }
+        return s;
+    }
 
     /// <summary>The first in this tile's chain (index into zs), or -1.</summary>
-    public int first(double k)
-    {
-        var b = bit(k);
-        if ((occ[b >> 6] & (1UL << (b & 63))) == 0)
-        {
-            return -1;
-        }
-        return head.TryGetValue(k, out var h) ? h : -1;
-    }
+    public int first(double k) => heads[slot((int)k)];
 }

@@ -460,3 +460,43 @@ public class JobsProbe
     }
 }
 
+
+/// <summary>The crowd's parts (ZombieCrowd.cs) timed on one state, each repeated (PROBE_REPS, 200): making the buckets,
+/// every zombie's nine neighbouring tiles looked up, pushApart (it moves bodies, so later rounds push less), and
+/// zombiesWithin from every survivor. Scene: SCENES (one, default horde-512). Report: out/crowd-probe.txt.</summary>
+public class CrowdProbe
+{
+    static string? Env(string name) => System.Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;
+
+    [Fact(DisplayName = "crowd probe")]
+    public void Run()
+    {
+        var name = Env("SCENES") ?? "horde-512";
+        int reps = int.TryParse(Env("PROBE_REPS"), out var r) ? r : 200;
+        var state = Profile.SCENES.First((x) => x.name == name).build();
+        for (int t = 0; t < 20; t++) Tick.tick(state);
+        int w = state.grid.width;
+        var out_ = new List<string> { $"{name}: zombies {state.zombies.Count} survivors {state.survivors.Count}" };
+        void T(string what, Action f)
+        {
+            f();
+            long b0 = GC.GetAllocatedBytesForCurrentThread(), t0 = Stopwatch.GetTimestamp();
+            for (int i = 0; i < reps; i++) f();
+            double ms = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency / reps;
+            out_.Add($"   {what,-40} {ms,8:0.000} ms {(GC.GetAllocatedBytesForCurrentThread() - b0) / 1024.0 / reps,8:0.0} KB");
+        }
+        T("new ZombieBuckets", () => new ZombieBuckets(state.zombies, w));
+        var b = new ZombieBuckets(state.zombies, w);
+        T("first x 9 x zombies", () =>
+        {
+            int n = 0;
+            foreach (var z in state.zombies)
+                for (var dy = -1; dy <= 1; dy++)
+                    for (var dx = -1; dx <= 1; dx++)
+                        for (var i = b.first(((double)(z.pos.y + dy) * w) + z.pos.x + dx); i >= 0; i = b.next[i]) n++;
+        });
+        T("pushApart", () => Zombies.pushApart(state));
+        T("zombiesWithin(8) x survivors", () => { Zombies.edited(state.zombies); foreach (var s in state.survivors) Zombies.zombiesWithin(state, s.pos, 8); });
+        File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/crowd-probe.txt"), string.Join("\n", out_) + "\n");
+    }
+}
