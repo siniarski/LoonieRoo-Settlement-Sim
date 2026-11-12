@@ -270,7 +270,7 @@ public sealed class WorldLights
     float Flicker(SimLights.Source s)
     {
         if (s.kind is not (SimLights.FIRE or SimLights.HEATER or SimLights.STOVE)) return 1;
-        double k = Characters.Looks.Hash01(s.id, 5) * 97;
+        double k = IdHash.Hash01(s.id, 5) * 97;
         return (float)(0.82 + 0.1 * Math.Sin(clock * 9.1 + k) + 0.08 * Math.Sin(clock * 23.7 + k * 1.7));
     }
 

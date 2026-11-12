@@ -42,6 +42,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -671,14 +672,6 @@ public partial class Lab : Node3D
     }
 
     // ------------------------------------------------------------------ helpers
-
-    static T? Find<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (Find<T>(c) is T found) return found;
-        return null;
-    }
 
     static double Num(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 

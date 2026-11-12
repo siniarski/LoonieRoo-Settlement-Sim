@@ -49,6 +49,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -899,7 +900,7 @@ public partial class LookLab : Node3D
                     Rebuild();
                     foreach (var x in subjects) x.Root.Visible = false;
                     await Frames(30);
-                    double cpu = 0, gpu = 0, rcpu = 0, tris = 0, draws = 0, ms = 0;
+                    double gpu = 0, rcpu = 0, tris = 0, draws = 0, ms = 0;
                     const int N = 90;
                     ulong last = Time.GetTicksUsec();
                     for (int i = 0; i < N; i++)
@@ -1020,21 +1021,6 @@ public partial class LookLab : Node3D
     }
 
     // ------------------------------------------------------------------ helpers
-
-    static T? Find<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (Find<T>(c) is T found) return found;
-        return null;
-    }
-
-    static IEnumerable<T> FindAll<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var x in FindAll<T>(c)) yield return x;
-    }
 
     static double Num(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 

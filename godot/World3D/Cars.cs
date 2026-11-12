@@ -24,7 +24,7 @@ public sealed class Cars
     public Cars(Node3D parent) => models = new ModelSet(parent, "res://assets/furniture/furniture.glb");
 
     /// <summary>The model a vehicle is drawn with: the pickup for a truck, else one of the sedans by its id.</summary>
-    public static string ModelOf(Vehicle v) => v.kind == "truck" ? "truck" : Characters.Looks.Hash01(v.id, 11) < 0.5 ? "car" : "car_v1";
+    public static string ModelOf(Vehicle v) => v.kind == "truck" ? "truck" : IdHash.Hash01(v.id, 11) < 0.5 ? "car" : "car_v1";
 
     /// <summary>`mine`: the car not to draw (the one you sit in: Cockpit.cs draws that), or null.</summary>
     public void Update(SimState state, double alpha, Vector3 eye, Vehicle? mine)

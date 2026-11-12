@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 

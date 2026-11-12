@@ -32,6 +32,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 

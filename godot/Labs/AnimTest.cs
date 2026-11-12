@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using Godot;
 using LoonieRoo.Game.World3D;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -113,7 +114,6 @@ public partial class AnimTest : Node3D
             Scenery();
         }
         bool ik = logic == "after";
-        double Const(double v, double _) => v;
         foreach (double v in new[] { 0.8, 1.4, 2.2, 2.5, 3.5, 4.4, 5.0 })
             cases.Add(new Case($"flat {v.ToString("0.0", CultureInfo.InvariantCulture)} m/s", (x) => v, 0, 5, 1.5, 5, false));
         foreach (bool on in ik ? new[] { false, true } : new[] { false })
@@ -549,13 +549,5 @@ public partial class AnimTest : Node3D
             }
             GD.Print($"calibrate: more/{name} {a.Length:0.000}s ground speed {(n > 0 ? dist / (n * DT) : 0):0.000} m/s (Gaits.Measure {Gaits.SpeedOf("more/" + name):0.000})");
         }
-    }
-
-    static T? Find<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (Find<T>(c) is T f) return f;
-        return null;
     }
 }

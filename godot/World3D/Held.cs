@@ -75,14 +75,15 @@ public sealed class Held
     };
 
     /// <summary>How an item is held and moved (the weapons' table is cs/Sim/Combat/WeaponTable.cs): "rifle" (a long gun in both hands), "handgun", "axe" (a heavy tool in both hands), "stab" (a knife, a spear) or "club".</summary>
-    internal static string Family(string kind) => kind switch
+    internal static string Family(string kind)
     {
-        "rifle" or "shotgun" or "crossbow" => "rifle",
-        "gun" or "pistol" or "revolver" => "handgun",
-        "axe" or "sledge" => "axe",
-        "knife" or "spear" => "stab",
-        _ => "club",
-    };
+        // As the sim's table says it is used: shot or loosed, stabbed or swung, in one hand or two.
+        var spec = Weapons.specOfKind(kind == "gun" ? "pistol" : kind); // an old "gun" is a pistol (Weapons.specOf)
+        if (spec == null) return "club";
+        if (spec.cls is "shoot" or "bow") return spec.twoHanded ? "rifle" : "handgun";
+        if (spec.cls == "stab") return "stab";
+        return spec.twoHanded ? "axe" : "club";
+    }
 
     static bool IsGun(string kind) => Family(kind) is "rifle" or "handgun";
 

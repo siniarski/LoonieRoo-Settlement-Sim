@@ -2,14 +2,17 @@
 // and the drawing of many of them: one MultiMesh per model, filled from a list of transforms.
 //
 // What draws with it says where things stand; this only loads and batches. Use: Begin(), Add(model, transform) for
-// each thing, End(). A model not added this time draws nothing. Fields, Sites, Aircraft, Cars and Others' props use
-// it; the items and the furniture (Items.cs, Furniture.cs) came first and have the same code of their own.
-// The shader (and those two's) lays the detail kit over the colour (docs/textures.md): each face's layer is in the
-// model's UV, laid by its UV2 in metres, so it stays on the thing when it drives, is carried or is turned.
+// each thing, End(). A model not added this time draws nothing. The items and furniture (Items.cs, Furniture.cs),
+// Fields, Sites, Aircraft, Cars and Others' props use it. Variants: a file's "crate", "crate_v1", "crate_v2" are one
+// kind's models, and Pick chooses one by a hash of the thing's id.
+// The shader lays the detail kit over the colour (docs/textures.md): each face's layer is in the model's UV, laid by
+// its UV2 in metres, so it stays on the thing when it drives, is carried or is turned.
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Godot;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.World3D;
 
@@ -25,11 +28,12 @@ void vertex() {
 }
 void fragment() {
     ALBEDO = snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
-    METALLIC = COLOR.a * 0.7;
-    ROUGHNESS = mix(0.9, 0.45, COLOR.a);
+    METALLIC = COLOR.a * $metal;
+    ROUGHNESS = mix($dull, $shiny, COLOR.a);
 }";
 
-    static ShaderMaterial? shared, bare;
+    /// <summary>One material for each shader text (snow or none, metal and roughness), shared by every set using it.</summary>
+    static readonly Dictionary<string, ShaderMaterial> materials = new();
 
     readonly Node3D parent;
     readonly Dictionary<string, Mesh> meshes = new();
@@ -39,21 +43,39 @@ void fragment() {
     /// <summary>Things drawn by the last End (the debug panel, the self-test).</summary>
     public int Count { get; private set; }
 
-    public ModelSet(Node3D parent, string path, bool shadows = true, bool snow = true)
+    /// <summary>The models in the file at `path`. `snow`: snow on what faces up (outdoors), or none (a cabin's inside);
+    /// `metal` how metallic the metal parts (the colour's alpha) are, and the roughness from none of it (`dull`) to
+    /// all of it (`shiny`).</summary>
+    public ModelSet(Node3D parent, string path, bool shadows = true, bool snow = true, float metal = 0.7f, float dull = 0.9f, float shiny = 0.45f)
     {
         this.parent = parent;
         this.shadows = shadows;
-        shared ??= new ShaderMaterial { Shader = Surfaces.Shader(SHADER) };
-        bare ??= new ShaderMaterial { Shader = Surfaces.Shader(SHADER.Replace("snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz)", "COLOR.rgb * SURFACE_DETAIL")) };
-        material = snow ? shared : bare;
+        string N(float v) => v.ToString(CultureInfo.InvariantCulture);
+        string text = SHADER.Replace("$metal", N(metal)).Replace("$dull", N(dull)).Replace("$shiny", N(shiny));
+        if (!snow) text = text.Replace("snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz)", "COLOR.rgb * SURFACE_DETAIL");
+        if (!materials.TryGetValue(text, out var m)) materials[text] = m = new ShaderMaterial { Shader = Surfaces.Shader(text) };
+        material = m;
         var scene = GD.Load<PackedScene>(path).Instantiate<Node3D>();
         Collect(scene);
         scene.Free();
+        foreach (var name in meshes.Keys)
+        {
+            int v = name.LastIndexOf("_v", StringComparison.Ordinal);
+            if (v <= 0 || !int.TryParse(name.AsSpan(v + 2), out _)) continue;
+            string kind = name[..v];
+            if (!meshes.ContainsKey(kind)) continue;
+            if (!variants.TryGetValue(kind, out var list)) variants[kind] = list = new() { kind };
+            list.Add(name);
+        }
+        foreach (var list in variants.Values) list.Sort(string.CompareOrdinal);
     }
 
     readonly bool shadows;
-    /// <summary>The shared material, with snow on what faces up (outdoors) or without (a cabin's inside).</summary>
     readonly ShaderMaterial material;
+    /// <summary>A kind's models: its own name first, then its variants in order.</summary>
+    readonly Dictionary<string, List<string>> variants = new();
+    /// <summary>What model "" draws (none if null): the items' grey box for a kind with no model.</summary>
+    public Mesh? Fallback;
 
     void Collect(Node n)
     {
@@ -67,8 +89,24 @@ void fragment() {
 
     public bool Has(string model) => meshes.ContainsKey(model);
 
+    /// <summary>The file's model names.</summary>
+    public IEnumerable<string> Names => meshes.Keys;
+
     /// <summary>A model's mesh, for something drawn on its own node (a rotor that spins).</summary>
     public Mesh MeshOf(string model) => meshes[model];
+
+    /// <summary>A model's mesh, or null if the file has none of that name.</summary>
+    public Mesh? MeshOrNull(string model) => meshes.GetValueOrDefault(model);
+
+    /// <summary>The model a thing of this kind is drawn with: the kind's, or one of its variants by the id's hash
+    /// (`variant` instead, if given); "" if the file has none.</summary>
+    public string Pick(string kind, string id, int? variant = null)
+    {
+        if (!meshes.ContainsKey(kind)) return "";
+        if (!variants.TryGetValue(kind, out var list)) return kind;
+        int k = variant ?? (int)(Mix(Fnv(id)) % (uint)list.Count);
+        return list[k % list.Count];
+    }
 
     public void Begin()
     {
@@ -77,7 +115,7 @@ void fragment() {
 
     public void Add(string model, Transform3D at)
     {
-        if (!meshes.ContainsKey(model)) return;
+        if (!meshes.ContainsKey(model) && !(model == "" && Fallback != null)) return;
         if (!batch.TryGetValue(model, out var list)) batch[model] = list = new();
         list.Add(at);
     }
@@ -91,7 +129,7 @@ void fragment() {
             if (!nodes.TryGetValue(model, out var node))
             {
                 if (list.Count == 0) continue;
-                node = new MultiMeshInstance3D { Multimesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = meshes[model] } };
+                node = new MultiMeshInstance3D { Multimesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = model == "" ? Fallback : meshes[model] } };
                 node.CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
                 parent.AddChild(node);
                 nodes[model] = node;

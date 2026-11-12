@@ -23,7 +23,8 @@ public partial class Game
 
     static double RandomSeed() => Math.Floor(Random.Shared.NextDouble() * 1e9);
 
-    static Settings CopySettings(Settings s) => new() { start = s.start, zombies = s.zombies, weather = s.weather, progression = s.progression, winter = s.winter, dayScale = s.dayScale, wildfire = s.wildfire, map = s.map };
+    /// <summary>A copy of a world's settings, to change without changing the preset (the labs' worlds too).</summary>
+    internal static Settings CopySettings(Settings s) => new() { start = s.start, zombies = s.zombies, weather = s.weather, progression = s.progression, winter = s.winter, dayScale = s.dayScale, wildfire = s.wildfire, map = s.map };
 
     /// <summary>Replace the running game (a save, an import, a new world) and start the bug-report log afresh. Returns whether it did.</summary>
     bool Replace(LoadResult result, string from)

@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -227,16 +228,7 @@ public static class Looks
         return new Vector3(l.R, l.G, l.B);
     }
 
-    // --- the hash (stable between runs and machines: FNV-1a of the id's chars, then a salt) ---
-
-    public static double Hash01(string id, int salt)
-    {
-        uint h = 2166136261;
-        foreach (char c in id) h = (h ^ c) * 16777619;
-        h = (h ^ (uint)salt) * 16777619;
-        h ^= h >> 13;
-        return (h % 10007) / 10007.0;
-    }
+    // --- picks by the id (IdHash: stable between runs and machines) ---
 
     public static string Pick(string[] from, string id, int salt) => from[(int)(Hash01(id, salt) * from.Length) % from.Length];
 

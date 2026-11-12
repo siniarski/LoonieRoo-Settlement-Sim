@@ -27,6 +27,7 @@ public sealed partial class FirstPerson : Node3D
     /// <summary>Vertical field of view (degrees), as the look lab's.</summary>
     const float FOV = 60;
 
+    // --- the scene: camera, sky and the world's chunks ---
     public readonly Camera3D camera = new() { Fov = FOV, Near = 0.05f, Far = 120 };
     readonly DirectionalLight3D sun = new() { ShadowEnabled = true, DirectionalShadowMaxDistance = 40 };
     readonly OmniLight3D near = new() { OmniRange = 7, LightEnergy = 0, ShadowEnabled = false };
@@ -35,45 +36,52 @@ public sealed partial class FirstPerson : Node3D
     readonly ShaderMaterial solid = WorldLook.Solid, glass = WorldLook.Glass;
     readonly WorldMesh.Lookups look = new();
     readonly Dictionary<(int, int), (MeshInstance3D node, long sig)> chunks = new();
-    readonly Bodies bodies;
-    readonly ItemModels items;
-    readonly FurnitureModels furniture;
-    readonly Held held;
-    readonly SwimHands swimHands;
-    readonly RoadRibbons ribbons;
-    /// <summary>Country roads drawn along their planned lines (the self-test).</summary>
-    public RoadRibbons Ribbons => ribbons;
-    /// <summary>Your arms while swimming (the self-test).</summary>
-    public SwimHands SwimHands => swimHands;
-    /// <summary>What you hold (the self-test).</summary>
-    public Held Held => held;
-    readonly People people;
-    /// <summary>The people drawn (the self-test reads their footfalls).</summary>
-    public People People => people;
-    readonly Trees trees;
-    readonly FarField far;
-    readonly Roofs roofs;
-    readonly WorldLights lights;
-    readonly Fields fields;
-    readonly Sites sites;
-    readonly Aircraft aircraft;
-    readonly Cars cars;
-    readonly Others others;
-    readonly Cockpit cockpit;
-    /// <summary>The world's lights (the debug panel, the light bench).</summary>
-    public WorldLights Lights => lights;
-    /// <summary>Rain, snow, the snow layer and the overcast sky (Weather.cs).</summary>
-    readonly WeatherLayer weather = new();
-    /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
-    public readonly Audio.Sounds sounds = new();
-    /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
-    public int Modelled { get; private set; }
     /// <summary>When it last changed: walkability, open doors and windows, boards, furniture, what's indoors.</summary>
     (int, int, int, int, int, int, int) worldKey = (-1, 0, 0, 0, 0, 0, 0);
     int sinceCheck;
+
+    // --- the renderers, each a part of the world; Update calls them in a fixed order (below) ---
+    // The land: roofs and what's indoors, country roads, trees, furniture with a model, the far view, the weather.
+    readonly Roofs roofs;
+    readonly RoadRibbons ribbons;
+    readonly Trees trees;
+    readonly FurnitureModels furniture;
+    readonly FarField far;
+    /// <summary>Rain, snow, the snow layer and the overcast sky (Weather.cs).</summary>
+    readonly WeatherLayer weather = new();
+    // Who is about: others' stand-ins, the character models, the capsules (and the animals).
+    readonly Others others;
+    readonly People people;
+    readonly Bodies bodies;
+    // Things: cars and the cockpit of yours, farm plots, building sites, the helicopter, items on the ground.
+    readonly Cars cars;
+    readonly Cockpit cockpit;
+    readonly Fields fields;
+    readonly Sites sites;
+    readonly Aircraft aircraft;
+    readonly ItemModels items;
+    // You: what you hold, your arms swimming. Then the world's lights and its sounds.
+    readonly Held held;
+    readonly SwimHands swimHands;
+    readonly WorldLights lights;
+    /// <summary>The dead's moans and blows landing, positional (godot/Audio).</summary>
+    public readonly Audio.Sounds sounds = new();
+
+    // --- read from outside: the debug panel, the benches and the self-test ---
+    public RoadRibbons Ribbons => ribbons;
+    public SwimHands SwimHands => swimHands;
+    public Held Held => held;
+    /// <summary>The people drawn (the self-test reads their footfalls).</summary>
+    public People People => people;
+    /// <summary>The world's lights (the debug panel, the light bench).</summary>
+    public WorldLights Lights => lights;
+    /// <summary>The cockpit of the car you drive (the self-test reads its instruments).</summary>
+    public Cockpit Cockpit => cockpit;
+    public FarField Far => far;
+    /// <summary>How many people are drawn as models this frame (the debug panel).</summary>
+    public int Modelled { get; private set; }
     public int ChunkCount => chunks.Count;
     public int TreeCount => trees.Count;
-    public FarField Far => far;
     public int ItemCount => items.Count;
     /// <summary>What the newer renderers drew (the self-test): farm plots, building-site pieces, cars, others' props and people, the helicopter.</summary>
     public int PlotCount => fields.Count;
@@ -82,8 +90,6 @@ public sealed partial class FirstPerson : Node3D
     public int OtherProps => others.Props;
     public int OtherPeople => others.Shown.Count;
     public bool HelicopterShown => aircraft.Shown;
-    /// <summary>The cockpit of the car you drive (the self-test reads its instruments).</summary>
-    public Cockpit Cockpit => cockpit;
 
     /// <summary>Before Update each frame: how far the car you're in turned (its heading eased), for the view to turn with
     /// it, so you keep looking out of the windscreen as you steer. Getting in, with `faceForward`, it is the turn that
@@ -169,7 +175,11 @@ public sealed partial class FirstPerson : Node3D
         new((float)(Math.Cos(yaw) * Math.Cos(pitch)), (float)Math.Sin(pitch), (float)(Math.Sin(yaw) * Math.Cos(pitch)));
 
     /// <summary>A frame: `delta` the frame's time (the light's and the weather's eases), `world` the world's (0 while it is
-    /// held: the menu, the map, --paused; the frame's if not given), which everything that moves runs on.</summary>
+    /// held: the menu, the map, --paused; the frame's if not given), which everything that moves runs on. The steps in
+    /// order, each needing what the ones before it set: the eye; roofs (what's indoors) and the light; the land (roads
+    /// before the chunks, which ask whether roads are ribbons); the weather (after the light and the fog, which it dims);
+    /// who is about (others before the people they stand in for, the models before the capsules for the rest); things;
+    /// you; the world's lights and its sounds.</summary>
     public void Update(SimState state, double alpha, double yaw, double pitch, double delta, double? worldDelta = null)
     {
         double world = worldDelta ?? delta;
@@ -177,6 +187,40 @@ public sealed partial class FirstPerson : Node3D
         if (you == null) return;
         Terrain.Use(state);
         var car = Vehicles.vehicleOf(state, you);
+        var (eye, inCar) = PlaceEye(state, you, car, alpha, yaw, pitch, delta);
+        roofs.Update(state, eye, Radius);
+        sun.ShadowEnabled = ShadowDistance > 0;
+        if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
+        Light(state, eye, delta);
+        Land(state, eye);
+        weather.Held = world <= 0;
+        weather.Update(state, eye, delta, roofs.Indoor, sun, env); // overcast and fog on bad days, rain, snow (Weather.cs)
+        // Who is about: wanderers, traders, prisoners, caravans and runs stand in for People and Bodies.
+        others.Update(state, eye, world);
+        var modelled = people.Update(state, alpha, eye, you.id, world, GetViewport().GetVisibleRect().Size.Y, others.Shown);
+        Modelled = modelled.Count;
+        people.UpdateYou(state, you, alpha, yaw, world, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
+        bodies.Update(state, alpha, eye, you.id, modelled, others.Shown, world);
+        // Things. The car you sit in is the cockpit round you; seen from outside (--eye) it is a car like the others.
+        bool inside = car != null && EyeAt == null;
+        cars.Update(state, alpha, eye, inside ? car : null);
+        cockpit.Update(state, car, camera.Position, alpha, delta, inside); // its needles ease to the car as it is (held still, it stays)
+        fields.Update(state, eye);
+        sites.Update(state, eye);
+        aircraft.Update(state, world);
+        items.Update(state, eye);
+        // You: nothing in hand in a car, under a pickup or seen from outside.
+        held.Update(state, you, alpha, world, inCar || EyeAt != null || state.control?.underCar != null);
+        swimHands.Update(state, you, world, inCar || EyeAt != null);
+        lights.Update(state, eye, alpha, world, inCar);
+        sounds.Update(state, alpha, you, people.Steps);
+    }
+
+    /// <summary>The frame's first step: the camera at your eye, looking along yaw and pitch. The ground under it is
+    /// eased (a kerb or a rise lifts the view smoothly), swimming sinks it to the surface, --eye moves it. Returns the
+    /// eye and whether you are in a car.</summary>
+    (Vector3 eye, bool inCar) PlaceEye(SimState state, Survivor you, Vehicle? car, double alpha, double yaw, double pitch, double delta)
+    {
         var (eye, inCar, _) = Eye(state, you, alpha, car != null && cockpit.Following(car) ? cockpit.Yaw : null);
         // Out of your depth (Swim.cs) the eye sits just over the water, not standing height over the bed; eased in and out.
         float sinkTo = !inCar && Swim.swimming(state, you) ? Math.Min(0, Terrain.Water(eye.X, eye.Z) + SWIM_EYE - eye.Y) : 0;
@@ -190,10 +234,13 @@ public sealed partial class FirstPerson : Node3D
         camera.Position = eye;
         EyeUp = eye.Y - eyeGround;
         camera.LookAt(eye + LookDir(yaw, pitch), Vector3.Up);
-        roofs.Update(state, eye, Radius);
-        sun.ShadowEnabled = ShadowDistance > 0;
-        if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
-        Light(state, eye, delta);
+        return (eye, inCar);
+    }
+
+    /// <summary>The land round the eye: country roads, the chunks, their trees and furniture, the far view past them,
+    /// and how far the camera and the fog reach.</summary>
+    void Land(SimState state, Vector3 eye)
+    {
         // The far field steps aside where the chunks are (the square they're kept in); with it on, the view and the fog reach its range.
         int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
         var hole = new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK);
@@ -205,25 +252,6 @@ public sealed partial class FirstPerson : Node3D
         far.Update(state, eye, hole);
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
-        weather.Held = world <= 0;
-        weather.Update(state, eye, delta, roofs.Indoor, sun, env); // after the lighting and the fog: overcast and fog on bad days, rain, snow (Weather.cs)
-        others.Update(state, eye, world); // wanderers, traders, prisoners, caravans, runs: stand-ins for People and Bodies
-        var modelled = people.Update(state, alpha, eye, you.id, world, GetViewport().GetVisibleRect().Size.Y, others.Shown);
-        Modelled = modelled.Count;
-        people.UpdateYou(state, you, alpha, yaw, world, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
-        bodies.Update(state, alpha, eye, you.id, modelled, others.Shown, world);
-        // The car you sit in is the cockpit round you; seen from outside (--eye) it is a car like the others.
-        bool inside = car != null && EyeAt == null;
-        cars.Update(state, alpha, eye, inside ? car : null);
-        cockpit.Update(state, car, camera.Position, alpha, delta, inside); // its needles ease to the car as it is (held still, it stays)
-        fields.Update(state, eye);
-        sites.Update(state, eye);
-        aircraft.Update(state, world);
-        items.Update(state, eye);
-        held.Update(state, you, alpha, world, inCar || EyeAt != null || state.control?.underCar != null);  // nothing in hand under a pickup
-        swimHands.Update(state, you, world, inCar || EyeAt != null);
-        lights.Update(state, eye, alpha, world, inCar);
-        sounds.Update(state, alpha, you, people.Steps);
     }
 
     /// <summary>How much of the open sky's ambient light reaches you: less under a roof, eased so doorways don't flicker.</summary>
