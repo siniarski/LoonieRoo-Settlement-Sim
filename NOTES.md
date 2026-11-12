@@ -110,4 +110,4 @@ cheaper models for mechanical work.
 The session log is in `log/`, a file per entry: `log/YYYY-MM-DD-NN-slug.md` (NN: the entry's place in its day, one
 more than that day's highest; two sessions picking the same NN is fine, their slugs differ). Add a new file for each
 non-trivial change (what was tried, the numbers, what was decided, what's left); never edit NOTES.md just to log.
-`ls log/` is the index; `grep -ril <word> log/` finds an old entry.
+`log/README.md` is the index (one line a file, in order, with the eras); add a line there for a new entry. `grep -ril <word> log/` finds an old entry by its words.
