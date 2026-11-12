@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using LoonieRoo.Sim;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.World3D;
 
@@ -287,20 +288,5 @@ void fragment() {
                     bestD = dx * dx + dy * dy;
                 }
         return best;
-    }
-
-    static uint Fnv(string s)
-    {
-        uint h = 2166136261;
-        foreach (char c in s) h = (h ^ c) * 16777619;
-        return h;
-    }
-
-    static uint Mix(uint h)
-    {
-        h ^= h >> 16; h *= 0x85EBCA6B;
-        h ^= h >> 13; h *= 0xC2B2AE35;
-        h ^= h >> 16;
-        return h;
     }
 }

@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -102,7 +103,7 @@ public sealed class Dresser
                 m.SetSurfaceOverrideMaterial(0, Garments.Material);  // the head's face keeps its own (surface 1)
             }
         var clothes = Garments.Scene.Instantiate<Node3D>();
-        foreach (var m in Find(clothes))
+        foreach (var m in new List<MeshInstance3D>(FindAll<MeshInstance3D>(clothes)))
         {
             m.GetParent().RemoveChild(m);
             m.Owner = null;  // it belonged to the garments scene
@@ -113,14 +114,6 @@ public sealed class Dresser
             pieces[m.Name] = m;
         }
         clothes.QueueFree();
-    }
-
-    static List<MeshInstance3D> Find(Node n)
-    {
-        var all = new List<MeshInstance3D>();
-        if (n is MeshInstance3D m) all.Add(m);
-        foreach (var c in n.GetChildren()) all.AddRange(Find(c));
-        return all;
     }
 
     /// <summary>What shows of an outfit: the body regions left bare and the garment pieces on view

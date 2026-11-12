@@ -166,7 +166,7 @@ public sealed class Cockpit
         var at = new Vector2((float)car.at.x, (float)car.at.y) / Motion.SUB;
         if (last is { } was) trip += at.DistanceTo(was) / 1000;
         last = at;
-        g.OdoKm = 20000 + Math.Floor(Looks.Hash01(car.id, 31) * 160000) + trip;
+        g.OdoKm = 20000 + Math.Floor(IdHash.Hash01(car.id, 31) * 160000) + trip;
         // The panel is lit with the headlights; without them it has a little light of its own, as by day.
         glass.EmissionEnergyMultiplier = car.lights == true && runs ? 1.4f : 0.45f;
     }

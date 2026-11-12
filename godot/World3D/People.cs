@@ -30,6 +30,8 @@ using Godot;
 using LoonieRoo.Game.Characters;
 using LoonieRoo.Sim;
 using static LoonieRoo.Game.Render.CameraMath;
+using static LoonieRoo.Game.Nodes;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.World3D;
 
@@ -487,8 +489,6 @@ public sealed partial class People
 
     // --- looks ---
 
-    static double Hash01(string id, int salt) => Looks.Hash01(id, salt);
-
     static string Pick(string[] from, string id, int salt) => Looks.Pick(from, id, salt);
 
     /// <summary>A look's lost limbs (the pose intent's lostLimbs): "|armLeft:elbow,legRight:knee", or "" for none.
@@ -900,20 +900,5 @@ public sealed partial class People
         var s = name.ToString();
         int i = s.LastIndexOf("lod", StringComparison.Ordinal);
         return i >= 0 && int.TryParse(s[(i + 3)..], out var n) ? n : 0;
-    }
-
-    static T? Find<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (Find<T>(c) is T f) return f;
-        return null;
-    }
-
-    static IEnumerable<T> FindAll<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var f in FindAll<T>(c)) yield return f;
     }
 }

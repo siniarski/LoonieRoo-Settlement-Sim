@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using Godot;
 using LoonieRoo.Game.World3D;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -549,13 +550,5 @@ public partial class AnimTest : Node3D
             }
             GD.Print($"calibrate: more/{name} {a.Length:0.000}s ground speed {(n > 0 ? dist / (n * DT) : 0):0.000} m/s (Gaits.Measure {Gaits.SpeedOf("more/" + name):0.000})");
         }
-    }
-
-    static T? Find<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (Find<T>(c) is T f) return f;
-        return null;
     }
 }

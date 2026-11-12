@@ -12,6 +12,7 @@
 
 using Godot;
 using LoonieRoo.Sim;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.World3D;
 

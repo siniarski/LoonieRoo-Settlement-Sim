@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -53,8 +54,8 @@ public static class Vat
 
         var actor = GD.Load<PackedScene>(Mannequin).Instantiate<Node3D>();
         host.AddChild(actor);
-        var skel = FindFirst<Skeleton3D>(actor)!;
-        var player = FindFirst<AnimationPlayer>(actor)!;
+        var skel = Find<Skeleton3D>(actor)!;
+        var player = Find<AnimationPlayer>(actor)!;
         var toChar = actor.GlobalTransform.AffineInverse() * skel.GlobalTransform;  // skeleton space -> the character's
         // Skin binds -> skeleton bones, by name.
         var bindBone = new int[skin.GetBindCount()];
@@ -129,13 +130,5 @@ public static class Vat
         bake.Material.SetShaderParameter("fps", Fps);
         bake.BakeMs = (Time.GetTicksUsec() - t0) / 1000.0;
         return bake;
-    }
-
-    static T? FindFirst<T>(Node n) where T : Node
-    {
-        if (n is T t) return t;
-        foreach (var c in n.GetChildren())
-            if (FindFirst<T>(c) is T found) return found;
-        return null;
     }
 }

@@ -20,6 +20,7 @@ using System;
 using Godot;
 using LoonieRoo.Game.Characters;
 using LoonieRoo.Sim;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.World3D;
 

@@ -26,6 +26,8 @@ using System.Linq;
 using Godot;
 using LoonieRoo.Sim;
 using static LoonieRoo.Game.Render.CameraMath;
+using static LoonieRoo.Game.Nodes;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.World3D;
 
@@ -160,15 +162,6 @@ public sealed class AnimalModels
     {
         if (!free.TryGetValue(kind, out var l)) free[kind] = l = new();
         return l;
-    }
-
-    static double Hash01(string id, int salt)
-    {
-        uint h = 2166136261;
-        foreach (char c in id) h = (h ^ c) * 16777619;
-        h = (h ^ (uint)salt) * 16777619;
-        h ^= h >> 13;
-        return (h % 10007) / 10007.0;
     }
 
     Model Make(string kind)
@@ -343,12 +336,5 @@ void fragment() {
         var s = name.ToString();
         int i = s.LastIndexOf("lod", StringComparison.Ordinal);
         return i >= 0 && int.TryParse(s[(i + 3)..], out var n) ? n : 0;
-    }
-
-    static IEnumerable<T> FindAll<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var f in FindAll<T>(c)) yield return f;
     }
 }

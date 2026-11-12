@@ -59,9 +59,9 @@ public sealed class Others
         bool Near(double x, double y) => Math.Abs(x + 0.5 - eye.X) <= RANGE && Math.Abs(y + 0.5 - eye.Z) <= RANGE;
 
         foreach (var w in state.wanderers)
-            if (Near(w.x, w.y)) Stand($"o:{w.id}", w.x + 0.5f, w.y + 0.5f, Looks.Hash01(w.id, 21) * Math.Tau);
+            if (Near(w.x, w.y)) Stand($"o:{w.id}", w.x + 0.5f, w.y + 0.5f, IdHash.Hash01(w.id, 21) * Math.Tau);
         foreach (var q in state.prisoners)
-            if (Near(q.x, q.y)) Stand($"o:{q.id}", q.x + 0.5f, q.y + 0.5f, Looks.Hash01(q.id, 21) * Math.Tau);
+            if (Near(q.x, q.y)) Stand($"o:{q.id}", q.x + 0.5f, q.y + 0.5f, IdHash.Hash01(q.id, 21) * Math.Tau);
         foreach (var t in state.traders)
         {
             if (!Near(t.x, t.y)) continue;
@@ -133,7 +133,7 @@ public sealed class Others
         {
             p.at = to;
             p.seen = true;
-            p.heading = (float)(Looks.Hash01(id, 22) * Math.Tau);
+            p.heading = (float)(IdHash.Hash01(id, 22) * Math.Tau);
             p.speed = 0;
             return p;
         }

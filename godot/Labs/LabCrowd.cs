@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -146,7 +147,7 @@ public partial class Lab
         string clip = m.Gait < 1.9 ? "walk" : "jog";
         if (tier == 0)
         {
-            foreach (var mi in FindAllNodes<MeshInstance3D>(node))
+            foreach (var mi in FindAll<MeshInstance3D>(node))
                 if (mi.Name.ToString().StartsWith("stump_")) mi.Visible = false;
             DressCrowd(node, crowd.IndexOf(m));  // near: each in a random outfit
             crowdTreeRoot ??= CrowdTreeRoot();
@@ -216,12 +217,5 @@ public partial class Lab
                               $"draw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):0}\n" +
                               $"merged     {OutfitMerge.Merges} meshes, {OutfitMerge.MergeMs:0.0} ms in all";
         }
-    }
-
-    static IEnumerable<T> FindAllNodes<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var x in FindAllNodes<T>(c)) yield return x;
     }
 }

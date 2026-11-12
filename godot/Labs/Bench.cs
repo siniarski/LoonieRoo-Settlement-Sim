@@ -20,6 +20,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -192,12 +193,5 @@ public partial class Bench : Node3D
             GD.Print(line);
             NextRun();
         }
-    }
-
-    static IEnumerable<T> FindAll<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var x in FindAll<T>(c)) yield return x;
     }
 }

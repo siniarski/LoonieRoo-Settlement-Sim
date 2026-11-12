@@ -20,6 +20,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Godot;
 using LoonieRoo.Game.World3D;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -605,14 +606,5 @@ void fragment() {
         if (i < 0) return 0;
         var digits = new string(s[(i + 3)..].TakeWhile(char.IsDigit).ToArray());
         return int.TryParse(digits, out var n) ? n : 0;
-    }
-
-    static T? Find<T>(Node n) where T : Node => FindAll<T>(n).FirstOrDefault();
-
-    static IEnumerable<T> FindAll<T>(Node n) where T : Node
-    {
-        if (n is T t) yield return t;
-        foreach (var c in n.GetChildren())
-            foreach (var x in FindAll<T>(c)) yield return x;
     }
 }

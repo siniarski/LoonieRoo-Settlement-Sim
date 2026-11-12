@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using static LoonieRoo.Game.Nodes;
 
 namespace LoonieRoo.Game.Characters;
 
@@ -87,17 +88,10 @@ public static class OutfitMerge
         foreach (var r in Dresser.BodyRegions)
             if (bodyScene.FindChild(r, true, false) is MeshInstance3D m) Add(m);
         var clothes = Garments.Scene.Instantiate<Node3D>();
-        foreach (var m in All(clothes)) Add(m);
+        foreach (var m in FindAll<MeshInstance3D>(clothes)) Add(m);
         clothes.Free();
         bodyScene.Free();
         LoadMs = (Time.GetTicksUsec() - t0) / 1000.0;
-    }
-
-    static IEnumerable<MeshInstance3D> All(Node n)
-    {
-        if (n is MeshInstance3D m) yield return m;
-        foreach (var c in n.GetChildren())
-            foreach (var x in All(c)) yield return x;
     }
 
     /// <summary>The merged mesh for an outfit (cached by the pieces it shows).</summary>

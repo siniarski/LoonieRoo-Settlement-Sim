@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using LoonieRoo.Sim;
+using static LoonieRoo.Game.IdHash;
 
 namespace LoonieRoo.Game.World3D;
 
@@ -164,22 +165,6 @@ void fragment() {
         var turn = new Basis(Vector3.Up, yaw);
         var basis = up.Y > 0.9999f ? turn : new Basis(new Quaternion(Vector3.Up, up)) * turn;
         return new Transform3D(basis, new Vector3(px, y, pz));
-    }
-
-    static uint Fnv(string s)
-    {
-        uint h = 2166136261;
-        foreach (char c in s) h = (h ^ c) * 16777619;
-        return h;
-    }
-
-    /// <summary>A second hash from the first (a finaliser), so the variant doesn't follow the yaw's or the nudge's bits.</summary>
-    static uint Mix(uint h)
-    {
-        h ^= h >> 16; h *= 0x85EBCA6B;
-        h ^= h >> 13; h *= 0xC2B2AE35;
-        h ^= h >> 16;
-        return h;
     }
 
     /// <summary>Show each of these items as a given model variant, not the one its hash picks (--lineup: the items
