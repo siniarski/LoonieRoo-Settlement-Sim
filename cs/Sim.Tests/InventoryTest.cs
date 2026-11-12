@@ -2,6 +2,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class InventoryTest
@@ -19,13 +20,7 @@ public partial class InventoryTest
         return state;
     }
 
-    public static void run(SimState state, double ticks)
-    {
-        for (var t = 0; t < ticks; t++)
-        {
-            Tick.tick(state);
-        }
-    }
+    public static void run(SimState state, double n) => TestKit.tickN(state, n);
 
     /// <summary>the bag</summary>
     public class D001_the_bag

@@ -2,19 +2,12 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class OrdersTest
 {
 
-    public static void run(SimState state, double ticks)
-    {
-        for (var t = 0; t < ticks; t++)
-        {
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-    }
 
     public static void cmd(SimState state, Command c)
     {

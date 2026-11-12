@@ -2,24 +2,13 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class StorageTest
 {
 
-    public static void runUntil(SimState state, Func<SimState, bool> done, double max = 800)
-    {
-        for (var t = 0; t < max; t++)
-        {
-            if (Js.T(done(state)))
-            {
-                return;
-            }
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-        throw new Exception($"condition not met after {Js.Str(max)} ticks\n{Js.Str(DebugText.dumpText(state))}\n{Js.Str(state.survivors.map((s) => s.note).join("\n"))}");
-    }
+    public static double runUntil(SimState state, Func<SimState, bool> done, double max = 800) => TestKit.runUntil(state, done, max);
 
     public static readonly List<string> MAP = ["................", ".######.######..", ".#....#.#....#..", ".#....#.#....#..", ".##D###.###D##..", "................", "..s....www......", "................"];
 

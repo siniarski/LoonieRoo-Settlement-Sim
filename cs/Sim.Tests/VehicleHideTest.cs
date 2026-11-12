@@ -3,14 +3,12 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehicleHideTest
 {
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     /// <summary>A field 40 x 11, a pickup facing east with its middle on (10, 5), you crouched just south of its side.</summary>
     static (SimState state, Survivor s, Vehicle truck) beside(string kind = "truck")

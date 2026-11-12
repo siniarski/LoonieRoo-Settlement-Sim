@@ -4,6 +4,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehicleParkingTest
@@ -17,10 +18,7 @@ public class VehicleParkingTest
         return (f.state, f.s, f.car);
     }
 
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     static string marks(SimState state)
     {

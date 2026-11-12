@@ -2,6 +2,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class HandiworkTest
@@ -12,13 +13,7 @@ public partial class HandiworkTest
         { expect(Commands.applyCommand(state, c), Js.Json_stringify(c)).toMatchObject(Js.Obj(("ok", (object?)(true)))); return; }
     }
 
-    public static void run(SimState state, double n)
-    {
-        for (var i = 0; i < n; i++)
-        {
-            Tick.tick(state);
-        }
-    }
+    static void run(SimState state, double n) => tickN(state, n);
 
     /// <summary>Put a piece of wood in the controlled survivor's hands.</summary>
     public static void holdWood(SimState state)

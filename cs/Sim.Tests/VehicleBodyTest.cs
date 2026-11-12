@@ -4,6 +4,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests;
 
 public class VehicleBodyTest
@@ -20,10 +21,7 @@ public class VehicleBodyTest
         return (f.state, f.s, f.car);
     }
 
-    static void run(SimState state, int n)
-    {
-        for (int i = 0; i < n; i++) Tick.tick(state);
-    }
+    static void run(SimState state, int n) => tickN(state, n);
 
     static void steer(SimState state, int dx, int dy) => Commands.applyCommand(state, new Command { type = "steer", dx = dx, dy = dy });
 

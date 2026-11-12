@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class WildfireTest
@@ -37,14 +38,7 @@ public partial class WildfireTest
         Grids.setGround(state.grid, x, y, Grids.GROUNDS.IndexOf(ground));
     }
 
-    public static void run(SimState state, int ticks)
-    {
-        for (var t = 0; t < ticks; t++)
-        {
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state), DebugText.dumpText(state)).toEqual(Js.Arr([]));
-        }
-    }
+    public static void run(SimState state, double n) => TestKit.run(state, n);
 
     public static bool scarredAt(SimState state, int x, int y) => state.burnt.ContainsKey($"{x},{y}");
 

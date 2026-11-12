@@ -2,6 +2,7 @@
 #nullable disable warnings
 using LoonieRoo.Sim;
 using static LoonieRoo.Sim.Tests.Vitest;
+using static LoonieRoo.Sim.Tests.TestKit;
 namespace LoonieRoo.Sim.Tests.Ported;
 
 public partial class ResidentsTest
@@ -24,14 +25,6 @@ public partial class ResidentsTest
         return Js.NN(Grids.neighbours4(state.grid, p.x, p.y).find((q) => !state.residents.some((r) => (r.pos.x == q.x) && (r.pos.y == q.y))));
     }
 
-    public static void run(SimState state, double ticks)
-    {
-        for (var t = 0; t < ticks; t++)
-        {
-            Tick.tick(state);
-            expect(Invariants.checkInvariants(state)).toEqual(Js.Arr([]));
-        }
-    }
 
     /// <summary>residents</summary>
     public class D001_residents
