@@ -103,7 +103,7 @@ public sealed partial class People
         return lift;
     }
 
-    int leapShots, leaps;
+    int leaps;
     double lastT = 1;
 
     /// <summary>LEAP_SHOT=prefix: pictures of your first two leaps at a quarter, half and three quarters of the way (with
