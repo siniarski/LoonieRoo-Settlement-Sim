@@ -199,17 +199,10 @@ public static partial class Work
             }
             if (s.carrying != item.id)
             {
-                if (!Js.T(item.pos))
+                if (!pickUp(state, s, job, item))
                 {
-                    { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                    return;
                 }
-                if (!Space.samePoint(s.pos, item.pos))
-                {
-                    { goTo(state, s, job, [item.pos]); return; }
-                }
-                item.pos = null;
-                item.carriedBy = s.id;
-                s.carrying = item.id;
             }
             if (Space.manhattan(s.pos, lab) != 1)
             {
@@ -394,17 +387,10 @@ public static partial class Work
             }
             if (s.carrying != item.id)
             {
-                if (!Js.T(item.pos))
+                if (!pickUp(state, s, job, item))
                 {
-                    { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                    return;
                 }
-                if (!Space.samePoint(s.pos, item.pos))
-                {
-                    { goTo(state, s, job, [item.pos]); return; }
-                }
-                item.pos = null;
-                item.carriedBy = s.id;
-                s.carrying = item.id;
                 s.note = $"picked up {Js.Str(recipe.input)} for {Js.Str(station)}";
             }
             if (Space.manhattan(s.pos, bench) != 1)
@@ -542,17 +528,10 @@ public static partial class Work
         }
         if (s.carrying != item.id)
         {
-            if (!Js.T(item.pos))
+            if (!pickUp(state, s, job, item))
             {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                return;
             }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
             s.note = $"picked up {Js.Str((item.kind == "medicine") ? Js.Str("medicine") : Js.Str("a bandage"))} for {Js.Str(patient.name)}";
         }
         if (Space.manhattan(s.pos, patient.pos) != 1)
@@ -681,6 +660,26 @@ public static partial class Work
     public static void workRepairEdge(SimState state, Survivor s, Job job, double e) => workRepairEdge(state, s, job, Js.I(e));
 
     /// <summary>Walk towards the goals (only the first `steps` tiles, to look again sooner).</summary>
+    /// <summary>The job's item, not yet in hand: give the job up if someone else took it, walk to it, or pick it up once there.
+    /// True when it was picked up this tick; false when the tick went on walking or the job was given up.</summary>
+    public static bool pickUp(SimState state, Survivor s, Job job, Item item)
+    {
+        if (!Js.T(item.pos))
+        {
+            Jobs.releaseSurvivor(state, s, "item taken by someone else");
+            return false;
+        }
+        if (!Space.samePoint(s.pos, item.pos))
+        {
+            goTo(state, s, job, [item.pos]);
+            return false;
+        }
+        item.pos = null;
+        item.carriedBy = s.id;
+        s.carrying = item.id;
+        return true;
+    }
+
     public static void goTo(SimState state, Survivor s, Job job, List<Point> goals, double? steps = default)
     {
         var path = Pathfinding.findPathToAny(state.grid, s.pos, goals);

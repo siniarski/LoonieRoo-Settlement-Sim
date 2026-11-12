@@ -29,17 +29,10 @@ public static partial class Work
         }
         if (s.carrying != item.id)
         {
-            if (!Js.T(item.pos))
+            if (!pickUp(state, s, job, item))
             {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                return;
             }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
             s.note = $"picked up {Js.Str(item.kind)}";
             if (Js.T(Jobs.isStoreJob(job) && Js.T(s.cart)))
             {
@@ -88,17 +81,10 @@ public static partial class Work
         }
         if (s.carrying != item.id)
         {
-            if (!Js.T(item.pos))
+            if (!pickUp(state, s, job, item))
             {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                return;
             }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
         }
         if (Space.manhattan(s.pos, g) != 1)
         {
