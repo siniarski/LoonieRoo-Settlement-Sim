@@ -174,10 +174,11 @@ public sealed class Held
     static readonly Pose PUNCH_STRIKE = new(new(0.04f, -0.08f, -0.7f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.2f, 1f), Vector3.Zero);
     static readonly Pose PUNCH_FOLLOW = new(new(0.03f, -0.09f, -0.74f), new(-0.95f, 0.3f, 0f), new(0.2f, -0.22f, 1f), Vector3.Zero);
     // An empty pistol swung as a club: raised and tipped back, brought down hard ahead and to the left
-    // (the butt and the slide lead), carried on low.
+    // (the butt and the slide lead), carried on low. The strike lands under the crosshair, in view: it was 21 deg
+    // under the eye line with the gun hanging down from the hand, below the view's edge (2026-11-12, the quality pass).
     static readonly Pose WHIP_WIND = new(new(0.32f, -0.08f, -0.4f), new(0.05f, 0.8f, -0.55f), new(0.45f, -0.7f, 0.5f), new(0, 0.6f, 0.8f));
-    static readonly Pose WHIP_STRIKE = new(new(0.04f, -0.24f, -0.62f), new(-0.35f, -0.55f, -0.75f), new(0.5f, -0.4f, 0.75f), new(-0.3f, 0.75f, -0.6f));
-    static readonly Pose WHIP_FOLLOW = new(new(-0.04f, -0.3f, -0.58f), new(-0.45f, -0.75f, -0.45f), new(0.5f, -0.3f, 0.8f), new(-0.3f, 0.5f, -0.8f));
+    static readonly Pose WHIP_STRIKE = new(new(0.06f, -0.13f, -0.6f), new(-0.4f, -0.3f, -0.85f), new(0.5f, -0.45f, 0.75f), new(-0.3f, 0.8f, -0.5f));
+    static readonly Pose WHIP_FOLLOW = new(new(-0.02f, -0.21f, -0.58f), new(-0.5f, -0.55f, -0.65f), new(0.5f, -0.35f, 0.8f), new(-0.3f, 0.6f, -0.75f));
     // A rifle's butt driven forward: the gun pulled back and turned, the stock thrust ahead.
     static readonly Pose BUTT_WIND = new(new(0.2f, -0.2f, -0.3f), new(-0.4f, 0.05f, -0.9f), new(0.35f, -0.75f, 0.45f), new(0, 1, 0));
     static readonly Pose BUTT_STRIKE = new(new(0.1f, -0.16f, -0.62f), new(-0.85f, -0.1f, -0.5f), new(0.4f, -0.6f, 0.6f), new(0, 1, 0));
