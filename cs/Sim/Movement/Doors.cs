@@ -170,6 +170,12 @@ public static partial class Doors
             foreach (var d in run) grid.edgeOpen.Remove(d);
             return wide ? "pulled the wide door down" : "closed the door";
         }
+        // Locked, it stays shut, as a locked tile door does (2026-11-12: it opened at a touch); any part of a wide
+        // door locked locks all of it.
+        if (run.some((d) => grid.edgeLocked.includes(d)))
+        {
+            return "it's locked";
+        }
         foreach (var d in run)
         {
             if (!grid.edgeOpen.includes(d)) grid.edgeOpen.push(d);
@@ -254,21 +260,15 @@ public static partial class Doors
         if (((side != null) && Grids.inBounds(state.grid, x, y)) && (Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, x, y, side)) == Grids.EDGE_DOOR))
         {
             var e = Grids.edgeIndex(state.grid, x, y, side);
-            var openAt = state.grid.edgeOpen.indexOf(e);
-            if (openAt >= 0)
+            // A wide door (a garage's) locks and unlocks as one, shut.
+            bool unlock = state.grid.edgeLocked.includes(e);
+            foreach (var d in wideDoor(state.grid, e))
             {
-                state.grid.edgeOpen.splice(openAt, 1);
+                state.grid.edgeOpen.Remove(d);
+                state.grid.edgeLocked.Remove(d);
+                if (!unlock) state.grid.edgeLocked.push(d);
+                Grids.noteEdgeChange(state.grid, d);
             }
-            var lockedAt = state.grid.edgeLocked.indexOf(e);
-            if (lockedAt >= 0)
-            {
-                state.grid.edgeLocked.splice(lockedAt, 1);
-            }
-            else
-            {
-                state.grid.edgeLocked.push(e);
-            }
-            Grids.noteEdgeChange(state.grid, e);
             state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
             return null;
         }
@@ -278,6 +278,12 @@ public static partial class Doors
         }
         var i = ((double)(y) * (state.grid.width)) + x;
         var open = state.grid.open.indexOf(i);
+        // Locking shuts it: not on someone alive standing in it (shutting it refuses the same; 2026-11-12: a
+        // survivor or a resident was left inside a shut, locked door). The dead in it are turned out, below.
+        if (!state.grid.locked.includes(i) && Js.ListOf<IBody>(state.survivors, state.residents).some((b) => (b.pos.x == x) && (b.pos.y == y)))
+        {
+            return "someone is in the doorway";
+        }
         if (open >= 0)
         {
             state.grid.open.splice(open, 1);

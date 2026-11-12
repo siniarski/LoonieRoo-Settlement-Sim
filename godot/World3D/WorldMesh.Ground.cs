@@ -42,7 +42,8 @@ public static partial class WorldMesh
         if (ribbon) { Ground(gs, ws, x, y, tile, Nearest(g, x, y, VERGE_REACH)); return false; }
         Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));
         LaneMark(gs, g, x, y, tile, ground);
-        return tile == "water" || (Ribboned && ground == "bridge");
+        // (A bridge's floor tile drew its water above; a tile that is not floor drew none, whatever its ground.)
+        return tile == "water";
     }
 
     /// <summary>The kind of ground under tile (x, y) (grass where the sim's number is not a kind).</summary>

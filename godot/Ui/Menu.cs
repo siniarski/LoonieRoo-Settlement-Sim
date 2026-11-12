@@ -426,7 +426,7 @@ public sealed partial class Menu : Control
         grid.AddThemeConstantOverride("h_separation", 12);
         var o = Graphics.Current;
         void Set(Action<Graphics.Options> change) { Graphics.Set(change); shown = ""; }
-        Choose(grid, "View distance", Graphics.VIEWS.Select((v) => (v, v == 0 ? "Near only (about 60 m)" : $"{v} m")), Graphics.View, (v) => Set((x) => x.view = v), "View");
+        Choose(grid, "View distance", Graphics.VIEWS.Select((v) => (v, v == 0 ? "Near only (about 56 m)" : $"{v} m")), Graphics.View, (v) => Set((x) => x.view = v), "View");
         Choose(grid, "Detail distance", Graphics.DETAILS.Select((d) => (d, $"{d * 16 + 8} m{(d == 3 ? " (normal)" : "")}")), Graphics.Detail, (v) => Set((x) => x.detail = v), "Detail");
         Choose(grid, "Far trees", new[] { ("off", "Off"), ("simple", "Simple"), ("detailed", "Detailed") }, o.farTrees, (v) => Set((x) => x.farTrees = v), "FarTrees");
         Choose(grid, "Shadows", new[] { ("off", "Off"), ("low", "Low (24 m)"), ("medium", "Medium (40 m)"), ("high", "High (80 m)") }, o.shadows, (v) => Set((x) => x.shadows = v), "Shadows");
