@@ -910,6 +910,8 @@ public partial class SimState
     public List<Resident> residents { get; set; } = new();
     public List<Animal> animals { get; set; } = new();
     public double lastRelief { get; set; }
+    /// <summary>The ticks of the colony's deaths in the storyteller's window (Director.RECENT), oldest first: the event log keeps only the last MAX_EVENTS.</summary>
+    public List<double> deathTicks { get; set; } = new();
     public List<Prisoner> prisoners { get; set; } = new();
     public List<SupplyRequest> requests { get; set; } = new();
     public Endgame endgame { get; set; } = new();

@@ -47,6 +47,7 @@ public static partial class Needs
             return;
         }
         Events.logEvent(state, $"{Js.Str(s.name)} died of {Js.Str(cause)}");
+        Director.noteDeath(state);
         Mood.mournDeath(state, s);
     }
 }
