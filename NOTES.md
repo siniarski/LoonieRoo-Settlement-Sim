@@ -3,9 +3,9 @@
 The project's index: read "Start here" at the start of each session, then only the file your task touches.
 Non-trivial work gets a session-log entry (`log/`), not an edit here; "Session log" at the end says how.
 
-## Start here (state as of 2026-11-12)
+## Start here (state as of 2026-11-12; what the game does today: docs/state-of-the-game.md)
 
-**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~1,010 xUnit tests (a shared TestKit.cs in cs/Sim.Tests), schema 78, world generation version 3), the game in
+**What it is.** A deterministic survival sim: the sim in pure C# (`cs/Sim`, ~1,020 xUnit tests (a shared TestKit.cs in cs/Sim.Tests), schema 78, world generation version 3), the game in
 Godot 4.6 .NET (`godot/`). It began as a RimWorld-style colony sim and is now **Project Zomboid-style survival in
 first person** (3D, `godot/World3D`), with an optional colony sim run from the map screen's Colony tab (M; 2D
 top-down, `godot/Render`), neighbouring settlements living their own lives, and survivors with stories and requests.
@@ -39,22 +39,23 @@ trace flags) to screenshots unless the question is about rendering. Parallel ses
 cheaper models for mechanical work.
 
 **Next, in order** (detail in docs/open-work.md).
-1. The player's playtest in Godot: nothing built since 2026-11-05 has been played by a human, and 2026-11-10's
+1. More playtest in Godot: only two short play lists (2026-11-11, -12) have been played by a human, and 2026-11-10's
    sixteen features least of all (docs/open-work.md "Not played yet").
-2. The player's decisions (docs/open-work.md "For the player to decide": thirst, deer, light and the dead, snow
-   tracks, weapon options, the bag).
+2. The player's decisions (docs/open-work.md "For the player to decide": thirst, deer, light and the dead, snow tracks, cars,
+   weapon options, the bag).
 3. Big worlds: unloading chunks (furniture per chunk, an active region), loading off the main thread, then the
    very large stress test before storeys or long-path work.
 4. The look and sound: textures, weapon, fire and rain sounds, bloom for lights.
 
 **Where to read what** (read only what your task touches).
+- docs/state-of-the-game.md: what you can do in the game today, and what is known not to work. For a first read.
 - README.md: the shape and a reading order, for a person reviewing the code.
 - docs/modules.md: one line per sim module by folder and per game folder; the TypeScript-name mapping. Before touching code.
 - docs/sim-model.md: designations, jobs, rooms, paths, doors, edges, replays. Before jobs, rooms or pathfinding work.
 - docs/decisions.md: every design decision with its reasoning, by area. Before changing how a system behaves.
 - docs/design.md: the player's vision, the 2026-11-04 and 2026-11-08 decisions, big worlds. Before new features.
-- docs/open-work.md: what's left by area, the unplayed list, the character work's status and traps.
-- docs/controls.md: every key, first person and the Colony tab; where saves go.
+- docs/open-work.md: what is left, by subject (cars, the dead, water, buildings, the colony, others, the view, animation, sound, tests, performance), and the unplayed list.
+- docs/controls.md: one table of every key, first person and the Colony tab; where saves go.
 - docs/harness.md: the balance players, bench and stress, and their env vars. For balance or performance.
 - godot/README.md: the game file by file, every command-line flag, the character lab. Before rendering or UI work.
 - docs/characters.md (characters), docs/trees.md (trees), docs/textures.md (the detail textures: layers, the shader
@@ -110,4 +111,4 @@ cheaper models for mechanical work.
 The session log is in `log/`, a file per entry: `log/YYYY-MM-DD-NN-slug.md` (NN: the entry's place in its day, one
 more than that day's highest; two sessions picking the same NN is fine, their slugs differ). Add a new file for each
 non-trivial change (what was tried, the numbers, what was decided, what's left); never edit NOTES.md just to log.
-`ls log/` is the index; `grep -ril <word> log/` finds an old entry.
+`log/README.md` is the index (one line a file, in order, with the eras); add a line there for a new entry. `grep -ril <word> log/` finds an old entry by its words.
