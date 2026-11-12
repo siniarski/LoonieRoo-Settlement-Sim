@@ -56,7 +56,9 @@ public partial class Game
         // Sitting in a sedan with the dead after you: they come to it and stop at its body, none inside it.
         var car = Staging.car(state, cx, cy, 0);
         PutYou(you, cx + 0.5, cy + 0.5, cx + 3, cy + 0.5);
-        var seated = Staging.seat(state, you, 1, 1, 0);
+        // A sound car with fuel (the numbers are percentages: at 1 for health the car was a wreck after one blow,
+        // and the dead reached you through it, which read as a fault in the game and was the scene's).
+        var seated = Staging.seat(state, you, 50, 100, 0);
         await Frames(3);
         var zs = new[] { (-3, 0), (3, 2) }.Select((d) => Zombies.addZombie(state, cx + d.Item1, cy + d.Item2, 100, "static")).ToList();
         foreach (var z in zs) z.targetId = you.id;
@@ -72,6 +74,8 @@ public partial class Game
                 inside |= gap < 0;
             }
         }
+        Check("In a sound car the dead batter the car, not you", seated != null && you.health == hp0 && car.health < Vehicles.VEHICLE_HEALTH,
+            $"your health {hp0:0} -> {you.health:0}, the car's {Vehicles.VEHICLE_HEALTH} -> {car.health:0}");
         Check("The dead come to the car you sit in and stop at its body, none inside it", seated != null && !inside && nearest < 2 * Motion.SUB,
             $"seated {seated != null}, nearest {nearest:0} SUB from the body, one inside {inside}, your health {hp0:0} -> {you.health:0}, alive {state.survivors.Contains(you) && ControlMod.controlled(state) == you}");
         foreach (var z in zs) Zombies.removeZombie(state, z);

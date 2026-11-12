@@ -16,6 +16,6 @@ Push with J, alarm, U and I, crouch and E under a pickup (north side), vault a w
 Not done: a tall fence that is not vaulted; the dead stopped at a car you sit in is checked with static dead only; the death screen.
 
 ## Findings
-- Sitting in a parked sedan with two dead after you, you lose 1000 -> 451 health in 8 s: they hurt you through the car (the check only asks that they stop at its body, which they do, 178 SUB off). Probably intended (windows); say if not. See it: SELFTEST_ONLY=play.
+- (Not a fault, 2026-11-13: the scene sat you in a car at 1% health, a wreck after one blow, so the dead reached you through it as they are meant to once it is wrecked. The step now uses a sound car and checks that the car is battered and you are not.) Sitting in a parked sedan with two dead after you, you lose 1000 -> 451 health in 8 s: they hurt you through the car (the check only asks that they stop at its body, which they do, 178 SUB off). Probably intended (windows); say if not. See it: SELFTEST_ONLY=play.
 - 2 game hours at 4x is only about 70 m of held running (400 ticks): "a few hundred metres" needs 6+ game hours, which would take about 2 minutes here. Not a game bug; the threshold is 60 m.
 No step is marked as a known failure: `KnownFailures` and `CheckKnown` (SelfTestPlace.cs) are the mechanism, empty now.
