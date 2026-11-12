@@ -72,12 +72,13 @@ public class Profile
     public static readonly (string name, Func<SimState> build)[] BIG =
     {
         ("new-2048", () => Worldgen.createWorld(42, 2048, Difficulty.NORMAL)),
+        ("spread-1024", () => Scenarios.STRESS.First((x) => x.name == "spread-1024").build()),
         ("new-4096", () => Worldgen.createWorld(42, 4096, Difficulty.NORMAL)),
         ("new-10000", () => Worldgen.createWorld(42, 10000, Difficulty.NORMAL)),
     };
 
     // --- The replayed tick. ---
-    sealed class Acc { public double ms; public long bytes; public long calls; }
+    sealed class Acc { public double ms, cur, worst; public long bytes; public long calls; } // cur: this tick's, worst: the worst tick's
     readonly Dictionary<string, Acc> acc = new();
     readonly List<string> order = new();
 
@@ -100,13 +101,16 @@ public class Profile
     {
         long t1 = Stopwatch.GetTimestamp(), b1 = GC.GetAllocatedBytesForCurrentThread();
         if (!acc.TryGetValue(name, out var a)) { a = acc[name] = new Acc(); order.Add(name); }
-        a.ms += (t1 - t0) * 1000.0 / Stopwatch.Frequency;
+        double took = (t1 - t0) * 1000.0 / Stopwatch.Frequency;
+        a.ms += took;
+        a.cur += took;
         a.bytes += b1 - b0;
         a.calls++;
     }
 
     void ReplayTick(SimState state)
     {
+        foreach (var a in acc.Values) { a.worst = Math.Max(a.worst, a.cur); a.cur = 0; }
         Time.setDayScale(state.settings.dayScale);
         S("movers.was", state, (st) => { foreach (var e in Js.Iter(Tick.movers(st))) e.was = new Point { x = Js.I(e.at.x), y = Js.I(e.at.y) }; });
         if (Env("DEEP") == "zombies") ReplayZombies(state);
@@ -185,6 +189,9 @@ public class Profile
         S("Doors.closeBehind", state, Doors.closeBehind);
         S("movers.syncStep", state, (st) => { foreach (var e in Js.Iter(Tick.movers(st))) if (!Tick.isFree(st, e)) Motion.syncStep(e); });
         S("Snow.tick", state, Snow.tick);
+        // updateFog generates the chunks round each survivor first (Worldgen.ensureGeneratedAround): timed on its own
+        // here, all survivors before the sight (the replay only; the tick interleaves them).
+        S("Fog: ensureGeneratedAround", state, (st) => { foreach (var s in st.survivors) Worldgen.ensureGeneratedAround(st, s.pos); });
         S("Fog.updateFog", state, Fog.updateFog);
         state.tick = Js.I(state.tick + 1);
     }
@@ -374,11 +381,11 @@ public class Profile
             out_.Add($"== {name}: size {state.grid.width} survivors {state.survivors.Count} zombies {state.zombies.Count} animals {state.animals.Count} items {state.items.Count} jobs {state.jobs.Count} tick {state.tick}");
             out_.Add($"   whole tick: {ms:0.000} ms ({1000 / ms:0} ticks/s), {bytes / 1024:0.0} KB allocated a tick, {gcs} gen0 GCs over {ticks} ticks");
             out_.Add($"   replayed:   {total / ticks:0.000} ms, {(double)totalB / ticks / 1024:0.0} KB a tick (the same ticks step by step, on a second build; the clocks add a little)");
-            out_.Add($"   {"step",-38} {"ms/tick",8} {"%",5} {"KB/tick",8} {"%",5} {"calls/tick",10}");
+            out_.Add($"   {"step",-38} {"ms/tick",8} {"%",5} {"KB/tick",8} {"%",5} {"calls/tick",10} {"worst ms",9}");
             foreach (var k in order.OrderByDescending((k) => acc[k].ms).Where((k) => acc[k].ms / total > 0.002 || (double)acc[k].bytes / Math.Max(1, totalB) > 0.002))
             {
                 var a = acc[k];
-                out_.Add($"   {k,-38} {a.ms / ticks,8:0.000} {100 * a.ms / total,5:0.0} {(double)a.bytes / ticks / 1024,8:0.0} {100.0 * a.bytes / Math.Max(1, totalB),5:0.0} {(double)a.calls / ticks,10:0.0}");
+                out_.Add($"   {k,-38} {a.ms / ticks,8:0.000} {100 * a.ms / total,5:0.0} {(double)a.bytes / ticks / 1024,8:0.0} {100.0 * a.bytes / Math.Max(1, totalB),5:0.0} {(double)a.calls / ticks,10:0.0} {Math.Max(a.worst, a.cur),9:0.000}");
             }
             out_.Add($"   sampled allocations by type (whole tick, KB/tick):");
             foreach (var kv in types) out_.Add($"     {kv.Value / 1024.0 / ticks,8:0.0}  {kv.Key}");

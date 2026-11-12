@@ -18,10 +18,15 @@ public static partial class NatureMod
     /// <summary>A well-mixed 32-bit hash of the seed and up to three integers.</summary>
     public static double hash(double seed, double a, double b, double salt)
     {
-        double h = Js.Xor(Js.Xor(Js.Xor(JsMath.imul(Js.Xor(seed, 2654435769.0), 2246822507.0), JsMath.imul(a, 3266489909.0)), JsMath.imul(b, 668265263.0)), JsMath.imul(salt, 0x165667b1));
-        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x2c1b3c6d);
-        h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 12)), 0x297a2d39);
-        return Js.Ushr((Js.Xor(h, Js.Ushr(h, 15))), 0);
+        // JS's (each operand through ToInt32, 32-bit products) in ints: the same bits (2026-11-12: 24 ns a call through
+        // the double overloads, and the world's terrain hashes some forty times a tile; NatureProbe checks the two agree).
+        unchecked
+        {
+            int h = ((Js.ToInt32(seed) ^ (int)2654435769u) * (int)2246822507u) ^ (Js.ToInt32(a) * (int)3266489909u) ^ (Js.ToInt32(b) * 668265263) ^ (Js.ToInt32(salt) * 0x165667b1);
+            h = (h ^ (int)((uint)h >> 15)) * 0x2c1b3c6d;
+            h = (h ^ (int)((uint)h >> 12)) * 0x297a2d39;
+            return (uint)(h ^ (int)((uint)h >> 15));
+        }
     }
 
     /// <summary>Uniform in [0, 1).</summary>
@@ -42,12 +47,10 @@ public static partial class NatureMod
         var gy = JsMath.floor(((double)(y) / (scale)));
         var fx = smooth(((double)(x) / (scale)) - gx);
         var fy = smooth(((double)(y) / (scale)) - gy);
-        double c(double i, double j)
-        {
-            return roll(seed, gx + i, gy + j, salt);
-        }
-        var top = c(0, 0) + ((double)((c(1, 0) - c(0, 0))) * (fx));
-        var bottom = c(0, 1) + ((double)((c(1, 1) - c(0, 1))) * (fx));
+        // Each corner's roll once (it was asked six times for four).
+        double c00 = roll(seed, gx, gy, salt), c10 = roll(seed, gx + 1, gy, salt), c01 = roll(seed, gx, gy + 1, salt), c11 = roll(seed, gx + 1, gy + 1, salt);
+        var top = c00 + ((double)((c10 - c00)) * (fx));
+        var bottom = c01 + ((double)((c11 - c01)) * (fx));
         return top + ((double)((bottom - top)) * (fy));
     }
     public static double noise(double seed, double x, double y, double scale, double salt) => noise(seed, Js.I(x), Js.I(y), scale, salt);
