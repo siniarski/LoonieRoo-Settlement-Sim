@@ -233,6 +233,21 @@ public class AnimalCarsTest
         }
     }
 
+    [Fact(DisplayName = "animals and cars > letting go under a pickup leaves the colonist beside it, not in its tiles")]
+    public void Let_go_under()
+    {
+        var state = map(20, 12, (x, y) => '.');
+        var s = state.survivors[0];
+        Commands.applyCommand(state, new Command { type = "takeControl", survivorId = s.id });
+        var car = park(state, "truck", 10, 6);
+        Vehicles.hideUnder(state, s, car);
+        expect(Grids.isParked(state.grid, s.pos.x, s.pos.y)).toBe(true);
+        Commands.applyCommand(state, new Command { type = "takeControl", survivorId = null });
+        expect(state.control).toBeNull();
+        expect(Grids.isParked(state.grid, s.pos.x, s.pos.y)).toBe(false);
+        expect(Motion.fits(state.grid, s.at, Pathfinding.FREE)).toBe(true);
+    }
+
     [Fact(DisplayName = "animals and cars > a wolf goes round a car's end when round is short")]
     public void Wolf_round()
     {
