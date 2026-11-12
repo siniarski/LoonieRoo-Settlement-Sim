@@ -1,6 +1,6 @@
 // Furniture in first person (2026-11-09): one model per furniture kind or look (art/scripts/build_furniture.py:
 // godot/assets/furniture/furniture.glb, a mesh per name, vertex colours with metalness in the alpha, like
-// the items), drawn as one MultiMesh per model. A piece's model is its look's for a crate or decor that has
+// the items), drawn as one MultiMesh per model (ModelSet). A piece's model is its look's for a crate or decor that has
 // one (a kitchen counter, a sofa, a car), else its kind's (a built bed, a well); variants ("crate_v1"...)
 // by a hash of its id. A piece with no model stays WorldMesh's box (Has tells it which); trees are Trees.cs's.
 //
@@ -32,30 +32,13 @@ public sealed class FurnitureModels
     /// <summary>How far a wall's face is from its tile's centre (half a tile less half a wall).</summary>
     const float WALL_FACE = 0.5f - 0.06f;
 
-    const string SHADER = @"
-shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_schlick_ggx;
-#include ""res://assets/shaders/surface_detail.gdshaderinc""
-#include ""res://assets/shaders/snow_cover.gdshaderinc""
-void vertex() {
-    SURFACE_BY_OBJECT
-}
-void fragment() {
-    ALBEDO = snowy(COLOR.rgb * SURFACE_DETAIL, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
-    METALLIC = COLOR.a * 0.7;
-    ROUGHNESS = mix(0.9, 0.45, COLOR.a);
-}";
-
     /// <summary>The model names furniture.glb has (WorldMesh draws no box for a piece with one).</summary>
     static readonly HashSet<string> names = new();
     static readonly string[] LONG = { "car", "truck", "tractor" };
 
-    readonly Node3D parent;
-    readonly Dictionary<string, Mesh> meshes = new();
-    readonly Dictionary<string, List<string>> variants = new();
+    readonly ModelSet models;
     /// <summary>Each model's bounds (to push it against a wall and fit it between its neighbours).</summary>
     readonly Dictionary<string, Aabb> boxes = new();
-    readonly Dictionary<string, MultiMeshInstance3D> nodes = new();
     readonly Dictionary<(int, int), Furniture> byTile = new();
     (int, int) lastChunk = (int.MinValue, 0);
     int lastVersion = -1;
@@ -65,33 +48,12 @@ void fragment() {
 
     public FurnitureModels(Node3D parent)
     {
-        this.parent = parent;
-        var material = new ShaderMaterial { Shader = Surfaces.Shader(SHADER) };
-        var scene = GD.Load<PackedScene>("res://assets/furniture/furniture.glb").Instantiate<Node3D>();
-        Collect(scene, material);
-        scene.Free();
-        foreach (var name in meshes.Keys)
+        models = new ModelSet(parent, "res://assets/furniture/furniture.glb");
+        foreach (var name in models.Names)
         {
             names.Add(name);
-            boxes[name] = meshes[name].GetAabb();
-            int v = name.LastIndexOf("_v", StringComparison.Ordinal);
-            if (v <= 0 || !int.TryParse(name.AsSpan(v + 2), out _)) continue;
-            string kind = name[..v];
-            if (!meshes.ContainsKey(kind)) continue;
-            if (!variants.TryGetValue(kind, out var list)) variants[kind] = list = new() { kind };
-            list.Add(name);
+            boxes[name] = models.MeshOf(name).GetAabb();
         }
-        foreach (var list in variants.Values) list.Sort(string.CompareOrdinal);
-    }
-
-    void Collect(Node n, Material material)
-    {
-        if (n is MeshInstance3D mi && mi.Mesh != null)
-        {
-            for (int i = 0; i < mi.Mesh.GetSurfaceCount(); i++) mi.Mesh.SurfaceSetMaterial(i, material);
-            meshes[n.Name] = mi.Mesh;
-        }
-        foreach (var c in n.GetChildren()) Collect(c, material);
     }
 
     /// <summary>A piece's model name before variants: its look's (a crate or decor with one), else its kind's.</summary>
@@ -102,13 +64,7 @@ void fragment() {
     public static bool Has(Furniture f) => names.Contains(Base(f));
 
     /// <summary>The model a piece is drawn with (one of its variants by its id's hash), or "" for none.</summary>
-    public string ModelOf(Furniture f)
-    {
-        string b = Base(f);
-        if (!meshes.ContainsKey(b)) return "";
-        if (!variants.TryGetValue(b, out var list)) return b;
-        return list[(int)(Mix(Fnv(f.id)) % (uint)list.Count)];
-    }
+    public string ModelOf(Furniture f) => models.Pick(Base(f), f.id);
 
     public void Update(SimState state, Vector3 eye, WorldMesh.Lookups look)
     {
@@ -131,36 +87,16 @@ void fragment() {
                     if (inRange) near.Add(f);
                 }
             }
-        var byModel = new Dictionary<string, List<Transform3D>>();
+        models.Begin();
         foreach (var f in near)
         {
             string model = ModelOf(f);
             if (model == "") continue;
-            if (Place(state.grid, f, model) is not { } t) continue;
-            if (!byModel.TryGetValue(model, out var l)) byModel[model] = l = new();
-            l.Add(t);
+            if (Place(state.grid, f, model) is { } t) models.Add(model, t);
         }
-        int count = 0;
         float span = (2 * RADIUS + 1) * CHUNK + 8;
-        var bounds = new Aabb(new Vector3((chunk.Item1 - RADIUS) * CHUNK - 4, -60, (chunk.Item2 - RADIUS) * CHUNK - 4), new Vector3(span, 200, span));
-        foreach (var (model, list) in byModel)
-        {
-            if (!nodes.TryGetValue(model, out var node))
-            {
-                node = new MultiMeshInstance3D { Multimesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = meshes[model] } };
-                parent.AddChild(node);
-                nodes[model] = node;
-            }
-            var mm = node.Multimesh;
-            if (mm.InstanceCount < list.Count) mm.InstanceCount = Math.Max(list.Count, mm.InstanceCount * 2);
-            mm.VisibleInstanceCount = list.Count;
-            for (int k = 0; k < list.Count; k++) mm.SetInstanceTransform(k, list[k]);
-            node.CustomAabb = bounds;
-            count += list.Count;
-        }
-        foreach (var (model, node) in nodes)
-            if (!byModel.ContainsKey(model)) node.Multimesh.VisibleInstanceCount = 0;
-        Count = count;
+        models.End(new Aabb(new Vector3((chunk.Item1 - RADIUS) * CHUNK - 4, -60, (chunk.Item2 - RADIUS) * CHUNK - 4), new Vector3(span, 200, span)));
+        Count = models.Count;
     }
 
     // The four ways, as grid steps: north, east, south, west.

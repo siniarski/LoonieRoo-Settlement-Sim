@@ -267,7 +267,7 @@ void fragment() {
 
     void Item(string name, Vector3 at, float yaw, Node parent)
     {
-        var mesh = items.MeshNamed(name);
+        var mesh = items.MeshFor(name);
         if (mesh != null) Multi(mesh, new() { new Transform3D(new Basis(Vector3.Up, yaw), at) }, false, parent);
     }
 
@@ -437,7 +437,7 @@ void fragment() {
         {
             var at = new Vector3((i % 5 - 2) * 0.55f, 0, -1.6f - (i / 5) * 0.6f);
             Item(ItemSet[i], at, 0.5f + i, stage);
-            var mesh = items.MeshNamed(ItemSet[i]);
+            var mesh = items.MeshFor(ItemSet[i]);
             if (mesh != null) Tag($"{ItemSet[i]} {Tris(mesh)}", at + new Vector3(0, 0.32f, 0), 0.0009f);
         }
         Look(new Vector3(0, 1.65f, 0), new Vector3(0, 0, -1.9f));
@@ -488,7 +488,7 @@ void fragment() {
             list.Add(new Transform3D(new Basis(Vector3.Up, (float)(H(i, 43) * 6.28)), new Vector3((float)(Math.Sin(a) * d), 0, (float)(Math.Cos(a) * d))));
         }
         foreach (var (name, list) in byItem)
-            if (items.MeshNamed(name) is Mesh m) Multi(m, list, false, stage);
+            if (items.MeshFor(name) is Mesh m) Multi(m, list, false, stage);
         caption.Text = $"{t.Key}  {t.Name}: {people} people";
     }
 
