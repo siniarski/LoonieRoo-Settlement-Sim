@@ -263,15 +263,15 @@ public sealed class Roofs
 
     // --- the meshes ---
 
-    SurfaceTool Begin()
+    MeshBuf Begin()
     {
-        var st = new SurfaceTool();
+        var st = new MeshBuf();
         st.Begin(Mesh.PrimitiveType.Triangles);
         st.SetUV2(Vector2.Zero); // every roof vertex has one: a slope's own coordinates, where its layer is laid by them
         return st;
     }
 
-    ArrayMesh End(SurfaceTool st)
+    ArrayMesh End(MeshBuf st)
     {
         var mesh = st.Commit();
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, material);
@@ -329,7 +329,7 @@ public sealed class Roofs
     }
 
     /// <summary>A gable or hip roof over a rectangle, its ridge along the longer side; eaves overhang the walls.</summary>
-    static void Pitched(SurfaceTool st, Rect r, float top, float pitch, Look colour, bool hip, Look wall)
+    static void Pitched(MeshBuf st, Rect r, float top, float pitch, Look colour, bool hip, Look wall)
     {
         bool alongX = r.w >= r.h;
         float L = alongX ? r.w : r.h, D = alongX ? r.h : r.w;
@@ -392,7 +392,7 @@ public sealed class Roofs
     }
 
     /// <summary>A flat roof: a tarred deck at the walls' top, a parapet round the footprint's edge with a coping on it.</summary>
-    static void Flat(SurfaceTool st, Grid g, HashSet<int> tiles, List<Rect> rects, float top, Look wall)
+    static void Flat(MeshBuf st, Grid g, HashSet<int> tiles, List<Rect> rects, float top, Look wall)
     {
         foreach (var r in rects) WorldMesh.Box(st, new(r.x, top + 0.01f, r.y), new(r.x + r.w, top + SLAB, r.y + r.h), TAR);
         const float outT = 0.1f, inT = 0.12f, capT = 0.04f;
@@ -437,7 +437,7 @@ public sealed class Roofs
     }
 
     /// <summary>A roof you'd put on yourself: boards laid flat over the room, a hand past the walls.</summary>
-    static void FlatBuilt(SimState state, SurfaceTool st, List<int> tiles)
+    static void FlatBuilt(SimState state, MeshBuf st, List<int> tiles)
     {
         var g = state.grid;
         // Over the highest floor in the room (on a slope the walls step up with it).
@@ -461,7 +461,7 @@ public sealed class Roofs
 
     // --- primitives (front faces wind clockwise seen from the front, as WorldMesh's) ---
 
-    static void Tri(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Look look, Vector3 hint)
+    static void Tri(MeshBuf st, Vector3 a, Vector3 b, Vector3 c, Look look, Vector3 hint)
     {
         var n = (b - a).Cross(c - a).Normalized();
         if (n.Dot(hint) > 0) (b, c) = (c, b);
@@ -482,7 +482,7 @@ public sealed class Roofs
         }
     }
 
-    static void Quad(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Look colour, Vector3 hint)
+    static void Quad(MeshBuf st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Look colour, Vector3 hint)
     {
         Tri(st, a, b, c, colour, hint);
         Tri(st, a, c, d, colour, hint);

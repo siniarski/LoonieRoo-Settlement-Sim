@@ -24,7 +24,7 @@ public static partial class WorldMesh
     public static bool Ribboned;
 
     /// <summary>A tile's ground, by what it is and what is round it; returns whether it put water in.</summary>
-    static bool TileGround(SurfaceTool gs, SurfaceTool ws, Grid g, int x, int y, string tile)
+    static bool TileGround(MeshBuf gs, MeshBuf ws, Grid g, int x, int y, string tile)
     {
         string ground = GroundAt(g, x, y);
         // A country road's tiles are drawn as the verge beside them while the road itself is a ribbon along
@@ -32,12 +32,18 @@ public static partial class WorldMesh
         bool ribbon = Ribboned && tile == "floor" && ground == "road" && !Terrain.Sunk(x, y);
         // The water's edge is drawn smooth (Banks): a tile the bank runs through is part land, part water; one wholly
         // on the far side of it is drawn as that side, whatever the sim's tile says.
+        long q0 = System.Diagnostics.Stopwatch.GetTimestamp();
         int bank = Terrain.Flat || ground == "bridge" || tile is not ("floor" or "water") ? BANK_AS_IS : Banks(gs, ws, g, x, y, tile, ribbon ? Nearest(g, x, y, VERGE_REACH) : ground);
+        long q1 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PartTicks[4] += q1 - q0;
         if (bank == BANK_DRAWN) return true;
         if (bank == BANK_WATER) { Ground(gs, ws, x, y, "water", ground); return true; }
         if (bank == BANK_LAND && tile == "water") { Ground(gs, ws, x, y, "floor", Nearest(g, x, y, SHORE_REACH)); return false; }
         // Where kinds of open ground meet, smooth too (Edges).
-        if (bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground)) return false;
+        bool edged = bank == BANK_AS_IS && !Terrain.Flat && tile == "floor" && Soft(ground) >= 0 && Edges(gs, g, x, y, ground);
+        long q2 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PartTicks[5] += q2 - q1;
+        if (edged) return false;
         if (Ribboned && tile == "floor" && ground == "bridge") { UnderBridge(gs, ws, x, y); return true; }
         if (ribbon) { Ground(gs, ws, x, y, tile, Nearest(g, x, y, VERGE_REACH)); return false; }
         Ground(gs, ws, x, y, tile, ground, Ribboned ? -1 : RoadCorner(g, x, y, tile, ground));
@@ -74,7 +80,7 @@ public static partial class WorldMesh
 
     // --- the tile's ground ---
 
-    static void Ground(SurfaceTool st, SurfaceTool ws, int x, int y, string tile, string ground, int roadCorner = -1)
+    static void Ground(MeshBuf st, MeshBuf ws, int x, int y, string tile, string ground, int roadCorner = -1)
     {
         bool water = tile == "water";
         var w = SheetLook(x, y);
@@ -92,14 +98,14 @@ public static partial class WorldMesh
     }
 
     /// <summary>A tile's water surface, at the water's level on its corners.</summary>
-    static void WaterQuad(SurfaceTool ws, int x, int y, Look look)
+    static void WaterQuad(MeshBuf ws, int x, int y, Look look)
     {
         float W(int cx, int cy) => Terrain.Water(cx, cy);
         Quad(ws, new(x, W(x, y), y), new(x + 1, W(x + 1, y), y), new(x + 1, W(x + 1, y + 1), y + 1), new(x, W(x, y + 1), y + 1), look, Vector3.Up);
     }
 
     /// <summary>A tile of ground on its four corner heights, each corner with its own (shared) normal.</summary>
-    static void GroundQuad(SurfaceTool st, int x, int y, Look look)
+    static void GroundQuad(MeshBuf st, int x, int y, Look look)
     {
         // A street's asphalt lies a kerb's height under its corners (Terrain.Sunk), the kerb's face along each side
         // that isn't asphalt too.
@@ -120,7 +126,7 @@ public static partial class WorldMesh
 
     /// <summary>A tile of ground as two triangles of different looks, split on the diagonal that cuts off `corner`
     /// (0 north-east, 1 south-east, 2 south-west, 3 north-west): that half is `cut`, the rest `own`.</summary>
-    static void GroundHalves(SurfaceTool st, int x, int y, Look own, Look cut, int corner)
+    static void GroundHalves(MeshBuf st, int x, int y, Look own, Look cut, int corner)
     {
         // The tile's corners in order round it: north-west, north-east, south-east, south-west.
         var k = new (int x, int y)[] { (x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1) };
@@ -142,7 +148,7 @@ public static partial class WorldMesh
 
     /// <summary>The kerb's faces round a sunk tile: from the asphalt up to the ground beside it, on each side whose
     /// neighbour isn't sunk.</summary>
-    static void Kerbs(SurfaceTool st, int x, int y)
+    static void Kerbs(MeshBuf st, int x, int y)
     {
         foreach (var (dx, dy, ax, ay, bx, by, n) in new[] {
             (0, -1, x, y, x + 1, y, Vector3.Back), (0, 1, x, y + 1, x + 1, y + 1, Vector3.Forward),
@@ -180,7 +186,7 @@ public static partial class WorldMesh
     /// a road tile on the line between the two lanes carries a dash along that side, two metres in every four,
     /// just over the asphalt. A road is read off the tiles: an even number across (four to eight) and a straight
     /// run of at least five tiles each way along it, so junctions, yards and one-tile lanes have none.</summary>
-    static void LaneMark(SurfaceTool st, Grid g, int x, int y, string tile, string ground)
+    static void LaneMark(MeshBuf st, Grid g, int x, int y, string tile, string ground)
     {
         if (tile != "floor" || ground != "road") return;
         int Run(int dx, int dy) { int n = 0; while (n < 12 && IsRoad(g, x + dx * (n + 1), y + dy * (n + 1), true)) n++; return n; }
@@ -237,7 +243,7 @@ public static partial class WorldMesh
 
     /// <summary>A bridge's tile while roads are ribbons: the water running on under it (river bed and surface), the
     /// deck being the ribbon's (RoadRibbons.Deck), so a bridge on the slant is not a staircase of planks.</summary>
-    static void UnderBridge(SurfaceTool st, SurfaceTool ws, int x, int y)
+    static void UnderBridge(MeshBuf st, MeshBuf ws, int x, int y)
     {
         float W(int cx, int cy) => Terrain.Water(cx, cy);
         const float BED = 0.6f;

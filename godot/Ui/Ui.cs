@@ -51,8 +51,15 @@ public static class Kit
     }
 
     /// <summary>The look of an `active` button (a toggle that's on).</summary>
+    // Each button's state as SetActive last left it: the HUD sets every one every frame, and a new pair of style boxes
+    // a frame (a restyle in the engine) was a large part of its frame (log/2026-11-12-17-performance.md).
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Button, System.Runtime.CompilerServices.StrongBox<bool>> active = new();
+
     public static void SetActive(Button b, bool on)
     {
+        var was = active.GetOrCreateValue(b);
+        if (was.Value == on && b.HasThemeStyleboxOverride("normal") == on) return; // as it was, and nothing else has changed it
+        was.Value = on;
         if (on)
         {
             b.AddThemeStyleboxOverride("normal", Box("#3d5a46", "#6c9a78", 4, 3));

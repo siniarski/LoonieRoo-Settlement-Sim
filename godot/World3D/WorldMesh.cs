@@ -100,15 +100,16 @@ public static partial class WorldMesh
     /// ground itself (no shadows: low sun on gentle facets only striped it).</summary>
     public static (ArrayMesh world, ArrayMesh ground) Build(SimState state, int cx, int cy, Lookups look, Material solid, Material glass)
     {
+        long buildStart = System.Diagnostics.Stopwatch.GetTimestamp();
         var g = state.grid;
         deckGrid = g;
-        var st = new SurfaceTool();  // what stands: walls, doors, ceilings, furniture boxes
+        var st = new MeshBuf();  // what stands: walls, doors, ceilings, furniture boxes
         st.Begin(Mesh.PrimitiveType.Triangles);
-        var gs = new SurfaceTool();  // the ground, the river bed and the lane lines
+        var gs = new MeshBuf();  // the ground, the river bed and the lane lines
         gs.Begin(Mesh.PrimitiveType.Triangles);
-        var gl = new SurfaceTool();  // the windows' glass
+        var gl = new MeshBuf();  // the windows' glass
         gl.Begin(Mesh.PrimitiveType.Triangles);
-        var ws = new SurfaceTool();  // the water's surface: see-through (WorldLook.Water), over the bed
+        var ws = new MeshBuf();  // the water's surface: see-through (WorldLook.Water), over the bed
         ws.Begin(Mesh.PrimitiveType.Triangles);
         bool anyWater = false;
         bool anyGlass = false;
@@ -118,7 +119,10 @@ public static partial class WorldMesh
             {
                 int i = y * g.width + x;
                 string tile = Grids.tileAt(g, i);
+                long p0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 anyWater |= TileGround(gs, ws, g, x, y, tile);
+                long p1 = System.Diagnostics.Stopwatch.GetTimestamp();
+                PartTicks[0] += p1 - p0;
                 float floor = Terrain.Floor(x, y), low = Terrain.Low(x, y) - FOOTING;
                 if (tile == "wall") Box(st, new(x, low, y), new(x + 1, floor + WALL_H, y + 1), TileWall);
                 else if (tile == "barricade") Box(st, new(x + 0.05f, low, y + 0.05f), new(x + 0.95f, floor + 1.0f, y + 0.95f), WorldLook.Plank);
@@ -136,8 +140,11 @@ public static partial class WorldMesh
                     anyGlass |= Edge(st, gl, x, y, side == 0, kind, look.edgeOpen.Contains(e), look.edgeLocked.Contains(e), look.edgeBoarded.Contains(e), there, here, WideDoor(g, x, y, side, kind));
                 }
             }
+        long p2 = System.Diagnostics.Stopwatch.GetTimestamp();
         if (look.furniture.TryGetValue((cx, cy), out var list))
             foreach (var f in list) Thing(st, f);
+        long p3 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PartTicks[2] += p3 - p2;
         var mesh = st.Commit();
         if (mesh.GetSurfaceCount() > 0) mesh.SurfaceSetMaterial(0, solid);
         if (anyGlass)
@@ -152,18 +159,23 @@ public static partial class WorldMesh
             ws.Commit(groundMesh);
             groundMesh.SurfaceSetMaterial(groundMesh.GetSurfaceCount() - 1, WorldLook.Water);
         }
+        PartTicks[3] += System.Diagnostics.Stopwatch.GetTimestamp() - p3;
+        PartTicks[1] += p2 - buildStart;
         return (mesh, groundMesh);
     }
 
+    /// <summary>Where a chunk's build goes, in Stopwatch ticks (the chunk bench): the ground, the whole tile loop (the ground's share in it), furniture, the commits.</summary>
+    public static readonly long[] PartTicks = new long[6];
+
     /// <summary>A ceiling over an indoor tile at the walls' top, seen from below.</summary>
-    static void Ceiling(SurfaceTool st, int x, int y, Look look)
+    static void Ceiling(MeshBuf st, int x, int y, Look look)
     {
         float h = Terrain.Floor(x, y) + WALL_H;
         Quad(st, new(x, h, y), new(x + 1, h, y), new(x + 1, h, y + 1), new(x, h, y + 1), look, Vector3.Down);
     }
 
     /// <summary>A piece of furniture with no model, as a box on the ground.</summary>
-    static void Thing(SurfaceTool st, Furniture f)
+    static void Thing(MeshBuf st, Furniture f)
     {
         float x = f.x + 0.5f, z = f.y + 0.5f;
         if (f.kind == "tree" || FurnitureModels.Has(f)) return; // Trees.cs and Furniture.cs draw them
@@ -177,7 +189,7 @@ public static partial class WorldMesh
 
     // --- primitives ---
 
-    static void Quad(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Look look, Vector3 normal)
+    static void Quad(MeshBuf st, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Look look, Vector3 normal)
     {
         // Godot's front faces wind clockwise seen from the front: turn the quad round if it doesn't.
         if ((b - a).Cross(c - a).Dot(normal) > 0) (b, d) = (d, b);
@@ -189,10 +201,10 @@ public static partial class WorldMesh
     }
 
     /// <summary>An axis-aligned box from lo to hi (no bottom face).</summary>
-    public static void Box(SurfaceTool st, Vector3 lo, Vector3 hi, Look look) => Box(st, lo, hi, look, look, look, look, look);
+    public static void Box(MeshBuf st, Vector3 lo, Vector3 hi, Look look) => Box(st, lo, hi, look, look, look, look, look);
 
     /// <summary>A box with a look per face: its top, its north (-z) and south faces, its west (-x) and east ones.</summary>
-    public static void Box(SurfaceTool st, Vector3 lo, Vector3 hi, Look top, Look north, Look south, Look west, Look east)
+    public static void Box(MeshBuf st, Vector3 lo, Vector3 hi, Look top, Look north, Look south, Look west, Look east)
     {
         Vector3 v(float x, float y, float z) => new(x, y, z);
         float x0 = lo.X, y0 = lo.Y, z0 = lo.Z, x1 = hi.X, y1 = hi.Y, z1 = hi.Z;

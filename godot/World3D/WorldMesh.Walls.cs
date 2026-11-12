@@ -43,7 +43,7 @@ public static partial class WorldMesh
     /// <summary>An edge: a wall, door, barricade or window on the north or west side of tile (x, y). `before` is the
     /// building of the tile north or west of it and `after` the tile's own (null: none): a face looks like the inside of
     /// the building it faces into, or the outside of the one behind it. Returns whether it put glass in.</summary>
-    static bool Edge(SurfaceTool st, SurfaceTool gl, int x, int y, bool north, int kind, bool open, bool locked, bool boarded, WorldLook.Style? before, WorldLook.Style? after, int wide = 0)
+    static bool Edge(MeshBuf st, MeshBuf gl, int x, int y, bool north, int kind, bool open, bool locked, bool boarded, WorldLook.Style? before, WorldLook.Style? after, int wide = 0)
     {
         // Along the edge from a to a + 1, thickness across it. Heights are over the edge's floor (its higher
         // end); what starts at the ground goes down to a footing under its lower end.
@@ -140,7 +140,7 @@ public static partial class WorldMesh
     }
 
     /// <summary>An old-style door that fills its tile: posts and a lintel, the leaf across the gap unless open.</summary>
-    static void TileDoor(SurfaceTool st, Grid g, int x, int y, bool open, bool locked, float floor, float low)
+    static void TileDoor(MeshBuf st, Grid g, int x, int y, bool open, bool locked, float floor, float low)
     {
         // Across the gap the walls are on: walls west and east mean the door runs along x.
         bool alongX = Grids.getTile(g, x - 1, y) == "wall" || Grids.getTile(g, x + 1, y) == "wall";

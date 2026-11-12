@@ -343,3 +343,78 @@ public class GenProfile
         File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/plan-hashes.txt"), string.Join("\n", out_) + "\n");
     }
 }
+
+/// <summary>The world plan's per-tile functions timed one by one (what a generated chunk's terrain and the far
+/// field's region builds ask of every tile): ns a tile over SIZE (2048) world's middle 512 x 512 tiles, the best of
+/// ROUNDS (5). Report: out/nature-probe.txt.</summary>
+public class NatureProbe
+{
+    static string? Env(string name) => System.Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;
+
+    [Fact(DisplayName = "nature probe")]
+    public void Run()
+    {
+        int size = int.Parse(Env("SIZE") ?? "2048"), rounds = int.Parse(Env("ROUNDS") ?? "5"), n = 512, x0 = size / 2 - n / 2;
+        var l = Worldgen.layout(42, size, "normal");
+        var t = Terrain.Of(l);
+        var out_ = new List<string> { $"nature probe: {size} world, {n} x {n} tiles, best of {rounds}, ns a tile" };
+        double sink = 0;
+        void T(string what, Func<int, int, double> f)
+        {
+            double best = double.MaxValue;
+            for (int r = 0; r < rounds; r++)
+            {
+                long t0 = Stopwatch.GetTimestamp();
+                for (int y = x0; y < x0 + n; y++) for (int x = x0; x < x0 + n; x++) sink += f(x, y);
+                best = Math.Min(best, (Stopwatch.GetTimestamp() - t0) * 1e9 / Stopwatch.Frequency / (n * n));
+            }
+            out_.Add($"   {what,-34} {best,8:0.0}");
+        }
+        T("isWater", (x, y) => NatureMod.isWater(l, x, y) ? 1 : 0);
+        T("  nearStart", (x, y) => NatureMod.nearStart(l, x, y, 20) ? 1 : 0);
+        T("  isSea + isChannel", (x, y) => NatureMod.isSea(l, x, y) || NatureMod.isChannel(l, x, y) ? 1 : 0);
+        T("  Terrain.Of", (x, y) => Terrain.Of(l).W);
+        T("  riverDistance", (x, y) => t.riverDistance(x, y));
+        T("  isLake", (x, y) => t.isLake(x, y) ? 1 : 0);
+        T("  pond noise", (x, y) => NatureMod.noise(l.seed, x, y, 24, 8));
+        T("woodedness", (x, y) => NatureMod.woodedness(l, x, y));
+        T("  moisture", (x, y) => t.moisture(x, y));
+        T("  fbm 3 octaves", (x, y) => NatureMod.fbm(l.seed, x, y, 60, 9, 3));
+        T("isDirt", (x, y) => NatureMod.isDirt(l, x, y) ? 1 : 0);
+        T("isRoad", (x, y) => Worldgen.isRoad(l, x, y) ? 1 : 0);
+        T("noise (one)", (x, y) => NatureMod.noise(l.seed, x, y, 9, 0x5e40));
+        T("hash (one)", (x, y) => NatureMod.hash(l.seed, x, y, 0x5e40));
+        // The originals (before 2026-11-12), to check the rewrites give the same bits.
+        static double hash0(double seed, double a, double b, double salt)
+        {
+            double h = Js.Xor(Js.Xor(Js.Xor(JsMath.imul(Js.Xor(seed, 2654435769.0), 2246822507.0), JsMath.imul(a, 3266489909.0)), JsMath.imul(b, 668265263.0)), JsMath.imul(salt, 0x165667b1));
+            h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 15)), 0x2c1b3c6d);
+            h = JsMath.imul(Js.Xor(h, Js.Ushr(h, 12)), 0x297a2d39);
+            return Js.Ushr((Js.Xor(h, Js.Ushr(h, 15))), 0);
+        }
+        static double noise0(double seed, int x, int y, double scale, double salt)
+        {
+            var gx = JsMath.floor(((double)(x) / (scale)));
+            var gy = JsMath.floor(((double)(y) / (scale)));
+            var fx = NatureMod.smooth(((double)(x) / (scale)) - gx);
+            var fy = NatureMod.smooth(((double)(y) / (scale)) - gy);
+            double c(double i, double j) => hash0(seed, gx + i, gy + j, salt) / 4294967296.0;
+            var top = c(0, 0) + ((double)((c(1, 0) - c(0, 0))) * (fx));
+            var bottom = c(0, 1) + ((double)((c(1, 1) - c(0, 1))) * (fx));
+            return top + ((double)((bottom - top)) * (fy));
+        }
+        long checkedN = 0, differ = 0;
+        foreach (var seed in new double[] { 42, 7, 0, -1, 4294967295, 123456789012 })
+            foreach (var (scale, salt) in new[] { (9.0, 0x5e40), (24.0, 8.0), (30.0, 0x5e70), (40.0, 31.0), (18.0, 30.0), (1.0, 0x165667b1) })
+                for (int y = -300; y < 300; y += 3) for (int x = -300; x < 300; x += 3)
+                {
+                    checkedN += 2;
+                    if (hash0(seed, x, y, salt) != NatureMod.hash(seed, x, y, salt)) differ++;
+                    if (noise0(seed, x * 7, y * 5, scale, salt) != NatureMod.noise(seed, x * 7, y * 5, scale, salt)) differ++;
+                }
+        out_.Add($"   the rewrites against the originals: {checkedN} calls, {differ} differ");
+        Assert.Equal(0, differ);
+        out_.Add($"   (sink {sink:0})");
+        File.WriteAllText(Path.Combine(Node.Root, Env("OUT") ?? "cs/Harness/out/nature-probe.txt"), string.Join("\n", out_) + "\n");
+    }
+}

@@ -502,6 +502,8 @@ public sealed partial class Hud : Control
     {
         var s = Subject(state);
         if (s == null) { card.Visible = false; return; }
+        // Stowed in first person (Update hides it after): not worked out, nor rebuilt whenever a bar moves, unseen.
+        if (view.firstPerson && !view.showInventory) return;
         var bars = Card.barsOf(state, s);
         bool isYou = state.control?.survivorId == s.id;
         int jobIndex = (int)s.story.job;

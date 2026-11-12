@@ -23,6 +23,41 @@ public sealed partial class FirstPerson : Node3D
     public static float ShadowDistance = 40;
     /// <summary>Chunk meshes built per frame at most.</summary>
     const int BUILDS_PER_FRAME = 4;
+    // Chunk build timing (Stopwatch ticks), printed by the light bench: how many built, their total and worst, and the signature checks.
+    public static long BuildTicks, Builds, WorstBuild, SigTicks, Sigs;
+    /// <summary>The chunk bench (after the light bench): every chunk in range built REPS times over, warm, and where the time went.</summary>
+    public string ChunkBench(SimState state)
+    {
+        const int REPS = 3;
+        System.Array.Clear(WorldMesh.PartTicks);
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        int n = 0;
+        for (int r = 0; r < REPS; r++)
+            foreach (var k in chunks.Keys) { var (a, b) = WorldMesh.Build(state, k.Item1, k.Item2, look, solid, glass); a.Dispose(); b.Dispose(); n++; }
+        double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        double all = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * f / n;
+        var p = WorldMesh.PartTicks;
+        return $"chunk bench: {n / REPS} chunks x {REPS}, {all:0.00} ms each: tile loop {p[1] * f / n:0.00} (its ground {p[0] * f / n:0.00}), furniture {p[2] * f / n:0.00}, commits {p[3] * f / n:0.00}; in the ground: banks {p[4] * f / n:0.00}, edges {p[5] * f / n:0.00}";
+    }
+
+    // The frame by part (Stopwatch ticks, summed; printed by the light bench): each step of Update in its order.
+    public static readonly string[] FRAME_PARTS = { "roofs", "Light", "Land", "weather", "others", "people", "you", "bodies", "cars", "cockpit", "fields", "sites", "aircraft", "items", "held", "swimHands", "lights", "sounds", "game: hud", "game: inventory", "game: map", "game: tabs", "game: _Process all", "land: ribbons", "land: chunks", "land: trees", "land: furniture", "land: far" };
+    public static readonly long[] FrameTicks = new long[FRAME_PARTS.Length];
+    public static long Lap(int k, long t) { long now = System.Diagnostics.Stopwatch.GetTimestamp(); FrameTicks[k] += now - t; return now; }
+    public static string FrameStats(long frames)
+    {
+        double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency / Math.Max(1, frames);
+        var parts = new List<(double ms, string name)>();
+        for (int k = 0; k < FRAME_PARTS.Length; k++) parts.Add((FrameTicks[k] * f, FRAME_PARTS[k]));
+        parts.Sort((x, y) => y.ms.CompareTo(x.ms));
+        return "frame by part (ms): " + string.Join(", ", parts.ConvertAll(p => $"{p.name} {p.ms:0.000}"));
+    }
+
+    public static string ChunkStats()
+    {
+        double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        return $"chunks: {Builds} built, {(Builds > 0 ? BuildTicks * f / Builds : 0):0.00} ms each, worst {WorstBuild * f:0.00} ms; {Sigs} signatures, {(Sigs > 0 ? SigTicks * f / Sigs : 0):0.000} ms each";
+    }
     public const float EYE = 1.65f, EYE_SNEAK = 1.1f, EYE_ASLEEP = 0.35f;
     /// <summary>Vertical field of view (degrees), as the look lab's.</summary>
     const float FOV = 60;
@@ -188,32 +223,51 @@ public sealed partial class FirstPerson : Node3D
         Terrain.Use(state);
         var car = Vehicles.vehicleOf(state, you);
         var (eye, inCar) = PlaceEye(state, you, car, alpha, yaw, pitch, delta);
+        long lap = System.Diagnostics.Stopwatch.GetTimestamp();
         roofs.Update(state, eye, Radius);
+        lap = Lap(0, lap);
         sun.ShadowEnabled = ShadowDistance > 0;
         if (ShadowDistance > 0) sun.DirectionalShadowMaxDistance = ShadowDistance;
         Light(state, eye, delta);
+        lap = Lap(1, lap);
         Land(state, eye);
+        lap = Lap(2, lap);
         weather.Held = world <= 0;
         weather.Update(state, eye, delta, roofs.Indoor, sun, env); // overcast and fog on bad days, rain, snow (Weather.cs)
+        lap = Lap(3, lap);
         // Who is about: wanderers, traders, prisoners, caravans and runs stand in for People and Bodies.
         others.Update(state, eye, world);
+        lap = Lap(4, lap);
         var modelled = people.Update(state, alpha, eye, you.id, world, GetViewport().GetVisibleRect().Size.Y, others.Shown);
+        lap = Lap(5, lap);
         Modelled = modelled.Count;
         people.UpdateYou(state, you, alpha, yaw, world, !inCar, EyeAt != null, held.RightHand, held.LeftHand);
+        lap = Lap(6, lap);
         bodies.Update(state, alpha, eye, you.id, modelled, others.Shown, world);
+        lap = Lap(7, lap);
         // Things. The car you sit in is the cockpit round you; seen from outside (--eye) it is a car like the others.
         bool inside = car != null && EyeAt == null;
         cars.Update(state, alpha, eye, inside ? car : null);
+        lap = Lap(8, lap);
         cockpit.Update(state, car, camera.Position, alpha, delta, inside); // its needles ease to the car as it is (held still, it stays)
+        lap = Lap(9, lap);
         fields.Update(state, eye);
+        lap = Lap(10, lap);
         sites.Update(state, eye);
+        lap = Lap(11, lap);
         aircraft.Update(state, world);
+        lap = Lap(12, lap);
         items.Update(state, eye);
+        lap = Lap(13, lap);
         // You: nothing in hand in a car, under a pickup or seen from outside.
         held.Update(state, you, alpha, world, inCar || EyeAt != null || state.control?.underCar != null);
+        lap = Lap(14, lap);
         swimHands.Update(state, you, world, inCar || EyeAt != null);
+        lap = Lap(15, lap);
         lights.Update(state, eye, alpha, world, inCar);
+        lap = Lap(16, lap);
         sounds.Update(state, alpha, you, people.Steps);
+        lap = Lap(17, lap);
     }
 
     /// <summary>The frame's first step: the camera at your eye, looking along yaw and pitch. The ground under it is
@@ -245,11 +299,18 @@ public sealed partial class FirstPerson : Node3D
         int hx = (int)Math.Floor(eye.X / WorldMesh.CHUNK), hz = (int)Math.Floor(eye.Z / WorldMesh.CHUNK);
         var hole = new Vector4((hx - Radius) * WorldMesh.CHUNK, (hz - Radius) * WorldMesh.CHUNK, (hx + Radius + 1) * WorldMesh.CHUNK, (hz + Radius + 1) * WorldMesh.CHUNK);
         // Before the chunks: it says whether country roads are ribbons (WorldMesh.Ribboned). In the hole only while the far field draws past it.
+        int at = FRAME_PARTS.Length - 5;
+        long lap = System.Diagnostics.Stopwatch.GetTimestamp();
         ribbons.Update(state, eye, FarField.Range > 0 ? hole : null);
+        lap = Lap(at, lap);
         Chunks(state, eye);
+        lap = Lap(at + 1, lap);
         trees.Update(state, eye, look);
+        lap = Lap(at + 2, lap);
         furniture.Update(state, eye, look);
+        lap = Lap(at + 3, lap);
         far.Update(state, eye, hole);
+        Lap(at + 4, lap);
         camera.Far = FarField.Range > 0 ? FarField.Range + 64 : Math.Max(120, (Radius + 1) * WorldMesh.CHUNK * 1.6f);
         env.FogDensity = FarField.Range > 0 ? 3.2f / FarField.Range : 0.018f;
     }
@@ -315,9 +376,14 @@ public sealed partial class FirstPerson : Node3D
                 if (changed) sinceCheck = 120; // look at the rest next frame
                 break;
             }
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             long sig = WorldMesh.Signature(state, x, y, look);
+            long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+            SigTicks += t1 - t0; Sigs++;
             if (have && c.sig == sig) continue;
             var (mesh, groundMesh) = WorldMesh.Build(state, x, y, look, solid, glass);
+            long took = System.Diagnostics.Stopwatch.GetTimestamp() - t1;
+            BuildTicks += took; Builds++; WorstBuild = Math.Max(WorstBuild, took);
             if (!have)
             {
                 c.node = new MeshInstance3D();

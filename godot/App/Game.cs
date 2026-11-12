@@ -148,8 +148,12 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         }
     }
 
+    // Where Game's own frame goes (World3D.FirstPerson.FrameTicks, after the 3D's parts): the HUD, the inventory, the map, the tabs and death screen, and the whole of _Process.
+    static readonly int PART_HUD = System.Array.IndexOf(World3D.FirstPerson.FRAME_PARTS, "game: hud");
+
     public override void _Process(double delta)
     {
+        long processStart = Stopwatch.GetTimestamp();
         double frameMs = delta * 1000;
         fps = fps * 0.9 + 1000 / Math.Max(frameMs, 1) * 0.1;
         WatchMaking();
@@ -224,11 +228,17 @@ public partial class Game : Node2D, IGameFiles, IMenuActions
         QueueRedraw();
         string perf = $"fps            {fps:0}\ntick ms        {tickMs:0.00} (worst lately {worstTickMs:0.0})\nsim ms/frame   {simMs:0.00}\ndraw ms/frame  {drawMs:0.00}"
             + (fpScene ? $"\n3D ms/frame    {fpMs:0.00} · {firstPerson.Modelled} people as models · {firstPerson.ChunkCount} chunks · {firstPerson.TreeCount} trees\nrender         cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.00} ms · gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.00} ms" : "");
+        long lap = Stopwatch.GetTimestamp();
         hud.Update(state, perf);
+        lap = World3D.FirstPerson.Lap(PART_HUD, lap);
         inventory.Update(state);
+        lap = World3D.FirstPerson.Lap(PART_HUD + 1, lap);
         worldMap.Update(state);
+        lap = World3D.FirstPerson.Lap(PART_HUD + 2, lap);
         tabs.Update(state);
         deathScreen.Update(state);
+        World3D.FirstPerson.Lap(PART_HUD + 3, lap);
+        World3D.FirstPerson.Lap(PART_HUD + 4, processStart);
 
         frame++;
     }
