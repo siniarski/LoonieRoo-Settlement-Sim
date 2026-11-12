@@ -26,8 +26,8 @@ vars below for each.
   the managed heap after each step (SIZES=2048,10000, TICKS=200; BOUND_MB=n fails if the heap after createWorld at
   the last size is over n: the grid in chunks is held to 64 MB at 4096). **chunk cost** (same file, SIZE=1024): what a
   generated chunk costs in memory by part (the grid's layers, furniture, the dormant, what play derives).
-- **profile** (Profile.cs): the tick by system, with allocations (SCENES, TICKS, WARM). The big new worlds
-  `new-2048`, `new-4096` and `new-10000` run only when named in SCENES. **tick dumps** (same file, DUMP=dir): states
+- **profile** (Profile.cs): the tick by system, with allocations and each step's worst tick (SCENES, TICKS, WARM; Fog's chunk generation timed on its own). The big new worlds
+  `new-2048`, `new-4096` and `new-10000`, and `spread-1024`, run only when named in SCENES. **tick dumps** (same file, DUMP=dir): states
   of fixed scenes as JSON, to compare two builds byte for byte.
 - **micro** (Micro.cs; SCENE=colony-512, ROUNDS=7): the grid's readers one at a time on one fixed state (tile and
   edge reads, room labels, sight, paths, reachability, and each after a wall change), the best of several rounds in
@@ -55,6 +55,11 @@ vars below for each.
 - **census**, **census noise** (Census.cs; SEEDS, PRESET): the dead in a fresh world (how many, how near the start);
   how many sleepers each weapon's noise would wake.
 - **jobs probe** (Profile.cs; SCENES, PROBE_REPS): the cost of `reconcileJobs` on one scene.
+- **crowd probe** (Profile.cs; SCENES, PROBE_REPS): ZombieCrowd's parts on one scene (default horde-512): making the
+  buckets, the nine tiles round each zombie looked up, pushApart, zombiesWithin from every survivor.
+- **nature probe** (GenProfile.cs; SIZE=2048, ROUNDS=5): the world plan's per-tile functions (isWater and its parts,
+  woodedness, isDirt, isRoad, one noise sample, one hash) in ns a tile, and the hash and noise checked against the
+  originals they were rewritten from (2026-11-12: must agree bit for bit).
 - **harness >** (HarnessTest.cs): tests of the balance players themselves.
 
 More env vars: **OUT**=path overrides where a report is written (every fact); world balance also reads WILDFIRE and
