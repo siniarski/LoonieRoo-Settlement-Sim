@@ -165,14 +165,12 @@ public static partial class Needs
         {
             if (!Space.samePoint(s.pos, item.pos))
             {
-                var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-                if (!Js.T(path) || (path.length == 0))
+                if (!Survivors.walkTo(state, s, item.pos))
                 {
                     cancelMeal(state, s, "can't reach the food");
                     s.nextMealTick = state.tick + Food.MEAL_RETRY_TICKS;
                     return false;
                 }
-                Survivors.walk(s, path, state.walkabilityVersion);
                 return true;
             }
             if (Js.T(meal.seat) && Mess.seatUsable(state, s, meal.seat))
@@ -306,14 +304,12 @@ public static partial class Needs
         }
         if (!Space.samePoint(s.pos, item.pos))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, item.pos))
             {
                 cancelTreatment(state, s, "can't reach the bandage");
                 s.nextTreatTick = state.tick + Health.TREAT_RETRY_TICKS;
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         treatment.progress += 1;
@@ -499,10 +495,8 @@ public static partial class Needs
             s.note = $"asleep in bed at ({Js.Str(bed.x)}, {Js.Str(bed.y)})";
             return true;
         }
-        var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && (path.length > 0))
+        if (Survivors.walkTo(state, s, bed))
         {
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         bed.occupant = null;
@@ -537,11 +531,7 @@ public static partial class Needs
             s.note = $"asleep in bed at ({Js.Str(bed.x)}, {Js.Str(bed.y)})";
             return;
         }
-        var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && (path.length > 0))
-        {
-            Survivors.walk(s, path, state.walkabilityVersion);
-        }
+        Survivors.walkTo(state, s, bed);
     }
 
     /// <summary>Which bed: never someone else's. The hurt try infirmary beds first, everyone else saves them for the hurt; then your own bed; then guards take barracks beds and others leave them; then nearest.</summary>

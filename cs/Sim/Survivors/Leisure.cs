@@ -83,14 +83,12 @@ public static partial class Leisure
         }
         if (!Space.samePoint(s.pos, spot))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [spot]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, spot))
             {
                 s.leisure = null;
                 s.note = "can't reach the rec room";
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         s.leisure.progress += 1;

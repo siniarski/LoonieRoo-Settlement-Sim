@@ -42,6 +42,19 @@ public static partial class Survivors
         s.pathVersion = version;
     }
 
+    /// <summary>Paths from where the survivor stands to `to` and sets them walking it. False, and nothing changed,
+    /// when there is no way there (or they are already on it: an empty path): the caller gives up.</summary>
+    public static bool walkTo(SimState state, Survivor s, Point to)
+    {
+        var path = Pathfinding.findPathToAny(state.grid, s.pos, [to]);
+        if (!Js.T(path) || (path.length == 0))
+        {
+            return false;
+        }
+        walk(s, path, state.walkabilityVersion);
+        return true;
+    }
+
     /// <summary>Advances movement by one tick. Afterwards the survivor is mid-step, walking, or standing still.</summary>
     public static void updateMovement(SimState state, Survivor s)
     {

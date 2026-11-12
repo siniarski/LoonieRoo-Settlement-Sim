@@ -194,14 +194,12 @@ public static partial class Water
         var d = Js.NN(s.drink);
         if (!Space.samePoint(s.pos, d))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [d]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, d))
             {
                 cancelDrink(s, "can't reach water");
                 s.nextDrinkTick = state.tick + DRINK_RETRY_TICKS;
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         var source = sourceAt(state, d.from.x, d.from.y);

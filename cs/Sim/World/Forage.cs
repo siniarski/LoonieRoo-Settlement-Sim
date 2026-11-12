@@ -62,13 +62,11 @@ public static partial class Forage
             }
             if (!Space.samePoint(s.pos, f))
             {
-                var path = Pathfinding.findPathToAny(state.grid, s.pos, [f]);
-                if (!Js.T(path) || (path.length == 0))
+                if (!Survivors.walkTo(state, s, f))
                 {
                     s.forage = null;
                     return false;
                 }
-                Survivors.walk(s, path, state.walkabilityVersion);
                 s.note = $"going to forage at ({Js.Str(f.x)}, {Js.Str(f.y)})";
                 return true;
             }
