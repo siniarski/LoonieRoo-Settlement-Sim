@@ -17,9 +17,9 @@ public static partial class Space
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool Mark(int x, int y)
         {
-            int c = (y >> 5) * cw + (x >> 5);
+            int c = (y >> GridChunk.SHIFT) * cw + (x >> GridChunk.SHIFT);
             var a = seen[c] ?? Allocate(c);
-            ref uint stamp = ref a[((y & 31) << 5) | (x & 31)];
+            ref uint stamp = ref a[((y & GridChunk.MASK) << GridChunk.SHIFT) | (x & GridChunk.MASK)];
             if (stamp == gen) return false;
             stamp = gen;
             return true;
@@ -28,7 +28,7 @@ public static partial class Space
         uint[] Allocate(int c)
         {
             allocated++;
-            return seen[c] = new uint[32 * 32];
+            return seen[c] = new uint[GridChunk.SIDE * GridChunk.SIDE];
         }
     }
 
@@ -45,7 +45,7 @@ public static partial class Space
         var sc = pool[d];
         if (sc == null || sc.width != grid.width || sc.height != grid.height || sc.gen >= 0xfffffff0 || sc.allocated > MAX_SCRATCH_CHUNKS)
         {
-            int cw = (grid.width + 31) >> 5, ch = (grid.height + 31) >> 5;
+            int cw = (grid.width + GridChunk.MASK) >> GridChunk.SHIFT, ch = (grid.height + GridChunk.MASK) >> GridChunk.SHIFT;
             sc = new Scratch { width = grid.width, height = grid.height, cw = cw, gen = 0, seen = new uint[]?[cw * ch], queue = sc?.queue ?? new int[1024] };
             pool[d] = sc;
         }
@@ -100,7 +100,25 @@ public static partial class Space
         }
     }
 
+    /// <summary>The first tile `accept` takes in square rings round p, the nearest ring first (`from` to `to` tiles out;
+    /// ring 0 is p), each ring in row order (its top row first, west to east), or null. Bounds are accept's to check.
+    /// (Swim.nearestLand wants the nearest in a ring by straight line instead, and Towns steps three tiles at a time.)</summary>
+    public static Point? firstInRings(Point p, int from, int to, Func<int, int, bool> accept)
+    {
+        for (int r = from; r <= to; r++)
+            for (int y = p.y - r; y <= p.y + r; y++)
+                for (int x = p.x - r; x <= p.x + r; x++)
+                    if (chebyshev(p, x, y) == r && accept(x, y)) return new Point { x = x, y = y };
+        return null;
+    }
+
     public static int manhattan(Point a, Point b) => Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
+
+    /// <summary>Tiles apart counting a diagonal step as one: max(|dx|, |dy|). "Within r" of this is a square.</summary>
+    public static int chebyshev(Point a, Point b) => Math.Max(Math.Abs(a.x - b.x), Math.Abs(a.y - b.y));
+
+    /// <summary><see cref="chebyshev(Point, Point)"/> to the tile (x, y).</summary>
+    public static int chebyshev(Point a, int x, int y) => Math.Max(Math.Abs(a.x - x), Math.Abs(a.y - y));
 
     public static bool samePoint(Point a, Point b) => a.x == b.x && a.y == b.y;
 }

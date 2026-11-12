@@ -57,7 +57,7 @@ git tag `ts-final`.
 ### `Grid/`: tiles, paths, rooms
 
 - **Grid.cs** (`Grids`): tiles, walls, doors, edges: the only way to the grid's per-tile layers (`getTile`, `tileAt`,
-  `groundAt`, `edgeKind`, `setTile`...), which **GridLayers.cs** keeps in 32 x 32 chunks allocated where something
+  `groundAt`, `edgeKind`, `setTile`...), which **GridLayers.cs** keeps in 32 x 32 chunks (`GridChunk`, the one chunk size) allocated where something
   differs from bare land (also `TileMask`).
 - **Pathfinding.cs**: A* with a `mover`, reachability labels, `crossable`, straightening (their per-tile data in
   chunks too). **Space.cs**: spatial search helpers (nearestTile).
@@ -75,7 +75,7 @@ git tag `ts-final`.
 ### `Movement/`
 
 - **Motion**: precise positions (`at`, `was` in SUB = 256 a tile), free movers' `slide` against walls and edges.
-- **Survivors**: tile-to-tile movement along cached A* paths (making and finding one: Survivors/SurvivorRoster.cs). **Doors**: doors held open by whoever passes.
+- **Survivors**: tile-to-tile movement along cached A* paths (making and finding one: Survivors/SurvivorRoster.cs). **Doors**: doors held open by whoever passes; opening, shutting and locking a door (the toggleDoor and toggleLock commands, `use`).
 - **Walkers**: animals and dogs as free movers (straight at goals, A* round walls).
 - **Leaps**: Space in first person: jump, vault or hop. **CarLeaps** (part of Leaps): over a parked car, onto it,
   walking on its roof and down off it (`control.onCar`), your height for the view. **Trunks**: a tree's trunk, solid to free movers, tile
@@ -95,7 +95,7 @@ git tag `ts-final`.
 
 ### `Worldgen/`: making the world from a seed
 
-- **Worldgen**: draws chunks lazily from the plan; starting a world (`createWorld`, the camp); `GEN_VERSION`. **Terrain**: the land's large scale from
+- **Worldgen**: draws chunks lazily from the plan; starting a world (**WorldStart**, part of Worldgen: `createWorld`, the camp, the first strays); `GEN_VERSION`. **Terrain**: the land's large scale from
   the seed (elevation, moisture, settlement; rivers by drainage, lakes in hollows; cached, never saved).
 - **NatureMod**: water, forest, trees, dirt per tile (noise, fBm, `treeChanceAt`); the map types' seas and fences.
 - **Worldplan**: the plan (towns, streets, roads, lots; cached, never saved). **WorldRegions**: the plan by region
@@ -142,7 +142,7 @@ git tag `ts-final`.
   (the dead by tile, survivors within a bite, bodies pushed apart). **ZombieKinds**: runners, screamers, brutes,
   crawlers.
 - **Herds**: the dead out in the world (dormant and migrating). **Dormant**: dormant dead bucketed by place.
-- **Hordes**: the dead moving together on one flow field.
+- **Hordes**: the dead moving together on one flow field (**HordeField**, part of Hordes: the costs, the field, a member's next step).
 - **Crossings**: the dead over parked cars (a crawler under a pickup) and runners over barricades: who, how long, what paths pay.
 
 ### `Items/`
@@ -155,7 +155,8 @@ git tag `ts-final`.
 ### `Colony/`
 
 - **Designations** -> **Jobs** (the queue, `reconcileJobs`) -> **JobChoice** (who takes what) -> **Work** (doing it;
-  **WorkHaul**, part of Work: carrying to storage, fuel, the cart).
+  **WorkHaul**, part of Work: carrying to storage, fuel, the cart). **RoomStorage** (part of Grid/Rooms): which store
+  category an item is in and which complete rooms take it (`categoryOf`, `completeStoreRooms`, `homeFor`).
   **JobTypes**: job types and priorities. The model: docs/sim-model.md.
 - **Mess**: mess halls. **Medicine**. **Planner** (the auto-planner: ordinary commands). **Policies**.
 - **Director** (storyteller). **EndgameMod** (cure, evacuation, sieges). **Escape** (the helicopter, new game+).
@@ -163,7 +164,7 @@ git tag `ts-final`.
 
 ### `Survivors/`
 
-- **Needs**, **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
+- **Needs** (**NeedsTreatment**, part of Needs: treating yourself; **NeedsDeath**: a survivor's death), **Food**, **Rest**, **Health**, **BodyMod** (endurance, panic, body heat, wetness), **Wellbeing**
   (social, comfort), **Mood** (thoughts), **Moodlets**, **Resolve**, **Wishes**, **Skills** (skills, traits),
   **Relationships**, **Leisure**, **Books**, **Clothing**, **Family**, **Dogs**.
 - **SurvivorRoster** (part of Survivors, whose walking is Movement/Survivors.cs): a new survivor, the names handed
@@ -175,7 +176,7 @@ git tag `ts-final`.
 
 - **ControlMod**: direct control (steer, swing, use, work). **Handiwork**: build, repair, forage, hunt.
 - **Orders**: follow, hold, loot. **Talk** and **StoryMod**: backstories, talks, tasks.
-- **SuccessionMod**: the death rule. **Swim**: you in the water (wading, swimming, the stroke, soaking).
+- **SuccessionMod**: the death rule. **Swim**: you in the water (wading, swimming, the stroke, soaking); how deep a tile is, and the dead and animals wading the shallows.
 
 ### `Others/`: everyone else
 

@@ -65,12 +65,10 @@ public static partial class Towers
             {
                 continue;
             }
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [t]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, t))
             {
                 continue;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             s.note = $"climbing the watchtower at ({Js.Str(t.x)}, {Js.Str(t.y)})";
             return true;
         }

@@ -183,7 +183,7 @@ public static class WorldPreview
         var seen = new byte[px * px];
         // Chunk by chunk: one with nothing seen in it (most of a big world) isn't looked at.
         var layer = g.exploredLayer;
-        const int SIDE = GridLayer<byte>.SIDE;
+        const int SIDE = GridChunk.SIDE;
         for (int ci = 0; ci < layer.chunks.Length; ci++)
         {
             var c = layer.chunks[ci];

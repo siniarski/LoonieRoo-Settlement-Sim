@@ -170,7 +170,7 @@ public static partial class Inventory
         {
             return FurnitureMod.holds(f) ? CRATE_GRID : null;
         }
-        var v = Vehicles.vehiclesOf(state).find((x) => x.id == gridRef);
+        var v = Vehicles.getVehicle(state, gridRef);
         return Js.T(v) ? ((v.kind == "truck") ? TRUCK_GRID : BOOT_GRID) : null;
     }
 
@@ -191,7 +191,7 @@ public static partial class Inventory
         {
             return capitalise(FurnitureMod.containerName(f));
         }
-        var v = Vehicles.vehiclesOf(state).find((x) => x.id == gridRef);
+        var v = Vehicles.getVehicle(state, gridRef);
         return (v?.kind == "truck") ? "Truck's boot" : "Car's boot";
     }
 

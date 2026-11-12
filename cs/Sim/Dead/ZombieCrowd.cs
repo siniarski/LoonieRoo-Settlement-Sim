@@ -53,7 +53,7 @@ public static partial class Zombies
                 for (var i = cells.first(((double)(y) * (width)) + x); i >= 0; i = cells.next[i])
                 {
                     var z = cells.zs[i];
-                    if (JsMath.max(JsMath.abs(z.pos.x - p.x), JsMath.abs(z.pos.y - p.y)) <= r)
+                    if (Space.chebyshev(z.pos, p) <= r)
                     {
                         n++;
                     }

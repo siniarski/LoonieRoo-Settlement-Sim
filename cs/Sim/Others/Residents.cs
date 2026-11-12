@@ -128,7 +128,7 @@ public static partial class Residents
     {
         double near(Survivor s)
         {
-            return JsMath.max(JsMath.abs(s.pos.x - r.pos.x), JsMath.abs(s.pos.y - r.pos.y));
+            return Space.chebyshev(s.pos, r.pos);
         }
         var target = Js.Get(state.survivors.filter((s) => near(s) <= HOSTILE_SIGHT).sort((a, b) => near(a) - near(b)), 0);
         if (!Js.T(target))

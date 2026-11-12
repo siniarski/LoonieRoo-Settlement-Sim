@@ -16,7 +16,7 @@
 // Anything that goes wrong (bed or food gone, path blocked) falls back to
 // re-planning or the floor, so a needy survivor is never stuck.
 //
-// Constants live in Rest.cs and Food.cs.
+// Constants live in Rest.cs and Food.cs. Treating yourself: NeedsTreatment.cs; death: NeedsDeath.cs.
 #nullable disable warnings
 namespace LoonieRoo.Sim;
 
@@ -165,14 +165,12 @@ public static partial class Needs
         {
             if (!Space.samePoint(s.pos, item.pos))
             {
-                var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-                if (!Js.T(path) || (path.length == 0))
+                if (!Survivors.walkTo(state, s, item.pos))
                 {
                     cancelMeal(state, s, "can't reach the food");
                     s.nextMealTick = state.tick + Food.MEAL_RETRY_TICKS;
                     return false;
                 }
-                Survivors.walk(s, path, state.walkabilityVersion);
                 return true;
             }
             if (Js.T(meal.seat) && Mess.seatUsable(state, s, meal.seat))
@@ -255,7 +253,7 @@ public static partial class Needs
     /// <summary>Nearest unreserved item of a kind, on the ground, that this survivor can reach.</summary>
     public static Item? nearestFreeItem(SimState state, Survivor s, string kind)
     {
-        return state.items.filter((i) => ((i.kind == kind) && (i.pos != null)) && (i.reservedBy == null)).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
+        return Items.freeOfKind(state, kind).sort((a, b) => Space.manhattan(s.pos, a.pos) - Space.manhattan(s.pos, b.pos)).find((i) => Pathfinding.canReach(state.grid, state.walkabilityVersion, s.pos, [i.pos]));
     }
 
     /// <summary>Gives up the reserved food (if any). Safe to call when not eating.</summary>
@@ -276,113 +274,6 @@ public static partial class Needs
             item.reservedBy = null;
         }
         s.meal = null;
-        s.goal = null;
-        s.path = [];
-        s.pathVersion = -1;
-        s.note = note;
-    }
-
-    /// <summary>Runs when standing still, after eating and before sleep. A hurt survivor walks to the nearest free bandage and applies it where it lies.</summary>
-    public static bool updateTreatment(SimState state, Survivor s)
-    {
-        if (Js.T(s.sleep))
-        {
-            return false;
-        }
-        if (!Js.T(s.treatment) && onGuardDuty(state, s))
-        {
-            return false;
-        }
-        if (!Js.T(s.treatment) && !startTreatment(state, s))
-        {
-            return false;
-        }
-        var treatment = Js.NN(s.treatment);
-        var item = Items.getItem(state, treatment.itemId);
-        if (!Js.T(Js.T(item?.pos)) || (item.reservedBy != s.id))
-        {
-            cancelTreatment(state, s, "bandage gone");
-            return false;
-        }
-        if (!Space.samePoint(s.pos, item.pos))
-        {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || (path.length == 0))
-            {
-                cancelTreatment(state, s, "can't reach the bandage");
-                s.nextTreatTick = state.tick + Health.TREAT_RETRY_TICKS;
-                return false;
-            }
-            Survivors.walk(s, path, state.walkabilityVersion);
-            return true;
-        }
-        treatment.progress += 1;
-        if (treatment.progress == 1)
-        {
-            s.note = $"bandaging wounds at ({Js.Str(item.pos.x)}, {Js.Str(item.pos.y)})";
-        }
-        if (treatment.progress < Time.scaled(Health.TREAT_TICKS))
-        {
-            return true;
-        }
-        Items.removeItem(state, item);
-        Medicine.applyRemedy(s, item.kind);
-        s.treatment = null;
-        s.note = (item.kind == "medicine") ? "took medicine for the infection" : "treated wounds with a bandage";
-        return true;
-    }
-
-    /// <summary>The nearest free thing that would help: medicine if infected, else a bandage if hurt.</summary>
-    public static Item? nearestRemedy(SimState state, Survivor s)
-    {
-        foreach (var kind in Js.Iter(Medicine.remediesFor(s)))
-        {
-            var found = nearestFreeItem(state, s, kind);
-            if (Js.T(found))
-            {
-                return found;
-            }
-        }
-        return null;
-    }
-
-    public static bool startTreatment(SimState state, Survivor s)
-    {
-        if ((Medicine.remediesFor(s).length == 0) || (state.tick < s.nextTreatTick))
-        {
-            return false;
-        }
-        var bandage = nearestRemedy(state, s);
-        if (!Js.T(Js.T(bandage?.pos)))
-        {
-            s.nextTreatTick = state.tick + Health.TREAT_RETRY_TICKS;
-            return false;
-        }
-        if (Js.T(s.jobId))
-        {
-            Jobs.releaseSurvivor(state, s, "going to treat wounds");
-        }
-        Weapons.cancelArming(state, s, "going to treat wounds");
-        Clothing.cancelDressing(state, s, "going to treat wounds");
-        bandage.reservedBy = s.id;
-        s.treatment = new SurvivorTreatment { itemId = bandage.id, progress = 0 };
-        s.note = $"going for {Js.Str((bandage.kind == "medicine") ? Js.Str("medicine") : Js.Str("a bandage"))} at ({Js.Str(bandage.pos.x)}, {Js.Str(bandage.pos.y)})";
-        return true;
-    }
-
-    /// <summary>Gives up the reserved bandage (if any). Safe to call when not treating.</summary>
-    public static void cancelTreatment(SimState state, Survivor s, string note)
-    {
-        if (!Js.T(s.treatment))
-        {
-            return;
-        }
-        var item = Items.getItem(state, s.treatment.itemId);
-        if (Js.T(item) && (item.reservedBy == s.id))
-        {
-            item.reservedBy = null;
-        }
-        s.treatment = null;
         s.goal = null;
         s.path = [];
         s.pathVersion = -1;
@@ -424,50 +315,6 @@ public static partial class Needs
         return (s.satiety == 0) ? "starvation" : (s.lastHurtBy ?? "injuries");
     }
 
-    /// <summary>Death (or, with walkedAway, leaving for good: no body, no mourning).</summary>
-    public static void killSurvivor(SimState state, Survivor s, string cause, bool walkedAway = false)
-    {
-        if ((state.control?.survivorId == s.id) && !Js.T(walkedAway))
-        {
-            SuccessionMod.beginSuccession(state, s, cause);
-        }
-        cancelMeal(state, s, cause);
-        if (Js.T(Js.T(s.jobId) || Js.T(s.carrying)))
-        {
-            Jobs.releaseSurvivor(state, s, cause);
-        }
-        wake(state, s, cause);
-        cancelTreatment(state, s, cause);
-        Weapons.cancelArming(state, s, cause);
-        Clothing.cancelDressing(state, s, cause);
-        Books.stopReading(state, s, cause);
-        Weapons.dropWeapon(state, s);
-        Inventory.dropPack(state, s);
-        Clothing.undress(state, s);
-        if ((cause != Infection.CAUSE) && !Js.T(walkedAway))
-        {
-            Corpses.leaveCorpse(state, s.pos, s.name);
-        }
-        foreach (var f in Js.Iter(FurnitureMod.ofKind(state, "bed")))
-        {
-            if (f.owner == s.id)
-            {
-                f.owner = null;
-            }
-        }
-        var i = state.survivors.indexOf(s);
-        if (i >= 0)
-        {
-            state.survivors.splice(i, 1);
-        }
-        if (Js.T(walkedAway))
-        {
-            return;
-        }
-        Events.logEvent(state, $"{Js.Str(s.name)} died of {Js.Str(cause)}");
-        Mood.mournDeath(state, s);
-    }
-
     /// <summary>Runs when the survivor is standing still. Returns true if sleep handled this tick (so the survivor doesn't also look for work).</summary>
     public static bool updateSleep(SimState state, Survivor s)
     {
@@ -499,10 +346,8 @@ public static partial class Needs
             s.note = $"asleep in bed at ({Js.Str(bed.x)}, {Js.Str(bed.y)})";
             return true;
         }
-        var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && (path.length > 0))
+        if (Survivors.walkTo(state, s, bed))
         {
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         bed.occupant = null;
@@ -537,11 +382,7 @@ public static partial class Needs
             s.note = $"asleep in bed at ({Js.Str(bed.x)}, {Js.Str(bed.y)})";
             return;
         }
-        var path = Pathfinding.findPathToAny(state.grid, s.pos, [bed]);
-        if (Js.T(path) && (path.length > 0))
-        {
-            Survivors.walk(s, path, state.walkabilityVersion);
-        }
+        Survivors.walkTo(state, s, bed);
     }
 
     /// <summary>Which bed: never someone else's. The hurt try infirmary beds first, everyone else saves them for the hurt; then your own bed; then guards take barracks beds and others leave them; then nearest.</summary>

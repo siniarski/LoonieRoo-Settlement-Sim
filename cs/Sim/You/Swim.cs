@@ -1,7 +1,7 @@
-// Swim (2026-11-11): you in the water. Water is a tile kind nobody else stands on (Pathfinding.isPassable refuses
-// it for every mover: colonists, the dead, animals and dogs keep to the land, so paths, hordes and reachability are
-// as they were). You, the controlled survivor, walk into it: your body moves as the mover "swimmer" (Pathfinding:
-// the free mover's rules, and water), and your tile (pos) follows you into it.
+// Swim (2026-11-11): you in the water. Deep water is yours alone: colonists and dogs keep to the land, and the dead
+// and animals only wade the shallows (since 2026-11-12: Pathfinding.isPassable, at WADERS_PCT of their pace: waded).
+// You, the controlled survivor, walk into any of it: your body moves as the mover "swimmer" (Pathfinding: the free
+// mover's rules, and water), and your tile (pos) follows you into it.
 // How deep, by the distance from the bank (tiles only: nothing in the tick reads the ground's heights):
 //   shallow  a water tile with land among its eight neighbours (land: on the map, not water, not a bridge's deck):
 //            you wade, WADE_PCT of your pace; running, swinging, using and working as on land.
@@ -150,7 +150,7 @@ public static class Swim
             for (int y = from.y - r; y <= from.y + r; y++)
                 for (int x = from.x - r; x <= from.x + r; x++)
                 {
-                    if (JsMath.max(JsMath.abs(x - from.x), JsMath.abs(y - from.y)) != r || !Grids.isWalkable(grid, x, y)) continue;
+                    if (Space.chebyshev(from, x, y) != r || !Grids.isWalkable(grid, x, y)) continue;
                     double d2 = (double)(x - from.x) * (x - from.x) + (double)(y - from.y) * (y - from.y);
                     if (d2 < bestD2) { bestD2 = d2; best = new Point { x = x, y = y }; }
                 }

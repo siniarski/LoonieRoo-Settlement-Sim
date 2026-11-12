@@ -1,5 +1,5 @@
 // Ported from src/sim/doors.ts (TypeScript, retired 2026-11-08: git tag ts-final). Hand-maintained C# from here.
-// Doors held open by whoever is passing through.
+// Doors held open by whoever is passing through, and the open, shut and lock rules the commands and `use` call.
 //
 // Colonists (and raiders) open a closed door as they step into the doorway, and it swings shut
 // behind them once nobody is in it or stepping into it: grid.passing lists the doors open only
@@ -208,5 +208,92 @@ public static partial class Doors
         if (!Grids.inBounds(grid, ax + ox, ay + oy) || !Grids.inBounds(grid, bx + ox, by + oy)) return false;
         return Grids.edgeKind(grid, Grids.edgeBetween(grid, ax, ay, bx, by)) == Grids.EDGE_NONE
             && Grids.edgeKind(grid, Grids.edgeBetween(grid, ax + ox, ay + oy, bx + ox, by + oy)) == Grids.EDGE_NONE;
+    }
+
+    /// <summary>Open or close a door. Returns why not, or null.</summary>
+    public static string? toggleDoor(SimState state, int x, int y)
+    {
+        if (Grids.getTile(state.grid, x, y) != "door")
+        {
+            return $"({Js.Str(x)}, {Js.Str(y)}) is not a door";
+        }
+        var i = ((double)(y) * (state.grid.width)) + x;
+        var at = state.grid.open.indexOf(i);
+        var passing = state.grid.passing.indexOf(i);
+        if (passing >= 0)
+        {
+            state.grid.passing.splice(passing, 1);
+            return null;
+        }
+        if (at < 0)
+        {
+            if (state.grid.locked.includes(i))
+            {
+                return "it's locked";
+            }
+            state.grid.open.push(i);
+        }
+        else
+        {
+            var inTheWay = Js.ListOf<IBody>(state.survivors, state.zombies, state.residents).some((e) => (e.pos.x == x) && (e.pos.y == y));
+            if (Js.T(inTheWay))
+            {
+                return "someone is in the doorway";
+            }
+            state.grid.open.splice(at, 1);
+        }
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+        return null;
+    }
+    public static string? toggleDoor(SimState state, double x, double y) => toggleDoor(state, Js.I(x), Js.I(y));
+
+    /// <summary>Locks or unlocks a door: the edge door on `side` of (x, y) when there is one, else the door tile at (x, y).
+    /// Locking shuts it, and a tile door's lock turns out the dead standing in it. Returns why not, or null.</summary>
+    public static string? toggleLock(SimState state, int x, int y, string? side)
+    {
+        if (((side != null) && Grids.inBounds(state.grid, x, y)) && (Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, x, y, side)) == Grids.EDGE_DOOR))
+        {
+            var e = Grids.edgeIndex(state.grid, x, y, side);
+            var openAt = state.grid.edgeOpen.indexOf(e);
+            if (openAt >= 0)
+            {
+                state.grid.edgeOpen.splice(openAt, 1);
+            }
+            var lockedAt = state.grid.edgeLocked.indexOf(e);
+            if (lockedAt >= 0)
+            {
+                state.grid.edgeLocked.splice(lockedAt, 1);
+            }
+            else
+            {
+                state.grid.edgeLocked.push(e);
+            }
+            Grids.noteEdgeChange(state.grid, e);
+            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+            return null;
+        }
+        if (Grids.getTile(state.grid, x, y) != "door")
+        {
+            return $"({Js.Str(x)}, {Js.Str(y)}) is not a door";
+        }
+        var i = ((double)(y) * (state.grid.width)) + x;
+        var open = state.grid.open.indexOf(i);
+        if (open >= 0)
+        {
+            state.grid.open.splice(open, 1);
+        }
+        var at = state.grid.locked.indexOf(i);
+        if (at >= 0)
+        {
+            state.grid.locked.splice(at, 1);
+        }
+        else
+        {
+            state.grid.locked.push(i);
+            Zombies.evictZombies(state, new Point { x = Js.I(x), y = Js.I(y) });
+        }
+        Grids.noteChange(state.grid, Js.NN(i));
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+        return null;
     }
 }

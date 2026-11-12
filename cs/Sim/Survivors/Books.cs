@@ -95,13 +95,11 @@ public static partial class Books
         }
         if (!Space.samePoint(s.pos, book.pos))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [book.pos]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, book.pos))
             {
                 stopReading(state, s, "can't reach the book");
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         s.reading.progress += 1;

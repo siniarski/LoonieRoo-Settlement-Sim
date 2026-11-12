@@ -13,6 +13,9 @@ public static partial class Items
         return Lookup.findById(state.items, id);
     }
 
+    /// <summary>Items of this kind lying on the ground (not carried or stored) that nobody has reserved, in list order.</summary>
+    public static List<Item> freeOfKind(SimState state, string kind) => state.items.filter((i) => ((i.kind == kind) && (i.pos != null)) && (i.reservedBy == null));
+
     public static Item? itemAt(SimState state, int x, int y)
     {
         return state.items.find((i) => ((i.pos != null) && (i.pos.x == x)) && (i.pos.y == y));

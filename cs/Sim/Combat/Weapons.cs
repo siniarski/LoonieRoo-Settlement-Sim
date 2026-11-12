@@ -50,14 +50,12 @@ public static partial class Weapons
         }
         if (!Space.samePoint(s.pos, item.pos))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, item.pos))
             {
                 cancelArming(state, s, "can't reach the weapon");
                 s.nextArmTick = state.tick + ARM_RETRY_TICKS;
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         s.arming = null;

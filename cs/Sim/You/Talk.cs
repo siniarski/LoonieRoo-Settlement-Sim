@@ -82,7 +82,7 @@ public static partial class Talk
         {
             return "that's you";
         }
-        if (Js.T(you) && (JsMath.max(JsMath.abs(you.pos.x - s.pos.x), JsMath.abs(you.pos.y - s.pos.y)) > TALK_RANGE))
+        if (Js.T(you) && (Space.chebyshev(you.pos, s.pos) > TALK_RANGE))
         {
             return $"{Js.Str(s.name)} is too far away to talk";
         }
@@ -278,7 +278,7 @@ public static partial class Talk
 
     public static bool near(Point a, Point b, double r)
     {
-        return JsMath.max(JsMath.abs(a.x - b.x), JsMath.abs(a.y - b.y)) <= r;
+        return Space.chebyshev(a, b) <= r;
     }
 
     /// <summary>Checks tasks for being done (or no longer doable). Every 10 ticks.</summary>

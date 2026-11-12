@@ -1,8 +1,10 @@
 // A* on the grid, 4-way, Manhattan heuristic; reachability labels; straightening.
 // Deterministic: ties broken by lower h, then insertion order; neighbours expanded N, E, S, W.
-// Movers: "survivor" (colonists: any door), "free" (you: doors open; a broken window or a barricade only with a vault, Leaps.cs), "zombie", "breacher" (batters
-// through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
-// "animal" (wild animals: open floor only; through open doors and broken windows, never onto a door's tile).
+// Movers: "survivor" (colonists: any door), "free" (you: doors open; a broken window or a barricade only with a vault,
+// Leaps.cs), "swimmer" (you in the water: the free mover's rules, and water), "zombie" (open doors, the shallows),
+// "breacher" (batters through anything but water), "raider" (unlocked doors), "crawler" (under barricades), "vehicle",
+// "animal" (wild animals: open floor and the shallows; through open doors and broken windows, never onto a door's
+// tile). Each mover's rule for a tile and for an edge: isPassable and crossable, one line each.
 // The dead's paths (not their bodies) also go over parked cars, and a "runner"'s over barricades, at a cost:
 // Crossings.cs (the hooks here: A*'s step, reachability's rules, the open doors' joins).
 using System.Runtime.CompilerServices;
@@ -21,45 +23,75 @@ public static partial class Pathfinding
     /// <summary>Your body in first person (Swim.cs): the free mover's rules, and water too. Nobody paths as one.</summary>
     public const string SWIMMER = "swimmer";
 
+    /// <summary>Can this mover stand on tile (x, y)? Each mover's rule is one line below, after the two that hold for
+    /// nearly everyone: you swimming take water too, and a parked car is in everyone's way but another car's.</summary>
     public static bool isPassable(Grid grid, int x, int y, string mover = SURVIVOR)
     {
-        if (mover == SWIMMER) { if (getTile(grid, x, y) == WATER) return true; mover = FREE; }
+        var tile = getTile(grid, x, y); // null off the map
+        // Your body in the water (Swim.cs): any water, else the free mover's rules.
+        if (mover == SWIMMER)
+        {
+            if (tile == WATER) return true;
+            mover = FREE;
+        }
         // A parked car is in everyone's way but another car's (cars meet body to body: VehicleBody.cs).
-        if (grid.parkedCount > 0 && mover != VEHICLE && Grids.isParked(grid, x, y)) return false;
-        if (mover == BREACHER) return inBounds(grid, x, y) && getTile(grid, x, y) != WATER;
-        var tile = getTile(grid, x, y);
-        bool openDoor = tile == DOOR && isOpen(grid, x, y);
-        if (mover == CRAWLER) return tile == FLOOR || tile == BARRICADE || openDoor;
+        if (mover != VEHICLE && isParked(grid, x, y)) return false;
+        // Batters through anything but water.
+        if (mover == BREACHER) return tile != null && tile != WATER;
+        // Floor only.
         if (mover == VEHICLE) return tile == FLOOR;
-        // The shallows (water with land beside it: Swim.depth) are waded by animals and the dead, at half pace
-        // (Swim.WADERS_PCT); deep water is still nobody's but yours.
-        bool shallows = tile == WATER && Swim.depth(grid, x, y) == Swim.SHALLOW;
-        if (mover == ANIMAL) return tile == FLOOR || shallows;
-        if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
+        // Colonists: floor, and any door or barricade (they open and lock doors, and step over barricades).
         if (mover == SURVIVOR) return isWalkable(grid, x, y);
-        if (mover == FREE) return tile == FLOOR || tile == BARRICADE || openDoor;
-        return tile == FLOOR || openDoor || shallows; // the dead ("zombie", and a "runner"'s body)
+        // Raiders: floor, and any door not locked.
+        if (mover == RAIDER) return tile == FLOOR || (tile == DOOR && !isLocked(grid, x, y));
+        // You on foot, and crawlers: floor, barricades (you stand on one; a crawler goes under), open doors.
+        if (mover == FREE || mover == CRAWLER) return tile == FLOOR || tile == BARRICADE || openDoor(grid, x, y, tile);
+        // Wild animals: floor, and the shallows (water with land beside it: Swim.depth) at half pace (Swim.WADERS_PCT).
+        if (mover == ANIMAL) return tile == FLOOR || shallows(grid, x, y, tile);
+        // The dead ("zombie", and a "runner"'s body): floor, open doors and the shallows. Deep water is nobody's but yours.
+        return tile == FLOOR || openDoor(grid, x, y, tile) || shallows(grid, x, y, tile);
     }
 
-    /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows)?</summary>
+    static bool openDoor(Grid grid, int x, int y, string? tile) => tile == DOOR && isOpen(grid, x, y);
+
+    static bool shallows(Grid grid, int x, int y, string? tile) => tile == WATER && Swim.depth(grid, x, y) == Swim.SHALLOW;
+
+    /// <summary>Can this mover cross from a tile to the one beside it (edge walls, doors, barricades, windows, fences)?
+    /// Nothing on the edge: anyone. A wall or a fence: only a breacher. Otherwise each mover's rule is one block below.</summary>
     public static bool crossable(Grid grid, int ax, int ay, int bx, int by, string mover = SURVIVOR)
     {
         int e = edgeBetween(grid, ax, ay, bx, by, out int kind);
-        if (e < 0) return true;
+        if (e < 0 || kind == EDGE_NONE) return true;
         if (mover == SWIMMER) mover = FREE;
-        if (kind == EDGE_NONE || mover == BREACHER) return true;
-        if (kind == EDGE_WALL || kind == EDGE_FENCE || mover == VEHICLE) return false;
-        // A boarded door (Handiwork.cs: boards nailed across it by hand) lets only you and yours by, as a barricaded
-        // tile door does; the dead and raiders batter the boards off first (Breach.edgeHealth).
-        if (kind == EDGE_DOOR && grid.edgeBoarded.Contains(e)) return mover == SURVIVOR || mover == FREE;
-        if (kind == EDGE_DOOR) return mover == SURVIVOR || (mover == RAIDER && !grid.edgeLocked.Contains(e)) || edgeIsOpen(grid, e);
-        // A barricade or a yard fence (planks), and a broken window: you (FREE) don't walk through, you vault them
-        // with Space (Leaps.cs); colonists step over barricades and use doors, the dead and animals climb through windows.
-        if (kind == EDGE_BARRICADE) return mover == SURVIVOR || mover == CRAWLER;
-        if (kind == EDGE_WINDOW || grid.edgeBoarded.Contains(e)) return false;
-        if (kind == EDGE_WINDOW_BROKEN) return mover != SURVIVOR && mover != FREE;
-        return true;
+        // Batters through anything; a car crosses no edge at all.
+        if (mover == BREACHER) return true;
+        if (mover == VEHICLE || kind == EDGE_WALL || kind == EDGE_FENCE) return false;
+        // Boards nailed across a door (Handiwork.cs), or across a window (a boarded-up house, Lots.cs). A boarded
+        // door lets only you and yours by, as a barricaded tile door does; the dead and raiders batter the boards off
+        // first (Breach.edgeHealth).
+        bool door = kind == EDGE_DOOR;
+        // Colonists: any door, even boarded or locked; they step over barricades; never through a window.
+        if (mover == SURVIVOR) return door || kind == EDGE_BARRICADE || !windowOrBoarded(grid, e, kind);
+        // You on foot: an open door, or your own boarded one. A barricade, a yard fence's planks or a broken window
+        // you vault with Space (Leaps.cs), not walk through.
+        if (mover == FREE) return door ? boarded(grid, e) || edgeIsOpen(grid, e) : kind != EDGE_BARRICADE && !windowOrBoarded(grid, e, kind);
+        // Raiders: a door not boarded, if it's open or not locked; a broken window.
+        if (mover == RAIDER) return door ? !boarded(grid, e) && (!grid.edgeLocked.Contains(e) || edgeIsOpen(grid, e)) : climbsThrough(grid, e, kind);
+        // Crawlers: a door not boarded, if it's open; under a barricade; a broken window.
+        if (mover == CRAWLER) return door ? !boarded(grid, e) && edgeIsOpen(grid, e) : kind == EDGE_BARRICADE || climbsThrough(grid, e, kind);
+        // The dead and animals: a door not boarded, if it's open; a broken window (they climb through).
+        return door ? !boarded(grid, e) && edgeIsOpen(grid, e) : climbsThrough(grid, e, kind);
     }
+
+    /// <summary>An edge that isn't a door: a window, whole or broken, or anything boarded.</summary>
+    static bool windowOrBoarded(Grid grid, int e, int kind) => kind == EDGE_WINDOW || kind == EDGE_WINDOW_BROKEN || boarded(grid, e);
+
+    /// <summary>An edge that isn't a door, for those who climb through broken windows: not a barricade, a whole window or
+    /// anything boarded.</summary>
+    static bool climbsThrough(Grid grid, int e, int kind) => kind != EDGE_BARRICADE && kind != EDGE_WINDOW && !boarded(grid, e);
+
+    /// <summary>Boards across this edge (a list: asked last, only where the answer turns on it).</summary>
+    static bool boarded(Grid grid, int e) => grid.edgeBoarded.Contains(e);
 
     public static readonly List<Point> DIRS = [new(0, -1), new(1, 0), new(0, 1), new(-1, 0)];
 
@@ -531,9 +563,9 @@ public static partial class Pathfinding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref AStarCell At(int x, int y)
         {
-            int c = (y >> 5) * cw + (x >> 5);
+            int c = (y >> GridChunk.SHIFT) * cw + (x >> GridChunk.SHIFT);
             var cells = chunks[c] ?? Allocate(c);
-            return ref cells[((y & 31) << 5) | (x & 31)];
+            return ref cells[((y & GridChunk.MASK) << GridChunk.SHIFT) | (x & GridChunk.MASK)];
         }
 
         AStarCell[] Allocate(int c)

@@ -117,12 +117,7 @@ public static partial class Designations
         if ((Js.T(bp.side) && (bp.target == "barricade")) && Grids.isWindow(Grids.edgeKind(state.grid, Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side))))
         {
             var e = Grids.edgeIndex(state.grid, bp.x, bp.y, bp.side);
-            if (!state.grid.edgeBoarded.includes(e))
-            {
-                state.grid.edgeBoarded.push(e);
-            }
-            Grids.noteEdgeChange(state.grid, e);
-            state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+            Breach.board(state, e);
             return;
         }
         if (Js.T(bp.side) && (((bp.target == "wall") || (bp.target == "door")) || (bp.target == "barricade") || (bp.target == "fence")))

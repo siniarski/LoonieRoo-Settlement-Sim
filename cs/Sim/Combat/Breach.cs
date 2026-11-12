@@ -80,6 +80,18 @@ public static partial class Breach
     }
     public static double repairStructure(SimState state, double x, double y, double amount) => repairStructure(state, Js.I(x), Js.I(y), amount);
 
+    /// <summary>Boards nailed across an edge: a window (the colony's barricade on one, Designations.cs) or a door (by
+    /// your hand, Handiwork.cs). They come off when battered through (damageEdge, below: BOARDS_HEALTH).</summary>
+    public static void board(SimState state, int e)
+    {
+        if (!state.grid.edgeBoarded.includes(e))
+        {
+            state.grid.edgeBoarded.push(e);
+        }
+        Grids.noteEdgeChange(state.grid, e);
+        state.walkabilityVersion = Js.I(state.walkabilityVersion + 1);
+    }
+
     /// <summary>What it takes to break an edge wall or door: the same as the tile kinds.</summary>
     public static double edgeHealth(Grid grid, int e)
     {

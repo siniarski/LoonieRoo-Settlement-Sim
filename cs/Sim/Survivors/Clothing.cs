@@ -141,14 +141,12 @@ public static partial class Clothing
         }
         if (!Space.samePoint(s.pos, item.pos))
         {
-            var path = Pathfinding.findPathToAny(state.grid, s.pos, [item.pos]);
-            if (!Js.T(path) || (path.length == 0))
+            if (!Survivors.walkTo(state, s, item.pos))
             {
                 cancelDressing(state, s, "can't reach the clothing");
                 s.nextDressTick = state.tick + DRESS_RETRY_TICKS;
                 return false;
             }
-            Survivors.walk(s, path, state.walkabilityVersion);
             return true;
         }
         s.dressing = null;

@@ -12,7 +12,7 @@ public static partial class Work
         var __d0 = state;
         var grid = __d0.grid;
         var v = __d0.walkabilityVersion;
-        var free = state.items.filter((i) => ((i.pos != null) && (i.reservedBy == null)) && (i.kind == kind)).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
+        var free = Items.freeOfKind(state, kind).sort((a, b) => Space.manhattan(from, a.pos) - Space.manhattan(from, b.pos));
         return free.slice(0, Jobs.MAX_CANDIDATES).find((i) => Pathfinding.canReach(grid, v, from, [i.pos]) && Pathfinding.canReach(grid, v, i.pos, site));
     }
 
@@ -29,17 +29,10 @@ public static partial class Work
         }
         if (s.carrying != item.id)
         {
-            if (!Js.T(item.pos))
+            if (!pickUp(state, s, job, item))
             {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                return;
             }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
             s.note = $"picked up {Js.Str(item.kind)}";
             if (Js.T(Jobs.isStoreJob(job) && Js.T(s.cart)))
             {
@@ -88,17 +81,10 @@ public static partial class Work
         }
         if (s.carrying != item.id)
         {
-            if (!Js.T(item.pos))
+            if (!pickUp(state, s, job, item))
             {
-                { Jobs.releaseSurvivor(state, s, "item taken by someone else"); return; }
+                return;
             }
-            if (!Space.samePoint(s.pos, item.pos))
-            {
-                { goTo(state, s, job, [item.pos]); return; }
-            }
-            item.pos = null;
-            item.carriedBy = s.id;
-            s.carrying = item.id;
         }
         if (Space.manhattan(s.pos, g) != 1)
         {

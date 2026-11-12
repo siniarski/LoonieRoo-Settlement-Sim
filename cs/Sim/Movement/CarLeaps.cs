@@ -55,9 +55,8 @@ public static partial class Leaps
     const int CAR_PARTS = 6;
 
     /// <summary>The car you are standing on, if any (it may have gone: settle() sorts that out).</summary>
-    public static Vehicle? carOf(SimState state, Control? c) => c?.onCar == null ? null : Vehicles.vehiclesOf(state).find((v) => v.id == c.onCar);
+    public static Vehicle? carOf(SimState state, Control? c) => c?.onCar == null ? null : Vehicles.getVehicle(state, c.onCar);
 
-    static Vehicle? carById(SimState state, string id) => Vehicles.vehiclesOf(state).find((v) => v.id == id);
 
     /// <summary>`from` moved k SUB along a direction (any length; a unit four-way one moves exactly k).</summary>
     static Point step(Point from, Point d, int k)
@@ -254,7 +253,7 @@ public static partial class Leaps
     /// else on the ground where a body fits.</summary>
     static void landed(SimState state, Survivor s, Control c, string what, string carId)
     {
-        var v = carById(state, carId);
+        var v = Vehicles.getVehicle(state, carId);
         if ((what == "climb" || what == "jump") && v != null && Vehicles.isParked(v) && onTopFits(state, v, s.at))
         {
             c.onCar = v.id;
@@ -332,7 +331,7 @@ public static partial class Leaps
             double from = Js.Num(parts[3]) / 100, to = Js.Num(parts[4]) / 100, peak = Js.Num(parts[5]) / 100;
             double line = from + (to - from) * t;
             double h = line + (peak - line) * JsMath.sqrt(JsMath.max(0, JsMath.sin(JsMath.PI * t)));
-            var v = carById(state, parts[2]);
+            var v = Vehicles.getVehicle(state, parts[2]);
             if (v != null && Vehicles.gap(v, here) == 0) h = JsMath.max(h, Vehicles.topAt(v, here));
             return h;
         }
