@@ -47,6 +47,19 @@ public partial class DefencesTest
             expect(state.furniture).toEqual(Js.Arr([]));
             expect(state.events.map((e) => e.message)).toContain("A spike trap at (4, 0) is spent");
         }
+
+        [Fact(DisplayName = "spike traps > a zombie a trap kills may leave a sample, as one a guard kills does")]
+        public void T003b_a_zombie_a_trap_kills_may_leave_a_sample()
+        {
+            var state = setup(["^....s"]);
+            var z = Zombies.addZombie(state, 0, 0);
+            var n = 1;
+            while (Hash.hashRoll(Hash.idNumber($"zs{n}"), 0x5a3) >= EndgameMod.SAMPLE_CHANCE) n++;
+            z.id = $"zs{n}";
+            z.health = 1;
+            expect(Defences.springTrap(state, z)).toBe(true);
+            expect(state.items.filter((i) => i.kind == "sample").length).toBe(1);
+        }
     }
 
     /// <summary>barricades</summary>

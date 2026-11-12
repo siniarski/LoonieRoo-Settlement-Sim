@@ -116,9 +116,7 @@ public static partial class Defences
             {
                 continue;
             }
-            Zombies.removeZombie(state, z);
-            Corpses.leaveCorpse(state, z.pos, null);
-            EndgameMod.maybeSample(state, z.id, z.pos);
+            Zombies.killZombie(state, z);
             Events.logEvent(state, $"The turret at ({Js.Str(t.x)}, {Js.Str(t.y)}) brought down a zombie");
         }
     }
@@ -143,8 +141,7 @@ public static partial class Defences
         {
             return false;
         }
-        Zombies.removeZombie(state, z);
-        Corpses.leaveCorpse(state, z.pos, null);
+        Zombies.killZombie(state, z);
         Events.logEvent(state, "A spike trap killed a zombie");
         return true;
     }

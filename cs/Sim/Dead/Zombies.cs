@@ -672,6 +672,14 @@ public static partial class Zombies
         }
     }
 
+    /// <summary>A zombie brought down by a turret, a trap or a dog: gone, a body left, and maybe a sample (as a guard's kill).</summary>
+    public static void killZombie(SimState state, Zombie z)
+    {
+        removeZombie(state, z);
+        Corpses.leaveCorpse(state, z.pos, null);
+        EndgameMod.maybeSample(state, z.id, z.pos);
+    }
+
     /// <summary>A guard's blow. Returns true if the zombie died (and was removed).</summary>
     public static bool damageZombie(SimState state, Zombie z, double amount, Survivor by)
     {

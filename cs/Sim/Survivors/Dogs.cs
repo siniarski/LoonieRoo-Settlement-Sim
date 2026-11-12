@@ -168,8 +168,7 @@ public static partial class Dogs
         {
             return;
         }
-        Zombies.removeZombie(state, z);
-        Corpses.leaveCorpse(state, z.pos, null);
+        Zombies.killZombie(state, z);
         Events.logEvent(state, $"{Js.Str(dog.name)} brought down a zombie");
     }
 
